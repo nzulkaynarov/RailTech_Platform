@@ -272,7 +272,7 @@ test.describe("База знаний: права", () => {
     }
   });
 
-  test("у снабженца пункта «База знаний» в меню CRM нет, прямой адрес — «Нет доступа»; у администратора пункт есть", async ({
+  test("у снабженца пункта «База знаний» в меню CRM нет, прямой адрес — «Нет доступа»; администратор входит из Настроек · Telegram-бот", async ({
     page,
   }) => {
     await loginAndWait(page, "supply@demo.example");
@@ -285,8 +285,14 @@ test.describe("База знаний: права", () => {
     await spaGoto(page, "/login");
     await loginAndWait(page, "admin@demo.example");
     await spaGoto(page, "/crm/kb");
-    await expect(page.getByRole("link", { name: "База знаний бота" })).toBeVisible();
     await expect(page.getByRole("heading", { level: 1, name: "База знаний бота" })).toBeVisible();
+    // W15-H4: пункт базы знаний у администратора — в Настройках (подсвечен «Telegram-бот»), не в Клиентах
+    const menu = page.getByRole("navigation", { name: "Разделы модуля" });
+    await expect(menu.getByRole("link", { name: "Telegram-бот" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    await expect(menu.getByRole("link", { name: "База знаний бота" })).toHaveCount(0);
   });
 });
 

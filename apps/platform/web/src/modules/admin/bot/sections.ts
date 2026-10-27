@@ -28,6 +28,34 @@ export function sectionGroups(available: readonly string[]): SectionGroup[] {
   return groups.filter((g) => g.sections.length > 0);
 }
 
+/**
+ * Вкладки экрана «Telegram-бот» (W15-H4, UX-оценка §5 P1-6): бот настраивается в одном месте. «Тексты» и «База знаний» —
+ * свои разделы настроек CRM (`texts`, `kb`), «Поведение и передача» — остальные разделы, «Подключение» — токен, канал и
+ * профиль (раньше — в «Подключениях»).
+ */
+export const BOT_PARTS = ["connection", "texts", "behavior", "kb", "templates", "exports"] as const;
+export type BotPart = (typeof BOT_PARTS)[number];
+
+/** Разделы настроек, у которых своя вкладка, а не место в «Поведении и передаче». */
+const OWN_PART: Record<string, BotPart> = { texts: "texts", kb: "kb" };
+
+/** Разделы «Поведения и передачи»: всё, кроме текстов и базы знаний. */
+export function behaviorKeys(available: readonly string[]): string[] {
+  return available.filter((key) => OWN_PART[key] === undefined);
+}
+
+/**
+ * Вкладка и раздел из адреса: `?part=` — вкладка; старый `?section=` (ссылки до W15-H4) ведёт на вкладку своего раздела.
+ */
+export function resolvePart(part: string | null, section: string | null): BotPart {
+  const found = BOT_PARTS.find((p) => p === part);
+  if (found) return found;
+  if (section === "templates" || section === "exports") return section;
+  if (section && OWN_PART[section]) return OWN_PART[section];
+  if (section) return "behavior";
+  return "connection";
+}
+
 /** Не разделы настроек, а соседние части экрана: шаблоны ответов и выгрузки. */
 export const EXTRA_SECTIONS = ["templates", "exports"] as const;
 export type ExtraSection = (typeof EXTRA_SECTIONS)[number];

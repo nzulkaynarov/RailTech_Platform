@@ -455,12 +455,22 @@ describe("CRM · База знаний: пункт меню и права", () =
     expect(await screen.findByRole("heading", { level: 1, name: "Нет доступа" })).toBeVisible();
   });
 
-  it("администратор без лидов видит в CRM единственный пункт — «База знаний»; менеджер — вместе с остальными", async () => {
+  it("администратор без лидов входит в базу знаний из Настроек · Telegram-бот (W15-H4); менеджер — из Клиентов", async () => {
     signIn("admin@demo.example");
     renderAt("/crm/kb");
-    const menu = await screen.findByRole("link", { name: "База знаний бота" });
-    expect(menu).toBeVisible();
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "База знаний бота" }),
+    ).toBeVisible();
+    // Подменю — Настроек, подсвечен «Telegram-бот»; пункта базы знаний в Клиентах у администратора нет
+    const menu = screen.getByRole("navigation", { name: "Разделы модуля" });
+    expect(within(menu).getByRole("link", { name: "Telegram-бот" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(within(menu).queryByRole("link", { name: "База знаний бота" })).toBeNull();
     expect(screen.queryByRole("link", { name: "Лиды" })).toBeNull();
+    const crumbs = screen.getByRole("navigation", { name: "Хлебные крошки" });
+    expect(crumbs).toHaveTextContent("Настройки/Telegram-бот/База знаний бота");
     cleanup();
     endSession();
 

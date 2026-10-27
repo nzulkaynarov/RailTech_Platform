@@ -300,7 +300,7 @@
     "reply_template": "Reply template",
     "sandbox": "Bot sandbox",
     "export": "Export",
-    "integration_secret": "Connection",
+    "integration_secret": "Connection key",
     "integration": "Connection",
     "external_service": "External service",
     "platform_role": "Platform role"
