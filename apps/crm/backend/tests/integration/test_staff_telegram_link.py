@@ -41,7 +41,7 @@ def make(
     sessions: async_sessionmaker[AsyncSession], bot: Any = None
 ) -> tuple[StaffTelegramLinkService, Clock]:
     clock = Clock()
-    return StaffTelegramLinkService(sessions, bot or FakeBotState(), clock), clock
+    return StaffTelegramLinkService(sessions, bot or FakeBotState(), clock), clock  # type: ignore[arg-type]
 
 
 def code_of(url: str) -> str:

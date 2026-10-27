@@ -66,7 +66,7 @@ async def test_reply_is_in_the_employee_language(
 ) -> None:
     links = FakeLinks(outcome)
     message = FakeMessage(language)
-    await staff_link.on_staff_start(message, CODE, links)  # type: ignore[arg-type]
+    await staff_link.on_staff_start(message, CODE, links)
     assert links.calls == [(CODE, 501, "aziz")]
     assert message.answers == [table[expected_language]]
 

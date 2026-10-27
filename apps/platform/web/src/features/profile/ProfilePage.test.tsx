@@ -89,7 +89,7 @@ describe("Профиль /me", () => {
   it("сохранение уходит в BFF только с изменёнными полями", async () => {
     const sent: unknown[] = [];
     server.use(
-      http.patch("*/me/profile", async ({ request, params: _p }) => {
+      http.patch("*/me/profile", async ({ request }) => {
         sent.push(await request.json());
         return HttpResponse.json({
           name: "Демо Менеджеров",
@@ -408,7 +408,7 @@ describe("«Моя очередь» заместителя", () => {
     const covered = await within(queue).findByText(/^за Демо Директоров · /);
     expect(covered).toBeInTheDocument();
     const rows = within(queue).getAllByRole("listitem");
-    expect(rows.filter((row) => /за Демо Директоров/.test(row.textContent ?? ""))).toHaveLength(1);
+    expect(rows.filter((row) => /за Демо Директоров/.test(row.textContent))).toHaveLength(1);
     expect(rows.length).toBeGreaterThan(1);
   });
 });

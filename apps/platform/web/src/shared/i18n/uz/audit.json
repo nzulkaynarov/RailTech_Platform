@@ -197,7 +197,15 @@
       "notify": "Bildirishnomalarni o'zgartirdi",
       "bootstrap_admin": "Birinchi administrator",
       "invite": "Taklifni pochta orqali yubordi",
-      "hand_over": "Lid va mijozlarni topshirdi"
+      "hand_over": "Lid va mijozlarni topshirdi",
+      "password_reset_link": "Xatdagi havola orqali yangi parol oʻrnatdi",
+      "profile_update": "Oʻz profilini oʻzgartirdi",
+      "avatar_set": "Profil rasmini yukladi",
+      "avatar_removed": "Profil rasmini oʻchirdi",
+      "telegram_linked": "Telegramni ulagan",
+      "telegram_unlinked": "Telegramni uzdi",
+      "deputy_set": "Yoʻqlik vaqtiga oʻrinbosar tayinladi",
+      "deputy_cleared": "Oʻrinbosarlikni olib tashladi"
     },
     "setup": {
       "admin_created": "Birinchi administrator (sozlash ustasi)"

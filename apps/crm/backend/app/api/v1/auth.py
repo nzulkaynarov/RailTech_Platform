@@ -2,7 +2,7 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Cookie, Request, Response, status
+from fastapi import APIRouter, BackgroundTasks, Cookie, Request, Response, status
 
 from app.api.deps import ContainerDep, PrincipalDep, client_ip
 from app.config import Settings
@@ -91,13 +91,17 @@ async def change_password(
 
 
 @router.post("/forgot-password", status_code=status.HTTP_202_ACCEPTED)
-async def forgot_password(body: ForgotPasswordRequest, container: ContainerDep) -> dict[str, bool]:
+async def forgot_password(
+    body: ForgotPasswordRequest, container: ContainerDep, background: BackgroundTasks
+) -> dict[str, bool]:
     """«Забыли пароль?»: ответ один и тот же для любой учётной записи (перечислять нельзя).
 
     Ссылка уходит на почту или в Telegram, если у найденного сотрудника есть канал; иначе тихо
     ничего — экран входа заранее говорит «если нет ни того, ни другого, обратитесь к
-    администратору». Частоту по адресу и учётной записи ограничивают BFF и сам сервис (3 в час)."""
-    await container.password_reset.request(body.identifier)
+    администратору». Частоту по адресу и учётной записи ограничивают BFF и сам сервис (3 в час).
+    Выпуск и отправка — после ответа (фоновая задача): время ответа не выдаёт, найдена ли учётная
+    запись и ушло ли письмо."""
+    background.add_task(container.password_reset.request, body.identifier)
     return {"accepted": True}
 
 

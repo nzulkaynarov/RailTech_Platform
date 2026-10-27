@@ -252,3 +252,23 @@ async def test_api_reset_with_a_bad_token_is_422(client: TestClient) -> None:
     )
     assert response.status_code == 422
     assert response.json()["details"]["reason"] == "reset_token_invalid"
+
+
+async def test_background_failure_never_reaches_the_caller(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    """Выпуск идёт после ответа клиенту: сбой (упал провайдер бота) — в журнал, не наружу."""
+
+    async def broken() -> Any:
+        raise RuntimeError("bot provider down")
+
+    service = PasswordResetService(
+        sessions,
+        FakeMail(),  # type: ignore[arg-type]
+        FakeSettings(),  # type: ignore[arg-type]
+        broken,
+        PLATFORM,
+    )
+    await make_user(sessions, "dilshod@railtech.uz", ["manager"])
+    await service.request("dilshod@railtech.uz")
+    assert await tokens(sessions) == []

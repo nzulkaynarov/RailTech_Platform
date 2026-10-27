@@ -197,7 +197,15 @@
       "notify": "Changed notifications",
       "bootstrap_admin": "First administrator",
       "invite": "Sent an invitation by email",
-      "hand_over": "Handed over leads and clients"
+      "hand_over": "Handed over leads and clients",
+      "password_reset_link": "Set a new password from the reset link",
+      "profile_update": "Updated their profile",
+      "avatar_set": "Uploaded a profile photo",
+      "avatar_removed": "Removed the profile photo",
+      "telegram_linked": "Linked Telegram",
+      "telegram_unlinked": "Unlinked Telegram",
+      "deputy_set": "Assigned a deputy while away",
+      "deputy_cleared": "Removed the deputy"
     },
     "setup": {
       "admin_created": "First administrator (setup wizard)"

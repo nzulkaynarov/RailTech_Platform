@@ -62,7 +62,15 @@ class PasswordResetService:
         self._clock = clock
 
     async def request(self, identifier: str) -> None:
-        """Выпустить ссылку и отправить; наружу — ничего (ответ API одинаков для любого ввода)."""
+        """Выпустить ссылку и отправить; наружу — ничего (ответ API одинаков для любого ввода).
+
+        Вызывается после ответа клиенту: сбой пишется в журнал и не доходит до сотрудника."""
+        try:
+            await self._request(identifier)
+        except Exception:
+            logger.error("password_reset_failed", exc_info=True)
+
+    async def _request(self, identifier: str) -> None:
         if not self._platform_url:
             logger.warning("password_reset_skipped", why="platform_url_missing")
             return
