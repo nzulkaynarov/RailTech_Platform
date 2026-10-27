@@ -6,8 +6,15 @@ import { resetEmployees } from "../../mocks/fixtures/employees";
 import { resetRoles } from "../../mocks/fixtures/roles";
 import { resetExtraUsers } from "../../mocks/fixtures/users";
 import { endSession } from "../../mocks/mockSession";
-import { readSetup, resetSetup, startFreshInstall, startFreshSetup } from "../../mocks/setupState";
+import {
+  markStepDone,
+  readSetup,
+  resetSetup,
+  startFreshInstall,
+  startFreshSetup,
+} from "../../mocks/setupState";
 import i18n from "../../shared/i18n";
+import { resetBannerHidden } from "./hidden";
 import { renderApp, signInAs } from "../../test/renderApp";
 import { server } from "../../test/server";
 import { setViewportWidth } from "../../test/viewport";
@@ -160,6 +167,7 @@ describe("Первый запуск до входа", () => {
 
 describe("Баннер настройки и мастер", () => {
   beforeEach(() => {
+    resetBannerHidden("u-demo-admin"); // «Скрыть» помнит и память модуля, не только localStorage
     startFreshSetup();
   });
 
@@ -169,7 +177,7 @@ describe("Баннер настройки и мастер", () => {
 
     const banner = await screen.findByRole("region", { name: "Настройка Платформы" });
     expect(within(banner).getByText("Настройка Платформы: готово 0 из 5")).toBeVisible();
-    expect(within(banner).getByText(/Своей компании ещё нет в ERP/)).toBeVisible();
+    expect(within(banner).getByText(/Дальше: ERP/)).toBeVisible();
     expect(within(banner).getByRole("link", { name: "Продолжить настройку" })).toHaveAttribute(
       "href",
       "/admin/setup",
@@ -252,17 +260,29 @@ describe("Баннер настройки и мастер", () => {
     expect(screen.queryByRole("button", { name: /Создать компанию/ })).toBeNull();
   });
 
-  it("мастер: на своей странице баннер не дублируется, пять шагов ведут на свои экраны", async () => {
+  it("мастер: порядок «администратор -> ERP -> компания -> остальное», баннер не дублируется, шаги ведут на свои экраны", async () => {
     signInAs("admin@demo.example");
     renderApp("/admin/setup");
 
-    expect(await screen.findByRole("heading", { level: 2, name: "Подключения" })).toBeVisible();
+    expect(
+      await screen.findByRole("heading", { level: 2, name: "Остальные подключения" }),
+    ).toBeVisible();
+    const order = screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent);
+    expect(order).toEqual([
+      "Администратор",
+      "Подключение ERP",
+      "Ваша компания",
+      "Остальные подключения",
+    ]);
     expect(screen.queryByRole("region", { name: "Настройка Платформы" })).toBeNull();
+    // ERP — отдельный шаг с главной кнопкой «Подключить ERP» (на новой установке без кода сопряжения)
+    for (const link of screen.getAllByRole("link", { name: "Подключить ERP" })) {
+      expect(link).toHaveAttribute("href", "/admin/integrations?card=erp&panel=open");
+    }
     const list = screen.getByRole("list", { name: "Шаги настройки" });
     const links = within(list).getAllByRole("link");
     expect(links.map((a) => a.getAttribute("href"))).toEqual([
       "/admin/integrations?card=telegram&panel=open",
-      "/admin/integrations?card=erp&panel=open",
       "/admin/integrations?card=mail&panel=open",
       "/admin/integrations?card=models&panel=open",
       "/admin/org?invite=open&panel=open",
@@ -273,8 +293,48 @@ describe("Баннер настройки и мастер", () => {
     expect(screen.getByText("Готово 0 из 5")).toBeVisible();
   });
 
+  it("ERP не подключена: «Ваша компания» объясняет и ведёт на шаг ERP — без формы и «Проверить снова»", async () => {
+    signInAs("admin@demo.example");
+    renderApp("/admin/setup");
+
+    expect(await screen.findByText("Сначала подключите ERP")).toBeVisible();
+    expect(screen.getByText("Ждёт ERP")).toBeVisible();
+    expect(screen.queryByLabelText("Название компании")).toBeNull();
+    expect(screen.queryByRole("button", { name: /Создать компанию/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Проверить снова" })).toBeNull();
+    expect(screen.queryByText(/ERP пока не ответила/)).toBeNull();
+    const company = screen
+      .getByRole("heading", { level: 2, name: "Ваша компания" })
+      .closest(".ant-card");
+    expect(company).not.toBeNull();
+    expect(
+      within(company as HTMLElement).getByRole("link", { name: "Подключить ERP" }),
+    ).toHaveAttribute("href", "/admin/integrations?card=erp&panel=open");
+  });
+
+  it("после подключения ERP форма компании появляется", async () => {
+    markStepDone("erp");
+    signInAs("admin@demo.example");
+    renderApp("/admin/setup");
+
+    expect(await screen.findByLabelText("Название компании")).toBeVisible();
+    expect(screen.queryByText("Сначала подключите ERP")).toBeNull();
+    expect(
+      screen.getByText("ERP подключена. Связь можно проверить на карточке интеграции."),
+    ).toBeVisible();
+  });
+
+  it("баннер ведёт сначала к ERP: «Дальше: ERP»", async () => {
+    signInAs("admin@demo.example");
+    renderApp("/admin/org");
+
+    const banner = await screen.findByRole("region", { name: "Настройка Платформы" });
+    expect(within(banner).getByText(/Дальше: ERP/)).toBeVisible();
+  });
+
   it("шаг «Ваша компания»: форма с блоком «Что произойдёт», создание, затем статус «Готово»", async () => {
     let body: unknown;
+    markStepDone("erp");
     signInAs("admin@demo.example");
     renderApp("/admin/setup");
     expect(await screen.findByRole("heading", { level: 2, name: "Ваша компания" })).toBeVisible();
@@ -300,6 +360,7 @@ describe("Баннер настройки и мастер", () => {
   });
 
   it("ошибка поля от ERP показана у поля, повтор после исправления проходит", async () => {
+    markStepDone("erp");
     signInAs("admin@demo.example");
     renderApp("/admin/setup");
     await screen.findByRole("heading", { level: 2, name: "Ваша компания" });
@@ -317,20 +378,21 @@ describe("Баннер настройки и мастер", () => {
     expect(await screen.findByText("Своя компания создана.")).toBeVisible();
   });
 
-  it("ERP не ответила: «Проверить снова» вместо тупика", async () => {
+  it("ERP подключена, но не ответила: «Проверить снова» вместо тупика", async () => {
     server.use(
       http.get("*/setup/checklist", () =>
         HttpResponse.json({
           steps: [
+            { key: "erp", state: "done" },
             { key: "bot", state: "todo" },
-            { key: "erp", state: "todo" },
             { key: "mail", state: "todo" },
             { key: "models", state: "todo" },
             { key: "first_employee", state: "todo" },
           ],
-          done: 0,
+          done: 1,
           total: 5,
           company: null,
+          company_blocker: "erp_unavailable",
         }),
       ),
     );
@@ -339,6 +401,48 @@ describe("Баннер настройки и мастер", () => {
 
     expect(await screen.findByText(/ERP пока не ответила/)).toBeVisible();
     expect(screen.getByRole("button", { name: "Проверить снова" })).toBeVisible();
+    expect(screen.queryByText("Сначала подключите ERP")).toBeNull();
+  });
+
+  it("409 ERP_NOT_CONNECTED при создании: шаг перерисовывается как «сначала подключите ERP»", async () => {
+    // экран ещё думает, что ERP есть, а BFF уже знает, что нет
+    markStepDone("erp");
+    signInAs("admin@demo.example");
+    renderApp("/admin/setup");
+    await screen.findByLabelText("Название компании");
+    server.use(
+      http.post("*/setup/company", () =>
+        HttpResponse.json(
+          {
+            code: "ERP_NOT_CONNECTED",
+            message: "ERP не подключена. Сначала подключите ERP.",
+            source: "bff",
+          },
+          { status: 409 },
+        ),
+      ),
+      http.get("*/setup/checklist", () =>
+        HttpResponse.json({
+          steps: [
+            { key: "erp", state: "todo" },
+            { key: "bot", state: "todo" },
+            { key: "mail", state: "todo" },
+            { key: "models", state: "todo" },
+            { key: "first_employee", state: "todo" },
+          ],
+          done: 0,
+          total: 5,
+          company: null,
+          company_blocker: "erp_not_connected",
+        }),
+      ),
+    );
+    fill("Название компании", "ООО Демо");
+
+    fireEvent.click(screen.getByRole("button", { name: /Создать компанию/ }));
+
+    expect(await screen.findByText("Сначала подключите ERP")).toBeVisible();
+    expect(screen.queryByLabelText("Название компании")).toBeNull();
   });
 
   it("сбой чек-листа: «Повторить»", async () => {

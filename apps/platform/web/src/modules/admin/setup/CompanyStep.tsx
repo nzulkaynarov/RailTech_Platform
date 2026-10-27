@@ -4,12 +4,16 @@ import { useTranslation } from "react-i18next";
 
 import { lines } from "../../../features/first-run/lines";
 import { ApiError } from "../../../shared/api/errors";
+import { STEP_TARGET } from "../../../entities/setup/steps";
 import type { SetupChecklist, SetupCompanyIn } from "../../../shared/api/generated/model";
 import {
+  createOwnCompany,
   getGetSetupChecklistQueryKey,
   useCreateOwnCompany,
 } from "../../../shared/api/generated/platform-bff";
+import { withTimeout } from "../../../shared/api/timeout";
 import { Consequence } from "../../../shared/ui/Consequence";
+import { LinkButton } from "../../../shared/ui/LinkButton";
 
 interface Values {
   name: string;
@@ -31,6 +35,8 @@ function errorText(t: ReturnType<typeof useTranslation>["t"], error: unknown): s
         "FORBIDDEN",
         "BACKEND_UNAVAILABLE",
         "VALIDATION_FAILED",
+        "ERP_NOT_CONNECTED",
+        "REQUEST_TIMEOUT",
       ].includes(error.code)
     ) {
       return t(key);
@@ -41,15 +47,18 @@ function errorText(t: ReturnType<typeof useTranslation>["t"], error: unknown): s
 
 /**
  * Шаг «Ваша компания» (ERP `setup/status`, `setup/company`, W13-A4): форма, пока своей компании нет; иначе статус словами.
- * ERP без ответа (доступ новому администратору выдаётся с задержкой) — «Проверить снова», а не тупик. Блок «Что
- * произойдёт» стоит над главной кнопкой.
+ * Без сопряжённой ERP (`company_blocker = erp_not_connected`, W13C-F1) формы и «Проверить снова» нет: шаг объясняет
+ * «сначала подключите ERP» и ведёт на шаг ERP. ERP сопряжена, но не ответила (доступ новому администратору выдаётся с
+ * задержкой) — «Проверить снова». Блок «Что произойдёт» стоит над главной кнопкой.
  */
 export function CompanyStep({
   company,
+  blocker,
   onRetry,
   retrying,
 }: {
   company: SetupChecklist["company"];
+  blocker: SetupChecklist["company_blocker"];
   onRetry: () => void;
   retrying: boolean;
 }) {
@@ -59,11 +68,16 @@ export function CompanyStep({
   const [form] = Form.useForm<Values>();
   const create = useCreateOwnCompany({
     mutation: {
+      mutationFn: ({ data }) => createOwnCompany(data, { signal: withTimeout(undefined) }),
       onSuccess: (created) => {
         void message.success(t("admin.setup.companyCreated", { name: created.name }));
         void queryClient.invalidateQueries({ queryKey: getGetSetupChecklistQueryKey() });
       },
       onError: (error) => {
+        if (error instanceof ApiError && error.code === "ERP_NOT_CONNECTED") {
+          // Состояние ушло вперёд экрана: шаг перерисуется как «сначала подключите ERP».
+          void queryClient.invalidateQueries({ queryKey: getGetSetupChecklistQueryKey() });
+        }
         if (!(error instanceof ApiError) || error.code !== "VALIDATION_FAILED") return;
         const fields = error.details["fields"];
         const messages = error.details["messages"];
@@ -92,6 +106,23 @@ export function CompanyStep({
     },
   });
 
+  if (company === null && blocker === "erp_not_connected") {
+    return (
+      <div className="pf-panel-stack">
+        <Alert
+          type="info"
+          showIcon
+          message={t("admin.setup.companyNeedsErp")}
+          description={t("admin.setup.companyNeedsErpText")}
+        />
+        <div>
+          <LinkButton type="primary" to={STEP_TARGET.erp}>
+            {t("admin.setup.companyNeedsErpAction")}
+          </LinkButton>
+        </div>
+      </div>
+    );
+  }
   if (company === null) {
     return (
       <div className="pf-panel-stack">

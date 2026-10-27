@@ -11,6 +11,7 @@ import { PageHeader } from "../../../shared/ui/PageHeader";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { CompanyStep } from "./CompanyStep";
 import { ConnectionsStep } from "./ConnectionsStep";
+import { ErpStep } from "./ErpStep";
 
 import "../../../features/first-run/first-run.css";
 
@@ -35,8 +36,9 @@ function StepCard({
 }
 
 /**
- * Admin · «Первый запуск» (`/admin/setup`, SPEC-v3 §7.6, W13-A4): три шага — администратор (уже создан на экране до
- * входа), своя компания (ERP) и подключения (чек-лист из пяти шагов). Состояние приносит BFF; сделать шаг можно позже,
+ * Admin · «Первый запуск» (`/admin/setup`, SPEC-v3 §7.6, W13-A4, порядок — W13C-F1): администратор (уже создан на
+ * экране до входа) -> подключение ERP -> своя компания (создаётся в ERP) -> остальные подключения (бот, почта, модели,
+ * первый сотрудник). Состояние приносит BFF; сделать шаг можно позже,
  * страница остаётся и после «Скрыть» на баннере. Только администратор: директору чек-лист не отдаётся (BFF — 403).
  */
 export function SetupWizardPage() {
@@ -45,7 +47,7 @@ export function SetupWizardPage() {
   const editable = canEdit(me, "admin");
   const title = t("admin.setup.title");
   useDocumentTitle(title);
-  const checklist = useSetupChecklist(editable);
+  const checklist = useSetupChecklist(editable, { fresh: true });
 
   let body: ReactNode;
   if (!editable) {
@@ -76,6 +78,8 @@ export function SetupWizardPage() {
     );
   } else {
     const data = checklist.data;
+    const erpStep = data.steps.find((s) => s.key === "erp");
+    const otherSteps = data.steps.filter((s) => s.key !== "erp");
     body = (
       <div className="pf-setup-stack">
         <StepCard
@@ -85,10 +89,30 @@ export function SetupWizardPage() {
           <p style={{ margin: 0 }}>{t("admin.setup.adminDone", { name: me.name })}</p>
         </StepCard>
         <StepCard
+          title={t("admin.setup.erpTitle")}
+          status={
+            <StatusTag
+              tone={
+                erpStep?.state === "done" ? "green" : erpStep?.state === "todo" ? "gold" : "default"
+              }
+            >
+              {t(`admin.setup.state.${erpStep?.state ?? "unknown"}`)}
+            </StatusTag>
+          }
+        >
+          <ErpStep step={erpStep} />
+        </StepCard>
+        <StepCard
           title={t("admin.setup.companyTitle")}
           status={
             data.company === null ? (
-              <StatusTag tone="default">{t("admin.setup.state.unknown")}</StatusTag>
+              <StatusTag tone="default">
+                {t(
+                  data.company_blocker === "erp_not_connected"
+                    ? "admin.setup.state.waitingErp"
+                    : "admin.setup.state.unknown",
+                )}
+              </StatusTag>
             ) : (
               <StatusTag tone={data.company.required ? "gold" : "green"}>
                 {t(data.company.required ? "admin.setup.state.todo" : "admin.setup.state.done")}
@@ -98,6 +122,7 @@ export function SetupWizardPage() {
         >
           <CompanyStep
             company={data.company}
+            blocker={data.company_blocker}
             retrying={checklist.isFetching}
             onRetry={() => {
               void checklist.refetch();
@@ -117,7 +142,7 @@ export function SetupWizardPage() {
               ? t("admin.setup.allDone")
               : t("admin.setup.connectionsLead")}
           </p>
-          <ConnectionsStep steps={data.steps} />
+          <ConnectionsStep steps={otherSteps} />
         </StepCard>
       </div>
     );
