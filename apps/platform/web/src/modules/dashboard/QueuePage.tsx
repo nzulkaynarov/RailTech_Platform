@@ -72,7 +72,10 @@ export function QueuePage() {
       (value) => format.date(value, "short"),
     ),
     title: item.title,
-    caption: item.subtitle,
+    // Строка замещаемого коллеги (W15-H6): «за Имя · …» — чья это работа.
+    caption: item.on_behalf_of
+      ? `${t("modules:dashboard.queue.onBehalf", { name: item.on_behalf_of.name })} · ${item.subtitle}`
+      : item.subtitle,
     to: item.object.path,
     urgent: isUrgent(item),
     // У цели нет экрана в Платформе — «Где сделать» вместо ссылки на заглушку (W15-H2).

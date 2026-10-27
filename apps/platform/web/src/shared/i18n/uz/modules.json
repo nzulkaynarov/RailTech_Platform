@@ -67,7 +67,8 @@
       "partialEmpty": {
         "title": "Navbat to‘liq yuklanmadi",
         "text": "Manba javob bermagani uchun vazifalarning bir qismi ko‘rinmayapti. Birozdan keyin qayta urinib ko‘ring."
-      }
+      },
+      "onBehalf": "{{name}} uchun"
     },
     "activity": {
       "label": "Bugungi voqealar",

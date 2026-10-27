@@ -24,6 +24,7 @@ STATUS: dict[type[e.DomainError], int] = {
     e.ValidationFailedError: status.HTTP_422_UNPROCESSABLE_CONTENT,
     e.UpstreamUnavailableError: status.HTTP_502_BAD_GATEWAY,
     e.RateLimitedError: status.HTTP_429_TOO_MANY_REQUESTS,
+    e.PayloadTooLargeError: status.HTTP_413_CONTENT_TOO_LARGE,
     e.MailTemplateMissingError: status.HTTP_500_INTERNAL_SERVER_ERROR,
 }
 HTTP_CODES: dict[int, str] = {

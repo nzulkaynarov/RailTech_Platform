@@ -78,7 +78,13 @@ class ExternalServicesView:
         """Группы по причине и состояние каждого сервиса — вход для оповещений `ExternalChecks`."""
         out = await self.list(now)
         assert self._cache is not None  # noqa: S101 — список только что построен или взят из кэша
-        return self._cache[2], {s.key: s.state for s in out.services}
+        # «Восстановлено» ждёт `ok` проверки, а не конца дребезга: `ok` с «Нестабильно»
+        # для записи причины уже `ok`.
+        states: dict[str, cause.State] = {
+            s.key: "ok" if s.status == "ok" and s.state == "unstable" else s.state
+            for s in out.services
+        }
+        return self._cache[2], states
 
     async def list(self, now: datetime) -> ExternalServicesOut:
         if self._cache is not None and self._clock() < self._cache[0]:
@@ -261,7 +267,7 @@ class _Context:
                 never_checked=row is None,
                 stale=is_stale,
                 providers=self.providers,
-                fail_for=now - streak.since if streak else None,
+                fail_for=streak.last - streak.since if streak else None,
                 flaps_24h=flaps.day if flaps else 0,
                 flaps_recent=flaps.recent if flaps else 0,
             ),

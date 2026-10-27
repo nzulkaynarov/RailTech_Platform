@@ -10,10 +10,13 @@ from datetime import datetime, timedelta
 from enum import StrEnum
 from typing import Final
 
+# Прежние алерты ушли в центр внешних сервисов (W15-H3b): монитор их больше не шлёт, а живые строки
+# `system_alerts` закрывает молча. «Шлюз моделей недоступен» (`litellm`) и сбои ответов ИИ
+# (`vendor.*`, `litellm`) идут по общей политике причин: 15 минут подряд, 5 минут `ok`, раз в сутки.
+RETIRED_KEYS: Final = frozenset({"litellm_down", "ai_failures"})
 # Пороги монитора — одно место (технические, не бизнес-правила: в «Настройки» не выносим).
 QUEUE_LIMIT: Final = 100
 BUDGET_WARN_SHARE: Final = 0.8
-LITELLM_GRACE: Final = timedelta(minutes=2)
 REPEAT_AFTER: Final = timedelta(hours=6)
 MODEL_PROBE_MINUTE: Final = 0  # раз в час: каждая проба — платный запрос
 _BILLING: Final = (
@@ -40,8 +43,6 @@ class HealthSnapshot:
     models: dict[str, str | None] | None = None
     # Задачи, у которых после последнего сбоя был успешный запуск: только они «в норме».
     recovered_tasks: frozenset[str] = frozenset()
-    # Сколько лидов за окно не получили ответ из-за сбоя ИИ (одна сводка вместо карточек).
-    ai_failures: int = 0
 
 
 @dataclass(frozen=True)
@@ -52,6 +53,9 @@ class Check:
     detail: str
     grace: timedelta = timedelta(0)
     hint: str = ""  # «что делать» — для задач воркера и сбоев ИИ
+    # Без собственного сообщения: состояние пишется в `system_alerts` (его читают «Состояние
+    # системы» и чек-лист), а оповещает центр внешних сервисов (проба — причина провайдера).
+    notify: bool = True
 
 
 @dataclass(frozen=True)
@@ -91,24 +95,8 @@ def checks(
             snapshot.queue_size > QUEUE_LIMIT,
             "Очередь задач",
             f"{snapshot.queue_size} задач в ожидании (порог {QUEUE_LIMIT})",
-        ),
-        Check(
-            "litellm_down",
-            not snapshot.litellm_ok,
-            "LiteLLM",
-            "шлюз моделей недоступен дольше 2 минут",
-            LITELLM_GRACE,
-        ),
-    ]
-    result.append(
-        Check(
-            "ai_failures",
-            snapshot.ai_failures > 0,
-            "ИИ-ассистент",
-            f"не ответил клиентам за последний час: {snapshot.ai_failures}",
-            hint="проверьте LiteLLM, модели и бюджет; ответьте клиентам из CRM",
         )
-    )
+    ]
     budget = snapshot.daily_budget_usd
     share = snapshot.spent_usd / budget if budget > 0 else 0.0
     result.append(
@@ -121,7 +109,13 @@ def checks(
     )
     for alias, problem in sorted((snapshot.models or {}).items()):
         result.append(
-            Check(f"model:{alias}", problem is not None, f"Модель {alias}", problem or "")
+            Check(
+                f"model:{alias}",
+                problem is not None,
+                f"Модель {alias}",
+                problem or "",
+                notify=False,
+            )
         )
     for task in sorted(set(snapshot.failed_tasks) | set(known_failed)):
         count = snapshot.failed_tasks.get(task, 0)
@@ -147,6 +141,8 @@ def decide(
     check: Check, state: AlertState | None, now: datetime, repeat_after: timedelta = REPEAT_AFTER
 ) -> Decision:
     """Отправка только на переходах; активный алерт напоминается не чаще `repeat_after`."""
+    if not check.notify:
+        return Decision.NONE
     if not check.active:
         return (
             Decision.RESOLVE if state is not None and state.sent_at is not None else Decision.NONE
@@ -174,7 +170,8 @@ def model_probe_due(now: datetime) -> bool:
 def provider_problem(status: int | None, text: str) -> str | None:
     """Ответ провайдера, о котором должна знать команда: кредиты/квота или отклонённый ключ.
 
-    Временные сбои (перегрузка 529, таймаут) — не здесь: их покрывают ретраи и `litellm_down`.
+    Временные сбои (перегрузка 529, таймаут) — не здесь: их покрывают ретраи и строки «Шлюз моделей»
+    и провайдеров центра внешних сервисов.
     """
     lowered = text.lower()
     if any(word in lowered for word in _BILLING):

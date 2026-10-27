@@ -88,7 +88,7 @@ def user(monkeypatch: pytest.MonkeyPatch) -> Any:
 
     monkeypatch.setattr("app.services.user_invites.repo.get", get_user)
     monkeypatch.setattr("app.services.user_invites.audit.record", record)
-    monkeypatch.setattr("app.services.user_invites.revoke_tokens", revoke)
+    monkeypatch.setattr("app.services.user_invites.close_sessions", revoke)
     account.audits, account.revoked = audits, revoked
     return account
 

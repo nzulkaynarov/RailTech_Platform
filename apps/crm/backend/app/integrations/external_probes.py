@@ -22,7 +22,7 @@ from app.domain.external_status import HttpFacts, ProbeError
 
 logger = structlog.get_logger(__name__)
 TELEGRAM_API = "https://api.telegram.org"
-TLS_TIMEOUT_S = 8.0
+TLS_TIMEOUT_S = 12.0  # как HTTP_TIMEOUT_S: медленное рукопожатие — не провал (W15-H3)
 
 
 def _ms(started: float) -> int:

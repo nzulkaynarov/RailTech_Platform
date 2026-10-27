@@ -128,7 +128,8 @@ def test_take_data_round_trip_and_legacy() -> None:
 
 
 def test_silent_and_sla_rules() -> None:
-    assert is_silent(["agent_unavailable"])
+    # передача из-за сбоя ИИ — рабочая карточка в канал: менеджер должен забрать клиента (W15-H3b)
+    assert not is_silent(["agent_unavailable"])
     assert not is_silent(["agent_unavailable", "human_requested"])
     assert not is_silent([])
     assert (needs_sla("hot"), needs_sla("warm"), needs_sla("info")) == (True, True, False)

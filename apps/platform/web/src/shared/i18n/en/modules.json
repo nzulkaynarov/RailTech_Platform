@@ -67,7 +67,8 @@
       "partialEmpty": {
         "title": "The queue loaded only in part",
         "text": "Some tasks are hidden because a source did not respond. Try again in a moment."
-      }
+      },
+      "onBehalf": "for {{name}}"
     },
     "activity": {
       "label": "Today's events",
