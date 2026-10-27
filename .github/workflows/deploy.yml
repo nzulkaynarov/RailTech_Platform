@@ -48,7 +48,7 @@ on:
 # GitHub отменяет более старый ожидающий запуск, когда приходит следующий. Запуски, которые ничего не деплоят (CI не успешен,
 # событие не push, режим build), получают собственную группу — иначе они вытесняли бы настоящий ожидающий деплой.
 concurrency:
-  group: ${{ ((github.event_name == 'workflow_dispatch' && inputs.action != 'build') || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main')) && 'deploy-production' || format('deploy-aux-{0}', github.run_id) }}
+  group: ${{ ((github.event_name == 'workflow_dispatch' && inputs.action != 'build') || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.head_repository.full_name == github.repository)) && 'deploy-production' || format('deploy-aux-{0}', github.run_id) }}
   cancel-in-progress: false
 
 permissions:
@@ -61,7 +61,8 @@ jobs:
     if: >-
       (github.event_name == 'workflow_dispatch' && inputs.action != 'rollback')
       || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success'
-          && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main')
+          && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main'
+          && github.event.workflow_run.head_repository.full_name == github.repository)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -196,7 +197,7 @@ jobs:
     needs: [prepare, build]
     if: needs.prepare.outputs.action == 'deploy'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     environment: production
     permissions:
       contents: read
