@@ -10,7 +10,7 @@ import { type StatusTone, TONE_STYLE } from "../../shared/lib/statuses";
 import { useFormat } from "../../shared/lib/useFormat";
 import { EmptyState } from "../../shared/ui/EmptyState";
 import { SourceBanner } from "../../shared/ui/SourceBanner";
-import { findModule } from "../registry";
+import { moduleName } from "../registry";
 import "../../features/notifications/notifications.css";
 
 const AVATAR_TONES: readonly StatusTone[] = ["blue", "gold", "cyan", "purple"];
@@ -24,7 +24,8 @@ function toneOf(name: string): StatusTone {
 
 function Row({ item }: { item: ActivityItem }) {
   const format = useFormat();
-  const module = findModule(item.module)?.name ?? item.module;
+  const { t } = useTranslation("modules");
+  const module = moduleName(t, item.module);
   const hint = [module, item.object?.number, format.activity(item.at)].filter(Boolean).join(" · ");
   const body = (
     <>

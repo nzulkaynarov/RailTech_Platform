@@ -25,7 +25,9 @@ describe("Admin · Журнал аудита (экран целиком на MSW
     signInAs("admin@demo.example");
     renderApp("/admin/audit");
 
-    expect(await screen.findByRole("heading", { level: 1, name: "Журнал аудита" })).toBeVisible();
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "История действий" }),
+    ).toBeVisible();
     const table = await screen.findByRole("table", { name: "Записи журнала аудита" });
     const rows = within(table).getAllByRole("row");
     // заголовок + 13 записей без двух входов (15 всего)
@@ -35,7 +37,7 @@ describe("Admin · Журнал аудита (экран целиком на MSW
     ).toBeVisible();
     expect(within(table).queryByText("Вход")).toBeNull();
     expect(screen.getByText("Записей: 13")).toBeVisible();
-    expect(screen.getByRole("link", { name: /Журнал аудита/ })).toBeVisible();
+    expect(screen.getByRole("link", { name: /История действий/ })).toBeVisible();
   });
 
   it("«Показывать входы в систему» добавляет входы", async () => {
@@ -97,7 +99,9 @@ describe("Admin · Журнал аудита (экран целиком на MSW
 
     const side = await panelEl();
     expect(
-      await within(side).findByText(/ERP · Все запросы, Расчёт: Скрыто → Только чтение/),
+      await within(side).findByText(
+        /Расчёт · Заявки в расчёте, Мои расчёты: Скрыто → Только чтение/,
+      ),
     ).toBeVisible();
     expect(within(side).getByText(/Поле «Цены поставщиков»: станет видно/)).toBeVisible();
   });
@@ -125,7 +129,7 @@ describe("Admin · Журнал аудита (экран целиком на MSW
     renderApp("/admin/audit");
 
     expect(await screen.findByRole("heading", { level: 1, name: "Нет доступа" })).toBeVisible();
-    expect(screen.queryByRole("link", { name: "Журнал аудита" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "История действий" })).toBeNull();
   });
 
   it("постранично: 50 записей на странице и переход на вторую", async () => {

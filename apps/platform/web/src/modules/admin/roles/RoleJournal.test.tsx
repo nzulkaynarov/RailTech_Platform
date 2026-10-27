@@ -40,7 +40,7 @@ describe("Ролевая матрица · вкладка «Журнал»", () 
     expect(text.indexOf("Изменена роль")).toBeLessThan(text.indexOf("Создана роль «Менеджер»"));
     expect(within(side).getByText(/24\.10\.2026 21:48 · Демо Админов/)).toBeVisible();
     expect(
-      within(side).getByText(/ERP · Все запросы, Расчёт: Скрыто → Только чтение/),
+      within(side).getByText(/Расчёт · Заявки в расчёте, Мои расчёты: Скрыто → Только чтение/),
     ).toBeVisible();
     expect(within(side).getByText(/Поле «Цены поставщиков»: станет видно/)).toBeVisible();
   });

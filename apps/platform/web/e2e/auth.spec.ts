@@ -14,12 +14,12 @@ test.describe("вход", () => {
 
   test("вход → /dashboard/queue, сессия переживает перезагрузку", async ({ page }) => {
     await loginAndWait(page, "director@demo.example");
-    await expect(page.getByRole("heading", { level: 1, name: "Моя очередь" })).toBeVisible();
-    await expect(page).toHaveTitle("Моя очередь — RailTech Platform");
+    await expect(page.getByRole("heading", { level: 1, name: "Мои задачи" })).toBeVisible();
+    await expect(page).toHaveTitle("Мои задачи — RailTech Platform");
 
     await page.reload();
     await expect(page).toHaveURL(/\/dashboard\/queue$/);
-    await expect(page.getByRole("heading", { level: 1, name: "Моя очередь" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Мои задачи" })).toBeVisible();
   });
 
   test("корень / ведёт в Мою очередь", async ({ page }) => {
@@ -76,7 +76,7 @@ test.describe("вход", () => {
     await page.getByLabel("Текущий пароль").fill(DEMO_PASSWORD);
     await page.getByRole("button", { name: "Сменить пароль" }).click();
     await expect(page).toHaveURL(/\/dashboard\/queue$/);
-    await expect(page.getByRole("heading", { level: 1, name: "Моя очередь" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Мои задачи" })).toBeVisible();
   });
 
   test("смена пароля: короткий пароль и несовпадение отклоняются на форме", async ({ page }) => {
@@ -102,7 +102,7 @@ test.describe("вход", () => {
     await page.getByLabel("Пароль").fill(DEMO_PASSWORD);
     await page.getByRole("button", { name: "Войти" }).click();
     await expect(page).toHaveURL(/\/crm\/leads\?panel=open$/);
-    await expect(page.getByRole("heading", { level: 1, name: "Все лиды" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Лиды" })).toBeVisible();
   });
 
   test("истёкшая сессия 401 SESSION_EXPIRED → экран входа с возвратом на тот же адрес", async ({
@@ -110,7 +110,7 @@ test.describe("вход", () => {
   }) => {
     await loginAndWait(page, "director@demo.example");
     await page.goto("/eds/inbox");
-    await expect(page.getByRole("heading", { level: 1, name: "Входящие" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Входящие письма" })).toBeVisible();
     await page.evaluate("window.localStorage.removeItem('rt-pf-mock-session')");
     await page.reload();
     await expect(page).toHaveURL(/\/login\?next=%2Feds%2Finbox$/);
@@ -135,13 +135,13 @@ test.describe("вход", () => {
 
     await openAvatarMenu(page);
     await page.getByRole("menuitem", { name: "O‘zbekcha" }).click();
-    await expect(page.getByRole("heading", { level: 1, name: "Mening navbatim" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Mening vazifalarim" })).toBeVisible();
     await page.reload();
-    await expect(page.getByRole("heading", { level: 1, name: "Mening navbatim" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Mening vazifalarim" })).toBeVisible();
 
     await openAvatarMenu(page);
     await page.getByRole("menuitem", { name: "English" }).click();
-    await expect(page.getByRole("heading", { level: 1, name: "My queue" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "My tasks" })).toBeVisible();
     await expect(page.locator("html")).toHaveAttribute("lang", "en");
   });
 });

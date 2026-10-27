@@ -30,9 +30,7 @@ describe("Admin · Внешние интеграции: обзор", () => {
     signIn("admin@demo.example");
     renderAt("/admin/integrations");
 
-    expect(
-      await screen.findByRole("heading", { level: 1, name: "Внешние интеграции" }),
-    ).toBeVisible();
+    expect(await screen.findByRole("heading", { level: 1, name: "Подключения" })).toBeVisible();
     const attention = await screen.findByRole("heading", { level: 2, name: "Требует внимания" });
     // «Требует внимания» стоит раньше карточек
     const cards = screen.getByRole("heading", { level: 2, name: "Сервисы" });
@@ -178,9 +176,7 @@ describe("Admin · Внешние интеграции: обзор", () => {
     signIn("director@demo.example");
     renderAt("/admin/integrations?card=erp&panel=open");
 
-    expect(
-      await screen.findByRole("heading", { level: 1, name: "Внешние интеграции" }),
-    ).toBeVisible();
+    expect(await screen.findByRole("heading", { level: 1, name: "Подключения" })).toBeVisible();
     expect(await screen.findByText("Только просмотр")).toBeVisible();
     expect(screen.queryByRole("button", { name: /^Проверить/ })).not.toBeInTheDocument();
     // «Расходы» и «Состояние системы» — отчёты: директору есть «Обновить»
@@ -253,8 +249,8 @@ describe("Admin · Внешние интеграции: доступ", () => {
     renderAt("/admin/integrations");
 
     expect(await screen.findByRole("heading", { level: 1, name: "Нет доступа" })).toBeVisible();
-    expect(screen.queryByRole("link", { name: "Admin" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Внешние интеграции" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Настройки" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Подключения" })).not.toBeInTheDocument();
   });
 
   it("у администратора пункт «Внешние интеграции» в подменю Admin", async () => {
@@ -262,7 +258,7 @@ describe("Admin · Внешние интеграции: доступ", () => {
     renderAt("/admin/integrations");
 
     const menu = await screen.findByRole("navigation", { name: "Разделы модуля" });
-    expect(within(menu).getByRole("link", { name: /Внешние интеграции/ })).toHaveAttribute(
+    expect(within(menu).getByRole("link", { name: /Подключения/ })).toHaveAttribute(
       "aria-current",
       "page",
     );

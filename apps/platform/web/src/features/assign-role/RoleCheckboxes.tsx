@@ -3,14 +3,14 @@ import { useId } from "react";
 import { useTranslation } from "react-i18next";
 
 import { rolesAccess } from "../../entities/role/roles";
-import { findModule } from "../../modules/registry";
+import { moduleName } from "../../modules/registry";
 import type { Role } from "../../shared/api/generated/model";
 import "./assign-role.css";
 
 /** Модули роли подписью под её названием — из её матрицы (данные роли, а не код). */
-function moduleNames(role: Role): string {
+function moduleNames(t: (key: string) => string, role: Role): string {
   return rolesAccess([role])
-    .modules.map((code) => findModule(code)?.name ?? code)
+    .modules.map((code) => moduleName(t, code))
     .join(", ");
 }
 
@@ -85,7 +85,7 @@ export function RoleCheckboxes({
                   ) : null}
                 </span>
                 <span className="pf-role-modules">
-                  {moduleNames(role) || t("modules:admin.roles.noModules")}
+                  {moduleNames(t, role) || t("modules:admin.roles.noModules")}
                 </span>
               </Checkbox>
             </li>

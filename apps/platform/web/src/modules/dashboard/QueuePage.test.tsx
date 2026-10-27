@@ -23,7 +23,7 @@ afterEach(() => {
 });
 
 async function main() {
-  await screen.findByRole("heading", { level: 1, name: "Моя очередь" });
+  await screen.findByRole("heading", { level: 1, name: "Мои задачи" });
   return screen.getByRole("main");
 }
 
@@ -76,7 +76,7 @@ describe("Dashboard · Моя очередь", () => {
         "Новые письма приходят из CRM, черновики КП — из ERP, служебки — от сотрудников.",
       ),
     ).toBeVisible();
-    expect(within(page).getByRole("link", { name: "Все проекты" })).toBeVisible();
+    expect(within(page).getByRole("link", { name: "Проекты" })).toBeVisible();
     expect(within(page).getByText(/0 решений/)).toBeVisible();
   });
 
