@@ -6,6 +6,7 @@ import { crm } from "./crm/module";
 import { dashboard } from "./dashboard/module";
 import { eds } from "./eds/module";
 import { erp } from "./erp/module";
+import { isDocNumber } from "../shared/lib/docNumber";
 import type { ModuleConfig, SectionConfig } from "./types";
 
 /** Шесть модулей в порядке рейла (SPEC-v3 §6.1). Конфигурация без кода страниц: страницы модулей грузятся лениво. */
@@ -65,6 +66,14 @@ export function matchSection(pathname: string, search = ""): SectionMatch | unde
       const id = hit.params["id"] ?? hit.params["userId"];
       return id === undefined ? { module, section } : { module, section, objectId: decoded(id) };
     }
+  }
+  // Номер документа со «/» без кодирования (`/eds/inbox/ВХ-104/26`): react-router видит два сегмента, но это одна карточка.
+  for (const { module, section } of all) {
+    if (!section.detail) continue;
+    const prefix = section.detail.replace(/:[A-Za-z]+$/, "");
+    if (prefix === section.detail || !pathname.startsWith(prefix)) continue;
+    const rest = decoded(pathname.slice(prefix.length));
+    if (rest.includes("/") && isDocNumber(rest)) return { module, section, objectId: rest };
   }
   return undefined;
 }
