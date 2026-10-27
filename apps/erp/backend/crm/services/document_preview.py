@@ -101,7 +101,9 @@ def _frame(kind_code: str, company, brand: dict, now: datetime.datetime) -> tupl
     from crm.templatetags.document_format import money
 
     if kind_code == "CONTRACT":
-        blocks = blocks_module.contract_block_values(contract, items, totals, _CCY, seller=seller, seller_profile=profile)
+        blocks = blocks_module.contract_block_values(
+            contract, items, totals, _CCY, seller=seller, seller_profile=profile
+        )
         scalars = {
             "doc.number": contract.number,
             "doc.date": date,

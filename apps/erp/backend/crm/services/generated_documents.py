@@ -365,7 +365,6 @@ def preview_template(company, user: CustomUser, *, body_html: str, kind_code: st
     # Структурные блоки юридических видов (E1b) собираются только при печати настоящего
     # документа — в превью на месте токена встаёт подписанная заглушка, а не предупреждение.
     from .document_blocks import preview_block_stubs, render_document_body
-
     from .document_preview import FRAMES, render_kind_preview
 
     stubs = preview_block_stubs()
