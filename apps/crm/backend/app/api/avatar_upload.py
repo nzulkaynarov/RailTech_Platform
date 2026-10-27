@@ -6,7 +6,8 @@
 
 from collections.abc import AsyncGenerator
 
-from fastapi import Request, UploadFile
+from fastapi import Request
+from starlette.datastructures import UploadFile
 from starlette.formparsers import MultiPartException, MultiPartParser
 
 from app.domain.errors import PayloadTooLargeError, Reason, ValidationFailedError
@@ -39,6 +40,12 @@ async def read_avatar(request: Request) -> tuple[bytes, str | None]:
     declared = request.headers.get("content-length", "")
     if declared.isdigit() and int(declared) > BODY_LIMIT:
         raise _too_large()
+    if not request.headers.get("content-type", "").lower().startswith("multipart/form-data"):
+        raise ValidationFailedError(
+            "multipart/form-data is required",
+            reason=Reason.AVATAR_UNSUPPORTED_TYPE,
+            field="avatar",
+        )
     try:
         form = await MultiPartParser(
             request.headers, _capped(request), max_files=1, max_fields=1
@@ -49,11 +56,13 @@ async def read_avatar(request: Request) -> tuple[bytes, str | None]:
             reason=Reason.AVATAR_UNSUPPORTED_TYPE,
             field="avatar",
         ) from exc
-    file = form.get("avatar")
-    if not isinstance(file, UploadFile):
-        raise ValidationFailedError(
-            "the field avatar is required", reason=Reason.AVATAR_EMPTY, field="avatar"
-        )
-    data = await file.read(AVATAR_MAX_BYTES + 1)
-    await file.close()
-    return data, file.content_type
+    try:
+        file = form.get("avatar")
+        if not isinstance(file, UploadFile):
+            raise ValidationFailedError(
+                "the field avatar is required", reason=Reason.AVATAR_EMPTY, field="avatar"
+            )
+        data = await file.read(AVATAR_MAX_BYTES + 1)
+        return data, file.content_type
+    finally:
+        await form.close()  # временные файлы разбора закрываются при любом исходе
