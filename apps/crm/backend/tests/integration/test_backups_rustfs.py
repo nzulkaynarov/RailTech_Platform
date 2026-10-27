@@ -134,16 +134,15 @@ async def test_no_copy_for_a_day_opens_one_incident_and_fresh_copy_closes_it(
     metrics = failed["service"]["metrics"]
     assert metrics["backup_source"] == "rustfs"
     assert metrics["last_copy_at"]
-    check(client, auth)  # повтор — тот же инцидент, без второго оповещения
-    assert [k for k, _ in alerts.sent] == ["backup"]
-    assert alerts.sent[0][1].subject.startswith("⚠️ Сбой:")
+    check(client, auth)  # повтор — тот же инцидент; «Сломано» меньше 15 минут — без оповещения
+    assert alerts.sent == []
 
     await upload_backup(storage, bucket, 1)
     service._cached = None
     recovered = check(client, auth)
     assert recovered["service"]["status"] == "ok"
     assert recovered["service"]["incident"] is None
-    assert [a.subject.split(":")[0] for _, a in alerts.sent] == ["⚠️ Сбой", "✅ Восстановлено"]
+    assert alerts.sent == []  # о сбое не сообщали — «восстановлено» не нужно
 
 
 async def test_missing_bucket_is_explained(
