@@ -228,8 +228,9 @@ test.describe("Обращения к администратору", () => {
     await expect(bell.getByText(/Ответ на обращение ОБР-0001/)).toBeVisible();
     await bell.getByRole("link", { name: /Ответ на обращение ОБР-0001/ }).click();
     await expect(page).toHaveURL(/\/help\/requests\/.+/);
-    await expect(page.getByText("Доступ выдан: выйдите и войдите заново")).toBeVisible();
-    await expect(page.getByText("Решено").first()).toBeVisible();
+    const answers = page.getByRole("region", { name: "Ответы администратора" });
+    await expect(answers.getByText("Доступ выдан: выйдите и войдите заново")).toBeVisible();
+    await expect(page.getByText("Решено", { exact: true }).first()).toBeVisible();
     await shoot(page, "my-request", async () => {
       await expect(page.getByRole("heading", { level: 1, name: "Помощь" })).toBeVisible();
     });
@@ -308,7 +309,9 @@ test.describe("Первый вход", () => {
     const second = await page.context().newPage();
     await second.goto("/dashboard/queue");
     await expect(second.getByRole("dialog", { name: /Добро пожаловать/ })).toBeVisible();
+    const saved = second.waitForResponse((r) => r.url().includes("/me/onboarding"));
     await second.getByRole("button", { name: "Больше не показывать" }).click();
+    await saved;
     await expect(second.getByRole("dialog", { name: /Добро пожаловать/ })).toBeHidden();
     await second.close();
 
