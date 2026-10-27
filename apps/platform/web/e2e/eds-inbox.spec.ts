@@ -22,7 +22,7 @@ async function expectNoViolations(page: Page, context: string): Promise<void> {
 
 async function openInbox(page: Page, query = ""): Promise<void> {
   await spaGoto(page, `/eds/inbox${query}`);
-  await expect(page.getByRole("heading", { level: 1, name: "Входящие" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Входящие письма" })).toBeVisible();
 }
 
 function row(page: Page, number: string) {
@@ -117,9 +117,7 @@ test.describe("Входящие письма: директор", () => {
     await expect(row(page, "ВХ-104/26").getByText("Резолюция наложена")).toBeVisible();
   });
 
-  test("ошибка резолюции словами; введённое не теряется и возвращается после перезагрузки", async ({
-    page,
-  }) => {
+  test("ошибка резолюции словами; введённое в форме не теряется", async ({ page }) => {
     await loginAndWait(page, "director@demo.example");
     await spaGoto(page, "/eds/inbox/%D0%92%D0%A5-105%2F26");
     const form = page.locator(PANEL).getByRole("form", { name: "Резолюция директора" });
@@ -133,9 +131,7 @@ test.describe("Входящие письма: директор", () => {
     await form.getByRole("button", { name: SUBMIT }).click();
 
     await expect(
-      form.getByText(
-        "Резолюция не сохранена: письмо уже не ждёт резолюции, обновите карточку. Текст сохранён в черновике.",
-      ),
+      form.getByText("Резолюция не сохранена: письмо уже не ждёт резолюции, обновите карточку."),
     ).toBeVisible();
     await expect(form.getByLabel("Текст резолюции")).toHaveValue("Расчёт нужен срочно.");
     await settledScreenshot(page, "error");

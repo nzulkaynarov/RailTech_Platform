@@ -12,7 +12,7 @@ async function openInbox(email: string, path = "/eds/inbox") {
   const view = renderAt(path);
   // список — заголовок раздела из `modules`; карточка — «Письмо ВХ-…», его проверяет сам тест
   if (path === "/eds/inbox") {
-    expect(await screen.findByRole("heading", { level: 1, name: "Входящие" })).toBeVisible();
+    expect(await screen.findByRole("heading", { level: 1, name: "Входящие письма" })).toBeVisible();
   }
   return view;
 }
