@@ -1,5 +1,6 @@
 """Admin · Компания: реквизиты, бланк и бренд, нумерация, условия КП, статьи расхода, шаблоны,
-справочники, категории и платформенные настройки своей компании в ERP (контракт 0.8.0, tag `admin`).
+справочники, категории, платформенные настройки и курс USD→UZS своей компании в ERP (контракт 0.8.0,
+0.13.0, tag `admin`).
 
 BFF не решает: данные и права на операции — в ERP (`settings.edit`, `settings.charge_templates`,
 администратор платформы для решений по запросам на категории и ставки НДС). BFF проверяет раздел
@@ -53,6 +54,8 @@ from app.schemas_company import (
     EmailTemplateList,
     EmailTemplatePreview,
     EmailTemplateUpdate,
+    FxRateIn,
+    FxRateOverview,
     NumberingPreview,
     NumberingPreviewIn,
     NumberingScheme,
@@ -78,6 +81,7 @@ from app.schemas_company import (
     to_company,
     to_document_template,
     to_email_template,
+    to_fx_overview,
     to_numbering,
     to_numbering_preview,
     to_placeholders,
@@ -735,3 +739,36 @@ async def update_platform_settings(
 ) -> PlatformSettings:
     raw = await _erp(authed).data("PATCH", "system-settings/", json=body.sent())
     return to_platform_settings(raw)
+
+
+# --- курс USD→UZS: ручной ввод и журнал (W13C-F6) ----------------------------------------------
+
+FX_JOURNAL_LIMIT = 20
+
+
+async def _fx_overview(erp: ErpCompany) -> FxRateOverview:
+    current = await erp.data("GET", "exchange-rates/current/", params={"currency": "USD"})
+    journal = await erp.data(
+        "GET", "exchange-rates/journal/", params={"currency": "USD", "limit": FX_JOURNAL_LIMIT}
+    )
+    return to_fx_overview(
+        current if isinstance(current, dict) else {},
+        [row for row in journal if isinstance(row, dict)] if isinstance(journal, list) else [],
+    )
+
+
+@router.get("/admin/company/fx-rate", response_model=FxRateOverview, operation_id="getFxRate")
+async def get_fx_rate(authed: Reader) -> FxRateOverview:
+    return await _fx_overview(_erp(authed))
+
+
+@router.post(
+    "/admin/company/fx-rate",
+    response_model=FxRateOverview,
+    status_code=status.HTTP_201_CREATED,
+    operation_id="createFxRate",
+)
+async def create_fx_rate(body: FxRateIn, authed: Writer) -> FxRateOverview:
+    erp = _erp(authed)
+    await erp.request("POST", "exchange-rates/manual/", json=body.to_erp())
+    return await _fx_overview(erp)

@@ -89,3 +89,21 @@ class BotRuntimeState(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
+
+
+class IdentityCatalogState(Base):
+    """Отпечаток каталога, по которому CRM последний раз опубликовала снимки сотрудников на шину.
+
+    Одна строка на каталог (`key = 'eds_permissions'`): права EDS в `identity.user.*` меняются без
+    события, когда меняется каталог `platform-rbac.yaml`; смена отпечатка = «переопубликовать»
+    (`services/identity_catalog.py`). Не `settings`: та таблица валидирует ключи и отдаёт их в API.
+    """
+
+    __tablename__ = "identity_catalog_state"
+
+    key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    fingerprint: Mapped[str] = mapped_column(String(64), nullable=False)
+    published_users: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    published_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )

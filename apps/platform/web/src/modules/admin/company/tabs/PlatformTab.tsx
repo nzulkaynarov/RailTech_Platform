@@ -12,12 +12,13 @@ import { useFormat } from "../../../../shared/lib/useFormat";
 import { DefinitionList } from "../../../../shared/ui/DefinitionList";
 import { QueryGate, SaveBlock, TabHeader, ReadOnlyFence } from "../common";
 import { errorFields } from "../errors";
+import { FxRateSection } from "./FxRateSection";
 
 interface Values {
   vat_rate: string;
 }
 
-/** Платформенные настройки (ERP `system-settings`): ставка НДС — правится, курс USD→UZS — только чтение. */
+/** Платформенные настройки ERP: ставка НДС (`system-settings`) и курс USD→UZS с ручным вводом на дату (`FxRateSection`). */
 export function PlatformTab() {
   const { t } = useTranslation("company");
   const query = useGetPlatformSettings();
@@ -29,6 +30,7 @@ export function PlatformTab() {
           {(settings) => <PlatformForm key={JSON.stringify(settings)} settings={settings} />}
         </QueryGate>
       </ReadOnlyFence>
+      <FxRateSection />
     </div>
   );
 }
@@ -36,7 +38,7 @@ export function PlatformTab() {
 function PlatformForm({ settings }: { settings: PlatformSettings }) {
   const { t } = useTranslation("company");
   const { message } = App.useApp();
-  const { number, date } = useFormat();
+  const { date } = useFormat();
   const queryClient = useQueryClient();
   const [form] = Form.useForm<Values>();
   const watched = Form.useWatch("vat_rate", form) as string | undefined;
@@ -81,20 +83,8 @@ function PlatformForm({ settings }: { settings: PlatformSettings }) {
         </Form.Item>
       </div>
       <DefinitionList
-        items={[
-          {
-            label: t("platform.rate"),
-            value:
-              settings.exchange_rate_usd_uzs === null
-                ? null
-                : `1 USD = ${number(settings.exchange_rate_usd_uzs, { fractionDigits: 2 })} ${t("platform.currencyUzs")}`,
-          },
-          { label: t("platform.updated"), value: date(settings.updated_at) },
-        ]}
+        items={[{ label: t("platform.updated"), value: date(settings.updated_at) }]}
       />
-      <p className="pf-co-hint" style={{ margin: "8px 0 16px" }}>
-        {t("platform.rateHint")}
-      </p>
       <SaveBlock
         label={t("platform.save")}
         loading={update.isPending}

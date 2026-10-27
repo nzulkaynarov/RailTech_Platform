@@ -477,6 +477,49 @@ test.describe("Компания: категории, запросы, платф�
   });
 });
 
+test.describe("Курс USD → UZS: ручной ввод (W13C-F6)", () => {
+  test.skip(({ isMobile }) => isMobile, "ширины задаёт сам сценарий");
+
+  for (const width of [1440, 390] as const) {
+    test(`ввод курса, ошибка у поля, журнал на ${String(width)}: axe без нарушений, снимки`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
+      await loginAndWait(page, "admin@demo.example");
+      await openCompany(page, "platform");
+      const section = page.getByRole("region", { name: "Курс USD → UZS" });
+      await expect(section.getByText(/1 USD = 12\s650,50 сум/)).toBeVisible();
+      await expect(section.getByText("Автозагрузка (ЦБ РУз)")).toBeVisible();
+      await expect(section.getByRole("region", { name: "Журнал курса" })).toBeVisible();
+      await expectNoViolations(page, `fx default ${String(width)}`);
+      await settledScreenshot(page, "fx-rate-default");
+
+      // ошибка у поля: ноль не курс, на сервер не уходит
+      await section.getByLabel("Курс, сум за 1 USD").fill("0");
+      await section.getByRole("button", { name: "Сохранить курс" }).click();
+      await expect(section.getByText(/Курс — число больше нуля/)).toBeVisible();
+      await expectNoViolations(page, `fx error ${String(width)}`);
+      await settledScreenshot(page, "fx-rate-error");
+
+      // ввод запятой: курс, источник и журнал обновились
+      await section.getByLabel("Курс, сум за 1 USD").fill("12700,5");
+      await section.getByRole("button", { name: "Сохранить курс" }).click();
+      await expect(toast(page, "Курс сохранён")).toBeVisible();
+      await expect(section.getByText(/1 USD = 12\s700,50 сум/)).toBeVisible();
+      await expect(
+        section.locator(".ant-tag", { hasText: "Введён вручную" }).first(),
+      ).toBeVisible();
+      await expect(
+        section.getByRole("row", { name: /12\s700,50/ }).getByText("Ввод вручную"),
+      ).toBeVisible();
+      await expectNoViolations(page, `fx saved ${String(width)}`);
+      await settledScreenshot(page, "fx-rate-saved");
+      await section.getByRole("region", { name: "Журнал курса" }).scrollIntoViewIfNeeded();
+      await settledScreenshot(page, "fx-rate-journal");
+    });
+  }
+});
+
 test.describe("Компания: axe и снимки", () => {
   test.skip(({ isMobile }) => isMobile, "ширины задаёт сам сценарий");
 

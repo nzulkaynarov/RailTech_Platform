@@ -116,6 +116,14 @@
  * `admin`; в Admin новый пункт «Настройки бота». Нового кода ошибки нет: ошибки формата документа и пути невалидных полей настроек
  * — `VALIDATION_FAILED` с `details.reason`, `details.rule`, `details.messages`, `details.paths`.
  *
+ * **0.13.0 (W13C-F6) — Admin · Компания: ручной ввод курса USD→UZS.** Чисто добавляющее изменение: `GET /admin/company/fx-rate`
+ * (текущий курс на сегодня с датой и источником «авто»/«вручную», допустимый возраст курса и журнал последних записей: ручные
+ * вводы и случаи «автокурс ЦБ не применён») и `POST /admin/company/fx-rate` (курс на дату вручную, на случай, если автозагрузка
+ * `erp-beat` не сработала). Раздел `company.settings`: чтение — `GET`, ввод — полный (в ERP — право `settings.edit`). Курс на дату
+ * заменяет и курс ЦБ, и прежний ручной (прежнее значение остаётся в журнале); автозагрузка ручной курс на ту же дату не
+ * перетирает. Отказ проверки — 422 `VALIDATION_FAILED` с `details.reason` (`fx_rate_invalid`, `fx_rate_date_invalid`,
+ * `fx_rate_date_in_future`, `fx_rate_date_too_old`) и `details.fields` (`rate_to_uzs` или `rate_date`).
+ *
  * **0.12.0 (W13-A6) — Admin · Оргструктура, Журнал аудита, профиль.** Чисто добавляющее изменение: `POST /admin/users/{id}/reset-password/email`
  * (сброс пароля сотрудника с письмом; себе — 409 `CONFLICT` с `details.reason = self_reset`; почта не подключена — 409
  * `NOT_CONFIGURED`), `GET /admin/audit` (журнал аудита CRM «кто, что, когда» с фильтрами по автору, действию, объекту и периоду и
@@ -232,6 +240,8 @@ import type {
   ExternalServiceDetail,
   ExternalServiceList,
   ForbiddenResponse,
+  FxRateIn,
+  FxRateOverview,
   GetAiSpendReportParams,
   GetQueueCardsParams,
   GetQueueParams,
@@ -14284,6 +14294,230 @@ export const useUpdatePlatformSettings = <
   TContext
 > => {
   return useMutation(getUpdatePlatformSettingsMutationOptions(options), queryClient);
+};
+
+export const getGetFxRateUrl = () => {
+  return `/api/v1/admin/company/fx-rate`;
+};
+
+/**
+ * Раздел `company.settings` — чтение. Журнал — последние 20 записей, новые первыми.
+ * @summary Курс USD→UZS: текущий и журнал ручных вводов
+ */
+export const getFxRate = async (options?: Parameters<typeof http>[1]): Promise<FxRateOverview> => {
+  return http<FxRateOverview>(getGetFxRateUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetFxRateQueryKey = () => {
+  return [`/api/v1/admin/company/fx-rate`] as const;
+};
+
+export const getGetFxRateQueryOptions = <
+  TData = Awaited<ReturnType<typeof getFxRate>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getFxRate>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetFxRateQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getFxRate>>> = ({ signal }) =>
+    getFxRate({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getFxRate>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetFxRateQueryResult = NonNullable<Awaited<ReturnType<typeof getFxRate>>>;
+export type GetFxRateQueryError = ErrorType<SessionExpiredResponse | ForbiddenResponse>;
+
+export function useGetFxRate<
+  TData = Awaited<ReturnType<typeof getFxRate>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getFxRate>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getFxRate>>,
+          TError,
+          Awaited<ReturnType<typeof getFxRate>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetFxRate<
+  TData = Awaited<ReturnType<typeof getFxRate>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getFxRate>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getFxRate>>,
+          TError,
+          Awaited<ReturnType<typeof getFxRate>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetFxRate<
+  TData = Awaited<ReturnType<typeof getFxRate>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getFxRate>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Курс USD→UZS: текущий и журнал ручных вводов
+ */
+
+export function useGetFxRate<
+  TData = Awaited<ReturnType<typeof getFxRate>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getFxRate>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetFxRateQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getCreateFxRateUrl = () => {
+  return `/api/v1/admin/company/fx-rate`;
+};
+
+/**
+ * Раздел `company.settings` — полный; в ERP — право `settings.edit` или администратор, иначе 403 `FORBIDDEN` (`source = erp`).
+ * Строка на дату заменяется (курс ЦБ или прежний ручной), прежнее значение остаётся в журнале. Повтор того же значения ничего
+ * не пишет. Дата — не позже сегодня и не старше 366 дней; курс — больше 0, не более 6 знаков после запятой, меньше миллиарда.
+ * @summary Ввести курс USD→UZS на дату вручную
+ */
+export const createFxRate = async (
+  fxRateIn: FxRateIn,
+  options?: Parameters<typeof http>[1],
+): Promise<FxRateOverview> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<FxRateOverview>(getCreateFxRateUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(fxRateIn),
+  });
+};
+
+export const getCreateFxRateMutationKey = () => ["createFxRate"] as const;
+
+export const getCreateFxRateMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createFxRate>>,
+    TError,
+    CreateFxRateMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createFxRate>>,
+  TError,
+  CreateFxRateMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateFxRateMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createFxRate>>,
+    CreateFxRateMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createFxRate(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateFxRateMutationResult = NonNullable<Awaited<ReturnType<typeof createFxRate>>>;
+export type CreateFxRateMutationBody = FxRateIn;
+export type CreateFxRateMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse
+>;
+export type CreateFxRateMutationVariables = { data: FxRateIn };
+
+/**
+ * @summary Ввести курс USD→UZS на дату вручную
+ */
+export const useCreateFxRate = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createFxRate>>,
+      TError,
+      CreateFxRateMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createFxRate>>,
+  TError,
+  CreateFxRateMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateFxRateMutationOptions(options), queryClient);
 };
 
 export const getListKbDocumentsUrl = (params?: ListKbDocumentsParams) => {

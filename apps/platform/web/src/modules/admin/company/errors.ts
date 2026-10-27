@@ -17,6 +17,10 @@ const REASONS = new Set([
   "field_not_in_reference",
   "reason_required",
   "category_required",
+  "fx_rate_invalid",
+  "fx_rate_date_invalid",
+  "fx_rate_date_in_future",
+  "fx_rate_date_too_old",
 ]);
 
 /**

@@ -88,7 +88,11 @@
       "multipart_required": "Choose a logo file.",
       "field_not_in_reference": "This reference list has no such field.",
       "reason_required": "Enter the reason for rejection.",
-      "category_required": "Choose a category."
+      "category_required": "Choose a category.",
+      "fx_rate_invalid": "The rate must be a number above zero with at most 6 decimal places.",
+      "fx_rate_date_invalid": "Enter the rate date.",
+      "fx_rate_date_in_future": "The rate date cannot be later than today.",
+      "fx_rate_date_too_old": "A rate older than a year cannot be entered — check the year."
     }
   },
   "details": {
@@ -478,18 +482,55 @@
   },
   "platform": {
     "title": "Platform settings",
-    "hint": "ERP-wide settings for the whole platform: the VAT rate and the exchange rate.",
+    "hint": "ERP settings shared by the whole platform: the VAT rate and the USD → UZS exchange rate.",
     "vat": "VAT rate, %",
     "vatHint": "From 0 to 100.",
     "invalidVat": "The rate is a number from 0 to 100",
-    "rate": "USD → UZS rate",
     "currencyUzs": "UZS",
     "updated": "Settings updated",
-    "rateHint": "The rate is kept by ERP and is read-only here.",
     "save": "Save VAT rate",
     "consequence": {
       "new": "New calculations and documents use this rate.",
       "admin": "The platform administrator changes the rate; ERP refuses other roles."
+    },
+    "fx": {
+      "title": "USD → UZS exchange rate",
+      "current": "Current rate",
+      "date": "Rate date",
+      "source": "Source",
+      "sources": {
+        "auto": "Automatic (Central Bank of Uzbekistan)",
+        "manual": "Entered manually"
+      },
+      "missing": "There is no fresh rate: the automatic load gave no rate in the last {{days}} days. Dollar calculations are unavailable until there is one. Enter the rate manually.",
+      "formLabel": "Manual rate entry",
+      "dateField": "Rate date",
+      "dateHint": "Not later than today and not older than a year.",
+      "rateField": "Rate, UZS per 1 USD",
+      "rateHint": "A number above zero with up to 6 decimal places. For example, 12650.5.",
+      "save": "Save rate",
+      "saved": "Rate saved",
+      "consequence": {
+        "replace": "The rate for the chosen date replaces the previous one (automatic or entered earlier); the previous value stays in the journal.",
+        "quotes": "New calculations use the rate by date; rates in quotes already created do not change.",
+        "older": "A rate for a date earlier than the newest rate on record does not change the current rate — it stays in the journal and is used for calculations on that date."
+      },
+      "journal": {
+        "title": "Rate journal",
+        "date": "Rate date",
+        "rate": "Rate, UZS",
+        "event": "Event",
+        "manual": "Entered manually",
+        "autoSkipped": "Automatic rate not applied",
+        "before": "Was",
+        "none": "No rate before",
+        "was": "{{rate}} ({{source}})",
+        "who": "Who",
+        "system": "Automatic load",
+        "when": "When",
+        "emptyTitle": "No manual entries yet",
+        "emptyText": "Rates entered manually appear here, along with cases where the automatic load left a manual rate untouched."
+      }
     }
   }
 }

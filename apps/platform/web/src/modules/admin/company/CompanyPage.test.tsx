@@ -12,6 +12,7 @@ import {
 import { readEmployees, writeEmployees } from "../../../mocks/fixtures/employees";
 import { readRoles, writeRoles } from "../../../mocks/fixtures/roles";
 import { endSession } from "../../../mocks/mockSession";
+import { companyDayKey } from "../../../shared/lib/dates";
 import i18n from "../../../shared/i18n";
 import { renderApp, signInAs } from "../../../test/renderApp";
 import { server } from "../../../test/server";
@@ -679,11 +680,11 @@ describe("Категории и запросы", () => {
 });
 
 describe("Платформенные настройки", () => {
-  it("администратор меняет ставку НДС; курс только для чтения", async () => {
+  it("администратор меняет ставку НДС", async () => {
     await openTab("platform", "admin@demo.example");
     const vat = await screen.findByLabelText("Ставка НДС, %");
     expect(vat).toHaveDisplayValue(/^12/);
-    expect(screen.getByText(/1 USD = 12\s650,50 сум/)).toBeInTheDocument();
+    expect(await screen.findByText(/1 USD = 12\s650,50 сум/)).toBeInTheDocument();
     fireEvent.change(vat, { target: { value: "15" } });
     fireEvent.click(await button("Сохранить ставку НДС"));
     expect(await screen.findByText("Сохранено")).toBeInTheDocument();
@@ -697,5 +698,156 @@ describe("Платформенные настройки", () => {
     fireEvent.click(await button("Сохранить ставку НДС"));
     expect(await screen.findByText(/ERP не разрешила действие/)).toBeInTheDocument();
     expect(readCompanyMock().platform.vat_rate).toBe("12.00");
+  });
+});
+
+describe("Курс USD → UZS: ручной ввод", () => {
+  const today = () => companyDayKey(new Date()) ?? "";
+
+  function readerOfSettings() {
+    writeRoles([
+      ...readRoles(),
+      {
+        id: "50",
+        name: "Читатель настроек",
+        description: "",
+        system: false,
+        version: 1,
+        access: { "dashboard.queue": "full", "company.settings": "read" },
+        restricted_fields: [],
+        updated_at: "2026-10-26T00:00:00.000Z",
+      },
+    ]);
+    writeEmployees(
+      readEmployees().map((e) => (e.id === "u-demo-manager" ? { ...e, role_ids: ["50"] } : e)),
+    );
+  }
+
+  it("показывает текущий курс, его дату и источник и журнал", async () => {
+    await openTab("platform", "admin@demo.example");
+    const section = within(await screen.findByRole("region", { name: "Курс USD → UZS" }));
+    expect(await section.findByText(/1 USD = 12\s650,50 сум/)).toBeInTheDocument();
+    expect(section.getByText("26.10.2026")).toBeInTheDocument();
+    expect(section.getByText("Автозагрузка (ЦБ РУз)")).toBeInTheDocument();
+    const journal = within(section.getByRole("region", { name: "Журнал курса" }));
+    expect(journal.getByText("Ввод вручную")).toBeInTheDocument();
+    expect(journal.getByText("Автокурс ЦБ не применён")).toBeInTheDocument();
+    expect(journal.getByText("Демо Директоров")).toBeInTheDocument();
+    expect(journal.getByText("Автозагрузка")).toBeInTheDocument();
+    expect(screen.getByLabelText("Дата курса")).toHaveValue(today());
+  });
+
+  it("вводит курс запятой: курс, источник и журнал обновляются, поле очищается", async () => {
+    await openTab("platform", "admin@demo.example");
+    const rate = await screen.findByLabelText("Курс, сум за 1 USD");
+    fireEvent.change(rate, { target: { value: "12700,5" } });
+    fireEvent.click(screen.getByRole("button", { name: "Сохранить курс" }));
+    expect(await screen.findByText("Курс сохранён")).toBeInTheDocument();
+    expect(await screen.findByText(/1 USD = 12\s700,50 сум/)).toBeInTheDocument();
+    expect(screen.getByText("Введён вручную", { selector: ".ant-tag" })).toBeInTheDocument();
+    expect(rate).toHaveValue("");
+    const saved = readCompanyMock().fx;
+    expect(saved.current).toEqual({
+      rate_to_uzs: "12700.5",
+      rate_date: today(),
+      source: "manual",
+    });
+    expect(saved.journal[0]).toMatchObject({ kind: "manual", rate_to_uzs: "12700.5" });
+    expect(readCompanyMock().platform.exchange_rate_usd_uzs).toBe("12700.5");
+  });
+
+  it.each(["0", "-5", "abc", "12700,1234567"])(
+    "курс «%s» не уходит на сервер: ошибка у поля словами",
+    async (value) => {
+      await openTab("platform", "admin@demo.example");
+      const rate = await screen.findByLabelText("Курс, сум за 1 USD");
+      const before = readCompanyMock().fx.journal.length;
+      fireEvent.change(rate, { target: { value } });
+      fireEvent.click(screen.getByRole("button", { name: "Сохранить курс" }));
+      expect(await screen.findByText(/Курс — число больше нуля/)).toBeInTheDocument();
+      expect(rate).toHaveAttribute("aria-invalid", "true");
+      expect(readCompanyMock().fx.journal).toHaveLength(before);
+    },
+  );
+
+  it("дата позже сегодняшней — ошибка у поля даты, запись не создаётся", async () => {
+    await openTab("platform", "admin@demo.example");
+    const before = readCompanyMock().fx.journal.length;
+    fireEvent.change(await screen.findByLabelText("Дата курса"), {
+      target: { value: "2099-01-01" },
+    });
+    fireEvent.change(screen.getByLabelText("Курс, сум за 1 USD"), { target: { value: "12700" } });
+    fireEvent.click(screen.getByRole("button", { name: "Сохранить курс" }));
+    expect(
+      await screen.findByText("Дата курса не может быть позже сегодняшней."),
+    ).toBeInTheDocument();
+    expect(readCompanyMock().fx.journal).toHaveLength(before);
+  });
+
+  it("отказ сервера по полю показывается у этого поля", async () => {
+    server.use(
+      http.post("*/admin/company/fx-rate", () =>
+        HttpResponse.json(
+          {
+            code: "VALIDATION_FAILED",
+            message: "Проверьте заполнение полей.",
+            source: "erp",
+            details: { fields: ["rate_date"], reason: "fx_rate_date_too_old" },
+          },
+          { status: 422 },
+        ),
+      ),
+    );
+    await openTab("platform", "admin@demo.example");
+    fireEvent.change(await screen.findByLabelText("Курс, сум за 1 USD"), {
+      target: { value: "12700" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Сохранить курс" }));
+    expect(await screen.findByText(/старше года не вводится/)).toBeInTheDocument();
+    expect(screen.getByLabelText("Дата курса")).toHaveAttribute("aria-invalid", "true");
+  });
+
+  it("отказ ERP по правам — словами над кнопкой, курс прежний", async () => {
+    server.use(
+      http.post("*/admin/company/fx-rate", () =>
+        HttpResponse.json({ code: "FORBIDDEN", message: "нет", source: "erp" }, { status: 403 }),
+      ),
+    );
+    await openTab("platform", "admin@demo.example");
+    fireEvent.change(await screen.findByLabelText("Курс, сум за 1 USD"), {
+      target: { value: "12700" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Сохранить курс" }));
+    expect(await screen.findByText(/ERP не разрешила действие/)).toBeInTheDocument();
+    expect(await screen.findByText(/1 USD = 12\s650,50 сум/)).toBeInTheDocument();
+  });
+
+  it("нет свежего курса — предупреждение со сроком и приглашением ввести курс", async () => {
+    updateCompanyMock((state) => {
+      state.fx.current = null;
+    });
+    await openTab("platform", "admin@demo.example");
+    expect(await screen.findByText(/Свежего курса нет/)).toBeInTheDocument();
+    expect(screen.getByText(/за последние 7 дн/)).toBeInTheDocument();
+  });
+
+  it("журнал пуст — слово и пояснение, а не пустая таблица", async () => {
+    updateCompanyMock((state) => {
+      state.fx.journal = [];
+    });
+    await openTab("platform", "admin@demo.example");
+    expect(
+      await screen.findByRole("heading", { name: "Ручных вводов пока не было" }),
+    ).toBeInTheDocument();
+  });
+
+  it("доступ «чтение»: курс и журнал видны, поля и «Сохранить курс» заблокированы", async () => {
+    readerOfSettings();
+    await openTab("platform", "manager@demo.example");
+    expect(await screen.findByText(/1 USD = 12\s650,50 сум/)).toBeInTheDocument();
+    expect(screen.getByLabelText("Дата курса")).toBeDisabled();
+    expect(screen.getByLabelText("Курс, сум за 1 USD")).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Сохранить курс" })).toBeDisabled();
+    expect(screen.getByText("Ввод вручную")).toBeInTheDocument();
   });
 });

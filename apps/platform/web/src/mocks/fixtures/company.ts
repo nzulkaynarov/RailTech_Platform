@@ -7,6 +7,8 @@ import type {
   CompanyProfile,
   DocumentTemplate,
   EmailTemplate,
+  FxRate,
+  FxRateJournalEntry,
   NumberingScheme,
   PlatformSettings,
   QuoteDefaults,
@@ -19,7 +21,7 @@ import type {
  * `.example` и заведомо ненастоящие номера (репозиторий публичный). Состояние лежит в `localStorage` страницы (как сессия
  * и роли мока): правки в интерфейсе переживают перезагрузку; без хранилища — копия в памяти.
  */
-const KEY = "rt-pf-mock-company";
+const KEY = "rt-pf-mock-company-v2"; // v2: добавлен курс USD→UZS (`fx`)
 const SEEDED_AT = "2026-10-20T06:00:00.000Z";
 
 /** Квадрат-заглушка вместо загруженного файла (мок не читает содержимое). */
@@ -44,6 +46,8 @@ export interface CompanyMock {
   categories: CatalogCategory[];
   requests: CategoryRequest[];
   platform: PlatformSettings;
+  /** Курс USD→UZS: текущий и журнал ручных вводов (новые первыми) */
+  fx: { current: FxRate | null; journal: FxRateJournalEntry[] };
   /** Следующий свободный id для новых строк */
   nextId: number;
 }
@@ -329,6 +333,31 @@ function seed(): CompanyMock {
       },
     ],
     platform: { vat_rate: "12.00", exchange_rate_usd_uzs: "12650.5000", updated_at: SEEDED_AT },
+    fx: {
+      current: { rate_to_uzs: "12650.5", rate_date: "2026-10-26", source: "auto" },
+      journal: [
+        {
+          id: "2",
+          kind: "auto_skipped",
+          rate_date: "2026-10-25",
+          rate_to_uzs: "12610",
+          previous_rate_to_uzs: "12600",
+          previous_source: "manual",
+          entered_by: null,
+          entered_at: "2026-10-26T04:30:00.000Z",
+        },
+        {
+          id: "1",
+          kind: "manual",
+          rate_date: "2026-10-25",
+          rate_to_uzs: "12600",
+          previous_rate_to_uzs: null,
+          previous_source: null,
+          entered_by: "Демо Директоров",
+          entered_at: "2026-10-25T07:15:00.000Z",
+        },
+      ],
+    },
     nextId: 100,
   };
 }
