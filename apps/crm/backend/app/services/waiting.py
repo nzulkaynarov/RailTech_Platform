@@ -15,9 +15,8 @@ from app.domain.keywords import find_terms
 from app.domain.language import Language
 from app.domain.triggers import TriggerSignals, evaluate
 from app.models.leads import Conversation, Lead
-from app.repositories import leads as repo
 from app.schemas.settings import AppSettings
-from app.services import escalation
+from app.services import escalation, message_log
 
 ACK_INTERVAL: Final = timedelta(minutes=30)
 
@@ -56,9 +55,9 @@ async def while_waiting(
     if not human_requested and not ack_due(lead.last_bot_msg_at, now):
         return WaitingReply(None, None, escalation_id)
     reply = cfg.texts.waiting_for_manager.get(language)
-    message = await repo.add_message(
+    message = await message_log.add(
         session,
-        conversation_id=conversation.id,
+        conversation,
         role="bot",
         text=reply,
         meta={"notice": "waiting_for_manager"},

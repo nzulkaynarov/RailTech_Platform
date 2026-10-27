@@ -16,6 +16,7 @@ from rt_contracts.events.crm import (
     LeadCreatedV1,
     LeadErasedV1,
     LeadMergedV1,
+    LeadMessageAddedV1,
     LeadStageChangedV1,
     LeadUpdatedV1,
 )
@@ -66,6 +67,7 @@ TYPES: dict[str, type[BaseModel]] = {
     "uz.railtech.crm.lead.created.v1": LeadCreatedV1,
     "uz.railtech.crm.lead.erased.v1": LeadErasedV1,
     "uz.railtech.crm.lead.merged.v1": LeadMergedV1,
+    "uz.railtech.crm.lead.message_added.v1": LeadMessageAddedV1,
     "uz.railtech.crm.lead.stage_changed.v1": LeadStageChangedV1,
     "uz.railtech.crm.lead.updated.v1": LeadUpdatedV1,
     "uz.railtech.erp.act.accepted.v1": ActAcceptedV1,
@@ -136,6 +138,7 @@ __all__ = [
     "LeadCreatedV1",
     "LeadErasedV1",
     "LeadMergedV1",
+    "LeadMessageAddedV1",
     "LeadStageChangedV1",
     "LeadUpdatedV1",
     "LetterRegisteredV1",

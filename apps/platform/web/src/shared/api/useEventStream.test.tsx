@@ -15,7 +15,12 @@ function wrapper(client: QueryClient) {
 }
 
 function keysOf(spy: { mock: { calls: unknown[][] } }): string[] {
-  return spy.mock.calls.map((call) => (call[0] as { queryKey: string[] }).queryKey[0] ?? "").sort();
+  return spy.mock.calls
+    .map((call) => {
+      const filters = call[0] as { queryKey?: string[]; predicate?: unknown };
+      return filters.queryKey?.[0] ?? (filters.predicate ? "<predicate>" : "");
+    })
+    .sort();
 }
 
 beforeEach(() => {
@@ -83,11 +88,47 @@ describe("useEventStream", () => {
     });
     expect(keysOf(spy)).toEqual([
       "/api/v1/activity/today",
+      "/api/v1/crm/messages",
       "/api/v1/menu-counters",
       "/api/v1/notifications",
       "/api/v1/queue",
       "/api/v1/queue/cards",
+      "<predicate>",
     ]);
+  });
+
+  it("тема `messages` (D1-1): очередь «Ждут ответа» и открытая переписка лида, но не чужие запросы", () => {
+    const client = new QueryClient();
+    const spy = vi.spyOn(client, "invalidateQueries");
+    renderHook(
+      () => {
+        useEventStream(true);
+      },
+      { wrapper: wrapper(client) },
+    );
+    act(() => {
+      FakeEventSource.last.open();
+      FakeEventSource.last.emit("invalidate", {
+        topics: ["counters", "queue", "messages"],
+        reason: "uz.railtech.crm.lead.message_added.v1",
+      });
+    });
+    expect(keysOf(spy)).toEqual([
+      "/api/v1/crm/messages",
+      "/api/v1/menu-counters",
+      "/api/v1/queue",
+      "/api/v1/queue/cards",
+      "<predicate>",
+    ]);
+    const call = spy.mock.calls.find((c) => "predicate" in (c[0] ?? {}));
+    const predicate = (
+      call?.[0] as unknown as { predicate: (q: { queryKey: unknown[] }) => boolean }
+    ).predicate;
+    expect(predicate({ queryKey: ["/api/v1/crm/messages/L-2041/thread", { limit: 30 }] })).toBe(
+      true,
+    );
+    expect(predicate({ queryKey: ["/api/v1/crm/messages/L-2041"] })).toBe(true);
+    expect(predicate({ queryKey: ["/api/v1/crm/kb/documents"] })).toBe(false);
   });
 
   it("выключенный поток не открывается; закрывается при размонтировании", () => {

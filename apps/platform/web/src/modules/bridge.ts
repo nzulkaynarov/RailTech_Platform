@@ -1,4 +1,6 @@
 import type { ModuleCode, ObjectKind } from "../shared/api/generated/model";
+// Односторонняя зависимость: `registry` (карта разделов) про мост не знает, поэтому цикла `bridge` ↔ `registry` нет.
+import { matchSection } from "./registry";
 
 /**
  * Мост в старые экраны (W15-H1, UX-оценка P0-2): пока раздел Платформы — заглушка, здесь записано, где эта работа
@@ -72,7 +74,6 @@ export const BRIDGE: Readonly<Record<string, BridgeEntry>> = {
   },
   "dashboard.summary": { legacy: crm("/dashboard", "crmDashboard"), when: "pilot" },
 
-  "crm.messages": { legacy: crm("/inbox", "crmInbox"), when: "soon", legacyCount: true },
   "crm.leads": {
     legacy: crm("/leads", "crmLeads", leadPath),
     when: "soon",
@@ -142,6 +143,7 @@ export const BRIDGE: Readonly<Record<string, BridgeEntry>> = {
 /** Разделы с настоящим экраном: моста у них нет. Новый настоящий экран — сюда, а запись из `BRIDGE` — удалить. */
 export const NATIVE_SECTIONS: readonly string[] = [
   "dashboard.queue",
+  "crm.messages",
   "crm.kb",
   "eds.inbox",
   "admin.roles",
@@ -224,4 +226,36 @@ export function objectTitle(kindLabel: string | undefined, number: string): stri
   return number.toLocaleLowerCase().startsWith(kindLabel.toLocaleLowerCase())
     ? number
     : `${kindLabel} ${number}`;
+}
+
+export interface RouteTarget {
+  module: string;
+  section: string;
+  /** Номер объекта из адреса (`/eds/drafts/КП-2026%2F118`, `?lead=L-2041`); для списка — `undefined` */
+  objectId?: string | undefined;
+  /** Запись моста, если раздел ещё заглушка */
+  entry?: BridgeEntry | undefined;
+}
+
+/** Раздел и объект по адресу вида `/eds/drafts/КП-2026%2F118?panel=open`; адрес не из карты Платформы — `undefined`. */
+export function routeTarget(path: string): RouteTarget | undefined {
+  const [pathname = "", search = ""] = path.split("?");
+  const match = matchSection(pathname, search);
+  if (!match) return undefined;
+  return {
+    module: match.module.code,
+    section: match.section.key,
+    objectId: objectIdOf(match, search),
+    entry: bridgeEntry(match.module.code, match.section.key),
+  };
+}
+
+/**
+ * Можно ли выполнить работу по адресу в самой Платформе: у раздела есть настоящий экран, то есть записи моста нет.
+ * Одна функция на «Мои задачи», поиск и колокольчик: волна 16 снимает мост, добавляя раздел в `NATIVE_SECTIONS` и
+ * удаляя его запись из `BRIDGE`, — и все три места сами начинают открывать объект в боковом окне. Адрес не из карты
+ * (404 внутри каркаса) считается исполнимым: ссылку не прячем.
+ */
+export function isActionable(path: string): boolean {
+  return routeTarget(path)?.entry === undefined;
 }

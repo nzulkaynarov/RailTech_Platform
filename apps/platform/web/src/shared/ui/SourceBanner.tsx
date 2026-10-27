@@ -10,26 +10,27 @@ export interface SourceBannerProps {
   sources: Sources | undefined;
   /** Повторить запрос; без обработчика кнопки нет */
   onRetry?: () => void;
+  /** Свои тексты вместо «ERP не отвечает, данные неполные» (например, для очереди — с названиями разделов) */
+  messages?: Partial<Record<"crm" | "erp" | "both", string>>;
 }
 
 /**
  * Плашка частичных данных (docs/architecture/platform-frontend.md §5, контракт BFF «Частичные данные»): «ERP не отвечает, данные неполные».
  * `role="status"` — вежливое объявление, не прерывающее чтение; если оба бэкенда в порядке, плашки нет.
  */
-export function SourceBanner({ sources, onRetry }: SourceBannerProps) {
+export function SourceBanner({ sources, onRetry, messages }: SourceBannerProps) {
   const { t } = useTranslation("ui");
   if (!sources) return null;
   const crm = sources.crm === "unavailable";
   const erp = sources.erp === "unavailable";
   if (!crm && !erp) return null;
+  const kind = crm && erp ? "both" : erp ? "erp" : "crm";
   return (
     <div className="pf-source" role="status">
       <span className="pf-source-icon">
         <WarningIcon />
       </span>
-      <span className="pf-source-text">
-        {t(crm && erp ? "source.both" : erp ? "source.erp" : "source.crm")}
-      </span>
+      <span className="pf-source-text">{messages?.[kind] ?? t(`source.${kind}`)}</span>
       {onRetry ? (
         <Button size="small" onClick={onRetry}>
           {t("source.retry")}

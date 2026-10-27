@@ -6,9 +6,9 @@
 `users.onboarding_done_at` — «Больше не показывать» тур первого входа; у существующих сотрудников
 она заполняется сразу, приветствие увидят только новые.
 
-Revision ID: 0043_staff_tickets
-Revises: 0042_staff_profile
-Create Date: 2026-10-28 10:00:00+00:00
+Revision ID: 0044_staff_tickets
+Revises: 0043_messages_bot_created_idx
+Create Date: 2026-10-28 11:00:00+00:00
 """
 
 from collections.abc import Sequence
@@ -16,8 +16,8 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "0043_staff_tickets"
-down_revision: str | None = "0042_staff_profile"
+revision: str = "0044_staff_tickets"
+down_revision: str | None = "0043_messages_bot_created_idx"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

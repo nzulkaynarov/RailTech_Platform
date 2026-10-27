@@ -28,7 +28,21 @@ function erpDown(): boolean {
   }
 }
 
-const sources = (): Sources => ({ crm: "ok", erp: erpDown() ? "unavailable" : "ok" });
+/** То же для CRM: `localStorage["rt-pf-mock-crm-down"] = "1"` — очередь без лидов, `sources.crm = "unavailable"` (W15-H2). */
+export const MOCK_CRM_DOWN_KEY = "rt-pf-mock-crm-down";
+
+function crmDown(): boolean {
+  try {
+    return window.localStorage.getItem(MOCK_CRM_DOWN_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+const sources = (): Sources => ({
+  crm: crmDown() ? "unavailable" : "ok",
+  erp: erpDown() ? "unavailable" : "ok",
+});
 
 function expired() {
   return HttpResponse.json(
@@ -99,8 +113,8 @@ export const feedHandlers = [
     if (denied) return denied;
     const own = [
       ...queueForView(roles.view),
-      ...ticketQueueItems(roles.view), // обращения живут в CRM и не зависят от ERP
-    ].filter((i) => !erpDown() || i.kind.endsWith("_lead") || i.kind === "ticket");
+      ...ticketQueueItems(roles.view), // обращения живут в CRM, как и лиды
+    ].filter((i) => (i.kind.endsWith("_lead") || i.kind === "ticket" ? !crmDown() : !erpDown()));
     // Замещение (W15-H6): заместитель видит строки замещаемого с пометкой «за {имя}».
     const session = readSession();
     const userId = session ? sessionRoles(session)?.user.id : undefined;

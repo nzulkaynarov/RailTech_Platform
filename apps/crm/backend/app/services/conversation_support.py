@@ -18,7 +18,7 @@ from app.repositories import leads as repo
 from app.schemas.settings import AppSettings
 from app.security.agent_context import issue
 from app.security.erp_agent_context import ErpScope
-from app.services import escalation
+from app.services import escalation, message_log
 from app.services.conversation_types import ActivityHook, Keyboard, Outgoing, Turn
 
 logger = structlog.get_logger(__name__)
@@ -130,7 +130,7 @@ async def consent_prompt(
             Outgoing(texts.consent_required.get(language), keyboard="consent", language=language)
         )
     for item in out:
-        await repo.add_message(session, conversation_id=conversation.id, role="bot", text=item.text)
+        await message_log.add(session, conversation, role="bot", text=item.text)
     return out
 
 
@@ -145,7 +145,7 @@ async def consent_offer(
         Outgoing(texts.consent.get(language), keyboard="consent", language=language),
     ]
     for item in out:
-        await repo.add_message(session, conversation_id=conversation.id, role="bot", text=item.text)
+        await message_log.add(session, conversation, role="bot", text=item.text)
     return out
 
 
@@ -256,9 +256,7 @@ async def agent_failure(
         session, lead, hits, cfg, now, reason_text="dialog: agent_unavailable"
     )
     text, keyboard, meta = failure_reply(cfg, language, applied.plan.lead_text if applied else None)
-    message = await repo.add_message(
-        session, conversation_id=conversation.id, role="bot", text=text, meta=meta
-    )
+    message = await message_log.add(session, conversation, role="bot", text=text, meta=meta)
     lead.last_bot_msg_at = now
     outgoing = Outgoing(
         text, keyboard=keyboard, message_id=message.id, language=language, lead_id=lead.id

@@ -30,12 +30,12 @@ async function main() {
 }
 
 describe("SectionStubPage · раздел с мостом", () => {
-  it("менеджер, Ждут ответа: заголовок, где делается работа, кнопка в новую вкладку, когда появится", async () => {
+  it("менеджер, Лиды: заголовок, где делается работа, кнопка в новую вкладку, когда появится", async () => {
     signInAs("manager@demo.example");
-    renderApp("/crm/messages");
+    renderApp("/crm/leads");
     const page = await main();
 
-    expect(within(page).getByRole("heading", { level: 1, name: "Ждут ответа" })).toBeVisible();
+    expect(within(page).getByRole("heading", { level: 1, name: "Лиды" })).toBeVisible();
     expect(
       within(page).getByRole("heading", {
         level: 2,
@@ -44,12 +44,12 @@ describe("SectionStubPage · раздел с мостом", () => {
     ).toBeVisible();
     expect(
       within(page).getByText(
-        "Сейчас эта работа делается в старой CRM: раздел «Входящие». Данные не потеряны.",
+        "Сейчас эта работа делается в старой CRM: раздел «Лиды». Данные не потеряны.",
       ),
     ).toBeVisible();
 
     const open = await within(page).findByRole("link", { name: /Открыть в старой CRM/ });
-    expect(open).toHaveAttribute("href", "http://crm.localhost:8088/inbox");
+    expect(open).toHaveAttribute("href", "http://crm.localhost:8088/leads");
     expect(open).toHaveAttribute("target", "_blank");
     expect(open.getAttribute("rel")).toContain("noopener");
     expect(within(page).getByText("Вход в старую CRM — теми же логином и паролем.")).toBeVisible();
@@ -59,7 +59,6 @@ describe("SectionStubPage · раздел с мостом", () => {
   it("ни «пока нет», ни «фаза Pn» нет ни на одной заглушке", async () => {
     signInAs("all@demo.example");
     for (const path of [
-      "/crm/messages",
       "/crm/leads",
       "/crm/clients",
       "/eds/approvals",
@@ -260,16 +259,19 @@ describe("SectionStubPage · карточка объекта по прямой �
 });
 
 describe("Бейджи меню у заглушек", () => {
-  it("«Ждут ответа»: бейдж 1 только с подсказкой «ещё в старой системе: 1», а текст раздела не говорит «пока нет»", async () => {
+  it("«Лиды»: бейдж 2 только с подсказкой «ещё в старой системе: 2», а текст раздела не говорит «пока нет»", async () => {
     signInAs("manager@demo.example");
-    renderApp("/crm/messages");
+    renderApp("/crm/leads");
     const page = await main();
     const menu = screen.getByRole("navigation", { name: "Разделы модуля" });
 
     const item = await within(menu).findByRole("link", {
-      name: /Ждут ответа.*ещё в старой системе: 1/,
+      name: /Лиды.*ещё в старой системе: 2/,
     });
-    expect(item.querySelector("[title='ещё в старой системе: 1']")).not.toBeNull();
+    expect(item.querySelector("[title='ещё в старой системе: 2']")).not.toBeNull();
+    // «Ждут ответа» — настоящий экран (D1-1): живой бейдж, без подсказки о старой системе
+    const live = within(menu).getByRole("link", { name: /Ждут ответа/ });
+    expect(live.querySelector("[title^='ещё в старой системе']")).toBeNull();
     expect(within(page).queryByText(/пока нет/)).not.toBeInTheDocument();
   });
 

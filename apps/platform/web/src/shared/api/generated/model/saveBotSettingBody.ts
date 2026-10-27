@@ -133,6 +133,29 @@
  * (директор читает), сброс пароля — `admin: full`; профиль доступен каждому вошедшему. Секреты из записей журнала BFF вырезает
  * (значения полей `password`, `secret`, `token`, `key`, `*_key`, `credentials`, `authorization`, `pin` и им подобных -> `***` целиком, любого типа).
  *
+ * **0.23.0 (W15-H7) — помощь, первый вход и обращения к администратору.** Добавляющее изменение (тег `tickets`). **Обращения
+ * сотрудников** (домен CRM, ADR-0015): `POST /tickets` (тема из списка `access|notification|template|error|other`, текст,
+ * адрес страницы; роль автора BFF берёт из сессии), `GET /tickets` и `GET /tickets/{number}` — только свои обращения
+ * (чужое — 404), не больше пяти в час (429 `TOO_MANY_REQUESTS`, `details.reason = ticket_rate_limited`). Админ:
+ * `GET /admin/tickets` (список с фильтрами `status`, `subject`, постранично, `counts` по статусам), `GET /admin/tickets/{number}`,
+ * `POST /admin/tickets/{number}/reply` (ответ; новое обращение берётся «В работу», `status` задаёт итог) и
+ * `POST /admin/tickets/{number}/status` («Новое → В работе → Решено», «Решено» можно вернуть «В работу»; иначе 409
+ * `CONFLICT`, `details.reason = ticket_status_transition`). Раздел `admin`: чтение — директор, ответ и статус — администратор.
+ * Номер обращения — `ОБР-0012`, внутренних id в адресах нет. Ошибки значений — 422 `VALIDATION_FAILED` с `details.fields`
+ * и `details.reason` (`ticket_subject_unknown`, `ticket_text_empty`, `ticket_text_too_long`, `ticket_reply_empty`…).
+ * **Колокольчик** (`GET /notifications`) получил ленту CRM: идентификаторы `crm:<id>`, объект — обращение (`kind = ticket`);
+ * ответ и решение уходят автору, новое обращение — администраторам; `POST /notifications/{id}/read` и `read-all` отмечают
+ * обе ленты. **Первый вход:** `Me.onboarding_done` и `PUT /me/onboarding` («Пропустить» / «Больше не показывать» —
+ * флаг хранит CRM, не браузер).
+ *
+ * **0.22.0 (D1-1, волна 16) — Клиенты · Ждут ответа.** Добавляющее изменение (тег `messages`): очередь передач от бота с
+ * запиской (CRM-06) и SLA — `GET /crm/messages`; карточка лида, лента диалога с подгрузкой истории и вложениями через BFF —
+ * `GET /crm/messages/{lead}`, `/thread`, `/attachments/{message}/{index}`; действия — `take`, `reply` (ключ повтора
+ * `client_message_id`: «Повторить» не дублирует сообщение; Telegram не ответил — 502 `INTEGRATION_FAILED`, `delivery_failed`),
+ * `note` (заметка команде), `assist` (подсказка ответа через CRM/LiteLLM), `return-to-bot`; шаблоны — `GET /crm/reply-templates`
+ * (раздел `crm.leads` полный). Чтение — `crm.leads` от чтения (директор), действия — полный. Новая тема подсказки потока
+ * `InvalidationTopic.messages`: событие CRM `lead.message_added` (новое сообщение в переписке) и события лида — экран
+ * перезапрашивает очередь и открытую ленту.
  * **0.19.0 (W15-H1) — мост в старые экраны.** Добавляющее изменение (тег `bridge`). Пока раздел Платформы ещё заглушка, сотрудник
  * открывает ту же работу в старой CRM или старом ERP новой вкладкой. `GET /bridge` отдаёт публичные адреса старых фронтов
  * (`crm_url`, `erp_url`): настройки `PLATFORM_CRM_PUBLIC_URL` и `PLATFORM_ERP_PUBLIC_URL`, а если они пусты — адрес выводится из
@@ -179,21 +202,6 @@
  * EDS, полученным обменом токена сотрудника CRM `aud=eds` (`docs/architecture/platform-bff.md` §3); ошибки EDS переводятся в
  * формат `Error` (`source = eds`, `details.reason` и `details.fields` EDS сохраняются).
  *
- * **0.22.0 (W15-H7) — помощь, первый вход и обращения к администратору.** Добавляющее изменение (тег `tickets`). **Обращения
- * сотрудников** (домен CRM, ADR-0015): `POST /tickets` (тема из списка `access|notification|template|error|other`, текст,
- * адрес страницы; роль автора BFF берёт из сессии), `GET /tickets` и `GET /tickets/{number}` — только свои обращения
- * (чужое — 404), не больше пяти в час (429 `TOO_MANY_REQUESTS`, `details.reason = ticket_rate_limited`). Админ:
- * `GET /admin/tickets` (список с фильтрами `status`, `subject`, постранично, `counts` по статусам), `GET /admin/tickets/{number}`,
- * `POST /admin/tickets/{number}/reply` (ответ; новое обращение берётся «В работу», `status` задаёт итог) и
- * `POST /admin/tickets/{number}/status` («Новое → В работе → Решено», «Решено» можно вернуть «В работу»; иначе 409
- * `CONFLICT`, `details.reason = ticket_status_transition`). Раздел `admin`: чтение — директор, ответ и статус — администратор.
- * Номер обращения — `ОБР-0012`, внутренних id в адресах нет. Ошибки значений — 422 `VALIDATION_FAILED` с `details.fields`
- * и `details.reason` (`ticket_subject_unknown`, `ticket_text_empty`, `ticket_text_too_long`, `ticket_reply_empty`…).
- * **Колокольчик** (`GET /notifications`) получил ленту CRM: идентификаторы `crm:<id>`, объект — обращение (`kind = ticket`);
- * ответ и решение уходят автору, новое обращение — администраторам; `POST /notifications/{id}/read` и `read-all` отмечают
- * обе ленты. **Первый вход:** `Me.onboarding_done` и `PUT /me/onboarding` («Пропустить» / «Больше не показывать» —
- * флаг хранит CRM, не браузер).
- *
  * **0.21.0 (W15-H6) — Профиль сотрудника.** Добавляющее изменение, тег `me`: `GET/PATCH /me/profile` (имя, телефон, язык, часовой
  * пояс, подпись для писем; должность и роли только читаются, правит админ), `PUT/DELETE /me/avatar` и `GET /staff/{id}/avatar`
  * (фото: клиент обрезает по кругу, CRM хранит в S3, BFF отдаёт без публичных ссылок; `Me.avatar_url` — вместо инициалов),
@@ -222,7 +230,7 @@
  * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; «Забыли пароль?» — 5 запросов в час на IP и на адрес; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.22.0
+ * OpenAPI spec version: 0.23.0
  */
 
 export type SaveBotSettingBody = { [key: string]: unknown };

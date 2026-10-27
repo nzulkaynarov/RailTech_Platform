@@ -89,7 +89,16 @@ export function NotificationCenter({ variant, onClose }: NotificationCenterProps
       />
     );
   } else {
-    body = <NotificationList items={shown} onOpen={open} label={t("notifications.label")} />;
+    body = (
+      <NotificationList
+        items={shown}
+        onOpen={open}
+        onRead={(item) => {
+          read.markRead(item.id);
+        }}
+        label={t("notifications.label")}
+      />
+    );
   }
 
   const footer = (
