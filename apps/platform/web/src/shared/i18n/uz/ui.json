@@ -30,5 +30,9 @@
     "crm": "CRM javob bermayapti, ma’lumotlar to‘liq emas",
     "both": "CRM va ERP javob bermayapti, ma’lumotlar to‘liq emas",
     "retry": "Qayta urinish"
-  }
+  },
+  "whereToDo": "Qayerda bajarish",
+  "whereToDoItem": "Qayerda bajarish: {{title}}",
+  "whereToLook": "Qayerda ko‘rish",
+  "whereToLookItem": "Qayerda ko‘rish: {{title}}"
 }

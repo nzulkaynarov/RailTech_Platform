@@ -3,11 +3,14 @@ import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type R
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 
+import { useAuth } from "../../app/auth/useAuth";
+import { isActionable } from "../../modules/bridge";
 import { moduleName } from "../../modules/registry";
-import type { SearchHit } from "../../shared/api/generated/model";
+import { WhereToDo } from "../../modules/stub/WhereToDo";
 import { useSearch } from "../../shared/api/generated/platform-bff";
 import { SearchIcon } from "../../shared/ui/icons";
 import { SourceBanner } from "../../shared/ui/SourceBanner";
+import { matchActions } from "./actions";
 import "./global-search.css";
 
 const MIN_LENGTH = 2;
@@ -33,25 +36,41 @@ export interface GlobalSearchProps {
   mobile: boolean;
 }
 
+/** Строка списка: найденный объект или действие («создать заявку»); `path` — куда она ведёт. */
 interface Option {
   id: string;
   index: number;
-  hit: SearchHit;
+  title: string;
+  subtitle?: string | undefined;
+  /** Подпись справа: тип объекта или «Действие» */
+  tag: string;
+  path: string;
+}
+
+interface Group {
+  key: string;
+  name: string;
+  options: Option[];
 }
 
 /**
  * Глобальный поиск шапки (SPEC-v3 §6.1, docs/architecture/platform-frontend.md §4): поле 380 px, результаты группами по модулям, ⌘K/Ctrl+K
  * фокусирует поле (обработчик — в `AppShell`). Это комбобокс со списком: стрелки, Enter, Escape; запрос уходит в BFF
  * через 250 мс после последнего символа и не раньше двух символов. Недоступный бэкенд — плашка в списке, а не пустота.
+ * W15-H2: строка, у цели которой есть экран, открывает его (боковое окно — в адресе); у раздела-заглушки — поповер «Где
+ * посмотреть» с мостом в старый экран, а не заглушка. Слова «создать заявку», «служебка», «пригласить» добавляют
+ * группу «Действия» (только те, что доступны ролям сотрудника).
  */
 export function GlobalSearch({ inputRef, shortcut, mobile }: GlobalSearchProps) {
   const { t } = useTranslation("shell");
+  const { me } = useAuth();
   const navigate = useNavigate();
   const listId = useId();
   const root = useRef<HTMLDivElement>(null);
   const [value, setValue] = useState("");
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
+  const [where, setWhere] = useState<Option | null>(null);
 
   const typed = value.trim();
   const debounced = useDebounced(typed, DEBOUNCE_MS);
@@ -62,18 +81,40 @@ export function GlobalSearch({ inputRef, shortcut, mobile }: GlobalSearchProps) 
   );
 
   const groups = useMemo(() => (ready ? (query.data?.groups ?? []) : []), [ready, query.data]);
+  const actions = useMemo(() => matchActions(me, typed), [me, typed]);
   // Группы с порядковым номером результата сквозь все группы: по нему работают стрелки и aria-activedescendant
   const view = useMemo(() => {
     let next = 0;
-    return groups.map((group, g) => ({
-      module: group.module,
-      options: group.items.map<Option>((hit, i) => ({
-        id: `${listId}-${String(g)}-${String(i)}`,
-        index: next++,
-        hit,
-      })),
-    }));
-  }, [groups, listId]);
+    const out: Group[] = [];
+    if (actions.length > 0) {
+      out.push({
+        key: "actions",
+        name: t("search.actions.group"),
+        options: actions.map((action, i) => ({
+          id: `${listId}-a-${String(i)}`,
+          index: next++,
+          title: t(`search.actions.${action.key}`),
+          tag: t("search.actions.tag"),
+          path: action.to,
+        })),
+      });
+    }
+    groups.forEach((group, g) => {
+      out.push({
+        key: group.module,
+        name: moduleName(t, group.module),
+        options: group.items.map<Option>((hit, i) => ({
+          id: `${listId}-${String(g)}-${String(i)}`,
+          index: next++,
+          title: hit.title,
+          subtitle: hit.subtitle,
+          tag: t(`search.kind.${hit.object.kind}`),
+          path: hit.object.path,
+        })),
+      });
+    });
+    return out;
+  }, [actions, groups, listId, t]);
   const options = useMemo(() => view.flatMap((group) => group.options), [view]);
   const waiting = typed.length >= MIN_LENGTH && (debounced !== typed || query.isFetching);
 
@@ -83,6 +124,7 @@ export function GlobalSearch({ inputRef, shortcut, mobile }: GlobalSearchProps) 
     const onDown = (event: MouseEvent) => {
       if (root.current && event.target instanceof Node && !root.current.contains(event.target)) {
         setOpen(false);
+        setWhere(null);
       }
     };
     document.addEventListener("mousedown", onDown);
@@ -93,10 +135,16 @@ export function GlobalSearch({ inputRef, shortcut, mobile }: GlobalSearchProps) 
 
   const go = (option: Option | undefined) => {
     if (!option) return;
+    if (!isActionable(option.path)) {
+      // У раздела нет экрана: поиск остаётся открытым и говорит, где это посмотреть сейчас.
+      setWhere(option);
+      return;
+    }
     setOpen(false);
+    setWhere(null);
     setValue("");
     setActive(-1);
-    void navigate(option.hit.object.path);
+    void navigate(option.path);
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
@@ -104,6 +152,7 @@ export function GlobalSearch({ inputRef, shortcut, mobile }: GlobalSearchProps) 
       if (options.length === 0) return;
       event.preventDefault();
       setOpen(true);
+      setWhere(null);
       const step = event.key === "ArrowDown" ? 1 : -1;
       setActive((prev) => (prev + step + options.length) % options.length);
     } else if (event.key === "Enter") {
@@ -113,7 +162,10 @@ export function GlobalSearch({ inputRef, shortcut, mobile }: GlobalSearchProps) 
         go(target);
       }
     } else if (event.key === "Escape") {
-      if (open) {
+      if (where) {
+        event.preventDefault();
+        setWhere(null);
+      } else if (open) {
         event.preventDefault();
         setOpen(false);
       } else if (value) {
@@ -125,9 +177,11 @@ export function GlobalSearch({ inputRef, shortcut, mobile }: GlobalSearchProps) 
   let message: string | null = null;
   if (typed.length === 0) message = t("search.hint");
   else if (typed.length < MIN_LENGTH) message = t("search.tooShort");
-  else if (query.isError && !waiting) message = t("search.error");
-  else if (waiting && options.length === 0) message = t("search.loading");
-  else if (options.length === 0) message = t("search.none", { query: typed });
+  else if (options.length === 0) {
+    if (query.isError && !waiting) message = t("search.error");
+    else if (waiting) message = t("search.loading");
+    else message = t("search.none", { query: typed });
+  }
 
   return (
     <div ref={root} className="pf-gsearch" style={{ flex: mobile ? "1 1 0" : "0 1 380px" }}>
@@ -151,6 +205,7 @@ export function GlobalSearch({ inputRef, shortcut, mobile }: GlobalSearchProps) 
           onChange={(event) => {
             setValue(event.target.value);
             setActive(-1);
+            setWhere(null);
             setOpen(true);
           }}
           onFocus={() => {
@@ -185,12 +240,11 @@ export function GlobalSearch({ inputRef, shortcut, mobile }: GlobalSearchProps) 
           hidden={!open || options.length === 0}
         >
           {view.map((group) => {
-            const name = moduleName(t, group.module);
-            const headingId = `${listId}-h-${group.module}`;
+            const headingId = `${listId}-h-${group.key}`;
             return (
-              <div key={group.module} role="group" aria-labelledby={headingId}>
+              <div key={group.key} role="group" aria-labelledby={headingId}>
                 <div id={headingId} className="pf-gsearch-group" role="presentation">
-                  {name}
+                  {group.name}
                 </div>
                 {group.options.map((option) => (
                   <div
@@ -214,20 +268,33 @@ export function GlobalSearch({ inputRef, shortcut, mobile }: GlobalSearchProps) 
                     }}
                   >
                     <span className="pf-gsearch-main">
-                      <span className="pf-gsearch-title">{option.hit.title}</span>
-                      {option.hit.subtitle ? (
-                        <span className="pf-hint">{option.hit.subtitle}</span>
-                      ) : null}
+                      <span className="pf-gsearch-title">{option.title}</span>
+                      {option.subtitle ? <span className="pf-hint">{option.subtitle}</span> : null}
                     </span>
-                    <span className="pf-gsearch-kind">
-                      {t(`search.kind.${option.hit.object.kind}`)}
-                    </span>
+                    <span className="pf-gsearch-kind">{option.tag}</span>
                   </div>
                 ))}
               </div>
             );
           })}
         </div>
+        {open && where ? (
+          <section className="pf-gsearch-where" aria-label={t("search.where")}>
+            <h2 className="pf-gsearch-where-title">
+              {t("search.where")}: {where.title}
+            </h2>
+            <WhereToDo path={where.path} />
+            <button
+              type="button"
+              className="pf-gsearch-where-close pf-focusable"
+              onClick={() => {
+                setWhere(null);
+              }}
+            >
+              {t("search.whereClose")}
+            </button>
+          </section>
+        ) : null}
       </div>
       <div role="status" className="pf-sr-only">
         {open && ready && !waiting && options.length > 0

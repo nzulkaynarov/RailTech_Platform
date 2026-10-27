@@ -65,8 +65,39 @@ describe("Dashboard · Моя очередь", () => {
     expect(within(page).queryByRole("status")).toBeNull();
   });
 
-  it("пустая очередь: слова SPEC-v3 §7.1 и действие", async () => {
+  it("пустая очередь снабженца — по разделам каталога, не директорский текст", async () => {
     signInAs("supply@demo.example");
+    renderApp("/dashboard/queue");
+    const page = await main();
+
+    expect(await within(page).findByText("Заданий на расчёт нет")).toBeVisible();
+    expect(
+      within(page).getByText(
+        "Они приходят после резолюции директора — мы сообщим в колокольчике и в Telegram.",
+      ),
+    ).toBeVisible();
+    expect(within(page).queryByText("Решений от вас пока не требуется")).toBeNull();
+    expect(within(page).getByText(/0 решений/)).toBeVisible();
+  });
+
+  it.each([
+    ["engineer@demo.example", "Заданий по услугам нет"],
+    ["accountant@demo.example", "Платёжек на подтверждение и счетов к выставлению нет"],
+    ["admin@demo.example", "Задач для вас нет"],
+  ])("пустая очередь %s: свой текст", async (email, title) => {
+    signInAs(email);
+    renderApp("/dashboard/queue");
+    const page = await main();
+    expect(await within(page).findByText(title)).toBeVisible();
+  });
+
+  it("пустая очередь директора: слова SPEC-v3 §7.1 и действие", async () => {
+    server.use(
+      http.get("*/queue", () =>
+        HttpResponse.json({ items: [], sources: { crm: "ok", erp: "ok" } }),
+      ),
+    );
+    signInAs("director@demo.example");
     renderApp("/dashboard/queue");
     const page = await main();
 
@@ -77,17 +108,112 @@ describe("Dashboard · Моя очередь", () => {
       ),
     ).toBeVisible();
     expect(within(page).getByRole("link", { name: "Проекты" })).toBeVisible();
-    expect(within(page).getByText(/0 решений/)).toBeVisible();
   });
 
-  it("ERP не отвечает: данные CRM остаются, сверху плашка «ERP не отвечает»", async () => {
+  it("менеджер без задач: «Клиенты вас сейчас не ждут»", async () => {
+    server.use(
+      http.get("*/queue", () =>
+        HttpResponse.json({ items: [], sources: { crm: "ok", erp: "ok" } }),
+      ),
+    );
+    signInAs("manager@demo.example");
+    renderApp("/dashboard/queue");
+    const page = await main();
+    expect(await within(page).findByText("Клиенты вас сейчас не ждут")).toBeVisible();
+  });
+
+  it("строка без экрана — «Где сделать» с мостом, строка с экраном — «Открыть»; primary у всех срочных", async () => {
+    signInAs("manager@demo.example");
+    renderApp("/dashboard/queue");
+    const page = await main();
+
+    const where = await within(page).findByRole("button", {
+      name: "Где сделать: Взять в работу лида L-2041",
+    });
+    fireEvent.click(where);
+    expect(await screen.findByText(/Сейчас — в старой CRM: раздел «Лиды»/)).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: /Открыть в старой CRM/ })).toHaveAttribute(
+      "href",
+      "http://crm.localhost:8088/leads/2041",
+    );
+    // обе строки менеджера — «срок сегодня»; ссылки на заглушку у них нет
+    expect(within(page).queryAllByRole("link", { name: /^Открыть:/ })).toHaveLength(0);
+  });
+
+  it("строка директора с родным экраном (письмо) — «Открыть» primary; без экрана (КП, служебка) — «Где сделать»", async () => {
+    server.use(
+      http.get("*/queue", () =>
+        HttpResponse.json({
+          items: [
+            {
+              id: "letter:104",
+              role_id: "2",
+              kind: "resolve_letter",
+              title: "Наложить резолюцию на письмо ВХ-104/26",
+              subtitle: "ООО «Демо-Депо»",
+              due_label: "today",
+              object: {
+                kind: "letter",
+                number: "ВХ-104/26",
+                path: "/eds/inbox/%D0%92%D0%A5-104%2F26?panel=open&tab=resolution",
+              },
+            },
+            {
+              id: "letter:105",
+              role_id: "2",
+              kind: "resolve_letter",
+              title: "Наложить резолюцию на письмо ВХ-105/26",
+              subtitle: "АО «Демо-Транс»",
+              due_label: "overdue",
+              object: {
+                kind: "letter",
+                number: "ВХ-105/26",
+                path: "/eds/inbox/%D0%92%D0%A5-105%2F26?panel=open&tab=resolution",
+              },
+            },
+            {
+              id: "quote:118",
+              role_id: "2",
+              kind: "approve_quote",
+              title: "Одобрить КП-2026/118 (черновик)",
+              subtitle: "АО «Демо-Рейл»",
+              due_label: "tomorrow",
+              object: {
+                kind: "quote",
+                number: "КП-2026/118",
+                path: "/eds/drafts/%D0%9A%D0%9F-2026%2F118?panel=open&tab=approve",
+              },
+            },
+          ],
+          sources: { crm: "ok", erp: "ok" },
+        }),
+      ),
+    );
+    signInAs("director@demo.example");
+    renderApp("/dashboard/queue");
+    const page = await main();
+
+    const first = await within(page).findByRole("link", {
+      name: "Открыть: Наложить резолюцию на письмо ВХ-104/26",
+    });
+    const second = within(page).getByRole("link", {
+      name: "Открыть: Наложить резолюцию на письмо ВХ-105/26",
+    });
+    expect(first).toHaveClass("ant-btn-primary");
+    expect(second).toHaveClass("ant-btn-primary");
+    expect(
+      within(page).getByRole("button", { name: "Где сделать: Одобрить КП-2026/118 (черновик)" }),
+    ).not.toHaveClass("ant-btn-primary");
+  });
+
+  it("ERP не отвечает: данные CRM остаются, сверху плашка с названиями разделов", async () => {
     server.use(
       http.get("*/queue", () =>
         HttpResponse.json({
           items: [
             {
               id: "lead:1",
-              role: "MANAGER",
+              role_id: "1",
               kind: "take_lead",
               title: "Взять в работу лида L-0001",
               subtitle: "Демо Клиентов",
@@ -108,7 +234,61 @@ describe("Dashboard · Моя очередь", () => {
     const page = await main();
 
     expect(await within(page).findByText("Взять в работу лида L-0001")).toBeVisible();
-    expect(within(page).getByRole("status")).toHaveTextContent("ERP не отвечает, данные неполные");
+    expect(within(page).getByRole("status")).toHaveTextContent(
+      "Очередь загружена не полностью: разделы «Документы» и «Расчёт» не ответили. Остальное показано.",
+    );
+  });
+
+  it("CRM не отвечает: плашка называет «Клиенты», данные ERP показаны", async () => {
+    server.use(
+      http.get("*/queue", () =>
+        HttpResponse.json({
+          items: [
+            {
+              id: "quote:118",
+              role_id: "2",
+              kind: "approve_quote",
+              title: "Одобрить КП-2026/118 (черновик)",
+              subtitle: "АО «Демо-Рейл»",
+              due_label: "tomorrow",
+              object: {
+                kind: "quote",
+                number: "КП-2026/118",
+                path: "/eds/drafts/%D0%9A%D0%9F-2026%2F118",
+              },
+            },
+          ],
+          sources: { crm: "unavailable", erp: "ok" },
+        }),
+      ),
+    );
+    signInAs("director@demo.example");
+    renderApp("/dashboard/queue");
+    const page = await main();
+
+    expect(await within(page).findByText("Одобрить КП-2026/118 (черновик)")).toBeVisible();
+    expect(within(page).getByRole("status")).toHaveTextContent(
+      "Очередь загружена не полностью: раздел «Клиенты» не ответил. Остальное показано.",
+    );
+  });
+
+  it("не ответили оба и очередь пуста: не «задач нет», а «загружена не полностью» с «Повторить»", async () => {
+    server.use(
+      http.get("*/queue", () =>
+        HttpResponse.json({ items: [], sources: { crm: "unavailable", erp: "unavailable" } }),
+      ),
+    );
+    signInAs("all@demo.example");
+    renderApp("/dashboard/queue");
+    const page = await main();
+
+    expect(await within(page).findByText("Очередь загружена не полностью")).toBeVisible();
+    expect(within(page).queryByText("Решений от вас пока не требуется")).toBeNull();
+    // «Повторить» — в плашке над списком, второй кнопки в пустом состоянии нет
+    expect(within(page).getAllByRole("button", { name: "Повторить" })).toHaveLength(1);
+    expect(within(page).getAllByRole("status")[0]).toHaveTextContent(
+      "разделы «Клиенты», «Документы» и «Расчёт» не ответили",
+    );
   });
 
   it("сбой запроса: экран с причиной и «Повторить», после повтора данные появляются", async () => {

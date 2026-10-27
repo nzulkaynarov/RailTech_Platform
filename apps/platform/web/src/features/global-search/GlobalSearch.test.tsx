@@ -65,25 +65,48 @@ describe("Глобальный поиск", () => {
     expect(screen.queryByRole("option")).toBeNull();
   });
 
-  it("стрелки и Enter открывают объект по пути из ответа BFF", async () => {
-    signInAs("manager@demo.example");
+  it("стрелки и Enter: у объекта с экраном открывается его адрес из ответа BFF вместе с боковым окном", async () => {
+    server.use(
+      http.get("*/search", () =>
+        HttpResponse.json({
+          groups: [
+            {
+              module: "eds",
+              items: [
+                {
+                  title: "Письмо ВХ-104/26",
+                  subtitle: "ООО «Демо-Депо»",
+                  object: {
+                    kind: "letter",
+                    number: "ВХ-104/26",
+                    path: "/eds/inbox/%D0%92%D0%A5-104%2F26?panel=open&tab=resolution",
+                  },
+                },
+              ],
+            },
+          ],
+          sources: { crm: "ok", erp: "ok" },
+        }),
+      ),
+    );
+    signInAs("director@demo.example");
     const { router } = renderApp("/dashboard/queue");
     const box = await searchBox();
 
-    type(box, "СЧ-2026/142");
-    await screen.findByRole("option", { name: /СЧ-2026\/142/ });
+    type(box, "ВХ-104/26");
+    await screen.findByRole("option", { name: /ВХ-104\/26/ });
     fireEvent.keyDown(box, { key: "ArrowDown" });
     expect(box).toHaveAttribute("aria-activedescendant");
     fireEvent.keyDown(box, { key: "Enter" });
 
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe("/eds/payments/%D0%A1%D0%A7-2026%2F142");
+      expect(router.state.location.pathname).toBe("/eds/inbox/%D0%92%D0%A5-104%2F26");
     });
-    expect(router.state.location.search).toBe("?panel=open&tab=payment");
+    expect(router.state.location.search).toBe("?panel=open&tab=resolution");
     expect(box).toHaveValue("");
   });
 
-  it("клик по результату открывает объект", async () => {
+  it("у объекта без экрана — «Где посмотреть» с мостом, а не заглушка: адрес не меняется, поиск остаётся открытым", async () => {
     signInAs("manager@demo.example");
     const { router } = renderApp("/dashboard/queue");
     const box = await searchBox();
@@ -91,10 +114,49 @@ describe("Глобальный поиск", () => {
     type(box, "L-2041");
     fireEvent.click(await screen.findByRole("option", { name: /L-2041/ }));
 
+    const where = await screen.findByRole("region", { name: "Где посмотреть" });
+    expect(within(where).getByText(/Сейчас — в старой CRM: раздел «Лиды»/)).toBeInTheDocument();
+    expect(
+      await within(where).findByRole("link", { name: /Открыть в старой CRM/ }),
+    ).toHaveAttribute("href", "http://crm.localhost:8088/leads/2041");
+    expect(router.state.location.pathname).toBe("/dashboard/queue");
+    expect(box).toHaveValue("L-2041");
+
+    fireEvent.click(within(where).getByRole("button", { name: "Закрыть подсказку" }));
+    expect(screen.queryByRole("region", { name: "Где посмотреть" })).toBeNull();
+  });
+
+  it("слова «создать заявку» добавляют группу «Действия»; без права на запись действия нет", async () => {
+    signInAs("manager@demo.example");
+    renderApp("/dashboard/queue");
+    const box = await searchBox();
+
+    type(box, "создать заявку");
+    const action = await screen.findByRole("option", { name: /Создать заявку/ });
+    expect(within(action).getByText("Действие")).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Действия" })).toBeInTheDocument();
+    fireEvent.click(action);
+    const where = await screen.findByRole("region", { name: /Где посмотреть/ });
+    expect(within(where).getByText(/Сейчас — в старой CRM/)).toBeInTheDocument();
+
+    type(box, "пригласить");
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe("/crm/leads");
+      expect(screen.queryByRole("option", { name: /Пригласить сотрудника/ })).toBeNull();
     });
-    expect(router.state.location.search).toBe("?lead=L-2041&panel=open&tab=card");
+  });
+
+  it("администратор: «пригласить» — действие, которое ведёт в Оргструктуру с приглашением", async () => {
+    signInAs("admin@demo.example");
+    const { router } = renderApp("/dashboard/queue");
+    const box = await searchBox();
+
+    type(box, "пригласить");
+    fireEvent.click(await screen.findByRole("option", { name: /Пригласить сотрудника/ }));
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/admin/org");
+    });
+    expect(router.state.location.search).toBe("?invite=open&panel=open");
   });
 
   it("меньше двух символов — подсказка, запрос не уходит", async () => {

@@ -67,7 +67,9 @@
       "decisions": "D",
       "clients": "C",
       "system": "!"
-    }
+    },
+    "where": "Where to look",
+    "whereItem": "Where to look: {{title}}"
   },
   "panel": {
     "label": "Side panel",
@@ -228,6 +230,15 @@
       "chat": "Chat",
       "ticket": "Staff request",
       "integration": "Integration"
-    }
+    },
+    "actions": {
+      "group": "Actions",
+      "tag": "Action",
+      "createRequest": "Create a request",
+      "createDocument": "Create a memo",
+      "inviteEmployee": "Invite an employee"
+    },
+    "where": "Where to look",
+    "whereClose": "Close the hint"
   }
 }

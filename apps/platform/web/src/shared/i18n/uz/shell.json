@@ -67,7 +67,9 @@
       "decisions": "Q",
       "clients": "M",
       "system": "!"
-    }
+    },
+    "where": "Qayerda ko‘rish",
+    "whereItem": "Qayerda ko‘rish: {{title}}"
   },
   "panel": {
     "label": "Yon oyna",
@@ -228,6 +230,15 @@
       "chat": "Chat",
       "ticket": "Xodim murojaati",
       "integration": "Integratsiya"
-    }
+    },
+    "actions": {
+      "group": "Amallar",
+      "tag": "Amal",
+      "createRequest": "Ariza yaratish",
+      "createDocument": "Xizmat xatini yaratish",
+      "inviteEmployee": "Xodimni taklif qilish"
+    },
+    "where": "Qayerda ko‘rish",
+    "whereClose": "Maslahatni yopish"
   }
 }

@@ -7,13 +7,6 @@
       "projects": "Loyihalar",
       "summary": "Kompaniya xulosasi"
     },
-    "stub": {
-      "queue": {
-        "title": "Sizdan qaror hozircha talab qilinmaydi",
-        "text": "Yangi xatlar CRMdan, TT qoralamalari ERPdan, xizmat xatlari xodimlardan keladi.",
-        "action": "Loyihalar"
-      }
-    },
     "queue": {
       "title": "Hozir nima qilish kerak",
       "cardsLabel": "Navbat hisoblagichlari",
@@ -34,7 +27,47 @@
       "loading": "Navbat yuklanmoqda…",
       "loadErrorTitle": "Navbatni yuklab bo‘lmadi",
       "loadErrorText": "Server javob bermadi. Ulanishni tekshirib, qayta urinib ko‘ring.",
-      "retry": "Qayta urinish"
+      "retry": "Qayta urinish",
+      "empty": {
+        "director": {
+          "title": "Hozircha sizdan qaror talab qilinmaydi",
+          "text": "Yangi xatlar CRMdan, TT qoralamalari ERPdan, xizmat xatlari xodimlardan keladi.",
+          "action": "Loyihalar"
+        },
+        "manager": {
+          "title": "Mijozlar hozir sizni kutmayapti",
+          "text": "Telegram va pochtadan kelgan yangi xabarlar shu yerda va qo‘ng‘iroqchada paydo bo‘ladi."
+        },
+        "supply": {
+          "title": "Hisob-kitob topshiriqlari yo‘q",
+          "text": "Ular direktor rezolyutsiyasidan keyin keladi — qo‘ng‘iroqcha va Telegramda xabar beramiz."
+        },
+        "engineer": {
+          "title": "Xizmatlar bo‘yicha topshiriqlar yo‘q",
+          "text": "Ular direktor rezolyutsiyasidan keyin keladi — qo‘ng‘iroqcha va Telegramda xabar beramiz."
+        },
+        "accountant": {
+          "title": "Tasdiqlash uchun to‘lov topshiriqnomalari va chiqariladigan hisoblar yo‘q",
+          "text": "Yangilari mijoz «To‘ladim» tugmasini bosganda paydo bo‘ladi."
+        },
+        "admin": {
+          "title": "Sizga vazifalar yo‘q",
+          "text": "Xodimlar murojaatlari va integratsiya nosozliklari shu yerda va qo‘ng‘iroqchada paydo bo‘ladi."
+        },
+        "default": {
+          "title": "Sizga vazifalar yo‘q",
+          "text": "Yangi vazifalar shu yerda va qo‘ng‘iroqchada paydo bo‘ladi."
+        }
+      },
+      "partial": {
+        "crm": "Navbat to‘liq yuklanmadi: «{{crm}}» bo‘limi javob bermadi. Qolgani ko‘rsatilgan.",
+        "erp": "Navbat to‘liq yuklanmadi: «{{eds}}» va «{{erp}}» bo‘limlari javob bermadi. Qolgani ko‘rsatilgan.",
+        "both": "Navbat to‘liq yuklanmadi: «{{crm}}», «{{eds}}» va «{{erp}}» bo‘limlari javob bermadi. Qolgani ko‘rsatilgan."
+      },
+      "partialEmpty": {
+        "title": "Navbat to‘liq yuklanmadi",
+        "text": "Manba javob bermagani uchun vazifalarning bir qismi ko‘rinmayapti. Birozdan keyin qayta urinib ko‘ring."
+      }
     },
     "activity": {
       "label": "Bugungi voqealar",

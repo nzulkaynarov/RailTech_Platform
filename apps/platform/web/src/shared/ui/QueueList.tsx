@@ -1,3 +1,4 @@
+import { Button, Popover } from "antd";
 import { type ReactNode, useId } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -16,6 +17,13 @@ export interface QueueItem {
   caption?: string;
   /** Адрес объекта (бизнес-номер в пути) */
   to: string;
+  /** Срок сегодня или просрочено: у такой строки «Открыть» — primary (P2-9, UX-оценка) */
+  urgent?: boolean;
+  /**
+   * У цели нет экрана в Платформе: вместо «Открыть» — вторичная кнопка «Где сделать» с поповером (W15-H2). Содержимое —
+   * где работа делается сейчас; строка с `where` ссылки на заглушку не даёт.
+   */
+  where?: ReactNode;
 }
 
 export interface QueueListProps {
@@ -30,8 +38,8 @@ export interface QueueListProps {
 
 /**
  * «Что сделать сейчас» (docs/architecture/platform-frontend.md §5, SPEC-v3 §7.1): строка с отступом 14/24 и границей `#f0f0f0`, бейдж срока,
- * заголовок 500, подпись 12 px `#6e6e6e`, кнопка «Открыть»; primary — только у самой срочной (первой строки: порядок
- * задаёт сортировка «просроченные → сегодня → по сроку» на стороне данных).
+ * заголовок 500, подпись 12 px `#6e6e6e`, кнопка «Открыть» (primary — у всех строк «срок сегодня» и «просрочено»)
+ * или, если у цели нет экрана, «Где сделать» с поповером.
  */
 export function QueueList({ items, title, headingLevel = 2, empty }: QueueListProps) {
   const { t } = useTranslation("ui");
@@ -48,20 +56,33 @@ export function QueueList({ items, title, headingLevel = 2, empty }: QueueListPr
         empty
       ) : (
         <ul className="pf-list">
-          {items.map((item, index) => (
+          {items.map((item) => (
             <li key={item.id} className="pf-queue-row">
               <StatusTag tone={item.badge.tone}>{item.badge.label}</StatusTag>
               <div className="pf-queue-body">
                 <div className="pf-queue-title">{item.title}</div>
                 {item.caption ? <div className="pf-hint">{item.caption}</div> : null}
               </div>
-              <LinkButton
-                to={item.to}
-                type={index === 0 ? "primary" : "default"}
-                aria-label={t("openItem", { title: item.title })}
-              >
-                {t("open")}
-              </LinkButton>
+              {item.where === undefined ? (
+                <LinkButton
+                  to={item.to}
+                  type={item.urgent ? "primary" : "default"}
+                  aria-label={t("openItem", { title: item.title })}
+                >
+                  {t("open")}
+                </LinkButton>
+              ) : (
+                <Popover
+                  trigger="click"
+                  placement="bottomRight"
+                  title={t("whereToDo")}
+                  content={item.where}
+                >
+                  <Button aria-label={t("whereToDoItem", { title: item.title })}>
+                    {t("whereToDo")}
+                  </Button>
+                </Popover>
+              )}
             </li>
           ))}
         </ul>

@@ -93,3 +93,11 @@ a.pf-feed-row:focus-visible {
   width: 24px;
   height: 24px;
 }
+/* «Где посмотреть» (W15-H2): под уведомлением об объекте, у раздела которого ещё нет экрана */
+.pf-note-where {
+  margin: 0 16px 8px;
+  padding: 12px;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  background: #fafafa;
+}

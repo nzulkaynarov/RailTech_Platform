@@ -7,13 +7,6 @@
       "projects": "Projects",
       "summary": "Company summary"
     },
-    "stub": {
-      "queue": {
-        "title": "No decisions are needed from you yet",
-        "text": "New letters come from CRM, draft quotes from ERP, memos from colleagues.",
-        "action": "Projects"
-      }
-    },
     "queue": {
       "title": "What to do now",
       "cardsLabel": "Queue counters",
@@ -34,7 +27,47 @@
       "loading": "Loading the queue…",
       "loadErrorTitle": "Could not load the queue",
       "loadErrorText": "The server did not respond. Check the connection and try again.",
-      "retry": "Retry"
+      "retry": "Retry",
+      "empty": {
+        "director": {
+          "title": "No decisions needed from you yet",
+          "text": "New letters come from CRM, draft quotes from ERP, memos from employees.",
+          "action": "Projects"
+        },
+        "manager": {
+          "title": "No clients are waiting for you right now",
+          "text": "New client messages from Telegram and email will appear here and in the bell."
+        },
+        "supply": {
+          "title": "No costing tasks",
+          "text": "They arrive after the director’s resolution — we will tell you in the bell and in Telegram."
+        },
+        "engineer": {
+          "title": "No service tasks",
+          "text": "They arrive after the director’s resolution — we will tell you in the bell and in Telegram."
+        },
+        "accountant": {
+          "title": "No payments to confirm and no invoices to issue",
+          "text": "New ones appear when a client taps “I paid”."
+        },
+        "admin": {
+          "title": "No tasks for you",
+          "text": "Staff requests and integration problems will appear here and in the bell."
+        },
+        "default": {
+          "title": "No tasks for you",
+          "text": "New tasks will appear here and in the bell."
+        }
+      },
+      "partial": {
+        "crm": "The queue loaded only in part: the “{{crm}}” section did not respond. The rest is shown.",
+        "erp": "The queue loaded only in part: the “{{eds}}” and “{{erp}}” sections did not respond. The rest is shown.",
+        "both": "The queue loaded only in part: the “{{crm}}”, “{{eds}}” and “{{erp}}” sections did not respond. The rest is shown."
+      },
+      "partialEmpty": {
+        "title": "The queue loaded only in part",
+        "text": "Some tasks are hidden because a source did not respond. Try again in a moment."
+      }
     },
     "activity": {
       "label": "Today's events",

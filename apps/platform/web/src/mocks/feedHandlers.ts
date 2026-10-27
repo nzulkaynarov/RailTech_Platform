@@ -26,7 +26,21 @@ function erpDown(): boolean {
   }
 }
 
-const sources = (): Sources => ({ crm: "ok", erp: erpDown() ? "unavailable" : "ok" });
+/** То же для CRM: `localStorage["rt-pf-mock-crm-down"] = "1"` — очередь без лидов, `sources.crm = "unavailable"` (W15-H2). */
+export const MOCK_CRM_DOWN_KEY = "rt-pf-mock-crm-down";
+
+function crmDown(): boolean {
+  try {
+    return window.localStorage.getItem(MOCK_CRM_DOWN_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+const sources = (): Sources => ({
+  crm: crmDown() ? "unavailable" : "ok",
+  erp: erpDown() ? "unavailable" : "ok",
+});
 
 function expired() {
   return HttpResponse.json(
@@ -95,7 +109,9 @@ export const feedHandlers = [
     if (!roles) return expired();
     const denied = noQueue(roles);
     if (denied) return denied;
-    const items = queueForView(roles.view).filter((i) => !erpDown() || i.kind.endsWith("_lead"));
+    const items = queueForView(roles.view).filter((i) =>
+      i.kind.endsWith("_lead") ? !crmDown() : !erpDown(),
+    );
     return HttpResponse.json({ items, sources: sources() });
   }),
 
