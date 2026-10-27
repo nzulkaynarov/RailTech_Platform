@@ -7161,6 +7161,9 @@ paths:
       - admin
   /api/v1/auth/change-password:
     post:
+      description: 'Смена своего пароля. Прочие сессии закрываются сразу (`password_changed_at`), а эта
+
+        продолжается: в ответе новая пара токенов (access в теле, refresh в cookie, как при входе).'
       operationId: change_password
       requestBody:
         content:
@@ -7169,7 +7172,11 @@ paths:
               $ref: '#/components/schemas/ChangePasswordRequest'
         required: true
       responses:
-        '204':
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
           description: Successful Response
         '422':
           content:

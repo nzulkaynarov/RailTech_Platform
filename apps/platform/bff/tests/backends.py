@@ -60,7 +60,8 @@ class Backends:
         self.erp_refresh_status = 200
         self.exchange_status = 200
         self.sso_status = 200
-        self.change_password_response: tuple[int, dict[str, Any]] = (204, {})
+        # None — успех: CRM отдаёт новую пару токенов этой сессии (прочие сессии она закрыла)
+        self.change_password_response: tuple[int, dict[str, Any]] | None = None
         self.me_unauthorized_once = False
         self.must_change = False
         self.crm_login = router.post(f"{CRM_URL}/api/v1/auth/login").mock(side_effect=self._login)
@@ -178,6 +179,8 @@ class Backends:
         )
 
     def _change_password(self, request: httpx.Request) -> httpx.Response:
+        if self.change_password_response is None:
+            return self._token_response()
         status, body = self.change_password_response
         return httpx.Response(status, json=body) if body else httpx.Response(status)
 

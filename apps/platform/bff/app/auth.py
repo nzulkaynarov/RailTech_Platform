@@ -658,7 +658,7 @@ class AuthService:
             "/api/v1/auth/change-password",
             json={"current_password": current, "new_password": new},
         )
-        if resp.status_code != 204:
+        if resp.status_code != 200:
             if resp.status_code == 422 and backend_reason(resp) == "wrong_password":
                 raise PlatformError(
                     "WRONG_PASSWORD",
@@ -671,7 +671,20 @@ class AuthService:
             if resp.status_code == 422:
                 err.body.details = {**(err.body.details or {}), "fields": _failed_fields(resp)}
             raise err
-        await self.store.update(sid, _clear_must_change)
+        # CRM закрыла прежние токены и выдала этой сессии новую пару: заменяем её в Redis.
+        tokens = CrmClient.tokens(resp)
+        if tokens.refresh is None:
+            raise backend_unavailable("crm", "no_refresh_cookie")
+        fresh = BackendTokens(
+            access=tokens.access, access_exp=now() + tokens.expires_in, refresh=tokens.refresh
+        )
+
+        def apply(d: SessionData) -> None:
+            d.crm = fresh
+            _clear_must_change(d)
+
+        if await self.store.update(sid, apply) is None:
+            raise session_expired()
 
 
 def _tokens(data: SessionData, backend: Backend) -> BackendTokens | None:

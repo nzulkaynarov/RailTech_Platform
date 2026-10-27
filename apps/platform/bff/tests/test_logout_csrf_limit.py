@@ -155,6 +155,50 @@ async def test_change_password_clears_must_change(web: Web, check: ContractCheck
     assert len(web.redis.session_keys()) == 1  # сессия сохранена
 
 
+async def test_change_password_swaps_in_the_new_token_pair(web: Web) -> None:
+    """CRM закрыла прежние токены: сессия BFF продолжает работать на выданной ей новой паре."""
+    await web.login()
+    before = await web.redis.get(f"session:{web.sid}")
+    assert before is not None
+    assert "crm-access-1" in str(before)
+
+    response = await web.send(
+        "POST",
+        "/api/v1/auth/change-password",
+        json={"current_password": PASSWORD, "new_password": "brand-new-pass"},
+    )
+
+    assert response.status_code == 204
+    after = await web.redis.get(f"session:{web.sid}")
+    assert after is not None
+    assert "crm-access-2" in str(after)
+    assert "crm-refresh-2" in str(after)
+    assert "crm-access-1" not in str(after)
+    # Дальнейшие вызовы CRM идут уже с новым токеном (профиль перечитывается раз в минуту).
+    web.clock.advance(61)
+    assert (await web.client.get("/api/v1/me")).status_code == 200
+    assert web.be.crm_me.calls.last.request.headers["authorization"] == "Bearer crm-access-2"
+
+
+async def test_change_password_without_a_refresh_cookie_is_a_backend_failure(web: Web) -> None:
+    await web.login()
+    web.be.change_password_response = (
+        200,
+        {
+            "access_token": "x",
+            "token_type": "bearer",
+            "expires_in": 900,
+            "must_change_password": False,
+        },
+    )
+    response = await web.send(
+        "POST",
+        "/api/v1/auth/change-password",
+        json={"current_password": PASSWORD, "new_password": "brand-new-pass"},
+    )
+    assert response.status_code == 503
+
+
 async def test_change_password_wrong_current(web: Web, check: ContractChecker) -> None:
     await web.login()
     web.be.change_password_response = (
