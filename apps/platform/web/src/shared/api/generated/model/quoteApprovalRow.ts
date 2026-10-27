@@ -227,7 +227,7 @@ export interface QuoteApprovalRow {
    */
   request_number: string | null;
   /**
-   * Из снимка КП; `null` у роли
+   * Из снимка КП; `null` у роли, которой EDS снимок не отдаёт
    * @nullable
    */
   client_name: string | null;

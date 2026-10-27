@@ -8032,7 +8032,7 @@ components:
         number: {type: string, description: Номер КП, examples: [КП-2026/115]}
         version: {type: integer, minimum: 1}
         request_number: {type: [string, 'null'], description: Бизнес-номер заявки ЗВ}
-        client_name: {type: [string, 'null'], description: Из снимка КП; `null` у роли, которой EDS снимок не отдаёт}
+        client_name: {type: [string, 'null'], description: 'Из снимка КП; `null` у роли, которой EDS снимок не отдаёт'}
         total: {oneOf: [{$ref: '#/components/schemas/EdsMoney'}, {type: 'null'}], description: Итог с НДС из снимка КП}
         due: {type: [string, 'null'], format: date, description: Срок расчёта из резолюции (снимок КП)}
         status: {$ref: '#/components/schemas/ApprovalRouteStatus'}
@@ -8060,7 +8060,7 @@ components:
         unit: {type: [string, 'null']}
         unit_price: {type: string, pattern: '^-?\d+(\.\d+)?$', description: Цена без НДС}
         amount: {type: string, pattern: '^-?\d+(\.\d+)?$', description: Сумма строки без НДС}
-        lead_time_days: {type: [integer, 'null'], description: Срок поставки строки, дней}
+        lead_time_days: {type: [integer, 'null'], description: 'Срок поставки строки, дней'}
         optional: {type: boolean, description: Опциональная позиция — в итог не входит по решению ERP}
     QuoteTotals:
       type: object

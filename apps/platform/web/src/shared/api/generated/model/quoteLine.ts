@@ -234,7 +234,7 @@ export interface QuoteLine {
    */
   amount: string;
   /**
-   * Срок поставки строки
+   * Срок поставки строки, дней
    * @nullable
    */
   lead_time_days: number | null;
