@@ -37,6 +37,7 @@ from app.api.v1 import (
     stream,
     system,
     system_status,
+    team,
     users,
 )
 from app.api.v1 import settings as settings_api
@@ -124,6 +125,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         # Раньше `leads`: `/leads/web*` не должен перехватываться `/leads/{lead_id}`.
         lead_intake,
         leads,
+        team,
         stream,
         kb,
         settings_api,

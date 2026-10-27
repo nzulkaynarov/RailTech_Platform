@@ -480,7 +480,7 @@ ROLE_RESTRICTED_FIELDS: Final[dict[str, tuple[str, ...]]] = {
     ),
 }
 
-# Базовая роль CRM для старого фронта: роль с кодом (порядок — прежние шесть ролей).
+# Роли версии 1 (порядок — прежние шесть); признак базовой роли они не задают (D1-8).
 CRM_BASE_ROLE_BY_CODE: Final[dict[str, str]] = {
     "MANAGER": "manager",
     "DIRECTOR": "viewer",
@@ -490,7 +490,7 @@ CRM_BASE_ROLE_BY_CODE: Final[dict[str, str]] = {
     "ADMIN": "admin",
 }
 
-# Базовая роль CRM для роли без кода: достаточно одного условия `раздел:уровень`.
+# Признак базовой роли CRM по матрице роли: одно условие `раздел:уровень` (D1-8).
 CRM_BASE_ROLE_BY_ACCESS: Final[dict[str, tuple[str, ...]]] = {
     "admin": ("admin:full",),
     "manager": ("crm.leads:full",),

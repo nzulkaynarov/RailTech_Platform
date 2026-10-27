@@ -24,6 +24,7 @@ async def apply_snapshot(session: AsyncSession, snapshot: UserSnapshot, *, event
         "language": snapshot.language,
         "is_active": snapshot.is_active,
         "permissions_eds": snapshot.permissions_eds,
+        "sections": snapshot.sections,
         "updated_at": snapshot.updated_at,
         "last_event_id": event_id,
     }
@@ -49,6 +50,7 @@ async def apply_deactivation(session: AsyncSession, crm_user_id: int, *, at: dat
         full_name="",
         is_active=False,
         permissions_eds=[],
+        sections={},
         updated_at=at,
         last_event_id=event_id,
     )
@@ -56,6 +58,7 @@ async def apply_deactivation(session: AsyncSession, crm_user_id: int, *, at: dat
         index_elements=[Employee.crm_user_id],
         set_={
             "is_active": False,
+            "sections": {},
             "updated_at": func.greatest(Employee.updated_at, stmt.excluded.updated_at),
             "last_event_id": stmt.excluded.last_event_id,
             "synced_at": func.now(),

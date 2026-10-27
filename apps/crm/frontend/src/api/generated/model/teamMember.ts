@@ -5,7 +5,13 @@
  * OpenAPI spec version: 0.8.0
  */
 
+/**
+ * Сотрудник в выборе («кому передать лида», «исполнитель зоны»): без почты, телефона, ролей.
+ */
 export interface TeamMember {
   full_name: string;
   id: number;
+  /** @maxLength 3 */
+  initials: string;
+  position?: string | null;
 }

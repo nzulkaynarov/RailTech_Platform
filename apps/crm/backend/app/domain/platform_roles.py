@@ -7,9 +7,12 @@
 - права сотрудника = объединение его ролей: максимум по разделу и объединение полей;
 - права CRM (casbin) и ERP (`Permission`) вычисляются из каталога по разделу и уровню (уровень
   `full` включает `read`); поле с ограничением открывает права ERP из каталога;
-- базовая роль CRM `admin|manager|viewer` остаётся для старого фронта до T4: роль с кодом — как
-  в версии 1 (`CRM_BASE_ROLE_BY_CODE`), роль без кода — по `CRM_BASE_ROLE_BY_ACCESS`; у сотрудника
-  берётся старшая (admin > manager > viewer);
+- базовая роль CRM `admin|manager|viewer` — лишь признак (D1-8, B-014): «последний администратор»,
+  кого можно назначить на лида, замещающий, режим интерфейса старого фронта. Прав она не даёт —
+  права сотрудника с ролями Платформы только из матриц его ролей (`Principal.rbac_roles`). Признак
+  вычисляется из той же матрицы (`CRM_BASE_ROLE_BY_ACCESS`: `admin: full` — admin,
+  `crm.leads: full` — manager, иначе viewer), без привязки к коду роли; у сотрудника берётся
+  старшая (admin > manager > viewer);
 - права EDS (`eds_permissions_of`) вычисляются так же, по `EDS_BACKEND`; неактивный сотрудник —
   пустой список; CRM публикует их в `identity.user.*` как `permissions.eds` (задача E4);
 - провижининг ERP: `permissions` = вычисленный набор, `role_codes = []`; суперпользователь ERP —
@@ -261,7 +264,9 @@ def eds_catalog_fingerprint(
         for code in system_codes
     }
     payload = {
-        "v": 1,
+        # 2 — D1-8: снимок несёт и `permissions.sections` (разделы каталога): все сотрудники
+        # переопубликуются один раз при первом старте воркера после выкладки.
+        "v": 2,
         "backend": {r: lv for r, lv in sorted(effective.items()) if lv},
         "system_roles": dict(sorted(system.items())),
     }
@@ -283,10 +288,8 @@ def _meets(access: Mapping[str, str], condition: str) -> bool:
 
 
 def role_crm_base(grant: RoleGrant) -> str:
-    """Базовая роль CRM одной роли для старого фронта (до T4)."""
-    legacy = legacy_code(grant.code)
-    if legacy is not None:
-        return CRM_BASE_ROLE_BY_CODE[legacy]
+    """Базовая роль CRM одной роли — признак по матрице, не по коду роли (D1-8): шаблон
+    «Бухгалтер» без `crm.leads` — `viewer`, а не `manager`, как в версии 1."""
     for role in ("admin", "manager"):
         if any(_meets(grant.access, c) for c in CRM_BASE_ROLE_BY_ACCESS.get(role, ())):
             return role

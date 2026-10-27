@@ -266,43 +266,26 @@ def eds_error_body(code: str, message: str, **details: Any) -> dict[str, Any]:
     return {"code": code, "message": message, "source": "eds", "details": details}
 
 
-# --- справочник CRM для кандидатов ---------------------------------------------------------
+# --- сотрудники зоны из CRM для кандидатов -------------------------------------------------
 
 
-def crm_user(
-    user_id: int,
-    name: str,
-    role_ids: list[int],
-    *,
-    active: bool = True,
-    position: str | None = None,
+def team_member(
+    user_id: int, name: str, initials: str, position: str | None = None
 ) -> dict[str, Any]:
-    return {
-        "id": user_id,
-        "email": f"user{user_id}@example.org",
-        "full_name": name,
-        "is_active": active,
-        "platform_role_ids": role_ids,
-        "position": position,
-    }
-
-
-def crm_role(role_id: int, access: dict[str, str]) -> dict[str, Any]:
-    return {"id": role_id, "name": f"Роль {role_id}", "access": access}
+    """Строка `GET /team?section=` CRM: id, имя, инициалы, должность — без почты и ролей."""
+    return {"id": user_id, "full_name": name, "initials": initials, "position": position}
 
 
 class CrmDirectory:
-    """`GET /users` и `GET /platform-roles` CRM для проверки зон исполнителей."""
+    """`GET /team?section=&level=` CRM: сотрудники зоны по разделу каталога (D1-8, B-007)."""
 
     def __init__(self, be: Backends) -> None:
-        self.users: list[dict[str, Any]] = []
-        self.roles: list[dict[str, Any]] = []
+        self.sections: dict[str, list[dict[str, Any]]] = {}
         self.status: int | Exception = 200
         self.calls: list[httpx.Request] = []
-        be.router.get(f"{CRM_URL}/api/v1/users").mock(side_effect=self._users)
-        be.router.get(f"{CRM_URL}/api/v1/platform-roles").mock(side_effect=self._roles)
+        be.router.get(f"{CRM_URL}/api/v1/team").mock(side_effect=self._team)
 
-    def _answer(self, request: httpx.Request, body: list[dict[str, Any]]) -> httpx.Response:
+    def _team(self, request: httpx.Request) -> httpx.Response:
         self.calls.append(request)
         if isinstance(self.status, Exception):
             raise self.status
@@ -310,10 +293,4 @@ class CrmDirectory:
             return httpx.Response(
                 self.status, json={"code": "forbidden", "message": "x", "details": {}}
             )
-        return httpx.Response(200, json=body)
-
-    def _users(self, request: httpx.Request) -> httpx.Response:
-        return self._answer(request, self.users)
-
-    def _roles(self, request: httpx.Request) -> httpx.Response:
-        return self._answer(request, self.roles)
+        return httpx.Response(200, json=self.sections.get(request.url.params["section"], []))

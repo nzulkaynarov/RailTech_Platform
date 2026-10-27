@@ -165,6 +165,7 @@ import type {
   SsoTokenResponse,
   SystemStatusOut,
   TeamMember,
+  TeamParams,
   TelegramLinkOut,
   TelegramStatusOut,
   TelegramTokenIn,
@@ -15668,38 +15669,54 @@ export function useSystemStatus<
   return withQueryKey(query, queryOptions.queryKey);
 }
 
-export const getTeamUrl = () => {
-  return `/api/v1/team`;
+export const getTeamUrl = (params?: TeamParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/team?${stringifiedParams}` : `/api/v1/team`;
 };
 
 /**
- * Активные менеджеры и админы: кому передать лида, чьё имя показать (без email и ролей).
+ * Менеджеры и админы (без `section`) либо сотрудники раздела каталога (с `section`).
  * @summary Team
  */
-export const team = async (options?: Parameters<typeof http>[1]): Promise<TeamMember[]> => {
-  return http<TeamMember[]>(getTeamUrl(), {
+export const team = async (
+  params?: TeamParams,
+  options?: Parameters<typeof http>[1],
+): Promise<TeamMember[]> => {
+  return http<TeamMember[]>(getTeamUrl(params), {
     ...options,
     method: "GET",
   });
 };
 
-export const getTeamQueryKey = () => {
-  return [`/api/v1/team`] as const;
+export const getTeamQueryKey = (params?: TeamParams) => {
+  return [`/api/v1/team`, ...(params ? [params] : [])] as const;
 };
 
 export const getTeamQueryOptions = <
   TData = Awaited<ReturnType<typeof team>>,
   TError = ErrorType<ErrorOut>,
->(options?: {
-  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof team>>, TError, TData>>;
-  request?: SecondParameter<typeof http>;
-}) => {
+>(
+  params?: TeamParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof team>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
   const { query: queryOptions, request: requestOptions } = options ?? {};
 
-  const queryKey = queryOptions?.queryKey ?? getTeamQueryKey();
+  const queryKey = queryOptions?.queryKey ?? getTeamQueryKey(params);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof team>>> = ({ signal }) =>
-    team({ signal, ...requestOptions });
+    team(params, { signal, ...requestOptions });
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof team>>,
@@ -15712,6 +15729,7 @@ export type TeamQueryResult = NonNullable<Awaited<ReturnType<typeof team>>>;
 export type TeamQueryError = ErrorType<ErrorOut>;
 
 export function useTeam<TData = Awaited<ReturnType<typeof team>>, TError = ErrorType<ErrorOut>>(
+  params: undefined | TeamParams,
   options: {
     query: Partial<UseQueryOptions<Awaited<ReturnType<typeof team>>, TError, TData>> &
       Pick<
@@ -15727,6 +15745,7 @@ export function useTeam<TData = Awaited<ReturnType<typeof team>>, TError = Error
   queryClient?: QueryClient,
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useTeam<TData = Awaited<ReturnType<typeof team>>, TError = ErrorType<ErrorOut>>(
+  params?: TeamParams,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof team>>, TError, TData>> &
       Pick<
@@ -15742,6 +15761,7 @@ export function useTeam<TData = Awaited<ReturnType<typeof team>>, TError = Error
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useTeam<TData = Awaited<ReturnType<typeof team>>, TError = ErrorType<ErrorOut>>(
+  params?: TeamParams,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof team>>, TError, TData>>;
     request?: SecondParameter<typeof http>;
@@ -15753,13 +15773,14 @@ export function useTeam<TData = Awaited<ReturnType<typeof team>>, TError = Error
  */
 
 export function useTeam<TData = Awaited<ReturnType<typeof team>>, TError = ErrorType<ErrorOut>>(
+  params?: TeamParams,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof team>>, TError, TData>>;
     request?: SecondParameter<typeof http>;
   },
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-  const queryOptions = getTeamQueryOptions(options);
+  const queryOptions = getTeamQueryOptions(params, options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;

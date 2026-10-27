@@ -24,7 +24,7 @@ from app.models import Letter
 from app.schemas.common import ErpLinksIn
 from app.schemas.letters import LetterCreate, LetterStatus, LetterSubmitIn, ResolutionIn
 from app.services import events, files, journal, numbering
-from app.services.people import active_ids, default_director, load_directory
+from app.services.people import active_ids, default_director, load_directory, zone_mismatches
 
 log = structlog.get_logger(__name__)
 
@@ -247,6 +247,8 @@ async def resolve(
     inactive = {uid for uid, _ in pairs} - await active_ids(session, (uid for uid, _ in pairs))
     if inactive:
         raise invalid_fields("Исполнитель не найден или отключён.", assignees="not_active_employee")
+    if await zone_mismatches(session, pairs):  # B-007: исполнитель зоны имеет раздел зоны (проекция из identity)
+        raise invalid_fields("У исполнителя нет раздела выбранной зоны.", assignees="assignee_zone_mismatch")
     now = clock.now()
     letter.status = LetterStatus.RESOLVED.value
     letter.resolution_text = data.text

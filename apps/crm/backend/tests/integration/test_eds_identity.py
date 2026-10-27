@@ -18,6 +18,8 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.config import Settings
+from app.domain.platform_roles import RoleGrant, merge_access
+from app.domain.platform_roles_generated import ROLE_ACCESS
 from tests.integration.crm_helpers import login, make_user
 from tests.integration.roles_helpers import legacy_ids, make_client, patch_role
 from tests.integration.test_platform_access import Queue
@@ -34,6 +36,12 @@ ACCOUNTANT = [
     "registry.read",
 ]
 INBOX_READ = ["letters.read", "registry.read"]
+
+
+def sections_of(*codes: str) -> dict[str, str]:
+    """`permissions.sections` по кодам ролей каталога: `eds.*` и `erp.*` объединённой матрицы."""
+    merged = merge_access(RoleGrant(ROLE_ACCESS[code]) for code in codes)
+    return {k: v for k, v in merged.items() if k.startswith(("eds.", "erp."))}
 
 
 @pytest.fixture
@@ -125,6 +133,10 @@ async def test_created_user_carries_the_eds_permissions_of_the_roles(
         assert response.status_code == 201, response.text
 
     created = await events(sessions, USER_CREATED)
+    assert [d["user"]["permissions"]["sections"] for d in created] == [
+        sections_of("DIRECTOR"),
+        sections_of("ACCOUNTANT"),
+    ]
     assert [d["user"]["permissions"]["eds"] for d in created] == [
         sorted(
             [
@@ -159,11 +171,15 @@ async def test_assigning_and_removing_roles_publishes_the_new_eds_permissions(
 
     first, second, third = await events(sessions)
     assert first["user"]["permissions"] == {
-        "eds": ["letters.read", "memos.create", "registry.read"]
+        "eds": ["letters.read", "memos.create", "registry.read"],
+        "sections": sections_of("MANAGER"),
     }
-    assert second["user"]["permissions"] == {"eds": ACCOUNTANT}
+    assert second["user"]["permissions"] == {
+        "eds": ACCOUNTANT,
+        "sections": sections_of("MANAGER", "ACCOUNTANT"),
+    }
     assert "payments.confirm" in second["user"]["permissions"]["eds"]
-    assert third["user"]["permissions"] == {"eds": []}
+    assert third["user"]["permissions"] == {"eds": [], "sections": {}}
     for data in (first, second, third):
         assert data["user"]["crm_user_id"] == employee.id
     # changed_fields перечисляет все реально изменившиеся поля снимка, а не только права EDS.
@@ -206,7 +222,8 @@ async def test_deactivation_and_activation_follow_the_eds_permissions(
     (activated,) = await events(sessions)
     assert activated["user"]["is_active"] is True
     assert activated["user"]["permissions"] == {
-        "eds": ["letters.read", "memos.create", "registry.read"]
+        "eds": ["letters.read", "memos.create", "registry.read"],
+        "sections": sections_of("MANAGER"),
     }
     assert activated["changed_fields"] == ["is_active", "permissions"]
 
@@ -240,7 +257,8 @@ async def test_role_matrix_change_publishes_to_every_holder_whose_eds_rights_cha
     assert len(data) == 1
     event = by_user[alone.id]
     assert event["user"]["permissions"] == {
-        "eds": ["letters.read", "payments.confirm", "registry.export", "registry.read"]
+        "eds": ["letters.read", "payments.confirm", "registry.export", "registry.read"],
+        "sections": {"eds.inbox": "read", "eds.payments": "full"},
     }
     assert event["changed_fields"] == ["permissions"]
     assert without_role.id not in by_user
@@ -329,7 +347,7 @@ async def test_deleting_a_role_is_only_possible_without_holders_so_no_rights_cha
 
     assign(client, boss, employee.id, [plain])  # права снимает смена роли, и событие уходит там
     (removed,) = await events(sessions)
-    assert removed["user"]["permissions"] == {"eds": []}
+    assert removed["user"]["permissions"] == {"eds": [], "sections": {}}
     assert client.delete(f"/api/v1/platform-roles/{role}", headers=boss).status_code == 204
 
 

@@ -9,6 +9,7 @@ import pytest
 from app.container import Container
 from tests.conftest import FakeClock
 from tests.domain import Person, outbox, validate
+from tests.helpers import seed_employee
 from tests.test_api_auth import assert_error
 
 pytestmark = pytest.mark.pg
@@ -159,6 +160,78 @@ async def test_resolution_assignees_must_be_active_unique_employees(
     letter = await register(client, staff["registrar"])
     response = await act(client, staff["director"], letter["id"], "resolution", {**RESOLUTION, "assignees": assignees})
     assert_error(response, 422, "VALIDATION_FAILED")
+
+
+async def _resolve_with(
+    client: httpx.AsyncClient, staff: dict[str, Person], assignees: list[dict[str, Any]]
+) -> tuple[dict[str, Any], httpx.Response]:
+    letter = await register(client, staff["registrar"], links={})
+    response = await act(client, staff["director"], letter["id"], "resolution", {**RESOLUTION, "assignees": assignees})
+    return letter, response
+
+
+@pytest.mark.parametrize(
+    "assignees",
+    [
+        [{"crm_user_id": 11, "zone": "services"}],  # снабженец — не зона «услуги»
+        [{"crm_user_id": 12, "zone": "goods"}],  # инженер — не зона «товары»
+        [{"crm_user_id": 11, "zone": "payment_terms"}],  # снабженец — не условия оплаты
+        [{"crm_user_id": 11, "zone": "goods"}, {"crm_user_id": 6, "zone": "goods"}],  # бухгалтер — не товары
+        [{"crm_user_id": 5, "zone": "goods"}],  # менеджер: разделов расчёта нет вовсе
+    ],
+)
+async def test_resolution_assignee_must_hold_the_section_of_the_zone(
+    client: httpx.AsyncClient, container: Container, staff: dict[str, Person], assignees: list[dict[str, Any]]
+) -> None:
+    """B-007: исполнитель зоны — держатель её раздела каталога; иначе 422, письмо ждёт резолюции, события нет."""
+    letter, response = await _resolve_with(client, staff, assignees)
+
+    body = assert_error(response, 422, "VALIDATION_FAILED")
+    assert body["details"]["fields"] == [
+        {"field": "assignees", "message": "assignee_zone_mismatch", "type": "value_error"}
+    ]
+    assert await outbox(container, "letter.resolved") == []
+    card = (await client.get(f"/api/v1/letters/{letter['id']}", headers=staff["director"].headers)).json()
+    assert card["status"] == "awaiting_resolution"
+
+
+async def test_resolution_accepts_every_zone_of_its_holder_and_the_universal_role(
+    client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
+) -> None:
+    pairs = [
+        {"crm_user_id": 11, "zone": "goods"},
+        {"crm_user_id": 12, "zone": "services"},
+        {"crm_user_id": 6, "zone": "payment_terms"},
+        {"crm_user_id": 3, "zone": "goods"},  # директор по каталогу держит все три раздела зон
+        {"crm_user_id": 3, "zone": "services"},
+        {"crm_user_id": 3, "zone": "payment_terms"},
+    ]
+    _, response = await _resolve_with(client, staff, pairs)
+
+    assert response.status_code == 200, response.text
+    [event] = await outbox(container, "letter.resolved")
+    assert len(event["data"]["resolution"]["assignees"]) == 6
+
+
+async def test_resolution_zone_needs_full_level_and_a_projection_with_sections(
+    client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
+) -> None:
+    """Уровень `read` раздела зоны не делает исполнителем; проекция без разделов (снимок до D1-8) — тоже."""
+    await seed_employee(
+        container, 11, full_name="Сардор Снабженцев", permissions={"eds": [], "sections": {"erp.calc.goods": "read"}}
+    )
+    _, read_only = await _resolve_with(client, staff, [{"crm_user_id": 11, "zone": "goods"}])
+    assert_error(read_only, 422, "VALIDATION_FAILED")
+
+    await seed_employee(container, 11, full_name="Сардор Снабженцев", permissions={"eds": ["registry.read"]})
+    _, old_snapshot = await _resolve_with(client, staff, [{"crm_user_id": 11, "zone": "goods"}])
+    assert_error(old_snapshot, 422, "VALIDATION_FAILED")
+
+    await seed_employee(
+        container, 11, full_name="Сардор Снабженцев", permissions={"eds": [], "sections": {"erp.calc.goods": "full"}}
+    )
+    _, full = await _resolve_with(client, staff, [{"crm_user_id": 11, "zone": "goods"}])
+    assert full.status_code == 200, full.text
 
 
 async def test_resolution_due_in_the_past_is_rejected_today_is_accepted(

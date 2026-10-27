@@ -6231,6 +6231,7 @@ components:
       title: SystemStatusOut
       type: object
     TeamMember:
+      description: 'Сотрудник в выборе («кому передать лида», «исполнитель зоны»): без почты, телефона, ролей.'
       properties:
         full_name:
           title: Full Name
@@ -6238,9 +6239,19 @@ components:
         id:
           title: Id
           type: integer
+        initials:
+          maxLength: 3
+          title: Initials
+          type: string
+        position:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Position
       required:
       - id
       - full_name
+      - initials
       title: TeamMember
       type: object
     TelegramLinkOut:
@@ -11655,8 +11666,31 @@ paths:
       - system
   /api/v1/team:
     get:
-      description: 'Активные менеджеры и админы: кому передать лида, чьё имя показать (без email и ролей).'
+      description: Менеджеры и админы (без `section`) либо сотрудники раздела каталога (с `section`).
       operationId: team
+      parameters:
+      - in: query
+        name: section
+        required: false
+        schema:
+          anyOf:
+          - maxLength: 64
+            type: string
+          - type: 'null'
+          title: Section
+      - description: 'Уровень раздела не ниже: `full` или `read` (`full` ⊇ `read`).'
+        in: query
+        name: level
+        required: false
+        schema:
+          anyOf:
+          - enum:
+            - full
+            - read
+            type: string
+          - type: 'null'
+          description: 'Уровень раздела не ниже: `full` или `read` (`full` ⊇ `read`).'
+          title: Level
       responses:
         '200':
           content:

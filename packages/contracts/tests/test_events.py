@@ -277,6 +277,24 @@ def test_identity_user_may_carry_eds_permission_codes() -> None:
         assert not v.is_valid(broken), bad
 
 
+def test_identity_user_may_carry_catalog_sections() -> None:
+    """D1-8: `permissions.sections` — разделы каталога и уровень; аддитивно и необязательно."""
+    t = next(t for t in TYPES if t.name == "uz.railtech.identity.user.updated.v1")
+    v = type_validator(t)
+    data = load_json(t.example)["data"]
+    assert data["user"]["permissions"]["sections"]["erp.calc.goods"] == "full"
+    without = copy.deepcopy(data)
+    del without["user"]["permissions"]["sections"]
+    assert v.is_valid(without), "поле необязательное: старый CRM его не публикует"
+    empty = copy.deepcopy(data)
+    empty["user"]["permissions"]["sections"] = {}
+    assert v.is_valid(empty), "неактивный сотрудник — пусто"
+    for bad in ("hidden", "FULL", "", None, True):
+        broken = copy.deepcopy(data)
+        broken["user"]["permissions"]["sections"]["eds.projects"] = bad
+        assert not v.is_valid(broken), bad
+
+
 def _property_names(node: object) -> set[str]:
     if isinstance(node, dict):
         names = set(node.get("properties", {})) if isinstance(node.get("properties"), dict) else set()
