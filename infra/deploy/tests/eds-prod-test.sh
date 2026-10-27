@@ -163,11 +163,13 @@ jq -r '.services["db-init"].command | join(" ")' "$tmp/dev.json" | grep -qE 'ini
 
 # 5. Деплой.
 workflow="$root/.github/workflows/deploy.yml"
-eds_step="$(awk '/name: Образ rt-eds/{f=1} f&&/name: SSH к VPS 1/{exit} f{print}' "$workflow")"
-[[ -n "$eds_step" ]] || fail "deploy.yml: нет сборки образа rt-eds"
-grep -q 'context: apps/eds' <<<"$eds_step" || fail "deploy.yml: rt-eds собирается не из apps/eds"
-grep -q 'rtbus=packages/rt-bus' <<<"$eds_step" && grep -q 'contracts=packages/contracts' <<<"$eds_step" || fail "deploy.yml: rt-eds без build-contexts rtbus и contracts"
-grep -q 'target: prod' <<<"$eds_step" || fail "deploy.yml: rt-eds собирается не target prod"
+# shellcheck source=deploy-images.sh
+source "$here/deploy-images.sh"
+deploy_image_names "$workflow" | grep -qx rt-eds || fail "deploy.yml: нет сборки образа rt-eds"
+[[ "$(deploy_image_field "$workflow" rt-eds context)" == "apps/eds" ]] || fail "deploy.yml: rt-eds собирается не из apps/eds"
+eds_ctx="$(deploy_image_field "$workflow" rt-eds contexts)"
+grep -q 'rtbus=packages/rt-bus' <<<"$eds_ctx" && grep -q 'contracts=packages/contracts' <<<"$eds_ctx" || fail "deploy.yml: rt-eds без build-contexts rtbus и contracts"
+[[ "$(deploy_image_field "$workflow" rt-eds target)" == "prod" ]] || fail "deploy.yml: rt-eds собирается не target prod"
 deploy="$root/infra/deploy/deploy.sh"
 dump="$(grep -n 'predeploy-dump.sh' "$deploy" | grep -v '^[0-9]*:#' | head -1 | cut -d: -f1)"
 mig="$(grep -n 'run --rm --no-deps eds-migrate' "$deploy" | head -1 | cut -d: -f1)"
