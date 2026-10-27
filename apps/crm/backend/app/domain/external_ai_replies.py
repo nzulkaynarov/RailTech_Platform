@@ -8,11 +8,14 @@
 сбое менеджеру передаёт сам бот: карточка в канал команды — рабочая задача менеджера, не системный
 алерт.
 
-Нет обращений за окно — `unknown`: это не сбой и не восстановление.
+Состояние держится по последнему ответу бота за сутки, а не по окну: ночью обращений нет, но
+последний ответ успешный — строка `ok` (иначе «Восстановлено» не пришло бы). `unknown` — только
+если за сутки ответов не было совсем или последнее событие — давний сбой без ответов после него
+(данных нет: это не сбой и не восстановление).
 """
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Final
 
 from app.domain.external_status import CheckResult
@@ -26,32 +29,34 @@ WINDOW_MINUTES: Final = 5
 class AiFacts:
     failed: int = 0  # ответов «сбой ИИ» за окно
     answered: int = 0  # успешных ответов агента за окно
-    last_failed_at: datetime | None = None
-    last_answered_at: datetime | None = None
+    last_failed_at: datetime | None = None  # последний сбой за сутки
+    last_answered_at: datetime | None = None  # последний успешный ответ за сутки
 
 
-def ai_replies(f: AiFacts) -> CheckResult:
+def ai_replies(f: AiFacts, now: datetime) -> CheckResult:
     metrics = {"failed_5m": f.failed, "answered_5m": f.answered}
-    if f.failed == 0 and f.answered == 0:
-        return CheckResult(
-            KEY,
-            "unknown",
-            f"Обращений за последние {WINDOW_MINUTES} мин не было — нечего проверять",
-            metrics=metrics,
-        )
-    recovered = f.last_answered_at is not None and (
-        f.last_failed_at is None or f.last_answered_at > f.last_failed_at
+    last_is_failure = f.last_failed_at is not None and (
+        f.last_answered_at is None or f.last_answered_at < f.last_failed_at
     )
-    if f.failed and not recovered:
-        return CheckResult(
-            KEY,
-            "fail",
-            f"ИИ не ответил клиентам за {WINDOW_MINUTES} мин: {f.failed}; их передают менеджерам",
-            hint=(
-                "Проверьте строки «Шлюз моделей» и провайдеров в «Подключениях»; клиентов из этого "
-                "сбоя ведёт менеджер по карточке в канале команды"
-            ),
-            metrics=metrics,
-            cause="ai_unavailable",
-        )
-    return CheckResult(KEY, "ok", "ИИ отвечает клиентам", metrics=metrics)
+    if last_is_failure and f.last_failed_at is not None:
+        if now - f.last_failed_at <= timedelta(minutes=WINDOW_MINUTES):
+            return CheckResult(
+                KEY,
+                "fail",
+                f"ИИ не ответил клиентам за {WINDOW_MINUTES} мин: {max(f.failed, 1)}; "
+                "их передают менеджерам",
+                hint=(
+                    "Проверьте строки «Шлюз моделей» и провайдеров в «Подключениях»; клиентов из "
+                    "этого сбоя ведёт менеджер по карточке в канале команды"
+                ),
+                metrics=metrics,
+                cause="ai_unavailable",
+            )
+        return _unknown("После сбоя ответов не было — нечего проверять", metrics)
+    if f.last_answered_at is not None:
+        return CheckResult(KEY, "ok", "ИИ отвечает клиентам", metrics=metrics)
+    return _unknown("Ответов бота за сутки не было — нечего проверять", metrics)
+
+
+def _unknown(summary: str, metrics: dict[str, int]) -> CheckResult:
+    return CheckResult(KEY, "unknown", summary, metrics=metrics)
