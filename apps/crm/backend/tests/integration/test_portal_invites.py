@@ -26,6 +26,7 @@ from app.main import create_app
 from app.models.clients import Client, ClientContact
 from app.models.leads import Lead, TelegramIdentity
 from app.models.notices import ClientNotice
+from app.security import audit
 from app.security.principal import Principal
 from app.services.erp_handoff import ErpHandoffService
 from app.services.erp_invite_delivery import InviteDelivery
@@ -683,8 +684,12 @@ async def test_bot_result_waits_for_the_open_handoff_transaction_and_is_not_spli
 
 
 async def test_resend_and_bot_result_are_serialized_by_the_client_lock(
-    sessions: async_sessionmaker[AsyncSession], live_settings: Settings
+    sessions: async_sessionmaker[AsyncSession],
+    live_settings: Settings,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Событие бота приходит, пока `resend` вставил попытку, но не закоммитил: без блокировки
+    клиента событие её не видит и пишет сироту (карточка навсегда «в очереди»)."""
     ids = await seed(sessions, in_erp=True)
     erp = FakeErp(sent_via=["email"])
     await hand_off(sessions, erp, ids)
@@ -692,17 +697,24 @@ async def test_resend_and_bot_result_are_serialized_by_the_client_lock(
     service = PortalInviteService(sessions, erp)
     manager_account, _ = await make_user(sessions, "ser@railtech.uz", ["manager"])
     who = Principal(manager_account.id, "Менеджер", ("manager",))
+    original = audit.record
+
+    async def slow_audit(*args: Any, **kwargs: Any) -> Any:
+        await asyncio.sleep(0.8)  # окно между вставкой попытки и коммитом
+        return await original(*args, **kwargs)
+
+    monkeypatch.setattr(audit, "record", slow_audit)
 
     async def resend() -> None:
         await service.resend(who, ids[0], "telegram", None)
 
     async def event() -> None:
-        await asyncio.sleep(0.05)
+        await asyncio.sleep(0.4)
         await service.resolve_telegram(ids[0], ids[2], None)
 
     await asyncio.gather(resend(), event())
 
     rows = await notices(sessions)
-    assert len(rows) == 2
+    assert len(rows) == 2, "первая попытка и повтор, без сироты"
     assert all(r.status == "sent" for r in rows)
     assert all("orphan" not in r.detail for r in rows)
