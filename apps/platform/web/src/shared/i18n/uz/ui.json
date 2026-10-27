@@ -32,7 +32,5 @@
     "retry": "Qayta urinish"
   },
   "whereToDo": "Qayerda bajarish",
-  "whereToDoItem": "Qayerda bajarish: {{title}}",
-  "whereToLook": "Qayerda ko‘rish",
-  "whereToLookItem": "Qayerda ko‘rish: {{title}}"
+  "whereToDoItem": "Qayerda bajarish: {{title}}"
 }

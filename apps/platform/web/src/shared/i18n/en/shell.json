@@ -68,8 +68,7 @@
       "clients": "C",
       "system": "!"
     },
-    "where": "Where to look",
-    "whereItem": "Where to look: {{title}}"
+    "where": "Where to look"
   },
   "panel": {
     "label": "Side panel",

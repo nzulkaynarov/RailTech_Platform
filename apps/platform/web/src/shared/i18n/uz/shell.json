@@ -68,8 +68,7 @@
       "clients": "M",
       "system": "!"
     },
-    "where": "Qayerda ko‘rish",
-    "whereItem": "Qayerda ko‘rish: {{title}}"
+    "where": "Qayerda ko‘rish"
   },
   "panel": {
     "label": "Yon oyna",

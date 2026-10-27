@@ -32,7 +32,5 @@
     "retry": "Повторить"
   },
   "whereToDo": "Где сделать",
-  "whereToDoItem": "Где сделать: {{title}}",
-  "whereToLook": "Где посмотреть",
-  "whereToLookItem": "Где посмотреть: {{title}}"
+  "whereToDoItem": "Где сделать: {{title}}"
 }

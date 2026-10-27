@@ -117,7 +117,7 @@ describe("Центр уведомлений", () => {
     });
 
     const item = await within(center).findByRole("button", {
-      name: /Где посмотреть: .*КП-2026\/118 ждёт/,
+      name: /Где посмотреть.*КП-2026\/118 ждёт/,
     });
     fireEvent.click(item);
 

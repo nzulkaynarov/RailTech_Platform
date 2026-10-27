@@ -32,7 +32,5 @@
     "retry": "Retry"
   },
   "whereToDo": "Where to do it",
-  "whereToDoItem": "Where to do it: {{title}}",
-  "whereToLook": "Where to look",
-  "whereToLookItem": "Where to look: {{title}}"
+  "whereToDoItem": "Where to do it: {{title}}"
 }
