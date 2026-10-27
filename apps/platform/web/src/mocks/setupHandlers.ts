@@ -15,7 +15,7 @@ import { readSetup, writeSetup } from "./setupState";
 
 const STEPS: readonly SetupStepKey[] = ["erp", "bot", "mail", "models", "first_employee"];
 
-/** Чистая установка без шага «ERP»: ERP не сопряжена, компания невозможна (BFF 0.13.0, `ERP_NOT_CONNECTED`). */
+/** Чистая установка без шага «ERP»: ERP не сопряжена, компания невозможна (BFF 0.15.0, `ERP_NOT_CONNECTED`). */
 function erpNotConnected(): boolean {
   const state = readSetup();
   return state.fresh && !state.done.erp;

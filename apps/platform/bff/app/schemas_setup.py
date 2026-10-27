@@ -1,5 +1,5 @@
 """Модели первого запуска и выдачи временного пароля — схемы `Setup*` и `EmployeeCredentials` из
-packages/contracts/openapi/platform-bff.yaml (0.10.0, W13-A4; 0.13.0, W13C-F1)."""
+packages/contracts/openapi/platform-bff.yaml (0.10.0, W13-A4; 0.15.0, W13C-F1)."""
 
 from typing import Literal
 
