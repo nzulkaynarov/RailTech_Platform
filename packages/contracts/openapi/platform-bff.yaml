@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.16.0
+  version: 0.17.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -153,6 +153,16 @@ info:
     EDS, полученным обменом токена сотрудника CRM `aud=eds` (`docs/architecture/platform-bff.md` §3); ошибки EDS переводятся в
     формат `Error` (`source = eds`, `details.reason` и `details.fields` EDS сохраняются).
 
+    **0.17.0 (W15-H6) — Профиль сотрудника.** Добавляющее изменение, тег `me`: `GET/PATCH /me/profile` (имя, телефон, язык, часовой
+    пояс, подпись для писем; должность и роли только читаются, правит админ), `PUT/DELETE /me/avatar` и `GET /staff/{id}/avatar`
+    (фото: клиент обрезает по кругу, CRM хранит в S3, BFF отдаёт без публичных ссылок; `Me.avatar_url` — вместо инициалов),
+    `POST/DELETE /me/telegram-link` (сотрудник привязывает Telegram сам: ссылка `t.me/<бот>?start=staff_<одноразовый код>` на 10
+    минут), `GET /me/deputy-candidates`, `PUT/DELETE /me/deputy` (замещение на период; заместитель видит очередь замещаемого:
+    `QueueItem.on_behalf_of`, права на объекты — свои). Вход: `POST /auth/forgot-password` (ответ одинаков для любой учётной
+    записи; ссылка уходит на почту или в Telegram, иначе тихо ничего) и `POST /auth/reset-password` (новый пароль по одноразовой
+    ссылке; неверная или просроченная — 422 `VALIDATION_FAILED`, `details.reason = reset_token_invalid`). `Me.access` остаётся для
+    совместимости, но экран «Доступ: CRM · ERP» убран: вместо него роли словами.
+
     0.2.4: `423 ACCOUNT_LOCKED` объявлен и на `POST /auth/change-password` (CRM блокирует учётную запись после неверных
     текущих паролей).
 
@@ -168,7 +178,7 @@ info:
     0.2.1 (Q-P0-3): перечень `Error.code` дополнен `INTERNAL_ERROR` (500) и нейтральными кодами 4xx `BAD_REQUEST`,
     `METHOD_NOT_ALLOWED`, `HTTP_<статус>` для ответов, которые не относятся ни к одному именованному коду.
 
-    Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; остальные запросы — 300 в минуту на сессию; превышение — 429
+    Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; «Забыли пароль?» — 5 запросов в час на IP и на адрес; остальные запросы — 300 в минуту на сессию; превышение — 429
     `TOO_MANY_REQUESTS` с `Retry-After`.
 servers:
   - url: https://platform.railtech.uz/api/v1
@@ -256,6 +266,63 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+
+  /auth/forgot-password:
+    post:
+      tags: [auth]
+      operationId: forgotPassword
+      summary: Забыли пароль — запросить ссылку сброса
+      description: >-
+        Без сессии. Ответ один и тот же для существующей и несуществующей учётной записи (перечислять сотрудников нельзя). Ссылка
+        на Платформу уходит на почту (если подключён SMTP) или в Telegram (если привязан); нет ни того, ни другого — ничего не
+        уходит, и экран заранее говорит «обратитесь к администратору». Ссылка одноразовая, живёт час; не больше трёх в час на
+        учётную запись. Лимит BFF — 5 запросов в час на IP и на адрес, сверх него 429 `TOO_MANY_REQUESTS`.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordIn'
+      responses:
+        '202':
+          description: Запрос принят
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForgotPasswordAccepted'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /auth/reset-password:
+    post:
+      tags: [auth]
+      operationId: resetPassword
+      summary: Задать новый пароль по ссылке сброса
+      description: >-
+        Без сессии. Токен из ссылки одноразовый; после успеха все открытые сессии сотрудника закрываются и вход идёт с новым
+        паролем. Неверная, использованная или просроченная ссылка — 422 `VALIDATION_FAILED` с `details.reason = reset_token_invalid`
+        (`details.fields = [token]`); слабый пароль — `weak_password` (`new_password`), ссылка остаётся действующей.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordIn'
+      responses:
+        '204':
+          description: Пароль задан
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
 
   /auth/logout:
     post:
@@ -586,6 +653,264 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+
+  /me/profile:
+    get:
+      tags: [me]
+      operationId: getProfile
+      summary: Мой профиль для страницы /me
+      description: >-
+        Данные сотрудника из CRM (`GET /me`): имя, почта, должность, телефон, язык, часовой пояс, подпись для писем, фото, привязка
+        Telegram и замещение. Доступно каждому вошедшему; чужой профиль этим путём не читается.
+      responses:
+        '200':
+          description: Профиль
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+    patch:
+      tags: [me]
+      operationId: updateProfile
+      summary: Сохранить свой профиль
+      description: >-
+        Не присланное поле не меняется; пустая строка в `phone` и `email_signature` очищает поле. Должность и роли сюда не
+        приходят (задаёт админ). Ошибка значения — 422 `VALIDATION_FAILED` с `details.fields` и `details.reason`
+        (`phone_invalid`, `timezone_unknown`, `signature_invalid`).
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfileUpdate'
+      responses:
+        '200':
+          description: Сохранено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/CsrfFailed'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /me/avatar:
+    put:
+      tags: [me]
+      operationId: uploadAvatar
+      summary: Загрузить фото профиля
+      description: >-
+        `multipart/form-data`, поле `avatar`: уже обрезанная по кругу картинка (клиент режет её до 256x256), PNG, JPEG или WebP не
+        больше 1 МБ. Тип проверяется по содержимому. Иначе 422 `VALIDATION_FAILED` с `details.reason`: `avatar_unsupported_type`,
+        `avatar_type_mismatch`, `avatar_too_large`, `avatar_empty`. Ответ — обновлённый `Me` (`avatar_url` с новой версией).
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AvatarUpload'
+      responses:
+        '200':
+          description: Фото заменено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Me'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/CsrfFailed'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+    delete:
+      tags: [me]
+      operationId: deleteAvatar
+      summary: Удалить фото профиля
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      responses:
+        '200':
+          description: Фото удалено (снова инициалы)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Me'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/CsrfFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /staff/{id}/avatar:
+    get:
+      tags: [me]
+      operationId: getStaffAvatar
+      summary: Фото сотрудника
+      description: >-
+        Файл фото коллеги как есть (PNG, JPEG или WebP) с `X-Content-Type-Options: nosniff` и `Cache-Control: private`. Публичных
+        ссылок на хранилище нет: картинку отдаёт только BFF вошедшему сотруднику. Нет фото или сотрудник отключён — 404
+        `NOT_FOUND` (рисуются инициалы).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[1-9][0-9]*$'
+      responses:
+        '200':
+          description: Изображение
+          content:
+            image/*:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /me/telegram-link:
+    post:
+      tags: [me]
+      operationId: createTelegramLink
+      summary: Привязать Telegram для уведомлений
+      description: >-
+        Выпускает одноразовую ссылку `https://t.me/<бот>?start=staff_<код>` на 10 минут; прежняя ссылка перестаёт работать. SPA
+        показывает её кнопкой и QR. Бот по `/start staff_<код>` привязывает Telegram и отвечает подтверждением; клиентский путь бота
+        от этого не меняется. Бот не подключён — 409 `NOT_CONFIGURED`; бот не запущен — 409 `CONFLICT`.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      responses:
+        '200':
+          description: Ссылка
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelegramLink'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/CsrfFailed'
+        '409':
+          description: '`NOT_CONFIGURED` — бот не подключён; `CONFLICT` (`details.reason = bot_not_running`) — бот сейчас не запущен'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+    delete:
+      tags: [me]
+      operationId: deleteTelegramLink
+      summary: Отвязать Telegram
+      description: Снимает привязку и гасит неиспользованные ссылки. Без привязки — не ошибка.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      responses:
+        '200':
+          description: Отвязан; профиль без Telegram
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/CsrfFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /me/deputy-candidates:
+    get:
+      tags: [me]
+      operationId: listDeputyCandidates
+      summary: Кого можно назначить заместителем
+      description: Активные коллеги с рабочей ролью CRM (менеджер или администратор), кроме самого сотрудника.
+      responses:
+        '200':
+          description: Коллеги
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Colleague'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /me/deputy:
+    put:
+      tags: [me]
+      operationId: setDeputy
+      summary: Назначить заместителя на период
+      description: >-
+        «На время отсутствия мои задачи видит {сотрудник} с {дата} по {дата}»: обе даты включительно, считаются по календарю
+        замещаемого, период не в прошлом и не длиннее года. Заместитель видит очередь замещаемого строками с пометкой «за {имя}»,
+        права на объекты у него свои. 422 `VALIDATION_FAILED` с `details.reason`: `deputy_is_self`, `deputy_period_reversed`,
+        `deputy_period_past`, `deputy_period_too_long`, `deputy_not_colleague`.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeputyUpdate'
+      responses:
+        '200':
+          description: Назначен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/CsrfFailed'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+    delete:
+      tags: [me]
+      operationId: clearDeputy
+      summary: Снять замещение
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      responses:
+        '200':
+          description: Замещения нет
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/CsrfFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
 
   /health:
     get:
@@ -6349,6 +6674,9 @@ components:
         position:
           type: string
           description: Должность — текст (не роль)
+        avatar_url:
+          type: string
+          description: Адрес фото на BFF (`/staff/{id}/avatar?v=…`, тот же origin); нет — рисуются инициалы
         language:
           $ref: '#/components/schemas/Language'
         roles:
@@ -6779,6 +7107,214 @@ components:
       enum: [overdue, today, tomorrow, later, memo]
       description: Бейдж срока — red «просрочено», red «срок сегодня», gold «завтра», default — дата, purple «служебка»
 
+    ForgotPasswordIn:
+      type: object
+      additionalProperties: false
+      required: [identifier]
+      properties:
+        identifier:
+          type: string
+          minLength: 1
+          maxLength: 254
+          description: Почта (логин) сотрудника
+
+    ForgotPasswordAccepted:
+      type: object
+      additionalProperties: false
+      required: [accepted]
+      properties:
+        accepted:
+          type: boolean
+          enum: [true]
+
+    ResetPasswordIn:
+      type: object
+      additionalProperties: false
+      required: [token, new_password]
+      properties:
+        token:
+          type: string
+          minLength: 20
+          maxLength: 128
+          writeOnly: true
+        new_password:
+          type: string
+          minLength: 8
+          maxLength: 256
+          writeOnly: true
+
+    Timezone:
+      type: string
+      maxLength: 64
+      description: Имя пояса IANA — `Asia/Tashkent`
+      examples: ['Asia/Tashkent']
+
+    TelegramState:
+      type: object
+      additionalProperties: false
+      required: [linked]
+      properties:
+        linked:
+          type: boolean
+        username:
+          type: string
+          description: Ник, с которого сотрудник привязал бота («Привязан как @…»); у привязки администратором ника нет
+
+    DeputyPeriod:
+      type: object
+      additionalProperties: false
+      required: [user_id, name, date_from, date_to]
+      properties:
+        user_id:
+          type: string
+          pattern: '^[1-9][0-9]*$'
+        name:
+          type: string
+        date_from:
+          type: string
+          format: date
+        date_to:
+          type: string
+          format: date
+
+    Covering:
+      type: object
+      additionalProperties: false
+      required: [user_id, name, date_from, date_to]
+      description: За кого сотрудник сегодня заместитель — его очередь показана в «Моей очереди» строками «за {имя}»
+      properties:
+        user_id:
+          type: string
+          pattern: '^[1-9][0-9]*$'
+        name:
+          type: string
+        date_from:
+          type: string
+          format: date
+        date_to:
+          type: string
+          format: date
+
+    Profile:
+      type: object
+      additionalProperties: false
+      required: [name, email, language, timezone, telegram, covering]
+      description: Профиль сотрудника для страницы /me (данные CRM)
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        position:
+          type: string
+          description: Должность — только чтение, задаёт администратор
+        phone:
+          type: string
+          description: '`+` и цифры без пробелов'
+        language:
+          $ref: '#/components/schemas/Language'
+        timezone:
+          $ref: '#/components/schemas/Timezone'
+        email_signature:
+          type: string
+          maxLength: 1000
+          description: Подпись для исходящих писем
+        avatar_url:
+          type: string
+          description: Адрес фото на BFF (`/staff/{id}/avatar?v=…`); нет — инициалы
+        telegram:
+          $ref: '#/components/schemas/TelegramState'
+        deputy:
+          $ref: '#/components/schemas/DeputyPeriod'
+        covering:
+          type: array
+          items:
+            $ref: '#/components/schemas/Covering'
+
+    ProfileUpdate:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        phone:
+          type: string
+          maxLength: 40
+          description: Пустая строка очищает
+        language:
+          $ref: '#/components/schemas/Language'
+        timezone:
+          $ref: '#/components/schemas/Timezone'
+        email_signature:
+          type: string
+          maxLength: 1000
+          description: Пустая строка очищает
+
+    AvatarUpload:
+      type: object
+      required: [avatar]
+      properties:
+        avatar:
+          type: string
+          format: binary
+          description: PNG, JPEG или WebP до 1 МБ (клиент уже обрезал по кругу)
+
+    TelegramLink:
+      type: object
+      additionalProperties: false
+      required: [url, expires_at]
+      properties:
+        url:
+          type: string
+          description: '`https://t.me/<бот>?start=staff_<код>` — открыть в Telegram или показать QR'
+        expires_at:
+          type: string
+          format: date-time
+
+    Colleague:
+      type: object
+      additionalProperties: false
+      required: [id, name]
+      properties:
+        id:
+          type: string
+          pattern: '^[1-9][0-9]*$'
+        name:
+          type: string
+        position:
+          type: string
+
+    DeputyUpdate:
+      type: object
+      additionalProperties: false
+      required: [deputy_id, date_from, date_to]
+      properties:
+        deputy_id:
+          type: string
+          pattern: '^[1-9][0-9]*$'
+        date_from:
+          type: string
+          format: date
+        date_to:
+          type: string
+          format: date
+
+    QueueOwner:
+      type: object
+      additionalProperties: false
+      required: [id, name]
+      description: Чья это очередь, если строку видит заместитель
+      properties:
+        id:
+          type: string
+          pattern: '^[1-9][0-9]*$'
+        name:
+          type: string
+
     QueueItem:
       type: object
       additionalProperties: false
@@ -6803,6 +7339,8 @@ components:
           format: date-time
         object:
           $ref: '#/components/schemas/ObjectRef'
+        on_behalf_of:
+          $ref: '#/components/schemas/QueueOwner'
 
     Queue:
       type: object

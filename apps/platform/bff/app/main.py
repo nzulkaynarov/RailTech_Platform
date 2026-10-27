@@ -25,6 +25,7 @@ from app.api import (
     health,
     me,
     me_notifications,
+    me_profile,
     notifications,
     search,
     setup,
@@ -88,6 +89,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(auth.router, prefix=API_PREFIX)
     app.include_router(me.router, prefix=API_PREFIX)
     app.include_router(me_notifications.router, prefix=API_PREFIX)
+    app.include_router(me_profile.router, prefix=API_PREFIX)
     app.include_router(admin_users.router, prefix=API_PREFIX)
     app.include_router(admin_passwords.router, prefix=API_PREFIX)
     app.include_router(setup.router, prefix=API_PREFIX)

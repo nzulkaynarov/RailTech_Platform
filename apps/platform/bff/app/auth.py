@@ -253,6 +253,7 @@ class AuthService:
             email=str(profile["email"]),
             name=str(profile["full_name"]),
             position=profile.get("position") or None,
+            avatar_version=_avatar_version(profile),
             language=_language(profile),
             roles=roles,
             platform_access=access,
@@ -609,6 +610,13 @@ class AuthService:
             raise session_expired()
         return updated
 
+    async def apply_profile(self, sid: str, profile: dict[str, Any]) -> SessionData:
+        """Записать в сессию свежий профиль CRM (ответ `PATCH /me`, `PUT /me/avatar` и т. п.)."""
+        updated = await self.store.update(sid, lambda d: _apply_profile(d, profile))
+        if updated is None:
+            raise session_expired()
+        return updated
+
     async def set_language(self, sid: str, language: Language) -> None:
         """Язык хранит CRM (`PATCH /api/v1/me`); в сессии — копия до следующего чтения профиля."""
         resp = await self.call(sid, "crm", "PATCH", "/api/v1/me", json={"language": language})
@@ -662,6 +670,11 @@ def _language(profile: dict[str, Any]) -> Language:
     return value if value in ("ru", "uz", "en") else "ru"
 
 
+def _avatar_version(profile: dict[str, Any]) -> int | None:
+    value = profile.get("avatar_version")
+    return value if isinstance(value, int) and not isinstance(value, bool) and value > 0 else None
+
+
 def roles_of(profile: dict[str, Any]) -> list[SessionRole]:
     """Роли Платформы из `/me` CRM (`platform_role_refs` с матрицами, R-2). Битая запись не роняет
     вход: такая роль пропускается (права всё равно решает CRM)."""
@@ -681,6 +694,7 @@ def _apply_profile(data: SessionData, profile: dict[str, Any]) -> None:
     access = list(profile.get("platform_access") or ["crm"])
     data.name = str(profile.get("full_name") or data.name)
     data.position = profile.get("position") or None
+    data.avatar_version = _avatar_version(profile)
     data.language = _language(profile)
     data.roles = roles
     data.platform_access = access

@@ -17,6 +17,7 @@ from app.cookies import CSRF_HEADER, SESSION_COOKIE
 from app.errors import PlatformError, session_expired
 from app.rbac import Access, Need, allows, fields_of, merge
 from app.rbac_generated import RESOURCE_MODULE
+from app.reset_limit import HourlyLimiter
 from app.session import SessionData, SessionRole
 
 _SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
@@ -64,7 +65,19 @@ def get_login_limiter(redis: RedisDep, settings: SettingsDep) -> LoginLimiter:
     return LoginLimiter(redis, settings.login_rate_per_minute)
 
 
+def get_forgot_limiter(redis: RedisDep) -> HourlyLimiter:
+    """Запрос ссылки сброса: 5 в час на IP и на адрес."""
+    return HourlyLimiter(redis, "forgot", 5)
+
+
+def get_reset_limiter(redis: RedisDep) -> HourlyLimiter:
+    """Ввод нового пароля по ссылке: 20 в час на IP."""
+    return HourlyLimiter(redis, "reset", 20)
+
+
 AuthServiceDep = Annotated[AuthService, Depends(get_auth_service)]
+ForgotLimiterDep = Annotated[HourlyLimiter, Depends(get_forgot_limiter)]
+ResetLimiterDep = Annotated[HourlyLimiter, Depends(get_reset_limiter)]
 LoginLimiterDep = Annotated[LoginLimiter, Depends(get_login_limiter)]
 
 

@@ -151,6 +151,16 @@
  * EDS, полученным обменом токена сотрудника CRM `aud=eds` (`docs/architecture/platform-bff.md` §3); ошибки EDS переводятся в
  * формат `Error` (`source = eds`, `details.reason` и `details.fields` EDS сохраняются).
  *
+ * **0.17.0 (W15-H6) — Профиль сотрудника.** Добавляющее изменение, тег `me`: `GET/PATCH /me/profile` (имя, телефон, язык, часовой
+ * пояс, подпись для писем; должность и роли только читаются, правит админ), `PUT/DELETE /me/avatar` и `GET /staff/{id}/avatar`
+ * (фото: клиент обрезает по кругу, CRM хранит в S3, BFF отдаёт без публичных ссылок; `Me.avatar_url` — вместо инициалов),
+ * `POST/DELETE /me/telegram-link` (сотрудник привязывает Telegram сам: ссылка `t.me/<бот>?start=staff_<одноразовый код>` на 10
+ * минут), `GET /me/deputy-candidates`, `PUT/DELETE /me/deputy` (замещение на период; заместитель видит очередь замещаемого:
+ * `QueueItem.on_behalf_of`, права на объекты — свои). Вход: `POST /auth/forgot-password` (ответ одинаков для любой учётной
+ * записи; ссылка уходит на почту или в Telegram, иначе тихо ничего) и `POST /auth/reset-password` (новый пароль по одноразовой
+ * ссылке; неверная или просроченная — 422 `VALIDATION_FAILED`, `details.reason = reset_token_invalid`). `Me.access` остаётся для
+ * совместимости, но экран «Доступ: CRM · ERP» убран: вместо него роли словами.
+ *
  * 0.2.4: `423 ACCOUNT_LOCKED` объявлен и на `POST /auth/change-password` (CRM блокирует учётную запись после неверных
  * текущих паролей).
  *
@@ -166,10 +176,10 @@
  * 0.2.1 (Q-P0-3): перечень `Error.code` дополнен `INTERNAL_ERROR` (500) и нейтральными кодами 4xx `BAD_REQUEST`,
  * `METHOD_NOT_ALLOWED`, `HTTP_<статус>` для ответов, которые не относятся ни к одному именованному коду.
  *
- * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; остальные запросы — 300 в минуту на сессию; превышение — 429
+ * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; «Забыли пароль?» — 5 запросов в час на IP и на адрес; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.16.0
+ * OpenAPI spec version: 0.17.0
  */
 
 export * from "./accessLevel";
@@ -200,6 +210,7 @@ export * from "./auditEntry";
 export * from "./auditEntryAfter";
 export * from "./auditEntryBefore";
 export * from "./auditPage";
+export * from "./avatarUpload";
 export * from "./backendUnavailableResponse";
 export * from "./backupDatabase";
 export * from "./backupItem";
@@ -258,13 +269,17 @@ export * from "./chargeTemplateList";
 export * from "./chargeTemplateUpdate";
 export * from "./chargeType";
 export * from "./chargeTypeList";
+export * from "./colleague";
 export * from "./companyItemRef";
 export * from "./companyProfile";
 export * from "./companyProfileUpdate";
+export * from "./covering";
 export * from "./createdId";
 export * from "./csrfFailedResponse";
 export * from "./csrfTokenParameter";
 export * from "./decimalString";
+export * from "./deputyPeriod";
+export * from "./deputyUpdate";
 export * from "./documentKind";
 export * from "./documentPlaceholder";
 export * from "./documentPlaceholderGroup";
@@ -313,6 +328,8 @@ export * from "./externalServiceSource";
 export * from "./externalServiceStatus";
 export * from "./externalServiceSystem";
 export * from "./forbiddenResponse";
+export * from "./forgotPasswordAccepted";
+export * from "./forgotPasswordIn";
 export * from "./fxRate";
 export * from "./fxRateIn";
 export * from "./fxRateJournalEntry";
@@ -426,12 +443,15 @@ export * from "./passwordConfirm";
 export * from "./personRef";
 export * from "./platformSettings";
 export * from "./platformSettingsUpdate";
+export * from "./profile";
+export * from "./profileUpdate";
 export * from "./providerToday";
 export * from "./queue";
 export * from "./queueCard";
 export * from "./queueCards";
 export * from "./queueItem";
 export * from "./queueItemKind";
+export * from "./queueOwner";
 export * from "./quoteDefaults";
 export * from "./quoteDefaultsCatalogPriceVisibility";
 export * from "./quoteDefaultsUpdate";
@@ -444,6 +464,7 @@ export * from "./referenceKind";
 export * from "./replyTemplate";
 export * from "./replyTemplateIn";
 export * from "./replyTemplateList";
+export * from "./resetPasswordIn";
 export * from "./resolutionAssigneeIn";
 export * from "./resolutionAssignees";
 export * from "./resolutionAssigneesDirectory";
@@ -515,6 +536,9 @@ export * from "./systemStatusStatus";
 export * from "./telegramChannel";
 export * from "./telegramChannelList";
 export * from "./telegramConnector";
+export * from "./telegramLink";
+export * from "./telegramState";
 export * from "./telegramTokenIn";
+export * from "./timezone";
 export * from "./tooManyRequestsResponse";
 export * from "./validationFailedResponse";
