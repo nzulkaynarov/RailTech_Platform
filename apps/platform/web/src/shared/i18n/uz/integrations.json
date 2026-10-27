@@ -181,6 +181,10 @@
     },
     "updated": "Token yangilangan",
     "lastError": "Oxirgi xato",
+    "lastErrorCode": {
+      "bot_process_never_started": "Bot jarayoni serverda hali ishga tushirilmagan.",
+      "bot_process_down": "Serverdagi bot jarayoni javob bermayapti."
+    },
     "token": {
       "current": "Token",
       "set": "Tokenni kiritish",
@@ -550,6 +554,7 @@
     "state": {
       "ok": "Ishlayapti",
       "broken": "Buzilgan",
+      "unstable": "Beqaror",
       "degraded": "Uzilishlar bilan ishlayapti",
       "not_configured": "Sozlanmagan",
       "disabled": "Ataylab o‘chirilgan",
@@ -559,8 +564,10 @@
     "notChecked": "Tekshirilmagan — «Tekshirish» tugmasini bosing",
     "since": "{{date}} dan",
     "recoveredAt": "{{date}} da tiklandi",
+    "flaps": "Sutkada nosozliklar: {{count}}",
     "ownerLabel": "Kim tuzatadi",
     "owner": {
+      "ownerKey": "Siz (administrator) kalitni kiritasiz; kalit va to‘lov — kompaniya egasida",
       "admin": "Siz (administrator)",
       "owner": "Kompaniya egasi — provayder kaliti va to‘lovi",
       "hosting": "Xosting — server",

@@ -863,6 +863,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/admin/integrations/models/providers/{provider}/key": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Новый ключ провайдера для всех его ролей разом
+     * @description CRM `PUT /models/providers/{provider}/key` (W15-H3): один пароль администратора, один аудит. Новые deployment всех ролей провайдера создаются первыми, прежние удаляются, когда все созданы; сбой посередине откатывает созданное — частичного применения нет. Модели ролей не меняются. После смены провайдер сразу проверяется. Ключ и пароль уходят только в CRM, в ответ не попадают.
+     */
+    put: operations["changeProviderKey"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/admin/integrations/models/{alias}/reset": {
     parameters: {
       query?: never;
@@ -2772,12 +2792,13 @@ export interface components {
       | "paused"
       | "bot_not_running";
     /**
-     * @description Состояние словом (W15-H3, решает CRM): `broken` Сломано, `degraded` Работает с перебоями, `not_configured` Не настроено, `disabled` Выключено намеренно, `expected` Ожидаемо на стенде (серым, без оповещений и без «Требует внимания»), `not_checked` Не проверено — нажмите «Проверить», `ok` Работает.
+     * @description Состояние словом (W15-H3, решает CRM): `broken` Сломано (непрерывный сбой не короче 15 минут), `unstable` Нестабильно (короткие провалы и дребезг — жёлтое, без оповещений), `degraded` Работает с перебоями, `not_configured` Не настроено, `disabled` Выключено намеренно, `expected` Ожидаемо на стенде (серым, без оповещений и без «Требует внимания»), `not_checked` Не проверено — нажмите «Проверить», `ok` Работает.
      * @enum {string}
      */
     ServiceState:
       | "ok"
       | "broken"
+      | "unstable"
       | "degraded"
       | "not_configured"
       | "disabled"
@@ -2826,6 +2847,8 @@ export interface components {
       since: string | null;
       /** @description Сырой текст проверки для «Технических подробностей» (свёрнуто, «Скопировать для поддержки»); секреты замаскированы CRM. */
       technical: string[];
+      /** @description Провалов (полос сбоя) за сутки по сервисам причины — наибольшее */
+      flaps_24h: number;
       /** @description Готовый текст владельцу или хостингу; пользователь копирует его сам, Платформа ничего не отправляет */
       message: string | null;
       /** @description Карточка экрана, где действие выполняется; `null` — действие не требует карточки */
@@ -3128,6 +3151,8 @@ export interface components {
       /** @description Карточка экрана, где это исправляется (`IntegrationCardKey`); `null` — настроить негде */
       fix_card: components["schemas"]["IntegrationCardKey"] | null;
       state: components["schemas"]["ServiceState"];
+      /** @description Провалов (полос сбоя) за сутки: много — «Нестабильно» */
+      flaps_24h: number;
       /** @description Корень причины; у сервисов с общей причиной он общий */
       cause_key: string;
       owner: components["schemas"]["ServiceOwner"] | null;
@@ -3213,6 +3238,18 @@ export interface components {
       model: string | null;
       provider: string | null;
       today_usd: number;
+    };
+    ProviderKeyIn: {
+      /** Format: password */
+      api_key: string;
+      /** Format: password */
+      password: string;
+    };
+    /** @description Итог смены ключа провайдера: роли, к которым применён ключ, и проверен ли провайдер сразу. */
+    ProviderKeyResult: {
+      provider: string;
+      roles: components["schemas"]["AiModelChange"][];
+      checked: boolean;
     };
     /** @description Итог смены или сброса модели; `key_source`: `crm` — ключ задан в Платформе, `env` — из настроек сервера. */
     AiModelChange: {
@@ -6095,6 +6132,44 @@ export interface operations {
       };
       401: components["responses"]["SessionExpired"];
       403: components["responses"]["Forbidden"];
+      409: components["responses"]["IntegrationConflict"];
+      422: components["responses"]["IntegrationInvalid"];
+      423: components["responses"]["AccountLocked"];
+      429: components["responses"]["TooManyRequests"];
+      502: components["responses"]["IntegrationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  changeProviderKey: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        provider: "anthropic" | "gemini" | "openai";
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ProviderKeyIn"];
+      };
+    };
+    responses: {
+      /** @description Ключ применён ко всем ролям провайдера */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProviderKeyResult"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
       409: components["responses"]["IntegrationConflict"];
       422: components["responses"]["IntegrationInvalid"];
       423: components["responses"]["AccountLocked"];

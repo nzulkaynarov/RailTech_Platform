@@ -398,7 +398,7 @@ test.describe("Внешние интеграции: axe и снимки", () => 
         "не работают: поиск по базе знаний, проверка качества ответов",
       );
       await expect(row).toContainText("Кто исправляет:");
-      await expect(row).toContainText("Владелец компании — ключ и оплата провайдера");
+      await expect(row).toContainText("ключ и оплата — у владельца компании");
       await expect(row.getByRole("button", { name: /Ввести новый ключ/ })).toBeVisible();
       await expect(page.locator("body")).not.toContainText("invalid_api_key");
       await expectNoViolations(page, `h3 group ${String(width)}`);

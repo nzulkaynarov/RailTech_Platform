@@ -196,6 +196,7 @@ def service(key: str = "telegram", status: str = "ok", **over: Any) -> dict[str,
         "more_actions": [],
         "since": None if status == "ok" else EARLIER,
         "last_recovered_at": None,
+        "flaps_24h": 0,
         **over,
     }
 
@@ -216,6 +217,7 @@ def group(key: str = "telegram", state: str = "broken", **over: Any) -> dict[str
         "since": EARLIER,
         "technical": ["timeout"],
         "message": None,
+        "flaps_24h": 0,
         **over,
     }
 
@@ -531,6 +533,18 @@ class CrmIntegrationsFake:
                 return ok(row)
             if m == "POST" and action == "enable":
                 return ok(service(key))
+        if m == "PUT" and re.fullmatch(r"models/providers/[a-z]+/key", p):
+            provider = p.split("/")[2]
+            return ok(
+                {
+                    "provider": provider,
+                    "roles": [
+                        {**_model_change(a), "provider": provider, "key_source": "crm"}
+                        for a in ("dialog-model", "qualifier-model")
+                    ],
+                    "checked": True,
+                }
+            )
         if p.startswith("models/"):
             alias, _, action = p.removeprefix("models/").partition("/")
             if m == "PUT" and not action:

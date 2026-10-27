@@ -261,6 +261,7 @@ import type {
   NumberingPreview,
   NumberingScheme,
   PlatformSettings,
+  ProviderKeyResult,
   Queue,
   QueueCards,
   QuoteDefaults,
@@ -810,6 +811,7 @@ export const getGetIntegrationsOverviewResponseMock = (
             { length: faker.number.int({ min: 1, max: 10 }) },
             (_, i) => i + 1,
           ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+          flaps_24h: faker.number.int(),
           message: faker.helpers.arrayElement([
             faker.string.alpha({ length: { min: 10, max: 20 } }),
             null,
@@ -1255,6 +1257,7 @@ export const getListExternalServicesResponseMock = (
       technical: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
         () => faker.string.alpha({ length: { min: 10, max: 20 } }),
       ),
+      flaps_24h: faker.number.int(),
       message: faker.helpers.arrayElement([
         faker.string.alpha({ length: { min: 10, max: 20 } }),
         null,
@@ -1349,6 +1352,7 @@ export const getListExternalServicesResponseMock = (
       null,
     ]),
     state: faker.helpers.arrayElement(Object.values(ServiceState)),
+    flaps_24h: faker.number.int(),
     cause_key: faker.string.alpha({ length: { min: 10, max: 20 } }),
     owner: faker.helpers.arrayElement([
       faker.helpers.arrayElement(Object.values(ServiceOwner)),
@@ -1484,6 +1488,7 @@ export const getGetExternalServiceResponseMock = (
       null,
     ]),
     state: faker.helpers.arrayElement(Object.values(ServiceState)),
+    flaps_24h: faker.number.int(),
     cause_key: faker.string.alpha({ length: { min: 10, max: 20 } }),
     owner: faker.helpers.arrayElement([
       faker.helpers.arrayElement(Object.values(ServiceOwner)),
@@ -1619,6 +1624,7 @@ export const getCheckExternalServiceResponseMock = (
       null,
     ]),
     state: faker.helpers.arrayElement(Object.values(ServiceState)),
+    flaps_24h: faker.number.int(),
     cause_key: faker.string.alpha({ length: { min: 10, max: 20 } }),
     owner: faker.helpers.arrayElement([
       faker.helpers.arrayElement(Object.values(ServiceOwner)),
@@ -1710,6 +1716,7 @@ export const getDisableExternalServiceResponseMock = (
     null,
   ]),
   state: faker.helpers.arrayElement(Object.values(ServiceState)),
+  flaps_24h: faker.number.int(),
   cause_key: faker.string.alpha({ length: { min: 10, max: 20 } }),
   owner: faker.helpers.arrayElement([
     faker.helpers.arrayElement(Object.values(ServiceOwner)),
@@ -1800,6 +1807,7 @@ export const getEnableExternalServiceResponseMock = (
     null,
   ]),
   state: faker.helpers.arrayElement(Object.values(ServiceState)),
+  flaps_24h: faker.number.int(),
   cause_key: faker.string.alpha({ length: { min: 10, max: 20 } }),
   owner: faker.helpers.arrayElement([
     faker.helpers.arrayElement(Object.values(ServiceOwner)),
@@ -1859,6 +1867,22 @@ export const getChangeAiModelResponseMock = (
   provider: faker.string.alpha({ length: { min: 10, max: 20 } }),
   quality_check_recommended: faker.datatype.boolean(),
   reindex_required: faker.datatype.boolean(),
+  ...overrideResponse,
+});
+
+export const getChangeProviderKeyResponseMock = (
+  overrideResponse: Partial<Extract<ProviderKeyResult, object>> = {},
+): ProviderKeyResult => ({
+  provider: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  roles: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    alias: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    key_source: faker.helpers.arrayElement(["crm", "env"] as const),
+    model: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    provider: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    quality_check_recommended: faker.datatype.boolean(),
+    reindex_required: faker.datatype.boolean(),
+  })),
+  checked: faker.datatype.boolean(),
   ...overrideResponse,
 });
 
@@ -4939,6 +4963,30 @@ export const getChangeAiModelMockHandler = (
   );
 };
 
+export const getChangeProviderKeyMockHandler = (
+  overrideResponse?:
+    | ProviderKeyResult
+    | ((
+        info: Parameters<Parameters<typeof http.put>[1]>[0],
+      ) => Promise<ProviderKeyResult> | ProviderKeyResult),
+  options?: RequestHandlerOptions,
+) => {
+  return http.put(
+    "*/admin/integrations/models/providers/:provider/key",
+    async (info: Parameters<Parameters<typeof http.put>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getChangeProviderKeyResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getResetAiModelMockHandler = (
   overrideResponse?:
     | AiModelChange
@@ -7246,6 +7294,7 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getEnableExternalServiceMockHandler(),
   getListAiModelsMockHandler(),
   getChangeAiModelMockHandler(),
+  getChangeProviderKeyMockHandler(),
   getResetAiModelMockHandler(),
   getTestAiModelMockHandler(),
   getGetSpendReportMockHandler(),

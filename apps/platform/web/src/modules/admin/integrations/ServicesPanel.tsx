@@ -40,12 +40,17 @@ function ServiceRow({ service, editable }: { service: ExternalService; editable:
       <p className="pf-int-sub">
         {service.state === "not_checked" ? t("health.notChecked") : service.summary}
       </p>
-      {service.state === "broken" || service.state === "degraded" ? (
+      {service.state === "broken" ||
+      service.state === "unstable" ||
+      service.state === "degraded" ? (
         <p className="pf-health-meta">
           {service.since ? (
             <span>{t("health.since", { date: date(service.since, "datetime") })}</span>
           ) : null}
-          <OwnerLine owner={service.owner} />
+          <OwnerLine owner={service.owner} action={service.action} />
+          {service.flaps_24h > 0 ? (
+            <span>{t("health.flaps", { count: service.flaps_24h })}</span>
+          ) : null}
         </p>
       ) : null}
       {service.state === "expected" ? (

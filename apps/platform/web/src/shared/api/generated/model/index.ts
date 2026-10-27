@@ -398,6 +398,8 @@ export * from "./passwordConfirm";
 export * from "./personRef";
 export * from "./platformSettings";
 export * from "./platformSettingsUpdate";
+export * from "./providerKeyIn";
+export * from "./providerKeyResult";
 export * from "./providerToday";
 export * from "./queue";
 export * from "./queueCard";

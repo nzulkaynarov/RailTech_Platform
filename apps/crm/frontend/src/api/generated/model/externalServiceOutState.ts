@@ -14,6 +14,7 @@ export type ExternalServiceOutState =
 export const ExternalServiceOutState = {
   ok: "ok",
   broken: "broken",
+  unstable: "unstable",
   degraded: "degraded",
   not_configured: "not_configured",
   disabled: "disabled",

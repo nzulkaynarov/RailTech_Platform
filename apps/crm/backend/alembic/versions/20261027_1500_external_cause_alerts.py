@@ -3,7 +3,8 @@
 Одна строка — один эпизод «Сломано» по причине (`cause_key`: общий корень нескольких сервисов,
 например `vendor.anthropic:key_rejected`). Пока строка открыта, оповещение о причине уходит один
 раз (`alerted_at`) — и по рестарту процесса не повторяется; закрытие (`ended_at`) шлёт одно
-«восстановлено» (`recovery_alerted_at`). Данных для переноса нет.
+«восстановлено» (`recovery_alerted_at`); повторный сбой причины в те же сутки не оповещается
+(`suppressed_at`). Данных для переноса нет.
 
 Revision ID: 0041_external_cause_alerts
 Revises: 0040_identity_catalog_state
@@ -31,6 +32,7 @@ def upgrade() -> None:
         sa.Column("ended_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("alerted_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("recovery_alerted_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("suppressed_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("headline", sa.Text(), nullable=False),
         sa.Column(
             "service_keys",
@@ -52,9 +54,33 @@ def upgrade() -> None:
         unique=True,
         postgresql_where=sa.text("ended_at IS NULL"),
     )
+    # «С какого времени не в порядке», полоса `fail`, начало `ok`: последняя `ok` / не-`ok` /
+    # не-`fail` проверка сервиса за O(1). Без частичных индексов у сервиса, всегда бывшего
+    # `off`, чтение шло по всей его истории (50 с на 230 тыс. строк).
+    op.create_index(
+        "ix_external_service_checks_ok_at",
+        "external_service_checks",
+        ["service_key", "checked_at"],
+        postgresql_where=sa.text("status = 'ok'"),
+    )
+    op.create_index(
+        "ix_external_service_checks_notok_at",
+        "external_service_checks",
+        ["service_key", "checked_at"],
+        postgresql_where=sa.text("status <> 'ok'"),
+    )
+    op.create_index(
+        "ix_external_service_checks_notfail_at",
+        "external_service_checks",
+        ["service_key", "checked_at"],
+        postgresql_where=sa.text("status <> 'fail'"),
+    )
 
 
 def downgrade() -> None:
+    op.drop_index("ix_external_service_checks_notfail_at", table_name="external_service_checks")
+    op.drop_index("ix_external_service_checks_notok_at", table_name="external_service_checks")
+    op.drop_index("ix_external_service_checks_ok_at", table_name="external_service_checks")
     op.drop_index("uq_external_cause_alerts_open", table_name="external_cause_alerts")
     op.drop_index("ix_external_cause_alerts_cause_started", table_name="external_cause_alerts")
     op.drop_table("external_cause_alerts")

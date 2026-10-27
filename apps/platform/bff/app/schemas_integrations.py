@@ -42,7 +42,7 @@ AttentionKind = Literal[
 ]
 Severity = Literal["fail", "warn", "setup"]
 ServiceState = Literal[
-    "ok", "broken", "degraded", "not_configured", "disabled", "expected", "not_checked"
+    "ok", "broken", "unstable", "degraded", "not_configured", "disabled", "expected", "not_checked"
 ]
 ServiceOwner = Literal["admin", "owner", "hosting", "provider"]
 ServiceAction = Literal[
@@ -105,6 +105,11 @@ class AiModelChangeIn(_In):
     model: str = Field(min_length=1, max_length=128)
     api_key: SecretStr | None = Field(default=None, min_length=8, max_length=512)
     api_base: str | None = Field(default=None, max_length=256)
+    password: SecretStr = Field(min_length=1, max_length=256)
+
+
+class ProviderKeyIn(_In):
+    api_key: SecretStr = Field(min_length=8, max_length=512)
     password: SecretStr = Field(min_length=1, max_length=256)
 
 
@@ -282,6 +287,7 @@ class ServiceGroup(_Out):
     affected: list[str]
     detail: str | None
     fix_card: CardKey | None
+    flaps_24h: int
     headline: str
     id: str
     message: str | None
@@ -297,6 +303,7 @@ class ServiceGroup(_Out):
 class ExternalService(_Out):
     action: ServiceAction | None
     cause_key: str
+    flaps_24h: int
     last_recovered_at: datetime | None
     more_actions: list[ServiceAction]
     owner: ServiceOwner | None
@@ -391,6 +398,12 @@ class AiModelChange(_Out):
     provider: str
     quality_check_recommended: bool
     reindex_required: bool
+
+
+class ProviderKeyResult(_Out):
+    provider: str
+    roles: list[AiModelChange]
+    checked: bool
 
 
 class AiModelTest(_Out):

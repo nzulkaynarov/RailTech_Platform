@@ -125,6 +125,7 @@ export function groupsOf(
               .replace("{since}", leftTime(since ?? now))
         : null,
       fix_card: first.fix_card,
+      flaps_24h: Math.max(...members.map((m) => m.flaps_24h)),
     });
   }
   return groups.sort((a, b) => order.indexOf(a.state) - order.indexOf(b.state));

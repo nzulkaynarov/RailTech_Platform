@@ -2,17 +2,20 @@ import { Alert, App, Button, Input } from "antd";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { ServiceGroup, ServiceOwner, ServiceState } from "../../../shared/api/generated/model";
+import type {
+  ServiceAction,
+  ServiceGroup,
+  ServiceOwner,
+  ServiceState,
+} from "../../../shared/api/generated/model";
 import {
-  checkExternalService,
-  useChangeAiModel,
+  useChangeProviderKey,
   useListAiModels,
   useListExternalServices,
 } from "../../../shared/api/generated/platform-bff";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { copyText, mailtoLink, telegramShareLink } from "./copy";
 import { STATE_TONE } from "./levels";
-import { bareModelName } from "./modelName";
 import { ActionForm, Field, PanelState } from "./parts";
 import { useRefreshIntegrations } from "./refresh";
 import { SwitchForm } from "./SwitchForm";
@@ -23,13 +26,20 @@ export function StateTag({ state }: { state: ServiceState }) {
 }
 
 /** «Кто исправляет: …» — одна строка, слово из словаря; без владельца (исправлять нечего) строки нет. */
-export function OwnerLine({ owner }: { owner: ServiceOwner | null }) {
+export function OwnerLine({
+  owner,
+  action,
+}: {
+  owner: ServiceOwner | null;
+  action?: ServiceAction | null;
+}) {
   const { t } = useTranslation("integrations");
   if (owner === null) return null;
+  // Ключ вводит администратор, а ключ и оплата — у владельца компании
+  const key = owner === "owner" && action === "enter_key" ? "ownerKey" : owner;
   return (
     <span>
-      <span className="pf-health-label">{t("health.ownerLabel")}:</span>{" "}
-      {t(`health.owner.${owner}`)}
+      <span className="pf-health-label">{t("health.ownerLabel")}:</span> {t(`health.owner.${key}`)}
     </span>
   );
 }
@@ -151,42 +161,15 @@ export function KeyForm({ group, onDone }: { group: ServiceGroup; onDone: () => 
   const { t } = useTranslation("integrations");
   const refresh = useRefreshIntegrations();
   const vendorKey = group.service_keys.find((key) => key.startsWith("vendor."));
-  const provider = vendorKey?.slice("vendor.".length) ?? "";
+  const provider = (vendorKey?.slice("vendor.".length) ?? "") as "anthropic" | "gemini" | "openai";
   const models = useListAiModels();
-  const change = useChangeAiModel();
+  const change = useChangeProviderKey();
   const [key, setKey] = useState("");
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState<unknown>(null);
   const [done, setDone] = useState<string[] | null>(null);
   const roles = (models.data?.items ?? []).filter((model) => model.provider === provider);
   const roleNames = roles.map((model) =>
     t(`models.alias.${model.alias}`, { defaultValue: model.alias }),
   );
-  const submit = async (password: string) => {
-    setPending(true);
-    setError(null);
-    try {
-      for (const model of roles) {
-        await change.mutateAsync({
-          alias: model.alias,
-          data: {
-            provider: provider as "anthropic" | "gemini" | "openai",
-            model: bareModelName(model.provider, model.model),
-            api_key: key,
-            password,
-          },
-        });
-      }
-      if (vendorKey) await checkExternalService(vendorKey).catch(() => undefined);
-      setDone(roleNames);
-      setKey("");
-      refresh();
-    } catch (failure) {
-      setError(failure);
-    } finally {
-      setPending(false);
-    }
-  };
   return (
     <PanelState query={models}>
       {() =>
@@ -206,13 +189,27 @@ export function KeyForm({ group, onDone }: { group: ServiceGroup; onDone: () => 
               vendor: t(`models.provider.${provider}`, { defaultValue: provider }),
             })}
             submitLabel={t("health.key.submit")}
-            pending={pending}
-            error={error}
+            pending={change.isPending}
+            error={change.error}
             invalid={key.length < 8}
             consequence={[t("health.key.step1"), t("health.key.step2"), t("health.key.step3")]}
             onCancel={onDone}
             onSubmit={(password) => {
-              void submit(password);
+              // Одна операция CRM: один пароль, все роли провайдера или ни одной (без частичного применения)
+              change.mutate(
+                { provider, data: { api_key: key, password } },
+                {
+                  onSuccess: (result) => {
+                    setDone(
+                      result.roles.map((role) =>
+                        t(`models.alias.${role.alias}`, { defaultValue: role.alias }),
+                      ),
+                    );
+                    setKey("");
+                    refresh();
+                  },
+                },
+              );
             }}
           >
             <Field

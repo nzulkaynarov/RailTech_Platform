@@ -66,6 +66,7 @@ function service(
     action: null,
     more_actions: [],
     since: null,
+    flaps_24h: 0,
     last_recovered_at: null,
     status: "ok",
     summary: "Работает",

@@ -19,6 +19,7 @@ from app.domain import external_incidents as inc
 from app.domain import external_registry as reg
 from app.domain import external_status as rules
 from app.domain.errors import NotFoundError
+from app.domain.external_cause import technical_text
 from app.domain.external_status import CAUSE_METRIC
 from app.domain.system_status import Component
 from app.integrations.litellm_catalog import ModelCatalog
@@ -86,7 +87,7 @@ class ExternalServicesView:
         specs = reg.registry(providers)
         cfg = await self._settings.get()
         async with self._sessions() as session:
-            ctx = await _Context.load(session, now)
+            ctx = await _Context.load(session, now, [s.key for s in specs])
         ctx.providers, ctx.stand = providers, self._stand
         pairs = [ctx.service(spec, now) for spec in specs]
         services = [service for service, _ in pairs]
@@ -134,7 +135,7 @@ class ExternalServicesView:
         """Строка «Внешние сервисы» на «Состоянии системы»."""
         data = await self.list(now)
         fails = [s.title for s in data.services if s.state == "broken"]
-        warns = [s.title for s in data.services if s.state == "degraded"]
+        warns = [s.title for s in data.services if s.state in ("degraded", "unstable")]
         s = data.summary
         counts = inc.Counts(s.ok, s.warn, s.fail, s.unknown, s.off, s.disabled)
         return inc.summary_component(counts, fails, warns, now, checked=data.checked_at is not None)
@@ -148,6 +149,7 @@ def _level(state: cause.State) -> reg.Status:
     return {
         "ok": "ok",
         "broken": "fail",
+        "unstable": "warn",
         "degraded": "warn",
         "not_checked": "unknown",
     }.get(state, "off")  # type: ignore[return-value]
@@ -168,6 +170,7 @@ def _group_out(g: cause.Group) -> ServiceGroupOut:
         since=g.since,
         technical=list(g.technical),
         message=g.message,
+        flaps_24h=g.flaps_24h,
     )
 
 
@@ -197,15 +200,19 @@ class _Context:
         providers: Mapping[str, str | None] | None = None,
         since: Mapping[str, datetime] | None = None,
         recovered: Mapping[str, datetime] | None = None,
+        fails: Mapping[str, repo.FailStreak] | None = None,
+        flaps: Mapping[str, repo.Flaps] | None = None,
     ) -> None:
         self.latest, self.day, self.week, self.p95 = latest, day, week, p95
         self.incidents, self.switches, self.names = incidents, switches, names
         self.providers = providers or {}
         self.since, self.recovered = since or {}, recovered or {}
+        self.fails = fails or {}
+        self.flaps = flaps or {}
         self.stand = False
 
     @classmethod
-    async def load(cls, session: AsyncSession, now: datetime) -> "_Context":
+    async def load(cls, session: AsyncSession, now: datetime, keys: list[str]) -> "_Context":
         switches = await repo.switches(session)
         ids = {s.changed_by for s in switches.values() if s.changed_by is not None}
         names: dict[int, str] = {}
@@ -220,7 +227,11 @@ class _Context:
             incidents=await repo.open_incidents(session),
             switches=switches,
             names=names,
-            since=await repo.unhealthy_since(session),
+            since=await repo.unhealthy_since(session, keys),
+            fails=await repo.fail_streaks(session, keys),
+            flaps=await repo.flaps(
+                session, keys, now - timedelta(hours=24), now - cause.FLAP_WINDOW
+            ),
             recovered=await repo.last_recovered(session, now - timedelta(days=30)),
         )
 
@@ -233,10 +244,14 @@ class _Context:
         no_fix = bool(result.metrics.get("_no_fix"))
         switch = self.switches.get(spec.key)
         row = self.latest.get(spec.key)
-        since = min(
-            (t for t in (self.since.get(spec.key), incident.started_at if incident else None) if t),
-            default=None,
+        streak = self.fails.get(spec.key)
+        since = cause.since_for(
+            result.status,
+            fail_since=streak.since if streak else None,
+            unhealthy_since=self.since.get(spec.key),
+            incident_started=incident.started_at if incident else None,
         )
+        flaps = self.flaps.get(spec.key)
         diagnosis = cause.diagnose(
             spec,
             result,
@@ -246,6 +261,9 @@ class _Context:
                 never_checked=row is None,
                 stale=is_stale,
                 providers=self.providers,
+                fail_for=now - streak.since if streak else None,
+                flaps_24h=flaps.day if flaps else 0,
+                flaps_recent=flaps.recent if flaps else 0,
             ),
             since,
         )
@@ -276,7 +294,7 @@ class _Context:
             else ("minute" if "cheap" in spec.tiers else "quarter"),
             status=result.status,
             summary=result.summary,
-            error=result.error,
+            error=technical_text(result.error),
             hint=result.hint,
             fix_path="/system" if is_stale else (None if no_fix else spec.fix_path),
             checked_at=checked_at,
@@ -296,6 +314,7 @@ class _Context:
             action=diagnosis.action,
             more_actions=list(diagnosis.more),
             since=diagnosis.since,
+            flaps_24h=diagnosis.flaps_24h,
             last_recovered_at=self.recovered.get(spec.key),
         )
 
@@ -376,7 +395,7 @@ def _incident_out(row: ExternalServiceIncident) -> IncidentOut:
         ended_at=row.ended_at,
         duration_s=duration,
         summary=row.summary,
-        last_error=row.last_error,
+        last_error=technical_text(row.last_error),
         alerted=row.alerted_at is not None,
         recovery_alerted=row.recovery_alerted_at is not None,
     )
@@ -389,7 +408,7 @@ def _check_out(row: ExternalServiceCheck) -> ServiceCheckOut:
         status=row.status,
         latency_ms=row.latency_ms,
         summary=row.summary,
-        error=row.error,
+        error=technical_text(row.error),
     )
 
 

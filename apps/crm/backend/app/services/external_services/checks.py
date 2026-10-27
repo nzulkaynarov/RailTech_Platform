@@ -35,6 +35,8 @@ from app.services.settings import SettingsService
 logger = structlog.get_logger(__name__)
 CHECKS_RETENTION = timedelta(days=8)
 INCIDENTS_RETENTION = timedelta(days=90)
+# «Восстановлено», не дошедшее сразу, повторяется не дольше этого срока после возврата.
+RECOVERY_RETRY_WINDOW = timedelta(hours=6)
 Reconcile = Callable[[], Awaitable[object]]
 Causes = Callable[[datetime], Awaitable[tuple[list[cause.Group], dict[str, cause.State]]]]
 
@@ -109,30 +111,32 @@ class ExternalChecks:
             return []
         return await self.run("heavy", now, keys=due)
 
-    async def _failed_state(self) -> tuple[dict[str, ExternalServiceCheck], dict[str, int]]:
+    async def _failed_state(
+        self, keys: Collection[str]
+    ) -> tuple[dict[str, ExternalServiceCheck], dict[str, repo.FailStreak]]:
         async with self._sessions() as session:
-            return await repo.latest_checks(session), await repo.fail_streaks(session)
+            return await repo.latest_checks(session), await repo.fail_streaks(session, keys)
 
     async def _due_failed(self, keys: Collection[str], now: datetime) -> list[str]:
-        latest, streaks = await self._failed_state()
+        latest, streaks = await self._failed_state(keys)
         return [
             k
             for k in keys
             if (row := latest.get(k)) is not None
             and row.status == "fail"
-            and cause.recheck_due(streaks.get(k, 1), row.checked_at, now)
+            and cause.recheck_due(_count(streaks, k), row.checked_at, now)
         ]
 
     async def _skip_backing_off(self, keys: Collection[str], now: datetime) -> list[str]:
         """Сломанное сервис перепроверяется по затуханию, остальное — каждую минуту."""
-        latest, streaks = await self._failed_state()
+        latest, streaks = await self._failed_state(keys)
         out: list[str] = []
         for key in keys:
             row = latest.get(key)
             backing_off = (
                 row is not None
                 and row.status == "fail"
-                and not cause.recheck_due(streaks.get(key, 1), row.checked_at, now)
+                and not cause.recheck_due(_count(streaks, key), row.checked_at, now)
             )
             if not backing_off:
                 out.append(key)
@@ -150,9 +154,21 @@ class ExternalChecks:
         async with self._sessions() as session, session.begin():
             await repo.lock(session)
             open_ = await repo.open_incidents(session, for_update=True)
+            keys = [r.key for r in results]
+            # Полосы до этой проверки: когда начался `fail` и когда начался `ok`.
+            fails = await repo.fail_streaks(session, keys)
+            oks = await repo.ok_since(session, keys)
             for result in results:
                 session.add(_check_row(result, run, now))
-                await _apply(session, open_.get(result.key), result, now)
+                streak = fails.get(result.key)
+                await _apply(
+                    session,
+                    open_.get(result.key),
+                    result,
+                    now,
+                    fail_started=streak.since if streak else now,
+                    ok_started=oks.get(result.key, now),
+                )
 
     async def _notify(self, now: datetime) -> None:
         """Журнал причин и оповещения: по одному «сломано» (от 15 мин) и «восстановлено»."""
@@ -165,9 +181,9 @@ class ExternalChecks:
             return
         for item in pending:
             delivered = await self._alerts.send(item.text, item.cause_key)
-            if item.kind == "alert" and not delivered:
-                await self._unclaim(item.row_id)
-            elif delivered:
+            if not delivered:
+                await self._unclaim(item.row_id, item.kind)
+            else:
                 await self._mark_incidents(item, now)
 
     async def _sync_causes(self, now: datetime) -> list[_Pending]:
@@ -180,10 +196,21 @@ class ExternalChecks:
             await repo.lock(session)
             rows = await repo.open_causes(session, for_update=True)
             known = {
-                k: cause.OpenCause(k, r.started_at, r.alerted_at, tuple(r.service_keys))
+                k: cause.OpenCause(
+                    k, r.started_at, r.alerted_at, tuple(r.service_keys), r.suppressed_at
+                )
                 for k, r in rows.items()
             }
-            for step in cause.plan_alerts(groups, known, states, now):
+            members = sorted({key for r in rows.values() for key in r.service_keys})
+            plan = cause.plan_alerts(
+                groups,
+                known,
+                states,
+                now,
+                ok_since=await repo.ok_since(session, members),
+                recently_alerted=await repo.recently_alerted(session, now - cause.ALERT_COOLDOWN),
+            )
+            for step in plan:
                 if step.kind == "open":
                     group = by_id[step.cause_key]
                     row = ExternalCauseAlert(
@@ -195,6 +222,10 @@ class ExternalChecks:
                     session.add(row)
                     await session.flush()
                     rows[step.cause_key] = row
+                elif step.kind == "suppress":
+                    # Сутки не прошли с прошлого «Сломано» по причине: серии писем нет, повтор виден
+                    # как «Нестабильно» в «Здоровье», а в следующее «Сломано» войдёт счёт провалов.
+                    rows[step.cause_key].suppressed_at = now
                 elif step.kind == "alert":
                     row = rows[step.cause_key]
                     group = by_id[step.cause_key]
@@ -204,24 +235,32 @@ class ExternalChecks:
                         _Pending("alert", step.cause_key, row.id, text, list(row.service_keys))
                     )
                 else:
-                    row = rows[step.cause_key]
-                    row.ended_at = now
-                    if step.kind == "restore" and row.alerted_at is not None:
-                        row.recovery_alerted_at = now
-                        text = cause.restored_alert(row.headline, now - row.started_at)
-                        pending.append(
-                            _Pending(
-                                "restore", step.cause_key, row.id, text, list(row.service_keys)
-                            )
-                        )
+                    closing = rows[step.cause_key]
+                    closing.ended_at = step.started_at or now
+                    if step.kind == "close":
+                        closing.recovery_alerted_at = now  # закрыто молча: «восстановлено» не нужно
+            # «Восстановлено» — симметрично «сломано»: закрытые записи, о которых сообщали, а о
+            # возврате ещё нет (в т. ч. не доставленные прошлым проходом), занимаем здесь и шлём
+            # после коммита.
+            for row in await repo.unannounced_recoveries(session, now - RECOVERY_RETRY_WINDOW):
+                row.recovery_alerted_at = now
+                lasted = (row.ended_at or now) - row.started_at
+                text = cause.restored_alert(row.headline, lasted)
+                pending.append(
+                    _Pending("restore", row.cause_key, row.id, text, list(row.service_keys))
+                )
         return pending
 
-    async def _unclaim(self, row_id: int) -> None:
-        """Оповещение не дошло ни в Telegram, ни на почту — следующий проход попробует снова."""
+    async def _unclaim(self, row_id: int, kind: str) -> None:
+        """Не дошло ни в Telegram, ни на почту — отметка снимается, следующий проход повторит."""
         async with self._sessions() as session, session.begin():
             row = await session.get(ExternalCauseAlert, row_id)
-            if row is not None:
+            if row is None:
+                return
+            if kind == "alert":
                 row.alerted_at = None
+            else:
+                row.recovery_alerted_at = None
 
     async def _mark_incidents(self, item: _Pending, now: datetime) -> None:
         async with self._sessions() as session, session.begin():
@@ -234,6 +273,11 @@ class ExternalChecks:
         async with self._sessions() as session, session.begin():
             removed = await repo.purge(session, now - CHECKS_RETENTION, now - INCIDENTS_RETENTION)
         logger.info("external_checks_purged", removed=removed)
+
+
+def _count(streaks: dict[str, repo.FailStreak], key: str) -> int:
+    streak = streaks.get(key)
+    return streak.count if streak else 1
 
 
 def _check_row(result: CheckResult, run: Run, now: datetime) -> ExternalServiceCheck:
@@ -258,15 +302,24 @@ async def _apply(
     row: ExternalServiceIncident | None,
     result: CheckResult,
     now: datetime,
+    *,
+    fail_started: datetime,
+    ok_started: datetime,
 ) -> None:
-    """Инцидент сервиса — журнал «с … по …»: открывает `fail`, закрывает `ok`/`warn`."""
+    """Инцидент сервиса — журнал «с … по …»: открывает непрерывный `fail` ≥ 15 мин, закрывает
+    непрерывный `ok` ≥ 5 мин; короткие провалы и возвраты инцидентов не создают."""
     state = None if row is None else inc.OpenIncident(row.id, row.started_at, row.alerted_at)
-    step = inc.transition(state, result.status)
+    step = inc.transition(
+        state,
+        result.status,
+        sustained=now - fail_started >= cause.ALERT_AFTER,
+        recovered=now - ok_started >= cause.RECOVERY_AFTER,
+    )
     if step == "open":
         session.add(
             ExternalServiceIncident(
                 service_key=result.key,
-                started_at=now,
+                started_at=fail_started,
                 summary=result.summary,
                 last_error=result.error,
             )
@@ -276,4 +329,4 @@ async def _apply(
         row.summary = result.summary
         row.last_error = result.error or row.last_error
     elif row is not None and step == "close":
-        row.ended_at = now
+        row.ended_at = ok_started

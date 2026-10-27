@@ -69,7 +69,7 @@ describe("Требует внимания: одна причина — одна 
     ).toBeVisible();
     expect(within(row).getByText(/^с 26\.10\.2026, 08:40|^с 26\.10\.2026/)).toBeVisible();
     expect(within(row).getByText("Кто исправляет:")).toBeVisible();
-    expect(within(row).getByText(/Владелец компании — ключ и оплата провайдера/)).toBeVisible();
+    expect(within(row).getByText(/ключ и оплата — у владельца компании/)).toBeVisible();
     // человеческая подсказка CRM есть, сырого ответа провайдера нет
     expect(within(row).getByText(/введите новый ключ в «Модели ИИ»/)).toBeVisible();
     expect(within(row).queryByText(/invalid_api_key/)).not.toBeInTheDocument();
@@ -195,6 +195,58 @@ describe("Требует внимания: одна причина — одна 
     expect(within(row).queryByRole("button", { name: /Ввести новый ключ/ })).toBeNull();
     expect(within(row).queryByRole("button", { name: /Выключить провайдера/ })).toBeNull();
     expect(within(row).queryByRole("button", { name: /Проверить снова/ })).toBeNull();
+  });
+});
+
+describe("Нестабильно: дребезг без сбоя и писем", () => {
+  it("«Нестабильно» — жёлтое слово, «провалов за сутки: N», без «Сломано» и без кнопок письма", async () => {
+    signIn("admin@demo.example");
+    const unstable = {
+      id: "docling:flapping",
+      state: "unstable",
+      owner: null,
+      action: "recheck",
+      more_actions: [],
+      headline: "Распознавание документов (docling): нестабильная связь, провалов за сутки: 7",
+      detail: null,
+      affected: [],
+      service_keys: ["docling"],
+      titles: ["Распознавание документов (docling)"],
+      since: "2026-10-26T08:00:00Z",
+      technical: [],
+      message: null,
+      fix_card: null,
+      flaps_24h: 7,
+    };
+    server.use(
+      http.get("*/admin/integrations", () =>
+        HttpResponse.json({
+          checked_at: "2026-10-26T09:12:00Z",
+          cards: [],
+          attention: [
+            {
+              id: "group:docling:flapping",
+              card: "services",
+              severity: "warn",
+              kind: "service",
+              subject: unstable.headline,
+              detail: null,
+              group: unstable,
+              technical: null,
+            },
+          ],
+        }),
+      ),
+    );
+    renderAt("/admin/integrations");
+
+    const row = await groupRow(/нестабильная связь/);
+    expect(row).toHaveAttribute("data-state", "unstable");
+    const tag = within(row).getByText("Нестабильно");
+    expect(tag.closest("[data-tone]")).toHaveAttribute("data-tone", "gold");
+    expect(within(row).getByText("Провалов за сутки: 7")).toBeVisible();
+    expect(within(row).queryByText("Сломано")).toBeNull();
+    expect(within(row).queryByRole("button", { name: /Написать/ })).toBeNull();
   });
 });
 

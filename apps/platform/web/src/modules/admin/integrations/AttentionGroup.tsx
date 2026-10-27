@@ -126,7 +126,10 @@ export function AttentionGroupRow({
       </div>
       <p className="pf-health-meta">
         <span>{sinceText}</span>
-        <OwnerLine owner={group.owner} />
+        <OwnerLine owner={group.owner} action={group.action} />
+        {group.flaps_24h > 0 && group.state !== "ok" ? (
+          <span>{t("health.flaps", { count: group.flaps_24h })}</span>
+        ) : null}
       </p>
       {expected ? <p className="pf-int-sub">{t("health.expectedNote")}</p> : null}
       {group.detail && !expected ? <p className="pf-int-sub">{group.detail}</p> : null}

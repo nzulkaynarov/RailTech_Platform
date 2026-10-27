@@ -45,6 +45,8 @@ from app.schemas_integrations import (
     MailQueued,
     MailStatus,
     PasswordConfirm,
+    ProviderKeyIn,
+    ProviderKeyResult,
     ServiceSwitchIn,
     SmtpCheck,
     SmtpConnector,
@@ -465,6 +467,26 @@ async def change_model(alias: Alias, body: AiModelChangeIn, authed: Admin) -> Ai
         probe=True,
     )
     return _to(AiModelChange, out)
+
+
+@router.put(
+    "/models/providers/{provider}/key",
+    response_model=ProviderKeyResult,
+    operation_id="changeProviderKey",
+)
+async def change_provider_key(
+    provider: Annotated[Literal["anthropic", "gemini", "openai"], Path()],
+    body: ProviderKeyIn,
+    authed: Admin,
+) -> ProviderKeyResult:
+    out = await _crm(authed).get_model(
+        crm.ProviderKeyResult,
+        "PUT",
+        f"{API}/models/providers/{provider}/key",
+        json={"api_key": secret(body.api_key), "password": secret(body.password)},
+        probe=True,
+    )
+    return _to(ProviderKeyResult, out)
 
 
 @router.post("/models/{alias}/reset", response_model=AiModelChange, operation_id="resetAiModel")

@@ -104,7 +104,7 @@ describe("Admin · Внешние интеграции: обзор", () => {
     ).toBeVisible();
     expect(within(row).getByText(/^с 26\.10\.2026/)).toBeVisible();
     expect(
-      within(row).getByText("Владелец компании — ключ и оплата провайдера", { exact: false }),
+      within(row).getByText("ключ и оплата — у владельца компании", { exact: false }),
     ).toBeVisible();
     // одно главное действие по смыслу и запасные
     expect(

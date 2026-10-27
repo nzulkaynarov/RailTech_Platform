@@ -38,6 +38,25 @@ class ExternalServiceCheck(Base):
         CheckConstraint("tier IN ('cheap', 'heavy', 'manual')", name="tier"),
         Index("ix_external_service_checks_service_at", "service_key", "checked_at"),
         Index("ix_external_service_checks_checked_at", "checked_at"),
+        # W15-H3: последняя `ok` / не-`fail` проверка сервиса — «с какого времени» и полоса `fail`.
+        Index(
+            "ix_external_service_checks_ok_at",
+            "service_key",
+            "checked_at",
+            postgresql_where=text("status = 'ok'"),
+        ),
+        Index(
+            "ix_external_service_checks_notok_at",
+            "service_key",
+            "checked_at",
+            postgresql_where=text("status <> 'ok'"),
+        ),
+        Index(
+            "ix_external_service_checks_notfail_at",
+            "service_key",
+            "checked_at",
+            postgresql_where=text("status <> 'fail'"),
+        ),
     )
 
     id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
@@ -98,6 +117,8 @@ class ExternalCauseAlert(Base):
     ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     alerted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     recovery_alerted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Повторный сбой той же причины за сутки: сообщения не было — «нестабильно» видно в «Здоровье».
+    suppressed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     headline: Mapped[str] = mapped_column(Text, nullable=False)
     service_keys: Mapped[list[str]] = mapped_column(
         JSONB, nullable=False, server_default=text("'[]'::jsonb")

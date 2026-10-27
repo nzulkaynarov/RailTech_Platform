@@ -29,6 +29,8 @@ export interface ExternalServiceOut {
   failures_24h: number;
   /** Путь в CRM, где это исправляется */
   fix_path: string | null;
+  /** Провалов (полос сбоя) за сутки: «Нестабильно», когда их много */
+  flaps_24h: number;
   frequency: ExternalServiceOutFrequency;
   /** Что сделать, если не в норме */
   hint: string | null;

@@ -10,6 +10,7 @@ export type ServiceGroupOutState = (typeof ServiceGroupOutState)[keyof typeof Se
 export const ServiceGroupOutState = {
   ok: "ok",
   broken: "broken",
+  unstable: "unstable",
   degraded: "degraded",
   not_configured: "not_configured",
   disabled: "disabled",

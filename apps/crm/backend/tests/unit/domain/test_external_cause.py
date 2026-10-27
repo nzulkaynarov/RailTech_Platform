@@ -274,7 +274,7 @@ def _kinds(steps: list[cause.Step]) -> list[str]:
 def test_no_alert_before_fifteen_minutes() -> None:
     group = _broken_group(since=NOW - timedelta(minutes=14))
     steps = cause.plan_alerts([group], {}, {"docling": "broken"}, NOW)
-    assert _kinds(steps) == ["open"]
+    assert steps == []  # короткий провал: ни записи, ни оповещения
 
 
 def test_one_alert_after_fifteen_minutes_and_none_on_later_passes() -> None:
@@ -299,13 +299,14 @@ def test_alert_waits_on_an_existing_row_until_the_threshold() -> None:
 
 def test_recovery_closes_the_row_with_one_restore() -> None:
     row = OpenCause("docling:server_down", NOW - timedelta(minutes=40), NOW, ("docling",))
-    steps = cause.plan_alerts([], {row.cause_key: row}, {"docling": "ok"}, NOW)
-    assert steps == [cause.Step("restore", row.cause_key)]
+    began = NOW - timedelta(minutes=6)
+    steps = cause.plan_alerts([], {row.cause_key: row}, {"docling": "ok"}, NOW, {"docling": began})
+    assert steps == [cause.Step("restore", row.cause_key, began)]
 
 
 def test_not_checked_and_degraded_keep_the_row_open() -> None:
     row = OpenCause("docling:server_down", NOW - timedelta(minutes=40), NOW, ("docling",))
-    for state in ("not_checked", "degraded"):
+    for state in ("not_checked", "degraded", "unstable"):
         assert cause.plan_alerts([], {row.cause_key: row}, {"docling": state}, NOW) == []
 
 
@@ -334,9 +335,160 @@ def test_alert_texts_have_no_raw_error_and_name_the_owner() -> None:
     text = cause.broken_alert(group, group.since or NOW, NOW, "UTC")
     assert text.subject == "⚠️ Сломано: Ключ Anthropic отклонён"
     plain = text.plain
-    assert "владелец компании" in plain
+    assert "администратор вводит новый ключ; ключ и оплата — у владельца." in plain
     assert "AuthenticationError" not in plain
     assert "уже 20 мин" in plain
     restored = cause.restored_alert(group.headline, timedelta(minutes=35))
     assert restored.subject == "✅ Восстановлено: Ключ Anthropic отклонён"
     assert "35 мин" in restored.plain
+
+
+# --- «с {время}» и порог 15 минут считаются от начала полосы fail ---------------------------------
+
+
+@pytest.mark.parametrize(
+    ("status", "expected"),
+    [
+        ("fail", NOW - timedelta(minutes=2)),  # off/warn несколько дней → fail: «сломано» 2 мин
+        ("warn", NOW - timedelta(days=3)),
+        ("off", NOW - timedelta(days=3)),
+        ("unknown", NOW - timedelta(days=3)),
+    ],
+)
+def test_since_for_broken_starts_at_the_fail_streak(status: str, expected: datetime) -> None:
+    got = cause.since_for(
+        status,  # type: ignore[arg-type]
+        fail_since=NOW - timedelta(minutes=2),
+        unhealthy_since=NOW - timedelta(days=3),
+        incident_started=None,
+    )
+    assert got == expected
+
+
+def test_since_for_falls_back_to_the_incident_and_then_to_the_unhealthy_start() -> None:
+    incident = NOW - timedelta(minutes=9)
+    assert (
+        cause.since_for("fail", fail_since=None, unhealthy_since=NOW, incident_started=incident)
+        == incident
+    )
+    assert (
+        cause.since_for("fail", fail_since=None, unhealthy_since=NOW, incident_started=None) == NOW
+    )
+
+
+@pytest.mark.parametrize("earlier", ["off", "warn"])
+def test_a_service_that_was_off_or_degraded_for_days_does_not_alert_at_once_on_fail(
+    earlier: str,
+) -> None:
+    """off/degraded → fail: до оповещения 15 минут от падения, а не «уже 3 дн»."""
+    fail_started = NOW - timedelta(minutes=3)
+    since = cause.since_for(
+        "fail",
+        fail_since=fail_started,
+        unhealthy_since=NOW - timedelta(days=3),
+        incident_started=None,
+    )
+    group = cause.build_groups(
+        [_diagnose("docling", rules.docling(HttpFacts("unavailable", "x")), since)]
+    )[0]
+    assert group.since == fail_started
+    states: dict[str, cause.State] = {"docling": "broken"}
+    assert cause.plan_alerts([group], {}, states, NOW) == []  # 3 мин fail: ещё не «Сломано»
+    later = fail_started + cause.ALERT_AFTER
+    assert [s.kind for s in cause.plan_alerts([group], {}, states, later)] == ["open", "alert"]
+    assert earlier  # параметр описывает, что было до падения
+
+
+# --- дребезг: «Нестабильно», 15 минут fail, 5 минут ok, одно «Сломано» в сутки ----
+
+
+def _fail_diag(fail_for: timedelta | None, **ctx: Any) -> Diagnosis:
+    return _diagnose(
+        "docling",
+        rules.docling(HttpFacts("unavailable", "x")),
+        NOW - (fail_for or timedelta(0)),
+        fail_for=fail_for,
+        **ctx,
+    )
+
+
+@pytest.mark.parametrize(
+    ("fail_minutes", "state"),
+    [(0, "unstable"), (1, "unstable"), (14, "unstable"), (15, "broken"), (90, "broken")],
+)
+def test_fail_is_broken_only_after_fifteen_continuous_minutes(
+    fail_minutes: int, state: str
+) -> None:
+    assert _fail_diag(timedelta(minutes=fail_minutes)).state == state
+
+
+def test_a_short_failure_is_unstable_yellow_and_never_alertable() -> None:
+    d = _fail_diag(timedelta(minutes=3))
+    assert d.state == "unstable"
+    assert (d.owner, d.action) == ("hosting", "write_hosting")
+    group = cause.build_groups([d])[0]
+    assert group.state == "unstable"
+    assert group.message is None
+    steps = cause.plan_alerts([group], {}, {"docling": "unstable"}, NOW)
+    assert steps == []
+
+
+def test_flapping_service_is_unstable_without_a_continuous_fail() -> None:
+    ok = rules.docling(HttpFacts(None, None, 5))
+    d = _diagnose("docling", ok, None, flaps_24h=7, flaps_recent=4)
+    assert d.state == "unstable"
+    assert d.cause == "flapping"
+    assert d.cause_key == "docling:flapping"
+    assert d.headline.endswith("провалов за сутки: 7")
+    assert cause.plan_alerts(cause.build_groups([d]), {}, {"docling": "unstable"}, NOW) == []
+    quiet = _diagnose("docling", ok, None, flaps_24h=2, flaps_recent=2)
+    assert quiet.state == "ok"
+
+
+def test_stand_greys_out_an_unstable_hosting_failure() -> None:
+    assert _fail_diag(timedelta(minutes=2), stand=True).state == "expected"
+
+
+def test_restore_waits_for_five_continuous_ok_minutes() -> None:
+    row = OpenCause("docling:server_down", NOW - timedelta(minutes=60), NOW, ("docling",))
+    states: dict[str, cause.State] = {"docling": "ok"}
+    for minutes, due in ((1, False), (4, False), (5, True), (30, True)):
+        began = NOW - timedelta(minutes=minutes)
+        steps = cause.plan_alerts([], {row.cause_key: row}, states, NOW, {"docling": began})
+        assert [s.kind for s in steps] == (["restore"] if due else [])
+    # нет данных о начале ok — не восстановлено
+    assert cause.plan_alerts([], {row.cause_key: row}, states, NOW, {}) == []
+
+
+def test_a_short_failure_after_recovery_does_not_open_a_second_alert() -> None:
+    """ok 3 мин → fail 2 мин: запись всё ещё открыта, нового «Сломано» и «Восстановлено» нет."""
+    row = OpenCause("docling:server_down", NOW - timedelta(minutes=60), NOW, ("docling",))
+    blip = _fail_diag(timedelta(minutes=2))
+    steps = cause.plan_alerts(
+        cause.build_groups([blip]), {row.cause_key: row}, {"docling": "unstable"}, NOW
+    )
+    assert steps == []
+
+
+def test_second_outage_within_a_day_is_suppressed_not_repeated() -> None:
+    group = _broken_group(since=NOW - timedelta(minutes=20))
+    fresh = cause.plan_alerts([group], {}, {"docling": "broken"}, NOW, recently_alerted={group.id})
+    assert _kinds(fresh) == ["open", "suppress"]
+    row = OpenCause(group.id, NOW - timedelta(minutes=20), None, ("docling",), suppressed_at=NOW)
+    later = cause.plan_alerts(
+        [group],
+        {group.id: row},
+        {"docling": "broken"},
+        NOW + timedelta(hours=1),
+        recently_alerted={group.id},
+    )
+    assert later == []  # подавленную причину повторно не оценивают
+    # через сутки после прошлого «Сломано» — снова одно сообщение
+    after_day = cause.plan_alerts([group], {}, {"docling": "broken"}, NOW, recently_alerted=set())
+    assert _kinds(after_day) == ["open", "alert"]
+
+
+def test_alert_text_carries_the_flap_count() -> None:
+    group = cause.build_groups([_fail_diag(timedelta(minutes=20), flaps_24h=5)])[0]
+    plain = cause.broken_alert(group, group.since or NOW, NOW, "UTC").plain
+    assert "5-й провал" in plain

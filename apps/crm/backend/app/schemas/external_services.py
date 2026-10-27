@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field, SecretStr
 
 ServiceStatus = Literal["ok", "warn", "fail", "unknown", "off"]
 ServiceState = Literal[
-    "ok", "broken", "degraded", "not_configured", "disabled", "expected", "not_checked"
+    "ok", "broken", "unstable", "degraded", "not_configured", "disabled", "expected", "not_checked"
 ]
 ServiceOwner = Literal["admin", "owner", "hosting", "provider"]
 ServiceAction = Literal[
@@ -80,6 +80,9 @@ class ExternalServiceOut(BaseModel):
     action: ServiceAction | None = Field(description="Главное действие по смыслу")
     more_actions: list[ServiceAction] = Field(description="Запасные действия")
     since: datetime | None = Field(description="Когда впервые обнаружено (не в порядке с …)")
+    flaps_24h: int = Field(
+        description="Провалов (полос сбоя) за сутки: «Нестабильно», когда их много"
+    )
     last_recovered_at: datetime | None = Field(
         description="Когда восстановился после последнего сбоя за 30 дней (журнал инцидентов)"
     )
@@ -105,6 +108,7 @@ class ServiceGroupOut(BaseModel):
     message: str | None = Field(
         description="Готовый текст владельцу или хостингу — копируется, сам не отправляется"
     )
+    flaps_24h: int = Field(description="Провалов за сутки по сервисам причины (наибольшее)")
 
 
 class ExternalServicesSummary(BaseModel):

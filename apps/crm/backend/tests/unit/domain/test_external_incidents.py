@@ -12,22 +12,31 @@ OPEN = OpenIncident(1, NOW - timedelta(minutes=5), None)
 
 
 @pytest.mark.parametrize(
-    ("open_incident", "status", "step"),
+    ("open_incident", "status", "kwargs", "step"),
     [
-        (None, "ok", "none"),
-        (None, "warn", "none"),
-        (None, "unknown", "none"),
-        (None, "off", "none"),
-        (None, "fail", "open"),
-        (OPEN, "fail", "update"),
-        (OPEN, "ok", "close"),
-        (OPEN, "warn", "close"),
-        (OPEN, "unknown", "none"),  # нет данных — инцидент не закрывается и не открывается заново
-        (OPEN, "off", "none"),
+        (None, "ok", {}, "none"),
+        (None, "warn", {}, "none"),
+        (None, "unknown", {}, "none"),
+        (None, "off", {}, "none"),
+        (None, "fail", {}, "open"),
+        (None, "fail", {"sustained": False}, "none"),  # короткий провал — дребезг, не инцидент
+        (OPEN, "fail", {"sustained": False}, "update"),
+        (OPEN, "ok", {}, "close"),
+        (OPEN, "ok", {"recovered": False}, "none"),  # ok короче 5 мин — инцидент ещё открыт
+        (OPEN, "warn", {}, "none"),
+        (
+            OPEN,
+            "unknown",
+            {},
+            "none",
+        ),  # нет данных — инцидент не закрывается и не открывается заново
+        (OPEN, "off", {}, "none"),
     ],
 )
-def test_transition(open_incident: OpenIncident | None, status: str, step: str) -> None:
-    assert inc.transition(open_incident, status) == step  # type: ignore[arg-type]
+def test_transition(
+    open_incident: OpenIncident | None, status: str, kwargs: dict[str, bool], step: str
+) -> None:
+    assert inc.transition(open_incident, status, **kwargs) == step  # type: ignore[arg-type]
 
 
 @pytest.mark.parametrize(

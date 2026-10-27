@@ -142,11 +142,13 @@ def _level(service: ExternalService) -> Level:
     """Уровень сервиса для карточек: «ожидаемо на стенде» и «не настроено» — не сбой."""
     if service.state in ("expected", "not_configured"):
         return "off"
+    if service.state == "unstable":
+        return "warn"
     return service.status
 
 
 def _problems(services: list[ExternalService]) -> list[ExternalService]:
-    return [s for s in services if s.state in ("broken", "degraded")]
+    return [s for s in services if s.state in ("broken", "unstable", "degraded")]
 
 
 def _paused(service: ExternalService | None) -> bool:
@@ -225,7 +227,7 @@ def _telegram_card(parts: Parts) -> IntegrationCard:
         return _card("telegram", "off", "not_configured", last=last)
     if _paused(service):
         return _card("telegram", status, "paused", last=last)
-    if service is not None and service.state in ("broken", "degraded"):
+    if service is not None and service.state in ("broken", "unstable", "degraded"):
         return _card("telegram", status, "problems", count=1, last=last)
     if service is not None and service.state == "expected":
         return _card("telegram", "off", "not_configured", last=last)
@@ -246,7 +248,7 @@ def _mail_card(parts: Parts) -> IntegrationCard:
         return _card("mail", "off", "not_configured", last=last)
     if _paused(service):
         return _card("mail", service.status, "paused", last=last)
-    if service.state in ("broken", "degraded"):
+    if service.state in ("broken", "unstable", "degraded"):
         return _card("mail", service.status, "problems", count=1, last=last)
     if service.state in ("expected", "not_configured"):
         return _card("mail", "off", "not_configured", last=last)
@@ -386,6 +388,7 @@ def _item(
 
 _GROUP_SEVERITY: dict[str, Severity] = {
     "broken": "fail",
+    "unstable": "warn",
     "degraded": "warn",
     "not_configured": "setup",
     "not_checked": "warn",
@@ -460,7 +463,11 @@ def _setup_items(parts: Parts) -> list[AttentionItem]:
         elif not telegram.running and "telegram" not in covered:
             items.append(
                 _item(
-                    "bot:telegram", "telegram", "warn", "bot_not_running", None, telegram.last_error
+                    "bot:telegram",
+                    "telegram",
+                    "warn",
+                    "bot_not_running",
+                    technical=telegram.last_error,  # сырое — только под «Подробностями»
                 )
             )
     elif _service(parts, "telegram", "off") and "telegram" not in covered:
@@ -499,7 +506,7 @@ def _storage_items(parts: Parts) -> list[AttentionItem]:
     level, note = _backup_state(backups)
     if level == "ok" or note is None:
         return []
-    return [_item("backup:stale", "storage", "warn", "backup_stale", None, backups.error)]
+    return [_item("backup:stale", "storage", "warn", "backup_stale", technical=backups.error)]
 
 
 #: Компонент «Состояния системы» -> сервис реестра, который говорит о том же (строка уже есть).

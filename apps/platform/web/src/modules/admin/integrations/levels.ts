@@ -14,6 +14,7 @@ export const LEVEL_TONE: Record<IntegrationStatus, StatusTone> = {
 export const STATE_TONE: Record<ServiceState, StatusTone> = {
   ok: "green",
   broken: "red",
+  unstable: "gold",
   degraded: "gold",
   not_configured: "default",
   disabled: "default",

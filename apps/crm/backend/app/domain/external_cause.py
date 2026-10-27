@@ -10,11 +10,12 @@
 - `plan_alerts` — одно «сломано» после 15 минут и одно «восстановлено» на причину (дедупликация по
   `cause_key`; состояние хранит БД, поэтому рестарт процесса её не обнуляет).
 
-«Ожидаемо на стенде»: не-прод окружение (`APP_ENV != prod`) и причина, которую на стенде чинить
-некому (ключи и оплата провайдера, сервер, «не настроено»). Такие строки серые, без оповещений.
+«Ожидаемо на стенде»: стенд ансамбля (`APP_ENV=dev`, `Settings.is_stand`; у прода `prod`, у тестов
+`test`) и причина, которую на стенде чинить некому (ключи, оплата, сервер, «не настроено»).
+Такие строки серые, без оповещений.
 """
 
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Collection, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from datetime import datetime, timedelta
 from typing import Final, Literal
@@ -32,7 +33,16 @@ from app.domain.external_status import CheckResult
 from app.domain.system_status import hosting_ask
 from app.security.log_mask import mask_secrets
 
-State = Literal["ok", "broken", "degraded", "not_configured", "disabled", "expected", "not_checked"]
+State = Literal[
+    "ok",
+    "broken",
+    "unstable",
+    "degraded",
+    "not_configured",
+    "disabled",
+    "expected",
+    "not_checked",
+]
 Owner = Literal["admin", "owner", "hosting", "provider"]
 Action = Literal[
     "enter_key",
@@ -45,19 +55,29 @@ Action = Literal[
     "disable_provider",
 ]
 
+#: «Сломано» — только непрерывный `fail` не короче этого срока (от начала полосы); короче —
+#: «Нестабильно».
 ALERT_AFTER: Final = timedelta(minutes=15)
+#: «Восстановлено» — только после непрерывного `ok` не короче этого срока.
+RECOVERY_AFTER: Final = timedelta(minutes=5)
+#: Не больше одного «Сломано» на причину за это время; повторные провалы — сводка, не серия.
+ALERT_COOLDOWN: Final = timedelta(hours=24)
+#: Дребезг: столько провалов (полос `fail`) за `FLAP_WINDOW` — «Нестабильно», даже если сейчас `ok`.
+FLAP_MIN: Final = 3
+FLAP_WINDOW: Final = timedelta(hours=3)
 #: Затухание повторных проверок сломанного, мин: после 1-го, 2-го, 3-го, 4-го и далее подряд сбоя.
 BACKOFF_MINUTES: Final = (1, 2, 5, 15)
 BACKOFF_SLACK: Final = timedelta(seconds=10)
 TECHNICAL_LIMIT: Final = 600
 _SEVERITY: Final[dict[State, int]] = {
     "broken": 0,
-    "degraded": 1,
-    "not_configured": 2,
-    "not_checked": 3,
-    "expected": 4,
-    "disabled": 5,
-    "ok": 6,
+    "unstable": 1,
+    "degraded": 2,
+    "not_configured": 3,
+    "not_checked": 4,
+    "expected": 5,
+    "disabled": 6,
+    "ok": 7,
 }
 #: Причины «ещё не подключено»: слово «Не настроено», а не «Сломано».
 NOT_CONFIGURED: Final = frozenset({"no_token", "not_configured", "erp_not_connected"})
@@ -109,11 +129,13 @@ ROUTES: Final[dict[str, Route]] = {
     "last_failed": Route("admin", "recheck", ("open_settings",)),
     "backup_admin": Route("admin", "open_settings", ("recheck",)),
     "cert": _HOSTING,
+    "cert_expiring": _HOSTING,
     "erp_not_connected": Route("admin", "reconnect"),
     "erp_sync_failed": _ADMIN_FIX,
     "erp_handoff_failed": _ADMIN_FIX,
     "erp_events_failed": _ADMIN_FIX,
     "checks_stale": _HOSTING,
+    "flapping": Route(None, "recheck"),
     "intentional": Route(None, None),
     "disabled_manual": Route(None, None),
 }
@@ -143,6 +165,11 @@ class Context:
     never_checked: bool = False
     stale: bool = False
     providers: Mapping[str, str | None] = field(default_factory=dict)
+    # Сколько `fail` идёт подряд; `None` — полосы нет (или неизвестно): считается «непрерывно».
+    fail_for: timedelta | None = None
+    # Провалов (полос `fail`) за сутки и за `FLAP_WINDOW` — для «Нестабильно».
+    flaps_24h: int = 0
+    flaps_recent: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -161,6 +188,7 @@ class Diagnosis:
     affected: tuple[str, ...]
     technical: str | None
     since: datetime | None = None
+    flaps_24h: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -178,6 +206,7 @@ class Group:
     since: datetime | None
     technical: tuple[str, ...]
     message: str | None
+    flaps_24h: int = 0
 
 
 def vendor_title(provider: str) -> str:
@@ -208,16 +237,23 @@ def _state_of(status: Status, cause: str | None, ctx: Context) -> State:
     if ctx.never_checked or ctx.stale or status == "unknown":
         return "not_checked"
     if status == "ok":
-        return "ok"
+        return "unstable" if ctx.flaps_recent >= FLAP_MIN else "ok"
     if cause in INTENTIONAL:
         return "disabled"
     if cause in NOT_CONFIGURED or status == "off":
         return "not_configured"
-    return "broken" if status == "fail" else "degraded"
+    if status == "fail":
+        sustained = ctx.fail_for is None or ctx.fail_for >= ALERT_AFTER
+        return "broken" if sustained else "unstable"
+    return "degraded"
 
 
-def _headline(spec: ServiceSpec, result: CheckResult, cause: str | None, state: State) -> str:
-    if spec.vendor is not None and state in ("broken", "degraded"):
+def _headline(
+    spec: ServiceSpec, result: CheckResult, cause: str | None, state: State, flaps: int = 0
+) -> str:
+    if cause == "flapping":
+        return f"{spec.title}: нестабильная связь, провалов за сутки: {flaps}"
+    if spec.vendor is not None and state in ("broken", "unstable", "degraded"):
         name = vendor_title(spec.vendor)
         lines = {
             "key_rejected": f"Ключ {name} отклонён",
@@ -250,7 +286,13 @@ def diagnose(
 ) -> Diagnosis:
     cause = "checks_stale" if ctx.stale else result.cause
     state = _state_of(result.status, cause, ctx)
-    route = route_of(spec, cause) if state in ("broken", "degraded", "not_configured") else None
+    if state == "unstable" and result.status == "ok":
+        cause = "flapping"
+    route = (
+        route_of(spec, cause)
+        if state in ("broken", "unstable", "degraded", "not_configured")
+        else None
+    )
     owner = route.owner if route else None
     action: Action | None = route.action if route else None
     more = route.more if route else ()
@@ -259,7 +301,7 @@ def diagnose(
         action, more = "recheck", ("write_hosting",) if ctx.stale else ()
     if state == "disabled":
         owner, action, more = None, None, ()
-    on_stand = ctx.stand and state in ("broken", "degraded", "not_configured")
+    on_stand = ctx.stand and state in ("broken", "unstable", "degraded", "not_configured")
     if on_stand and (state == "not_configured" or owner in ("hosting", "owner")):
         state, action, more = "expected", "recheck", ()
     return Diagnosis(
@@ -272,11 +314,12 @@ def diagnose(
         owner=owner,
         action=action,
         more=more,
-        headline=_headline(spec, result, cause, state),
+        headline=_headline(spec, result, cause, state, ctx.flaps_24h),
         detail=result.hint,
         affected=_affected(spec, ctx.providers) if state != "ok" else (),
         technical=technical_text(result.error),
         since=since,
+        flaps_24h=ctx.flaps_24h,
     )
 
 
@@ -343,8 +386,27 @@ def _group(cause_key: str, members: Sequence[Diagnosis], tz: str, company: str) 
         since=since,
         technical=technical,
         message=None,
+        flaps_24h=max(d.flaps_24h for d in members),
     )
-    return replace(group, message=owner_message(group, first.cause, tz, company))
+    message = owner_message(group, first.cause, tz, company) if first.state == "broken" else None
+    return replace(group, message=message)
+
+
+def since_for(
+    status: Status,
+    *,
+    fail_since: datetime | None,
+    unhealthy_since: datetime | None,
+    incident_started: datetime | None,
+) -> datetime | None:
+    """«С {время}»: у `fail` — начало полосы `fail`; у остальных не-`ok` — первая не-`ok` проверка.
+
+    Сервис, который дни был «не настроен» (`off`) или с перебоями (`warn`), а потом упал, «сломан» с
+    момента падения, а не с первой не-`ok` проверки: от него же считаются 15 минут до оповещения.
+    """
+    if status == "fail":
+        return fail_since or incident_started or unhealthy_since
+    return unhealthy_since
 
 
 # --- затухание повторных проверок ---------------------------------------------------------------
@@ -369,11 +431,12 @@ class OpenCause:
     started_at: datetime
     alerted_at: datetime | None
     service_keys: tuple[str, ...]
+    suppressed_at: datetime | None = None
 
 
 @dataclass(frozen=True, slots=True)
 class Step:
-    kind: Literal["open", "alert", "restore", "close"]
+    kind: Literal["open", "alert", "suppress", "restore", "close"]
     cause_key: str
     started_at: datetime | None = None
 
@@ -383,31 +446,44 @@ def plan_alerts(
     open_causes: Mapping[str, OpenCause],
     states: Mapping[str, State],
     now: datetime,
+    ok_since: Mapping[str, datetime] | None = None,
+    recently_alerted: Collection[str] = (),
 ) -> list[Step]:
     """Что сделать с журналом причин и оповещениями после очередного прохода проверок.
 
-    `open`: причина стала «Сломано» — завести запись (начало — «с {время}» группы);
-    `alert`: «Сломано» уже ≥ 15 мин и о причине ещё не сообщали;
-    `restore`: все сервисы причины снова `ok` — закрыть запись и сообщить, если сообщали о сбое;
+    `open`: «Сломано» (непрерывный `fail` ≥ 15 мин) — завести запись, начало — начало полосы;
+    короткие провалы и «Нестабильно» записей не заводят и не оповещают;
+    `alert`: о причине ещё не сообщали — одно «Сломано»;
+    `suppress`: о причине уже сообщали за последние сутки — сводка «нестабильно» вместо новой серии;
+    `restore`: все сервисы причины непрерывно `ok` не меньше 5 мин — закрыть запись (начало `ok` —
+    `started_at` шага) и, если сообщали о сбое, сообщить о возврате;
     `close`: причина исчезла иначе (выключили, «ожидаемо», сменилась) — закрыть молча.
-    «Не проверено» и «работает с перебоями» запись не трогают: данных для вывода нет.
+    «Не проверено», «нестабильно» и «перебои» запись не трогают: данных для вывода нет.
     """
+    since_ok = ok_since or {}
     broken = {g.id: g for g in groups if g.state == "broken"}
     steps: list[Step] = []
     for cause_key, group in broken.items():
         row = open_causes.get(cause_key)
         started = row.started_at if row else (group.since or now)
+        if now - started < ALERT_AFTER:
+            continue
         if row is None:
             steps.append(Step("open", cause_key, started))
-        if (row is None or row.alerted_at is None) and now - started >= ALERT_AFTER:
-            steps.append(Step("alert", cause_key, started))
+        if row is None or (row.alerted_at is None and row.suppressed_at is None):
+            steps.append(
+                Step("suppress" if cause_key in recently_alerted else "alert", cause_key, started)
+            )
     for cause_key, row in open_causes.items():
         if cause_key in broken:
             continue
         members = [states.get(k) for k in row.service_keys]
         if members and all(m == "ok" for m in members):
-            steps.append(Step("restore", cause_key))
-        elif any(m in ("not_checked", "degraded") for m in members):
+            recovered = [since_ok.get(k) for k in row.service_keys]
+            if all(t is not None and now - t >= RECOVERY_AFTER for t in recovered):
+                at = max(t for t in recovered if t is not None)
+                steps.append(Step("restore", cause_key, at))
+        elif any(m in ("not_checked", "degraded", "unstable") for m in members):
             continue
         else:
             steps.append(Step("close", cause_key))
@@ -416,9 +492,15 @@ def plan_alerts(
 
 def broken_alert(group: Group, since: datetime, now: datetime, tz: str) -> AlertText:
     lines = [f"С {_local(since, tz)} (уже {duration_text(now - since)})."]
+    if group.flaps_24h > 1:
+        lines.append(f"За сутки это уже {group.flaps_24h}-й провал: связь нестабильна.")
     if group.affected:
         lines.append(f"Не работают: {', '.join(group.affected)}.")
-    if group.owner is not None:
+    if group.owner == "owner" and group.action == "enter_key":
+        lines.append(
+            "Кто исправляет: администратор вводит новый ключ; ключ и оплата — у владельца."
+        )
+    elif group.owner is not None:
         lines.append(f"Кто исправляет: {OWNER_LABEL[group.owner]}.")
     if group.detail:
         lines.append(f"Что сделать: {group.detail}")

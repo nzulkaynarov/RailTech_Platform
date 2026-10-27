@@ -181,6 +181,10 @@
     },
     "updated": "Token updated",
     "lastError": "Last error",
+    "lastErrorCode": {
+      "bot_process_never_started": "The bot process has never started on the server.",
+      "bot_process_down": "The bot process on the server is not responding."
+    },
     "token": {
       "current": "Token",
       "set": "Set token",
@@ -540,6 +544,7 @@
     "state": {
       "ok": "Working",
       "broken": "Broken",
+      "unstable": "Unstable",
       "degraded": "Working with interruptions",
       "not_configured": "Not set up",
       "disabled": "Switched off on purpose",
@@ -549,8 +554,10 @@
     "notChecked": "Not checked — press “Check”",
     "since": "since {{date}}",
     "recoveredAt": "Recovered at {{date}}",
+    "flaps": "Failures in 24 hours: {{count}}",
     "ownerLabel": "Who fixes it",
     "owner": {
+      "ownerKey": "You (administrator) enter the key; the key and payment are with the company owner",
       "admin": "You (administrator)",
       "owner": "Company owner — provider key and payment",
       "hosting": "Hosting — the server",

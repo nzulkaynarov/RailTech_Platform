@@ -2,6 +2,7 @@ import { HttpResponse, http } from "msw";
 
 import type {
   AiModel,
+  AiModelChange,
   AiModelChangeIn,
   AttentionItem,
   BotProfile,
@@ -13,6 +14,7 @@ import type {
   IntegrationStatus,
   IntegrationsOverview,
   PasswordConfirm,
+  ProviderKeyIn,
   ServiceState,
   ServiceSwitchIn,
   SmtpSettingsIn,
@@ -730,6 +732,37 @@ export const adminIntegrationsHandlers = [
   }),
 
   // --- Модели ИИ
+  http.put("*/admin/integrations/models/providers/:provider/key", async ({ request, params }) => {
+    const denied = guard("full");
+    if (denied) return denied;
+    const body = (await request.json()) as ProviderKeyIn;
+    const wrong = wrongPassword(body.password);
+    if (wrong) return wrong;
+    const provider = String(params["provider"]);
+    // Одна операция: ключ ложится на все роли провайдера, модели ролей не меняются
+    const roles: AiModelChange[] = [];
+    update((s) => {
+      for (const model of s.models.filter((m) => m.provider === provider)) {
+        model.health = "ok";
+        model.health_detail = null;
+        model.checked_at = MOCK_NOW;
+        model.key_source = "crm";
+        model.key_last4 = last4(body.api_key);
+        roles.push({
+          alias: model.alias,
+          provider,
+          model: (model.model ?? "").replace(`${provider}/`, ""),
+          key_source: "crm",
+          reindex_required: false,
+          quality_check_recommended: false,
+        });
+      }
+      const vendor = findService(s, `vendor.${provider}`);
+      if (vendor) settleOk(vendor, MOCK_NOW, "Ошибок за 15 минут нет");
+    });
+    if (roles.length === 0) return failure(404, "NOT_FOUND", "Не найдено.", "crm");
+    return HttpResponse.json({ provider, roles, checked: true });
+  }),
   http.get("*/admin/integrations/models", () => {
     const denied = guard("read");
     if (denied) return denied;

@@ -1,8 +1,9 @@
 """Инциденты, оповещения и сводка внешних сервисов (M3-CRM-12, ADR-0024). Чистые функции.
 
-Инцидент открывает переход в `fail`, закрывает `ok`/`warn`; `unknown`/`off` (нет данных, не
-подключён) инцидент не меняют. Инцидент — журнал «с … по …» по сервису; оповещения о причинах
-(одно «сломано» после 15 минут и одно «восстановлено») — в `external_cause`.
+Инцидент открывает непрерывный `fail` не короче 15 мин (короткие провалы — дребезг, не инцидент),
+закрывает непрерывный `ok` не короче 5 мин; `warn`/`unknown`/`off` инцидент не меняют. Инцидент —
+журнал «с … по …» по сервису; оповещения о причинах (одно «сломано» и одно «восстановлено») —
+в `external_cause`.
 """
 
 from collections.abc import Iterable, Mapping
@@ -25,10 +26,20 @@ class OpenIncident:
     alerted_at: datetime | None
 
 
-def transition(open_incident: OpenIncident | None, status: Status) -> Transition:
+def transition(
+    open_incident: OpenIncident | None,
+    status: Status,
+    *,
+    sustained: bool = True,
+    recovered: bool = True,
+) -> Transition:
+    """`sustained` — `fail` идёт подряд не меньше 15 мин (иначе это дребезг, инцидента нет);
+    `recovered` — `ok` идёт подряд не меньше 5 мин (иначе инцидент остаётся открытым)."""
     if status == "fail":
-        return "update" if open_incident is not None else "open"
-    if status in ("ok", "warn") and open_incident is not None:
+        if open_incident is not None:
+            return "update"
+        return "open" if sustained else "none"
+    if status == "ok" and open_incident is not None and recovered:
         return "close"
     return "none"
 

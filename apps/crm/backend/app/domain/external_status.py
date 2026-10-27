@@ -530,7 +530,7 @@ def tls(f: TlsFacts) -> CheckResult:
                 "Проверить журнал Caddy и что порты 80 и 443 открыты из интернета",
             ),
             metrics=metrics,
-            cause="cert",
+            cause="cert_expiring",
         )
     return CheckResult(key, "ok", f"Действует ещё {days} дн.", metrics=metrics)
 

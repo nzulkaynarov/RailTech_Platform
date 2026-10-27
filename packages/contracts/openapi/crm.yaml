@@ -2837,6 +2837,10 @@ components:
           - type: 'null'
           description: Путь в CRM, где это исправляется
           title: Fix Path
+        flaps_24h:
+          description: 'Провалов (полос сбоя) за сутки: «Нестабильно», когда их много'
+          title: Flaps 24H
+          type: integer
         frequency:
           enum:
           - minute
@@ -2935,6 +2939,7 @@ components:
           enum:
           - ok
           - broken
+          - unstable
           - degraded
           - not_configured
           - disabled
@@ -3008,6 +3013,7 @@ components:
       - action
       - more_actions
       - since
+      - flaps_24h
       - last_recovered_at
       title: ExternalServiceOut
       type: object
@@ -4681,6 +4687,49 @@ components:
       - retry_after
       title: ProfilePublishOut
       type: object
+    ProviderKeyIn:
+      additionalProperties: false
+      description: 'Новый ключ провайдера для всех его ролей разом (W15-H3): модели ролей не меняются.'
+      properties:
+        api_key:
+          format: password
+          maxLength: 512
+          minLength: 8
+          title: Api Key
+          type: string
+          writeOnly: true
+        password:
+          format: password
+          maxLength: 256
+          minLength: 1
+          title: Password
+          type: string
+          writeOnly: true
+      required:
+      - api_key
+      - password
+      title: ProviderKeyIn
+      type: object
+    ProviderKeyResult:
+      properties:
+        checked:
+          description: Провайдер сразу проверен после смены ключа
+          title: Checked
+          type: boolean
+        provider:
+          title: Provider
+          type: string
+        roles:
+          items:
+            $ref: '#/components/schemas/ModelChangeResult'
+          title: Roles
+          type: array
+      required:
+      - provider
+      - roles
+      - checked
+      title: ProviderKeyResult
+      type: object
     ProviderToday:
       properties:
         limit_usd:
@@ -5316,6 +5365,10 @@ components:
           - type: 'null'
           description: Что сделать и кому передать
           title: Detail
+        flaps_24h:
+          description: Провалов за сутки по сервисам причины (наибольшее)
+          title: Flaps 24H
+          type: integer
         headline:
           description: Что случилось одной фразой, без сырых ответов провайдера
           title: Headline
@@ -5369,6 +5422,7 @@ components:
           enum:
           - ok
           - broken
+          - unstable
           - degraded
           - not_configured
           - disabled
@@ -5401,6 +5455,7 @@ components:
       - since
       - technical
       - message
+      - flaps_24h
       title: ServiceGroupOut
       type: object
     ServiceRequestClose:
@@ -10214,6 +10269,49 @@ paths:
       security:
       - HTTPBearer: []
       summary: List Models
+      tags:
+      - spend
+  /api/v1/models/providers/{provider}/key:
+    put:
+      description: 'Новый ключ провайдера для всех его ролей разом (W15-H3): один пароль, один аудит.
+
+
+        Сначала создаются новые deployment всех ролей, потом удаляются прежние; сбой посередине
+
+        откатывает созданное. После смены провайдер сразу проверяется (журнал шлюза, без платных
+
+        вызовов моделей). Ключ уходит только в LiteLLM, в ответах и аудите — только последние 4 символа.'
+      operationId: change_provider_key
+      parameters:
+      - in: path
+        name: provider
+        required: true
+        schema:
+          maxLength: 32
+          title: Provider
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProviderKeyIn'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProviderKeyResult'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Change Provider Key
       tags:
       - spend
   /api/v1/models/{alias}:

@@ -18,6 +18,8 @@ export interface ServiceGroupOut {
   affected: string[];
   /** Что сделать и кому передать */
   detail: string | null;
+  /** Провалов за сутки по сервисам причины (наибольшее) */
+  flaps_24h: number;
   /** Что случилось одной фразой, без сырых ответов провайдера */
   headline: string;
   /** Корень причины (`cause_key`), стабильный ключ строки */

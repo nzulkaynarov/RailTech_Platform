@@ -417,6 +417,10 @@ class ExternalServiceOut(BaseModel):
     """
     Путь в CRM, где это исправляется
     """
+    flaps_24h: Annotated[int, Field(title="Flaps 24H")]
+    """
+    Провалов (полос сбоя) за сутки: «Нестабильно», когда их много
+    """
     frequency: Annotated[Frequency, Field(title="Frequency")]
     hint: Annotated[str | None, Field(title="Hint")]
     """
@@ -695,6 +699,15 @@ class ProfilePublishOut(BaseModel):
     retry_after: Annotated[int | None, Field(title="Retry After")]
 
 
+class ProviderKeyResult(BaseModel):
+    checked: Annotated[bool, Field(title="Checked")]
+    """
+    Провайдер сразу проверен после смены ключа
+    """
+    provider: Annotated[str, Field(title="Provider")]
+    roles: Annotated[list[ModelChangeResult], Field(title="Roles")]
+
+
 class ProviderToday(BaseModel):
     limit_usd: Annotated[float, Field(title="Limit Usd")]
     provider: Annotated[str, Field(title="Provider")]
@@ -789,6 +802,10 @@ class ServiceGroupOut(BaseModel):
     detail: Annotated[str | None, Field(title="Detail")]
     """
     Что сделать и кому передать
+    """
+    flaps_24h: Annotated[int, Field(title="Flaps 24H")]
+    """
+    Провалов за сутки по сервисам причины (наибольшее)
     """
     headline: Annotated[str, Field(title="Headline")]
     """
@@ -945,6 +962,7 @@ class State(StrEnum):
 
     ok = "ok"
     broken = "broken"
+    unstable = "unstable"
     degraded = "degraded"
     not_configured = "not_configured"
     disabled = "disabled"
@@ -955,6 +973,7 @@ class State(StrEnum):
 class State1(StrEnum):
     ok = "ok"
     broken = "broken"
+    unstable = "unstable"
     degraded = "degraded"
     not_configured = "not_configured"
     disabled = "disabled"

@@ -458,3 +458,48 @@ async def test_hosting_cause_keeps_the_ready_message_for_the_copy_button(
     listing = (await web.client.get(f"{URL}/services")).json()
     assert listing["groups"][0]["id"] == "docling:server_down"
     assert listing["stand"] is False
+
+
+async def test_unstable_is_a_yellow_warning_row_not_a_failure(
+    web: Web, crm: CrmIntegrationsFake
+) -> None:
+    flapping = service("docling", "ok", state="unstable", cause_key="docling:flapping", flaps_24h=6)
+    flap_group = group(
+        "docling",
+        "unstable",
+        id="docling:flapping",
+        owner=None,
+        action="recheck",
+        more_actions=[],
+        headline="docling: нестабильная связь, провалов за сутки: 6",
+        flaps_24h=6,
+    )
+    crm.answer("GET", "admin/external-services", 200, services_out([flapping], [flap_group]))
+    await web.login(["ADMIN"])
+
+    body = (await web.client.get(URL)).json()
+
+    (row,) = [a for a in body["attention"] if a["id"].startswith("group:")]
+    assert (row["severity"], row["group"]["state"], row["group"]["flaps_24h"]) == (
+        "warn",
+        "unstable",
+        6,
+    )
+    assert cards(body)["services"]["status"] == "warn"
+
+
+async def test_raw_bot_and_backup_errors_go_to_technical_not_detail(
+    web: Web, crm: CrmIntegrationsFake
+) -> None:
+    crm.answer(
+        "GET", "integrations/telegram", 200, telegram_status(running=False, last_error="boom 401")
+    )
+    crm.answer("GET", "system/backups", 200, backups(stale=True, error="bucket_missing"))
+    await web.login(["ADMIN"])
+
+    body = (await web.client.get(URL)).json()
+
+    bot = next(a for a in body["attention"] if a["id"] == "bot:telegram")
+    backup = next(a for a in body["attention"] if a["id"] == "backup:stale")
+    assert (bot["detail"], bot["technical"]) == (None, "boom 401")
+    assert (backup["detail"], backup["technical"]) == (None, "bucket_missing")

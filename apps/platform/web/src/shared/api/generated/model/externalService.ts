@@ -211,6 +211,8 @@ export interface ExternalService {
   /** Карточка экрана, где это исправляется (`IntegrationCardKey`); `null` — настроить негде */
   fix_card: IntegrationCardKey | null;
   state: ServiceState;
+  /** Провалов (полос сбоя) за сутки: много — «Нестабильно» */
+  flaps_24h: number;
   /** Корень причины; у сервисов с общей причиной он общий */
   cause_key: string;
   owner: ServiceOwner | null;

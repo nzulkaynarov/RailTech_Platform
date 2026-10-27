@@ -162,13 +162,14 @@
  */
 
 /**
- * Состояние словом (W15-H3, решает CRM): `broken` Сломано, `degraded` Работает с перебоями, `not_configured` Не настроено, `disabled` Выключено намеренно, `expected` Ожидаемо на стенде (серым, без оповещений и без «Требует внимания»), `not_checked` Не проверено — нажмите «Проверить», `ok` Работает.
+ * Состояние словом (W15-H3, решает CRM): `broken` Сломано (непрерывный сбой не короче 15 минут), `unstable` Нестабильно (короткие провалы и дребезг — жёлтое, без оповещений), `degraded` Работает с перебоями, `not_configured` Не настроено, `disabled` Выключено намеренно, `expected` Ожидаемо на стенде (серым, без оповещений и без «Требует внимания»), `not_checked` Не проверено — нажмите «Проверить», `ok` Работает.
  */
 export type ServiceState = (typeof ServiceState)[keyof typeof ServiceState];
 
 export const ServiceState = {
   ok: "ok",
   broken: "broken",
+  unstable: "unstable",
   degraded: "degraded",
   not_configured: "not_configured",
   disabled: "disabled",

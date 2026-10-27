@@ -1545,6 +1545,54 @@ paths:
         '503':
           $ref: '#/components/responses/BackendUnavailable'
 
+  /admin/integrations/models/providers/{provider}/key:
+    put:
+      tags: [integrations]
+      operationId: changeProviderKey
+      summary: 'Новый ключ провайдера для всех его ролей разом'
+      description: >-
+        CRM `PUT /models/providers/{provider}/key` (W15-H3): один пароль администратора, один аудит. Новые deployment
+        всех ролей провайдера создаются первыми, прежние удаляются, когда все созданы; сбой посередине откатывает созданное —
+        частичного применения нет. Модели ролей не меняются. После смены провайдер сразу проверяется. Ключ и пароль
+        уходят только в CRM, в ответ не попадают.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - name: provider
+          in: path
+          required: true
+          schema: {type: string, enum: [anthropic, gemini, openai]}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProviderKeyIn'
+      responses:
+        '200':
+          description: Ключ применён ко всем ролям провайдера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProviderKeyResult'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/IntegrationConflict'
+        '422':
+          $ref: '#/components/responses/IntegrationInvalid'
+        '423':
+          $ref: '#/components/responses/AccountLocked'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '502':
+          $ref: '#/components/responses/IntegrationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
   /admin/integrations/models/{alias}/reset:
     post:
       tags: [integrations]
@@ -5333,9 +5381,10 @@ components:
 
     ServiceState:
       type: string
-      enum: [ok, broken, degraded, not_configured, disabled, expected, not_checked]
+      enum: [ok, broken, unstable, degraded, not_configured, disabled, expected, not_checked]
       description: >-
-        Состояние словом (W15-H3, решает CRM): `broken` Сломано, `degraded` Работает с перебоями, `not_configured`
+        Состояние словом (W15-H3, решает CRM): `broken` Сломано (непрерывный сбой не короче 15 минут), `unstable` Нестабильно
+        (короткие провалы и дребезг — жёлтое, без оповещений), `degraded` Работает с перебоями, `not_configured`
         Не настроено, `disabled` Выключено намеренно, `expected` Ожидаемо на стенде (серым, без оповещений и без «Требует
         внимания»), `not_checked` Не проверено — нажмите «Проверить», `ok` Работает.
 
@@ -5358,7 +5407,7 @@ components:
     ServiceGroup:
       type: object
       additionalProperties: false
-      required: [id, state, owner, action, more_actions, headline, detail, affected, service_keys, titles, since, technical, message, fix_card]
+      required: [id, state, owner, action, more_actions, headline, detail, affected, service_keys, titles, since, technical, message, fix_card, flaps_24h]
       description: >-
         Одна причина — одна строка «Требует внимания» (W15-H3): сервисы реестра CRM с общим корнем свёрнуты вместе
         («Ключ Anthropic отклонён — не работают: диалог с клиентом, запасная модель, поиск по базе знаний»). Правило
@@ -5398,6 +5447,7 @@ components:
             Сырой текст проверки для «Технических подробностей» (свёрнуто, «Скопировать для поддержки»); секреты
             замаскированы CRM.
           items: {type: string}
+        flaps_24h: {type: integer, description: 'Провалов (полос сбоя) за сутки по сервисам причины — наибольшее'}
         message:
           type: [string, 'null']
           description: Готовый текст владельцу или хостингу; пользователь копирует его сам, Платформа ничего не отправляет
@@ -5771,6 +5821,7 @@ components:
           - {$ref: '#/components/schemas/IntegrationCardKey'}
           - {type: 'null'}
         state: {$ref: '#/components/schemas/ServiceState'}
+        flaps_24h: {type: integer, description: 'Провалов (полос сбоя) за сутки: много — «Нестабильно»'}
         cause_key: {type: string, description: 'Корень причины; у сервисов с общей причиной он общий'}
         owner:
           anyOf:
@@ -5787,7 +5838,7 @@ components:
         last_recovered_at: {type: [string, 'null'], format: date-time, description: 'Когда восстановился после последнего сбоя за 30 дней — «восстановлено в …» из журнала инцидентов'}
       required: [check, checked_at, checks_24h, error, failures_24h, frequency, hint, incident, key, latency_ms, p95_ms_24h, purpose,
         source, stale, status, summary, switch, system, title, uptime_24h, uptime_7d, fix_card, state, cause_key, owner, action,
-        more_actions, since, last_recovered_at]
+        more_actions, since, last_recovered_at, flaps_24h]
       type: object
       additionalProperties: false
     ExternalServiceDetail:
@@ -5867,6 +5918,26 @@ components:
       required: [alias, checked_at, health, health_detail, key_last4, key_source, model, provider, today_usd]
       type: object
       additionalProperties: false
+    ProviderKeyIn:
+      type: object
+      additionalProperties: false
+      required: [api_key, password]
+      properties:
+        api_key: {type: string, format: password, writeOnly: true, minLength: 8, maxLength: 512}
+        password: {type: string, format: password, writeOnly: true, minLength: 1, maxLength: 256}
+
+    ProviderKeyResult:
+      type: object
+      additionalProperties: false
+      description: 'Итог смены ключа провайдера: роли, к которым применён ключ, и проверен ли провайдер сразу.'
+      required: [provider, roles, checked]
+      properties:
+        provider: {type: string}
+        roles:
+          type: array
+          items: {$ref: '#/components/schemas/AiModelChange'}
+        checked: {type: boolean}
+
     AiModelChange:
       description: 'Итог смены или сброса модели; `key_source`: `crm` — ключ задан в Платформе, `env` — из настроек сервера.'
       properties:
