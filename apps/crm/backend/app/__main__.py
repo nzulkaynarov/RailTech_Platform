@@ -53,11 +53,15 @@ async def _run_worker() -> None:
     from rt_bus.contrib.procrastinate import WORKER_OPTIONS
 
     from app.container import get_container
+    from app.services.identity_catalog import sync_eds_rights_on_start
     from app.tasks.queue import queue
 
     try:
         async with queue.open_async():
             try:
+                # Права EDS при смене каталога (W13C-F4): очередь уже открыта — коммит с событием
+                # будит ретранслятор; сбой не мешает старту.
+                await sync_eds_rights_on_start(get_container().session_factory)
                 # опрос очереди раз в секунду: потерянное уведомление не задержит пробуждение шины
                 await queue.run_worker_async(
                     concurrency=get_settings().worker_concurrency, **WORKER_OPTIONS

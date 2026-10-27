@@ -61,6 +61,7 @@ TABLES = (
     "external_service_switches",
     "procrastinate_jobs",
     "platform_roles",
+    "identity_catalog_state",
 )
 FAKE_KEY = "x" * 40  # фиктивный ключ только для тестов
 

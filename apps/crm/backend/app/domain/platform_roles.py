@@ -18,6 +18,8 @@
   (Q-R1c-1 п. 5).
 """
 
+import hashlib
+import json
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Final, Literal
@@ -52,6 +54,7 @@ __all__ = [
     "default_roles",
     "derive_access",
     "diff_access",
+    "eds_catalog_fingerprint",
     "eds_permissions_for",
     "eds_permissions_of",
     "erp_access_for",
@@ -224,6 +227,45 @@ def eds_permissions_for(access: Mapping[str, str]) -> tuple[str, ...]:
         p for resource, level in access.items() for p in _accumulated(EDS_BACKEND, resource, level)
     }
     return tuple(sorted(granted))
+
+
+def eds_catalog_fingerprint(
+    backend: Mapping[str, Mapping[str, tuple[str, ...]]] = EDS_BACKEND,
+    role_access: Mapping[str, Mapping[str, str]] = ROLE_ACCESS,
+    system_codes: Iterable[str] = SYSTEM_ROLE_CODES,
+) -> str:
+    """Отпечаток (sha256) части каталога, от которой зависит `permissions.eds` в `identity.user.*`.
+
+    Входит: действующий состав кодов EDS по каждому разделу и уровню (с учётом `full ⊇ read`; пустые
+    уровни и разделы не считаются) и права EDS системных ролей по их матрицам. Не входит: права CRM
+    и ERP, названия, описания, порядок записей и комментарии каталога — их правка отпечаток не
+    меняет. Роли с произвольной матрицей — данные, их правки идут обычными событиями сотрудника."""
+    effective = {
+        resource: {
+            level: sorted(set(_accumulated(backend, resource, level))) for level in ("read", "full")
+        }
+        for resource in backend
+    }
+    effective = {
+        resource: {lv: codes for lv, codes in levels.items() if codes}
+        for resource, levels in effective.items()
+    }
+    system = {
+        code: sorted(
+            {
+                perm
+                for resource, level in role_access.get(code, {}).items()
+                for perm in _accumulated(backend, resource, level)
+            }
+        )
+        for code in system_codes
+    }
+    payload = {
+        "v": 1,
+        "backend": {r: lv for r, lv in sorted(effective.items()) if lv},
+        "system_roles": dict(sorted(system.items())),
+    }
+    return hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
 
 
 def eds_permissions_of(grants: Iterable[RoleGrant], *, is_active: bool = True) -> tuple[str, ...]:
