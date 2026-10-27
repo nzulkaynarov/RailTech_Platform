@@ -11,9 +11,14 @@ const EDS_ANY = [
 
 export const eds: ModuleConfig = {
   code: "eds",
-  action: { access: "eds.memo.create" },
+  action: { access: "eds.memo.create", to: "/eds/new" },
   sections: [
-    { key: "documents", path: "/eds/documents", access: { anyOf: EDS_ANY } },
+    {
+      key: "documents",
+      path: "/eds/documents",
+      access: { anyOf: EDS_ANY },
+      defaults: { panelOpen: false },
+    },
     {
       key: "inbox",
       path: "/eds/inbox",
@@ -64,6 +69,7 @@ export const eds: ModuleConfig = {
       path: "/eds/new",
       access: { resource: "eds.memo.create" },
       hidden: true,
+      defaults: { panelOpen: false },
       actionTo: "/eds/documents",
     },
   ],

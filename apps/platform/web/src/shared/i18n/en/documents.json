@@ -1,0 +1,304 @@
+{
+  "kinds": {
+    "memo": "Memo",
+    "application": "Application",
+    "report": "Report",
+    "letter_out": "Letter",
+    "letter_in": "Incoming letter",
+    "quote": "Quote"
+  },
+  "status": {
+    "draft": "Draft",
+    "sent": "Registered",
+    "quote": {
+      "open": "Awaiting approval",
+      "approved": "Approved",
+      "returned": "Returned for rework",
+      "rejected": "Rejected"
+    },
+    "filter": {
+      "draft": "Draft",
+      "on_approval": "Awaiting approval",
+      "returned": "Returned for rework",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "to_accountant": "Passed to accountant",
+      "paid": "Paid",
+      "sent": "Registered",
+      "awaiting_resolution": "Awaiting resolution",
+      "resolved": "Resolution made",
+      "open": "Quote awaiting approval"
+    }
+  },
+  "list": {
+    "subtitle": "Documents you created: drafts, in approval and completed. The company register is on the “All” tab.",
+    "subtitleAll": "Company register: letters, quotes, memos, applications and reports with number, status and owner.",
+    "scope": {
+      "label": "Whose documents",
+      "mine": "Mine",
+      "all": "All"
+    },
+    "tabs": {
+      "label": "Document type",
+      "all": "All types",
+      "memo": "Memos",
+      "application": "Applications",
+      "report": "Reports",
+      "letters": "Letters",
+      "quote": "Quotes"
+    },
+    "status": {
+      "label": "Status",
+      "any": "Any status"
+    },
+    "columns": {
+      "number": "Number",
+      "subject": "Subject",
+      "kind": "Type",
+      "status": "Status",
+      "amount": "Amount",
+      "due": "Needed by",
+      "author": "Author",
+      "responsible": "Owner",
+      "created": "Created",
+      "action": "Action"
+    },
+    "noNumber": "number is assigned on sending",
+    "open": "Open document: {{subject}}",
+    "continue": "Continue",
+    "continueLabel": "Continue document: {{subject}}",
+    "inSection": "In “{{section}}”",
+    "inSectionLabel": "Open in “{{section}}”: {{subject}}",
+    "empty": {
+      "mineTitle": "You have no documents yet",
+      "mineText": "A memo, application, report or letter is created with the “Create document” button. Drafts are kept here.",
+      "allTitle": "The register is empty so far",
+      "allText": "Letters, quotes and employee documents appear here as soon as they are registered.",
+      "filteredTitle": "Nothing matches these filters",
+      "filteredText": "Change the type or status — or create a new document."
+    },
+    "paging": {
+      "label": "List pages",
+      "prev": "Back",
+      "next": "Next",
+      "page": "Page {{page}}"
+    },
+    "caption": "Documents: number, subject, type, status, amount and deadline",
+    "tableScroll": "Documents table, scrolls horizontally",
+    "listLabel": "Documents",
+    "retry": "Retry",
+    "loadError": {
+      "title": "Could not load documents",
+      "text": "The server did not respond. Check the connection and try again."
+    },
+    "unavailable": {
+      "title": "Documents are unavailable",
+      "text": "The documents service is not responding. Try again later."
+    },
+    "forbidden": {
+      "title": "Documents are not open to you",
+      "text": "The list is not granted to your role, or you have no rights in the documents service. Contact the administrator."
+    }
+  },
+  "panel": {
+    "label": "Document",
+    "fields": {
+      "kind": "Type",
+      "author": "From",
+      "addressee": "To",
+      "recipient": "Addressee",
+      "amount": "Amount",
+      "due": "Needed by",
+      "deal": "Project",
+      "created": "Created",
+      "updated": "Changed",
+      "version": "Revision"
+    },
+    "toDirector": "Director",
+    "text": "Text",
+    "files": "Attachments",
+    "noFiles": "No attachments.",
+    "download": "Download: {{name}}",
+    "downloadFailed": "Could not download the file: {{reason}}",
+    "route": "Route",
+    "routeAuthor": "Author · {{name}}",
+    "routeAuthorMeta": "created {{date}}",
+    "routeStep": {
+      "approved": "{{label}} — approved",
+      "returned": "{{label}} — returned for rework",
+      "rejected": "{{label}} — rejected",
+      "current": "{{label}} — decision pending",
+      "pending": "{{label}} — next on the route",
+      "skipped": "{{label}} — skipped"
+    },
+    "routePreview": "The route opens after sending: you → director{{accountant}}.",
+    "routePreviewAccountant": " → accountant",
+    "decisions": "Decisions",
+    "decision": {
+      "approve": "Approved",
+      "return": "Returned for rework",
+      "reject": "Rejected"
+    },
+    "decisionMeta": "{{date}} · {{name}} · round {{round}}",
+    "noDecisions": "No decisions yet.",
+    "continue": "Continue",
+    "close": "Close",
+    "closeLabel": "Close document",
+    "retry": "Retry",
+    "loadError": {
+      "title": "Could not open the document",
+      "text": "The server did not respond. Try again later."
+    },
+    "notFound": {
+      "title": "Document not found",
+      "text": "It does not exist or is not visible to you."
+    },
+    "forbidden": {
+      "title": "The document is not open to you",
+      "text": "It is not granted to your role."
+    }
+  },
+  "form": {
+    "subtitle": "The document goes to the director for approval. You can save a draft and continue later in “My documents”.",
+    "subtitleLetter": "The letter gets an outgoing number. Letterhead, PDF and sending to the addressee come later: for now the text is stored.",
+    "subtitleContinue": "Draft {{number}}: changes are saved, you can send it at any time.",
+    "subtitleReturned": "{{number}} was returned for rework: fix it and send again.",
+    "formLabel": "New document",
+    "type": {
+      "label": "Document type",
+      "letterLocked": "Letters are registered by a role with access to incoming letters.",
+      "letterOption": "Letter — needs access to incoming letters",
+      "locked": "The type cannot be changed after creation."
+    },
+    "subject": {
+      "label": "Subject",
+      "hint": "Short, like a heading: up to 300 characters."
+    },
+    "to": {
+      "label": "To",
+      "director": "Director",
+      "hint": "Any employee with approval rights receives the document. Choosing a specific addressee will come later."
+    },
+    "recipient": {
+      "label": "Addressee (organization)",
+      "inn": "Addressee tax ID",
+      "innHint": "Optional."
+    },
+    "text": {
+      "label": "Text",
+      "hint": "Plain text, up to 20,000 characters."
+    },
+    "amount": {
+      "label": "Amount, UZS",
+      "hint": "Optional. With an amount, the document goes to the accountant after the director."
+    },
+    "due": {
+      "label": "Needed by",
+      "hint": "Optional."
+    },
+    "files": {
+      "label": "Attachments",
+      "hint": "PDF, images and Office documents, each up to 25 MB.",
+      "list": "Attached files",
+      "uploading": "uploading…",
+      "uploaded": "uploaded",
+      "attached": "already in the document",
+      "remove": "Remove file {{name}}",
+      "tooLarge": "The file is larger than 25 MB.",
+      "unsupported": "PDF, images and Office documents are accepted.",
+      "failed": "Not uploaded: {{reason}}"
+    },
+    "deal": {
+      "label": "Link to a project",
+      "hint": "Optional: find a request or project by number, title or company.",
+      "placeholder": "For example, ZV-2026-104 or a title",
+      "empty": "Nothing found",
+      "searching": "Searching…",
+      "unavailable": "Requests are unavailable right now — you can add the link later."
+    },
+    "route": {
+      "label": "Approval route",
+      "plain": "You → Director",
+      "withAmount": "You → Director → Accountant (amount given)",
+      "letter": "No approval: the letter is registered at once"
+    },
+    "consequence": {
+      "memo": [
+        "The document gets a number like СЗ-2026/031 and goes to the director for approval.",
+        "The director approves, returns it for rework or rejects it — you get a notification.",
+        "An approved document stays in “My documents” with the visa and date."
+      ],
+      "memoAmount": [
+        "The document gets a number like СЗ-2026/031 and goes to the director for approval.",
+        "After the director approves, the document is passed to the accountant for payment.",
+        "The accountant confirms payment: the status becomes “Paid”."
+      ],
+      "application": [
+        "The application gets a number like ЗЯ-2026/012 and goes to the director for approval.",
+        "The director approves, returns it for rework or rejects it — you get a notification.",
+        "The decision and its date stay in “My documents”."
+      ],
+      "report": [
+        "The report gets a number like ОТ-2026/007 and goes to the director for approval.",
+        "The director approves, returns it for rework or rejects it — you get a notification.",
+        "The decision and its date stay in “My documents”."
+      ],
+      "letter": [
+        "The letter gets an outgoing number like ИСХ-082/26.",
+        "It appears in “My documents” with the status “Registered”.",
+        "Letterhead, PDF and sending to the addressee come later: for now the text is stored."
+      ],
+      "draft": "“Save draft” sends nothing: the document stays in “My documents” with a “Continue” button."
+    },
+    "submit": {
+      "approval": "Send for approval",
+      "letter": "Register the letter",
+      "draft": "Save draft",
+      "uploadWait": "Wait for the files to upload"
+    },
+    "validation": {
+      "summary": "Fix the marked fields.",
+      "subject": "Enter a subject.",
+      "text": "Write the document text.",
+      "amount": "The amount must be greater than zero, for example 1,500,000.",
+      "due": "“Needed by” cannot be in the past.",
+      "recipient": "Enter the addressee of the letter.",
+      "deal": "Project not found — pick another or remove the link."
+    },
+    "toast": {
+      "draft": "Draft saved",
+      "sent": "Sent for approval: {{number}}",
+      "registered": "Letter registered: {{number}}"
+    },
+    "error": {
+      "send": "Not sent: {{reason}}",
+      "save": "Not saved: {{reason}}",
+      "savedNote": "The draft is saved and what you typed is kept. Fix it and send again.",
+      "reasons": {
+        "FORBIDDEN": "this action is not granted to your role",
+        "eds_not_granted": "you have no rights in the documents service",
+        "not_author": "only the author can edit the document",
+        "NOT_FOUND": "the document was not found",
+        "CONFLICT": "the document has changed, refresh the page",
+        "invalid_state": "the document is already sent or closed, refresh the page",
+        "VALIDATION_FAILED": "check the fields",
+        "BACKEND_UNAVAILABLE": "the documents service is not responding, try again later",
+        "PAYLOAD_TOO_LARGE": "the file is larger than 25 MB",
+        "UNSUPPORTED_MEDIA_TYPE": "PDF, images and Office documents are accepted",
+        "REQUEST_TIMEOUT": "the server did not respond in time",
+        "DEFAULT": "the server returned an error, try again"
+      }
+    },
+    "loadDraft": "Loading the draft…",
+    "draftLoadError": {
+      "title": "Could not open the draft",
+      "text": "It does not exist, is not visible to you, or the server did not respond."
+    },
+    "notEditable": {
+      "title": "This document cannot be edited",
+      "text": "A draft and a document returned for rework can be edited. A sent document is waiting for a decision."
+    },
+    "toDocuments": "My documents",
+    "forbiddenTitle": "You cannot create documents"
+  }
+}

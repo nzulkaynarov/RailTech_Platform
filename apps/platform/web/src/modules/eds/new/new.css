@@ -1,0 +1,55 @@
+/* EDS · Создать документ (D1-5). Значения — макет v3: рамка #f0f0f0, вторичный текст #595959, ошибка — красный antd с контрастом ≥ 4.5:1. */
+.pf-newdoc {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  max-width: 760px;
+  min-width: 0;
+}
+.pf-newdoc-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.pf-field-error {
+  color: #cf1322;
+  font-size: 13px;
+  line-height: 20px;
+}
+.pf-newdoc-route {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.pf-newdoc-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
+}
+.pf-newdoc input[type="file"] {
+  max-width: 100%;
+}
+/* Телефон: форма — лист на весь экран, кнопки прижаты к низу (над нижней панелью модулей) */
+@media (max-width: 767px) {
+  .pf-newdoc-row {
+    grid-template-columns: 1fr;
+  }
+  .pf-newdoc-actions {
+    position: sticky;
+    /* sticky отсчитывается от края отступа контейнера: область контента кончается над нижней панелью (60 px) + её отступ 76 px */
+    bottom: -16px;
+    z-index: 5;
+    margin: 16px -16px 0;
+    padding: 12px 16px;
+    background: #fff;
+    border-top: 1px solid #f0f0f0;
+  }
+  .pf-newdoc-actions .pf-fp-row {
+    flex-direction: column;
+  }
+  .pf-newdoc-actions .pf-fp-row > .ant-btn {
+    width: 100%;
+  }
+}

@@ -1,7 +1,20 @@
 import { toApiError } from "./errors";
 
-/** Имя файла из `Content-Disposition: attachment; filename="leads-20261026-1430.csv"`. */
+/**
+ * Имя файла из `Content-Disposition: attachment; filename="leads-20261026-1430.csv"`; запись RFC 5987
+ * (`filename*=UTF-8''%D1%81%D1%87%D1%91%D1%82.pdf`, так отдаёт EDS) важнее обычной и декодируется.
+ */
 export function filenameFrom(disposition: string | null, fallback: string): string {
+  const encoded = disposition
+    ? /filename\*\s*=\s*UTF-8''([^;]+)/i.exec(disposition)?.[1]
+    : undefined;
+  if (encoded) {
+    try {
+      return decodeURIComponent(encoded.trim());
+    } catch {
+      // Битая запись — берём обычное имя.
+    }
+  }
   const match = disposition ? /filename="?([^";]+)"?/i.exec(disposition) : null;
   return match?.[1] ?? fallback;
 }
