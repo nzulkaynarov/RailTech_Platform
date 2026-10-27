@@ -594,7 +594,7 @@ export interface paths {
     put?: never;
     /**
      * EDS · Одобрить КП → отправить клиенту / Вернуть на доработку / Отклонить
-     * @description EDS `POST /approvals/{id}/decision` (право `approvals.decide`). Раздел `eds.drafts` — полный: роль только для чтения получает 403 в BFF до EDS. **Проверку чек-листа делает EDS**, не BFF: `approve` при красной блокирующей строке (визы, маржа) — 409 `CONFLICT`, `details.reason = checklist_not_green`, `details.failed` — коды красных строк; строка `due` (срок) — предупреждение, КП одобряется с отметкой `approved_late`. Маршрут уже закрыт (решил другой директор, новая версия КП) — 409 `details.reason = route_closed`; сотрудника не ждёт шаг — 403 `FORBIDDEN`, `details.reason = not_your_step`. `comment` обязателен для `return` и `reject` — пустой 422 в BFF до EDS (`details.fields = [comment]`); `channels` — только для `approve`. При одобрении EDS присваивает `ИСХ-NNN/ГГ` и публикует `approval.decided` (ERP отправляет КП по выбранным каналам). Ответ — обновлённая карточка.
+     * @description EDS `POST /approvals/{id}/decision` (право `approvals.decide`). Раздел `eds.drafts` — полный: роль только для чтения получает 403 в BFF до EDS. **Проверку чек-листа делает EDS**, не BFF: `approve` при красной блокирующей строке (визы, маржа) — 409 `CONFLICT`, `details.reason = checklist_not_green`, `details.failed` — коды красных строк; строка `due` (срок) — предупреждение, КП одобряется с отметкой `approved_late`. Маршрут уже закрыт (решил другой директор, новая версия КП) — 409 `details.reason = route_closed`; сотрудника не ждёт шаг — 403 `FORBIDDEN`, `details.reason = not_your_step`. `comment` обязателен для `return` и `reject` — пустой 422 в BFF до EDS (`details.fields = [comment]`); `channels` — только для `approve`. При одобрении EDS присваивает `ИСХ-NNN/ГГ` и публикует `approval.decided` с выбранными `channels`: ERP переводит КП в «Готово к отправке» и сохраняет каналы; клиенту КП отправляет менеджер заявки (`quote.send`, C1-G-4) — автоотправка по каналам делается в W16-D1-2. Ответ — обновлённая карточка.
      */
     post: operations["decideQuoteApproval"];
     delete?: never;
@@ -654,7 +654,7 @@ export interface paths {
     put?: never;
     /**
      * EDS · Согласовать / Вернуть на доработку / Отклонить документ
-     * @description EDS `POST /approvals/{id}/decision` (права `memos.approve` / `approvals.decide`). Раздел `eds.memo.approve` — полный: автор без права решения получает 403 в BFF до EDS. `comment` обязателен для `return` и `reject` — пустой 422 в BFF до EDS (`details.fields = [comment]`). Шаг не этого сотрудника — 403 EDS (`details.reason = not_your_step`); маршрут уже закрыт — 409 `CONFLICT`, `details.reason = route_closed`. Служебная записка с суммой после директора идёт бухгалтеру. `{id}` — `approval_id` из карточки. Ответ — обновлённая карточка.
+     * @description EDS `POST /approvals/{id}/decision` (права `memos.approve` / `approvals.decide` на шаге директора, `payments.confirm` на шаге бухгалтера). Раздел `eds.memo.approve` — полный (директор) или `eds.payments` — полный (бухгалтер на своём шаге): автор без права решения получает 403 в BFF до EDS; чей это шаг, решает EDS. Бухгалтер: «Принять к оплате» (`approve`) и «Вернуть». `comment` обязателен для `return` и `reject` — пустой 422 в BFF до EDS (`details.fields = [comment]`). Шаг не этого сотрудника — 403 EDS (`details.reason = not_your_step`); маршрут уже закрыт — 409 `CONFLICT`, `details.reason = route_closed`. Служебная записка с суммой после директора идёт бухгалтеру. `{id}` — `approval_id` из карточки. Ответ — обновлённая карточка.
      */
     post: operations["decideMemoApproval"];
     delete?: never;
@@ -4413,7 +4413,7 @@ export interface components {
        */
       due: string | null;
       status: components["schemas"]["ApprovalRouteStatus"];
-      /** @description Текущий шаг ждёт этого сотрудника */
+      /** @description Текущий шаг ждёт этого сотрудника (из маршрута EDS; не удалось прочитать — `false`) */
       can_decide: boolean;
       /** @description ИСХ-номер одобренного КП */
       outgoing_number: string | null;
@@ -4541,7 +4541,11 @@ export interface components {
       letter: components["schemas"]["QuoteLetterRef"] | null;
       /** @description Кто считал — авторы виз чек-листа */
       calculated_by: components["schemas"]["QuoteCalculator"][];
-      /** @description Состав КП из ERP; `null` — ERP не ответил или не отдал КП */
+      /** @description Итог с НДС из снимка КП (EDS отдаёт его только решающему шаг); `null` — снимка нет */
+      snapshot_total: components["schemas"]["EdsMoney"] | null;
+      /** @description Итог ERP расходится с итогом снимка EDS — КП в ERP менялось после передачи на одобрение; экран предупреждает */
+      totals_mismatch: boolean;
+      /** @description Состав КП из ERP; `null` — ERP не ответил, не отдал КП (нет доступа) или у ERP другая редакция КП, чем в маршруте (закрытые круги прежних версий): тогда строки не показываются, только снимок. Пока `lines = null`, одобрить КП на экране нельзя (подпись «Нет данных КП из ERP — обновите карточку») */
       lines: components["schemas"]["QuoteLine"][] | null;
       /** @description Итоги из ERP; `null` — ERP не ответил */
       totals: components["schemas"]["QuoteTotals"] | null;
@@ -4629,6 +4633,8 @@ export interface components {
       deal: components["schemas"]["EdsDealRef"] | null;
       /** @description Шаги маршрута текущего круга; автор — вне списка */
       steps: components["schemas"]["EdsRouteStep"][];
+      /** @description Текущий шаг — бухгалтера (право `payments.confirm`): кнопки «Принять к оплате» и «Вернуть» */
+      accountant_step: boolean;
       decisions: components["schemas"]["EdsDecision"][];
       can_decide: boolean;
       allowed_decisions: components["schemas"]["ApprovalDecision"][];
