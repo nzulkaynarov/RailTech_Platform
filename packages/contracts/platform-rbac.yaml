@@ -222,7 +222,7 @@ resources:
         full: [leads:read, leads:reply, leads:note, leads:assist]
   - key: admin
     module: admin
-    label: { ru: "Настройки · Роли и права, Сотрудники, Подключения, Telegram-бот, История действий, Обращения сотрудников", uz: "Sozlamalar · Rollar va huquqlar, xodimlar, ulanishlar, Telegram-bot, harakatlar tarixi, xodimlar murojaatlari", en: "Settings · Roles & permissions, employees, connections, Telegram bot, activity log, staff requests" }
+    label: { ru: "Настройки · Роли и права, Сотрудники, Подключения, Telegram-бот, Журнал, Обращения сотрудников", uz: "Sozlamalar · Rollar va huquqlar, xodimlar, ulanishlar, Telegram-bot, jurnal, xodimlar murojaatlari", en: "Settings · Roles & permissions, employees, connections, Telegram bot, log, staff requests" }
     backend:
       crm:
         # W13-A5: директор (admin: read) читает и настройки бота, шаблоны ответов и базу знаний — без правки; правка и

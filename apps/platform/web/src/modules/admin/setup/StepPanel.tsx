@@ -1,4 +1,5 @@
 import { Alert, Button } from "antd";
+import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { InviteEmployeeForm } from "../../../features/invite-employee/InviteEmployeeForm";
@@ -33,6 +34,14 @@ export function StepPanel({
   onInvited: () => void;
 }) {
   const { t } = useTranslation("modules");
+  // Пока временный пароль на экране, «Дальше» нет: пароль показывается один раз и пропал бы вместе с формой.
+  const [passwordShown, setPasswordShown] = useState(false);
+  const headingId = useId();
+  const heading = useRef<HTMLHeadingElement>(null);
+  // Окно шага открылось (или мастер сам перешёл к следующему шагу) — фокус на его заголовок, а не в начало страницы.
+  useEffect(() => {
+    heading.current?.focus();
+  }, []);
   const index = STEP_ORDER.indexOf(step) + 1;
   let form;
   switch (step) {
@@ -49,24 +58,29 @@ export function StepPanel({
       form = <ModelsPanel editable />;
       break;
     case "first_employee":
-      form = <InviteEmployeeForm onInvited={onInvited} onOpenCard={onInvited} onCancel={onClose} />;
+      form = (
+        <InviteEmployeeForm
+          onInvited={onInvited}
+          onOpenCard={onInvited}
+          onCancel={onClose}
+          onPasswordShown={setPasswordShown}
+        />
+      );
       break;
   }
   const stepOf = t("admin.setup.stepOf", { index, total: STEP_ORDER.length });
   const title = t(`admin.setup.steps.${step}.title`);
   return (
-    <section className="pf-panel-stack" aria-label={`${stepOf}: ${title}`}>
+    <section className="pf-panel-stack" aria-labelledby={headingId}>
       <div>
-        <p className="pf-hint" style={{ margin: 0 }}>
-          {stepOf}
-        </p>
-        {/* У форм подключений свой заголовок (название карточки); у приглашения его нет — даём здесь */}
-        {step === "first_employee" ? <h3 className="pf-setup-step-heading">{title}</h3> : null}
+        <h3 id={headingId} ref={heading} tabIndex={-1} className="pf-setup-step-heading">
+          {`${stepOf}: ${title}`}
+        </h3>
         <p className="pf-hint" style={{ margin: 0 }}>
           {t(`admin.setup.steps.${step}.text`)}
         </p>
       </div>
-      {state === "done" ? (
+      {state === "done" && !passwordShown ? (
         <Alert
           type="success"
           showIcon

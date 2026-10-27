@@ -568,7 +568,9 @@ describe("Баннер настройки и мастер", () => {
     renderApp("/admin/setup?step=bot&panel=open");
 
     const side = await screen.findByRole("complementary", { name: "Боковое окно" });
-    expect(await within(side).findByText("Шаг 2 из 5")).toBeVisible();
+    expect(
+      await within(side).findByRole("heading", { level: 3, name: "Шаг 2 из 5: Telegram-бот" }),
+    ).toBeVisible();
     expect(within(side).getByRole("region", { name: "Шаг 2 из 5: Telegram-бот" })).toBeVisible();
     // главный экран — по-прежнему мастер
     expect(screen.getByRole("heading", { level: 1, name: "Первый запуск" })).toBeVisible();
@@ -588,6 +590,43 @@ describe("Баннер настройки и мастер", () => {
       await within(side).findByRole("region", { name: "Шаг 3 из 5: Почта" }, { timeout: 5_000 }),
     ).toBeVisible();
     expect(screen.getByRole("heading", { level: 1, name: "Первый запуск" })).toBeVisible();
+  });
+
+  it("первый сотрудник с временным паролем: пока пароль на экране, «Дальше» нет; после «Готово» — следующий шаг", async () => {
+    markStepDone("erp");
+    signInAs("admin@demo.example");
+    renderApp("/admin/setup?step=first_employee&panel=open");
+
+    const side = await screen.findByRole("complementary", { name: "Боковое окно" });
+    const step = await within(side).findByRole("region", { name: "Шаг 5 из 5: Первый сотрудник" });
+    fireEvent.click(within(step).getByRole("radio", { name: "Временным паролем, без почты" }));
+    fireEvent.change(within(step).getByLabelText("Имя и фамилия"), {
+      target: { value: "Тест Мастеров" },
+    });
+    fireEvent.change(within(step).getByLabelText("Электронная почта"), {
+      target: { value: "wizard.temp@demo.example" },
+    });
+    fireEvent.click(await within(step).findByRole("checkbox", { name: /^Снабженец/ }));
+    fireEvent.click(within(step).getByRole("button", { name: /Создать и показать пароль/ }));
+
+    expect(await within(side).findByLabelText("Временный пароль")).toBeVisible();
+    // шаг уже «Готово», но пароль показывается один раз — уйти с него можно только через «Готово»
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 300));
+    });
+    expect(within(side).queryByRole("button", { name: /^Дальше:/ })).toBeNull();
+    expect(within(side).queryByText("Шаг выполнен.")).toBeNull();
+
+    fireEvent.click(within(side).getByRole("button", { name: "Готово: пароль передан" }));
+    const next = await within(side).findByRole(
+      "heading",
+      { level: 3, name: "Шаг 2 из 5: Telegram-бот" },
+      { timeout: 5_000 },
+    );
+    // фокус — на заголовке нового шага
+    await waitFor(() => {
+      expect(next).toHaveFocus();
+    });
   });
 
   it("сбой чек-листа: «Повторить»", async () => {

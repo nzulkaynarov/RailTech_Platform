@@ -61,7 +61,8 @@ export function BusJournalPage() {
   const { t } = useTranslation(["bus", "modules"]);
   // Один «Журнал» (W15-H4): это его фильтр «Обмен между системами».
   const title = t("modules:admin.sections.audit");
-  useDocumentTitle(title);
+  // Вкладка браузера различает фильтр журнала: «Журнал · Обмен между системами»
+  useDocumentTitle(`${title} · ${t("modules:admin.journal.systems")}`);
   const [params, setParams] = useSearchParams();
   const view: View = isView(params.get("view")) ? (params.get("view") as View) : "subscribers";
   const journal = useGetBusJournal();

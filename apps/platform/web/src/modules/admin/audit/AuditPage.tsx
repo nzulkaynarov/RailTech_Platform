@@ -38,7 +38,8 @@ export function AuditPage() {
   const { wide } = useViewport();
   // Один «Журнал» (W15-H4): заголовок — общий, фильтр «Действия людей / Обмен между системами» — под ним.
   const title = t("modules:admin.sections.audit");
-  useDocumentTitle(title);
+  // Вкладка браузера различает фильтр журнала: «Журнал · Действия людей»
+  useDocumentTitle(`${title} · ${t("modules:admin.journal.people")}`);
 
   const blockRef = useRef<HTMLDivElement>(null);
   const [blockWidth, setBlockWidth] = useState(0);

@@ -44,6 +44,7 @@ import { TelegramPanel } from "./TelegramPanel";
 import "./integrations.css";
 
 const PATH = "/admin/integrations";
+const BUS_PATH = "/admin/bus";
 const CARD_KEYS: readonly IntegrationCardKey[] = [
   "erp",
   "telegram",
@@ -442,8 +443,12 @@ export function IntegrationsPage() {
         subtitle={t(editable ? "integrations:subtitle" : "integrations:readOnlySubtitle")}
         extra={
           editable ? (
-            // Мастер первого запуска остаётся доступным и после завершения шагов (W15-H4): «Настройка Платформы».
-            <LinkButton to={WIZARD_PATH}>{t("integrations:setupLink")}</LinkButton>
+            // Мастер первого запуска остаётся доступным и после завершения шагов (W15-H4): «Настройка Платформы»;
+            // журнал шины — «Обмен между системами» (только `admin: full`, как и сам журнал).
+            <div className="pf-int-row">
+              <LinkButton to={BUS_PATH}>{t("modules:admin.journal.systems")}</LinkButton>
+              <LinkButton to={WIZARD_PATH}>{t("integrations:setupLink")}</LinkButton>
+            </div>
           ) : (
             <StatusTag tone="default">
               <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>

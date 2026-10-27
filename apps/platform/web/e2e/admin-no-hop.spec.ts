@@ -90,6 +90,19 @@ test.describe("Настройки без переброса", () => {
       await expectNoViolations(page, `wizard step ${String(width)}`);
       await shot(page, "wizard-step-bot");
 
+      // Сохранение шага — мастер сам открывает следующий, фокус на его заголовке
+      await step.getByRole("button", { name: "Сменить токен" }).click();
+      const token = step.getByRole("form", { name: "Токен бота" });
+      await token
+        .getByLabel("Токен бота", { exact: true })
+        .fill("100200:demoTokenValue000000000000Wz5q");
+      await token.getByLabel("Ваш пароль администратора").fill("demo-pass-1");
+      await token.getByRole("button", { name: "Сохранить токен" }).click();
+      await expect(page).toHaveURL(/\/admin\/setup\?step=mail/);
+      await expect(
+        page.locator(PANEL).getByRole("heading", { level: 3, name: "Шаг 3 из 5: Почта" }),
+      ).toBeFocused();
+
       // Telegram-бот в одном месте
       await spaGoto(page, "/admin/bot");
       await expect(page.getByRole("heading", { level: 1, name: "Telegram-бот" })).toBeVisible();
@@ -114,12 +127,14 @@ test.describe("Настройки без переброса", () => {
       );
       await expect(page.getByRole("complementary", { name: "Боковое окно" })).toHaveCount(0);
       await expect(page.getByText("Записей: 13")).toBeVisible();
+      await expect(page).toHaveTitle("Журнал · Действия людей — RailTech Platform");
       await expectNoViolations(page, `journal people ${String(width)}`);
       await shot(page, "journal-people");
       await filter.getByRole("link", { name: "Обмен между системами" }).click();
       await expect(page).toHaveURL(/\/admin\/bus$/);
       await expect(page.getByRole("heading", { level: 3, name: "CRM отправляет" })).toBeVisible();
       await expect(page.getByRole("complementary", { name: "Боковое окно" })).toHaveCount(0);
+      await expect(page).toHaveTitle("Журнал · Обмен между системами — RailTech Platform");
       await expectNoViolations(page, `journal systems ${String(width)}`);
       await shot(page, "journal-systems");
 
@@ -128,6 +143,10 @@ test.describe("Настройки без переброса", () => {
       await expect(page.getByRole("heading", { level: 2, name: "Сервисы" })).toBeVisible();
       await expect(page.getByRole("complementary", { name: "Боковое окно" })).toHaveCount(0);
       await expect(page.getByRole("link", { name: "Настройка Платформы" })).toBeVisible();
+      await expect(page.getByRole("link", { name: "Обмен между системами" })).toHaveAttribute(
+        "href",
+        "/admin/bus",
+      );
       await expectNoViolations(page, `integrations ${String(width)}`);
       await shot(page, "integrations");
       await spaGoto(page, "/admin/integrations?card=telegram&panel=open");
