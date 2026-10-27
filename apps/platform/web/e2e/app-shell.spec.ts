@@ -112,7 +112,9 @@ test.describe("панели", () => {
       "page",
     );
     await expect(menu.getByRole("link", { name: "Мои задачи 3, требует действия" })).toBeVisible();
-    await expect(menu.getByRole("link", { name: "Проекты 4" })).toBeVisible();
+    await expect(
+      menu.getByRole("link", { name: "Проекты 4, ещё в старой системе: 4" }),
+    ).toBeVisible();
     await expect(page.getByRole("button", { name: /^Центр уведомлений, 3 новых/ })).toBeVisible();
   });
 
@@ -123,12 +125,12 @@ test.describe("панели", () => {
     await page.goto("/crm/leads");
     const action = page.getByRole("button", { name: /^Создать заявку/ });
     await expect(action).toBeDisabled();
-    await expect(action).toHaveAccessibleName("Создать заявку. Появится в фазе P2");
+    await expect(action).toHaveAccessibleName("Создать заявку. Появится в ближайшем обновлении");
     await page
       .getByRole("navigation", { name: "Разделы модуля" })
       .getByText("Создать заявку")
       .hover({ force: true });
-    await expect(page.getByRole("tooltip")).toContainText("Появится в фазе P2");
+    await expect(page.getByRole("tooltip")).toContainText("Появится в ближайшем обновлении");
   });
 });
 
@@ -230,7 +232,7 @@ test.describe("узкие экраны", () => {
       await page.getByRole("button", { name: "Меню" }).click();
       const drawerMenu = page.getByRole("navigation", { name: "Разделы модуля" });
       await expect(drawerMenu).toBeVisible();
-      await drawerMenu.getByRole("link", { name: "Проекты 4" }).click();
+      await drawerMenu.getByRole("link", { name: /^Проекты 4/ }).click();
       await expect(page).toHaveURL(/\/dashboard\/projects$/);
       await expect(drawerMenu).toBeHidden();
 
