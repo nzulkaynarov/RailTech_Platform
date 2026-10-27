@@ -73,6 +73,9 @@ ALL_DONE = SetupFacts(
     kb_indexed=True,
     teammate_with_telegram=True,
     lead_message_exists=True,
+    erp_connected=True,
+    mail_configured=True,
+    colleague_exists=True,
 )
 
 
