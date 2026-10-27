@@ -70,7 +70,7 @@ test.describe("Мелкие дефекты гейта C2a: G-5 и G-6", () => {
       await page.getByRole("button", { name: "Найти" }).click();
       await expect(
         page.getByText(
-          "Модель поиска недоступна: добавьте ключ эмбеддингов в Настройках · Подключения, раздел «Модели ИИ», и повторите.",
+          "Модель поиска недоступна: добавьте ключ эмбеддингов в Настройках · Подключениях, раздел «Модели ИИ», и повторите.",
         ),
       ).toBeVisible();
       await expectNoViolations(page, `kb search without key ${String(width)}`);

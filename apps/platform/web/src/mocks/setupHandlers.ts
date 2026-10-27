@@ -122,7 +122,7 @@ export const setupHandlers = [
       return failure(
         409,
         "ERP_NOT_CONNECTED",
-        "ERP не подключена. Сначала подключите ERP (Администрирование — Внешние интеграции — ERP), затем создайте компанию.",
+        "ERP не подключена. Сначала подключите ERP (Настройки · Подключения · ERP), затем создайте компанию.",
         "bff",
         { reason: "erp_not_connected", link: "/admin/integrations?card=erp&panel=open" },
       );

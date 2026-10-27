@@ -51,7 +51,7 @@ function queryMatches(want: URLSearchParams, have: URLSearchParams): boolean {
 }
 
 /**
- * Раздел по адресу. Сначала пункты с `?tab=` в пути (Chats · Внутренний), затем точные пути списков,
+ * Раздел по адресу. Сначала пункты с query в пути (Чаты · Команда, `?scope=internal`), затем точные пути списков,
  * затем карточки объектов (`/chats/contacts` раньше `/chats/:id`). Нет совпадения — undefined (404 внутри каркаса).
  */
 export function matchSection(pathname: string, search = ""): SectionMatch | undefined {

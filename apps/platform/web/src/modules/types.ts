@@ -2,7 +2,7 @@ import type { AccessLevel, ModuleCode } from "../shared/api/generated/model";
 
 /**
  * Правило доступа к разделу: ключ ресурса матрицы `platform-rbac.yaml` или «любой из». Уровень берётся из `Me.resources`;
- * `level: "full"` — раздел только для полного доступа (Admin · Журнал интеграций: чтения уровня `read` у него нет).
+ * `level: "full"` — раздел только для полного доступа (Настройки · Обмен между системами: чтения уровня `read` у него нет).
  */
 export type AccessRule = ({ resource: string } | { anyOf: readonly string[] }) & {
   level?: AccessLevel;
