@@ -210,38 +210,43 @@ test.describe("роли и доступ", () => {
 });
 
 test.describe("узкие экраны", () => {
-  test("390: рейл — нижняя панель, подменю — Drawer, боковое окно — Drawer", async ({ page }) => {
-    await page.setViewportSize({ width: 390, height: 844 });
-    await loginAndWait(page, "director@demo.example");
+  // @mobile: проект mobile (Pixel 7, 390) гоняет только сценарии с этим тегом — экраны с адаптивной логикой.
+  test(
+    "390: рейл — нижняя панель, подменю — Drawer, боковое окно — Drawer",
+    { tag: "@mobile" },
+    async ({ page }) => {
+      await page.setViewportSize({ width: 390, height: 844 });
+      await loginAndWait(page, "director@demo.example");
 
-    const bar = page.getByRole("navigation", { name: "Модули" });
-    await expect(bar).toBeVisible();
-    const box = await bar.boundingBox();
-    expect(box?.y ?? 0).toBeGreaterThan(700);
-    await expect(bar.getByRole("link")).toHaveCount(visibleModules("DIRECTOR").length);
-    // рейл слева и подменю не занимают экран
-    await expect(page.getByRole("navigation", { name: "Разделы модуля" })).toHaveCount(0);
+      const bar = page.getByRole("navigation", { name: "Модули" });
+      await expect(bar).toBeVisible();
+      const box = await bar.boundingBox();
+      expect(box?.y ?? 0).toBeGreaterThan(700);
+      await expect(bar.getByRole("link")).toHaveCount(visibleModules("DIRECTOR").length);
+      // рейл слева и подменю не занимают экран
+      await expect(page.getByRole("navigation", { name: "Разделы модуля" })).toHaveCount(0);
 
-    await page.getByRole("button", { name: "Меню" }).click();
-    const drawerMenu = page.getByRole("navigation", { name: "Разделы модуля" });
-    await expect(drawerMenu).toBeVisible();
-    await drawerMenu.getByRole("link", { name: "Все проекты 4" }).click();
-    await expect(page).toHaveURL(/\/dashboard\/projects$/);
-    await expect(drawerMenu).toBeHidden();
+      await page.getByRole("button", { name: "Меню" }).click();
+      const drawerMenu = page.getByRole("navigation", { name: "Разделы модуля" });
+      await expect(drawerMenu).toBeVisible();
+      await drawerMenu.getByRole("link", { name: "Все проекты 4" }).click();
+      await expect(page).toHaveURL(/\/dashboard\/projects$/);
+      await expect(drawerMenu).toBeHidden();
 
-    await expect(page.getByRole("complementary", { name: "Боковое окно" })).toHaveCount(0);
-    await page.getByRole("button", { name: "Показать боковое окно" }).click();
-    await expect(page.getByRole("tab", { name: "Карточка" })).toBeVisible();
-    await expect(page).toHaveURL(/panel=open/);
-    await page
-      .getByRole("dialog", { name: "Боковое окно" })
-      .getByRole("button", { name: "Скрыть боковое окно" })
-      .click();
-    await expect(page.getByRole("tab", { name: "Карточка" })).toBeHidden();
+      await expect(page.getByRole("complementary", { name: "Боковое окно" })).toHaveCount(0);
+      await page.getByRole("button", { name: "Показать боковое окно" }).click();
+      await expect(page.getByRole("tab", { name: "Карточка" })).toBeVisible();
+      await expect(page).toHaveURL(/panel=open/);
+      await page
+        .getByRole("dialog", { name: "Боковое окно" })
+        .getByRole("button", { name: "Скрыть боковое окно" })
+        .click();
+      await expect(page.getByRole("tab", { name: "Карточка" })).toBeHidden();
 
-    const scrollWidth = await page.evaluate("document.documentElement.scrollWidth");
-    expect(scrollWidth).toBeLessThanOrEqual(390);
-  });
+      const scrollWidth = await page.evaluate("document.documentElement.scrollWidth");
+      expect(scrollWidth).toBeLessThanOrEqual(390);
+    },
+  );
 
   test("1100: боковое окно — Drawer поверх основного, по умолчанию закрыт", async ({ page }) => {
     test.skip(test.info().project.name === "mobile");
