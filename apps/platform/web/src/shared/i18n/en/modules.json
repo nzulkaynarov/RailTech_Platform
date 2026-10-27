@@ -1,15 +1,17 @@
 {
   "dashboard": {
+    "name": "Home",
+    "title": "Home",
     "sections": {
-      "queue": "My queue",
-      "projects": "All projects",
+      "queue": "My tasks",
+      "projects": "Projects",
       "summary": "Company summary"
     },
     "stub": {
       "queue": {
         "title": "No decisions are needed from you yet",
         "text": "New letters come from CRM, draft quotes from ERP, memos from colleagues.",
-        "action": "All projects"
+        "action": "Projects"
       }
     },
     "queue": {
@@ -42,59 +44,69 @@
     }
   },
   "crm": {
+    "name": "Clients",
+    "title": "Clients & leads",
     "sections": {
-      "messages": "All messages",
-      "leads": "All leads",
-      "clients": "All clients",
-      "requests": "All requests",
+      "messages": "Awaiting reply",
+      "leads": "Leads",
+      "clients": "Clients",
+      "requests": "Requests",
       "channels": "Channels",
-      "kb": "Knowledge base"
+      "kb": "Bot knowledge base"
     },
-    "action": "Create request"
+    "action": "New request"
   },
   "eds": {
+    "name": "Documents",
+    "title": "Documents & approvals",
     "sections": {
       "documents": "All documents",
-      "inbox": "Inbox",
-      "outbox": "Outbox",
-      "projects": "All projects",
-      "drafts": "Draft",
-      "approvals": "For approval",
-      "payments": "Invoices and payments",
-      "new": "Create document"
+      "inbox": "Incoming letters",
+      "outbox": "Outgoing",
+      "projects": "Projects: contracts & acts",
+      "drafts": "Quotes to approve",
+      "approvals": "Awaiting approval",
+      "payments": "Invoices & payments",
+      "new": "New document"
     },
-    "action": "Create document"
+    "action": "New document"
   },
   "erp": {
+    "name": "Costing",
+    "title": "Costing & stock",
     "sections": {
-      "requests": "All requests",
-      "calc": "Calculation",
+      "requests": "Requests in costing",
+      "calc": "My costings",
       "stock": "Stock",
-      "catalog": "Catalogs",
-      "docs": "Documentation"
+      "catalog": "Items & suppliers",
+      "docs": "Technical files"
     },
-    "action": "Create request"
+    "action": "New request"
   },
   "chats": {
+    "name": "Chats",
+    "title": "Chats",
     "sections": {
       "all": "All chats",
-      "internal": "Internal",
-      "external": "External",
+      "internal": "Team",
+      "external": "With clients",
       "contacts": "Contacts"
     },
     "action": "Create chat"
   },
   "admin": {
+    "name": "Settings",
+    "title": "Company settings",
     "sections": {
-      "roles": "Role matrix (RBAC)",
-      "org": "Org structure",
-      "integrations": "External integrations",
-      "bus": "Integration log",
-      "tickets": "Team tickets",
-      "company": "Company",
-      "setup": "First run",
-      "bot": "Bot settings",
-      "audit": "Audit log"
+      "roles": "Roles & permissions",
+      "org": "Employees",
+      "integrations": "Connections",
+      "bus": "System exchange",
+      "tickets": "Staff requests",
+      "company": "Company & letterhead",
+      "setup": "First-time setup",
+      "bot": "Telegram bot",
+      "audit": "Activity log"
     },
     "action": "Invite employee",
     "setup": {
@@ -118,7 +130,7 @@
       "companySubmit": "Create the company",
       "companyConsequence": [
         "ERP gets your company with the “seller” type, and you become its owner.",
-        "Details, letterhead and numbering can be completed later in Admin · Company.",
+        "Details, letterhead and numbering can be completed later in Settings · Company & letterhead.",
         "The wizard creates the company once: it cannot be created again."
       ],
       "companyCreated": "Company “{{name}}” created",
@@ -172,7 +184,7 @@
         }
       },
       "listLabel": "Setup steps",
-      "onlyAdmin": "The first-run wizard is for the administrator. The director sees the setup read-only in Admin · External integrations.",
+      "onlyAdmin": "The first-run wizard is for the administrator. The director sees the setup read-only in Settings · Connections.",
       "banner": {
         "label": "Platform setup",
         "title": "Platform setup: {{done}} of {{total}} done",
@@ -181,7 +193,7 @@
         "open": "Continue setup",
         "hide": "Hide",
         "hideLabel": "Hide the setup banner",
-        "hidden": "Banner hidden. The wizard stays on the “First run” page in Admin (/admin/setup)."
+        "hidden": "Banner hidden. The wizard stays on the “First-time setup” page in Settings (/admin/setup)."
       },
       "erpTitle": "ERP connection",
       "erpLead": "The company is created in ERP, so ERP is connected first. A new installation needs no pairing code — the \"Connect ERP\" button is enough.",
@@ -194,7 +206,7 @@
       "companyAlreadyCreated": "Your company already exists — that is the same result, continue with the other steps."
     },
     "org": {
-      "title": "Org structure",
+      "title": "Employees",
       "subtitle": "Employees, roles and access to CRM and ERP. Roles for both systems are granted in one card.",
       "readOnly": "View only: an administrator changes roles and access.",
       "listLabel": "Employees",
@@ -248,7 +260,7 @@
       },
       "loadError": {
         "title": "Could not load employees",
-        "text": "The list comes from CRM. Try again; if the error stays, check CRM in Admin · Integrations.",
+        "text": "The list comes from CRM. Try again; if the error stays, check CRM in Settings · Connections.",
         "retry": "Retry"
       },
       "cardError": {
@@ -287,7 +299,7 @@
         "position": "Position on the card: “{{position}}”.",
         "positionCleared": "The position on the card will be cleared.",
         "self": "You are changing your own roles: the menu updates after saving.",
-        "selfLosesAdmin": "You will lose access to the Admin section.",
+        "selfLosesAdmin": "You will lose access to the Settings section.",
         "erpAdmin": "In ERP the employee becomes an administrator (superuser).",
         "erpSections": "In ERP the employee gets rights by the roles' sections; the outcome is in the card (“ERP: being granted”, “ERP: error”)."
       },
@@ -305,12 +317,12 @@
         "sent": "Invitation sent: {{email}}",
         "consequenceMail": "An email with a temporary password goes to the address; it must be changed at first sign-in.",
         "consequenceListed": "The employee appears in the list with the status “Invited”.",
-        "notSent": "The employee was added with the status “Invited”, but the email was not sent: mail is not connected or unavailable. Connect it in Admin · Integrations and send the invitation again from the employee card.",
+        "notSent": "The employee was added with the status “Invited”, but the email was not sent: mail is not connected or unavailable. Connect it in Settings · Connections and send the invitation again from the employee card.",
         "openCard": "Open card",
         "notSentUnavailable": "The employee was added with the status “Invited”, but CRM did not respond and the email was not sent. Try again later with “Send the invitation again” in the card.",
         "resend": "Send the invitation again",
         "resendHint": "A new email with a new temporary password goes out; the previous one stops working.",
-        "resendNotSent": "The email was not sent: mail is not connected or unavailable. Connect it in Admin · Integrations and try again.",
+        "resendNotSent": "The email was not sent: mail is not connected or unavailable. Connect it in Settings · Connections and try again.",
         "delivery": "How to hand over access",
         "deliveryMail": "By email",
         "deliveryPassword": "With a temporary password, no email",
@@ -378,12 +390,12 @@
       }
     },
     "roles": {
-      "title": "Role matrix",
+      "title": "Roles & permissions",
       "subtitle": "What each role sees and can do. Modules outside the role are hidden from the rail. One person can hold several roles — access and queues add up.",
       "caption": "Role matrix: sections by module and the access level of every role",
       "sectionColumn": "Module · section",
       "system": "system role",
-      "systemNote": "System role: its matrix is set by the Platform catalog and cannot be changed or deleted. Grant or remove it in the org chart.",
+      "systemNote": "System role: its matrix is set by the Platform catalog and cannot be changed or deleted. Grant or remove it in Employees.",
       "gives": "What the role gives",
       "assign": "Assign the role to an employee",
       "fieldsGroup": "Restricted fields",
@@ -399,7 +411,7 @@
         "off": "hidden"
       },
       "noModules": "No sections yet",
-      "adminNote": "Admin “full” in this role manages employees, roles and connections, but does not make an ERP superuser: only the system role “Administrator” does — in ERP this role gets only the rights of its sections. It does not give CRM leads, clients or deals — that needs a second role.",
+      "adminNote": "Full access to Settings in this role manages employees, roles and connections, but does not make an ERP superuser: only the system role “Administrator” does — in ERP this role gets only the rights of its sections. It does not give CRM leads, clients or deals — that needs a second role.",
       "employeesCount": "Employees: {{count}}",
       "create": "Create role",
       "createdToast": "Role “{{name}}” created",
@@ -407,10 +419,10 @@
       "deletedToast": "Role deleted",
       "viewOnly": "View only",
       "readOnlySubtitle": "What each role sees and can do. Roles and access are changed by the administrator.",
-      "readOnlyNote": "View only: the role and its matrix are changed by the administrator. Employee roles are in the org chart.",
+      "readOnlyNote": "View only: the role and its matrix are changed by the administrator. Employee roles are in Employees.",
       "loadError": {
         "title": "Could not load roles",
-        "text": "Roles are stored in CRM. Try again; if the error stays, check CRM in Admin · Integrations."
+        "text": "Roles are stored in CRM. Try again; if the error stays, check CRM in Settings · Connections."
       },
       "notFound": {
         "title": "Role not found",
@@ -423,8 +435,8 @@
         "empty": "Scratch — all sections hidden",
         "submit": "Create role",
         "cancel": "Cancel",
-        "created": "The role appears in the matrix and in the org chart role list; nobody holds it yet — nobody's rights change.",
-        "assign": "Grant the role to employees in Admin · Org chart."
+        "created": "The role appears in the matrix and in the role list in Employees; nobody holds it yet — nobody's rights change.",
+        "assign": "Grant the role to employees in Settings · Employees."
       },
       "name": "Name",
       "description": "Description (optional)",
@@ -452,16 +464,16 @@
         "failed": "Could not work out the consequences: CRM did not respond. Saving will still show the result."
       },
       "delete": "Delete role",
-      "deleteBlocked": "Cannot delete: the role is held by employees ({{count}}). Give them other roles in the org chart first.",
+      "deleteBlocked": "Cannot delete: the role is held by employees ({{count}}). Give them other roles in Employees first.",
       "deleteTitle": "Delete the role?",
-      "deleteResult": "The role disappears from the matrix and the org chart role list. Nobody holds it — nobody's rights change.",
+      "deleteResult": "The role disappears from the matrix and the role list in Employees. Nobody holds it — nobody's rights change.",
       "deleteConfirm": "Delete",
       "deleteCancel": "Cancel",
       "errors": {
-        "ROLE_IN_USE": "The role is held by employees ({{count}}) and cannot be deleted. Give them other roles in the org chart first.",
+        "ROLE_IN_USE": "The role is held by employees ({{count}}) and cannot be deleted. Give them other roles in Employees first.",
         "ROLE_SYSTEM": "A system role cannot be changed or deleted.",
         "NAME_TAKEN": "A role with this name already exists. Choose another name.",
-        "LAST_ADMIN": "After this change the company would have no administrator. Keep Admin “full” or appoint an administrator.",
+        "LAST_ADMIN": "After this change the company would have no administrator. Keep full access to Settings or appoint an administrator.",
         "FORBIDDEN": "Not enough rights: roles are changed by an administrator.",
         "BACKEND_UNAVAILABLE": "CRM is not responding. Try again later.",
         "VALIDATION_FAILED": "Check the role name, sections and fields.",
@@ -470,7 +482,7 @@
         "DEFAULT": "The action failed. Try again."
       },
       "employeesTitle": "Employees with the role “{{name}}”",
-      "employeesEmpty": "Nobody holds the role yet. Grant it in the employee card in the org chart.",
+      "employeesEmpty": "Nobody holds the role yet. Grant it in the employee card in Employees.",
       "openEmployee": "Change roles: {{name}}",
       "viewEmployee": "Open card: {{name}}",
       "change": "Change",

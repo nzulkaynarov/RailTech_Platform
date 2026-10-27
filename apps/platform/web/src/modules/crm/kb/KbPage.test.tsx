@@ -9,7 +9,7 @@ setupBotTests();
 async function openKb(email: string, search = "") {
   signIn(email);
   const view = renderAt(`/crm/kb${search}`);
-  expect(await screen.findByRole("heading", { level: 1, name: "База знаний" })).toBeVisible();
+  expect(await screen.findByRole("heading", { level: 1, name: "База знаний бота" })).toBeVisible();
   return view;
 }
 
@@ -81,7 +81,7 @@ describe("CRM · База знаний: документы", () => {
 
     expect(
       await screen.findByText(
-        "Модель поиска недоступна: добавьте ключ эмбеддингов в Admin · Внешние интеграции, раздел «Модели ИИ», и повторите.",
+        "Модель поиска недоступна: добавьте ключ эмбеддингов в Настройках · Подключениях, раздел «Модели ИИ», и повторите.",
       ),
     ).toBeVisible();
   });
@@ -447,8 +447,8 @@ describe("CRM · База знаний: пункт меню и права", () =
   it("снабженцу пункта «База знаний» в меню CRM нет, по прямому адресу — «Нет доступа»", async () => {
     signIn("supply@demo.example");
     renderAt("/crm/clients");
-    expect(await screen.findByRole("heading", { level: 1, name: "Все клиенты" })).toBeVisible();
-    expect(screen.queryByRole("link", { name: "База знаний" })).toBeNull();
+    expect(await screen.findByRole("heading", { level: 1, name: "Клиенты" })).toBeVisible();
+    expect(screen.queryByRole("link", { name: "База знаний бота" })).toBeNull();
     cleanup();
 
     renderAt("/crm/kb");
@@ -458,15 +458,15 @@ describe("CRM · База знаний: пункт меню и права", () =
   it("администратор без лидов видит в CRM единственный пункт — «База знаний»; менеджер — вместе с остальными", async () => {
     signIn("admin@demo.example");
     renderAt("/crm/kb");
-    const menu = await screen.findByRole("link", { name: "База знаний" });
+    const menu = await screen.findByRole("link", { name: "База знаний бота" });
     expect(menu).toBeVisible();
-    expect(screen.queryByRole("link", { name: "Все лиды" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Лиды" })).toBeNull();
     cleanup();
     endSession();
 
     signIn("manager@demo.example");
     renderAt("/crm/kb");
-    expect(await screen.findByRole("link", { name: "База знаний" })).toBeVisible();
-    expect(screen.getByRole("link", { name: "Все лиды" })).toBeVisible();
+    expect(await screen.findByRole("link", { name: "База знаний бота" })).toBeVisible();
+    expect(screen.getByRole("link", { name: "Лиды" })).toBeVisible();
   });
 });

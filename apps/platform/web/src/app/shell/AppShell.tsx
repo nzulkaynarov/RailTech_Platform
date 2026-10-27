@@ -106,7 +106,7 @@ export function AppShell() {
     const target = firstSection(module, sectionAllowed);
     return {
       code: module.code,
-      name: module.name,
+      name: t(`modules:${module.code}.name`),
       to: target?.path ?? `/${module.code}`,
       active: matchedVisible === true && module.code === activeModule.code,
     };
@@ -163,7 +163,8 @@ export function AppShell() {
     ) : undefined;
 
   const menuProps = {
-    title: `${String(activeModule.order)}. ${activeModule.name}`,
+    // Полное имя модуля без номера (UX-оценка 2026-10-27 §6.1): «Клиенты и лиды», а не «2. CRM».
+    title: t(`modules:${activeModule.code}.title`),
     items: menuItems,
     labels: {
       nav: t("menu.nav"),
@@ -176,7 +177,7 @@ export function AppShell() {
   const crumbs: Crumb[] = [];
   if (match) {
     const moduleStart = firstSection(match.module, sectionAllowed);
-    crumbs.push({ label: match.module.name, to: moduleStart?.path });
+    crumbs.push({ label: t(`modules:${match.module.code}.name`), to: moduleStart?.path });
     const sectionLabel = t(`modules:${match.module.code}.sections.${match.section.key}`);
     crumbs.push({
       label: sectionLabel,

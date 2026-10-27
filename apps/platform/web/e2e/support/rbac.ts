@@ -50,13 +50,14 @@ function accessOf(role: Role): Partial<Record<string, Level>> {
   return (catalog.system_roles[role] ?? catalog.templates[role])?.access ?? {};
 }
 
+/** Имена модулей в рейле (ru, `modules:<code>.name`, UX-оценка 2026-10-27 §6.1). */
 export const MODULE_TITLES: Record<string, string> = {
-  dashboard: "Dashboard",
-  crm: "CRM",
-  eds: "EDS",
-  erp: "ERP",
-  chats: "Chats",
-  admin: "Admin",
+  dashboard: "Главная",
+  crm: "Клиенты",
+  eds: "Документы",
+  erp: "Расчёт",
+  chats: "Чаты",
+  admin: "Настройки",
 };
 const MODULE_ORDER = ["dashboard", "crm", "eds", "erp", "chats", "admin"];
 

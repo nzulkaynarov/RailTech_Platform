@@ -22,7 +22,7 @@ async function setMock(page: Page, key: string, value: string): Promise<void> {
   );
 }
 
-test.describe("Моя очередь", () => {
+test.describe("Мои задачи", () => {
   test.skip(({ isMobile }) => isMobile, "ширины задаёт сам сценарий");
 
   test("поток подсказок: событие шины обновляет колокольчик, бейджи и очередь без опроса", async ({
@@ -282,7 +282,7 @@ test.describe("Поиск ⌘K", () => {
 
       const option = page.getByRole("option", { name: /ЗВ-2026-104 · Стрелочные приводы/ });
       await expect(option).toBeVisible();
-      await expect(page.getByRole("group", { name: "CRM" })).toBeVisible();
+      await expect(page.getByRole("group", { name: "Клиенты" })).toBeVisible();
       await settledScreenshot(page, "dashboard-search");
       await expectNoViolations(page, "search results");
 
@@ -303,8 +303,8 @@ test.describe("Поиск ⌘K", () => {
     const search = page.getByRole("combobox", { name: "Глобальный поиск" });
 
     await search.fill("Демо");
-    await expect(page.getByRole("group", { name: "CRM" })).toBeVisible();
-    await expect(page.getByRole("group", { name: "EDS" })).toBeVisible();
+    await expect(page.getByRole("group", { name: "Клиенты" })).toBeVisible();
+    await expect(page.getByRole("group", { name: "Документы" })).toBeVisible();
 
     await search.fill("нет-такого");
     await expect(page.getByText("По запросу «нет-такого» ничего не найдено.")).toBeVisible();

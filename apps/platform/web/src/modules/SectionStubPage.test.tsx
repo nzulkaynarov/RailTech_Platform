@@ -30,12 +30,12 @@ async function main() {
 }
 
 describe("SectionStubPage · раздел с мостом", () => {
-  it("менеджер, Все сообщения: заголовок, где делается работа, кнопка в новую вкладку, когда появится", async () => {
+  it("менеджер, Ждут ответа: заголовок, где делается работа, кнопка в новую вкладку, когда появится", async () => {
     signInAs("manager@demo.example");
     renderApp("/crm/messages");
     const page = await main();
 
-    expect(within(page).getByRole("heading", { level: 1, name: "Все сообщения" })).toBeVisible();
+    expect(within(page).getByRole("heading", { level: 1, name: "Ждут ответа" })).toBeVisible();
     expect(
       within(page).getByRole("heading", {
         level: 2,
@@ -246,13 +246,13 @@ describe("SectionStubPage · карточка объекта по прямой �
 });
 
 describe("Бейджи меню у заглушек", () => {
-  it("«Все сообщения»: бейдж 1 только с подсказкой «в старой CRM: 1», а текст раздела не говорит «пока нет»", async () => {
+  it("«Ждут ответа»: бейдж 1 только с подсказкой «в старой CRM: 1», а текст раздела не говорит «пока нет»", async () => {
     signInAs("manager@demo.example");
     renderApp("/crm/messages");
     const page = await main();
     const menu = screen.getByRole("navigation", { name: "Разделы модуля" });
 
-    const item = await within(menu).findByRole("link", { name: /Все сообщения.*в старой CRM: 1/ });
+    const item = await within(menu).findByRole("link", { name: /Ждут ответа.*в старой CRM: 1/ });
     expect(item.querySelector("[title='в старой CRM: 1']")).not.toBeNull();
     expect(within(page).queryByText(/пока нет/)).not.toBeInTheDocument();
   });
@@ -264,6 +264,6 @@ describe("Бейджи меню у заглушек", () => {
     const menu = screen.getByRole("navigation", { name: "Разделы модуля" });
     const item = within(menu).getByRole("link", { name: /Входящие/ });
     expect(item.querySelector(".pf-badge")).toBeNull();
-    expect(item).toHaveAccessibleName("Входящие");
+    expect(item).toHaveAccessibleName("Входящие письма");
   });
 });

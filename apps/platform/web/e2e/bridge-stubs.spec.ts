@@ -82,12 +82,12 @@ test.describe("Заглушки и мост", () => {
     await shoot(page, "object-from-queue-letter");
   });
 
-  test("менеджер: «Все сообщения» — мост в старую CRM; бейдж меню только с подсказкой «в старой CRM: 1»", async ({
+  test("менеджер: «Ждут ответа» — мост в старую CRM; бейдж меню только с подсказкой «в старой CRM: 1»", async ({
     page,
   }) => {
     await loginAndWait(page, "manager@demo.example");
     await spaGoto(page, "/crm/messages");
-    await expect(page.getByRole("heading", { level: 1, name: "Все сообщения" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Ждут ответа" })).toBeVisible();
     const main = page.getByRole("main");
     await expect(
       main.getByRole("heading", { level: 2, name: "Этот раздел ещё переносится в Платформу" }),
@@ -105,7 +105,7 @@ test.describe("Заглушки и мост", () => {
     await expect(main.getByText(/Сообщений пока нет/)).toHaveCount(0);
 
     const menu = page.getByRole("navigation", { name: "Разделы модуля" });
-    await expect(menu.getByRole("link", { name: /Все сообщения/ })).toHaveAccessibleName(
+    await expect(menu.getByRole("link", { name: /Ждут ответа/ })).toHaveAccessibleName(
       /в старой CRM: 1/,
     );
     await shoot(page, "stub-with-bridge");
@@ -116,7 +116,7 @@ test.describe("Заглушки и мост", () => {
   }) => {
     await loginAndWait(page, "director@demo.example");
     await spaGoto(page, "/eds/inbox");
-    await expect(page.getByRole("heading", { level: 1, name: "Входящие" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Входящие письма" })).toBeVisible();
     const main = page.getByRole("main");
     await expect(
       main.getByText(/Сейчас этой работы в интерфейсе нет; её делает директор/),
@@ -124,7 +124,9 @@ test.describe("Заглушки и мост", () => {
     await expect(main.getByText("Когда появится: в ближайшем обновлении.")).toBeVisible();
     await expect(main.getByRole("link", { name: /Открыть в/ })).toHaveCount(0);
     const menu = page.getByRole("navigation", { name: "Разделы модуля" });
-    await expect(menu.getByRole("link", { name: /Входящие/ })).toHaveAccessibleName("Входящие");
+    await expect(menu.getByRole("link", { name: /Входящие/ })).toHaveAccessibleName(
+      "Входящие письма",
+    );
     await shoot(page, "stub-without-bridge");
   });
 
@@ -137,7 +139,9 @@ test.describe("Заглушки и мост", () => {
     );
     await loginAndWait(page, "supply@demo.example");
     await spaGoto(page, "/erp/catalog");
-    await expect(page.getByRole("heading", { level: 1, name: "Справочники" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Номенклатура и поставщики" }),
+    ).toBeVisible();
     const open = page.getByRole("main").getByRole("link", { name: /Открыть в старом ERP/ });
     await expect(open).toHaveAttribute("href", "http://erp.localhost:8088/#catalog-reference");
     await expect(page.getByRole("main").getByText(/Вход выполнится сам/)).toBeVisible();

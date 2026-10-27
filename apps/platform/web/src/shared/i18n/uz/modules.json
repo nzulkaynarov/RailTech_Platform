@@ -1,15 +1,17 @@
 {
   "dashboard": {
+    "name": "Asosiy",
+    "title": "Bosh sahifa",
     "sections": {
-      "queue": "Mening navbatim",
-      "projects": "Barcha loyihalar",
-      "summary": "Kompaniya bo‘yicha xulosa"
+      "queue": "Mening vazifalarim",
+      "projects": "Loyihalar",
+      "summary": "Kompaniya xulosasi"
     },
     "stub": {
       "queue": {
         "title": "Sizdan qaror hozircha talab qilinmaydi",
         "text": "Yangi xatlar CRMdan, TT qoralamalari ERPdan, xizmat xatlari xodimlardan keladi.",
-        "action": "Barcha loyihalar"
+        "action": "Loyihalar"
       }
     },
     "queue": {
@@ -42,23 +44,27 @@
     }
   },
   "crm": {
+    "name": "Mijozlar",
+    "title": "Mijozlar va lidlar",
     "sections": {
-      "messages": "Barcha xabarlar",
-      "leads": "Barcha lidlar",
-      "clients": "Barcha mijozlar",
-      "requests": "Barcha arizalar",
+      "messages": "Javob kutmoqda",
+      "leads": "Lidlar",
+      "clients": "Mijozlar",
+      "requests": "Arizalar",
       "channels": "Aloqa kanallari",
-      "kb": "Bilimlar bazasi"
+      "kb": "Bot bilimlar bazasi"
     },
     "action": "Ariza yaratish"
   },
   "eds": {
+    "name": "Hujjatlar",
+    "title": "Hujjatlar va kelishuvlar",
     "sections": {
       "documents": "Barcha hujjatlar",
-      "inbox": "Kiruvchilar",
-      "outbox": "Chiquvchilar",
-      "projects": "Barcha loyihalar",
-      "drafts": "Qoralama",
+      "inbox": "Kiruvchi xatlar",
+      "outbox": "Chiquvchi",
+      "projects": "Loyihalar: shartnoma va dalolatnomalar",
+      "drafts": "Tasdiqlash uchun TT",
       "approvals": "Kelishuvda",
       "payments": "Hisoblar va to‘lovlar",
       "new": "Hujjat yaratish"
@@ -66,35 +72,41 @@
     "action": "Hujjat yaratish"
   },
   "erp": {
+    "name": "Hisob",
+    "title": "Hisob-kitob va ombor",
     "sections": {
-      "requests": "Barcha so‘rovlar",
-      "calc": "Hisob-kitob",
+      "requests": "Hisobdagi arizalar",
+      "calc": "Mening hisob-kitoblarim",
       "stock": "Ombor",
-      "catalog": "Ma’lumotnomalar",
-      "docs": "Hujjatlar"
+      "catalog": "Nomenklatura va yetkazib beruvchilar",
+      "docs": "Texnik hujjatlar"
     },
-    "action": "So‘rov yaratish"
+    "action": "Ariza yaratish"
   },
   "chats": {
+    "name": "Chatlar",
+    "title": "Chatlar",
     "sections": {
       "all": "Barcha chatlar",
-      "internal": "Ichki",
-      "external": "Tashqi",
+      "internal": "Jamoa",
+      "external": "Mijozlar bilan",
       "contacts": "Kontaktlar"
     },
     "action": "Chat yaratish"
   },
   "admin": {
+    "name": "Sozlamalar",
+    "title": "Kompaniya sozlamalari",
     "sections": {
-      "roles": "Rollar matritsasi (RBAC)",
-      "org": "Tashkiliy tuzilma",
-      "integrations": "Tashqi integratsiyalar",
-      "bus": "Integratsiyalar jurnali",
-      "tickets": "Jamoa tiketlari",
-      "company": "Kompaniya",
+      "roles": "Rollar va huquqlar",
+      "org": "Xodimlar",
+      "integrations": "Ulanishlar",
+      "bus": "Tizimlararo almashinuv",
+      "tickets": "Xodimlar murojaatlari",
+      "company": "Kompaniya va blankalar",
       "setup": "Birinchi ishga tushirish",
-      "bot": "Bot sozlamalari",
-      "audit": "Audit jurnali"
+      "bot": "Telegram-bot",
+      "audit": "Harakatlar tarixi"
     },
     "action": "Xodimni taklif qilish",
     "setup": {
@@ -118,7 +130,7 @@
       "companySubmit": "Kompaniyani yaratish",
       "companyConsequence": [
         "ERP'da «sotuvchi» turidagi kompaniyangiz paydo bo'ladi, siz uning egasi bo'lasiz.",
-        "Rekvizitlar, blank va raqamlashni keyinroq Admin · Kompaniya bo'limida to'ldirish mumkin.",
+        "Rekvizitlar, blank va raqamlashni keyinroq Sozlamalar · Kompaniya va blankalar bo‘limida to'ldirish mumkin.",
         "Ustoz kompaniyani bir marta yaratishni taklif qiladi: uni qayta yaratib bo'lmaydi."
       ],
       "companyCreated": "«{{name}}» kompaniyasi yaratildi",
@@ -152,7 +164,7 @@
         },
         "erp": {
           "title": "ERP",
-          "text": "CRM va ERP ni ulash: so'rovlar va hisob-kitoblar tizimlar o'rtasida yuradi. Yangi o'rnatishda kod kerak emas.",
+          "text": "CRM va ERP ni ulash: arizalar va hisob-kitoblar tizimlar o'rtasida yuradi. Yangi o'rnatishda kod kerak emas.",
           "action": "ERP ni ulash"
         },
         "mail": {
@@ -172,7 +184,7 @@
         }
       },
       "listLabel": "Sozlash qadamlari",
-      "onlyAdmin": "Birinchi ishga tushirish ustozi administratorga ochiq. Direktor sozlashni faqat o'qish uchun Admin · Tashqi integratsiyalar bo'limida ko'radi.",
+      "onlyAdmin": "Birinchi ishga tushirish ustozi administratorga ochiq. Direktor sozlashni faqat o'qish uchun Sozlamalar · Ulanishlar bo‘limida ko'radi.",
       "banner": {
         "label": "Platformani sozlash",
         "title": "Platformani sozlash: tayyor {{done}} / {{total}}",
@@ -181,7 +193,7 @@
         "open": "Sozlashni davom ettirish",
         "hide": "Yashirish",
         "hideLabel": "Sozlash bannerini yashirish",
-        "hidden": "Banner yashirildi. Ustoz Admin'dagi «Birinchi ishga tushirish» sahifasida (/admin/setup) qoladi."
+        "hidden": "Banner yashirildi. Ustoz Sozlamalardagi «Birinchi ishga tushirish» sahifasida (/admin/setup) qoladi."
       },
       "erpTitle": "ERP ulanishi",
       "erpLead": "Kompaniya ERP'da yaratiladi, shuning uchun ERP birinchi ulanadi. Yangi o'rnatishda juftlash kodi kerak emas — «ERP ni ulash» tugmasi yetarli.",
@@ -194,7 +206,7 @@
       "companyAlreadyCreated": "O'z kompaniyasi allaqachon yaratilgan — natija o'sha, qolgan qadamlar bilan davom eting."
     },
     "org": {
-      "title": "Tashkiliy tuzilma",
+      "title": "Xodimlar",
       "subtitle": "Xodimlar, rollar va CRM hamda ERP ga kirish. Ikkala tizimning rollari bitta kartochkada beriladi.",
       "readOnly": "Faqat ko'rish: rollar va kirishni administrator o'zgartiradi.",
       "listLabel": "Xodimlar",
@@ -248,7 +260,7 @@
       },
       "loadError": {
         "title": "Xodimlarni yuklab bo'lmadi",
-        "text": "Ro'yxat CRM dan olinadi. So'rovni takrorlang; xato qolsa, Admin · Integratsiyalar bo'limida CRM ni tekshiring.",
+        "text": "Ro'yxat CRM dan olinadi. So'rovni takrorlang; xato qolsa, Sozlamalar · Ulanishlar bo‘limida CRM ni tekshiring.",
         "retry": "Takrorlash"
       },
       "cardError": {
@@ -287,7 +299,7 @@
         "position": "Kartochkadagi lavozim: «{{position}}».",
         "positionCleared": "Kartochkadagi lavozim tozalanadi.",
         "self": "Siz o'z rollaringizni o'zgartiryapsiz: menyu saqlangandan keyin yangilanadi.",
-        "selfLosesAdmin": "Siz Admin bo'limiga kirish huquqini yo'qotasiz.",
+        "selfLosesAdmin": "Siz «Sozlamalar» bo‘limiga kirish huquqini yo‘qotasiz.",
         "erpAdmin": "ERP da xodim administrator (superfoydalanuvchi) bo'ladi.",
         "erpSections": "ERP da xodim rollar bo'limlari bo'yicha huquq oladi; berish natijasi — kartochkada («ERP: berilmoqda», «ERP: xato»)."
       },
@@ -305,12 +317,12 @@
         "sent": "Taklif yuborildi: {{email}}",
         "consequenceMail": "Ko'rsatilgan pochtaga vaqtinchalik parolli xat yuboriladi; birinchi kirishda uni almashtirish kerak.",
         "consequenceListed": "Xodim ro'yxatda «Taklif qilingan» holatida paydo bo'ladi.",
-        "notSent": "Xodim ro'yxatga «Taklif qilingan» holatida qo'shildi, lekin xat yuborilmadi: pochta ulanmagan yoki mavjud emas. Uni Admin · Integratsiyalar bo'limida ulang va xodim kartochkasidan taklifni qayta yuboring.",
+        "notSent": "Xodim ro'yxatga «Taklif qilingan» holatida qo'shildi, lekin xat yuborilmadi: pochta ulanmagan yoki mavjud emas. Uni Sozlamalar · Ulanishlar bo‘limida ulang va xodim kartochkasidan taklifni qayta yuboring.",
         "openCard": "Kartochkani ochish",
         "notSentUnavailable": "Xodim ro'yxatga «Taklif qilingan» holatida qo'shildi, lekin CRM javob bermadi va xat yuborilmadi. Keyinroq kartochkadagi «Taklifni qayta yuborish» tugmasi bilan takrorlang.",
         "resend": "Taklifni qayta yuborish",
         "resendHint": "Yangi vaqtinchalik parolli yangi xat yuboriladi; avvalgisi amal qilmay qoladi.",
-        "resendNotSent": "Xat yuborilmadi: pochta ulanmagan yoki mavjud emas. Uni Admin · Integratsiyalar bo'limida ulang va takrorlang.",
+        "resendNotSent": "Xat yuborilmadi: pochta ulanmagan yoki mavjud emas. Uni Sozlamalar · Ulanishlar bo‘limida ulang va takrorlang.",
         "delivery": "Kirishni qanday berish",
         "deliveryMail": "Pochtaga xat bilan",
         "deliveryPassword": "Vaqtinchalik parol bilan, pochtasiz",
@@ -378,12 +390,12 @@
       }
     },
     "roles": {
-      "title": "Rollar matritsasi",
+      "title": "Rollar va huquqlar",
       "subtitle": "Har bir rol nimani ko'radi va nima qila oladi. Roldan tashqari modullar relsdan yashirilgan. Bir kishiga bir nechta rol berish mumkin — kirish va navbatlar qo'shiladi.",
       "caption": "Rollar matritsasi: modullar bo'yicha bo'limlar va har bir rolning kirish darajasi",
       "sectionColumn": "Modul · bo'lim",
       "system": "tizim roli",
-      "systemNote": "Tizim roli: uning matritsasi Platforma katalogida belgilangan, uni o'zgartirib yoki o'chirib bo'lmaydi. Berish yoki olish — Tuzilmada.",
+      "systemNote": "Tizim roli: uning matritsasi Platforma katalogida belgilangan, uni o'zgartirib yoki o'chirib bo'lmaydi. Berish yoki olish — «Xodimlar» bo‘limida.",
       "gives": "Rol nima beradi",
       "assign": "Xodimga rol berish",
       "fieldsGroup": "Cheklangan maydonlar",
@@ -399,7 +411,7 @@
         "off": "ko'rmaydi"
       },
       "noModules": "Hozircha bo'limlar yo'q",
-      "adminNote": "Ushbu roldagi Admin «to'liq» xodimlar, rollar va ulanishlarni boshqarishni beradi, lekin ERP superfoydalanuvchisi qilmaydi: buni faqat «Administrator» tizim roli beradi — ERP'da bu rol faqat o'z bo'limlari huquqlarini oladi. CRM lidlari, mijozlari va bitimlarini bu bo'lim bermaydi — ikkinchi rol kerak.",
+      "adminNote": "Ushbu roldagi «Sozlamalar» bo‘limiga to‘liq kirish xodimlar, rollar va ulanishlarni boshqarishni beradi, lekin ERP superfoydalanuvchisi qilmaydi: buni faqat «Administrator» tizim roli beradi — ERP'da bu rol faqat o'z bo'limlari huquqlarini oladi. CRM lidlari, mijozlari va bitimlarini bu bo'lim bermaydi — ikkinchi rol kerak.",
       "employeesCount": "Xodimlar: {{count}}",
       "create": "Rol yaratish",
       "createdToast": "«{{name}}» roli yaratildi",
@@ -407,10 +419,10 @@
       "deletedToast": "Rol o'chirildi",
       "viewOnly": "Faqat ko'rish",
       "readOnlySubtitle": "Har bir rol nimani ko'radi va nima qila oladi. Rollar va kirishni administrator o'zgartiradi.",
-      "readOnlyNote": "Faqat ko'rish: rolni va uning matritsasini administrator o'zgartiradi. Xodimlar rollari — Tuzilmada.",
+      "readOnlyNote": "Faqat ko'rish: rolni va uning matritsasini administrator o'zgartiradi. Xodimlar rollari — «Xodimlar» bo‘limida.",
       "loadError": {
         "title": "Rollarni yuklab bo'lmadi",
-        "text": "Rollar CRM da saqlanadi. Qayta urinib ko'ring; xato qolsa, Admin · Integratsiyalar bo'limida CRM ni tekshiring."
+        "text": "Rollar CRM da saqlanadi. Qayta urinib ko'ring; xato qolsa, Sozlamalar · Ulanishlar bo‘limida CRM ni tekshiring."
       },
       "notFound": {
         "title": "Rol topilmadi",
@@ -423,8 +435,8 @@
         "empty": "Noldan — barcha bo'limlar yashirin",
         "submit": "Rol yaratish",
         "cancel": "Bekor qilish",
-        "created": "Rol matritsada va Tuzilmadagi rollar ro'yxatida paydo bo'ladi; hozircha xodimlari yo'q — hech kimning huquqlari o'zgarmaydi.",
-        "assign": "Rolni xodimlarga berish — Admin · Tuzilma bo'limida."
+        "created": "Rol matritsada va «Xodimlar» bo‘limidagi rollar ro'yxatida paydo bo'ladi; hozircha xodimlari yo'q — hech kimning huquqlari o'zgarmaydi.",
+        "assign": "Rolni xodimlarga berish — Sozlamalar · Xodimlar bo‘limida."
       },
       "name": "Nomi",
       "description": "Tavsif (ixtiyoriy)",
@@ -452,16 +464,16 @@
         "failed": "Oqibatlarni hisoblab bo'lmadi: CRM javob bermadi. Saqlash baribir natijani ko'rsatadi."
       },
       "delete": "Rolni o'chirish",
-      "deleteBlocked": "O'chirib bo'lmaydi: rol xodimlarga berilgan ({{count}}). Avval Tuzilmada ularga boshqa rollar bering.",
+      "deleteBlocked": "O'chirib bo'lmaydi: rol xodimlarga berilgan ({{count}}). Avval «Xodimlar» bo‘limida ularga boshqa rollar bering.",
       "deleteTitle": "Rol o'chirilsinmi?",
-      "deleteResult": "Rol matritsadan va Tuzilmadagi rollar ro'yxatidan yo'qoladi. U bilan xodimlar yo'q — hech kimning huquqlari o'zgarmaydi.",
+      "deleteResult": "Rol matritsadan va «Xodimlar» bo‘limidagi rollar ro'yxatidan yo'qoladi. U bilan xodimlar yo'q — hech kimning huquqlari o'zgarmaydi.",
       "deleteConfirm": "O'chirish",
       "deleteCancel": "Bekor qilish",
       "errors": {
-        "ROLE_IN_USE": "Rol xodimlarga berilgan ({{count}}): uni o'chirib bo'lmaydi. Avval Tuzilmada ularga boshqa rollar bering.",
+        "ROLE_IN_USE": "Rol xodimlarga berilgan ({{count}}): uni o'chirib bo'lmaydi. Avval «Xodimlar» bo‘limida ularga boshqa rollar bering.",
         "ROLE_SYSTEM": "Tizim rolini o'zgartirib yoki o'chirib bo'lmaydi.",
         "NAME_TAKEN": "Bunday nomli rol allaqachon bor. Boshqa nom tanlang.",
-        "LAST_ADMIN": "O'zgarishdan so'ng kompaniyada administrator qolmaydi. Admin «to'liq»ni saqlang yoki administrator tayinlang.",
+        "LAST_ADMIN": "O'zgarishdan so'ng kompaniyada administrator qolmaydi. «Sozlamalar» bo‘limiga to‘liq kirishni saqlang yoki administrator tayinlang.",
         "FORBIDDEN": "Huquq yetarli emas: rollarni administrator o'zgartiradi.",
         "BACKEND_UNAVAILABLE": "CRM javob bermayapti. Keyinroq takrorlang.",
         "VALIDATION_FAILED": "Rol nomi, bo'limlari va maydonlarini tekshiring.",
@@ -470,7 +482,7 @@
         "DEFAULT": "Amalni bajarib bo'lmadi. Qayta urinib ko'ring."
       },
       "employeesTitle": "«{{name}}» roli bilan xodimlar",
-      "employeesEmpty": "Rol hali hech kimga berilmagan. Tuzilmadagi xodim kartochkasida bering.",
+      "employeesEmpty": "Rol hali hech kimga berilmagan. «Xodimlar» bo‘limidagi xodim kartochkasida bering.",
       "openEmployee": "Rollarni o'zgartirish: {{name}}",
       "viewEmployee": "Kartochkani ochish: {{name}}",
       "change": "O'zgartirish",

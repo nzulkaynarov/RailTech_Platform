@@ -200,8 +200,8 @@
   "notFound": {
     "heading": "Sahifa topilmadi",
     "title": "Platformada bunday manzil yo‘q",
-    "text": "Havola eskirgan yoki manzilda xato bor. O‘z navbatingizga qayting.",
-    "back": "Mening navbatim"
+    "text": "Havola eskirgan yoki manzilda xato bor. O‘z vazifalaringizga qayting.",
+    "back": "Mening vazifalarim"
   },
   "stub": {
     "subtitle": "Bo‘lim Platformaga ko‘chirilmoqda"
@@ -226,7 +226,7 @@
       "act": "Dalolatnoma",
       "memo": "Xizmat xati",
       "chat": "Chat",
-      "ticket": "Tiket",
+      "ticket": "Xodim murojaati",
       "integration": "Integratsiya"
     }
   }

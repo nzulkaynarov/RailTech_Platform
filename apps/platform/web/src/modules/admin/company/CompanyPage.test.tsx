@@ -64,7 +64,7 @@ function stubLogoUpload(path: "/admin/company/logo" | "/admin/company/brand/logo
 async function openTab(tab: string, email = "director@demo.example") {
   signInAs(email);
   renderApp(`/admin/company?tab=${tab}`);
-  await screen.findByRole("heading", { level: 1, name: "Компания" });
+  await screen.findByRole("heading", { level: 1, name: "Компания и бланки" });
 }
 
 const button = (name: string | RegExp) => screen.findByRole("button", { name });
@@ -98,14 +98,14 @@ describe("Admin · Компания: доступ и каркас", () => {
     expect(
       await screen.findByRole("heading", { level: 1, name: "Нет доступа" }),
     ).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Компания" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Компания и бланки" })).toBeNull();
     expect(screen.queryByRole("tab", { name: "Реквизиты" })).toBeNull();
   });
 
   it("администратор видит пункт «Компания» в меню Admin", async () => {
     signInAs("admin@demo.example");
     renderApp("/admin/org");
-    expect(await screen.findByRole("link", { name: "Компания" })).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: "Компания и бланки" })).toBeInTheDocument();
   });
 
   it("своей компании в ERP нет — слово и действие «Проверить снова», а не пустая страница", async () => {
