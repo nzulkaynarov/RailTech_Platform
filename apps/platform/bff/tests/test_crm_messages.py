@@ -190,6 +190,22 @@ async def test_thread_hides_the_storage_key_and_names_the_manager(
     assert crm.last("GET", "leads/2041/messages").url.params["limit"] == "4"
 
 
+def test_attachment_link_does_not_depend_on_the_storage_key_and_never_leaks_it() -> None:
+    """D1-8: CRM ключа не отдаёт — ссылка по `stored`; ключ старого CRM наружу не идёт."""
+    from app.crm_messages_view import attachments
+
+    modern = {"kind": "file", "name": "a.pdf", "mime": "application/pdf", "size": 1, "stored": True}
+    legacy = {**modern, "storage_key": "tg/5001/77/a.pdf"}
+
+    for raw in (modern, legacy):
+        [item] = attachments("L-1", 5, [raw])
+        assert item.url == "/api/v1/crm/messages/L-1/attachments/5/0"
+        assert "storage_key" not in item.model_dump_json()
+        assert "tg/5001" not in item.model_dump_json()
+    [skipped] = attachments("L-1", 5, [{**modern, "stored": False}])
+    assert skipped.url is None
+
+
 async def test_older_page_asks_crm_before_id_and_skips_notes(
     web: Web, crm: CrmMessagesFake
 ) -> None:
