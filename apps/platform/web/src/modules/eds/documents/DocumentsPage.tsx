@@ -319,6 +319,70 @@ export function DocumentsPage() {
 
   const kindTabs = KIND_TABS.filter((k) => k !== "quote" || scope === "all");
 
+  const body = (
+    <QueryState query={list} labels={labels}>
+      {(data) =>
+        data.items.length === 0 ? (
+          <EmptyState
+            title={t(
+              filtered
+                ? "documents:list.empty.filteredTitle"
+                : scope === "all"
+                  ? "documents:list.empty.allTitle"
+                  : "documents:list.empty.mineTitle",
+            )}
+            text={t(
+              filtered
+                ? "documents:list.empty.filteredText"
+                : scope === "all"
+                  ? "documents:list.empty.allText"
+                  : "documents:list.empty.mineText",
+            )}
+            action={
+              canEdit(me, "eds.memo.create") ? (
+                <LinkButton type="primary" to="/eds/new">
+                  {t("modules:eds.action")}
+                </LinkButton>
+              ) : undefined
+            }
+          />
+        ) : (
+          <>
+            {mobile ? (
+              <DocumentsList items={data.items} scope={scope} selected={docId} params={params} />
+            ) : (
+              <DocumentsTable items={data.items} scope={scope} selected={docId} params={params} />
+            )}
+            {cursors.length > 0 || data.next_cursor ? (
+              <nav className="pf-docs-pager" aria-label={t("documents:list.paging.label")}>
+                <Button
+                  disabled={cursors.length === 0}
+                  onClick={() => {
+                    setCursors((stack) => stack.slice(0, -1));
+                  }}
+                >
+                  {t("documents:list.paging.prev")}
+                </Button>
+                <span className="pf-hint">
+                  {t("documents:list.paging.page", { page: cursors.length + 1 })}
+                </span>
+                <Button
+                  disabled={!data.next_cursor}
+                  onClick={() => {
+                    const next = data.next_cursor;
+                    if (next) setCursors((stack) => [...stack, next]);
+                  }}
+                >
+                  {t("documents:list.paging.next")}
+                </Button>
+              </nav>
+            ) : null}
+          </>
+        )
+      }
+    </QueryState>
+  );
+
   return (
     <div className="pf-docs">
       <PageHeader
@@ -346,6 +410,23 @@ export function DocumentsPage() {
             }}
           />
         ) : null}
+        {mobile ? (
+          <div className="pf-docs-filter">
+            <label htmlFor="pf-docs-kind">{t("documents:list.tabs.label")}</label>
+            <Select
+              id="pf-docs-kind"
+              style={{ minWidth: 180 }}
+              value={tab}
+              options={kindTabs.map((key) => ({
+                value: key,
+                label: t(`documents:list.tabs.${key}`),
+              }))}
+              onChange={(key) => {
+                setFilter({ kind: key === "all" ? null : key });
+              }}
+            />
+          </div>
+        ) : null}
         <div className="pf-docs-filter">
           <label htmlFor="pf-docs-status">{t("documents:list.status.label")}</label>
           <Select
@@ -366,95 +447,23 @@ export function DocumentsPage() {
         </div>
       </div>
       <Card styles={{ body: { padding: 0 } }}>
-        <Tabs
-          aria-label={t("documents:list.tabs.label")}
-          activeKey={tab}
-          onChange={(key) => {
-            setFilter({ kind: key === "all" ? null : key });
-          }}
-          tabBarStyle={{ margin: 0, padding: "0 16px" }}
-          items={kindTabs.map((key) => ({
-            key,
-            label: t(`documents:list.tabs.${key}`),
-            children:
-              key === tab ? (
-                <QueryState query={list} labels={labels}>
-                  {(data) =>
-                    data.items.length === 0 ? (
-                      <EmptyState
-                        title={t(
-                          filtered
-                            ? "documents:list.empty.filteredTitle"
-                            : scope === "all"
-                              ? "documents:list.empty.allTitle"
-                              : "documents:list.empty.mineTitle",
-                        )}
-                        text={t(
-                          filtered
-                            ? "documents:list.empty.filteredText"
-                            : scope === "all"
-                              ? "documents:list.empty.allText"
-                              : "documents:list.empty.mineText",
-                        )}
-                        action={
-                          canEdit(me, "eds.memo.create") ? (
-                            <LinkButton type="primary" to="/eds/new">
-                              {t("modules:eds.action")}
-                            </LinkButton>
-                          ) : undefined
-                        }
-                      />
-                    ) : (
-                      <>
-                        {mobile ? (
-                          <DocumentsList
-                            items={data.items}
-                            scope={scope}
-                            selected={docId}
-                            params={params}
-                          />
-                        ) : (
-                          <DocumentsTable
-                            items={data.items}
-                            scope={scope}
-                            selected={docId}
-                            params={params}
-                          />
-                        )}
-                        {cursors.length > 0 || data.next_cursor ? (
-                          <nav
-                            className="pf-docs-pager"
-                            aria-label={t("documents:list.paging.label")}
-                          >
-                            <Button
-                              disabled={cursors.length === 0}
-                              onClick={() => {
-                                setCursors((stack) => stack.slice(0, -1));
-                              }}
-                            >
-                              {t("documents:list.paging.prev")}
-                            </Button>
-                            <span className="pf-hint">
-                              {t("documents:list.paging.page", { page: cursors.length + 1 })}
-                            </span>
-                            <Button
-                              disabled={!data.next_cursor}
-                              onClick={() => {
-                                const next = data.next_cursor;
-                                if (next) setCursors((stack) => [...stack, next]);
-                              }}
-                            >
-                              {t("documents:list.paging.next")}
-                            </Button>
-                          </nav>
-                        ) : null}
-                      </>
-                    )
-                  }
-                </QueryState>
-              ) : null,
-          }))}
-        />
+        {mobile ? (
+          body
+        ) : (
+          <Tabs
+            aria-label={t("documents:list.tabs.label")}
+            activeKey={tab}
+            onChange={(key) => {
+              setFilter({ kind: key === "all" ? null : key });
+            }}
+            tabBarStyle={{ margin: 0, padding: "0 16px" }}
+            items={kindTabs.map((key) => ({
+              key,
+              label: t(`documents:list.tabs.${key}`),
+              children: key === tab ? body : null,
+            }))}
+          />
+        )}
       </Card>
       {docId ? <DocumentSheet id={docId} /> : null}
     </div>

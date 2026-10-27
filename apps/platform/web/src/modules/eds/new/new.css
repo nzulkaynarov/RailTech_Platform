@@ -31,14 +31,15 @@
 .pf-newdoc input[type="file"] {
   max-width: 100%;
 }
-/* Телефон: форма — лист на весь экран, кнопки прижаты к низу (над нижней панелью модулей, 60 px) */
+/* Телефон: форма — лист на весь экран, кнопки прижаты к низу (над нижней панелью модулей) */
 @media (max-width: 767px) {
   .pf-newdoc-row {
     grid-template-columns: 1fr;
   }
   .pf-newdoc-actions {
     position: sticky;
-    bottom: 60px;
+    /* sticky отсчитывается от края отступа контейнера: область контента кончается над нижней панелью (60 px) + её отступ 76 px */
+    bottom: -16px;
     z-index: 5;
     margin: 16px -16px 0;
     padding: 12px 16px;
@@ -46,10 +47,9 @@
     border-top: 1px solid #f0f0f0;
   }
   .pf-newdoc-actions .pf-fp-row {
-    flex-wrap: nowrap;
+    flex-direction: column;
   }
   .pf-newdoc-actions .pf-fp-row > .ant-btn {
-    flex: 1 1 0;
-    min-width: 0;
+    width: 100%;
   }
 }

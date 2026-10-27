@@ -72,8 +72,8 @@
 | **Подтвердить оплату** / Частичная / Запросить платёжку | `POST /invoices/{СЧ}/confirm-payment {amount, date}`; `POST /invoices/{СЧ}/request-payment-doc` | `POST /crm/invoices/{id}/record-payment/` ✓; связь с платёжкой и запрос платёжки — новое | Δ ERP-04 |
 | Акт: выпустить, прикрепить скан, возврат | `POST /acts/{АКТ}/…` | `POST /crm/invoices/{id}/generate-act/`, `/acts/{id}/reissue/`, `/remind/`; загрузка скана сотрудником — новое; событие `act.returned` — FIX-62 | Δ ERP-13 |
 | На согласовании, служебная записка | `GET/POST /memos`, `POST /memos/{СЗ}/decision` | сервис EDS | Δ EDS-02 |
-| Создать документ (служебка, заявление, отчёт, письмо) | `POST /documents {type,…}` | сервис EDS; шаблоны — `GET /crm/document-templates/` | Δ EDS-02 |
-| Все документы | `GET /documents?type=&status=` | `GET /crm/generated-documents/`, КП, договоры, счета, акты + EDS | агрегат |
+| Создать документ (служебка, заявление, отчёт, письмо) | `POST /eds/documents {kind, subject, text, amount?, due_date?, file_ids, erp_deal_id?, recipient?, submit}`; сохранить черновик — `PUT /eds/documents/{id}`; вложения — `POST /eds/document-files`, `GET /eds/document-files/{id}`; связь с проектом — `GET /eds/deal-options?q=` | EDS `POST /documents`, `PATCH /documents/{id}` (eds.yaml 0.4.0), `POST /documents/{id}/submit`, `POST /files`; поиск заявки — сделки ERP (как сквозной поиск); бланк, PDF и шаблоны (`GET /crm/document-templates/`) — волна D-DOC | ✓ (BFF 0.16.0, D1-5): простой текст; письмо — `letter_out`, нужен `eds.inbox: full`; «Кому» — директор, выбор адресата — Q-D15-1 |
+| Все документы | `GET /eds/documents?scope=mine\|all&kind=&status=&cursor=`; карточка — `GET /eds/documents/{id}` (шаги маршрута из `GET /approvals/{id}`) | «Мои» — EDS `GET /documents?mine=1`; «Все» — EDS `GET /registry` (письма, КП, служебные, заявления, отчёты); договоры, счета и акты — когда EDS начнёт вести их проекции | ✓ частично (BFF 0.16.0, D1-5): «Мои» и реестр EDS; договоры, счета, акты — позже |
 
 ### 1.5. ERP
 
