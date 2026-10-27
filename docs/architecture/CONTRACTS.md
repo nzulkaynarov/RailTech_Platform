@@ -35,7 +35,7 @@ Contract-first действует для `portal`, `integration`, событий
 | Метод и путь | Назначение | Тело / ответ (главное) |
 |---|---|---|
 | `POST /clients/handoff` | передача клиента из CRM | вход: `crm_client_id`, `crm_lead_id?`, `company{name, inn?, segment?, language}`, `contacts[{crm_contact_id, name, phone?, email?, telegram_user_id?, language, is_primary, preferred_channel}]`, `need{summary, product_interest[], attachments[]?}`, `owner{crm_user_id, name}`, `consent{given_at, version}`, `create_request: bool`, `invite{channels: [telegram, email]}`. Ответ: `erp_company_id`, `erp_request_id?`, `invite{sent_via[], cabinet_url}`. Идемпотентно по `crm_client_id` |
-| `POST /clients/{crm_client_id}/requests` | «Создать заявку» CRM для переданного клиента (шов 0.8.0, CRM-03, W16-D1-2) | вход: `crm_request_id` (строка `deals` CRM — ключ идемпотентности), `crm_lead_id?`, `contact?` (как в передаче; незнакомый ERP контакт создаётся и сопоставляется; e-mail не обязателен), `need{summary, product_interest[]?}`, `owner{crm_user_id, name}` (менеджер заявки — владелец сделки ERP, B-008), `urgency: normal\|urgent`, `letter_file_id?` (файл письма в EDS), `process: v3`. Ответ: `erp_company_id`, `erp_request_id`, `number` (`ЗВ-ГГГГ-NNN`). Клиент не передан — 404 `CLIENT_NOT_FOUND`; повтор `crm_request_id` — 200 с той же заявкой |
+| `POST /clients/{crm_client_id}/requests` | «Создать заявку» CRM для переданного клиента (шов 0.8.0, CRM-03, W16-D1-2) | вход: `crm_request_id` (строка `deals` CRM — ключ идемпотентности), `crm_lead_id?`, `contact?` (как в передаче; незнакомый ERP контакт создаётся и сопоставляется; e-mail не обязателен), `need{summary, product_interest[]?}`, `owner{crm_user_id, name}` (менеджер заявки — владелец сделки ERP, B-008), `urgency: normal\|urgent`, `letter_file_id?` (файл письма в EDS), `process: v3`. Ответ: `erp_company_id`, `erp_request_id`, `number` (`ЗВ-ГГГГ-NNN`). Клиент не передан — 404 `CLIENT_NOT_FOUND`; повтор `crm_request_id` — 200 с той же заявкой; тот же `Idempotency-Key` с другим телом — 409 `IDEMPOTENCY_CONFLICT` (ничего не создано; CRM: заявка `failed`, `erp_request_conflict`, без повтора) |
 | `PUT /contacts/{crm_contact_id}` | обновление контакта / Telegram-привязки | те же поля контакта |
 | `GET /companies/{erp_company_id}/summary` | карточка клиента для CRM | открытые сделки, последний документ, дебиторка, ближайшая поставка |
 | `GET /companies/{erp_company_id}/deals` | список сделок | `[{erp_deal_id, number, title, stage, amount, currency, next_step, updated_at}]`; `amount` — сумма последнего КП, отправленного клиенту, `null` — КП ещё не отправлялось (черновик не утекает) |
@@ -693,8 +693,10 @@ ERP применяет события EDS (E5) — §10.6.
   отметка «одобрено с опозданием» в журнале КП); с выбранными `channels` ERP **сразу отправляет КП клиенту** по доступным из
   них (ERP-11, решение архитектора 2026-10-28): почта — получатель с e-mail, Telegram — контакт с Telegram у клиента из CRM
   (пишет бот CRM по `quote.sent.channels`), кабинет — контакт, приглашённый или входивший; недоступный канал и остановка
-  отправки гейтом — в `Quote.send_report` (`requested`, `sent_via`, `skipped[{channel, reason}]`, `error`) и журнале КП,
-  одобрение в силе, КП тогда отправляет менеджер; повтор события второй отправки не даёт; `return` — черновик с
+  отправки гейтом или любой сбой (`SEND_FAILED`, `error_detail`) — в `Quote.send_report` (`requested`, `sent_via`,
+  `skipped[{channel, reason}]`, `error`) и журнале КП, одобрение в силе (откатывается только точка сохранения отправки),
+  менеджеру заявки — уведомление «КП не отправлено по каналу X — отправьте вручную» (`quote.auto_send_failed`); кабинет из
+  каналов не исключается (отправленное КП видно в кабинете всегда); повтор события второй отправки не даёт; `return` — черновик с
   комментарием директора; `reject` — КП отклонено (статус `REJECTED`; от отказа клиента его отличает
   `Quote.director_decision = reject` — КП клиенту не уходило, в портале и в сумме сделки его нет). Решение по `quote_version`, отличной от текущей редакции, или по КП, которое
   уже не ждёт одобрения, не применяется — запись в журнал КП; повтор применённого решения — без изменений.
@@ -705,6 +707,8 @@ ERP применяет события EDS (E5) — §10.6.
   `eds.drafts` и дан разделу `crm.clients` full (решение архитектора, C1-G-4); снабженец-автор, гл. инженер и бухгалтер — 403.
   Объектная проверка (B-008, W16-D1-2): менеджер отправляет КП только своей заявки — `Deal.manager`, сотрудник ERP,
   сопоставленный с менеджером «Создать заявку» (`owner.crm_user_id` передачи и `POST /clients/{id}/requests`); чужую заявку —
-  только держатель и `quote.review` (директор, роль с `eds.drafts` full, прежние роли ERP «Расчёт» и «Руководитель»).
+  только держатель и `quote.review` (директор, роль с `eds.drafts` full, прежние роли ERP «Расчёт» и «Руководитель»). Сделка
+  без менеджера (`Deal.manager = NULL`: заявки до Платформы, портал) — тоже только с `quote.review`. Та же объектная проверка —
+  у отзыва публичной ссылки КП (`POST /crm/quotes/{id}/revoke-public-link/`).
 - **API КП** (`erp-internal.yaml`, `QuoteSerializer`, C1-G-5): `outgoing_number`, `director_decision`, `director_comment`,
   `send_channels`, `send_report` (ERP-11) — только чтение; решение, комментарий и каналы видят сотрудники своей компании, не покупатель.

@@ -98,9 +98,12 @@ def auto_send(quote, channels: list[str], *, director=None, outgoing_number: str
                     quote.pk, _sender(quote, director), justification=justification, channels=available
                 )
             report["sent_via"] = available
-        except ValueError as exc:
+        except ValueError as exc:  # гейт отправки (QUOTE_BELOW_COST, FX_RATE_MISSING…) — код как есть
             report["error"] = str(exc)[:64] or "SEND_FAILED"
             logger.info("КП #%s: автоотправка остановлена гейтом %s", quote.pk, report["error"])
+        except Exception as exc:  # noqa: BLE001 — любой сбой отправки откатывает только точку сохранения
+            report["error"], report["error_detail"] = "SEND_FAILED", f"{type(exc).__name__}: {exc}"[:200]
+            logger.exception("КП #%s: автоотправка упала, одобрение остаётся", quote.pk)
     quote.refresh_from_db()
     quote.send_report = report
     quote.save(update_fields=["send_report", "updated_at"])
@@ -112,7 +115,38 @@ def auto_send(quote, channels: list[str], *, director=None, outgoing_number: str
         event_code="quote.auto_sent" if report["sent_via"] else "quote.auto_send_skipped",
         event_params={"number": quote.number or quote.pk, **report},
     )
+    _notify_manager(quote, report)
     return report
+
+
+def _unsent_channels(report: dict[str, Any]) -> list[str]:
+    """Каналы, по которым КП не ушло: недоступные и все доступные, если отправку остановила ошибка."""
+    failed = [] if report["sent_via"] else [c for c in report["requested"] if c not in _skipped(report)]
+    return [*_skipped(report), *(failed if report["error"] else [])]
+
+
+def _skipped(report: dict[str, Any]) -> list[str]:
+    return [item["channel"] for item in report["skipped"]]
+
+
+def _notify_manager(quote, report: dict[str, Any]) -> None:
+    """Колокольчик менеджеру заявки (`deal.manager`, иначе автору КП): по каким каналам отправить вручную."""
+    from crm.services.approvals import _link, _notify_user
+
+    unsent = _unsent_channels(report)
+    if not unsent:
+        return
+    number = quote.number or quote.pk
+    channels = ", ".join(unsent)
+    _notify_user(
+        quote.deal.manager_id or quote.prepared_by_id,
+        "КП не отправлено по части каналов",
+        f"КП #{number} не отправлено по каналу {channels} — отправьте вручную.",
+        type_code="WARNING",
+        link=_link(quote),
+        event_code="quote.auto_send_failed",
+        event_params={"number": number, "channels": channels, "error": report["error"] or ""},
+    )
 
 
 def _title(report: dict[str, Any]) -> str:

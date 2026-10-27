@@ -245,3 +245,20 @@ def test_handoff_request_also_gets_the_request_manager_as_owner(api):
     )
     assert response.status_code == 201, response.content
     assert Deal.objects.get(pk=response.json()["erp_request_id"]).manager_id == manager.pk
+
+
+def test_same_idempotency_key_with_a_changed_body_is_409_and_nothing_is_overwritten(api):
+    """Ключ идемпотентности шва (детерминированный от заявки CRM) с изменённым телом — 409 `IDEMPOTENCY_CONFLICT`:
+    вторая сделка не создаётся, первая не перезаписывается."""
+    _handoff(api)
+    key = str(uuid.uuid4())
+    url = "/api/integration/v1/clients/1001/requests"
+    first = api.post(url, _body(), format="json", HTTP_IDEMPOTENCY_KEY=key)
+    assert first.status_code == 201
+
+    changed = api.post(url, _body(urgency="normal"), format="json", HTTP_IDEMPOTENCY_KEY=key)
+
+    assert changed.status_code == 409 and changed.json() == {"detail": "IDEMPOTENCY_CONFLICT"}
+    deal = Deal.objects.get(crm_request_id=318)
+    assert deal.urgency == "urgent", "первая заявка не перезаписана"
+    assert Deal.objects.filter(crm_request_id__isnull=False).count() == 1

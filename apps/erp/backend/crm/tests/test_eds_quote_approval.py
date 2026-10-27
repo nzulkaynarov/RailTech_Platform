@@ -493,6 +493,9 @@ def test_manager_with_quote_send_sends_the_approved_quote_and_the_author_without
     assert denied.status_code == 403, denied.content
     foreign = _api(other).post(f"/api/v1/crm/quotes/{quote.pk}/send-to-client/", {}, format="json")
     assert foreign.status_code == 403 and foreign.json()["detail"] == "ROLE_NOT_PERMITTED", foreign.content
+    # отзыв публичной ссылки — та же объектная проверка (B-008)
+    revoke = _api(other).post(f"/api/v1/crm/quotes/{quote.pk}/revoke-public-link/", {}, format="json")
+    assert revoke.status_code == 403, revoke.content
     assert _status(quote) == "READY_TO_SEND"
 
     sent = _api(manager).post(f"/api/v1/crm/quotes/{quote.pk}/send-to-client/", {}, format="json")
@@ -674,3 +677,40 @@ def test_approval_without_channels_does_not_auto_send(world):
     quote, _ = _approve_with(world, [])
 
     assert quote.status.code == "READY_TO_SEND" and quote.send_report == {}
+
+
+def test_any_send_failure_keeps_the_approval_and_tells_the_request_manager(world, monkeypatch):
+    """Любое исключение внутри отправки откатывает только точку сохранения: решение применено, КП «Готово к
+    отправке», в итоге `SEND_FAILED` с причиной, менеджеру заявки — уведомление «отправьте вручную»."""
+    from crm.services.quotes import QuoteLifecycleService
+    from notifications.models import Notification
+
+    _contact(world, telegram=700106, email="", invited=True)
+    quote = _submitted(world)
+
+    def broken(*args, **kwargs):
+        raise RuntimeError("smtp is on fire")
+
+    monkeypatch.setattr(QuoteLifecycleService, "send_to_client", staticmethod(broken))
+    data = decided(quote, "approve")
+    data["channels"] = ["cabinet"]
+
+    assert eds_inbound.apply_approval_decided(data).applied
+    quote.refresh_from_db()
+    assert quote.status.code == "READY_TO_SEND" and quote.director_decision == "approve"
+    assert quote.outgoing_number == "ИСХ-082/26"
+    assert quote.send_report["error"] == "SEND_FAILED" and "smtp is on fire" in quote.send_report["error_detail"]
+    note = Notification.objects.get(user=world["calc"], event_code="quote.auto_send_failed")
+    assert "cabinet" in note.message and "вручную" in note.message
+
+
+def test_unavailable_channels_are_reported_to_the_request_manager(world):
+    from notifications.models import Notification
+
+    _contact(world, telegram=700107, email="")
+
+    quote, _ = _approve_with(world, ["telegram", "email"])
+
+    assert quote.status.code == "SENT"
+    note = Notification.objects.get(user=world["calc"], event_code="quote.auto_send_failed")
+    assert note.event_params["channels"] == "email"

@@ -34,6 +34,7 @@ class Deal(TimestampMixin, Base):
         Index("ix_deals_stage_closed_at", "stage", "closed_at"),
         # Одна заявка ERP — одно зеркало (FIX-33); NULL (локальные сделки) уникальность не нарушают.
         Index("uq_deals_erp_deal_id", "erp_deal_id", unique=True),
+        Index("uq_deals_request_key", "request_key", unique=True),
         CheckConstraint(
             "request_urgency IS NULL OR request_urgency IN ('normal', 'urgent')",
             name="request_urgency",
@@ -62,6 +63,8 @@ class Deal(TimestampMixin, Base):
     external_stage_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # «Создать заявку» (W16-D1-2, CRM-03): заявка CRM, которая уходит в ERP задачей после коммита
     # (`services/erp_requests.py`); номер ЗВ/ПР — из ERP (события обновляют `erp_number`).
+    # Ключ идемпотентности формы «Создать заявку» (UNIQUE): повтор с тем же ключом — та же заявка.
+    request_key: Mapped[uuid.UUID | None] = mapped_column(Uuid)
     request_summary: Mapped[str | None] = mapped_column(Text)
     request_urgency: Mapped[str | None] = mapped_column(String(8))
     request_letter_file_id: Mapped[uuid.UUID | None] = mapped_column(Uuid)

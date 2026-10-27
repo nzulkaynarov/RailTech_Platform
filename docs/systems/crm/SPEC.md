@@ -231,6 +231,7 @@ deals(                                              -- сделки клиент
   owner_user_id NULL, created_at, updated_at,
   erp_deal_id UNIQUE NULL, external_stage NULL, external_stage_at NULL,  -- зеркало заявки ERP (FIX-33)
   erp_number NULL,                                  -- ЗВ/ПР-ГГГГ-NNN из ERP (ERP-09, события)
+  request_key UUID UNIQUE NULL,                     -- ключ формы «Создать заявку» (идемпотентность)
   request_summary NULL, request_urgency 'normal'|'urgent' NULL,           -- «Создать заявку» (W16-D1-2, CRM-03):
   request_contact_id → client_contacts NULL, request_letter_file_id UUID NULL, --   суть, срочность, контакт, файл EDS
   erp_request_status 'pending'|'done'|'failed' NULL, erp_request_error NULL  -- передача заявки в ERP задачей
@@ -348,7 +349,9 @@ settings(key PK, value JSONB, schema_version INT, updated_by, updated_at)
 ответственный за переписку, диалог ведёт бот, активная передача закрывается (`request_created`), заявка — строка `deals` со
 `erp_request_status = pending`. В ERP — задачей `erp_create_request` после коммита (`services/erp_requests.py`): клиента нет в
 ERP — передача без заявки, затем `POST /clients/{crm_client_id}/requests` шва 0.8.0; итог — `erp_request_status`,
-`erp_deal_id`, `erp_number`. Без коннектора ERP — 409 `erp_not_configured`. Статус лида для Платформы (CRM-02) —
+`erp_deal_id`, `erp_number`. Без коннектора ERP — 409 `erp_not_configured`. Идемпотентность — `request_key` формы (UUID от клиента): повтор — 200 с той
+же заявкой без новой строки и задачи (блокировка лида или клиента, UNIQUE `deals.request_key`); ключ заявки другого лида —
+409 `request_key_reused`; ERP ответила 409 `IDEMPOTENCY_CONFLICT` (тело изменилось) — заявка `failed`, `erp_request_conflict`. Статус лида для Платформы (CRM-02) —
 `platform_status` в ответе лида и фильтры `GET /leads?platform_status=&overdue=` (`domain/client_requests.py`).
 
 ### 6.2. State machine (`domain/stage_machine.py`)

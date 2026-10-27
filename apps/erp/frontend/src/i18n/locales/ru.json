@@ -3556,6 +3556,10 @@
       "title": "КП одобрено директором",
       "message": "КП #{{number}} одобрено ({{outgoing_number}}) — можно отправлять клиенту."
     },
+    "quote.auto_send_failed": {
+      "title": "КП не отправлено по части каналов",
+      "message": "КП #{{number}} не отправлено по каналу {{channels}} — отправьте вручную."
+    },
     "quote.director_rejected": {
       "title": "КП отклонено директором",
       "message": "КП #{{number}} отклонено директором. {{comment}}"

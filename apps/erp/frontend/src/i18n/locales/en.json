@@ -3535,6 +3535,10 @@
       "title": "Quote approved by the director",
       "message": "Quote #{{number}} approved ({{outgoing_number}}) — you can send it to the client."
     },
+    "quote.auto_send_failed": {
+      "title": "Quote not sent on some channels",
+      "message": "Quote #{{number}} was not sent via {{channels}} — send it manually."
+    },
     "quote.director_rejected": {
       "title": "Quote rejected by the director",
       "message": "Quote #{{number}} was rejected by the director. {{comment}}"

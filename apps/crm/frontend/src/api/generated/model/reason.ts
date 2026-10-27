@@ -117,4 +117,6 @@ export const Reason = {
   reset_token_invalid: "reset_token_invalid",
   contact_channel_required: "contact_channel_required",
   request_not_allowed: "request_not_allowed",
+  request_key_reused: "request_key_reused",
+  erp_request_conflict: "erp_request_conflict",
 } as const;

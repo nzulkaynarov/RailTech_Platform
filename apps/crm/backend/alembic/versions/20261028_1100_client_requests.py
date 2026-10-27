@@ -23,6 +23,10 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
+    op.add_column("deals", sa.Column("request_key", sa.Uuid(), nullable=True))
+    # Идемпотентность «Создать заявку»: повтор формы с тем же ключом — та же заявка (последний рубеж
+    # после блокировки лида или клиента).
+    op.create_index("uq_deals_request_key", "deals", ["request_key"], unique=True)
     op.add_column("deals", sa.Column("request_summary", sa.Text(), nullable=True))
     op.add_column("deals", sa.Column("request_urgency", sa.String(length=8), nullable=True))
     op.add_column("deals", sa.Column("request_letter_file_id", sa.Uuid(), nullable=True))
@@ -67,3 +71,5 @@ def downgrade() -> None:
         "request_summary",
     ):
         op.drop_column("deals", column)
+    op.drop_index("uq_deals_request_key", table_name="deals")
+    op.drop_column("deals", "request_key")

@@ -141,6 +141,11 @@ class Reason(StrEnum):
     # обезличен.
     CONTACT_CHANNEL_REQUIRED = "contact_channel_required"
     REQUEST_NOT_ALLOWED = "request_not_allowed"
+    # Ключ формы `request_key` уже занят заявкой другого лида или клиента.
+    REQUEST_KEY_REUSED = "request_key_reused"
+    # ERP: тот же ключ идемпотентности заявки с другим телом (409 `IDEMPOTENCY_CONFLICT`) — заявка
+    # не создана, автоповтора нет.
+    ERP_REQUEST_CONFLICT = "erp_request_conflict"
 
 
 class DomainError(Exception):

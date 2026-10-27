@@ -251,4 +251,6 @@ def test_reason_values_are_a_stable_contract() -> None:
         # «Создать заявку» (W16-D1-2, CRM-03)
         "contact_channel_required",
         "request_not_allowed",
+        "request_key_reused",
+        "erp_request_conflict",
     }

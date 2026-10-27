@@ -456,6 +456,12 @@ def exercise_all(client, world):
     again = hit("POST", requests_path, "/clients/8101/requests", 200, body=client_request_body(8111))
     assert made == again and made["number"].startswith("ЗВ-")
     hit("POST", requests_path, "/clients/999999/requests", 404, body=client_request_body(8112))
+    # тот же Idempotency-Key, другое тело — 409 IDEMPOTENCY_CONFLICT, второй заявки нет
+    same_key = str(uuid.uuid4())
+    for body, expected in ((client_request_body(8115), 201), ({**client_request_body(8115), "urgency": "normal"}, 409)):
+        response = client.post(PREFIX + "/clients/8101/requests", body, format="json", HTTP_IDEMPOTENCY_KEY=same_key)
+        assert response.status_code == expected, response.content
+        out.append(("POST", requests_path, expected, json.loads(response.content)))
     hit("POST", requests_path, "/clients/8101/requests", 422, body={"crm_request_id": 8113})
     hit("POST", requests_path, "/clients/8101/requests", 401, api=anonymous, body=client_request_body(8114))
 
@@ -655,7 +661,17 @@ def test_error_codes_are_the_documented_ones(exercised):
     )
     assert codes[404] == {"NOT_FOUND", "CLIENT_NOT_FOUND"}
     assert codes[422] == {"VALIDATION_ERROR", "PAIRING_PARTIAL_REPEAT"}  # 0.6.1: частичный повтор ротации
-    assert codes[409] <= {"INN_CONFLICT", "EMAIL_CONFLICT", "BOOTSTRAP_CLOSED", "NOT_SWITCHABLE"} and codes[409]
+    assert (
+        codes[409]
+        <= {
+            "INN_CONFLICT",
+            "EMAIL_CONFLICT",
+            "BOOTSTRAP_CLOSED",
+            "NOT_SWITCHABLE",
+            "IDEMPOTENCY_CONFLICT",
+        }
+        and codes[409]
+    )
 
 
 # --- FIX-63: `role_codes` в провижининге (SystemRoleCode) --------------------------------------------------------

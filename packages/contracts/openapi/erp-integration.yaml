@@ -273,6 +273,15 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '409':
+          description: >-
+            `IDEMPOTENCY_CONFLICT` — тот же `Idempotency-Key` пришёл с другим телом (данные заявки изменились после
+            первой отправки): ничего не создано и не перезаписано. CRM повтор не делает — заявка `failed` с причиной
+            `erp_request_conflict`, менеджер создаёт заявку заново.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
         '422':
           $ref: '#/components/responses/ValidationError'
 

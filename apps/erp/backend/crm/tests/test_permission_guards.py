@@ -199,6 +199,28 @@ def test_quote_send_with_explicit_perm_passes(lookups, seller_company, deal):
 
 
 @pytest.mark.django_db
+def test_quote_without_a_request_manager_is_sent_only_with_quote_review(lookups, seller_company, deal):
+    """B-008: у сделки нет менеджера (`deal.manager = NULL`, заявка до Платформы) — `quote.send` без `quote.review`
+    не даёт отправить; директор (с `quote.review`) — отправляет."""
+    author = _make_user("author_nomanager@seller.test")
+    _make_member(author, seller_company, can_sell=False, is_primary=True)
+    deal.manager = None
+    deal.save(update_fields=["manager"])
+    quote = _ready_to_send_quote(deal, prepared_by=author)
+    manager = _make_user("manager_nomanager@seller.test")
+    send_only = CompanyRole.objects.create(company=seller_company, name="SendOnly", permissions=["quote.send"])
+    _make_member(manager, seller_company, roles=[send_only], can_sell=False, is_primary=True)
+    director = _make_user("director_nomanager@seller.test")
+    review = CompanyRole.objects.create(
+        company=seller_company, name="Director", permissions=["quote.send", "quote.review"]
+    )
+    _make_member(director, seller_company, roles=[review], can_sell=False, is_primary=True)
+
+    assert can_send_quote_to_client(manager, quote) is False
+    assert can_send_quote_to_client(director, quote) is True
+
+
+@pytest.mark.django_db
 @pytest.mark.parametrize(
     ("permissions", "is_manager", "allowed"),
     [

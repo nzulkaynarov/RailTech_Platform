@@ -19,6 +19,7 @@ export interface RequestCreate {
   consent?: RequestConsentIn | null;
   contact: RequestContactIn;
   letter_file_id?: string | null;
+  request_key: string;
   /**
    * @minLength 1
    * @maxLength 5000

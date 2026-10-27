@@ -149,6 +149,15 @@ def _result(response: httpx.Response) -> ClientRequestResult:
         raise rate_limited(response)
     if status in (401, 403):
         raise UpstreamUnavailableError(f"HTTP {status}", reason=Reason.ERP_UNAUTHORIZED)
+    if status == 409:
+        # Тот же ключ идемпотентности с другим телом (`IDEMPOTENCY_CONFLICT`): данные заявки
+        # изменились после первой отправки — ERP ничего не создала и не перезаписала.
+        raise ConflictError(
+            "ERP: заявка уже отправлялась с другими данными — ничего не создано; "
+            "создайте заявку заново",
+            reason=Reason.ERP_REQUEST_CONFLICT,
+            erp_detail=_detail_of(response),
+        )
     if status == 404:
         raise NotFoundError("erp: client is not handed off", reason=Reason.ERP_BAD_RESPONSE)
     if status == 422:
@@ -170,3 +179,10 @@ def _result(response: httpx.Response) -> ClientRequestResult:
         raise UpstreamUnavailableError(
             f"bad json from erp: {exc}", reason=Reason.ERP_BAD_RESPONSE
         ) from exc
+
+
+def _detail_of(response: httpx.Response) -> str:
+    try:
+        return str(response.json().get("detail", ""))[:64]
+    except (ValueError, AttributeError):
+        return ""

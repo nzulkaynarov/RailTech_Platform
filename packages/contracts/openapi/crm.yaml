@@ -5190,6 +5190,8 @@ components:
       - reset_token_invalid
       - contact_channel_required
       - request_not_allowed
+      - request_key_reused
+      - erp_request_conflict
       title: Reason
       type: string
     ReasonCount:
@@ -5371,6 +5373,10 @@ components:
             type: string
           - type: 'null'
           title: Letter File Id
+        request_key:
+          format: uuid
+          title: Request Key
+          type: string
         summary:
           maxLength: 5000
           minLength: 1
@@ -5384,6 +5390,7 @@ components:
           title: Urgency
           type: string
       required:
+      - request_key
       - contact
       - summary
       title: RequestCreate
@@ -5396,6 +5403,10 @@ components:
         client_id:
           title: Client Id
           type: integer
+        created:
+          default: true
+          title: Created
+          type: boolean
         deal_id:
           title: Deal Id
           type: integer

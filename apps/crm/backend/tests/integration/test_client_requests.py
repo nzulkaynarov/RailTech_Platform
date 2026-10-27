@@ -6,6 +6,7 @@
 фильтр `platform_status` в SQL совпадает с доменной функцией.
 """
 
+import asyncio
 import uuid
 from datetime import UTC, datetime, timedelta
 
@@ -138,6 +139,7 @@ async def _manager(
 
 def _body(**changes: object) -> RequestCreate:
     data: dict[str, object] = {
+        "request_key": str(uuid.uuid4()),
         "company": {"name": "ООО Пример Логистик", "inn": "301234567"},
         "contact": {"full_name": "Алишер Каримов", "use_lead_telegram": True},
         "summary": "Нужны 20 комплектов, срок — ноябрь",
@@ -506,3 +508,133 @@ async def test_platform_status_filter_matches_the_domain_rule(
     assert await ids(platform_status="new,wants_quote") == {asks, fresh}
     assert await ids(overdue=True) == {late_id}
     assert late_id not in await ids(overdue=False)
+
+
+# ── Идемпотентность «Создать заявку» (`request_key` формы) ─────────────────────────────────────
+
+
+async def _requests_of(sessions: async_sessionmaker[AsyncSession], key: uuid.UUID) -> list[Deal]:
+    async with sessions() as session:
+        return list((await session.scalars(select(Deal).where(Deal.request_key == key))).all())
+
+
+async def test_repeat_with_the_same_request_key_returns_the_same_request(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    """Двойной клик или повтор по таймауту: та же заявка (`created = False`), без второй строки и
+    задачи."""
+    who = await _manager(sessions)
+    lead_id = await _lead(sessions)
+    queue = Queue()
+    body = _body()
+
+    first = await _service(sessions, queue).create_from_lead(who, lead_id, body)
+    again = await _service(sessions, queue).create_from_lead(who, lead_id, body)
+
+    assert first.created
+    assert not again.created
+    assert again.deal_id == first.deal_id
+    assert len(queue.calls) == 1, "вторая задача в ERP не ставится — второго письма ВХ не будет"
+    assert len(await _requests_of(sessions, body.request_key)) == 1
+
+
+async def test_parallel_submissions_with_one_request_key_make_one_request(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    """Две одновременные отправки формы: одна заявка и одна задача. Мутационная проверка (описание
+    PR): без блокировки лида и UNIQUE `deals.request_key` тест красный (две заявки), с ними —
+    зелёный."""
+    who = await _manager(sessions)
+    lead_id = await _lead(sessions)
+    queue = Queue()
+    body = _body()
+
+    results = await asyncio.gather(
+        _service(sessions, queue).create_from_lead(who, lead_id, body),
+        _service(sessions, queue).create_from_lead(who, lead_id, body),
+    )
+
+    assert {r.deal_id for r in results} == {results[0].deal_id}
+    assert sorted(r.created for r in results) == [False, True]
+    assert len(queue.calls) == 1
+    assert len(await _requests_of(sessions, body.request_key)) == 1
+
+
+async def test_repeat_for_a_client_with_the_same_request_key_returns_the_same_request(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    who = await _manager(sessions)
+    async with sessions() as session, session.begin():
+        client = Client(name="ООО Клиент ERP", erp_company_id=501)
+        session.add(client)
+        await session.flush()
+        client_id = client.id
+    queue = Queue()
+    body = _body(company=None, contact={"full_name": "Пётр", "phone": "+998901234567"})
+
+    results = await asyncio.gather(
+        _service(sessions, queue).create_for_client(who, client_id, body),
+        _service(sessions, queue).create_for_client(who, client_id, body),
+    )
+
+    assert {r.deal_id for r in results} == {results[0].deal_id}
+    assert len(queue.calls) == 1
+
+
+async def test_request_key_of_another_lead_is_rejected(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    who = await _manager(sessions)
+    first_lead = await _lead(sessions, tg_user_id=88201)
+    second_lead = await _lead(sessions, tg_user_id=88202)
+    body = _body()
+    await _service(sessions).create_from_lead(who, first_lead, body)
+
+    with pytest.raises(ConflictError) as caught:
+        await _service(sessions).create_from_lead(who, second_lead, body)
+
+    assert caught.value.details["reason"] == Reason.REQUEST_KEY_REUSED
+
+
+async def test_erp_idempotency_conflict_fails_the_request_without_retry(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    """ERP: тот же ключ шва с другим телом (409) — заявка `failed` с причиной, без автоповтора."""
+    who = await _manager(sessions)
+    async with sessions() as session, session.begin():
+        client = Client(name="ООО Клиент ERP", erp_company_id=501)
+        session.add(client)
+        await session.flush()
+        client_id = client.id
+    created = await _service(sessions).create_for_client(
+        who, client_id, _body(company=None, contact={"full_name": "Пётр", "phone": "+998901234567"})
+    )
+    conflict = ConflictError("ERP: заявка уже отправлялась", reason=Reason.ERP_REQUEST_CONFLICT)
+
+    outcome = await ErpRequestService(
+        sessions, FakeRequests(error=conflict), ErpHandoffService(sessions, FakeHandoff())
+    ).run(created.deal_id, who.user_id)
+
+    assert outcome == "failed"
+    async with sessions() as session:
+        deal = await session.get(Deal, created.deal_id)
+        assert deal is not None
+        assert (deal.erp_request_status, deal.erp_request_error) == (
+            "failed",
+            "erp_request_conflict",
+        )
+
+
+async def test_request_key_is_unique_in_the_database(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    """Последний рубеж идемпотентности — UNIQUE `deals.request_key`. Мутационная проверка (описание
+    PR): без уникального индекса тест красный."""
+    from sqlalchemy.exc import IntegrityError
+
+    key = uuid.uuid4()
+    async with sessions() as session, session.begin():
+        session.add(Deal(title="Первая", stage="open", request_key=key))
+    with pytest.raises(IntegrityError):
+        async with sessions() as session, session.begin():
+            session.add(Deal(title="Вторая", stage="open", request_key=key))

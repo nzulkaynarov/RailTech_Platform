@@ -1156,6 +1156,15 @@ export interface operations {
           "application/json": components["schemas"]["Error"];
         };
       };
+      /** @description `IDEMPOTENCY_CONFLICT` — тот же `Idempotency-Key` пришёл с другим телом (данные заявки изменились после первой отправки): ничего не создано и не перезаписано. CRM повтор не делает — заявка `failed` с причиной `erp_request_conflict`, менеджер создаёт заявку заново. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
       422: components["responses"]["ValidationError"];
       429: components["responses"]["TooManyRequests"];
     };

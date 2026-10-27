@@ -12,6 +12,7 @@ import type { RequestCreatedErpRequestStatus } from "./requestCreatedErpRequestS
  */
 export interface RequestCreated {
   client_id: number;
+  created?: boolean;
   deal_id: number;
   erp_request_status?: RequestCreatedErpRequestStatus;
   lead_id?: number | null;

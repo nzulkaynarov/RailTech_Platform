@@ -50,6 +50,9 @@ class RequestCreate(BaseModel):
     """«Создать заявку»: клиент (существующий или новая компания), контакт с каналом, суть,
     срочность, письмо."""
 
+    # Ключ идемпотентности формы (UUID, задаёт клиент — форма «Создать заявку» один раз на
+    # открытие): повтор с тем же ключом — та же заявка (200), без второй строки, задачи и письма ВХ.
+    request_key: uuid.UUID
     client_id: int | None = None
     company: RequestCompanyIn | None = None
     contact: RequestContactIn
@@ -69,3 +72,5 @@ class RequestCreated(BaseModel):
     deal_id: int
     lead_id: int | None = None
     erp_request_status: Literal["pending", "done", "failed"] = "pending"
+    # False — повтор с тем же `request_key`: заявка уже была создана (ответ 200, а не 201).
+    created: bool = True
