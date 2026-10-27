@@ -41,6 +41,30 @@
                 }
             }
         },
+        "/api/integration/v1/clients/{crm_client_id}/invite": {
+            "post": {
+                "operationId": "api_integration_v1_clients_invite_create",
+                "description": "POST /api/integration/v1/clients/{crm_client_id}/invite (0.8.0, D1-9): менеджер CRM приглашает контакт ещё раз.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "crm_client_id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
         "/api/integration/v1/clients/handoff": {
             "post": {
                 "operationId": "api_integration_v1_clients_handoff_create",
