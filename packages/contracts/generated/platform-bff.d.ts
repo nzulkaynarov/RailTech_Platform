@@ -128,7 +128,7 @@ export interface paths {
     };
     /**
      * Чек-лист первого запуска из пяти шагов
-     * @description Раздел `admin` — полный (директору — 403: CRM отдаёт чек-лист только с правом записи настроек, а все шаги ведут на экраны администратора). Состояние шагов приносят бэкенды, BFF их только сводит: бот и модели ИИ — CRM `/setup/checklist`, ERP — `/integrations/erp`, почта — `/integrations/smtp`, первый сотрудник — `/users` (есть ли кроме администратора активный сотрудник). Часть данных не ответила — шаг `unknown`, чек-лист не падает; не ответила ни одна — 503. `company` — шаг мастера «своя компания» (ERP `setup/status`); `null`, если ERP не ответила или у администратора нет сессии ERP.
+     * @description Раздел `admin` — полный (директору — 403: CRM отдаёт чек-лист только с правом записи настроек, а все шаги ведут на экраны администратора). Состояние шагов приносит CRM (`/setup/checklist`: бот, модели ИИ, ERP — коннектор задан, почта — SMTP задан, первый сотрудник — есть кроме администратора активный сотрудник), BFF их только сводит; шаг, которого CRM не назвала, — `unknown`; CRM не ответила — 503. `company` — шаг мастера «своя компания» (ERP `setup/status`); ERP спрашивается только после сопряжения. `null`, если ERP не сопряжена (`company_blocker = erp_not_connected`) или не ответила либо у администратора нет сессии ERP (`erp_unavailable`).
      */
     get: operations["getSetupChecklist"];
     put?: never;
@@ -150,7 +150,7 @@ export interface paths {
     put?: never;
     /**
      * Создать свою компанию (шаг мастера)
-     * @description Раздел `admin` — полный. ERP `setup/company/` токеном администратора: создаёт компанию с типом «продавец» и делает его владельцем; только пока своей компании нет. Повтор — 409 `OWN_COMPANY_ALREADY_EXISTS`. Поля формы — 422 `VALIDATION_FAILED` (`details.fields`, тексты ERP — `details.messages`). ERP не ответила или у администратора ещё нет сессии ERP (доступ выдаётся CRM с задержкой) — 503 `BACKEND_UNAVAILABLE`, повтор через несколько секунд. Тот же сотрудник уже не суперпользователь ERP — 403 `FORBIDDEN`.
+     * @description Раздел `admin` — полный. ERP `setup/company/` токеном администратора: создаёт компанию с типом «продавец» и делает его владельцем; только пока своей компании нет. Повтор — 409 `OWN_COMPANY_ALREADY_EXISTS`. Поля формы — 422 `VALIDATION_FAILED` (`details.fields`, тексты ERP — `details.messages`). ERP не сопряжена (коннектор в CRM не задан) — 409 `ERP_NOT_CONNECTED`: сначала шаг «ERP» (`details.link`). ERP сопряжена, но не ответила или у администратора ещё нет сессии ERP (доступ выдаётся CRM с задержкой) — 503 `BACKEND_UNAVAILABLE`, повтор через несколько секунд. Тот же сотрудник уже не суперпользователь ERP — 403 `FORBIDDEN`.
      */
     post: operations["createOwnCompany"];
     delete?: never;
@@ -2375,7 +2375,7 @@ export interface components {
   schemas: {
     Error: {
       /**
-       * @description Стабильный код (`INVALID_CREDENTIALS`, `SESSION_EXPIRED`, `CSRF_FAILED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_FAILED`, `TOO_MANY_REQUESTS`, `BACKEND_UNAVAILABLE`, `NO_PLATFORM_ROLE`, `USER_DISABLED`, `ACCOUNT_LOCKED`, `CONFLICT`, `WRONG_PASSWORD`, `EMAIL_EXISTS`, `LAST_ADMIN`, `LAST_DIRECTOR`, `ROLE_IN_USE`, `ROLE_SYSTEM`, `ROLES_REQUIRED`, `NOT_CONFIGURED`, `SECRETS_KEY_MISSING`, `SERVICE_NOT_SWITCHABLE`, `INTEGRATION_FAILED`, `COMPANY_NOT_SET`, `SETUP_DONE`, `SETUP_CODE_INVALID`, `SETUP_CODE_EXPIRED`, `SETUP_LOCKED`, `OWN_COMPANY_ALREADY_EXISTS`, `INTERNAL_ERROR`, `BAD_REQUEST`, `METHOD_NOT_ALLOWED`, `HTTP_<статус>`)
+       * @description Стабильный код (`INVALID_CREDENTIALS`, `SESSION_EXPIRED`, `CSRF_FAILED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_FAILED`, `TOO_MANY_REQUESTS`, `BACKEND_UNAVAILABLE`, `NO_PLATFORM_ROLE`, `USER_DISABLED`, `ACCOUNT_LOCKED`, `CONFLICT`, `WRONG_PASSWORD`, `EMAIL_EXISTS`, `LAST_ADMIN`, `LAST_DIRECTOR`, `ROLE_IN_USE`, `ROLE_SYSTEM`, `ROLES_REQUIRED`, `NOT_CONFIGURED`, `SECRETS_KEY_MISSING`, `SERVICE_NOT_SWITCHABLE`, `INTEGRATION_FAILED`, `COMPANY_NOT_SET`, `SETUP_DONE`, `SETUP_CODE_INVALID`, `SETUP_CODE_EXPIRED`, `SETUP_LOCKED`, `OWN_COMPANY_ALREADY_EXISTS`, `ERP_NOT_CONNECTED`, `INTERNAL_ERROR`, `BAD_REQUEST`, `METHOD_NOT_ALLOWED`, `HTTP_<статус>`)
        * @example SESSION_EXPIRED
        */
       code: string;
@@ -3432,10 +3432,10 @@ export interface components {
       password: string;
     };
     /**
-     * @description Пять шагов чек-листа (SPEC-v3 §7.6) — бот, ERP, почта, модели ИИ, первый сотрудник
+     * @description Пять шагов чек-листа (SPEC-v3 §7.6) в порядке выполнения — ERP, бот, почта, модели ИИ, первый сотрудник
      * @enum {string}
      */
-    SetupStepKey: "bot" | "erp" | "mail" | "models" | "first_employee";
+    SetupStepKey: "erp" | "bot" | "mail" | "models" | "first_employee";
     /**
      * @description `unknown` — бэкенд не ответил или не отдал данные; чек-лист при этом не падает
      * @enum {string}
@@ -3456,9 +3456,16 @@ export interface components {
       steps: components["schemas"]["SetupStep"][];
       done: number;
       total: number;
-      /** @description Шаг мастера «своя компания»; `null` — ERP не ответила */
+      /** @description Шаг мастера «своя компания»; `null` — данных нет, причина в `company_blocker` */
       company: components["schemas"]["SetupCompanyStatus"] | null;
+      /** @description Почему нет данных о компании (`company = null`); `null`, когда данные есть */
+      company_blocker: components["schemas"]["SetupCompanyBlocker"] | null;
     };
+    /**
+     * @description `erp_not_connected` — ERP не сопряжена (CRM: коннектор не задан): сначала шаг «ERP», компания невозможна. `erp_unavailable` — ERP сопряжена, но не ответила или не выдала сессию администратору: повторить позже
+     * @enum {string}
+     */
+    SetupCompanyBlocker: "erp_not_connected" | "erp_unavailable";
     SetupCompanyIn: {
       name: string;
       inn?: string;
@@ -4832,7 +4839,7 @@ export interface operations {
       };
       401: components["responses"]["SessionExpired"];
       403: components["responses"]["Forbidden"];
-      /** @description `OWN_COMPANY_ALREADY_EXISTS` — компания уже создана */
+      /** @description `OWN_COMPANY_ALREADY_EXISTS` — компания уже создана; `ERP_NOT_CONNECTED` — ERP не сопряжена, сначала подключите её */
       409: {
         headers: {
           [name: string]: unknown;

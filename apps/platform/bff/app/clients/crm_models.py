@@ -499,6 +499,9 @@ class Key(StrEnum):
     kb = "kb"
     team = "team"
     test_dialog = "test_dialog"
+    erp = "erp"
+    mail = "mail"
+    first_employee = "first_employee"
 
 
 class KeySource(StrEnum):
