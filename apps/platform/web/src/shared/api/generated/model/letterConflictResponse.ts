@@ -133,13 +133,6 @@
  * (директор читает), сброс пароля — `admin: full`; профиль доступен каждому вошедшему. Секреты из записей журнала BFF вырезает
  * (значения полей `password`, `secret`, `token`, `key`, `*_key`, `credentials`, `authorization`, `pin` и им подобных -> `***` целиком, любого типа).
  *
- * **0.15.0 (W13C-F1) — первый запуск: ERP раньше компании (дефект гейта C2A-G-1).** Добавляющее изменение. Порядок шагов чек-листа —
- * `erp`, `bot`, `mail`, `models`, `first_employee`: сначала подключается ERP, затем создаётся компания. Все пять шагов
- * `GET /setup/checklist` приносит CRM (`/setup/checklist`, ключи `erp`, `mail`, `first_employee`), BFF сам их не вычисляет. Шаг
- * «своя компания» спрашивает ERP только после сопряжения; почему данных о компании нет — `SetupChecklist.company_blocker`
- * (`erp_not_connected` — сначала подключите ERP, `erp_unavailable` — ERP не ответила). `POST /setup/company` без сопряжённой ERP —
- * 409 `ERP_NOT_CONNECTED` (новый код) с текстом и `details.link` на карточку ERP; недоступная ERP — прежний 503 `BACKEND_UNAVAILABLE`.
- *
  * **0.18.0 (D1-1, волна 16) — Клиенты · Ждут ответа.** Добавляющее изменение (тег `messages`): очередь передач от бота с
  * запиской (CRM-06) и SLA — `GET /crm/messages`; карточка лида, лента диалога с подгрузкой истории и вложениями через BFF —
  * `GET /crm/messages/{lead}`, `/thread`, `/attachments/{message}/{index}`; действия — `take`, `reply` (ключ повтора
@@ -148,6 +141,21 @@
  * (раздел `crm.leads` полный). Чтение — `crm.leads` от чтения (директор), действия — полный. Новая тема подсказки потока
  * `InvalidationTopic.messages`: событие CRM `lead.message_added` (новое сообщение в переписке) и события лида — экран
  * перезапрашивает очередь и открытую ленту.
+ *
+ * **0.17.0 (D1-5) — EDS · Создать документ и «Мои документы».** Добавляющее изменение, тег `eds-documents`: `GET/POST /eds/documents`
+ * (мои документы или реестр «Все документы»; создать и сразу отправить), `GET/PUT /eds/documents/{id}` (карточка с маршрутом и
+ * решениями; сохранить черновик), `POST /eds/document-files` и `GET /eds/document-files/{file_id}` (вложения: загрузка потоком до 25 МБ,
+ * multipart BFF не разбирает), `GET /eds/deal-options` (связь с проектом). Вызовы идут в EDS с токеном доступа, полученным
+ * обменом SSO-токена CRM `aud=eds` (`platform-bff.md` §3); нет прав EDS — 403 `FORBIDDEN`, `details.reason = eds_not_granted`. Ошибки EDS
+ * приходят в формате `Error` с `source = eds`: текст EDS сохраняется в `message`, 422 несёт `details.fields` (список полей) и
+ * `details.messages` (поле → причина). `Error.code` дополнен `PAYLOAD_TOO_LARGE` (413) и `UNSUPPORTED_MEDIA_TYPE` (415).
+ *
+ * **0.15.0 (W13C-F1) — первый запуск: ERP раньше компании (дефект гейта C2A-G-1).** Добавляющее изменение. Порядок шагов чек-листа —
+ * `erp`, `bot`, `mail`, `models`, `first_employee`: сначала подключается ERP, затем создаётся компания. Все пять шагов
+ * `GET /setup/checklist` приносит CRM (`/setup/checklist`, ключи `erp`, `mail`, `first_employee`), BFF сам их не вычисляет. Шаг
+ * «своя компания» спрашивает ERP только после сопряжения; почему данных о компании нет — `SetupChecklist.company_blocker`
+ * (`erp_not_connected` — сначала подключите ERP, `erp_unavailable` — ERP не ответила). `POST /setup/company` без сопряжённой ERP —
+ * 409 `ERP_NOT_CONNECTED` (новый код) с текстом и `details.link` на карточку ERP; недоступная ERP — прежний 503 `BACKEND_UNAVAILABLE`.
  *
  * **0.16.0 (D1-3) — EDS · Входящие письма и резолюция директора.** Добавляющее изменение, тег `letters`: `GET /eds/letters`
  * (список со статусом словами интерфейса и фильтром по статусу), `GET /eds/letters/{ref}` (карточка письма по id или по

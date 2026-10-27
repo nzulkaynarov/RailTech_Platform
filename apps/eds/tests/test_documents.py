@@ -392,3 +392,131 @@ async def test_idempotent_document_creation(
     two = await client.post("/api/v1/documents", json=MEMO, headers=headers)
     assert (one.status_code, two.status_code, one.json() == two.json()) == (201, 201, True)
     assert len(await outbox(container, "document.registered")) == 1
+
+
+async def patch(client: httpx.AsyncClient, who: Person, doc_id: str, body: Any) -> httpx.Response:
+    return await client.patch(f"/api/v1/documents/{doc_id}", json=body, headers=who.headers)
+
+
+async def test_author_edits_draft_without_sending(
+    client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
+) -> None:
+    doc = await create(client, staff["manager"])
+    changed = await patch(
+        client,
+        staff["manager"],
+        doc["id"],
+        {
+            "subject": "Новая тема",
+            "amount": {"amount": "250000.00", "currency": "UZS"},
+            "due_date": "2026-11-10",
+            "erp_deal_id": 905,
+        },
+    )
+    assert changed.status_code == 200, changed.text
+    body = changed.json()
+    validate("Document", body)
+    assert (body["subject"], body["text"], body["status"], body["version"], body["number"]) == (
+        "Новая тема",
+        MEMO["text"],  # не переданное поле не меняется
+        "draft",
+        1,
+        "СЗ-2026/001",
+    )
+    assert (body["amount"], body["due_date"], body["erp_deal_id"]) == (
+        {"amount": "250000.00", "currency": "UZS"},
+        "2026-11-10",
+        905,
+    )
+    assert body["journal"][-1]["action"] == "document.updated"
+    assert await outbox(container, "approval.requested") == []  # маршрут не открывается
+
+    cleared = await patch(client, staff["manager"], doc["id"], {"amount": None, "due_date": None, "erp_deal_id": None})
+    assert cleared.status_code == 200
+    assert (cleared.json()["amount"], cleared.json()["due_date"], cleared.json()["erp_deal_id"]) == (None, None, None)
+    # правка не мешает отправке: маршрут без суммы — только директор
+    sent = await submit(client, staff["manager"], doc["id"])
+    assert sent.status_code == 200 and sent.json()["subject"] == "Новая тема"
+
+
+async def test_update_rules(client: httpx.AsyncClient, staff: dict[str, Person]) -> None:
+    doc = await create(client, staff["manager"])
+    # не автор: посторонний не видит документ (404), участник с registry.read — 403 not_author
+    assert_error(await patch(client, staff["admin"], doc["id"], {"subject": "Чужая правка"}), 404, "NOT_FOUND")
+    assert_error(
+        await patch(client, staff["accountant"], doc["id"], {"subject": "Чужая правка"}),
+        403,
+        "FORBIDDEN",
+        reason="not_author",
+    )
+    assert_error(
+        await patch(client, staff["manager"], doc["id"], {"amount": {"amount": "0.00", "currency": "UZS"}}),
+        422,
+        "VALIDATION_FAILED",
+    )
+    assert_error(await patch(client, staff["manager"], doc["id"], {"subject": ""}), 422, "VALIDATION_FAILED")
+    assert_error(await patch(client, staff["manager"], doc["id"], {"kind": "report"}), 422, "VALIDATION_FAILED")
+    ghost = "00000000-0000-4000-8000-000000000000"
+    assert_error(await patch(client, staff["manager"], ghost, {"subject": "x"}), 404, "NOT_FOUND")
+    assert_error(await patch(client, staff["nobody"], doc["id"], {"subject": "x"}), 403, "FORBIDDEN")
+
+
+async def test_update_is_allowed_for_draft_and_returned_only(
+    client: httpx.AsyncClient, staff: dict[str, Person]
+) -> None:
+    doc = await create(client, staff["manager"])
+    approval_id = (await submit(client, staff["manager"], doc["id"])).json()["approval_id"]
+    # на согласовании править нельзя
+    assert_error(
+        await patch(client, staff["manager"], doc["id"], {"subject": "Поздно"}),
+        409,
+        "CONFLICT",
+        reason="invalid_state",
+    )
+    # после возврата автор правит и отправляет снова
+    assert (await decide(client, staff["director"], approval_id, "return", comment="Уточните")).status_code == 200
+    edited = await patch(client, staff["manager"], doc["id"], {"text": "Уточнено."})
+    assert edited.status_code == 200 and edited.json()["status"] == "returned"
+    resent = await submit(client, staff["manager"], doc["id"])
+    assert (resent.json()["status"], resent.json()["version"], resent.json()["text"]) == ("on_approval", 2, "Уточнено.")
+    # отправленное исходящее письмо править нельзя
+    letter = await create(client, staff["registrar"], kind="letter_out", recipient={"name": "ООО «Пример»"})
+    assert (await patch(client, staff["registrar"], letter["id"], {"subject": "Тема"})).status_code == 200
+    assert (await submit(client, staff["registrar"], letter["id"])).status_code == 200
+    assert_error(
+        await patch(client, staff["registrar"], letter["id"], {"subject": "Поздно"}),
+        409,
+        "CONFLICT",
+        reason="invalid_state",
+    )
+    # письмо правит только регистратор, а менеджеру тип недоступен
+    other = await create(client, staff["registrar"], kind="letter_out", recipient={"name": "Другой"})
+    assert_error(await patch(client, staff["manager"], other["id"], {"subject": "x"}), 403, "FORBIDDEN")
+
+
+async def test_update_changes_recipient_only_for_outgoing_letter(
+    client: httpx.AsyncClient, staff: dict[str, Person]
+) -> None:
+    letter = await create(client, staff["registrar"], kind="letter_out", recipient={"name": "ООО «Пример»"})
+    changed = await patch(
+        client, staff["registrar"], letter["id"], {"recipient": {"name": "АО «Другое»", "inn": "123456789"}}
+    )
+    assert changed.status_code == 200, changed.text
+    assert changed.json()["recipient"] == {"name": "АО «Другое»", "inn": "123456789"}
+    memo = await create(client, staff["registrar"])
+    assert_error(
+        await patch(client, staff["registrar"], memo["id"], {"recipient": {"name": "Адресат"}}),
+        422,
+        "VALIDATION_FAILED",
+    )
+
+
+async def test_update_and_submit_reject_explicit_null_for_subject_and_text(
+    client: httpx.AsyncClient, staff: dict[str, Person]
+) -> None:
+    doc = await create(client, staff["manager"])
+    for field in ("subject", "text"):
+        assert_error(await patch(client, staff["manager"], doc["id"], {field: None}), 422, "VALIDATION_FAILED")
+        assert_error(await submit(client, staff["manager"], doc["id"], {field: None}), 422, "VALIDATION_FAILED")
+    still = (await client.get(f"/api/v1/documents/{doc['id']}", headers=staff["manager"].headers)).json()
+    assert (still["subject"], still["status"]) == (MEMO["subject"], "draft")

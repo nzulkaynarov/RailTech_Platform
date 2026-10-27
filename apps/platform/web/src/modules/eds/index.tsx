@@ -3,11 +3,13 @@ import { useLocation } from "react-router";
 import { RequireAccess } from "../../app/RequireAccess";
 import { ModuleRoutes } from "../ModuleRoutes";
 import { matchSection } from "../registry";
+import { DocumentsPage } from "./documents/DocumentsPage";
 import { InboxScreen } from "./inbox/InboxScreen";
+import { NewDocumentPage } from "./new/NewDocumentPage";
 
 /**
- * Модуль EDS. «Входящие письма» (D1-3) — настоящий экран: список, карточка письма и «Резолюция» директора; остальные разделы
- * пока заглушки каркаса.
+ * Модуль EDS. «Входящие письма» (D1-3), «Все документы» (реестр и «Мои документы») и «Создать документ» (D1-5) — настоящие
+ * экраны; остальные разделы пока заглушки каркаса.
  */
 export function Component() {
   const location = useLocation();
@@ -16,6 +18,20 @@ export function Component() {
     return (
       <RequireAccess rule={match.section.access}>
         <InboxScreen objectId={match.objectId} />
+      </RequireAccess>
+    );
+  }
+  if (match?.module.code === "eds" && match.section.key === "documents") {
+    return (
+      <RequireAccess rule={match.section.access}>
+        <DocumentsPage />
+      </RequireAccess>
+    );
+  }
+  if (match?.module.code === "eds" && match.section.key === "new") {
+    return (
+      <RequireAccess rule={match.section.access}>
+        <NewDocumentPage />
       </RequireAccess>
     );
   }

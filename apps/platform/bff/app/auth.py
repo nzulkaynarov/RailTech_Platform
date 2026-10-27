@@ -504,11 +504,16 @@ class AuthService:
         content: bytes | None = None,
         content_type: str | None = None,
         stream: bool = False,
+        extra_headers: dict[str, str] | None = None,
     ) -> httpx.Response:
         client = {"crm": self.crm, "erp": self.erp, "eds": self.eds}[backend]
         if client is None:
             raise backend_unavailable(backend, "not_configured")
-        headers = {"Content-Type": content_type} if content_type else None
+        merged = {
+            **(extra_headers or {}),
+            **({"Content-Type": content_type} if content_type else {}),
+        }
+        headers = merged or None
         try:
             return await client.send(
                 method,
@@ -537,6 +542,7 @@ class AuthService:
         content_type: str | None = None,
         probe: bool = False,
         stream: bool = False,
+        headers: dict[str, str] | None = None,
     ) -> httpx.Response:
         """Вызов CRM или ERP с токеном сотрудника. 2xx и 4xx бэкенда возвращаются как есть
         (`probe` — ещё и 502, см. `BackendClient.send`).
@@ -549,7 +555,17 @@ class AuthService:
         tokens = _tokens(data, backend)
         assert tokens is not None  # noqa: S101 — _prepare гарантирует токены
         resp = await self._send(
-            backend, tokens, method, path, json, params, probe, content, content_type, stream
+            backend,
+            tokens,
+            method,
+            path,
+            json,
+            params,
+            probe,
+            content,
+            content_type,
+            stream,
+            headers,
         )
         if resp.status_code != 401:
             return resp
@@ -559,7 +575,17 @@ class AuthService:
         tokens = _tokens(data, backend)
         assert tokens is not None  # noqa: S101
         resp = await self._send(
-            backend, tokens, method, path, json, params, probe, content, content_type, stream
+            backend,
+            tokens,
+            method,
+            path,
+            json,
+            params,
+            probe,
+            content,
+            content_type,
+            stream,
+            headers,
         )
         if resp.status_code == 401:
             if stream:

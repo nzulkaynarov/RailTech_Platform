@@ -238,7 +238,15 @@ export interface paths {
     delete?: never;
     options?: never;
     head?: never;
-    patch?: never;
+    /**
+     * Править черновик или возвращённый документ (без отправки)
+     * @description Только автор; `memo`, `application`, `report` — из `draft` и `returned`, `letter_out` — из `draft`; другой статус —
+     *     409 `CONFLICT` (`details.reason = invalid_state`), не автор — 403 (`details.reason = not_author`). Меняются только
+     *     переданные поля (`amount: null` и `due_date: null` очищают значение); `file_ids` привязывает файлы (уже привязанные
+     *     к этому документу пропускаются, снять вложение нельзя); `erp_deal_id` — связь с проектом (заявкой) ERP. Версия
+     *     не растёт (растёт при повторной отправке после возврата), номер и маршрут не меняются; в журнал — `document.updated`.
+     */
+    patch: operations["updateDocument"];
     trace?: never;
   };
   "/api/v1/documents/{document_id}/submit": {
@@ -973,6 +981,19 @@ export interface components {
       due_date?: string | null;
       file_ids?: components["schemas"]["Uuid"][];
     };
+    /** @description Правка черновика без отправки (0.4.0, D1-5) — поля `DocumentSubmitIn` и связь с проектом */
+    DocumentUpdate: {
+      subject?: string;
+      text?: string;
+      amount?: components["schemas"]["Money"] | null;
+      /** Format: date */
+      due_date?: string | null;
+      file_ids?: components["schemas"]["Uuid"][];
+      /** @description Связь с проектом (заявкой) ERP; `null` снимает связь */
+      erp_deal_id?: number | null;
+      /** @description Только `letter_out` — адресат исходящего письма (другой тип — 422 `recipient`) */
+      recipient?: components["schemas"]["LetterSender"] | null;
+    };
     DocumentDecision: {
       /** @description Круг маршрута (растёт после возврата) */
       round: number;
@@ -1683,6 +1704,37 @@ export interface operations {
       401: components["responses"]["Unauthorized"];
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
+    };
+  };
+  updateDocument: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        document_id: components["parameters"]["DocumentId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DocumentUpdate"];
+      };
+    };
+    responses: {
+      /** @description Документ с правками */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Document"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationFailed"];
     };
   };
   submitDocument: {

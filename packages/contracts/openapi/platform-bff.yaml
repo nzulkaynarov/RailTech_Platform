@@ -135,13 +135,6 @@ info:
     (директор читает), сброс пароля — `admin: full`; профиль доступен каждому вошедшему. Секреты из записей журнала BFF вырезает
     (значения полей `password`, `secret`, `token`, `key`, `*_key`, `credentials`, `authorization`, `pin` и им подобных -> `***` целиком, любого типа).
 
-    **0.15.0 (W13C-F1) — первый запуск: ERP раньше компании (дефект гейта C2A-G-1).** Добавляющее изменение. Порядок шагов чек-листа —
-    `erp`, `bot`, `mail`, `models`, `first_employee`: сначала подключается ERP, затем создаётся компания. Все пять шагов
-    `GET /setup/checklist` приносит CRM (`/setup/checklist`, ключи `erp`, `mail`, `first_employee`), BFF сам их не вычисляет. Шаг
-    «своя компания» спрашивает ERP только после сопряжения; почему данных о компании нет — `SetupChecklist.company_blocker`
-    (`erp_not_connected` — сначала подключите ERP, `erp_unavailable` — ERP не ответила). `POST /setup/company` без сопряжённой ERP —
-    409 `ERP_NOT_CONNECTED` (новый код) с текстом и `details.link` на карточку ERP; недоступная ERP — прежний 503 `BACKEND_UNAVAILABLE`.
-
     **0.18.0 (D1-1, волна 16) — Клиенты · Ждут ответа.** Добавляющее изменение (тег `messages`): очередь передач от бота с
     запиской (CRM-06) и SLA — `GET /crm/messages`; карточка лида, лента диалога с подгрузкой истории и вложениями через BFF —
     `GET /crm/messages/{lead}`, `/thread`, `/attachments/{message}/{index}`; действия — `take`, `reply` (ключ повтора
@@ -150,6 +143,21 @@ info:
     (раздел `crm.leads` полный). Чтение — `crm.leads` от чтения (директор), действия — полный. Новая тема подсказки потока
     `InvalidationTopic.messages`: событие CRM `lead.message_added` (новое сообщение в переписке) и события лида — экран
     перезапрашивает очередь и открытую ленту.
+
+    **0.17.0 (D1-5) — EDS · Создать документ и «Мои документы».** Добавляющее изменение, тег `eds-documents`: `GET/POST /eds/documents`
+    (мои документы или реестр «Все документы»; создать и сразу отправить), `GET/PUT /eds/documents/{id}` (карточка с маршрутом и
+    решениями; сохранить черновик), `POST /eds/document-files` и `GET /eds/document-files/{file_id}` (вложения: загрузка потоком до 25 МБ,
+    multipart BFF не разбирает), `GET /eds/deal-options` (связь с проектом). Вызовы идут в EDS с токеном доступа, полученным
+    обменом SSO-токена CRM `aud=eds` (`platform-bff.md` §3); нет прав EDS — 403 `FORBIDDEN`, `details.reason = eds_not_granted`. Ошибки EDS
+    приходят в формате `Error` с `source = eds`: текст EDS сохраняется в `message`, 422 несёт `details.fields` (список полей) и
+    `details.messages` (поле → причина). `Error.code` дополнен `PAYLOAD_TOO_LARGE` (413) и `UNSUPPORTED_MEDIA_TYPE` (415).
+
+    **0.15.0 (W13C-F1) — первый запуск: ERP раньше компании (дефект гейта C2A-G-1).** Добавляющее изменение. Порядок шагов чек-листа —
+    `erp`, `bot`, `mail`, `models`, `first_employee`: сначала подключается ERP, затем создаётся компания. Все пять шагов
+    `GET /setup/checklist` приносит CRM (`/setup/checklist`, ключи `erp`, `mail`, `first_employee`), BFF сам их не вычисляет. Шаг
+    «своя компания» спрашивает ERP только после сопряжения; почему данных о компании нет — `SetupChecklist.company_blocker`
+    (`erp_not_connected` — сначала подключите ERP, `erp_unavailable` — ERP не ответила). `POST /setup/company` без сопряжённой ERP —
+    409 `ERP_NOT_CONNECTED` (новый код) с текстом и `details.link` на карточку ERP; недоступная ERP — прежний 503 `BACKEND_UNAVAILABLE`.
 
     **0.16.0 (D1-3) — EDS · Входящие письма и резолюция директора.** Добавляющее изменение, тег `letters`: `GET /eds/letters`
     (список со статусом словами интерфейса и фильтром по статусу), `GET /eds/letters/{ref}` (карточка письма по id или по
@@ -196,6 +204,8 @@ tags:
   - name: dashboard
   - name: notifications
   - name: search
+  - name: eds-documents
+    description: EDS · Создать документ, «Мои документы» и реестр «Все документы», вложения, связь с проектом (прокси к EDS; раздел `eds.memo.create` и разделы EDS)
   - name: events
     description: Поток подсказок инвалидации (SSE) — замена опроса уведомлений, счётчиков и очереди
   - name: admin
@@ -821,6 +831,274 @@ paths:
           $ref: '#/components/responses/SessionExpired'
         '422':
           $ref: '#/components/responses/ValidationFailed'
+
+  /eds/documents:
+    get:
+      tags: [eds-documents]
+      operationId: listEdsDocuments
+      summary: 'EDS · Документы: «Мои документы» и реестр «Все документы»'
+      description: >-
+        EDS `GET /documents?mine=1` (`scope=mine`, по умолчанию) или `GET /registry` (`scope=all`). «Мои» — документы, где
+        сотрудник автор: служебные записки, заявления, отчёты, письма (черновики тоже). «Все» — реестр компании
+        (SPEC-v3 §7.3): письма, КП, служебные, заявления, отчёты; нужен раздел `eds.inbox`, `eds.projects` или `eds.payments`
+        (в EDS это право `registry.read`; решает EDS, иначе 403 `FORBIDDEN`). Договоры, счета и акты в реестре появятся, когда EDS
+        начнёт вести их проекции. Страницы — курсором (`next_cursor`), новые выше.
+      parameters:
+        - name: scope
+          in: query
+          required: false
+          schema: {type: string, enum: [mine, all], default: mine}
+        - name: kind
+          in: query
+          required: false
+          description: Вкладки по типу (повтором параметра); в «Мои» письма-входящие и КП игнорируются
+          schema:
+            type: array
+            items: {$ref: '#/components/schemas/EdsRegistryKind'}
+          style: form
+          explode: true
+        - name: status
+          in: query
+          required: false
+          description: Статусы (повтором); значения — статусы документа, письма или маршрута КП
+          schema:
+            type: array
+            items: {type: string, pattern: '^[a-z_]+$', maxLength: 32}
+          style: form
+          explode: true
+        - name: q
+          in: query
+          required: false
+          description: Поиск по номеру и теме (только `scope=all`)
+          schema: {type: string, maxLength: 200}
+        - name: cursor
+          in: query
+          required: false
+          schema: {type: string, maxLength: 2000}
+        - name: limit
+          in: query
+          required: false
+          schema: {type: integer, minimum: 1, maximum: 100, default: 50}
+      responses:
+        '200':
+          description: Страница документов
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EdsDocumentPage'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+    post:
+      tags: [eds-documents]
+      operationId: createEdsDocument
+      summary: 'EDS · Создать документ (и отправить на согласование)'
+      description: >-
+        EDS `POST /documents` и, если `submit = true`, `POST /documents/{id}/submit`. Необязательный `Idempotency-Key` уходит в EDS как есть: повтор с тем же
+        ключом и телом (ответ потерялся) возвращает прежний документ, а не создаёт второй; тот же ключ с другим телом — 409 `CONFLICT`
+        (`details.reason = idempotency_key_reused`). Раздел `eds.memo.create` (есть у всех ролей);
+        право на тип решает EDS: `memo`, `application`, `report` — `memos.create`, `letter_out` (Письмо) — `letters.register`
+        (нет права — 403 `FORBIDDEN`). Номер (`СЗ-`, `ЗЯ-`, `ОТ-ГГГГ/NNN`) присваивает EDS при создании; маршрут служебной
+        записки — директор, затем бухгалтер, если указана сумма; заявления и отчёта — директор. Письмо отправка не согласует:
+        EDS присваивает номер `ИСХ-NNN/ГГ` и переводит его в «Отправлено» (бланк, PDF и отправка адресату — волна D-DOC).
+        Если документ создан, а отправка отклонена (например, 422), ответ — ошибка, а созданный черновик назван в
+        `details.document_id`: введённое не теряется, экран продолжает с этим id через `PUT /eds/documents/{id}`.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/EdsIdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EdsDocumentIn'
+      responses:
+        '201':
+          description: Документ создан (черновик или на согласовании)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EdsDocument'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/EdsConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /eds/documents/{id}:
+    get:
+      tags: [eds-documents]
+      operationId: getEdsDocument
+      summary: 'EDS · Документ: статус, маршрут, решения, вложения'
+      description: >-
+        EDS `GET /documents/{id}` и, если документ отправлялся, `GET /approvals/{approval_id}` (шаги маршрута). Автор, участник
+        маршрута или сотрудник с правом реестра; иначе 404. `can_edit` — автор и статус `draft` или `returned`.
+      parameters:
+        - $ref: '#/components/parameters/EdsDocumentId'
+      responses:
+        '200':
+          description: Документ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EdsDocument'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+    put:
+      tags: [eds-documents]
+      operationId: updateEdsDocument
+      summary: 'EDS · Сохранить черновик (и отправить на согласование)'
+      description: >-
+        EDS `PATCH /documents/{id}` (с `eds.yaml` 0.4.0) и, если `submit = true`, `POST /documents/{id}/submit`. Только автор;
+        документ в статусе `draft` или `returned` (после возврата отправка открывает новый круг и версию), иначе 409 `CONFLICT`
+        (`details.reason = invalid_state`). Передаётся форма целиком: `amount`, `due_date`, `erp_deal_id` со значением `null`
+        очищают поле. Вложения привязываются; снять уже привязанное нельзя. Отправка отклонена — ошибка, а правки сохранены
+        (`details.saved = true`).
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/EdsDocumentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EdsDocumentUpdateIn'
+      responses:
+        '200':
+          description: Документ с правками
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EdsDocument'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/EdsConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /eds/document-files:
+    post:
+      tags: [eds-documents]
+      operationId: uploadEdsDocumentFile
+      summary: 'EDS · Загрузить вложение документа'
+      description: >-
+        EDS `POST /files` (multipart). BFF читает тело потоком до предела (25 МБ и поля формы), multipart не разбирает и
+        передаёт EDS как есть. Файл привязывается к документу при создании или сохранении (`file_ids`); пока не привязан, его видит
+        только загрузивший. Больше 25 МБ — 413 `PAYLOAD_TOO_LARGE` (`details.max_bytes`); не PDF, не изображение и не документ
+        Office — 415 `UNSUPPORTED_MEDIA_TYPE`. Раздел `eds.memo.create`.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EdsFileUpload'
+      responses:
+        '201':
+          description: Файл сохранён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EdsFile'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '413':
+          $ref: '#/components/responses/EdsPayloadTooLarge'
+        '415':
+          $ref: '#/components/responses/EdsUnsupportedMedia'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /eds/document-files/{file_id}:
+    get:
+      tags: [eds-documents]
+      operationId: downloadEdsDocumentFile
+      summary: 'EDS · Скачать вложение документа'
+      description: >-
+        EDS `GET /files/{id}`. Файл отдаётся потоком, в памяти BFF не накапливается; видит тот, кому виден документ с этим
+        вложением, или загрузивший. Имя файла — в `Content-Disposition`.
+      parameters:
+        - name: file_id
+          in: path
+          required: true
+          schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Содержимое файла
+          headers:
+            Content-Disposition:
+              description: "`attachment; filename*=UTF-8''…`"
+              schema: {type: string}
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /eds/deal-options:
+    get:
+      tags: [eds-documents]
+      operationId: listEdsDealOptions
+      summary: 'EDS · Связь с проектом: поиск заявки или проекта по номеру'
+      description: >-
+        Заявки и проекты из ERP (новейшие сделки; поиск по номеру `ЗВ-2026-104`, названию и компании, как в сквозном поиске)
+        для поля «Связь с проектом» формы документа: возвращает `erp_deal_id`, который EDS хранит в документе. Нужен раздел
+        `crm.clients` или `eds.projects` (чтение); у роли без них поле «Связь с проектом» не показывается. Без `q` — десять
+        новейших. ERP не ответила — `sources.erp = unavailable`, список пуст.
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema: {type: string, maxLength: 100}
+      responses:
+        '200':
+          description: Заявки и проекты
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EdsDealOptions'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
 
   /admin/integrations:
     get:
@@ -5226,6 +5504,18 @@ components:
       in: query
       required: false
       schema: {type: integer, minimum: 1, maximum: 100, default: 50}
+    EdsIdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      description: Ключ повтора создания (8–128 знаков, на экземпляр формы и тело запроса); EDS хранит его 24 часа
+      schema: {type: string, minLength: 8, maxLength: 128}
+    EdsDocumentId:
+      name: id
+      in: path
+      required: true
+      description: Id документа EDS (UUID); номер `СЗ-2026/031` содержит «/» и в адресе не используется
+      schema: {type: string, format: uuid}
     CsrfToken:
       name: X-CSRF-Token
       in: header
@@ -5326,6 +5616,26 @@ components:
           schema:
             $ref: '#/components/schemas/Error'
 
+    EdsConflict:
+      description: >-
+        409 `CONFLICT` — документ не в том статусе для действия (`details.reason = invalid_state`) или объект изменился
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    EdsPayloadTooLarge:
+      description: '413 `PAYLOAD_TOO_LARGE` — файл больше 25 МБ (`details.max_bytes`)'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    EdsUnsupportedMedia:
+      description: '415 `UNSUPPORTED_MEDIA_TYPE` — допустимы PDF, изображения и документы Office'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
     IntegrationConflict:
       description: >-
         409: `NOT_CONFIGURED` (коннектор или сервис не настроен), `SECRETS_KEY_MISSING` (на сервере нет ключа шифрования),
@@ -5395,7 +5705,7 @@ components:
       properties:
         code:
           type: string
-          description: Стабильный код (`INVALID_CREDENTIALS`, `SESSION_EXPIRED`, `CSRF_FAILED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_FAILED`, `TOO_MANY_REQUESTS`, `BACKEND_UNAVAILABLE`, `NO_PLATFORM_ROLE`, `USER_DISABLED`, `ACCOUNT_LOCKED`, `CONFLICT`, `WRONG_PASSWORD`, `EMAIL_EXISTS`, `LAST_ADMIN`, `LAST_DIRECTOR`, `ROLE_IN_USE`, `ROLE_SYSTEM`, `ROLES_REQUIRED`, `NOT_CONFIGURED`, `SECRETS_KEY_MISSING`, `SERVICE_NOT_SWITCHABLE`, `INTEGRATION_FAILED`, `COMPANY_NOT_SET`, `SETUP_DONE`, `SETUP_CODE_INVALID`, `SETUP_CODE_EXPIRED`, `SETUP_LOCKED`, `OWN_COMPANY_ALREADY_EXISTS`, `ERP_NOT_CONNECTED`, `INTERNAL_ERROR`, `BAD_REQUEST`, `METHOD_NOT_ALLOWED`, `HTTP_<статус>`)
+          description: Стабильный код (`INVALID_CREDENTIALS`, `SESSION_EXPIRED`, `CSRF_FAILED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_FAILED`, `TOO_MANY_REQUESTS`, `BACKEND_UNAVAILABLE`, `NO_PLATFORM_ROLE`, `USER_DISABLED`, `ACCOUNT_LOCKED`, `CONFLICT`, `WRONG_PASSWORD`, `EMAIL_EXISTS`, `LAST_ADMIN`, `LAST_DIRECTOR`, `ROLE_IN_USE`, `ROLE_SYSTEM`, `ROLES_REQUIRED`, `NOT_CONFIGURED`, `SECRETS_KEY_MISSING`, `SERVICE_NOT_SWITCHABLE`, `INTEGRATION_FAILED`, `PAYLOAD_TOO_LARGE`, `UNSUPPORTED_MEDIA_TYPE`, `COMPANY_NOT_SET`, `SETUP_DONE`, `SETUP_CODE_INVALID`, `SETUP_CODE_EXPIRED`, `SETUP_LOCKED`, `OWN_COMPANY_ALREADY_EXISTS`, `ERP_NOT_CONNECTED`, `INTERNAL_ERROR`, `BAD_REQUEST`, `METHOD_NOT_ALLOWED`, `HTTP_<статус>`)
           examples: [SESSION_EXPIRED]
         message:
           type: string
@@ -7313,6 +7623,201 @@ components:
             $ref: '#/components/schemas/SearchGroup'
         sources:
           $ref: '#/components/schemas/Sources'
+
+    EdsDocumentKind:
+      type: string
+      enum: [memo, application, report, letter_out]
+      description: Служебная записка (СЗ), заявление (ЗЯ), отчёт (ОТ), письмо (ИСХ)
+    EdsRegistryKind:
+      type: string
+      enum: [letter_in, letter_out, quote, memo, application, report]
+      description: 'Вкладки реестра «Все документы»: письма (входящие и исходящие), КП, служебные, заявления, отчёты'
+    EdsPerson:
+      type: object
+      additionalProperties: false
+      required: [crm_user_id, full_name]
+      properties:
+        crm_user_id: {type: integer}
+        full_name: {type: string}
+    EdsMoney:
+      type: object
+      additionalProperties: false
+      required: [amount, currency]
+      properties:
+        amount: {type: string, pattern: '^\d+\.\d{2}$', description: 'Деньги строкой с двумя знаками, больше нуля: `1500000.00`'}
+        currency: {type: string, pattern: '^[A-Z]{3}$', examples: [UZS]}
+    EdsRecipient:
+      type: object
+      additionalProperties: false
+      required: [name]
+      description: Адресат письма (организация) — только тип `letter_out`
+      properties:
+        name: {type: string, minLength: 1, maxLength: 255}
+        inn: {type: [string, 'null'], maxLength: 32}
+    EdsDocumentRow:
+      type: object
+      additionalProperties: false
+      required: [kind, id, number, subject, status, author, amount, due_date, created_at, openable]
+      properties:
+        kind: {$ref: '#/components/schemas/EdsRegistryKind'}
+        id: {type: string, format: uuid}
+        number: {type: [string, 'null'], description: 'Номер реестра EDS или КП ERP; `null` — письмо до отправки'}
+        subject: {type: string}
+        status:
+          type: string
+          description: >-
+            Статус словом по типу. Документ — `draft`, `on_approval`, `returned`, `rejected`, `approved`, `to_accountant`,
+            `paid`, `sent`; входящее письмо — `awaiting_resolution`, `resolved`, `returned`, `rejected`; КП (маршрут) —
+            `open`, `approved`, `returned`, `rejected`
+        author: {oneOf: [{$ref: '#/components/schemas/EdsPerson'}, {type: 'null'}], description: 'Автор документа; у письма и КП — ответственный'}
+        amount: {oneOf: [{$ref: '#/components/schemas/EdsMoney'}, {type: 'null'}], description: 'Только «Мои»; в реестре `null`'}
+        due_date: {type: [string, 'null'], format: date, description: 'Только «Мои»; в реестре `null`'}
+        created_at: {type: string, format: date-time, description: 'Создан (в реестре — зарегистрирован)'}
+        openable:
+          type: boolean
+          description: Документ (`memo`, `application`, `report`, `letter_out`) открывается в боковом окне; письма и КП — в своих разделах
+    EdsDocumentPage:
+      type: object
+      additionalProperties: false
+      required: [items, next_cursor]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/EdsDocumentRow'}
+        next_cursor: {type: [string, 'null']}
+    EdsFile:
+      type: object
+      additionalProperties: false
+      required: [id, name, content_type, size]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string, maxLength: 255}
+        content_type: {type: string}
+        size: {type: integer, minimum: 0}
+    EdsFileUpload:
+      type: object
+      required: [file]
+      properties:
+        file: {type: string, format: binary}
+    EdsRouteStep:
+      type: object
+      additionalProperties: false
+      required: [label, status, decided_by, decided_at, comment]
+      properties:
+        label: {type: string, description: '«Директор», «Бухгалтер»'}
+        status: {type: string, enum: [pending, current, approved, returned, rejected, skipped]}
+        decided_by: {oneOf: [{$ref: '#/components/schemas/EdsPerson'}, {type: 'null'}]}
+        decided_at: {type: [string, 'null'], format: date-time}
+        comment: {type: [string, 'null']}
+    EdsDecision:
+      type: object
+      additionalProperties: false
+      required: [round, step, decision, comment, by, at]
+      properties:
+        round: {type: integer, minimum: 1, description: Круг маршрута (растёт после возврата)}
+        step: {type: integer, minimum: 1}
+        decision: {type: string, enum: [approve, return, reject]}
+        comment: {type: [string, 'null']}
+        by: {$ref: '#/components/schemas/EdsPerson'}
+        at: {type: string, format: date-time}
+    EdsDealRef:
+      type: object
+      additionalProperties: false
+      required: [erp_deal_id, number]
+      properties:
+        erp_deal_id: {type: integer}
+        number: {type: [string, 'null'], description: 'Бизнес-номер заявки или проекта, если EDS его знает'}
+    EdsDocument:
+      type: object
+      additionalProperties: false
+      required:
+        [id, kind, number, status, version, subject, text, author, addressee, amount, due_date, files, deal, recipient,
+         route, decisions, can_edit, created_at, updated_at]
+      properties:
+        id: {type: string, format: uuid}
+        kind: {$ref: '#/components/schemas/EdsDocumentKind'}
+        number: {type: [string, 'null']}
+        status: {type: string, enum: [draft, on_approval, returned, rejected, approved, to_accountant, paid, sent]}
+        version: {type: integer, minimum: 1}
+        subject: {type: string}
+        text: {type: string}
+        author: {$ref: '#/components/schemas/EdsPerson'}
+        addressee: {oneOf: [{$ref: '#/components/schemas/EdsPerson'}, {type: 'null'}], description: '`null` — директор (любой, кто согласует служебные записки)'}
+        amount: {oneOf: [{$ref: '#/components/schemas/EdsMoney'}, {type: 'null'}]}
+        due_date: {type: [string, 'null'], format: date}
+        files:
+          type: array
+          items: {$ref: '#/components/schemas/EdsFile'}
+        deal: {oneOf: [{$ref: '#/components/schemas/EdsDealRef'}, {type: 'null'}], description: Связь с проектом}
+        recipient: {oneOf: [{$ref: '#/components/schemas/EdsRecipient'}, {type: 'null'}]}
+        route:
+          type: array
+          items: {$ref: '#/components/schemas/EdsRouteStep'}
+          description: Шаги маршрута текущего круга; пусто, пока документ не отправлялся
+        decisions:
+          type: array
+          items: {$ref: '#/components/schemas/EdsDecision'}
+          description: Решения всех кругов по порядку — кто, что и когда решил
+        can_edit: {type: boolean, description: 'Автор, статус `draft` или `returned`: экран открывает форму «Продолжить»'}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+    EdsDocumentIn:
+      type: object
+      additionalProperties: false
+      required: [kind, subject, text]
+      properties:
+        kind: {$ref: '#/components/schemas/EdsDocumentKind'}
+        subject: {type: string, minLength: 1, maxLength: 300}
+        text: {type: string, minLength: 1, maxLength: 20000}
+        amount: {oneOf: [{$ref: '#/components/schemas/EdsMoney'}, {type: 'null'}], description: 'Сумма: служебная записка с суммой после директора идёт бухгалтеру'}
+        due_date: {type: [string, 'null'], format: date, description: '«Нужно до» — не в прошлом'}
+        file_ids:
+          type: array
+          maxItems: 50
+          uniqueItems: true
+          items: {type: string, format: uuid}
+        erp_deal_id: {type: [integer, 'null'], description: 'Связь с проектом (`GET /eds/deal-options`)'}
+        recipient: {oneOf: [{$ref: '#/components/schemas/EdsRecipient'}, {type: 'null'}], description: 'Только `letter_out`'}
+        submit:
+          type: boolean
+          default: false
+          description: '`true` — сразу отправить (на согласование; письмо — зарегистрировать); `false` — сохранить черновик'
+    EdsDocumentUpdateIn:
+      type: object
+      additionalProperties: false
+      required: [subject, text]
+      description: Форма черновика целиком; `amount`, `due_date`, `erp_deal_id` со значением `null` очищают поле
+      properties:
+        subject: {type: string, minLength: 1, maxLength: 300}
+        text: {type: string, minLength: 1, maxLength: 20000}
+        amount: {oneOf: [{$ref: '#/components/schemas/EdsMoney'}, {type: 'null'}]}
+        due_date: {type: [string, 'null'], format: date}
+        file_ids:
+          type: array
+          maxItems: 50
+          uniqueItems: true
+          items: {type: string, format: uuid}
+        erp_deal_id: {type: [integer, 'null']}
+        recipient: {oneOf: [{$ref: '#/components/schemas/EdsRecipient'}, {type: 'null'}], description: 'Только `letter_out`'}
+        submit: {type: boolean, default: false}
+    EdsDealOption:
+      type: object
+      additionalProperties: false
+      required: [erp_deal_id, number, title, company]
+      properties:
+        erp_deal_id: {type: integer}
+        number: {type: string, examples: [ЗВ-2026-104]}
+        title: {type: string}
+        company: {type: [string, 'null']}
+    EdsDealOptions:
+      type: object
+      additionalProperties: false
+      required: [items, sources]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/EdsDealOption'}
+        sources: {$ref: '#/components/schemas/Sources'}
 
     DecimalString:
       type: string

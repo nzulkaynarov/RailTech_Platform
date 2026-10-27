@@ -21,6 +21,7 @@ from app.api import (
     crm_kb,
     crm_messages,
     dashboard,
+    eds_documents,
     eds_letters,
     events,
     health,
@@ -100,6 +101,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(admin_bot.router, prefix=API_PREFIX)
     app.include_router(crm_kb.router, prefix=API_PREFIX)
     app.include_router(crm_messages.router, prefix=API_PREFIX)
+    app.include_router(eds_documents.router, prefix=API_PREFIX)
     app.include_router(eds_letters.router, prefix=API_PREFIX)
     app.include_router(dashboard.router, prefix=API_PREFIX)
     app.include_router(notifications.router, prefix=API_PREFIX)
