@@ -146,6 +146,15 @@ def mail_row(row_id: int, status: str = "sent", **over: Any) -> dict[str, Any]:
     }
 
 
+STATE_OF_STATUS = {
+    "ok": "ok",
+    "fail": "broken",
+    "warn": "degraded",
+    "unknown": "not_checked",
+    "off": "not_configured",
+}
+
+
 def service(key: str = "telegram", status: str = "ok", **over: Any) -> dict[str, Any]:
     return {
         "key": key,
@@ -180,18 +189,66 @@ def service(key: str = "telegram", status: str = "ok", **over: Any) -> dict[str,
             "changed_by": None,
         },
         "incident": None,
+        "state": STATE_OF_STATUS[status],
+        "cause_key": f"{key}:{'ok' if status == 'ok' else 'status'}",
+        "owner": None if status in ("ok", "unknown") else "admin",
+        "action": None if status in ("ok", "unknown") else "open_settings",
+        "more_actions": [],
+        "since": None if status == "ok" else EARLIER,
+        "last_recovered_at": None,
+        "flaps_24h": 0,
         **over,
     }
 
 
-def services_out(items: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+def group(key: str = "telegram", state: str = "broken", **over: Any) -> dict[str, Any]:
+    """Строка-группа CRM: одна причина — один сервис (или несколько через `service_keys`)."""
+    return {
+        "id": f"{key}:status",
+        "state": state,
+        "owner": "admin",
+        "action": "open_settings",
+        "more_actions": ["recheck"],
+        "headline": "Проверка не прошла",
+        "detail": "Проверьте токен бота",
+        "affected": [],
+        "service_keys": [key],
+        "titles": [key],
+        "since": EARLIER,
+        "technical": ["timeout"],
+        "message": None,
+        "flaps_24h": 0,
+        **over,
+    }
+
+
+def services_out(
+    items: list[dict[str, Any]] | None = None,
+    groups: list[dict[str, Any]] | None = None,
+    *,
+    stand: bool = False,
+) -> dict[str, Any]:
     rows = items if items is not None else [service("telegram"), service("mail")]
     summary = dict.fromkeys(("ok", "warn", "fail", "unknown", "off", "disabled"), 0)
     for row in rows:
         summary[row["status"]] += 1
         if row["switch"] and row["switch"]["disabled"]:
             summary["disabled"] += 1
-    return {"checked_at": NOW, "summary": summary, "services": rows}
+    derived = [
+        group(row["key"], row["state"], id=row["cause_key"])
+        for row in rows
+        if row["state"] != "ok"
+        and row["state"] != "not_checked"
+        and row["state"] != "disabled"
+        and row["status"] != "off"
+    ]
+    return {
+        "checked_at": NOW,
+        "summary": summary,
+        "services": rows,
+        "stand": stand,
+        "groups": derived if groups is None else groups,
+    }
 
 
 def service_detail(**over: Any) -> dict[str, Any]:
@@ -252,6 +309,7 @@ def system_status(status: str = "ok", **over: Any) -> dict[str, Any]:
                 "status": "ok",
                 "reason": "отвечает",
                 "checked_at": NOW,
+                "expected_on_stand": False,
             },
             {
                 "key": "bot",
@@ -259,6 +317,7 @@ def system_status(status: str = "ok", **over: Any) -> dict[str, Any]:
                 "status": "ok" if status == "ok" else "fail",
                 "reason": "работает" if status == "ok" else "процесс не отвечает",
                 "checked_at": NOW,
+                "expected_on_stand": False,
             },
         ],
         **over,
@@ -474,6 +533,18 @@ class CrmIntegrationsFake:
                 return ok(row)
             if m == "POST" and action == "enable":
                 return ok(service(key))
+        if m == "PUT" and re.fullmatch(r"models/providers/[a-z]+/key", p):
+            provider = p.split("/")[2]
+            return ok(
+                {
+                    "provider": provider,
+                    "roles": [
+                        {**_model_change(a), "provider": provider, "key_source": "crm"}
+                        for a in ("dialog-model", "qualifier-model")
+                    ],
+                    "checked": True,
+                }
+            )
         if p.startswith("models/"):
             alias, _, action = p.removeprefix("models/").partition("/")
             if m == "PUT" and not action:

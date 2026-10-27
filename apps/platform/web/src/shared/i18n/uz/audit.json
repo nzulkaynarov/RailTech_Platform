@@ -249,7 +249,8 @@
     "model": {
       "test": "AI modelini tekshirdi",
       "update": "AI modelini almashtirdi",
-      "reset": "AI modelini standartga qaytardi"
+      "reset": "AI modelini standartga qaytardi",
+      "provider_key": "AI provayderi kalitini almashtirdi"
     },
     "reply_template": {
       "create": "Javob shablonini yaratdi",
@@ -289,6 +290,7 @@
     "service_request": "Xizmat so'rovi",
     "system": "Tizim",
     "model": "AI modeli",
+    "provider": "AI provayderi",
     "deal": "Bitim",
     "reply_template": "Javob shabloni",
     "sandbox": "Bot sandboxi",

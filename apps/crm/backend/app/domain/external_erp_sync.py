@@ -34,6 +34,7 @@ def erp_sync(f: ErpSyncFacts) -> CheckResult:
             error=f.last_error,
             hint=_hint(f),
             metrics=metrics,
+            cause="erp_not_connected" if not f.configured else "erp_sync_failed",
         )
     if not f.configured and not f.with_access:
         return CheckResult(
@@ -42,6 +43,7 @@ def erp_sync(f: ErpSyncFacts) -> CheckResult:
             "ERP не подключена — выдавать доступ к ней пока некому",
             hint=f"Подключите ERP: {ERP_TAB}",
             metrics=metrics,
+            cause="erp_not_connected",
         )
     if not f.with_access:
         return CheckResult(KEY, "ok", "Доступ к ERP пока никому не выдан", metrics=metrics)

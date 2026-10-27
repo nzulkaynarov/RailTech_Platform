@@ -46,6 +46,13 @@ class SetupFacts:
     erp_connected: bool
     mail_configured: bool
     colleague_exists: bool
+    # Монитор моделей ни разу не проверял роли (O-4): «Готово» нельзя — «Не проверено».
+    models_checked: bool = True
+
+
+def unchecked_keys(facts: SetupFacts) -> frozenset[str]:
+    """Шаги, о которых нет данных: проверка не выполнялась — интерфейс пишет «Не проверено»."""
+    return frozenset() if facts.models_checked else frozenset({"models"})
 
 
 def checklist(facts: SetupFacts) -> list[tuple[str, bool]]:
@@ -72,16 +79,25 @@ async def saved_settings(session: AsyncSession) -> set[str]:
 def health_facts(components: Sequence[Component]) -> tuple[bool, bool]:
     """(модели готовы, бот работает) — по компонентам «Состояния системы».
 
-    Модели готовы: шлюз доступен и ни одна модель не в сбое по монитору (или «Проверить»).
+    Модели готовы: шлюз доступен и монитор проверил роли (или «Проверить»), и ни одна не в сбое.
+    Пока монитор не проверял ни одной роли, модели не «готовы» (O-4) — см. `models_checked`.
     """
     by_key = {c.key: c for c in components}
     gateway = by_key.get("litellm")
     models = [c for c in components if c.key.startswith("model:")]
     models_ok = (
-        gateway is not None and gateway.status == "ok" and all(c.status != "fail" for c in models)
+        gateway is not None
+        and gateway.status == "ok"
+        and bool(models)
+        and all(c.status != "fail" for c in models)
     )
     bot = by_key.get("bot")
     return models_ok, bot is not None and bot.status == "ok"
+
+
+def models_checked(components: Sequence[Component]) -> bool:
+    """Монитор хотя бы раз проверил роли моделей (есть `model:*`), а не только «ещё не проверял»."""
+    return any(c.key.startswith("model:") for c in components)
 
 
 async def kb_indexed(session: AsyncSession) -> bool:

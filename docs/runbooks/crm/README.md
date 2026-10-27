@@ -15,6 +15,7 @@
 | [backup-restore.md](backup-restore.md) | Бэкапы, восстановление, проверка на dev |
 | [key-rotation.md](key-rotation.md) | Ротация ключей и секретов |
 | [promote-to-prod.md](promote-to-prod.md) | Чек-лист переезда на prod и пилот |
+| [integration-health.md](integration-health.md) | «Сломано» в Подключениях, оповещение, самовосстановление |
 
 
 ## Шаблон

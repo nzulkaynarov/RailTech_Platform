@@ -36,6 +36,14 @@ function service(overrides: Partial<ExternalServiceOut> = {}): ExternalServiceOu
     p95_ms_24h: 150,
     switch: null,
     incident: null,
+    state: "ok",
+    cause_key: "x:ok",
+    owner: null,
+    action: null,
+    more_actions: [],
+    since: null,
+    last_recovered_at: null,
+    flaps_24h: 0,
     ...overrides,
   };
 }

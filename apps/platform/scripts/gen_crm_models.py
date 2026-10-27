@@ -52,6 +52,7 @@ ROOTS = (
     "ExternalServiceOut",
     "ModelStatus",
     "ModelChangeResult",
+    "ProviderKeyResult",
     "ModelTestResult",
     "SpendReport",
     "AiSpendReport",

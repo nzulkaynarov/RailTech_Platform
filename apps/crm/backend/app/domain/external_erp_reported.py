@@ -15,10 +15,12 @@ from typing import Final
 
 from app.domain.external_registry import ERP_REPORTED_REASON, ERP_SERVICE_PREFIX, Status
 from app.domain.external_status import CheckResult, Metric
-from app.domain.system_status import ErpExternal, ErpFacts
+from app.domain.system_status import ErpExternal, ErpFacts, hosting_hint
 
 ERP_TAB: Final = "«Подключения» → «ERP»"
-SERVER_HINT: Final = "Настройка сервиса — в окружении ERP: обратитесь к администратору сервера"
+SERVER_HINT: Final = hosting_hint(
+    "Сервис не настроен в окружении ERP", "Задать настройки этого сервиса в окружении ERP"
+)
 _STATUS: Final[dict[str, Status]] = {
     "ok": "ok",
     "degraded": "warn",
@@ -95,6 +97,7 @@ def erp_external(key: str, erp: ErpFacts) -> CheckResult:
             "off",
             "ERP не подключена — состояние её внешних сервисов не собирается",
             hint=f"Подключите ERP: {ERP_TAB}",
+            cause="erp_not_connected",
         )
     if erp.error is not None:
         return CheckResult(
@@ -129,7 +132,10 @@ def _result(key: str, code: str, item: ErpExternal) -> CheckResult:
             else text["off_unconfigured"]
         )
         hint = None if not item.enabled else SERVER_HINT
-        return CheckResult(key, "off", summary, hint=hint, metrics=metrics)
+        cause = (
+            "intentional"  # выключен из CRM или необязателен в ERP — в «Требует внимания» не нужен
+        )
+        return CheckResult(key, "off", summary, hint=hint, metrics=metrics, cause=cause)
     if status == "ok":
         return CheckResult(key, "ok", text["ok"], metrics=metrics)
     if status == "unknown":
@@ -146,5 +152,11 @@ def _result(key: str, code: str, item: ErpExternal) -> CheckResult:
     else:
         summary = "Давно не было успешной операции — проверьте плановые задачи ERP"
     return CheckResult(
-        key, status, summary, error=item.last_error, hint=text["hint"], metrics=metrics
+        key,
+        status,
+        summary,
+        error=item.last_error,
+        hint=text["hint"],
+        metrics=metrics,
+        cause="erp_external",
     )

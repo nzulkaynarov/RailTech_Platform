@@ -4,6 +4,7 @@ HTTP — respx (Telegram, LiteLLM, docling, S3, Langfuse), SMTP — подста
 записанные строки, TLS — подставная проба. Платных вызовов и сети нет.
 """
 
+import re
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -142,6 +143,7 @@ def deps(**overrides: Any) -> Deps:
         "catalog": FakeCatalog(),
         "erp_url": erp_url,
         "tls_probe": tls,
+        "retry_delay_s": 0.0,
     }
     base.update(overrides)
     return Deps(**base)
@@ -194,6 +196,38 @@ async def test_cheap_pass_over_http_services() -> None:
     assert found["docling"].status == "fail"
     assert found["langfuse"].status == "off"
     assert found["erp.sentry"].status == "unknown"
+
+
+@respx.mock
+async def test_one_slow_answer_does_not_fail_the_check() -> None:
+    """Каждый 5–6-й запрос медленный: повтор внутри проверки до признания fail."""
+    route = respx.get("http://docling.invalid:5001/health").mock(
+        side_effect=[httpx.ConnectTimeout("slow"), httpx.Response(200, json={"status": "ok"})]
+    )
+    found = await collect(deps(), ["docling"])
+    assert found["docling"].status == "ok"
+    assert route.call_count == 2
+
+
+@respx.mock
+async def test_two_failed_attempts_are_a_fail_and_a_wrong_token_is_not_retried() -> None:
+    route = respx.get("http://docling.invalid:5001/health").mock(
+        side_effect=httpx.ConnectTimeout("slow")
+    )
+    assert (await collect(deps(), ["docling"]))["docling"].status == "fail"
+    assert route.call_count == 2
+    me = respx.get(re.compile(r".*/getMe")).mock(return_value=httpx.Response(401, json={}))
+    respx.get(re.compile(r".*/getWebhookInfo")).mock(return_value=httpx.Response(200, json={}))
+    found = await collect(deps(), ["telegram"])
+    assert found["telegram"].cause == "token_rejected"
+    assert me.call_count == 1  # причина не транзиентная — повтора нет
+
+
+def test_probe_timeouts_are_not_short() -> None:
+    from app.services.external_services import collector
+
+    assert collector.HTTP_TIMEOUT_S >= 10
+    assert collector.PROBE_TIMEOUT_S >= 2 * collector.HTTP_TIMEOUT_S
 
 
 async def test_docling_without_url_is_off_not_a_failure() -> None:

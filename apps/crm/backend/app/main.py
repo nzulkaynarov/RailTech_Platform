@@ -94,9 +94,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app = FastAPI(
         title="RailTech CRM API",
-        # 0.5.0 (W13C-F1): ключи erp, mail, first_employee в чек-листе; 0.6.0 (D1-1): записка
-        # передачи в /inbox, client_message_id ответа и reply_in_progress, вложение сообщения.
-        version="0.6.0",
+        # 0.6.0 (W15-H3): состояние, причина и «кто исправляет» у внешних сервисов; 0.5.0 — W13C-F1.
+        # 0.7.0 (D1-1): записка передачи в /inbox, client_message_id ответа, reply_in_progress,
+        # delivery_unknown/unconfirmed, вложение сообщения.
+        version="0.7.0",
         lifespan=lifespan,
         # operationId = имя функции роута → читаемые имена в клиенте orval.
         generate_unique_id_function=lambda route: route.name,

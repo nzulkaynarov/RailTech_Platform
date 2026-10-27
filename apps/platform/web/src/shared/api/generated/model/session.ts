@@ -133,7 +133,7 @@
  * (директор читает), сброс пароля — `admin: full`; профиль доступен каждому вошедшему. Секреты из записей журнала BFF вырезает
  * (значения полей `password`, `secret`, `token`, `key`, `*_key`, `credentials`, `authorization`, `pin` и им подобных -> `***` целиком, любого типа).
  *
- * **0.18.0 (D1-1, волна 16) — Клиенты · Ждут ответа.** Добавляющее изменение (тег `messages`): очередь передач от бота с
+ * **0.20.0 (D1-1, волна 16) — Клиенты · Ждут ответа.** Добавляющее изменение (тег `messages`): очередь передач от бота с
  * запиской (CRM-06) и SLA — `GET /crm/messages`; карточка лида, лента диалога с подгрузкой истории и вложениями через BFF —
  * `GET /crm/messages/{lead}`, `/thread`, `/attachments/{message}/{index}`; действия — `take`, `reply` (ключ повтора
  * `client_message_id`: «Повторить» не дублирует сообщение; Telegram не ответил — 502 `INTEGRATION_FAILED`, `delivery_failed`),
@@ -156,6 +156,15 @@
  * «своя компания» спрашивает ERP только после сопряжения; почему данных о компании нет — `SetupChecklist.company_blocker`
  * (`erp_not_connected` — сначала подключите ERP, `erp_unavailable` — ERP не ответила). `POST /setup/company` без сопряжённой ERP —
  * 409 `ERP_NOT_CONNECTED` (новый код) с текстом и `details.link` на карточку ERP; недоступная ERP — прежний 503 `BACKEND_UNAVAILABLE`.
+ *
+ * **0.17.0 (W15-H3) — здоровье интеграций: одна причина, одна строка, одно действие.** Добавляющее изменение. `GET
+ * /admin/integrations` и `GET /admin/integrations/services` отдают группы по причине (`ServiceGroup`: состояние `ServiceState`
+ * — «Сломано» только после 15 минут непрерывного сбоя, «Нестабильно» для дребезга, «Ожидаемо на стенде», «Не проверено»;
+ * «кто исправляет» `ServiceOwner`, действия `ServiceAction`, «с …», `flaps_24h`, готовый текст `message`, замаскированный
+ * `technical`), у сервисов — `state`, `cause_key`, `owner`, `action`, `since`, `flaps_24h`, `last_recovered_at`, у
+ * `AttentionItem` — `group` и `technical`, у компонентов состояния — `expected_on_stand`. Новый `PUT
+ * /admin/integrations/models/providers/{provider}/key` — ключ провайдера на все его роли одной операцией (один пароль, без
+ * частичного применения).
  *
  * **0.16.0 (D1-3) — EDS · Входящие письма и резолюция директора.** Добавляющее изменение, тег `letters`: `GET /eds/letters`
  * (список со статусом словами интерфейса и фильтром по статусу), `GET /eds/letters/{ref}` (карточка письма по id или по
@@ -186,7 +195,7 @@
  * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.18.0
+ * OpenAPI spec version: 0.20.0
  */
 import type { Me } from "./me";
 

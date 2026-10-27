@@ -78,6 +78,15 @@ class ModelChangeIn(BaseModel):
     password: SecretStr = Field(min_length=1, max_length=256)
 
 
+class ProviderKeyIn(BaseModel):
+    """Новый ключ провайдера для всех его ролей разом (W15-H3): модели ролей не меняются."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    api_key: SecretStr = Field(min_length=8, max_length=512)
+    password: SecretStr = Field(min_length=1, max_length=256)
+
+
 class ModelResetIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -91,3 +100,9 @@ class ModelChangeResult(BaseModel):
     key_source: Literal["crm", "env"]
     reindex_required: bool
     quality_check_recommended: bool
+
+
+class ProviderKeyResult(BaseModel):
+    provider: str
+    roles: list[ModelChangeResult]
+    checked: bool = Field(description="Провайдер сразу проверен после смены ключа")

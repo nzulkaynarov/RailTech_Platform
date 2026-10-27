@@ -198,7 +198,9 @@ def _crm_item_done(checklist: crm.SetupChecklist | None, key: str) -> bool | Non
     if checklist is None:
         return None
     item = next((i for i in checklist.items if i.key.value == key), None)
-    return None if item is None else item.done
+    if item is None or item.unchecked:
+        return None  # проверка не выполнялась (O-4): не «Готово» и не «Не сделано»
+    return item.done
 
 
 async def build_checklist(call: Call) -> SetupChecklist:
