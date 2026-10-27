@@ -174,7 +174,7 @@ SPA  POST /api/v1/setup/admin {code, name, email, password}
   (2) логи `platform-bff`: `POST /bus/v1/events` — 200 (401 — не совпал секрет пары `RT_BUS_SECRET_<ИЗДАТЕЛЬ>_PLATFORM_BFF`
   у издателя и BFF; 503 — Redis); (3) журнал издателя (`rt_bus_delivered`, DLQ) — доставка до BFF; (4) опрос работает
   всегда: при обрыве потока данные догоняются за 30 с.
-- **Тема `messages` (D1-1, BFF 0.16.0) — «Клиенты · Ждут ответа» без опроса.** CRM публикует
+- **Тема `messages` (D1-1, BFF 0.18.0) — «Клиенты · Ждут ответа» без опроса.** CRM публикует
   `uz.railtech.crm.lead.message_added.v1` на каждое сообщение переписки (входящее и исходящее; сигнал без текста, outbox в той же
   транзакции, что и строка сообщения) и `lead.updated` с `changed_fields = ["handoff"]` на новую передачу от бота. Темы: ERP —
   `notifications`, `counters`, `queue`, `activity`; события лида — `counters`, `queue`, `activity`, `messages`;
@@ -249,7 +249,7 @@ credential, authorization, passphrase, passcode, cookie, bearer, signature, hmac
 (4) `GET/PATCH /me/notification-settings` и `POST /me/test-notification` — личные уведомления бота (CRM `/me`): доступны каждому
 вошедшему, это его собственные настройки; идентификатор Telegram наружу не отдаётся (только «привязан»).
 
-**D1-1 (BFF 0.16.0): Клиенты · Ждут ответа.** `/crm/messages*` — прокси к CRM с токеном сотрудника: очередь (`/inbox` с
+**D1-1 (BFF 0.18.0): Клиенты · Ждут ответа.** `/crm/messages*` — прокси к CRM с токеном сотрудника: очередь (`/inbox` с
 запиской передачи CRM-06), карточка лида, лента (`/leads/{id}/messages` с `before_id`, заметки, имена `/team`), вложение потоком
 (`Content-Disposition: attachment`, `nosniff`, ключ хранилища наружу не уходит), «Забрать», ответ «От себя» с ключом повтора
 `client_message_id`: CRM занимает ключ до отправки (строка `meta.delivery = sending` под advisory-блокировкой на лид и

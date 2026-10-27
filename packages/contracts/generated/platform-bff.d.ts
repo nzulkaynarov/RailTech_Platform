@@ -3857,7 +3857,7 @@ export interface components {
       active_role?: components["schemas"]["RoleId"] | null;
     };
     /**
-     * @description Что перезапросить: `notifications` — `listNotifications`; `counters` — `getMenuCounters`; `queue` — `getQueue` и `getQueueCards`; `activity` — `getActivityToday`; `messages` (0.16.0) — `listCrmMessages` и открытая лента `getCrmThread` / `getCrmConversation`.
+     * @description Что перезапросить: `notifications` — `listNotifications`; `counters` — `getMenuCounters`; `queue` — `getQueue` и `getQueueCards`; `activity` — `getActivityToday`; `messages` (0.18.0) — `listCrmMessages` и открытая лента `getCrmThread` / `getCrmConversation`.
      * @enum {string}
      */
     InvalidationTopic: "notifications" | "counters" | "queue" | "activity" | "messages";

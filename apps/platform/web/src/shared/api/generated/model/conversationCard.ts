@@ -140,7 +140,7 @@
  * (`erp_not_connected` — сначала подключите ERP, `erp_unavailable` — ERP не ответила). `POST /setup/company` без сопряжённой ERP —
  * 409 `ERP_NOT_CONNECTED` (новый код) с текстом и `details.link` на карточку ERP; недоступная ERP — прежний 503 `BACKEND_UNAVAILABLE`.
  *
- * **0.16.0 (D1-1, волна 16) — Клиенты · Ждут ответа.** Добавляющее изменение (тег `messages`): очередь передач от бота с
+ * **0.18.0 (D1-1, волна 16) — Клиенты · Ждут ответа.** Добавляющее изменение (тег `messages`): очередь передач от бота с
  * запиской (CRM-06) и SLA — `GET /crm/messages`; карточка лида, лента диалога с подгрузкой истории и вложениями через BFF —
  * `GET /crm/messages/{lead}`, `/thread`, `/attachments/{message}/{index}`; действия — `take`, `reply` (ключ повтора
  * `client_message_id`: «Повторить» не дублирует сообщение; Telegram не ответил — 502 `INTEGRATION_FAILED`, `delivery_failed`),
@@ -178,7 +178,7 @@
  * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.16.0
+ * OpenAPI spec version: 0.18.0
  */
 import type { ConversationContacts } from "./conversationContacts";
 import type { HandoffFacts } from "./handoffFacts";

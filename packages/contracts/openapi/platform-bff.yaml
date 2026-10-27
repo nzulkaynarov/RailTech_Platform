@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.16.0
+  version: 0.18.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -142,7 +142,7 @@ info:
     (`erp_not_connected` — сначала подключите ERP, `erp_unavailable` — ERP не ответила). `POST /setup/company` без сопряжённой ERP —
     409 `ERP_NOT_CONNECTED` (новый код) с текстом и `details.link` на карточку ERP; недоступная ERP — прежний 503 `BACKEND_UNAVAILABLE`.
 
-    **0.16.0 (D1-1, волна 16) — Клиенты · Ждут ответа.** Добавляющее изменение (тег `messages`): очередь передач от бота с
+    **0.18.0 (D1-1, волна 16) — Клиенты · Ждут ответа.** Добавляющее изменение (тег `messages`): очередь передач от бота с
     запиской (CRM-06) и SLA — `GET /crm/messages`; карточка лида, лента диалога с подгрузкой истории и вложениями через BFF —
     `GET /crm/messages/{lead}`, `/thread`, `/attachments/{message}/{index}`; действия — `take`, `reply` (ключ повтора
     `client_message_id`: «Повторить» не дублирует сообщение; Telegram не ответил — 502 `INTEGRATION_FAILED`, `delivery_failed`),
@@ -7031,7 +7031,7 @@ components:
       enum: [notifications, counters, queue, activity, messages]
       description: >-
         Что перезапросить: `notifications` — `listNotifications`; `counters` — `getMenuCounters`; `queue` — `getQueue`
-        и `getQueueCards`; `activity` — `getActivityToday`; `messages` (0.16.0) — `listCrmMessages` и открытая лента
+        и `getQueueCards`; `activity` — `getActivityToday`; `messages` (0.18.0) — `listCrmMessages` и открытая лента
         `getCrmThread` / `getCrmConversation`.
 
     InvalidationHint:
@@ -9356,7 +9356,7 @@ components:
             `ok` — справочник сотрудников прочитан; `forbidden` — роли сотрудника не дают чтения справочника CRM (кандидатов
             нет); `unavailable` — CRM не ответила
 
-    # --- Клиенты · Ждут ответа (D1-1, 0.16.0) -----------------------------------------------------------------------
+    # --- Клиенты · Ждут ответа (D1-1, 0.18.0) -----------------------------------------------------------------------
 
     LeadOwnerMode:
       type: string
