@@ -240,53 +240,62 @@ test.describe("Центр уведомлений", () => {
   });
 });
 
-test("центр уведомлений на 390: список, переход к объекту, axe", async ({ page, isMobile }) => {
-  test.skip(!isMobile, "узкий экран — проект mobile");
-  await loginAndWait(page, "director@demo.example");
-  await page.getByRole("button", { name: "Центр уведомлений, 3 новых" }).click();
-  const center = page.getByRole("dialog", { name: "Центр уведомлений" });
-  await expect(center.getByText("КП-2026/118 ждёт вашего согласования")).toBeVisible();
-  // окно целиком внутри экрана: ни заголовок, ни вкладки, ни «Отметить все прочитанными» не обрезаны
-  const viewport = page.viewportSize();
-  const box = await center.boundingBox();
-  expect(box).not.toBeNull();
-  expect(box?.x ?? -1).toBeGreaterThanOrEqual(0);
-  expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(viewport?.width ?? 0);
-  const footer = await center
-    .getByRole("button", { name: "Отметить все прочитанными" })
-    .boundingBox();
-  expect(footer?.x ?? -1).toBeGreaterThanOrEqual(0);
-  await settledScreenshot(page, "dashboard-notifications");
-  await expectNoViolations(page, "notifications popover 390");
+// @mobile: проект mobile (Pixel 7, 390) гоняет только сценарии с этим тегом — экраны с адаптивной логикой.
+test(
+  "центр уведомлений на 390: список, переход к объекту, axe",
+  { tag: "@mobile" },
+  async ({ page, isMobile }) => {
+    test.skip(!isMobile, "узкий экран — проект mobile");
+    await loginAndWait(page, "director@demo.example");
+    await page.getByRole("button", { name: "Центр уведомлений, 3 новых" }).click();
+    const center = page.getByRole("dialog", { name: "Центр уведомлений" });
+    await expect(center.getByText("КП-2026/118 ждёт вашего согласования")).toBeVisible();
+    // окно целиком внутри экрана: ни заголовок, ни вкладки, ни «Отметить все прочитанными» не обрезаны
+    const viewport = page.viewportSize();
+    const box = await center.boundingBox();
+    expect(box).not.toBeNull();
+    expect(box?.x ?? -1).toBeGreaterThanOrEqual(0);
+    expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(viewport?.width ?? 0);
+    const footer = await center
+      .getByRole("button", { name: "Отметить все прочитанными" })
+      .boundingBox();
+    expect(footer?.x ?? -1).toBeGreaterThanOrEqual(0);
+    await settledScreenshot(page, "dashboard-notifications");
+    await expectNoViolations(page, "notifications popover 390");
 
-  await center.getByRole("link", { name: /КП-2026\/118 ждёт вашего согласования/ }).click();
-  await expect(page).toHaveURL(/\/eds\/drafts\/%D0%9A%D0%9F-2026%2F118\?panel=open&tab=approve$/);
-  await expect(page.getByRole("tab", { name: "Одобрение", selected: true })).toBeVisible();
-});
+    await center.getByRole("link", { name: /КП-2026\/118 ждёт вашего согласования/ }).click();
+    await expect(page).toHaveURL(/\/eds\/drafts\/%D0%9A%D0%9F-2026%2F118\?panel=open&tab=approve$/);
+    await expect(page.getByRole("tab", { name: "Одобрение", selected: true })).toBeVisible();
+  },
+);
 
 test.describe("Поиск ⌘K", () => {
-  test("находит сделку по номеру и открывает её", async ({ page, isMobile }) => {
-    await loginAndWait(page, "manager@demo.example");
-    const search = page.getByRole("combobox", { name: "Глобальный поиск" });
-    if (isMobile) await search.click();
-    else await page.keyboard.press("Control+k");
-    await expect(search).toBeFocused();
+  test(
+    "находит сделку по номеру и открывает её",
+    { tag: "@mobile" },
+    async ({ page, isMobile }) => {
+      await loginAndWait(page, "manager@demo.example");
+      const search = page.getByRole("combobox", { name: "Глобальный поиск" });
+      if (isMobile) await search.click();
+      else await page.keyboard.press("Control+k");
+      await expect(search).toBeFocused();
 
-    await search.fill("ЗВ-2026-104");
+      await search.fill("ЗВ-2026-104");
 
-    const option = page.getByRole("option", { name: /ЗВ-2026-104 · Стрелочные приводы/ });
-    await expect(option).toBeVisible();
-    await expect(page.getByRole("group", { name: "CRM" })).toBeVisible();
-    await settledScreenshot(page, "dashboard-search");
-    await expectNoViolations(page, "search results");
+      const option = page.getByRole("option", { name: /ЗВ-2026-104 · Стрелочные приводы/ });
+      await expect(option).toBeVisible();
+      await expect(page.getByRole("group", { name: "CRM" })).toBeVisible();
+      await settledScreenshot(page, "dashboard-search");
+      await expectNoViolations(page, "search results");
 
-    await search.press("ArrowDown");
-    await search.press("Enter");
-    await expect(page).toHaveURL(
-      /\/crm\/requests\?request=%D0%97%D0%92-2026-104&panel=open&tab=card$/,
-    );
-    await expect(page.getByRole("heading", { level: 1, name: "Все заявки" })).toBeVisible();
-  });
+      await search.press("ArrowDown");
+      await search.press("Enter");
+      await expect(page).toHaveURL(
+        /\/crm\/requests\?request=%D0%97%D0%92-2026-104&panel=open&tab=card$/,
+      );
+      await expect(page.getByRole("heading", { level: 1, name: "Все заявки" })).toBeVisible();
+    },
+  );
 
   test("группы по модулям и пустой результат", async ({ page, isMobile }) => {
     test.skip(isMobile, "достаточно десктопа");
