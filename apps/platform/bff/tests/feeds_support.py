@@ -43,6 +43,9 @@ class FeedBackends:
         self.m = moments
         self.state: dict[str, Any] = {
             "inbox": {"escalations": [], "mine": [], "unassigned": []},
+            "covering": [],
+            # on_behalf_of -> очередь замещаемого; значение-кортеж (код, тело) — отказ CRM
+            "covered_inbox": {},
             "leads": {"items": [], "total": 0},
             "lead": (404, {"code": "not_found", "message": "x", "details": {}}),
             "clients": [],
@@ -58,7 +61,8 @@ class FeedBackends:
         self.erp_down: Exception | int | None = None
         self.crm_down: Exception | int | None = None
         self.crm = {
-            "inbox": self._crm("inbox", router.get(f"{CRM_URL}/api/v1/inbox")),
+            "inbox": router.get(f"{CRM_URL}/api/v1/inbox").mock(side_effect=self._inbox),
+            "covering": self._crm("covering", router.get(f"{CRM_URL}/api/v1/me/covering")),
             "leads": self._crm("leads", router.get(f"{CRM_URL}/api/v1/leads")),
             "clients": self._crm("clients", router.get(f"{CRM_URL}/api/v1/clients")),
         }
@@ -94,6 +98,18 @@ class FeedBackends:
         if isinstance(value, tuple):
             status, body = value
             return httpx.Response(status, json=body)
+        return httpx.Response(200, json=value)
+
+    def _inbox(self, request: httpx.Request) -> httpx.Response:
+        """Своя очередь или (с `on_behalf_of`) очередь замещаемого."""
+        behalf = request.url.params.get("on_behalf_of")
+        if behalf is None:
+            return self._respond("inbox", self.crm_down)
+        value = self.state["covered_inbox"].get(int(behalf))
+        if value is None:
+            return httpx.Response(403, json={"code": "forbidden", "message": "x", "details": {}})
+        if isinstance(value, tuple):
+            return httpx.Response(value[0], json=value[1])
         return httpx.Response(200, json=value)
 
     def _respond_status(self, status: int) -> httpx.Response:

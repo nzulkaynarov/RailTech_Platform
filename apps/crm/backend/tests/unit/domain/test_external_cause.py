@@ -241,9 +241,9 @@ def test_provider_side_failure_has_no_message_for_the_owner() -> None:
 
 
 @pytest.mark.parametrize(
-    ("failures", "minutes"), [(0, 1), (1, 1), (2, 2), (3, 5), (4, 15), (5, 15), (40, 15)]
+    ("failures", "minutes"), [(0, 1), (1, 1), (2, 2), (3, 5), (4, 7), (5, 7), (40, 7)]
 )
-def test_recheck_interval_decays_then_holds_at_fifteen(failures: int, minutes: int) -> None:
+def test_recheck_interval_decays_then_holds_at_seven(failures: int, minutes: int) -> None:
     assert cause.recheck_interval(failures) == timedelta(minutes=minutes)
 
 
@@ -252,9 +252,9 @@ def test_recheck_due_follows_the_schedule_with_a_clock_substitute() -> None:
     # третий сбой подряд -> следующая проверка через 5 минут
     assert not cause.recheck_due(3, last, last + timedelta(minutes=4))
     assert cause.recheck_due(3, last, last + timedelta(minutes=5))
-    # четвёртый и дальше -> раз в 15 минут
-    assert not cause.recheck_due(9, last, last + timedelta(minutes=14))
-    assert cause.recheck_due(9, last, last + timedelta(minutes=15))
+    # четвёртый и дальше -> раз в 7 минут: проверка точно на 15-й минуте полосы (0, 1, 3, 8, 15)
+    assert not cause.recheck_due(9, last, last + timedelta(minutes=6))
+    assert cause.recheck_due(9, last, last + timedelta(minutes=7))
     # допуск на дрожание расписания
     assert cause.recheck_due(2, last, last + timedelta(minutes=2) - timedelta(seconds=5))
 
@@ -492,3 +492,129 @@ def test_alert_text_carries_the_flap_count() -> None:
     group = cause.build_groups([_fail_diag(timedelta(minutes=20), flaps_24h=5)])[0]
     plain = cause.broken_alert(group, group.since or NOW, NOW, "UTC").plain
     assert "5-й провал" in plain
+
+
+# --- сводка после подавления, блип при восстановлении, «15 минут» по проверкам (W15-H3b) ----------
+
+
+def test_the_schedule_checks_the_fail_on_the_fifteenth_minute_not_earlier() -> None:
+    """Сбой с 0-й минуты: проверки на 0, 1, 3, 8, 15; четыре провала за 8 минут — не «Сломано»."""
+    at_minute = 0
+    checks = [0]
+    for failures in range(1, 8):
+        at_minute += int(cause.recheck_interval(failures).total_seconds() // 60)
+        checks.append(at_minute)
+        if at_minute >= 15:
+            break
+    assert checks == [0, 1, 3, 8, 15]
+    assert checks[3] - checks[0] < 15  # четыре провала за 8 минут
+    assert checks[4] - checks[0] >= 15  # пятая проверка — ровно 15-я минута
+
+
+def test_suppressed_cause_is_announced_once_after_the_day_with_the_repeats() -> None:
+    group = _broken_group(since=NOW - timedelta(minutes=40))
+    row = OpenCause(group.id, NOW - timedelta(minutes=40), None, ("docling",), suppressed_at=NOW)
+    # сутки с прошлого «Сломано» ещё не прошли — подавлено, повторно не оценивается
+    assert (
+        cause.plan_alerts(
+            [group], {group.id: row}, {"docling": "broken"}, NOW, recently_alerted={group.id}
+        )
+        == []
+    )
+    # сутки прошли, сбой всё ещё непрерывный — одно «Сломано» со сводкой, без новой записи
+    steps = cause.plan_alerts([group], {group.id: row}, {"docling": "broken"}, NOW)
+    assert _kinds(steps) == ["alert"]
+    after = OpenCause(group.id, row.started_at, NOW, ("docling",), suppressed_at=NOW)
+    assert cause.plan_alerts([group], {group.id: after}, {"docling": "broken"}, NOW) == []
+
+
+def test_summary_line_counts_the_failures_since_the_previous_message() -> None:
+    group = cause.build_groups([_fail_diag(timedelta(minutes=20))])[0]
+    plain = cause.broken_alert(
+        group,
+        group.since or NOW,
+        NOW,
+        "UTC",
+        repeats=3,
+        since_previous=timedelta(hours=24, minutes=5),
+    ).plain
+    assert "Нестабилен: 3 провала с прошлого сообщения (1 дн назад)." in plain
+    quiet = cause.broken_alert(group, group.since or NOW, NOW, "UTC", repeats=1).plain
+    assert "Нестабилен" not in quiet
+
+
+def _rows(*pairs: tuple[int, str]) -> list[tuple[str, datetime]]:
+    """Проверки новые первыми: (минут назад, статус)."""
+    return [(status, NOW - timedelta(minutes=ago)) for ago, status in pairs]
+
+
+def test_ok_run_starts_after_the_last_real_non_ok_stretch() -> None:
+    rows = _rows((0, "ok"), (1, "ok"), (2, "ok"), (3, "fail"), (4, "fail"), (30, "fail"))
+    assert cause.ok_run_start(rows) == NOW - timedelta(minutes=2)
+    assert cause.ok_run_start(_rows((0, "fail"), (1, "ok"))) is None  # сейчас не ok
+    assert cause.ok_run_start([]) is None
+
+
+def test_a_short_blip_or_warn_does_not_reset_the_recovery_clock() -> None:
+    # ok 9..6 мин назад, провал 5, ok 4..0: провал между двумя ok отсчёт не сбрасывает
+    rows = _rows(
+        (0, "ok"), (1, "ok"), (2, "ok"), (3, "ok"), (4, "ok"), (5, "fail"),
+        (6, "ok"), (7, "ok"), (8, "ok"), (9, "ok"), (10, "fail"), (11, "fail"),
+    )  # fmt: skip
+    assert cause.ok_run_start(rows) == NOW - timedelta(minutes=9)
+    warn = _rows((0, "ok"), (1, "ok"), (2, "warn"), (3, "ok"), (4, "ok"), (5, "fail"))
+    assert cause.ok_run_start(warn) == NOW - timedelta(minutes=4)
+
+
+def test_a_long_gap_between_ok_checks_is_not_a_blip() -> None:
+    # fail 5 минут назад, соседние ok — через 8 мин: за это время сервис мог лежать — отсчёт заново
+    rows = _rows((0, "ok"), (1, "ok"), (2, "ok"), (3, "ok"), (4, "ok"), (5, "fail"), (12, "ok"))
+    assert cause.ok_run_start(rows) == NOW - timedelta(minutes=4)
+
+
+# --- часовая проба моделей — источник причины в центре, а не второй отправитель ----
+
+
+def test_hourly_probe_problem_becomes_the_vendor_cause_even_without_traffic() -> None:
+    quiet = vendor_rules.VendorStats()
+    probe = (
+        ("dialog-model", "провайдер отклонил ключ — проверьте ключ API; бот не отвечает"),
+        ("qualifier-model", "провайдер отклонил ключ — проверьте ключ API; бот не отвечает"),
+    )
+    result = vendor_rules.vendor(vendor_rules.VendorFacts("anthropic", True, quiet, probe=probe))
+    assert (result.status, result.cause) == ("fail", "key_rejected")
+    d = _diagnose("vendor.anthropic", result, None, fail_for=timedelta(minutes=20))
+    assert d.state == "broken"
+    assert d.headline == "Ключ Anthropic отклонён"  # одна причина на провайдера, не по алиасу
+    assert (d.owner, d.action) == ("owner", "enter_key")
+
+
+def test_hourly_probe_credits_problem_is_the_quota_cause() -> None:
+    probe = (("dialog-model", "закончились кредиты или квота у провайдера — пополните баланс"),)
+    result = vendor_rules.vendor(
+        vendor_rules.VendorFacts("anthropic", True, vendor_rules.VendorStats(), probe=probe)
+    )
+    assert result.cause == "quota"
+
+
+def test_no_probe_problem_leaves_the_log_based_verdict_alone() -> None:
+    result = vendor_rules.vendor(
+        vendor_rules.VendorFacts("anthropic", True, vendor_rules.VendorStats())
+    )
+    assert result.status == "ok"
+
+
+# --- причины, которые сами не проходят, проверяются реже ---------------------------------------
+
+
+@pytest.mark.parametrize(
+    "slow", ["key_rejected", "quota", "token_rejected", "smtp_auth_failed", "smtp_rejected"]
+)
+def test_causes_that_do_not_heal_themselves_are_rechecked_every_fifteen_minutes(slow: str) -> None:
+    for failures in (1, 2, 3, 4, 9):
+        assert cause.recheck_interval(failures, slow) == timedelta(minutes=15)
+    assert cause.recheck_interval(1, "network") == timedelta(minutes=1)  # дешёвые сетевые — 1/2/5/7
+    assert cause.recheck_interval(4, None) == timedelta(minutes=7)
+    last = NOW
+    assert not cause.recheck_due(1, last, last + timedelta(minutes=14), "smtp_auth_failed")
+    assert cause.recheck_due(1, last, last + timedelta(minutes=15), "smtp_auth_failed")

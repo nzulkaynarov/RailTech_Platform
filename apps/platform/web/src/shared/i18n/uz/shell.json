@@ -85,15 +85,6 @@
     "rolesMany": "Barcha rollar",
     "selected": "Tanlangan"
   },
-  "profile": {
-    "title": "Profil",
-    "name": "Ism",
-    "email": "Elektron pochta",
-    "position": "Lavozim",
-    "roles": "Rollar",
-    "access": "Kirish",
-    "noPosition": "ko‘rsatilmagan"
-  },
   "languages": {
     "ru": "Русский",
     "uz": "O‘zbekcha",

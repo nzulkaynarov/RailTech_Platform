@@ -2,7 +2,7 @@
 
 from collections.abc import Sequence
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import date, datetime
 
 from app.domain.erp_sync import AccessState, erp_sync_status
 from app.models.auth import User
@@ -31,6 +31,16 @@ class UserView:
     language: str = "ru"
     erp_sync: str = "not_applicable"
     erp_sync_error: str | None = None
+    # Профиль, который правит сам сотрудник (W15-H6).
+    phone: str | None = None
+    timezone: str = "Asia/Tashkent"
+    email_signature: str | None = None
+    tg_username: str | None = None
+    # Метка времени замены фото (секунды epoch): версия адреса картинки; None — фото нет.
+    avatar_version: int | None = None
+    deputy_user_id: int | None = None
+    deputy_from: date | None = None
+    deputy_to: date | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -82,6 +92,18 @@ def view_of(
             pending=erp_pending,
         ),
         erp_sync_error=user.erp_sync_error,
+        phone=user.phone,
+        timezone=user.timezone,
+        email_signature=user.email_signature,
+        tg_username=user.tg_username,
+        avatar_version=(
+            int(user.avatar_updated_at.timestamp())
+            if user.avatar_key and user.avatar_updated_at
+            else None
+        ),
+        deputy_user_id=user.deputy_user_id,
+        deputy_from=user.deputy_from,
+        deputy_to=user.deputy_to,
     )
 
 

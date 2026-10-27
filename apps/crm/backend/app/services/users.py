@@ -9,7 +9,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 import structlog
-from sqlalchemy import update
+from sqlalchemy import func, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -58,7 +58,14 @@ from app.services.user_views import (
     view_of,
 )
 
-__all__ = ["ErpSyncEnqueue", "UserPatch", "UserService", "UserView", "revoke_tokens"]
+__all__ = [
+    "ErpSyncEnqueue",
+    "UserPatch",
+    "UserService",
+    "UserView",
+    "close_sessions",
+    "revoke_tokens",
+]
 
 logger = structlog.get_logger(__name__)
 
@@ -237,7 +244,7 @@ class UserService:
             user.must_change_password = True
             user.failed_logins = 0
             user.locked_until = None
-            await revoke_tokens(session, user_id)
+            await close_sessions(session, user_id)
             await audit.record(session, actor, "user.reset_password", "user", user_id)
         return password
 
@@ -456,7 +463,12 @@ def _apply(user: User, patch: UserPatch) -> None:
         user.is_active = patch.is_active
     if patch.clear_tg_user_id:
         user.tg_user_id = None
+        user.tg_username = None
+        user.tg_linked_at = None
     elif patch.tg_user_id is not None:
+        if patch.tg_user_id != user.tg_user_id:
+            user.tg_username = None  # ник относился к прежнему аккаунту
+            user.tg_linked_at = None  # привязал администратор
         user.tg_user_id = patch.tg_user_id
     if patch.platform_access is not None:
         user.platform_access = sorted(set(patch.platform_access) | {"crm"})
@@ -466,6 +478,14 @@ def _apply(user: User, patch: UserPatch) -> None:
         user.position = patch.position or None
     if patch.language is not None:
         user.language = patch.language
+
+
+async def close_sessions(session: AsyncSession, user_id: int) -> None:
+    """Сброс пароля: refresh отозваны, выпущенные раньше access-токены больше не принимаются."""
+    await revoke_tokens(session, user_id)
+    await session.execute(
+        update(User).where(User.id == user_id).values(password_changed_at=func.now())
+    )
 
 
 async def revoke_tokens(session: AsyncSession, user_id: int) -> None:

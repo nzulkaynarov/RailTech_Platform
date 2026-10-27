@@ -2,6 +2,7 @@ import type { Language, Me, Session } from "../shared/api/generated/model";
 import { effectiveRoleIds } from "./fixtures/employees";
 import { ROLE_ID, computeAccess, readRoles, roleRefOf, rolesOf } from "./fixtures/roles";
 import { type DemoUser, findUserById } from "./fixtures/users";
+import { avatarUrlOf, initialsOf, nameOf, readProfile } from "./profileStore";
 
 /**
  * Сессия MSW-мока. Хранится в `localStorage` страницы (обработчики MSW работают в потоке страницы), поэтому
@@ -83,11 +84,15 @@ export function buildMe(session: MockSession): Me | undefined {
   if (!roles) return undefined;
   const { user, all, view, active } = roles;
   const computed = computeAccess(view);
+  const avatar = avatarUrlOf(user.id);
+  // Имя, которое сотрудник сменил на странице /me (W15-H6), и фото вместо инициалов.
+  const name = nameOf(user.id) || user.name;
   return {
     id: user.id,
     email: user.email,
-    name: user.name,
-    initials: user.initials,
+    name,
+    initials: readProfile(user.id).name ? initialsOf(name) : user.initials,
+    ...(avatar ? { avatar_url: avatar } : {}),
     position: user.position,
     language: session.language,
     roles: all.map(roleRefOf),

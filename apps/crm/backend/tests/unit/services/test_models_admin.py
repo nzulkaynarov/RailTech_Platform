@@ -422,6 +422,7 @@ def _provider_service(
 
     monkeypatch.setattr(service, "_reauth", reauth)
     monkeypatch.setattr(service, "_audit_provider_key", audit_provider)
+    service._retry_pause_s = 0.0
     return service, counts
 
 
@@ -518,3 +519,57 @@ async def test_provider_key_refuses_roles_defined_in_litellm_config(
     with pytest.raises(ConflictError):
         await service.change_provider_key(ADMIN, "anthropic", FAKE_KEY, "pw")
     assert new.call_count == 0
+
+
+@respx.mock
+async def test_provider_key_is_audited_before_the_old_deployments_go_and_delete_is_retried(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    rec = _Recorder()
+    service, _ = _provider_service(rec, monkeypatch)
+    respx.get(f"{BASE}/model/info").mock(httpx.Response(200, json=ROLES))
+    respx.post(f"{BASE}/model/new").mock(httpx.Response(200, json={}))
+    order: list[str] = []
+
+    def deleted(request: httpx.Request) -> httpx.Response:
+        order.append(f"delete:{len(rec.audits)}")  # сколько записей аудита уже было
+        return httpx.Response(500) if len(order) == 1 else httpx.Response(200, json={})
+
+    respx.post(f"{BASE}/model/delete").mock(side_effect=deleted)
+
+    await service.change_provider_key(ADMIN, "anthropic", FAKE_KEY, "pw")
+
+    assert order[0] == "delete:1"  # аудит записан до первого удаления
+    assert len(order) == 3  # первое удаление упало и повторено, вторая роль — одно
+
+
+@respx.mock
+async def test_provider_key_delete_failure_does_not_stop_the_other_roles_and_still_succeeds(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Ключ уже сменён: не удалившееся прежнее — хвост в журнале, остальные роли доделываются."""
+    rec = _Recorder()
+    service, _ = _provider_service(rec, monkeypatch)
+    service._retry_pause_s = 0.0
+    respx.get(f"{BASE}/model/info").mock(httpx.Response(200, json=ROLES))
+    respx.post(f"{BASE}/model/new").mock(httpx.Response(200, json={}))
+
+    def delete(request: httpx.Request) -> httpx.Response:
+        return (
+            httpx.Response(500)
+            if json.loads(request.content)["id"] == "rt-dialog"
+            else httpx.Response(200, json={})
+        )
+
+    deletes = respx.post(f"{BASE}/model/delete").mock(side_effect=delete)
+
+    with capture_logs() as logs:
+        out = await service.change_provider_key(ADMIN, "anthropic", FAKE_KEY, "pw")
+
+    assert sorted(o.alias for o in out) == ["dialog-model", "qualifier-model"]
+    ids = [json.loads(c.request.content)["id"] for c in deletes.calls]
+    assert ids == ["rt-dialog", "rt-dialog", "rt-qual"]  # одна неудачная + повтор, вторая роль цела
+    left = [e for e in logs if e["event"] == "provider_key_old_deployments_left"]
+    assert [e["ids"] for e in left] == [["rt-dialog"]]
+    assert FAKE_KEY not in str(logs)
+    assert len(rec.audits) == 1

@@ -85,6 +85,13 @@ class MenuCounters(BaseModel):
     sources: Sources
 
 
+class QueueOwner(BaseModel):
+    """Чья это очередь, если строку видит заместитель («за {имя}», W15-H6)."""
+
+    id: str
+    name: str
+
+
 class QueueItem(BaseModel):
     id: str
     role_id: str
@@ -94,6 +101,7 @@ class QueueItem(BaseModel):
     due_label: DueLabel
     due_at: datetime | None = None
     object: ObjectRef
+    on_behalf_of: QueueOwner | None = None
 
 
 class Queue(BaseModel):
