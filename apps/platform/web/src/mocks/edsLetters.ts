@@ -10,13 +10,7 @@ import type {
   ResolutionIn,
 } from "../shared/api/generated/model";
 import { COMPANY_TIME_ZONE } from "../shared/lib/format";
-import {
-  CANDIDATES,
-  DIRECTOR,
-  findLetter,
-  readLetters,
-  writeLetters,
-} from "./fixtures/letters";
+import { CANDIDATES, DIRECTOR, findLetter, readLetters, writeLetters } from "./fixtures/letters";
 import { buildMe, readSession } from "./mockSession";
 
 /**
@@ -112,13 +106,10 @@ function invalid(field: string, reason: string, message: string) {
 
 function notAwaiting(letter: LetterCard) {
   if (letter.status === "awaiting_resolution") return null;
-  return failure(
-    409,
-    "CONFLICT",
-    "Операция недоступна в текущем статусе письма.",
-    "eds",
-    { backend_status: 409, reason: "invalid_state" },
-  );
+  return failure(409, "CONFLICT", "Операция недоступна в текущем статусе письма.", "eds", {
+    backend_status: 409,
+    reason: "invalid_state",
+  });
 }
 
 function update(id: string, change: (letter: LetterCard) => LetterCard): LetterCard | undefined {
