@@ -34,7 +34,8 @@
       "loading": "Loading the queue…",
       "loadErrorTitle": "Could not load the queue",
       "loadErrorText": "The server did not respond. Check the connection and try again.",
-      "retry": "Retry"
+      "retry": "Retry",
+      "onBehalf": "for {{name}}"
     },
     "activity": {
       "label": "Today's events",

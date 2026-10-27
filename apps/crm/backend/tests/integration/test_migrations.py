@@ -382,3 +382,34 @@ def test_user_language_defaults_to_ru_accepts_only_known_codes_and_leaves_with_d
         ).fetchone() == (0,)
 
     command.upgrade(alembic_config, "head")
+
+
+PROFILE_SQL = """
+SELECT
+  (SELECT count(*) FROM information_schema.columns WHERE table_name = 'users'
+     AND column_name IN ('phone', 'timezone', 'email_signature', 'tg_username', 'avatar_key',
+                         'avatar_updated_at', 'tg_linked_at', 'deputy_user_id', 'deputy_from',
+                         'deputy_to', 'password_changed_at')),
+  (SELECT count(*) FROM information_schema.tables
+     WHERE table_name IN ('staff_telegram_links', 'password_reset_tokens'))
+"""
+
+
+def test_staff_profile_revision_is_reversible_and_has_one_head(
+    alembic_config: Config, live_settings: Settings
+) -> None:
+    """W15-H6: одиннадцать колонок профиля и две таблицы приходят и уходят; голова ревизий одна."""
+    from alembic.script import ScriptDirectory
+
+    assert len(ScriptDirectory.from_config(alembic_config).get_heads()) == 1
+    command.upgrade(alembic_config, "head")
+    with psycopg.connect(live_settings.libpq_dsn) as conn:
+        assert conn.execute(PROFILE_SQL).fetchone() == (11, 2)
+
+    command.downgrade(alembic_config, "0041_external_cause_alerts")
+    with psycopg.connect(live_settings.libpq_dsn) as conn:
+        assert conn.execute(PROFILE_SQL).fetchone() == (0, 0)
+
+    command.upgrade(alembic_config, "head")
+    with psycopg.connect(live_settings.libpq_dsn) as conn:
+        assert conn.execute(PROFILE_SQL).fetchone() == (11, 2)

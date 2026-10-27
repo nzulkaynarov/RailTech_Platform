@@ -19,8 +19,22 @@ DEALS_PARAMS = {"page_size": DEALS_PAGE_SIZE}
 
 
 @dataclass
+class Covered:
+    """Очередь замещаемого коллеги, которую сегодня видит заместитель (W15-H6)."""
+
+    user_id: int
+    name: str
+    inbox: dict[str, list[dict[str, Any]]]
+
+
+# Не больше стольких замещаемых за раз: каждый — отдельный запрос в CRM на каждый опрос очереди.
+MAX_COVERED = 5
+
+
+@dataclass
 class Snapshot:
     inbox: dict[str, list[dict[str, Any]]] | None = None
+    covered: list[Covered] = field(default_factory=list)
     approvals: list[dict[str, Any]] = field(default_factory=list)
     approvals_total: int = 0
     deals: list[dict[str, Any]] = field(default_factory=list)
@@ -47,11 +61,32 @@ def wants_projects(view: View) -> bool:
     return allows(view.access, "eds.projects", "read")
 
 
-async def _inbox(feed: Feed) -> dict[str, list[dict[str, Any]]] | None:
-    payload = await feed.get("crm", "/api/v1/inbox", ttl=SNAPSHOT_TTL_SECONDS)
+async def _inbox(
+    feed: Feed, params: dict[str, Any] | None = None
+) -> dict[str, list[dict[str, Any]]] | None:
+    payload = await feed.get("crm", "/api/v1/inbox", params, ttl=SNAPSHOT_TTL_SECONDS)
     if not isinstance(payload, dict):
         return None
     return {key: rows(payload.get(key)) for key in ("escalations", "mine", "unassigned")}
+
+
+async def _covered(feed: Feed) -> list[Covered]:
+    """За кого сотрудник сегодня заместитель и их очереди. Права — свои: CRM отдаёт очередь
+    замещаемого только назначенному заместителю в период и только по правам заместителя; сбой
+    любого шага даёт пустой список (замещение — добавка к очереди, не её условие)."""
+    payload = await feed.get("crm", "/api/v1/me/covering", ttl=SNAPSHOT_TTL_SECONDS)
+    people = [
+        row
+        for row in rows(payload)
+        if isinstance(row.get("user_id"), int) and isinstance(row.get("full_name"), str)
+    ][:MAX_COVERED]
+
+    async def one(row: dict[str, Any]) -> Covered | None:
+        inbox = await _inbox(feed, {"on_behalf_of": row["user_id"]})
+        return Covered(int(row["user_id"]), str(row["full_name"]), inbox) if inbox else None
+
+    found = await asyncio.gather(*(one(row) for row in people))
+    return [c for c in found if c is not None]
 
 
 async def load_snapshot(
@@ -63,7 +98,7 @@ async def load_snapshot(
 
     async def load_inbox() -> None:
         if inbox and wants_inbox(view):
-            snap.inbox = await _inbox(feed)
+            snap.inbox, snap.covered = await asyncio.gather(_inbox(feed), _covered(feed))
 
     async def load_approvals() -> None:
         if approvals and wants_approvals(view):
