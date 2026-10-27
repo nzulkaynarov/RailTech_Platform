@@ -10,7 +10,7 @@
  * BFF не имеет своей базы: данные приходят из CRM и ERP, каждый вызов бэкенда — с токеном сотрудника.
  *
  * **Сессия.** `POST /auth/login` ставит cookie `rt_pf_session` (`HttpOnly; Secure; SameSite=Lax; Path=/`) и CSRF-cookie
- * `rt_pf_csrf` (читается скриптом). Каждый `POST`, `PUT`, `PATCH`, `DELETE`, кроме `/auth/login`, несёт заголовок
+ * `rt_pf_csrf` (читается скриптом). Каждый `POST`, `PUT`, `PATCH`, `DELETE`, кроме `/auth/login` и `/setup/admin` (оба без сессии), несёт заголовок
  * `X-CSRF-Token` со значением CSRF-cookie; без него или с другим значением — 403 `CSRF_FAILED`. Истёкшая или
  * отозванная сессия — 401 `SESSION_EXPIRED`.
  *
@@ -90,6 +90,20 @@
  * сотрудника CRM `aud=eds` → `POST /api/v1/auth/sso/exchange` EDS (`docs/architecture/sso-token.md`), 15 минут, в сессии BFF.
  * Тел событий нет — только метаданные доставки. `Error.source` дополнен `eds`.
  *
+ * **0.10.0 (W13-A4) — добавляющее.** Первый запуск в Платформе (SPEC-v3 §7.6, тег `setup`): вместо `/setup` CRM и мастера ERP.
+ * Без сессии: `GET /setup/state` (CRM `/setup/state`: администратора ещё нет — `needs_admin`) и `POST /setup/admin` (одноразовый
+ * код первого запуска из журнала `crm-api`, имя, почта, пароль -> первый администратор; ответ — как у входа: `Session` и cookie).
+ * С сессией, раздел `admin` — полный: `GET /setup/checklist` (чек-лист из пяти шагов — бот, ERP, почта, модели ИИ, первый
+ * сотрудник — по ответам CRM; шаг мастера «своя компания» — по ERP `setup/status`) и `POST /setup/company` (ERP `setup/company`,
+ * токеном администратора). Приглашение без почты: `POST /admin/users` создаёт сотрудника и возвращает **временный пароль один
+ * раз**, `POST /admin/users/{id}/temporary-password` выдаёт новый временный пароль существующему сотруднику (CRM
+ * `/users/{id}/reset-password`; прежний пароль и сессии сотрудника перестают действовать). Пароль приходит только в этом ответе
+ * (`Cache-Control: no-store`): BFF его не пишет в журнал, не кэширует и не хранит, а повторно получить его нельзя — только выдать
+ * новый; сотрудник при входе обязан сменить его (`Session.must_change_password`, `POST /auth/change-password`). Коды ошибок:
+ * `SETUP_DONE` (409), `SETUP_CODE_INVALID`, `SETUP_CODE_EXPIRED` (422), `SETUP_LOCKED` (429, 15 минут после десяти неверных
+ * кодов), `OWN_COMPANY_ALREADY_EXISTS` (409). Право: чек-лист и мастер компании видит и выполняет только `admin: full` — CRM
+ * `/setup/checklist` требует право записи настроек; директору баннер не показывается.
+ *
  * 0.2.4: `423 ACCOUNT_LOCKED` объявлен и на `POST /auth/change-password` (CRM блокирует учётную запись после неверных
  * текущих паролей).
  *
@@ -108,7 +122,7 @@
  * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.9.0
+ * OpenAPI spec version: 0.10.0
  */
 import { faker } from "@faker-js/faker";
 
@@ -139,6 +153,8 @@ import {
   ObjectKind,
   QueueItemKind,
   RestrictedField,
+  SetupStepKey,
+  SetupStepState,
   SourceState,
   StepCode,
 } from "./model";
@@ -172,6 +188,7 @@ import type {
   EmailTemplateList,
   EmailTemplatePreview,
   Employee,
+  EmployeeCredentials,
   EmployeeList,
   ErpCheck,
   ErpConnector,
@@ -199,6 +216,10 @@ import type {
   RolePreview,
   SearchResult,
   Session,
+  SetupChecklist,
+  SetupCompanyCreated,
+  SetupCompanyStatus,
+  SetupState,
   SmtpCheck,
   SmtpConnector,
   SpendReport,
@@ -284,6 +305,81 @@ export const getGetSessionResponseMock = (
   },
   must_change_password: faker.datatype.boolean(),
   expires_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  ...overrideResponse,
+});
+
+export const getGetSetupStateResponseMock = (
+  overrideResponse: Partial<Extract<SetupState, object>> = {},
+): SetupState => ({ needs_admin: faker.datatype.boolean(), ...overrideResponse });
+
+export const getCreateFirstAdminResponseMock = (
+  overrideResponse: Partial<Extract<Session, object>> = {},
+): Session => ({
+  me: {
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    email: faker.internet.email(),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+    position: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+    language: faker.helpers.arrayElement(Object.values(Language)),
+    roles: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        id: faker.helpers.fromRegExp("^[0-9]+$"),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        system: faker.datatype.boolean(),
+        code: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          undefined,
+        ]),
+      }),
+    ),
+    active_role: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+    modules: faker.helpers.arrayElements(Object.values(ModuleCode)),
+    resources: {
+      [faker.string.alphanumeric(5)]: faker.helpers.arrayElement(Object.values(AccessLevel)),
+    },
+    restricted_fields: faker.helpers.arrayElement([
+      faker.helpers.arrayElements(Object.values(RestrictedField)),
+      undefined,
+    ]),
+    access: { crm: faker.datatype.boolean(), erp: faker.datatype.boolean() },
+  },
+  must_change_password: faker.datatype.boolean(),
+  expires_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  ...overrideResponse,
+});
+
+export const getGetSetupChecklistResponseSetupCompanyStatusMock = (
+  overrideResponse: Partial<SetupCompanyStatus> = {},
+): SetupCompanyStatus => ({
+  ...{ required: faker.datatype.boolean(), can_setup: faker.datatype.boolean() },
+  ...overrideResponse,
+});
+
+export const getGetSetupChecklistResponseMock = (
+  overrideResponse: Partial<Extract<SetupChecklist, object>> = {},
+): SetupChecklist => ({
+  steps: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    key: faker.helpers.arrayElement(Object.values(SetupStepKey)),
+    state: faker.helpers.arrayElement(Object.values(SetupStepState)),
+  })),
+  done: faker.number.int({ min: 0 }),
+  total: faker.number.int({ min: 5, max: 5 }),
+  company: faker.helpers.arrayElement([
+    { ...getGetSetupChecklistResponseSetupCompanyStatusMock() },
+    null,
+  ]),
+  ...overrideResponse,
+});
+
+export const getCreateOwnCompanyResponseMock = (
+  overrideResponse: Partial<Extract<SetupCompanyCreated, object>> = {},
+): SetupCompanyCreated => ({
+  id: faker.number.int(),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
   ...overrideResponse,
 });
 
@@ -1910,6 +2006,42 @@ export const getListEmployeesResponseMock = (
   ...overrideResponse,
 });
 
+export const getCreateEmployeeResponseMock = (
+  overrideResponse: Partial<Extract<EmployeeCredentials, object>> = {},
+): EmployeeCredentials => ({
+  employee: {
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+    email: faker.internet.email(),
+    position: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 120 } }),
+      undefined,
+    ]),
+    roles: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        id: faker.helpers.fromRegExp("^[0-9]+$"),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        system: faker.datatype.boolean(),
+        code: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          undefined,
+        ]),
+      }),
+    ),
+    access: { crm: faker.datatype.boolean(), erp: faker.datatype.boolean() },
+    status: faker.helpers.arrayElement(Object.values(EmployeeStatus)),
+    telegram_linked: faker.datatype.boolean(),
+    erp_sync: faker.helpers.arrayElement(Object.values(ErpSyncState)),
+    erp_sync_error: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+  },
+  temporary_password: faker.string.alpha({ length: { min: 1, max: 20 } }),
+  ...overrideResponse,
+});
+
 export const getInviteEmployeeResponseMock = (
   overrideResponse: Partial<Extract<Employee, object>> = {},
 ): Employee => ({
@@ -1969,6 +2101,42 @@ export const getResendInviteResponseMock = (
     faker.string.alpha({ length: { min: 10, max: 20 } }),
     undefined,
   ]),
+  ...overrideResponse,
+});
+
+export const getIssueTemporaryPasswordResponseMock = (
+  overrideResponse: Partial<Extract<EmployeeCredentials, object>> = {},
+): EmployeeCredentials => ({
+  employee: {
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+    email: faker.internet.email(),
+    position: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 120 } }),
+      undefined,
+    ]),
+    roles: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        id: faker.helpers.fromRegExp("^[0-9]+$"),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        system: faker.datatype.boolean(),
+        code: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          undefined,
+        ]),
+      }),
+    ),
+    access: { crm: faker.datatype.boolean(), erp: faker.datatype.boolean() },
+    status: faker.helpers.arrayElement(Object.values(EmployeeStatus)),
+    telegram_linked: faker.datatype.boolean(),
+    erp_sync: faker.helpers.arrayElement(Object.values(ErpSyncState)),
+    erp_sync_error: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+  },
+  temporary_password: faker.string.alpha({ length: { min: 1, max: 20 } }),
   ...overrideResponse,
 });
 
@@ -3066,6 +3234,98 @@ export const getGetSessionMockHandler = (
             : overrideResponse
           : getGetSessionResponseMock(),
         { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetSetupStateMockHandler = (
+  overrideResponse?:
+    | SetupState
+    | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<SetupState> | SetupState),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/setup/state",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetSetupStateResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getCreateFirstAdminMockHandler = (
+  overrideResponse?:
+    | Session
+    | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<Session> | Session),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/setup/admin",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCreateFirstAdminResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetSetupChecklistMockHandler = (
+  overrideResponse?:
+    | SetupChecklist
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<SetupChecklist> | SetupChecklist),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/setup/checklist",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetSetupChecklistResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getCreateOwnCompanyMockHandler = (
+  overrideResponse?:
+    | SetupCompanyCreated
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<SetupCompanyCreated> | SetupCompanyCreated),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/setup/company",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCreateOwnCompanyResponseMock(),
+        { status: 201 },
       );
     },
     options,
@@ -4224,6 +4484,30 @@ export const getListEmployeesMockHandler = (
   );
 };
 
+export const getCreateEmployeeMockHandler = (
+  overrideResponse?:
+    | EmployeeCredentials
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<EmployeeCredentials> | EmployeeCredentials),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/users",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCreateEmployeeResponseMock(),
+        { status: 201 },
+      );
+    },
+    options,
+  );
+};
+
 export const getInviteEmployeeMockHandler = (
   overrideResponse?:
     | Employee
@@ -4261,6 +4545,30 @@ export const getResendInviteMockHandler = (
             ? await overrideResponse(info)
             : overrideResponse
           : getResendInviteResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getIssueTemporaryPasswordMockHandler = (
+  overrideResponse?:
+    | EmployeeCredentials
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<EmployeeCredentials> | EmployeeCredentials),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/users/:id/temporary-password",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getIssueTemporaryPasswordResponseMock(),
         { status: 200 },
       );
     },
@@ -5479,6 +5787,10 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getLogoutMockHandler(),
   getChangePasswordMockHandler(),
   getGetSessionMockHandler(),
+  getGetSetupStateMockHandler(),
+  getCreateFirstAdminMockHandler(),
+  getGetSetupChecklistMockHandler(),
+  getCreateOwnCompanyMockHandler(),
   getGetMeMockHandler(),
   getUpdateMeMockHandler(),
   getGetHealthMockHandler(),
@@ -5529,8 +5841,10 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getRetryBusDeadLettersMockHandler(),
   getRetryBusInboxMockHandler(),
   getListEmployeesMockHandler(),
+  getCreateEmployeeMockHandler(),
   getInviteEmployeeMockHandler(),
   getResendInviteMockHandler(),
+  getIssueTemporaryPasswordMockHandler(),
   getGetEmployeeMockHandler(),
   getUpdateEmployeeMockHandler(),
   getListRolesMockHandler(),

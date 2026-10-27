@@ -224,7 +224,8 @@
       "integrations": "Tashqi integratsiyalar",
       "bus": "Integratsiyalar jurnali",
       "tickets": "Jamoa tiketlari",
-      "company": "Kompaniya"
+      "company": "Kompaniya",
+      "setup": "Birinchi ishga tushirish"
     },
     "stub": {
       "roles": {
@@ -256,9 +257,98 @@
         "title": "Kompaniya rekvizitlari shu yerda ochiladi",
         "text": "Kompaniya rekvizitlari, hujjat shablonlari, raqamlash va to'lov shartlari. Ekran ERP sozlamalari Platformaga ko'chirilishi bilan paydo bo'ladi.",
         "action": "Tuzilma"
+      },
+      "setup": {
+        "title": "Birinchi ishga tushirish ustozi",
+        "text": "Administrator, o'z kompaniyasi va ulanishning besh qadami: bot, ERP, pochta, AI modellari va birinchi xodim.",
+        "action": "Tashkiliy tuzilma"
       }
     },
     "action": "Xodimni taklif qilish",
+    "setup": {
+      "title": "Birinchi ishga tushirish",
+      "subtitle": "Uch qadam: administrator, kompaniyangiz, ulanishlar. Istalgan qadamni keyinroq bajarish mumkin.",
+      "adminTitle": "Administrator",
+      "adminDone": "Administrator yaratildi: {{name}}.",
+      "companyTitle": "Sizning kompaniyangiz",
+      "companyRequired": "O'z kompaniyangizni yarating: hujjatlar uning nomidan rasmiylashtiriladi, ERP'da esa rekvizitlar paydo bo'ladi.",
+      "companyDone": "O'z kompaniyasi yaratilgan.",
+      "companyUnknown": "ERP hozircha javob bermadi. Yangi administratorga ERP'ga kirish kechikib beriladi: bir necha soniyadan keyin takrorlang.",
+      "companyNoRights": "O'z kompaniyasini faqat ERP administratori yarata oladi. Administrator sifatida kiring.",
+      "companyRetry": "Qayta tekshirish",
+      "companyName": "Kompaniya nomi",
+      "companyNameRequired": "Kompaniya nomini kiriting",
+      "companyInn": "STIR (ixtiyoriy)",
+      "companyAddress": "Yuridik manzil (ixtiyoriy)",
+      "companyPhone": "Telefon (ixtiyoriy)",
+      "companyEmail": "Kompaniya pochtasi (ixtiyoriy)",
+      "companyEmailInvalid": "Elektron pochta manzilini tekshiring",
+      "companySubmit": "Kompaniyani yaratish",
+      "companyConsequence": [
+        "ERP'da «sotuvchi» turidagi kompaniyangiz paydo bo'ladi, siz uning egasi bo'lasiz.",
+        "Rekvizitlar, blank va raqamlashni keyinroq Admin · Kompaniya bo'limida to'ldirish mumkin.",
+        "Ustoz kompaniyani bir marta yaratishni taklif qiladi: uni qayta yaratib bo'lmaydi."
+      ],
+      "companyCreated": "«{{name}}» kompaniyasi yaratildi",
+      "companyErrors": {
+        "OWN_COMPANY_ALREADY_EXISTS": "O'z kompaniyasi allaqachon yaratilgan.",
+        "FORBIDDEN": "O'z kompaniyasini faqat ERP administratori yarata oladi.",
+        "BACKEND_UNAVAILABLE": "ERP javob bermadi. Yangi administratorga ERP'ga kirish kechikib beriladi: bir necha soniyadan keyin takrorlang.",
+        "VALIDATION_FAILED": "Forma maydonlarini tekshiring.",
+        "default": "Kompaniyani yaratib bo'lmadi. Urinishni takrorlang."
+      },
+      "connectionsTitle": "Ulanishlar",
+      "connectionsLead": "Sozlashning beshta qadami: har biri o'z ekraniga olib boradi.",
+      "progress": "Tayyor: {{done}} / {{total}}",
+      "allDone": "Hammasi tayyor: Platforma sozlangan.",
+      "loadError": "Sozlash holatini olib bo'lmadi",
+      "loadErrorText": "Server javob bermadi. Takrorlang.",
+      "retry": "Takrorlash",
+      "state": {
+        "done": "Tayyor",
+        "todo": "Bajarilmagan",
+        "unknown": "Ma'lumot yo'q"
+      },
+      "steps": {
+        "bot": {
+          "title": "Telegram-bot",
+          "text": "Bot tokeni va jamoa kanali: mijozlar botga yozadi, xodimlar bildirishnoma oladi.",
+          "action": "Botni ulash"
+        },
+        "erp": {
+          "title": "ERP",
+          "text": "CRM va ERP ni ulash: so'rovlar va hisob-kitoblar tizimlar o'rtasida yuradi.",
+          "action": "ERP ni ulash"
+        },
+        "mail": {
+          "title": "Pochta",
+          "text": "Barcha xatlar uchun bitta SMTP: takliflar, TT va hisoblar.",
+          "action": "Pochtani sozlash"
+        },
+        "models": {
+          "title": "AI modellari",
+          "text": "Bot va maslahatlar uchun model kalitlari.",
+          "action": "Modellarni ulash"
+        },
+        "first_employee": {
+          "title": "Birinchi xodim",
+          "text": "Hamkasbni taklif qiling va unga rol bering. Pochta yo'q bo'lsa, vaqtinchalik parol bering.",
+          "action": "Xodimni taklif qilish"
+        }
+      },
+      "listLabel": "Sozlash qadamlari",
+      "onlyAdmin": "Birinchi ishga tushirish ustozi administratorga ochiq. Direktor sozlashni faqat o'qish uchun Admin · Tashqi integratsiyalar bo'limida ko'radi.",
+      "banner": {
+        "label": "Platformani sozlash",
+        "title": "Platformani sozlash: tayyor {{done}} / {{total}}",
+        "company": "Kompaniyangiz ERP'da hali yo'q.",
+        "next": "Keyingisi: {{step}}.",
+        "open": "Sozlashni davom ettirish",
+        "hide": "Yashirish",
+        "hideLabel": "Sozlash bannerini yashirish",
+        "hidden": "Banner yashirildi. Ustoz Admin'dagi «Birinchi ishga tushirish» sahifasida (/admin/setup) qoladi."
+      }
+    },
     "org": {
       "title": "Tashkiliy tuzilma",
       "subtitle": "Xodimlar, rollar va CRM hamda ERP ga kirish. Ikkala tizimning rollari bitta kartochkada beriladi.",
@@ -376,7 +466,41 @@
         "notSentUnavailable": "Xodim ro'yxatga «Taklif qilingan» holatida qo'shildi, lekin CRM javob bermadi va xat yuborilmadi. Keyinroq kartochkadagi «Taklifni qayta yuborish» tugmasi bilan takrorlang.",
         "resend": "Taklifni qayta yuborish",
         "resendHint": "Yangi vaqtinchalik parolli yangi xat yuboriladi; avvalgisi amal qilmay qoladi.",
-        "resendNotSent": "Xat yuborilmadi: pochta ulanmagan yoki mavjud emas. Uni Admin · Integratsiyalar bo'limida ulang va takrorlang."
+        "resendNotSent": "Xat yuborilmadi: pochta ulanmagan yoki mavjud emas. Uni Admin · Integratsiyalar bo'limida ulang va takrorlang.",
+        "delivery": "Kirishni qanday berish",
+        "deliveryMail": "Pochtaga xat bilan",
+        "deliveryPassword": "Vaqtinchalik parol bilan, pochtasiz",
+        "submitPassword": "Yaratish va parolni ko'rsatish",
+        "consequencePassword": [
+          "Xodim ro'yxatda «Taklif qilingan» holatida paydo bo'ladi, xat yuborilmaydi.",
+          "Vaqtinchalik parolni bir marta ko'rasiz: uni xodimga shaxsan yoki himoyalangan chatda bering.",
+          "Birinchi kirishda xodim o'z parolini o'rnatishi shart."
+        ],
+        "created": "Xodim yaratildi: {{email}}"
+      },
+      "password": {
+        "title": "Vaqtinchalik parol",
+        "cardLabel": "Xodimning vaqtinchalik paroli",
+        "lead": "Xodim: {{name}}, {{email}}",
+        "warning": "Parol bir marta ko'rsatiladi. Bu oynani yopsangiz, uni qayta ko'ra olmaysiz, yangisini berishga to'g'ri keladi.",
+        "label": "Vaqtinchalik parol",
+        "copy": "Nusxalash",
+        "copied": "Parol nusxalandi",
+        "copyFailed": "Nusxalab bo'lmadi. Parolni belgilang va qo'lda nusxalang.",
+        "howTo": "Uni xodimga shaxsan yoki himoyalangan chatda bering, pochta orqali emas. Birinchi kirishda xodim parolini o'zinikiga almashtirishi shart.",
+        "done": "Tayyor: parol berildi",
+        "issue": {
+          "button": "Vaqtinchalik parol berish",
+          "hint": "Xatsiz yangi parol: avvalgisi amal qilmay qoladi.",
+          "confirmTitle": "Vaqtinchalik parol berish",
+          "confirm": "Parol berish",
+          "cancel": "Bekor qilish",
+          "consequence": [
+            "Avvalgi parol amal qilmay qoladi, xodim Platforma, CRM va ERP'dan chiqadi.",
+            "Yangi vaqtinchalik parolni bir marta ko'rasiz va xodimga berasiz.",
+            "Kirishda xodim o'z parolini o'rnatishi shart; ro'yxatda u «Taklif qilingan» bo'ladi."
+          ]
+        }
       },
       "disable": {
         "button": "Xodimni o'chirish",
@@ -400,7 +524,8 @@
         "FORBIDDEN": "Huquq yetarli emas: rollarni administrator beradi.",
         "BACKEND_UNAVAILABLE": "CRM javob bermayapti. Keyinroq takrorlang.",
         "VALIDATION_FAILED": "Maydonlarning to'ldirilganini tekshiring.",
-        "DEFAULT": "Amalni bajarib bo'lmadi. Qayta urinib ko'ring."
+        "DEFAULT": "Amalni bajarib bo'lmadi. Qayta urinib ko'ring.",
+        "OWN_ACCOUNT": "O'z parolingiz profilda almashtiriladi: vaqtinchalik parol boshqa xodimlarga beriladi."
       },
       "transfer": {
         "label": "Ishdagi lidlarni kimga topshirish",

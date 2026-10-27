@@ -192,6 +192,12 @@ class ChatCandidateOut(BaseModel):
     title: Annotated[str, Field(title="Title")]
 
 
+class ChecklistItem(BaseModel):
+    done: Annotated[bool, Field(title="Done")]
+    key: Annotated[Key, Field(title="Key")]
+    link: Annotated[str, Field(title="Link")]
+
+
 class ComponentStatusOut(BaseModel):
     checked_at: Annotated[AwareDatetime | None, Field(title="Checked At")]
     key: Annotated[str, Field(title="Key")]
@@ -421,6 +427,17 @@ class IncidentOut(BaseModel):
     summary: Annotated[str, Field(title="Summary")]
 
 
+class Key(StrEnum):
+    company = "company"
+    business_hours = "business_hours"
+    models = "models"
+    bot = "bot"
+    channel = "channel"
+    kb = "kb"
+    team = "team"
+    test_dialog = "test_dialog"
+
+
 class KeySource(StrEnum):
     crm = "crm"
     env = "env"
@@ -482,6 +499,10 @@ class ModelTestResult(BaseModel):
     detail: Annotated[str | None, Field(title="Detail")]
     latency_ms: Annotated[int, Field(title="Latency Ms")]
     ok: Annotated[bool, Field(title="Ok")]
+
+
+class PasswordReset(BaseModel):
+    temporary_password: Annotated[str, Field(title="Temporary Password")]
 
 
 class PasswordSource(StrEnum):
@@ -551,6 +572,16 @@ class SettingsSource(StrEnum):
     db = "db"
     env = "env"
     none = "none"
+
+
+class SetupChecklist(BaseModel):
+    done: Annotated[int, Field(title="Done")]
+    items: Annotated[list[ChecklistItem], Field(title="Items")]
+    total: Annotated[int, Field(title="Total")]
+
+
+class SetupState(BaseModel):
+    needs_setup: Annotated[bool, Field(title="Needs Setup")]
 
 
 class SmtpCheckOut(BaseModel):

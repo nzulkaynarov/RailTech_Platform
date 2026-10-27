@@ -8,6 +8,7 @@ import { IntegrationsPage } from "./integrations/IntegrationsPage";
 import { CompanyPage } from "./company/CompanyPage";
 import { OrgPage } from "./org/OrgPage";
 import { RolesPage } from "./roles/RolesPage";
+import { SetupWizardPage } from "./setup/SetupWizardPage";
 
 /**
  * Модуль Admin. Оргструктура (PLT-15), Ролевая матрица (R-2), Внешние интеграции (W13-A1), Компания (W13-A3) и Журнал
@@ -48,6 +49,13 @@ export function Component() {
     return (
       <RequireAccess rule={match.section.access}>
         <BusJournalPage />
+      </RequireAccess>
+    );
+  }
+  if (match?.module.code === "admin" && match.section.key === "setup") {
+    return (
+      <RequireAccess rule={match.section.access}>
+        <SetupWizardPage />
       </RequireAccess>
     );
   }

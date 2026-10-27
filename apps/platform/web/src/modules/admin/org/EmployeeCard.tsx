@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { AssignRoleForm } from "../../../features/assign-role/AssignRoleForm";
 import { DisableEmployee } from "../../../features/assign-role/DisableEmployee";
 import { ResendInvite } from "../../../features/invite-employee/ResendInvite";
+import { IssueTemporaryPassword } from "../../../features/temporary-password/IssueTemporaryPassword";
 import { erpAttention } from "../../../entities/employee/status";
 import type { Employee } from "../../../shared/api/generated/model";
 import { DefinitionList } from "../../../shared/ui/DefinitionList";
@@ -88,6 +89,9 @@ export function EmployeeCard({ employee, selfId, canEdit, otherActiveAdmins }: E
             otherActiveAdmins={otherActiveAdmins}
           />
           {employee.status === "invited" ? <ResendInvite employee={employee} /> : null}
+          {employee.status === "invited" && employee.id !== selfId ? (
+            <IssueTemporaryPassword employee={employee} />
+          ) : null}
           <DisableEmployee
             employee={employee}
             selfId={selfId}

@@ -43,6 +43,15 @@ export const admin: ModuleConfig = {
       actionTo: "/admin/org",
     },
     {
+      // «Первый запуск» (W13-A4): мастер и чек-лист, открывается баннером; в подменю SPEC-v3 §6.2 его нет.
+      key: "setup",
+      path: "/admin/setup",
+      access: { resource: "admin" },
+      hidden: true,
+      tabs: [{ key: "card" }],
+      actionTo: "/admin/org",
+    },
+    {
       key: "company",
       path: "/admin/company",
       access: { resource: "company.settings" },

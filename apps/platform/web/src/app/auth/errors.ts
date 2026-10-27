@@ -9,7 +9,7 @@ import i18n from "../../shared/i18n";
  */
 export function authErrorText(
   t: TFunction<"shell">,
-  group: "login" | "changePassword",
+  group: "login" | "changePassword" | "setup",
   error: unknown,
 ): string {
   const code = error instanceof ApiError ? error.code : "";

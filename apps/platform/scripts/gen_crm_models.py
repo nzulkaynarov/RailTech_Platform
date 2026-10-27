@@ -57,6 +57,10 @@ ROOTS = (
     "AiSpendReport",
     "BackupsOut",
     "SystemStatusOut",
+    # Первый запуск (W13-A4): состояние мастера, чек-лист, временный пароль (сброс без почты).
+    "SetupState",
+    "SetupChecklist",
+    "PasswordReset",
 )
 
 HEADER = (

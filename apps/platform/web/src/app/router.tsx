@@ -5,6 +5,7 @@ import { HomeRedirect } from "./HomeRedirect";
 import { AuthGate } from "./auth/AuthGate";
 import { ChangePasswordPage } from "./auth/ChangePasswordPage";
 import { LoginPage } from "./auth/LoginPage";
+import { SetupPage } from "./auth/SetupPage";
 import { NotFoundPage } from "./NotFoundPage";
 import { AppShell } from "./shell/AppShell";
 import { PanelSlotProvider } from "./shell/PanelSlot";
@@ -16,6 +17,8 @@ import { PanelSlotProvider } from "./shell/PanelSlot";
 
 export const routes: RouteObject[] = [
   { path: "/login", element: <LoginPage /> },
+  // «Первый запуск» до входа (W13-A4): пока в CRM нет администратора, вход ведёт сюда.
+  { path: "/setup", element: <SetupPage /> },
   // Витрина общих компонентов (PLT-13): статическое условие `import.meta.env.DEV` — сборка отбрасывает ветку вместе с
   // модулем, в прод-бандле витрины нет.
   ...(import.meta.env.DEV ? [{ path: "/dev/ui", lazy: () => import("../dev/UiShowcase") }] : []),

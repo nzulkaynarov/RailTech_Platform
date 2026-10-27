@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.9.0
+  version: 0.10.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -12,7 +12,7 @@ info:
     BFF не имеет своей базы: данные приходят из CRM и ERP, каждый вызов бэкенда — с токеном сотрудника.
 
     **Сессия.** `POST /auth/login` ставит cookie `rt_pf_session` (`HttpOnly; Secure; SameSite=Lax; Path=/`) и CSRF-cookie
-    `rt_pf_csrf` (читается скриптом). Каждый `POST`, `PUT`, `PATCH`, `DELETE`, кроме `/auth/login`, несёт заголовок
+    `rt_pf_csrf` (читается скриптом). Каждый `POST`, `PUT`, `PATCH`, `DELETE`, кроме `/auth/login` и `/setup/admin` (оба без сессии), несёт заголовок
     `X-CSRF-Token` со значением CSRF-cookie; без него или с другим значением — 403 `CSRF_FAILED`. Истёкшая или
     отозванная сессия — 401 `SESSION_EXPIRED`.
 
@@ -92,6 +92,20 @@ info:
     сотрудника CRM `aud=eds` → `POST /api/v1/auth/sso/exchange` EDS (`docs/architecture/sso-token.md`), 15 минут, в сессии BFF.
     Тел событий нет — только метаданные доставки. `Error.source` дополнен `eds`.
 
+    **0.10.0 (W13-A4) — добавляющее.** Первый запуск в Платформе (SPEC-v3 §7.6, тег `setup`): вместо `/setup` CRM и мастера ERP.
+    Без сессии: `GET /setup/state` (CRM `/setup/state`: администратора ещё нет — `needs_admin`) и `POST /setup/admin` (одноразовый
+    код первого запуска из журнала `crm-api`, имя, почта, пароль -> первый администратор; ответ — как у входа: `Session` и cookie).
+    С сессией, раздел `admin` — полный: `GET /setup/checklist` (чек-лист из пяти шагов — бот, ERP, почта, модели ИИ, первый
+    сотрудник — по ответам CRM; шаг мастера «своя компания» — по ERP `setup/status`) и `POST /setup/company` (ERP `setup/company`,
+    токеном администратора). Приглашение без почты: `POST /admin/users` создаёт сотрудника и возвращает **временный пароль один
+    раз**, `POST /admin/users/{id}/temporary-password` выдаёт новый временный пароль существующему сотруднику (CRM
+    `/users/{id}/reset-password`; прежний пароль и сессии сотрудника перестают действовать). Пароль приходит только в этом ответе
+    (`Cache-Control: no-store`): BFF его не пишет в журнал, не кэширует и не хранит, а повторно получить его нельзя — только выдать
+    новый; сотрудник при входе обязан сменить его (`Session.must_change_password`, `POST /auth/change-password`). Коды ошибок:
+    `SETUP_DONE` (409), `SETUP_CODE_INVALID`, `SETUP_CODE_EXPIRED` (422), `SETUP_LOCKED` (429, 15 минут после десяти неверных
+    кодов), `OWN_COMPANY_ALREADY_EXISTS` (409). Право: чек-лист и мастер компании видит и выполняет только `admin: full` — CRM
+    `/setup/checklist` требует право записи настроек; директору баннер не показывается.
+
     0.2.4: `423 ACCOUNT_LOCKED` объявлен и на `POST /auth/change-password` (CRM блокирует учётную запись после неверных
     текущих паролей).
 
@@ -119,6 +133,8 @@ security:
 tags:
   - name: auth
     description: Вход логином CRM; токены CRM и ERP живут только в сессии BFF
+  - name: setup
+    description: Первый запуск — администратор (без сессии), чек-лист из пяти шагов и своя компания (раздел `admin`)
   - name: me
   - name: system
   - name: dashboard
@@ -251,6 +267,146 @@ paths:
                 $ref: '#/components/schemas/Session'
         '401':
           $ref: '#/components/responses/SessionExpired'
+
+  /setup/state:
+    get:
+      tags: [setup]
+      operationId: getSetupState
+      summary: Нужен ли первый запуск (в CRM ещё нет администратора)
+      description: >-
+        Без сессии (CRM `/setup/state`). `needs_admin = true` — SPA ведёт на экран «Первый запуск» вместо входа. Пока администратора
+        нет, CRM выдаёт одноразовый код первого запуска и один раз пишет его в журнал `crm-api` (`setup_code_issued`); в ответе кода нет.
+      security: []
+      responses:
+        '200':
+          description: Состояние
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SetupState'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /setup/admin:
+    post:
+      tags: [setup]
+      operationId: createFirstAdmin
+      summary: Создать первого администратора и войти
+      description: >-
+        Без сессии, один раз (CRM `/setup/admin`). Код первого запуска — из журнала `crm-api`; регистр, пробелы и дефисы не важны.
+        Создаётся пользователь с системной ролью «Администратор»; BFF входит под ним теми же почтой и паролем и ставит `rt_pf_session` и
+        `rt_pf_csrf` — ответ как у `POST /auth/login`. Попытки считаются в том же лимите, что и вход (на IP и e-mail). Неверный код —
+        422 `SETUP_CODE_INVALID`, истёкший (24 часа) — 422 `SETUP_CODE_EXPIRED`, перебор — 429 `SETUP_LOCKED` (15 минут), администратор
+        уже есть — 409 `SETUP_DONE`. Слабый пароль — 422 `VALIDATION_FAILED`, `details.fields = [password]`.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetupAdminIn'
+      responses:
+        '200':
+          description: Администратор создан, сессия открыта
+          headers:
+            Set-Cookie:
+              description: '`rt_pf_session` и `rt_pf_csrf`'
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '409':
+          description: '`SETUP_DONE` — администратор уже создан'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: '`SETUP_CODE_INVALID`, `SETUP_CODE_EXPIRED`, `VALIDATION_FAILED` (`details.fields`)'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: '`SETUP_LOCKED` (15 минут) или `TOO_MANY_REQUESTS`'
+          headers:
+            Retry-After:
+              description: Секунды до повтора
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /setup/checklist:
+    get:
+      tags: [setup]
+      operationId: getSetupChecklist
+      summary: Чек-лист первого запуска из пяти шагов
+      description: >-
+        Раздел `admin` — полный (директору — 403: CRM отдаёт чек-лист только с правом записи настроек, а все шаги ведут на экраны
+        администратора). Состояние шагов приносят бэкенды, BFF их только сводит: бот и модели ИИ — CRM `/setup/checklist`, ERP —
+        `/integrations/erp`, почта — `/integrations/smtp`, первый сотрудник — `/users` (есть ли кроме администратора активный
+        сотрудник). Часть данных не ответила — шаг `unknown`, чек-лист не падает; не ответила ни одна — 503. `company` — шаг мастера
+        «своя компания» (ERP `setup/status`); `null`, если ERP не ответила или у администратора нет сессии ERP.
+      responses:
+        '200':
+          description: Чек-лист
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SetupChecklist'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /setup/company:
+    post:
+      tags: [setup]
+      operationId: createOwnCompany
+      summary: Создать свою компанию (шаг мастера)
+      description: >-
+        Раздел `admin` — полный. ERP `setup/company/` токеном администратора: создаёт компанию с типом «продавец» и делает его
+        владельцем; только пока своей компании нет. Повтор — 409 `OWN_COMPANY_ALREADY_EXISTS`. Поля формы — 422 `VALIDATION_FAILED`
+        (`details.fields`, тексты ERP — `details.messages`). ERP не ответила или у администратора ещё нет сессии ERP (доступ
+        выдаётся CRM с задержкой) — 503 `BACKEND_UNAVAILABLE`, повтор через несколько секунд. Тот же сотрудник уже не суперпользователь ERP — 403 `FORBIDDEN`.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetupCompanyIn'
+      responses:
+        '201':
+          description: Компания создана
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SetupCompanyCreated'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: '`OWN_COMPANY_ALREADY_EXISTS` — компания уже создана'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
 
   /me:
     get:
@@ -1706,6 +1862,50 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
 
+    post:
+      tags: [admin]
+      operationId: createEmployee
+      summary: Добавить сотрудника без почты — временный пароль показывается один раз
+      description: >-
+        Раздел `admin` — полный. Для тех, кому письмо не придёт (почта ещё не подключена, у сотрудника нет почты на этом адресе).
+        BFF создаёт пользователя в CRM с ролями Платформы (CRM `/users`) и отдаёт **временный пароль в этом ответе — единственный
+        раз**: BFF не пишет его в журнал, не кэширует и не хранит; ответ — `Cache-Control: no-store`. Сотрудник при первом входе
+        обязан сменить пароль. Потерянный пароль не восстановить — выдать новый: `POST /admin/users/{id}/temporary-password`.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmployeeInvite'
+      responses:
+        '201':
+          description: Сотрудник создан, пароль показан
+          headers:
+            Cache-Control:
+              description: '`no-store`'
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployeeCredentials'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: '`EMAIL_EXISTS`'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
   /admin/users/invite:
     post:
       tags: [admin]
@@ -1786,6 +1986,46 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+
+  /admin/users/{id}/temporary-password:
+    post:
+      tags: [admin]
+      operationId: issueTemporaryPassword
+      summary: Выдать сотруднику новый временный пароль (без почты)
+      description: >-
+        Раздел `admin` — полный (CRM `/users/{id}/reset-password`). Новый пароль показан **в этом ответе один раз**
+        (`Cache-Control: no-store`; BFF его не логирует, не кэширует и не хранит), прежний пароль и все сессии сотрудника в CRM и ERP
+        перестают действовать, при входе он обязан сменить пароль (в списке — «Приглашён»). Повторный запрос выдаёт ещё один новый
+        пароль, старый получить нельзя. Свой пароль так не меняют — 409 `CONFLICT` с `details.reason = own_account` (смена — в профиле).
+      parameters:
+        - $ref: '#/components/parameters/EmployeeId'
+        - $ref: '#/components/parameters/CsrfToken'
+      responses:
+        '200':
+          description: Пароль выдан
+          headers:
+            Cache-Control:
+              description: '`no-store`'
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployeeCredentials'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: '`CONFLICT` с `details.reason = own_account` — свой пароль меняется в профиле'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
 
   /admin/users/{id}:
     get:
@@ -3410,7 +3650,7 @@ components:
       properties:
         code:
           type: string
-          description: Стабильный код (`INVALID_CREDENTIALS`, `SESSION_EXPIRED`, `CSRF_FAILED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_FAILED`, `TOO_MANY_REQUESTS`, `BACKEND_UNAVAILABLE`, `NO_PLATFORM_ROLE`, `USER_DISABLED`, `ACCOUNT_LOCKED`, `CONFLICT`, `WRONG_PASSWORD`, `EMAIL_EXISTS`, `LAST_ADMIN`, `LAST_DIRECTOR`, `ROLE_IN_USE`, `ROLE_SYSTEM`, `ROLES_REQUIRED`, `NOT_CONFIGURED`, `SECRETS_KEY_MISSING`, `SERVICE_NOT_SWITCHABLE`, `INTEGRATION_FAILED`, `COMPANY_NOT_SET`, `INTERNAL_ERROR`, `BAD_REQUEST`, `METHOD_NOT_ALLOWED`, `HTTP_<статус>`)
+          description: Стабильный код (`INVALID_CREDENTIALS`, `SESSION_EXPIRED`, `CSRF_FAILED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_FAILED`, `TOO_MANY_REQUESTS`, `BACKEND_UNAVAILABLE`, `NO_PLATFORM_ROLE`, `USER_DISABLED`, `ACCOUNT_LOCKED`, `CONFLICT`, `WRONG_PASSWORD`, `EMAIL_EXISTS`, `LAST_ADMIN`, `LAST_DIRECTOR`, `ROLE_IN_USE`, `ROLE_SYSTEM`, `ROLES_REQUIRED`, `NOT_CONFIGURED`, `SECRETS_KEY_MISSING`, `SERVICE_NOT_SWITCHABLE`, `INTEGRATION_FAILED`, `COMPANY_NOT_SET`, `SETUP_DONE`, `SETUP_CODE_INVALID`, `SETUP_CODE_EXPIRED`, `SETUP_LOCKED`, `OWN_COMPANY_ALREADY_EXISTS`, `INTERNAL_ERROR`, `BAD_REQUEST`, `METHOD_NOT_ALLOWED`, `HTTP_<статус>`)
           examples: [SESSION_EXPIRED]
         message:
           type: string
@@ -4719,6 +4959,139 @@ components:
           uniqueItems: true
           items:
             $ref: '#/components/schemas/RoleId'
+
+    EmployeeCredentials:
+      type: object
+      additionalProperties: false
+      required: [employee, temporary_password]
+      description: Сотрудник и его временный пароль — показывается администратору один раз, повторно получить нельзя
+      properties:
+        employee:
+          $ref: '#/components/schemas/Employee'
+        temporary_password:
+          type: string
+          minLength: 1
+          description: Одноразовый временный пароль; сотрудник обязан сменить его при входе. Не логируется и не кэшируется
+
+    SetupState:
+      type: object
+      additionalProperties: false
+      required: [needs_admin]
+      properties:
+        needs_admin:
+          type: boolean
+          description: В CRM ещё нет активного администратора — нужен экран «Первый запуск»
+
+    SetupAdminIn:
+      type: object
+      additionalProperties: false
+      required: [code, name, email, password]
+      properties:
+        code:
+          type: string
+          minLength: 1
+          maxLength: 64
+          description: Одноразовый код первого запуска из журнала `crm-api` (`setup_code_issued`)
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        password:
+          type: string
+          minLength: 1
+          maxLength: 256
+          description: Правила пароля проверяет CRM; слабый — 422 `VALIDATION_FAILED` (`details.fields = [password]`)
+
+    SetupStepKey:
+      type: string
+      enum: [bot, erp, mail, models, first_employee]
+      description: Пять шагов чек-листа (SPEC-v3 §7.6) — бот, ERP, почта, модели ИИ, первый сотрудник
+
+    SetupStepState:
+      type: string
+      enum: [done, todo, unknown]
+      description: '`unknown` — бэкенд не ответил или не отдал данные; чек-лист при этом не падает'
+
+    SetupStep:
+      type: object
+      additionalProperties: false
+      required: [key, state]
+      properties:
+        key:
+          $ref: '#/components/schemas/SetupStepKey'
+        state:
+          $ref: '#/components/schemas/SetupStepState'
+
+    SetupCompanyStatus:
+      type: object
+      additionalProperties: false
+      required: [required, can_setup]
+      properties:
+        required:
+          type: boolean
+          description: Своей компании в ERP ещё нет
+        can_setup:
+          type: boolean
+          description: Текущий сотрудник может её создать (суперпользователь ERP)
+
+    SetupChecklist:
+      type: object
+      additionalProperties: false
+      required: [steps, done, total, company]
+      properties:
+        steps:
+          type: array
+          description: Всегда пять шагов в порядке `SetupStepKey`
+          items:
+            $ref: '#/components/schemas/SetupStep'
+        done:
+          type: integer
+          minimum: 0
+        total:
+          type: integer
+          minimum: 5
+          maximum: 5
+        company:
+          oneOf:
+            - $ref: '#/components/schemas/SetupCompanyStatus'
+            - type: 'null'
+          description: Шаг мастера «своя компания»; `null` — ERP не ответила
+
+    SetupCompanyIn:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        inn:
+          type: string
+          maxLength: 20
+        legal_address:
+          type: string
+        phone:
+          type: string
+          maxLength: 50
+        email:
+          type: string
+          maxLength: 254
+          description: Пусто или корректный адрес (проверяет ERP)
+
+    SetupCompanyCreated:
+      type: object
+      additionalProperties: false
+      required: [id, name]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
 
     EmployeeUpdate:
       type: object
