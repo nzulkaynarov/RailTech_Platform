@@ -54,13 +54,15 @@ def lead_dm_due(last_sent_at: datetime | None, now: datetime, window: timedelta)
     return last_sent_at is None or now - last_sent_at >= window
 
 
-def lead_dm_text(lead_name: str, text: str, crm_url: str, lead_id: int) -> str:
-    """HTML: превью экранировано, ссылка — `<a href>` (сырой адрес не показывается)."""
+def lead_dm_text(lead_name: str, text: str, lead_url: str, lead_id: int) -> str:
+    """HTML: превью экранировано, ссылка — `<a href>` (сырой адрес не показывается).
+
+    `lead_url` — готовый адрес лида (Платформа или старая CRM, `LinkBase.lead`)."""
     preview = " ".join(text.split())
     if len(preview) > PREVIEW_CHARS:
         preview = preview[: PREVIEW_CHARS - 1].rstrip() + "…"
     name = escape(lead_name.strip())
     who = f"лида #{lead_id} {name}" if name else f"лида #{lead_id}"
     body = f"«{escape(preview)}»" if preview else "(вложение)"
-    link = escape(f"{crm_url.rstrip('/')}/leads/{lead_id}", quote=True)
-    return f'💬 Новое сообщение от {who}: {body} — <a href="{link}">открыть в CRM</a>'
+    link = escape(lead_url, quote=True)
+    return f'💬 Новое сообщение от {who}: {body} — <a href="{link}">открыть</a>'

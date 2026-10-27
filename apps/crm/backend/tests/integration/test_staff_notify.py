@@ -6,6 +6,7 @@ import pytest
 from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.domain.platform_links import LinkBase
 from app.models.auth import User
 from app.models.leads import Lead
 from app.services.staff_notifier import StaffNotifier
@@ -34,11 +35,12 @@ async def test_manager_dm_once_per_window(sessions: async_sessionmaker[AsyncSess
     bot = FakeSender()
     notifier = StaffNotifier(sessions, bot)
     now = datetime.now(UTC)
-    assert await notifier.lead_message(lead_id, now, WINDOW, "https://crm.example.com")
-    assert not await notifier.lead_message(lead_id, now + timedelta(minutes=1), WINDOW, "x")
-    assert await notifier.lead_message(lead_id, now + WINDOW, WINDOW, "https://crm.example.com")
+    old = LinkBase(platform=None, crm="https://crm.example.com")
+    assert await notifier.lead_message(lead_id, now, WINDOW, old)
+    assert not await notifier.lead_message(lead_id, now + timedelta(minutes=1), WINDOW, old)
+    assert await notifier.lead_message(lead_id, now + WINDOW, WINDOW, old)
     assert [chat for chat, _ in bot.sent] == [tg, tg]
-    assert f"/leads/{lead_id}" in bot.sent[0][1]
+    assert f"https://crm.example.com/leads/{lead_id}" in bot.sent[0][1]
     assert "Сколько стоит?" in bot.sent[0][1]
 
 
@@ -56,7 +58,7 @@ async def test_no_dm_when_unsubscribed(sessions: async_sessionmaker[AsyncSession
         )
     bot = FakeSender()
     assert not await StaffNotifier(sessions, bot).lead_message(
-        lead_id, datetime.now(UTC), WINDOW, "x"
+        lead_id, datetime.now(UTC), WINDOW, LinkBase(None, "x")
     )
     assert bot.sent == []
 
@@ -68,3 +70,19 @@ async def test_alert_reaches_subscribed_admin(sessions: async_sessionmaker[Async
     bot = FakeSender()
     assert await StaffNotifier(sessions, bot).alert_admins("⚠️ тест", "test") >= 1
     assert (tg, "⚠️ тест") in bot.sent
+
+
+async def test_handover_dm_links_to_the_platform(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    manager, _ = await make_user(sessions, "h@x.uz", ["manager"])
+    await link(sessions, manager.id, 7003)
+    lead_id = await escalated_lead(sessions)
+    bot = FakeSender()
+    links = LinkBase(platform="https://platform.example.com", crm="https://crm.example.com")
+    assert await StaffNotifier(sessions, bot).handed_over(lead_id, manager.id, links)
+    text = bot.sent[0][1]
+    assert (
+        f"platform.example.com/crm/leads?lead=L-{lead_id:04d}&amp;panel=open&amp;tab=card" in text
+    )
+    assert "crm.example.com" not in text

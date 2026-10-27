@@ -157,7 +157,7 @@ class MonitorService:
         async with self._sessions() as session:
             f = await repo.daily_figures(session, since)
         day = f"{since.astimezone(ZoneInfo(cfg.business_hours.timezone)):%d.%m}"
-        dashboard = f"{cfg.company.crm_base_url.rstrip('/')}/dashboard"
+        dashboard = (await self._settings.links()).dashboard()
         text = report_text(f, day, dashboard)
         cost = f"${f.cost_usd:.2f}"
         if cfg.budget.daily_usd > 0:

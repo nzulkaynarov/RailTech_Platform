@@ -61,6 +61,8 @@ Action = Literal[
 ALERT_AFTER: Final = timedelta(minutes=15)
 #: «Восстановлено» — только после непрерывного `ok` не короче этого срока.
 RECOVERY_AFTER: Final = timedelta(minutes=5)
+#: Последняя строка оповещения; рассылка заменяет её ссылкой на «Подключения» Платформы (B-009).
+OPEN_LINE: Final = "Открыть: Платформа → Admin → Подключения."
 #: Не больше одного «Сломано» на причину за это время; повторные провалы — сводка, не серия.
 ALERT_COOLDOWN: Final = timedelta(hours=24)
 #: Дребезг: столько провалов (полос `fail`) за `FLAP_WINDOW` — «Нестабильно», даже если сейчас `ok`.
@@ -578,7 +580,7 @@ def broken_alert(
         lines.append(f"Кто исправляет: {OWNER_LABEL[group.owner]}.")
     if group.detail:
         lines.append(f"Что сделать: {group.detail}")
-    lines.append("Открыть: Платформа → Admin → Подключения.")
+    lines.append(OPEN_LINE)
     return AlertText(f"⚠️ Сломано: {group.headline}", tuple(lines))
 
 
@@ -594,5 +596,5 @@ def _plural(n: int) -> str:
 def restored_alert(headline: str, lasted: timedelta) -> AlertText:
     return AlertText(
         f"✅ Восстановлено: {headline}",
-        (f"Не работало {duration_text(lasted)}.", "Открыть: Платформа → Admin → Подключения."),
+        (f"Не работало {duration_text(lasted)}.", OPEN_LINE),
     )

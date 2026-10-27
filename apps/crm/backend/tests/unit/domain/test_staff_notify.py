@@ -89,10 +89,11 @@ def test_lead_dm_due(last: datetime | None, expected: bool) -> None:
 
 
 def test_lead_dm_text_has_preview_and_link() -> None:
-    text = lead_dm_text("Иван", "Когда  будет\nпоставка?", "https://crm.example.com/", 42)
+    url = "https://platform.example.com/crm/leads?lead=L-0042&panel=open&tab=card"
+    text = lead_dm_text("Иван", "Когда  будет\nпоставка?", url, 42)
     assert text == (
         "💬 Новое сообщение от лида #42 Иван: «Когда будет поставка?» — "
-        '<a href="https://crm.example.com/leads/42">открыть в CRM</a>'
+        f'<a href="{url.replace("&", "&amp;")}">открыть</a>'
     )
 
 
