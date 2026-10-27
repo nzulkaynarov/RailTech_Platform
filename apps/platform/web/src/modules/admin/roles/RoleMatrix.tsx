@@ -159,7 +159,7 @@ export function RoleMatrix({ columns, selectedId, onSelect, draft, onDraft }: Ro
               <tr key={`group:${module}`} className="pf-matrix-group">
                 <th scope="colgroup" colSpan={columns.length + 1}>
                   <span className="pf-matrix-group-label">
-                    {`${String(config?.order ?? "")}. ${config?.name ?? module}`}
+                    {config ? t(`${module}.title`) : module}
                   </span>
                 </th>
               </tr>,

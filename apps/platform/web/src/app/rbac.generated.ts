@@ -26,9 +26,9 @@ export const RESOURCES = {
     levels: ["read", "full"],
     backends: [],
     label: {
-      ru: "Dashboard · Моя очередь",
-      uz: "Dashboard · Mening navbatim",
-      en: "Dashboard · My queue",
+      ru: "Главная · Мои задачи",
+      uz: "Bosh sahifa · Mening vazifalarim",
+      en: "Home · My tasks",
     },
   },
   "dashboard.summary": {
@@ -36,9 +36,9 @@ export const RESOURCES = {
     levels: ["read", "full"],
     backends: ["crm", "erp"],
     label: {
-      ru: "Dashboard · Сводка по компании",
-      uz: "Dashboard · Kompaniya bo'yicha xulosa",
-      en: "Dashboard · Company summary",
+      ru: "Главная · Сводка по компании",
+      uz: "Bosh sahifa · Kompaniya xulosasi",
+      en: "Home · Company summary",
     },
   },
   "crm.leads": {
@@ -46,9 +46,9 @@ export const RESOURCES = {
     levels: ["read", "full"],
     backends: ["crm"],
     label: {
-      ru: "CRM · Все сообщения, Все лиды, Каналы связи, База знаний",
-      uz: "CRM · Xabarlar, lidlar, aloqa kanallari, bilimlar bazasi",
-      en: "CRM · Messages, leads, channels, knowledge base",
+      ru: "Клиенты · Ждут ответа, Лиды, Каналы связи, База знаний бота",
+      uz: "Mijozlar · Javob kutmoqda, lidlar, aloqa kanallari, bot bilimlar bazasi",
+      en: "Clients · Awaiting reply, leads, channels, bot knowledge base",
     },
   },
   "crm.clients": {
@@ -56,9 +56,9 @@ export const RESOURCES = {
     levels: ["read", "full"],
     backends: ["crm", "erp"],
     label: {
-      ru: "CRM · Все клиенты, Все заявки, Создать заявку",
-      uz: "CRM · Mijozlar, arizalar, ariza yaratish",
-      en: "CRM · Clients, requests, create request",
+      ru: "Клиенты · Клиенты, Заявки, Создать заявку",
+      uz: "Mijozlar · Mijozlar, arizalar, ariza yaratish",
+      en: "Clients · Clients, requests, new request",
     },
   },
   "eds.inbox": {
@@ -66,9 +66,9 @@ export const RESOURCES = {
     levels: ["read", "full"],
     backends: ["erp"],
     label: {
-      ru: "EDS · Входящие · резолюция",
-      uz: "EDS · Kiruvchi · rezolyutsiya",
-      en: "EDS · Inbox · resolution",
+      ru: "Документы · Входящие письма · резолюция",
+      uz: "Hujjatlar · Kiruvchi xatlar · rezolyutsiya",
+      en: "Documents · Incoming letters · resolution",
     },
   },
   "eds.drafts": {
@@ -76,9 +76,9 @@ export const RESOURCES = {
     levels: ["read", "full"],
     backends: ["erp"],
     label: {
-      ru: "EDS · Черновик КП · одобрение и отправка",
-      uz: "EDS · TT qoralamasi · tasdiqlash va yuborish",
-      en: "EDS · Draft quote · approval and sending",
+      ru: "Документы · КП на одобрение, Исходящие · одобрение и отправка",
+      uz: "Hujjatlar · Tasdiqlash uchun TT, chiquvchi · tasdiqlash va yuborish",
+      en: "Documents · Quotes to approve, outgoing · approval and sending",
     },
   },
   "eds.projects": {
@@ -86,9 +86,9 @@ export const RESOURCES = {
     levels: ["read", "full"],
     backends: ["erp"],
     label: {
-      ru: "EDS · Все проекты · договор, счёт, акт, сканы",
-      uz: "EDS · Loyihalar · shartnoma, hisob, dalolatnoma, skanlar",
-      en: "EDS · Projects · contract, invoice, act, scans",
+      ru: "Документы · Проекты: договор, счёт, акт, сканы",
+      uz: "Hujjatlar · Loyihalar: shartnoma, hisob, dalolatnoma, skanlar",
+      en: "Documents · Projects: contract, invoice, act, scans",
     },
   },
   "eds.payments": {
@@ -96,9 +96,9 @@ export const RESOURCES = {
     levels: ["read", "full"],
     backends: ["erp"],
     label: {
-      ru: "EDS · Счета и оплаты · подтвердить оплату, запросить платёжку",
-      uz: "EDS · Hisoblar va to'lovlar",
-      en: "EDS · Invoices and payments",
+      ru: "Документы · Счета и оплаты · подтвердить оплату, запросить платёжку",
+      uz: "Hujjatlar · Hisoblar va to‘lovlar · to‘lovni tasdiqlash, to‘lov topshiriqnomasini so‘rash",
+      en: "Documents · Invoices & payments · confirm payment, request a payment order",
     },
   },
   "eds.memo.create": {
@@ -106,9 +106,9 @@ export const RESOURCES = {
     levels: ["read", "full"],
     backends: [],
     label: {
-      ru: "EDS · Служебная записка · создать",
-      uz: "EDS · Xizmat xati · yaratish",
-      en: "EDS · Memo · create",
+      ru: "Документы · Служебная записка · создать",
+      uz: "Hujjatlar · Xizmat xati · yaratish",
+      en: "Documents · Memo · create",
     },
   },
   "eds.memo.approve": {
@@ -116,9 +116,9 @@ export const RESOURCES = {
     levels: ["read", "full"],
     backends: [],
     label: {
-      ru: "EDS · Служебная записка · согласовать",
-      uz: "EDS · Xizmat xati · kelishish",
-      en: "EDS · Memo · approve",
+      ru: "Документы · Служебная записка · согласовать",
+      uz: "Hujjatlar · Xizmat xati · kelishish",
+      en: "Documents · Memo · approve",
     },
   },
   "erp.calc": {
@@ -126,9 +126,9 @@ export const RESOURCES = {
     levels: ["read", "full"],
     backends: ["erp"],
     label: {
-      ru: "ERP · Все запросы, Расчёт",
-      uz: "ERP · So'rovlar, hisob-kitob",
-      en: "ERP · Requests, calculation",
+      ru: "Расчёт · Заявки в расчёте, Мои расчёты",
+      uz: "Hisob-kitob · Hisobdagi arizalar, mening hisob-kitoblarim",
+      en: "Costing · Requests in costing, my costings",
     },
   },
   "erp.calc.goods": {
@@ -136,9 +136,9 @@ export const RESOURCES = {
     levels: ["full"],
     backends: ["erp"],
     label: {
-      ru: "ERP · Расчёт · виза по товарам и складу",
-      uz: "ERP · Hisob-kitob · tovarlar va ombor vizasi",
-      en: "ERP · Calculation · goods and stock sign-off",
+      ru: "Расчёт · Виза расчёта: товары и склад",
+      uz: "Hisob-kitob · Hisob-kitob vizasi: tovarlar va ombor",
+      en: "Costing · Costing sign-off: goods and stock",
     },
   },
   "erp.calc.services": {
@@ -146,9 +146,9 @@ export const RESOURCES = {
     levels: ["full"],
     backends: ["erp"],
     label: {
-      ru: "ERP · Расчёт · виза по услугам",
-      uz: "ERP · Hisob-kitob · xizmatlar vizasi",
-      en: "ERP · Calculation · services sign-off",
+      ru: "Расчёт · Виза расчёта: услуги",
+      uz: "Hisob-kitob · Hisob-kitob vizasi: xizmatlar",
+      en: "Costing · Costing sign-off: services",
     },
   },
   "erp.stock": {
@@ -156,9 +156,9 @@ export const RESOURCES = {
     levels: ["read", "full"],
     backends: ["erp"],
     label: {
-      ru: "ERP · Склад, Справочники, Документация",
-      uz: "ERP · Ombor, ma'lumotnomalar, hujjatlar",
-      en: "ERP · Stock, catalogs, documentation",
+      ru: "Расчёт · Склад, Номенклатура и поставщики, Техдокументация",
+      uz: "Hisob-kitob · Ombor, nomenklatura va yetkazib beruvchilar, texnik hujjatlar",
+      en: "Costing · Stock, items & suppliers, technical files",
     },
   },
   "chats.internal": {
@@ -166,9 +166,9 @@ export const RESOURCES = {
     levels: ["read", "full"],
     backends: [],
     label: {
-      ru: "Chats · Внутренний (проекты, команда)",
-      uz: "Chats · Ichki (loyihalar, jamoa)",
-      en: "Chats · Internal (projects, team)",
+      ru: "Чаты · Команда (проекты, сотрудники)",
+      uz: "Chatlar · Jamoa (loyihalar, xodimlar)",
+      en: "Chats · Team (projects, staff)",
     },
   },
   "chats.external": {
@@ -176,9 +176,9 @@ export const RESOURCES = {
     levels: ["read", "full"],
     backends: ["crm"],
     label: {
-      ru: "Chats · Внешний (клиент: Telegram-бот, почта)",
-      uz: "Chats · Tashqi (mijoz: Telegram-bot, pochta)",
-      en: "Chats · External (client: Telegram bot, email)",
+      ru: "Чаты · С клиентами (Telegram-бот, почта)",
+      uz: "Chatlar · Mijozlar bilan (Telegram-bot, pochta)",
+      en: "Chats · With clients (Telegram bot, email)",
     },
   },
   admin: {
@@ -186,9 +186,9 @@ export const RESOURCES = {
     levels: ["read", "full"],
     backends: ["crm", "erp"],
     label: {
-      ru: "Admin · Роли, Оргструктура, Интеграции, Тикеты",
-      uz: "Admin · Rollar, tuzilma, integratsiyalar, tiketlar",
-      en: "Admin · Roles, org chart, integrations, tickets",
+      ru: "Настройки · Роли и права, Сотрудники, Подключения, Telegram-бот, История действий, Обращения сотрудников",
+      uz: "Sozlamalar · Rollar va huquqlar, xodimlar, ulanishlar, Telegram-bot, harakatlar tarixi, xodimlar murojaatlari",
+      en: "Settings · Roles & permissions, employees, connections, Telegram bot, activity log, staff requests",
     },
   },
   "company.settings": {
@@ -196,9 +196,9 @@ export const RESOURCES = {
     levels: ["read", "full"],
     backends: ["erp"],
     label: {
-      ru: "Компания: реквизиты, шаблоны документов, нумерация, условия оплаты",
-      uz: "Kompaniya: rekvizitlar, hujjat shablonlari, raqamlash, to'lov shartlari",
-      en: "Company: details, document templates, numbering, payment terms",
+      ru: "Настройки · Компания и бланки: реквизиты, шаблоны документов, нумерация, условия оплаты",
+      uz: "Sozlamalar · Kompaniya va blankalar: rekvizitlar, hujjat shablonlari, raqamlash, to‘lov shartlari",
+      en: "Settings · Company & letterhead: details, document templates, numbering, payment terms",
     },
   },
 } as const satisfies Record<string, ResourceDef>;

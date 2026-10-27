@@ -8,7 +8,7 @@ setupBotTests();
 async function openBot(email: string, search = "") {
   signIn(email);
   const view = renderAt(`/admin/bot${search}`);
-  expect(await screen.findByRole("heading", { level: 1, name: "Настройки бота" })).toBeVisible();
+  expect(await screen.findByRole("heading", { level: 1, name: "Telegram-бот" })).toBeVisible();
   await screen.findByRole("navigation", { name: "Разделы настроек бота" });
   return view;
 }
@@ -349,7 +349,7 @@ describe("Admin · Настройки бота: выгрузки CSV", () => {
     for (const title of ["Лиды", "Клиенты", "Сделки"]) {
       expect(screen.getByRole("button", { name: `Скачать: ${title}` })).toBeDisabled();
     }
-    expect(screen.getAllByText(/нужен раздел «CRM · Все лиды»/)).not.toHaveLength(0);
+    expect(screen.getAllByText(/нужен раздел «Клиенты · Лиды»/)).not.toHaveLength(0);
   });
 
   it("роль с данными: файл скачивается под именем с датой, фильтры уходят в запрос", async () => {
@@ -407,7 +407,7 @@ describe("Admin · Настройки бота: права", () => {
     renderAt("/admin/bot");
 
     expect(await screen.findByRole("heading", { level: 1, name: "Нет доступа" })).toBeVisible();
-    expect(screen.queryByRole("link", { name: "Настройки бота" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Telegram-бот" })).toBeNull();
     expect(screen.queryByRole("navigation", { name: "Разделы настроек бота" })).toBeNull();
   });
 });

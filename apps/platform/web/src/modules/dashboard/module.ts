@@ -2,8 +2,6 @@ import type { ModuleConfig } from "../types";
 
 export const dashboard: ModuleConfig = {
   code: "dashboard",
-  order: 1,
-  name: "Dashboard",
   sections: [
     {
       key: "queue",

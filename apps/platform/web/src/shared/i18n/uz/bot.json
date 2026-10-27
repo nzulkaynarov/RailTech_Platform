@@ -80,7 +80,7 @@
     "stay": "Qolish"
   },
   "qualificationHint": "Lid barcha majburiy faktlar ma’lum bo‘lganda va qo‘shimcha faktlar belgilangan sondan kam bo‘lmaganda «Kvalifikatsiyalangan» bo‘ladi. Faktlarni AI ajratadi, qarorni tizim qabul qiladi.",
-  "channelMoved": "Jamoa kanali «Tashqi integratsiyalar» → Telegramda tanlanadi; bu yerda — kimni tilga olish va menejerga qanchalik tez-tez yozish.",
+  "channelMoved": "Jamoa kanali «Ulanishlar» → Telegramda tanlanadi; bu yerda — kimni tilga olish va menejerga qanchalik tez-tez yozish.",
   "openIntegrations": "Telegramni ochish",
   "weekdays": {
     "mon": "Du",
@@ -195,8 +195,8 @@
     },
     "sections": {
       "crm": {
-        "leads": "CRM · Barcha lidlar",
-        "clients": "CRM · Barcha mijozlar"
+        "leads": "Mijozlar · Lidlar",
+        "clients": "Mijozlar · Mijozlar"
       }
     }
   },

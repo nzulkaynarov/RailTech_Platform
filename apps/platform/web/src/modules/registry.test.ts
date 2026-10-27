@@ -12,74 +12,133 @@ function menuOf(code: ModuleKey): string[] {
   return (module?.sections ?? []).filter((s) => !s.hidden).map((s) => sections[s.key] ?? "?");
 }
 
-describe("меню модулей дословно SPEC-v3 §6.2", () => {
-  it("Dashboard", () => {
-    expect(menuOf("dashboard")).toEqual(["Моя очередь", "Все проекты", "Сводка по компании"]);
+describe("меню модулей — SPEC-v3 §6.2 в редакции UX-оценки 2026-10-27 §6.2 (волна 15 H5)", () => {
+  it("Главная", () => {
+    expect(menuOf("dashboard")).toEqual(["Мои задачи", "Проекты", "Сводка по компании"]);
   });
-  it("CRM", () => {
+  it("Клиенты", () => {
     expect(menuOf("crm")).toEqual([
-      "Все сообщения",
-      "Все лиды",
-      "Все клиенты",
-      "Все заявки",
+      "Ждут ответа",
+      "Лиды",
+      "Клиенты",
+      "Заявки",
       "Каналы связи",
-      "База знаний",
+      "База знаний бота",
     ]);
   });
-  it("EDS", () => {
+  it("Документы", () => {
     expect(menuOf("eds")).toEqual([
       "Все документы",
-      "Входящие",
+      "Входящие письма",
       "Исходящие",
-      "Все проекты",
-      "Черновик",
+      "Проекты: договоры и акты",
+      "КП на одобрение",
       "На согласовании",
       "Счета и оплаты",
     ]);
   });
-  it("ERP", () => {
+  it("Расчёт", () => {
     expect(menuOf("erp")).toEqual([
-      "Все запросы",
-      "Расчёт",
+      "Заявки в расчёте",
+      "Мои расчёты",
       "Склад",
-      "Справочники",
-      "Документация",
+      "Номенклатура и поставщики",
+      "Техдокументация",
     ]);
   });
-  it("Chats", () => {
-    expect(menuOf("chats")).toEqual(["Все чаты", "Внутренний", "Внешний", "Контакты"]);
+  it("Чаты", () => {
+    expect(menuOf("chats")).toEqual(["Все чаты", "Команда", "С клиентами", "Контакты"]);
   });
-  it("Admin", () => {
+  it("Настройки", () => {
     expect(menuOf("admin")).toEqual([
-      "Ролевая матрица (RBAC)",
-      "Оргструктура",
-      "Внешние интеграции",
-      "Журнал интеграций",
-      "Тикеты от команды",
-      "Компания",
-      "Настройки бота",
-      "Журнал аудита",
+      "Роли и права",
+      "Сотрудники",
+      "Подключения",
+      "Обмен между системами",
+      "Обращения сотрудников",
+      "Компания и бланки",
+      "Telegram-бот",
+      "История действий",
     ]);
   });
 
-  it("главные действия модулей — SPEC-v3 §6.2", () => {
+  it("главные действия модулей; заявка — одно имя в Клиентах и Расчёте", () => {
     expect(ru.crm.action).toBe("Создать заявку");
     expect(ru.eds.action).toBe("Создать документ");
-    expect(ru.erp.action).toBe("Создать запрос");
+    expect(ru.erp.action).toBe("Создать заявку");
     expect(ru.chats.action).toBe("Создать чат");
     expect(ru.admin.action).toBe("Пригласить сотрудника");
     expect(MODULES.find((m) => m.code === "dashboard")?.action).toBeUndefined();
   });
+});
 
-  it("порядок и номера модулей", () => {
-    expect(MODULES.map((m) => `${String(m.order)}. ${m.name}`)).toEqual([
-      "1. Dashboard",
-      "2. CRM",
-      "3. EDS",
-      "4. ERP",
-      "5. Chats",
-      "6. Admin",
+describe("имена модулей — UX-оценка 2026-10-27 §6.1", () => {
+  const names = (lng: "ru" | "uz" | "en", field: "name" | "title") =>
+    MODULES.map((m) => resources[lng].modules[m.code][field]);
+
+  it("порядок рейла и имена в рейле на трёх языках", () => {
+    expect(MODULES.map((m) => m.code)).toEqual([
+      "dashboard",
+      "crm",
+      "eds",
+      "erp",
+      "chats",
+      "admin",
     ]);
+    expect(names("ru", "name")).toEqual([
+      "Главная",
+      "Клиенты",
+      "Документы",
+      "Расчёт",
+      "Чаты",
+      "Настройки",
+    ]);
+    expect(names("uz", "name")).toEqual([
+      "Asosiy",
+      "Mijozlar",
+      "Hujjatlar",
+      "Hisob",
+      "Chatlar",
+      "Sozlamalar",
+    ]);
+    expect(names("en", "name")).toEqual([
+      "Home",
+      "Clients",
+      "Documents",
+      "Costing",
+      "Chats",
+      "Settings",
+    ]);
+  });
+
+  it("заголовок подменю — полное имя модуля", () => {
+    expect(names("ru", "title")).toEqual([
+      "Главная",
+      "Клиенты и лиды",
+      "Документы и согласования",
+      "Расчёт и склад",
+      "Чаты",
+      "Настройки компании",
+    ]);
+  });
+
+  it.each(["ru", "uz", "en"] as const)(
+    "%s: в рейле не длиннее 10 символов, без номеров и внутренних кодов систем",
+    (lng) => {
+      for (const name of names(lng, "name")) expect(name.length, name).toBeLessThanOrEqual(10);
+      for (const name of [...names(lng, "name"), ...names(lng, "title")]) {
+        expect(name, name).not.toMatch(/^\d|\b(Dashboard|CRM|EDS|ERP|Admin|RBAC)\b/);
+      }
+    },
+  );
+
+  it.each(["ru", "uz"] as const)("%s: пункты подменю без английских имён систем", (lng) => {
+    for (const module of MODULES) {
+      const sections = resources[lng].modules[module.code].sections as Record<string, string>;
+      for (const label of Object.values(sections)) {
+        expect(label, label).not.toMatch(/\b(Dashboard|CRM|EDS|ERP|Chats|Admin|RBAC)\b/);
+      }
+    }
   });
 });
 

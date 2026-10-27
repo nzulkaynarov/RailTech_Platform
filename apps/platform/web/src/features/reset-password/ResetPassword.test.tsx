@@ -166,10 +166,9 @@ describe("Сброс пароля сотрудника по почте (карт
 
     const alert = await within(side).findByRole("alert");
     expect(alert).toHaveTextContent("Почта не подключена, пароль не изменён");
-    expect(within(alert).getByRole("link", { name: "Открыть Admin · Интеграции" })).toHaveAttribute(
-      "href",
-      "/admin/integrations",
-    );
+    expect(
+      within(alert).getByRole("link", { name: "Открыть Настройки · Подключения" }),
+    ).toHaveAttribute("href", "/admin/integrations");
   });
 
   it("«Отмена» закрывает подтверждение, письмо не уходит", async () => {

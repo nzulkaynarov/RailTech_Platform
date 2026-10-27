@@ -31,7 +31,7 @@ function matrix(page: Page) {
 
 async function openRole(page: Page, role: string): Promise<void> {
   await spaGoto(page, "/admin/roles");
-  await expect(page.getByRole("heading", { level: 1, name: "Ролевая матрица" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Роли и права" })).toBeVisible();
   await page.getByRole("button", { name: new RegExp(`^${role}`) }).click();
 }
 
@@ -80,14 +80,14 @@ test.describe("Роли: хвосты QA (R3-D-1, R3-D-3, R3-D-4)", () => {
 
     await openRole(page, "Бухгалтер");
     await matrix(page)
-      .getByRole("combobox", { name: "Внешний (клиент: Telegram-бот, почта) — роль «Бухгалтер»" })
+      .getByRole("combobox", { name: "С клиентами (Telegram-бот, почта) — роль «Бухгалтер»" })
       .selectOption({ label: "Скрыто" });
     await expect(panel.getByText(/^1 сотрудник потеряет: /)).toBeVisible();
     await settledScreenshot(page, "roles-preview-one");
 
     await openRole(page, "Гл. инженер");
     await matrix(page)
-      .getByRole("combobox", { name: /^Расчёт · виза по услугам — роль «Гл\. инженер»/ })
+      .getByRole("combobox", { name: /^Виза расчёта: услуги — роль «Гл\. инженер»/ })
       .selectOption({ label: "Скрыто" });
     await expect(panel.getByText(/^2 сотрудника потеряют: /)).toBeVisible();
     await expectNoViolations(page, "preview");
@@ -125,7 +125,7 @@ test.describe("Роли: хвосты QA (R3-D-1, R3-D-3, R3-D-4)", () => {
     await panel.getByLabel("Название").fill("Временная");
     await matrix(page)
       .getByRole("combobox", {
-        name: /^Все клиенты, Все заявки, Создать заявку — роль «Временная»/,
+        name: /^Клиенты, Заявки, Создать заявку — роль «Временная»/,
       })
       .selectOption({ label: "Только чтение" });
     await panel.getByRole("button", { name: "Создать роль" }).click();

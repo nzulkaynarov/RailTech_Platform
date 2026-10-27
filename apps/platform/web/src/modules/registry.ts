@@ -16,6 +16,14 @@ export function findModule(code: string): ModuleConfig | undefined {
   return MODULES.find((m) => m.code === code);
 }
 
+/**
+ * Имя модуля для людей (`modules:<code>.name`: «Клиенты», «Расчёт» — UX-оценка 2026-10-27 §6.1) в рейле, крошках, поиске
+ * и списках модулей роли. Неизвестный код — как есть.
+ */
+export function moduleName(t: (key: string) => string, code: string): string {
+  return findModule(code) ? t(`modules:${code}.name`) : code;
+}
+
 export interface SectionMatch {
   module: ModuleConfig;
   section: SectionConfig;

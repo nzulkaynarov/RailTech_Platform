@@ -7,7 +7,7 @@ import { backendConsequence } from "../../entities/employee/consequence";
 import { employeeErrorText } from "../../entities/employee/errors";
 import { ApiError } from "../../shared/api/errors";
 import type { Employee, EmployeeCredentials } from "../../shared/api/generated/model";
-import { findModule } from "../../modules/registry";
+import { moduleName } from "../../modules/registry";
 import { Consequence } from "../../shared/ui/Consequence";
 import { lines } from "../first-run/lines";
 import { TemporaryPasswordCard } from "../temporary-password/TemporaryPasswordCard";
@@ -122,7 +122,7 @@ export function InviteEmployeeForm({ onInvited, onOpenCard, onCancel }: InviteEm
   };
 
   const access = accessOfRoleIds(companyRoles, roles);
-  const modules = access.modules.map((code) => findModule(code)?.name ?? code);
+  const modules = access.modules.map((code) => moduleName(t, code));
   const items = [
     ...(delivery === "password"
       ? lines(t, "admin.org.invite.consequencePassword").slice(0, 2)

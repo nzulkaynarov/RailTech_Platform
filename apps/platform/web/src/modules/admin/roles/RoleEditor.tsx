@@ -11,7 +11,7 @@ import {
   rolesAccess,
   sectionFullLabel,
 } from "../../../entities/role/roles";
-import { findModule } from "../../registry";
+import { moduleName } from "../../registry";
 import type { Role, RolePreview, SectionLevel } from "../../../shared/api/generated/model";
 import { usePreviewRole } from "../../../shared/api/generated/platform-bff";
 import { Consequence } from "../../../shared/ui/Consequence";
@@ -21,9 +21,9 @@ import { LockIcon } from "../../../shared/ui/icons";
 import { isVersionConflict, roleErrorText } from "./errors";
 import { type RoleDraft, type TemplateKey, TEMPLATE_KEYS, changesOf, newDraft } from "./draft";
 
-function modulesLine(access: RoleDraft["access"]): string {
+function modulesLine(t: (key: string) => string, access: RoleDraft["access"]): string {
   return rolesAccess([{ access, system: false }])
-    .modules.map((code) => findModule(code)?.name ?? code)
+    .modules.map((code) => moduleName(t, code))
     .join(", ");
 }
 
@@ -103,7 +103,7 @@ export function SystemRoleCard({ role, readOnly = false }: { role: Role; readOnl
       <Consequence
         title={t("admin.roles.gives")}
         items={[
-          t("admin.roles.modules", { modules: modulesLine(draftAccess(role)) || "—" }),
+          t("admin.roles.modules", { modules: modulesLine(t, draftAccess(role)) || "—" }),
           ...(isSystemAdmin(role) ? [t("admin.org.consequence.erpAdmin")] : []),
         ]}
       />
@@ -193,7 +193,7 @@ export function RoleEditor({
   const items: string[] = [];
   if (isNew) {
     items.push(t("admin.roles.new.created"));
-    items.push(t("admin.roles.modules", { modules: modulesLine(draft.access) || "—" }));
+    items.push(t("admin.roles.modules", { modules: modulesLine(t, draft.access) || "—" }));
     if (access.adminWithoutSystem) items.push(t("admin.roles.adminNote"));
     items.push(t("admin.roles.new.assign"));
   } else {
@@ -204,7 +204,7 @@ export function RoleEditor({
       if (preview.isPending) items.push(t("admin.roles.preview.loading"));
       else if (preview.isError) items.push(t("admin.roles.preview.failed"));
       else if (preview.data) items.push(...previewLines(t, i18n.language, preview.data));
-      items.push(t("admin.roles.modules", { modules: modulesLine(draft.access) || "—" }));
+      items.push(t("admin.roles.modules", { modules: modulesLine(t, draft.access) || "—" }));
       if (access.adminWithoutSystem) items.push(t("admin.roles.adminNote"));
       items.push(t("admin.roles.applied"));
     }
