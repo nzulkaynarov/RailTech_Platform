@@ -309,7 +309,7 @@
         "VALIDATION_FAILED": "Check the form fields.",
         "default": "Could not create the company. Try again.",
         "ERP_NOT_CONNECTED": "ERP is not connected. Connect ERP first, then create the company.",
-        "REQUEST_TIMEOUT": "The server did not respond in time. Try again."
+        "REQUEST_TIMEOUT": "The server did not respond in time. The company may already be created: the state is refreshing — if the form disappears, the company exists; otherwise try again."
       },
       "connectionsTitle": "Other connections",
       "connectionsLead": "Four setup steps: each leads to its own screen.",
@@ -370,7 +370,8 @@
       "erpOpen": "Open ERP settings",
       "companyNeedsErp": "Connect ERP first",
       "companyNeedsErpText": "The company is created in ERP, so it cannot be created before ERP is connected. The form will appear here once it is.",
-      "companyNeedsErpAction": "Connect ERP"
+      "companyNeedsErpAction": "Connect ERP",
+      "companyAlreadyCreated": "Your company already exists — that is the same result, continue with the other steps."
     },
     "org": {
       "title": "Org structure",

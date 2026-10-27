@@ -309,7 +309,7 @@
         "VALIDATION_FAILED": "Forma maydonlarini tekshiring.",
         "default": "Kompaniyani yaratib bo'lmadi. Urinishni takrorlang.",
         "ERP_NOT_CONNECTED": "ERP ulanmagan. Avval ERP'ni ulang, so'ng kompaniyani yarating.",
-        "REQUEST_TIMEOUT": "Server o'z vaqtida javob bermadi. Urinishni takrorlang."
+        "REQUEST_TIMEOUT": "Server o'z vaqtida javob bermadi. Kompaniya allaqachon yaratilgan bo'lishi mumkin: holat yangilanmoqda — forma yo'qolsa, kompaniya bor, aks holda takrorlang."
       },
       "connectionsTitle": "Qolgan ulanishlar",
       "connectionsLead": "Sozlashning to'rtta qadami: har biri o'z ekraniga olib boradi.",
@@ -370,7 +370,8 @@
       "erpOpen": "ERP sozlamalarini ochish",
       "companyNeedsErp": "Avval ERP'ni ulang",
       "companyNeedsErpText": "Kompaniya ERP'da yaratiladi, shuning uchun ulanmagan paytda uni yaratib bo'lmaydi. Ulangandan keyin forma shu yerda paydo bo'ladi.",
-      "companyNeedsErpAction": "ERP ni ulash"
+      "companyNeedsErpAction": "ERP ni ulash",
+      "companyAlreadyCreated": "O'z kompaniyasi allaqachon yaratilgan — natija o'sha, qolgan qadamlar bilan davom eting."
     },
     "org": {
       "title": "Tashkiliy tuzilma",

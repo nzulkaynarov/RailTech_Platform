@@ -46,6 +46,8 @@ LOCKED_MESSAGE = "Слишком много неверных кодов. Пов�
 SETUP_DONE_MESSAGE = "Администратор уже создан. Войдите в Платформу."
 COMPANY_EXISTS_MESSAGE = "Своя компания уже создана."
 COMPANY_FORBIDDEN_MESSAGE = "Создать свою компанию может только администратор ERP."
+# Куда ведёт шаг «ERP» мастера (как STEP_TARGET.erp в SPA).
+ERP_STEP_LINK = "/admin/integrations?card=erp&panel=open"
 ERP_NOT_CONNECTED_MESSAGE = (
     "ERP не подключена. Сначала подключите ERP (Администрирование — Внешние интеграции — ERP), "
     "затем создайте компанию."
@@ -283,7 +285,7 @@ async def ensure_erp_connected(call: Call) -> None:
             ERP_NOT_CONNECTED_MESSAGE,
             status_code=409,
             source="bff",
-            details={"reason": "erp_not_connected", "link": "/admin/integrations?card=erp"},
+            details={"reason": "erp_not_connected", "link": ERP_STEP_LINK},
         )
 
 

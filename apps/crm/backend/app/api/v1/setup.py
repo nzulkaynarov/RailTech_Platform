@@ -1,8 +1,10 @@
 """Мастер первого запуска и чек-лист «Настройка CRM» (scope-аудит §3 п. 9, §4)."""
 
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
-from typing import Annotated, cast
+from typing import Annotated, Any, cast
 
+import structlog
 from fastapi import APIRouter, Depends, Request, Response
 
 from app.api.deps import ContainerDep, client_ip, require
@@ -23,6 +25,18 @@ from app.services.auth import ClientInfo
 from app.services.readiness import ReadinessService
 
 router = APIRouter(prefix="/api/v1/setup", tags=["setup"])
+logger = structlog.get_logger(__name__)
+
+
+async def _connector_set(resolve: Callable[[], Awaitable[Any]], name: str) -> bool:
+    """Коннектор задан? Сбой чтения настроек не валит чек-лист: шаг «не готов», причина в логе."""
+    try:
+        return (await resolve()).connection is not None
+    except Exception as exc:  # noqa: BLE001 — шаг чек-листа не должен ронять весь ответ
+        logger.warning(
+            "setup_checklist_connector_unavailable", connector=name, error=type(exc).__name__
+        )
+        return False
 
 
 @router.get("/state", response_model=SetupState)
@@ -66,10 +80,10 @@ async def get_setup_checklist(
     задан, задан SMTP, есть ещё один активный сотрудник.
     """
     cfg = await container.settings_service.get()
-    components = await collect_components(container, readiness, datetime.now(UTC))
+    components = await collect_components(container, readiness, datetime.now(UTC), probe_erp=False)
     models_ok, bot_running = checks.health_facts(components)
-    erp_connected = (await container.erp_connector.resolution()).connection is not None
-    mail_configured = (await container.smtp_connector.resolution()).connection is not None
+    erp_connected = await _connector_set(lambda: container.erp_connector.resolution(), "erp")
+    mail_configured = await _connector_set(lambda: container.smtp_connector.resolution(), "smtp")
     async with container.session_factory() as session:
         saved = await checks.saved_settings(session)
         facts = checks.SetupFacts(

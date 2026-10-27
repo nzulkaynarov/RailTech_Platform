@@ -124,7 +124,7 @@ export const setupHandlers = [
         "ERP_NOT_CONNECTED",
         "ERP не подключена. Сначала подключите ERP (Администрирование — Внешние интеграции — ERP), затем создайте компанию.",
         "bff",
-        { reason: "erp_not_connected", link: "/admin/integrations?card=erp" },
+        { reason: "erp_not_connected", link: "/admin/integrations?card=erp&panel=open" },
       );
     }
     if (state.companyCreated) {

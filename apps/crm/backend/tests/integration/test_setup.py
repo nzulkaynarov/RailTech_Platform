@@ -85,6 +85,32 @@ async def test_checklist_has_platform_steps(client: TestClient) -> None:
     assert second["done"] == first["done"] + 1
 
 
+async def test_checklist_survives_hanging_erp_and_broken_connector(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Зависшая ERP не задерживает чек-лист (пробы нет); сбой чтения коннектора — шаг «не готов»."""
+    ok = client.post("/api/v1/setup/admin", json={**BODY, "code": _code(client)})
+    headers = {"Authorization": f"Bearer {ok.json()['access_token']}"}
+    container = client.app.state.container  # type: ignore[attr-defined]
+
+    async def hang() -> None:
+        await asyncio.sleep(3600)
+
+    async def broken() -> None:
+        raise RuntimeError("settings unavailable")
+
+    monkeypatch.setattr(container.erp_connector, "health_facts", hang)
+    monkeypatch.setattr(container.smtp_connector, "resolution", broken)
+    monkeypatch.setattr(container.erp_connector, "resolution", broken)
+
+    response = client.get("/api/v1/setup/checklist", headers=headers)
+
+    assert response.status_code == 200, response.text
+    done = {i["key"]: i["done"] for i in response.json()["items"]}
+    assert done["erp"] is False
+    assert done["mail"] is False
+
+
 async def test_parallel_first_admins_only_one_wins(
     sessions: async_sessionmaker[AsyncSession],
 ) -> None:

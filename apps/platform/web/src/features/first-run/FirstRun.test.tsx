@@ -445,6 +445,66 @@ describe("Баннер настройки и мастер", () => {
     expect(screen.queryByLabelText("Название компании")).toBeNull();
   });
 
+  it("повтор после потерянного ответа: OWN_COMPANY_ALREADY_EXISTS — это успех, шаг переходит в «Готово»", async () => {
+    markStepDone("erp");
+    signInAs("admin@demo.example");
+    renderApp("/admin/setup");
+    await screen.findByLabelText("Название компании");
+    // первая попытка создала компанию, но ответ потерялся; вторая получает 409
+    const state = readSetup();
+    window.localStorage.setItem(
+      "rt-pf-mock-setup",
+      JSON.stringify({ ...state, companyCreated: true }),
+    );
+    fill("Название компании", "ООО Демо");
+
+    fireEvent.click(screen.getByRole("button", { name: /Создать компанию/ }));
+
+    expect(await screen.findByText("Своя компания создана.")).toBeVisible();
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.queryByLabelText("Название компании")).toBeNull();
+  });
+
+  it("таймаут при создании: чек-лист перечитывается, текст говорит, что компания могла быть создана", async () => {
+    markStepDone("erp");
+    let checklistCalls = 0;
+    signInAs("admin@demo.example");
+    renderApp("/admin/setup");
+    await screen.findByLabelText("Название компании");
+    server.use(
+      http.post("*/setup/company", () =>
+        HttpResponse.json(
+          { code: "REQUEST_TIMEOUT", message: "Сервер не ответил вовремя." },
+          { status: 504 },
+        ),
+      ),
+      http.get("*/setup/checklist", () => {
+        checklistCalls += 1;
+        return HttpResponse.json({
+          steps: [
+            { key: "erp", state: "done" },
+            { key: "bot", state: "todo" },
+            { key: "mail", state: "todo" },
+            { key: "models", state: "todo" },
+            { key: "first_employee", state: "todo" },
+          ],
+          done: 1,
+          total: 5,
+          company: { required: true, can_setup: true },
+          company_blocker: null,
+        });
+      }),
+    );
+    fill("Название компании", "ООО Демо");
+
+    fireEvent.click(screen.getByRole("button", { name: /Создать компанию/ }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/Возможно, компания уже создана/);
+    await waitFor(() => {
+      expect(checklistCalls).toBeGreaterThan(0);
+    });
+  });
+
   it("сбой чек-листа: «Повторить»", async () => {
     server.use(http.get("*/setup/checklist", () => HttpResponse.json({}, { status: 503 })));
     signInAs("admin@demo.example");

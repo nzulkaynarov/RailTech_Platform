@@ -23,6 +23,8 @@ interface Values {
   email?: string;
 }
 
+const ERP_STATE_CODES = ["ERP_NOT_CONNECTED", "OWN_COMPANY_ALREADY_EXISTS", "REQUEST_TIMEOUT"];
+
 const FIELDS = ["name", "inn", "legal_address", "phone", "email"] as const;
 
 function errorText(t: ReturnType<typeof useTranslation>["t"], error: unknown): string {
@@ -74,9 +76,14 @@ export function CompanyStep({
         void queryClient.invalidateQueries({ queryKey: getGetSetupChecklistQueryKey() });
       },
       onError: (error) => {
-        if (error instanceof ApiError && error.code === "ERP_NOT_CONNECTED") {
-          // Состояние ушло вперёд экрана: шаг перерисуется как «сначала подключите ERP».
+        if (error instanceof ApiError && ERP_STATE_CODES.includes(error.code)) {
+          // Состояние ушло вперёд экрана («ERP не подключена», «компания уже есть») или ответ потерян по таймауту:
+          // шаг перерисуется по свежему чек-листу, а не останется с формой.
           void queryClient.invalidateQueries({ queryKey: getGetSetupChecklistQueryKey() });
+        }
+        if (error instanceof ApiError && error.code === "OWN_COMPANY_ALREADY_EXISTS") {
+          // Повтор после потерянного ответа: компания создана — это успех, а не ошибка.
+          void message.success(t("admin.setup.companyAlreadyCreated"));
         }
         if (!(error instanceof ApiError) || error.code !== "VALIDATION_FAILED") return;
         const fields = error.details["fields"];
@@ -185,7 +192,10 @@ export function CompanyStep({
         <Input type="email" maxLength={254} autoComplete="off" inputMode="email" />
       </Form.Item>
       {create.isError &&
-      !(create.error instanceof ApiError && create.error.code === "VALIDATION_FAILED") ? (
+      !(
+        create.error instanceof ApiError &&
+        ["VALIDATION_FAILED", "OWN_COMPANY_ALREADY_EXISTS"].includes(create.error.code)
+      ) ? (
         <Alert type="error" showIcon role="alert" message={errorText(t, create.error)} />
       ) : null}
       <Consequence items={lines(t, "admin.setup.companyConsequence")} />

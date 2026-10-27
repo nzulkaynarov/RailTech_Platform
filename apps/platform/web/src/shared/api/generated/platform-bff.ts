@@ -1077,7 +1077,7 @@ export const getCreateOwnCompanyUrl = () => {
 };
 
 /**
- * Раздел `admin` — полный. ERP `setup/company/` токеном администратора: создаёт компанию с типом «продавец» и делает его владельцем; только пока своей компании нет. Повтор — 409 `OWN_COMPANY_ALREADY_EXISTS`. Поля формы — 422 `VALIDATION_FAILED` (`details.fields`, тексты ERP — `details.messages`). ERP не сопряжена (коннектор в CRM не задан) — 409 `ERP_NOT_CONNECTED`: сначала шаг «ERP» (`details.link`). ERP сопряжена, но не ответила или у администратора ещё нет сессии ERP (доступ выдаётся CRM с задержкой) — 503 `BACKEND_UNAVAILABLE`, повтор через несколько секунд. Тот же сотрудник уже не суперпользователь ERP — 403 `FORBIDDEN`.
+ * Раздел `admin` — полный. ERP `setup/company/` токеном администратора: создаёт компанию с типом «продавец» и делает его владельцем; только пока своей компании нет. Повтор — 409 `OWN_COMPANY_ALREADY_EXISTS`. Поля формы — 422 `VALIDATION_FAILED` (`details.fields`, тексты ERP — `details.messages`). ERP не сопряжена (коннектор в CRM не задан) — 409 `ERP_NOT_CONNECTED`: сначала шаг «ERP» (`details.link` = `/admin/integrations?card=erp&panel=open`). ERP сопряжена, но не ответила или у администратора ещё нет сессии ERP (доступ выдаётся CRM с задержкой) — 503 `BACKEND_UNAVAILABLE`, повтор через несколько секунд. Тот же сотрудник уже не суперпользователь ERP — 403 `FORBIDDEN`.
  * @summary Создать свою компанию (шаг мастера)
  */
 export const createOwnCompany = async (

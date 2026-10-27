@@ -455,6 +455,22 @@ async def test_checklist_when_erp_does_not_answer_says_so(
     assert steps(response)["erp"] == "done"
 
 
+async def test_checklist_with_hanging_erp_is_200_and_erp_unavailable(
+    web: Web, crm: SetupCrm, check: ContractChecker
+) -> None:
+    """Сопряжённая ERP висит (таймаут): чек-лист не падает, шаг компании — «ERP не ответила»."""
+    await web.login(["ADMIN"])
+    crm.erp_setup_status.mock(side_effect=httpx.ReadTimeout("erp is hanging"))
+
+    response = await web.client.get("/api/v1/setup/checklist")
+
+    assert response.status_code == 200
+    check(response, "/setup/checklist", "get")
+    assert response.json()["company"] is None
+    assert response.json()["company_blocker"] == "erp_unavailable"
+    assert steps(response)["erp"] == "done"
+
+
 async def test_checklist_without_pairing_does_not_ask_erp(
     web: Web, crm: SetupCrm, check: ContractChecker
 ) -> None:
@@ -614,7 +630,7 @@ async def test_company_without_pairing_is_409_erp_not_connected(
     assert body["code"] == "ERP_NOT_CONNECTED"
     assert body["source"] == "bff"
     assert "Сначала подключите ERP" in body["message"]
-    assert body["details"]["link"] == "/admin/integrations?card=erp"
+    assert body["details"]["link"] == "/admin/integrations?card=erp&panel=open"
     assert crm.erp_company.call_count == 0
 
 
