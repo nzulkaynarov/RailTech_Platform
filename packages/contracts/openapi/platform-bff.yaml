@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.12.0
+  version: 0.13.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -117,6 +117,14 @@ info:
     базу знаний (права CRM `settings:read`, `reply_templates:read`, `kb:read`); пункт меню CRM «База знаний» открывает и раздел
     `admin`; в Admin новый пункт «Настройки бота». Нового кода ошибки нет: ошибки формата документа и пути невалидных полей настроек
     — `VALIDATION_FAILED` с `details.reason`, `details.rule`, `details.messages`, `details.paths`.
+
+    **0.13.0 (W13C-F6) — Admin · Компания: ручной ввод курса USD→UZS.** Чисто добавляющее изменение: `GET /admin/company/fx-rate`
+    (текущий курс на сегодня с датой и источником «авто»/«вручную», допустимый возраст курса и журнал последних записей: ручные
+    вводы и случаи «автокурс ЦБ не применён») и `POST /admin/company/fx-rate` (курс на дату вручную, на случай, если автозагрузка
+    `erp-beat` не сработала). Раздел `company.settings`: чтение — `GET`, ввод — полный (в ERP — право `settings.edit`). Курс на дату
+    заменяет и курс ЦБ, и прежний ручной (прежнее значение остаётся в журнале); автозагрузка ручной курс на ту же дату не
+    перетирает. Отказ проверки — 422 `VALIDATION_FAILED` с `details.reason` (`fx_rate_invalid`, `fx_rate_date_invalid`,
+    `fx_rate_date_in_future`, `fx_rate_date_too_old`) и `details.fields` (`rate_to_uzs` или `rate_date`).
 
     **0.12.0 (W13-A6) — Admin · Оргструктура, Журнал аудита, профиль.** Чисто добавляющее изменение: `POST /admin/users/{id}/reset-password/email`
     (сброс пароля сотрудника с письмом; себе — 409 `CONFLICT` с `details.reason = self_reset`; почта не подключена — 409
@@ -3726,6 +3734,54 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PlatformSettings'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+  /admin/company/fx-rate:
+    get:
+      tags:
+        - admin
+      operationId: getFxRate
+      summary: 'Курс USD→UZS: текущий и журнал ручных вводов'
+      description: Раздел `company.settings` — чтение. Журнал — последние 20 записей, новые первыми.
+      responses:
+        '200':
+          description: Курс и журнал
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FxRateOverview'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags:
+        - admin
+      operationId: createFxRate
+      summary: Ввести курс USD→UZS на дату вручную
+      description: |-
+        Раздел `company.settings` — полный; в ERP — право `settings.edit` или администратор, иначе 403 `FORBIDDEN` (`source = erp`).
+        Строка на дату заменяется (курс ЦБ или прежний ручной), прежнее значение остаётся в журнале. Повтор того же значения ничего
+        не пишет. Дата — не позже сегодня и не старше 366 дней; курс — больше 0, не более 6 знаков после запятой, меньше миллиарда.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FxRateIn'
+      responses:
+        '201':
+          description: Сохранено — курс и журнал после записи
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FxRateOverview'
         '401':
           $ref: '#/components/responses/SessionExpired'
         '403':
@@ -7883,7 +7939,7 @@ components:
           oneOf:
             - $ref: '#/components/schemas/DecimalString'
             - type: 'null'
-          description: 'Курс USD→UZS (только чтение: курс ведёт ERP)'
+          description: 'Курс USD→UZS на сегодня (только чтение; ввод вручную и журнал — `/admin/company/fx-rate`)'
         updated_at:
           type: string
           format: date-time
@@ -7895,6 +7951,88 @@ components:
         vat_rate:
           $ref: '#/components/schemas/DecimalString'
           description: Ставка НДС платформы, %
+    FxRate:
+      type: object
+      additionalProperties: false
+      required: [rate_to_uzs, rate_date, source]
+      description: Курс 1 USD в сумах на дату.
+      properties:
+        rate_to_uzs:
+          $ref: '#/components/schemas/DecimalString'
+        rate_date:
+          type: string
+          format: date
+        source:
+          type: string
+          enum: [auto, manual]
+          description: '`auto` — автозагрузка курса ЦБ РУз, `manual` — введён вручную'
+    FxRateJournalEntry:
+      type: object
+      additionalProperties: false
+      required: [id, kind, rate_date, rate_to_uzs, previous_rate_to_uzs, previous_source, entered_by, entered_at]
+      properties:
+        id:
+          type: string
+        kind:
+          type: string
+          enum: [manual, auto_skipped]
+          description: '`manual` — ввод вручную; `auto_skipped` — курс ЦБ на ту же дату не применён, оставлен ручной'
+        rate_date:
+          type: string
+          format: date
+        rate_to_uzs:
+          $ref: '#/components/schemas/DecimalString'
+          description: Введённый курс (`manual`) или курс ЦБ, который не применён (`auto_skipped`)
+        previous_rate_to_uzs:
+          oneOf:
+            - $ref: '#/components/schemas/DecimalString'
+            - type: 'null'
+          description: Что стояло на эту дату до записи (при `auto_skipped` — оставшийся ручной курс); `null` — ничего
+        previous_source:
+          oneOf:
+            - type: string
+              enum: [auto, manual]
+            - type: 'null'
+        entered_by:
+          type:
+            - string
+            - 'null'
+          description: Имя (или почта) сотрудника; `null` — автозагрузка или сотрудник удалён
+        entered_at:
+          type: string
+          format: date-time
+    FxRateOverview:
+      type: object
+      additionalProperties: false
+      required: [currency, current, max_age_days, journal]
+      properties:
+        currency:
+          type: string
+          enum: [USD]
+        current:
+          oneOf:
+            - $ref: '#/components/schemas/FxRate'
+            - type: 'null'
+          description: Курс на сегодня (не старше допустимого возраста); `null` — курса нет
+        max_age_days:
+          type: integer
+          description: Допустимый возраст курса в днях (настройка компании в ERP)
+        journal:
+          type: array
+          items:
+            $ref: '#/components/schemas/FxRateJournalEntry'
+    FxRateIn:
+      type: object
+      additionalProperties: false
+      required: [rate_date, rate_to_uzs]
+      properties:
+        rate_date:
+          type: string
+          format: date
+          description: Дата курса; по умолчанию в форме — сегодня
+        rate_to_uzs:
+          $ref: '#/components/schemas/DecimalString'
+          description: Сумов за 1 USD; больше 0, не более 6 знаков после запятой
     CreatedId:
       type: object
       additionalProperties: false

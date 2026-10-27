@@ -116,6 +116,14 @@
  * `admin`; в Admin новый пункт «Настройки бота». Нового кода ошибки нет: ошибки формата документа и пути невалидных полей настроек
  * — `VALIDATION_FAILED` с `details.reason`, `details.rule`, `details.messages`, `details.paths`.
  *
+ * **0.13.0 (W13C-F6) — Admin · Компания: ручной ввод курса USD→UZS.** Чисто добавляющее изменение: `GET /admin/company/fx-rate`
+ * (текущий курс на сегодня с датой и источником «авто»/«вручную», допустимый возраст курса и журнал последних записей: ручные
+ * вводы и случаи «автокурс ЦБ не применён») и `POST /admin/company/fx-rate` (курс на дату вручную, на случай, если автозагрузка
+ * `erp-beat` не сработала). Раздел `company.settings`: чтение — `GET`, ввод — полный (в ERP — право `settings.edit`). Курс на дату
+ * заменяет и курс ЦБ, и прежний ручной (прежнее значение остаётся в журнале); автозагрузка ручной курс на ту же дату не
+ * перетирает. Отказ проверки — 422 `VALIDATION_FAILED` с `details.reason` (`fx_rate_invalid`, `fx_rate_date_invalid`,
+ * `fx_rate_date_in_future`, `fx_rate_date_too_old`) и `details.fields` (`rate_to_uzs` или `rate_date`).
+ *
  * **0.12.0 (W13-A6) — Admin · Оргструктура, Журнал аудита, профиль.** Чисто добавляющее изменение: `POST /admin/users/{id}/reset-password/email`
  * (сброс пароля сотрудника с письмом; себе — 409 `CONFLICT` с `details.reason = self_reset`; почта не подключена — 409
  * `NOT_CONFIGURED`), `GET /admin/audit` (журнал аудита CRM «кто, что, когда» с фильтрами по автору, действию, объекту и периоду и
@@ -143,7 +151,7 @@
  * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.12.0
+ * OpenAPI spec version: 0.13.0
  */
 import { faker } from "@faker-js/faker";
 
@@ -223,6 +231,8 @@ import type {
   ExternalService,
   ExternalServiceDetail,
   ExternalServiceList,
+  FxRate,
+  FxRateOverview,
   Health,
   IntegrationsOverview,
   KbChunkList,
@@ -3309,6 +3319,86 @@ export const getUpdatePlatformSettingsResponseMock = (
   ...overrideResponse,
 });
 
+export const getGetFxRateResponseFxRateMock = (overrideResponse: Partial<FxRate> = {}): FxRate => ({
+  ...{
+    rate_to_uzs: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    rate_date: faker.date.past().toISOString().slice(0, 10),
+    source: faker.helpers.arrayElement(["auto", "manual"] as const),
+  },
+  ...overrideResponse,
+});
+
+export const getGetFxRateResponseMock = (
+  overrideResponse: Partial<Extract<FxRateOverview, object>> = {},
+): FxRateOverview => ({
+  currency: faker.helpers.arrayElement(["USD"] as const),
+  current: faker.helpers.arrayElement([{ ...getGetFxRateResponseFxRateMock() }, null]),
+  max_age_days: faker.number.int(),
+  journal: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      kind: faker.helpers.arrayElement(["manual", "auto_skipped"] as const),
+      rate_date: faker.date.past().toISOString().slice(0, 10),
+      rate_to_uzs: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      previous_rate_to_uzs: faker.helpers.arrayElement([
+        faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+        null,
+      ]),
+      previous_source: faker.helpers.arrayElement([
+        faker.helpers.arrayElement(["auto", "manual"] as const),
+        null,
+      ]),
+      entered_by: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      entered_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    }),
+  ),
+  ...overrideResponse,
+});
+
+export const getCreateFxRateResponseFxRateMock = (
+  overrideResponse: Partial<FxRate> = {},
+): FxRate => ({
+  ...{
+    rate_to_uzs: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    rate_date: faker.date.past().toISOString().slice(0, 10),
+    source: faker.helpers.arrayElement(["auto", "manual"] as const),
+  },
+  ...overrideResponse,
+});
+
+export const getCreateFxRateResponseMock = (
+  overrideResponse: Partial<Extract<FxRateOverview, object>> = {},
+): FxRateOverview => ({
+  currency: faker.helpers.arrayElement(["USD"] as const),
+  current: faker.helpers.arrayElement([{ ...getCreateFxRateResponseFxRateMock() }, null]),
+  max_age_days: faker.number.int(),
+  journal: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      kind: faker.helpers.arrayElement(["manual", "auto_skipped"] as const),
+      rate_date: faker.date.past().toISOString().slice(0, 10),
+      rate_to_uzs: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      previous_rate_to_uzs: faker.helpers.arrayElement([
+        faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+        null,
+      ]),
+      previous_source: faker.helpers.arrayElement([
+        faker.helpers.arrayElement(["auto", "manual"] as const),
+        null,
+      ]),
+      entered_by: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      entered_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    }),
+  ),
+  ...overrideResponse,
+});
+
 export const getListKbDocumentsResponseMock = (
   overrideResponse: Partial<Extract<KbDocumentList, object>> = {},
 ): KbDocumentList => ({
@@ -6354,6 +6444,54 @@ export const getUpdatePlatformSettingsMockHandler = (
   );
 };
 
+export const getGetFxRateMockHandler = (
+  overrideResponse?:
+    | FxRateOverview
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<FxRateOverview> | FxRateOverview),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/company/fx-rate",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetFxRateResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getCreateFxRateMockHandler = (
+  overrideResponse?:
+    | FxRateOverview
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<FxRateOverview> | FxRateOverview),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/company/fx-rate",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCreateFxRateResponseMock(),
+        { status: 201 },
+      );
+    },
+    options,
+  );
+};
+
 export const getListKbDocumentsMockHandler = (
   overrideResponse?:
     | KbDocumentList
@@ -6990,6 +7128,8 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getRejectCategoryRequestMockHandler(),
   getGetPlatformSettingsMockHandler(),
   getUpdatePlatformSettingsMockHandler(),
+  getGetFxRateMockHandler(),
+  getCreateFxRateMockHandler(),
   getListKbDocumentsMockHandler(),
   getUploadKbDocumentMockHandler(),
   getCreateManualKbDocumentMockHandler(),

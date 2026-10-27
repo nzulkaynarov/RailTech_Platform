@@ -83,7 +83,11 @@
       "multipart_required": "Logotip faylini tanlang.",
       "field_not_in_reference": "Bu ma'lumotnomada bunday maydon yo'q.",
       "reason_required": "Rad etish sababini kiriting.",
-      "category_required": "Kategoriyani tanlang."
+      "category_required": "Kategoriyani tanlang.",
+      "fx_rate_invalid": "Kurs noldan katta son bo‘lishi kerak, verguldan keyin ko‘pi bilan 6 raqam.",
+      "fx_rate_date_invalid": "Kurs sanasini kiriting.",
+      "fx_rate_date_in_future": "Kurs sanasi bugundan kech bo‘lishi mumkin emas.",
+      "fx_rate_date_too_old": "Bir yildan eski kurs kiritilmaydi — yilni tekshiring."
     }
   },
   "details": {
@@ -469,18 +473,55 @@
   },
   "platform": {
     "title": "Platforma sozlamalari",
-    "hint": "Butun platforma uchun ERP ning umumiy sozlamalari: QQS stavkasi va kurs.",
+    "hint": "Butun platforma uchun umumiy ERP sozlamalari: QQS stavkasi va USD → UZS kursi.",
     "vat": "QQS stavkasi, %",
     "vatHint": "0 dan 100 gacha.",
     "invalidVat": "Stavka — 0 dan 100 gacha son",
-    "rate": "USD → UZS kursi",
     "currencyUzs": "so'm",
     "updated": "Sozlamalar yangilangan",
-    "rateHint": "Kursni ERP yuritadi, bu yerda u faqat o'qish uchun.",
     "save": "QQS stavkasini saqlash",
     "consequence": {
       "new": "Yangi hisob-kitob va hujjatlar shu stavka bilan boradi.",
       "admin": "Stavkani platforma administratori o'zgartiradi; boshqa rollarga ERP rad etadi."
+    },
+    "fx": {
+      "title": "USD → UZS kursi",
+      "current": "Joriy kurs",
+      "date": "Kurs sanasi",
+      "source": "Manba",
+      "sources": {
+        "auto": "Avtomatik (O‘zbekiston Markaziy banki)",
+        "manual": "Qo‘lda kiritilgan"
+      },
+      "missing": "Yangi kurs yo‘q: avtomatik yuklash so‘nggi {{days}} kunda kurs bermadi. Kurs bo‘lmaguncha dollardagi hisob-kitoblar mavjud emas. Kursni qo‘lda kiriting.",
+      "formLabel": "Kursni qo‘lda kiritish",
+      "dateField": "Kurs sanasi",
+      "dateHint": "Bugundan kech emas va bir yildan eski emas.",
+      "rateField": "Kurs, 1 USD uchun so‘m",
+      "rateHint": "Noldan katta son, verguldan keyin 6 tagacha raqam. Masalan, 12650,5.",
+      "save": "Kursni saqlash",
+      "saved": "Kurs saqlandi",
+      "consequence": {
+        "replace": "Tanlangan sanadagi kurs oldingisini (avtomatik yoki avval kiritilgan) almashtiradi; oldingi qiymat jurnalda qoladi.",
+        "quotes": "Yangi hisob-kitoblar kursni sana bo‘yicha oladi; yaratilgan tijorat takliflaridagi kurslar o‘zgarmaydi.",
+        "older": "Eng yangi yozuvdan oldingi sana uchun kiritilgan kurs joriy kursni o‘zgartirmaydi — u jurnalda qoladi va shu sana uchun hisob-kitoblarda ishlatiladi."
+      },
+      "journal": {
+        "title": "Kurs jurnali",
+        "date": "Kurs sanasi",
+        "rate": "Kurs, so‘m",
+        "event": "Hodisa",
+        "manual": "Qo‘lda kiritilgan",
+        "autoSkipped": "Avtomatik kurs qo‘llanmadi",
+        "before": "Oldin",
+        "none": "Oldin kurs yo‘q edi",
+        "was": "{{rate}} ({{source}})",
+        "who": "Kim",
+        "system": "Avtomatik yuklash",
+        "when": "Qachon",
+        "emptyTitle": "Hozircha qo‘lda kiritish bo‘lmagan",
+        "emptyText": "Bu yerda qo‘lda kiritilgan kurslar va avtomatik yuklash qo‘lda kiritilgan kursga tegmagan holatlar ko‘rinadi."
+      }
     }
   }
 }

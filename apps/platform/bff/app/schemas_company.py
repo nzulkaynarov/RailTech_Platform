@@ -1,10 +1,12 @@
 """Модели Admin · Компания — схемы `Company*`, `Brand*`, `Numbering*`, `QuoteDefaults*`, `Charge*`,
 `DocumentTemplate*`, `EmailTemplate*`, `Reference*`, `Catalog*`, `CategoryRequest*`,
-`PlatformSettings*` из packages/contracts/openapi/platform-bff.yaml (0.8.0) и перевод ответов ERP.
+`PlatformSettings*`, `FxRate*` из packages/contracts/openapi/platform-bff.yaml (0.8.0, 0.13.0) и
+перевод ответов ERP.
 
 Поля с ограничением (правило 6 CONVENTIONS): маржа в условиях КП — группа `cost_margin`.
 """
 
+import datetime
 import hashlib
 from collections.abc import Collection, Mapping
 from typing import Any, ClassVar, Literal, Self
@@ -856,4 +858,80 @@ def to_platform_settings(raw: Mapping[str, Any]) -> PlatformSettings:
         vat_rate=text(raw.get("vat_rate")) or "0",
         exchange_rate_usd_uzs=dec(raw.get("exchange_rate_usd_uzs")),
         updated_at=text(raw.get("updated_at")),
+    )
+
+
+# --- курс USD→UZS: ручной ввод и журнал (W13C-F6) -------------------------------------------------
+
+
+class FxRate(BaseModel):
+    rate_to_uzs: str
+    rate_date: str
+    source: Literal["auto", "manual"]
+
+
+class FxRateJournalEntry(BaseModel):
+    id: str
+    kind: Literal["manual", "auto_skipped"]
+    rate_date: str
+    rate_to_uzs: str
+    previous_rate_to_uzs: str | None
+    previous_source: Literal["auto", "manual"] | None
+    entered_by: str | None
+    entered_at: str
+
+
+class FxRateOverview(BaseModel):
+    currency: Literal["USD"] = "USD"
+    current: FxRate | None
+    max_age_days: int
+    journal: list[FxRateJournalEntry]
+
+
+class FxRateIn(Body):
+    rate_date: datetime.date
+    rate_to_uzs: str = Field(pattern=_DECIMAL)
+
+    def to_erp(self) -> dict[str, Any]:
+        return {
+            "currency": "USD",
+            "rate_date": self.rate_date.isoformat(),
+            "rate_to_uzs": self.rate_to_uzs,
+        }
+
+
+def _fx_source(value: Any) -> Literal["auto", "manual"]:
+    return "manual" if str(value or "").upper() == "MANUAL" else "auto"
+
+
+def to_fx_overview(current: Mapping[str, Any], journal: list[Mapping[str, Any]]) -> FxRateOverview:
+    """Ответы ERP `exchange-rates/current/` и `exchange-rates/journal/` -> `FxRateOverview`."""
+    row = current.get("current")
+    entries = [
+        FxRateJournalEntry(
+            id=ident(item.get("id")),
+            kind="auto_skipped" if item.get("kind") == "auto_skipped" else "manual",
+            rate_date=text(item.get("rate_date")),
+            rate_to_uzs=text(item.get("rate_to_uzs")),
+            previous_rate_to_uzs=dec(item.get("previous_rate_to_uzs")),
+            previous_source=(
+                _fx_source(item["previous_source"]) if item.get("previous_source") else None
+            ),
+            entered_by=text(item.get("entered_by_name") or item.get("entered_by_email")) or None,
+            entered_at=text(item.get("entered_at")),
+        )
+        for item in journal
+    ]
+    return FxRateOverview(
+        current=(
+            FxRate(
+                rate_to_uzs=text(row.get("rate_to_uzs")),
+                rate_date=text(row.get("rate_date")),
+                source=_fx_source(row.get("source")),
+            )
+            if isinstance(row, Mapping)
+            else None
+        ),
+        max_age_days=int(current.get("max_age_days") or 0),
+        journal=entries,
     )

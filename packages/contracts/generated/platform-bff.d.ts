@@ -1985,6 +1985,32 @@ export interface paths {
     patch: operations["updatePlatformSettings"];
     trace?: never;
   };
+  "/admin/company/fx-rate": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Курс USD→UZS: текущий и журнал ручных вводов
+     * @description Раздел `company.settings` — чтение. Журнал — последние 20 записей, новые первыми.
+     */
+    get: operations["getFxRate"];
+    put?: never;
+    /**
+     * Ввести курс USD→UZS на дату вручную
+     * @description Раздел `company.settings` — полный; в ERP — право `settings.edit` или администратор, иначе 403 `FORBIDDEN` (`source = erp`).
+     *     Строка на дату заменяется (курс ЦБ или прежний ручной), прежнее значение остаётся в журнале. Повтор того же значения ничего
+     *     не пишет. Дата — не позже сегодня и не старше 366 дней; курс — больше 0, не более 6 знаков после запятой, меньше миллиарда.
+     */
+    post: operations["createFxRate"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/crm/kb/documents": {
     parameters: {
       query?: never;
@@ -4176,7 +4202,7 @@ export interface components {
     PlatformSettings: {
       /** @description Ставка НДС платформы, % */
       vat_rate: components["schemas"]["DecimalString"];
-      /** @description Курс USD→UZS (только чтение: курс ведёт ERP) */
+      /** @description Курс USD→UZS на сегодня (только чтение; ввод вручную и журнал — `/admin/company/fx-rate`) */
       exchange_rate_usd_uzs: components["schemas"]["DecimalString"] | null;
       /** Format: date-time */
       updated_at: string;
@@ -4184,6 +4210,54 @@ export interface components {
     PlatformSettingsUpdate: {
       /** @description Ставка НДС платформы, % */
       vat_rate?: components["schemas"]["DecimalString"];
+    };
+    /** @description Курс 1 USD в сумах на дату. */
+    FxRate: {
+      rate_to_uzs: components["schemas"]["DecimalString"];
+      /** Format: date */
+      rate_date: string;
+      /**
+       * @description `auto` — автозагрузка курса ЦБ РУз, `manual` — введён вручную
+       * @enum {string}
+       */
+      source: "auto" | "manual";
+    };
+    FxRateJournalEntry: {
+      id: string;
+      /**
+       * @description `manual` — ввод вручную; `auto_skipped` — курс ЦБ на ту же дату не применён, оставлен ручной
+       * @enum {string}
+       */
+      kind: "manual" | "auto_skipped";
+      /** Format: date */
+      rate_date: string;
+      /** @description Введённый курс (`manual`) или курс ЦБ, который не применён (`auto_skipped`) */
+      rate_to_uzs: components["schemas"]["DecimalString"];
+      /** @description Что стояло на эту дату до записи (при `auto_skipped` — оставшийся ручной курс); `null` — ничего */
+      previous_rate_to_uzs: components["schemas"]["DecimalString"] | null;
+      previous_source: ("auto" | "manual") | null;
+      /** @description Имя (или почта) сотрудника; `null` — автозагрузка или сотрудник удалён */
+      entered_by: string | null;
+      /** Format: date-time */
+      entered_at: string;
+    };
+    FxRateOverview: {
+      /** @enum {string} */
+      currency: "USD";
+      /** @description Курс на сегодня (не старше допустимого возраста); `null` — курса нет */
+      current: components["schemas"]["FxRate"] | null;
+      /** @description Допустимый возраст курса в днях (настройка компании в ERP) */
+      max_age_days: number;
+      journal: components["schemas"]["FxRateJournalEntry"][];
+    };
+    FxRateIn: {
+      /**
+       * Format: date
+       * @description Дата курса; по умолчанию в форме — сегодня
+       */
+      rate_date: string;
+      /** @description Сумов за 1 USD; больше 0, не более 6 знаков после запятой */
+      rate_to_uzs: components["schemas"]["DecimalString"];
     };
     /** @description Объект создан в CRM. */
     CreatedId: {
@@ -8356,6 +8430,58 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["PlatformSettings"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  getFxRate: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Курс и журнал */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["FxRateOverview"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  createFxRate: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["FxRateIn"];
+      };
+    };
+    responses: {
+      /** @description Сохранено — курс и журнал после записи */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["FxRateOverview"];
         };
       };
       401: components["responses"]["SessionExpired"];
