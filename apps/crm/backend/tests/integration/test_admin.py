@@ -5,7 +5,7 @@ from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
-import httpx
+import httpx2
 import pytest
 from fastapi.testclient import TestClient
 from openai import APIConnectionError, InternalServerError
@@ -108,7 +108,7 @@ async def test_upload_ingest_and_test_search(harness: Harness, admin: dict[str, 
     assert bad.status_code == 422
 
 
-_REQUEST = httpx.Request("POST", "http://litellm.test/v1/embeddings")
+_REQUEST = httpx2.Request("POST", "http://litellm.test/v1/embeddings")
 
 
 class BrokenEmbedder:
@@ -126,7 +126,7 @@ async def test_search_without_embedding_key_is_422_with_a_hint_not_500(
 ) -> None:
     """C2A-G-6: LiteLLM `/v1/embeddings` отвечает 500 (нет ключа) — подкод для подсказки, не 500."""
     refusal = InternalServerError(
-        "no api key", response=httpx.Response(500, request=_REQUEST), body=None
+        "no api key", response=httpx2.Response(500, request=_REQUEST), body=None
     )
     harness.client.app.state.container.__dict__["kb_search"] = KbSearchService(  # type: ignore[attr-defined]
         sessions, BrokenEmbedder(refusal)

@@ -320,7 +320,7 @@ async def test_reingest_of_a_document_being_indexed_is_409(
 async def test_search_without_embedding_key_is_422_not_crm_down(
     web: Web, crm: CrmBotFake, check: ContractChecker
 ) -> None:
-    """C2A-G-6: CRM отвечает 422 `model_key_required` — BFF отдаёт его, а не «CRM не отвечает» (503)."""
+    """C2A-G-6: CRM отвечает 422 `model_key_required` — BFF отдаёт его, не 503 «CRM не отвечает»."""
     crm.error("POST", "kb/search", 422, "validation_failed", "model_key_required")
     await web.login(["ADMIN"])
 

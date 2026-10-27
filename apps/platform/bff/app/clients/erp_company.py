@@ -106,7 +106,7 @@ def _validation_fields(body: Any) -> list[str]:
 
 
 def _missing_blocks(body: Any) -> list[dict[str, str]]:
-    """Недостающие блоки договора из отказа ERP `TEMPLATE_MISSING_REQUIRED_BLOCKS`: `[{code, label}]`."""
+    """Недостающие блоки из отказа ERP `TEMPLATE_MISSING_REQUIRED_BLOCKS`: `[{code, label}]`."""
     raw = body.get("missing_blocks") if isinstance(body, dict) else None
     if not isinstance(raw, list):
         return []
@@ -123,8 +123,9 @@ def erp_error(response: httpx.Response) -> PlatformError:
     """Ответ ERP 4xx -> ошибка контракта (`source = erp`).
 
     400 у ERP — отказ проверки: 422 `VALIDATION_FAILED` с `details.reason` (код ERP в нижнем
-    регистре) и `details.fields`, у `TEMPLATE_MISSING_REQUIRED_BLOCKS` — ещё `details.missing_blocks`
-    (`[{code, label}]`); отказы «используется» и «уже рассмотрен» — 409 `CONFLICT`.
+    регистре) и `details.fields`, у `TEMPLATE_MISSING_REQUIRED_BLOCKS` — ещё
+    `details.missing_blocks` (`[{code, label}]`); отказы «используется» и «уже рассмотрен» —
+    409 `CONFLICT`.
     403, 404, 409 и 429 переводит общий `from_backend`.
     """
     if response.status_code not in (400, 422):

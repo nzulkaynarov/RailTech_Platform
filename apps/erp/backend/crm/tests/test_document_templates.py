@@ -198,8 +198,6 @@ def test_copy_rejects_a_too_long_name(lookups):
     company = _company("Seller", "S1")
     user = _member(company, "s@t.uz")
     sample = _sample_letter()
-    resp = _api(user).post(
-        f"/api/v1/crm/document-templates/{sample.id}/copy/", {"name": "я" * 256}, format="json"
-    )
+    resp = _api(user).post(f"/api/v1/crm/document-templates/{sample.id}/copy/", {"name": "я" * 256}, format="json")
     assert resp.status_code == 400
     assert resp.json()["detail"] == "TEMPLATE_NAME_TOO_LONG"

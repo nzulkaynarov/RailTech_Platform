@@ -1171,7 +1171,7 @@ async def test_document_template_in_use_is_409(
 async def test_document_template_without_required_blocks_names_them(
     web: Web, erp: respx.MockRouter, check: ContractChecker
 ) -> None:
-    """C2A-G-5: отказ ERP по составу блоков договора доезжает с названиями блоков, а не только кодом."""
+    """C2A-G-5: отказ ERP по составу блоков доезжает с названиями блоков, а не только кодом."""
     await web.login(["DIRECTOR"])
     blocks = [
         {"code": "doc.spec_table", "label": "Блок: спецификация (Приложение № 1)"},
