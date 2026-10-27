@@ -1,0 +1,96 @@
+{
+  "rows": [
+    {
+      "desc": "приглашение по почте без SMTP — понятная ошибка, а не 500",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "текст ошибки приглашения по почте",
+      "ok": null,
+      "detail": "Сотрудник добавлен в список со статусом «Приглашён», но письмо не отправлено: почта не подключена или недоступна. Подключите её в Admin · Интеграции и отправьте приглашение снова из карточки сотрудника. | Открыть карточку"
+    },
+    {
+      "desc": "страница не вернула 5xx при приглашении по почте",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "director: создан без почты, временный пароль показан",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "«Копировать»: пароль скопирован в буфер",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "director: после «Готово» пароля нет ни на экране, ни в адресе",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "manager: создан без почты, временный пароль показан",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "manager: после «Готово» пароля нет ни на экране, ни в адресе",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "accountant: создан без почты, временный пароль показан",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "accountant: после «Готово» пароля нет ни на экране, ни в адресе",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "вход с неверным паролем — «Неверная почта или пароль»",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "вход с временным паролем ведёт на обязательную смену пароля",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "пароль сменён, сотрудник попал в Платформу",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "ошибки консоли / 5xx",
+      "ok": null,
+      "detail": "Failed to load resource: the server responded with a status of 401 (Unauthorized) | Failed to load resource: the server responded with a status of 409 (Conflict) | Failed to load resource: the server responded with a status of 401 (Unauthorized) | Failed to load resource: the server responded with a status of 401 (Unauthorized) ;; "
+    }
+  ],
+  "screens": [
+    {
+      "name": "invite-mail-unconfigured",
+      "width": 1440,
+      "file": "s5a-invite-mail-unconfigured-1440.png"
+    },
+    {
+      "name": "invite-no-mail-form",
+      "width": 1440,
+      "file": "s5a-invite-no-mail-form-1440.png"
+    },
+    {
+      "name": "invite-temp-password-shown",
+      "width": 1440,
+      "file": "s5a-invite-temp-password-shown-1440.png"
+    },
+    {
+      "name": "change-password-required",
+      "width": 1440,
+      "file": "s5a-change-password-required-1440.png"
+    }
+  ]
+}

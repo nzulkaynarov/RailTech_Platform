@@ -1,0 +1,522 @@
+{
+  "rows": [
+    {
+      "desc": "обзор: «Требует внимания» и восемь карточек со статусом словом",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "статусы карточек на обзоре",
+      "ok": null,
+      "detail": "erp: ERP / Работает ;; telegram: Telegram / Не подключено ;; mail: Почта / Внимание ;; services: Внешние сервисы / Сбой ;; models: Модели ИИ / Сбой ;; spend: Расходы / Работает ;; storage: Хранилище и бэкапы / Внимание ;; system: Состояние системы / Сбой"
+    },
+    {
+      "desc": "overview @1440: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=1440, innerWidth=1440"
+    },
+    {
+      "desc": "overview @1440: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "overview @390: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=390, innerWidth=390"
+    },
+    {
+      "desc": "overview @390: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "плитка «telegram»: «Проверить/Обновить» отработала, результат словами",
+      "ok": true,
+      "detail": "Telegram | Не подключено | Клиентский бот, канал команды и профиль бота. | Ещё не подключено | Последняя проверка: 27.10.2026 10:56 | Проверено: Не подключено | Открыть | Проверить"
+    },
+    {
+      "desc": "плитка «mail»: «Проверить/Обновить» отработала, результат словами",
+      "ok": true,
+      "detail": "Почта | Внимание | Один SMTP на ансамбль: приглашения, сброс пароля, оповещения. | Требуют внимания: 1 | Последняя проверка: 27.10.2026 10:56 | Почтовый сервер не отвечает. | Открыть | Проверить"
+    },
+    {
+      "desc": "плитка «services»: «Проверить/Обновить» отработала, результат словами",
+      "ok": true,
+      "detail": "Внешние сервисы | Сбой | Реестр всех внешних сервисов ансамбля: статус, проверка, выключатель. | Требуют внимания: 5 | Последняя проверка: 27.10.2026 10:56 | Проверено: Сбой | Открыть | Проверить"
+    },
+    {
+      "desc": "плитка «models»: «Проверить/Обновить» отработала, результат словами",
+      "ok": true,
+      "detail": "Модели ИИ | Сбой | Модели и ключи по ролям: диалог, поиск по базе знаний, проверка качества. | Требуют внимания: 4 | Последняя проверка: 27.10.2026 10:56 | Проверено: Сбой | Открыть | Проверить"
+    },
+    {
+      "desc": "плитка «storage»: «Проверить/Обновить» отработала, результат словами",
+      "ok": true,
+      "detail": "Хранилище и бэкапы | Внимание | Файлы клиентов и резервные копии баз. | Копий ещё нет | Последняя проверка: 27.10.2026 10:56 | Проверено: Внимание | Открыть | Проверить"
+    },
+    {
+      "desc": "плитка «system»: «Проверить/Обновить» отработала, результат словами",
+      "ok": true,
+      "detail": "Состояние системы | Сбой | Компоненты ансамбля: база, очереди, бот, модели. | Требуют внимания: 9 | Последняя проверка: 27.10.2026 10:56 | Данные обновлены | Открыть | Обновить"
+    },
+    {
+      "desc": "плитка «spend»: «Проверить/Обновить» отработала, результат словами",
+      "ok": true,
+      "detail": "Расходы | Работает | Сколько тратят модели ИИ: бот и весь ансамбль, бюджеты. | Всё в порядке | Расход сегодня: 0,00 USD | Проверок ещё не было | Данные обновлены | Открыть | Обновить"
+    },
+    {
+      "desc": "card-erp @1440: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=1440, innerWidth=1440"
+    },
+    {
+      "desc": "card-erp @1440: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "card-erp @390: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=390, innerWidth=390"
+    },
+    {
+      "desc": "card-erp @390: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "card-telegram @1440: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=1440, innerWidth=1440"
+    },
+    {
+      "desc": "card-telegram @1440: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "card-telegram @390: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=390, innerWidth=390"
+    },
+    {
+      "desc": "card-telegram @390: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "card-mail @1440: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=1440, innerWidth=1440"
+    },
+    {
+      "desc": "card-mail @1440: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "card-mail @390: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=390, innerWidth=390"
+    },
+    {
+      "desc": "card-mail @390: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "card-services @1440: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=1440, innerWidth=1440"
+    },
+    {
+      "desc": "card-services @1440: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "card-services @390: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=390, innerWidth=390"
+    },
+    {
+      "desc": "card-services @390: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "card-models @1440: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=1440, innerWidth=1440"
+    },
+    {
+      "desc": "card-models @1440: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "card-models @390: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=390, innerWidth=390"
+    },
+    {
+      "desc": "card-models @390: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "card-spend @1440: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=1440, innerWidth=1440"
+    },
+    {
+      "desc": "card-spend @1440: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "card-spend @390: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=390, innerWidth=390"
+    },
+    {
+      "desc": "card-spend @390: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "card-storage @1440: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=1440, innerWidth=1440"
+    },
+    {
+      "desc": "card-storage @1440: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "card-storage @390: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=390, innerWidth=390"
+    },
+    {
+      "desc": "card-storage @390: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "card-system @1440: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=1440, innerWidth=1440"
+    },
+    {
+      "desc": "card-system @1440: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "card-system @390: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=390, innerWidth=390"
+    },
+    {
+      "desc": "card-system @390: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "Telegram: токен без настоящего бота — ошибка словами, не 500",
+      "ok": true,
+      "detail": "Telegram не принял токен: проверьте, что он скопирован целиком."
+    },
+    {
+      "desc": "Почта уже настроена прогоном s2tail — ветку «без SMTP» см. в журнале первого прогона",
+      "ok": null,
+      "detail": "console-final-batch1.txt"
+    },
+    {
+      "desc": "Почта · «Проверить связь» (SMTP настроен, сервер недоступен)",
+      "ok": null,
+      "detail": "Карточка | Почта | Состояние | Настроена | Сервер | smtp.invalid.example:587 | Шифрование | STARTTLS | Адрес отправителя | noreply@demo.example | Имя отправителя | RailTech Демо | Логин | demo-user | Пароль SMTP | •••• -Aa1 | задан, последние символы -Aa1 | Проверить связь | Тестовое письмо | Почтовый сервер не отвечает. | Настроить SMTP | Журнал отправок | Показать | Все письма | Приглашение в CR"
+    },
+    {
+      "desc": "Почта · состояние карточки",
+      "ok": null,
+      "detail": "Карточка | Почта | Состояние | Настроена | Сервер | smtp.invalid.example:587 | Шифрование | STARTTLS | Адрес отправителя | noreply@demo.example | Имя отправителя | RailTech Демо | Логин | demo-user | Пароль SMTP | •••• -Aa1 | задан, последние символы -Aa1 | Проверить связь | Тестовое письмо | Почтовый сервер не отвечает. | Настроить SMTP | Журнал отправок | Показать | Все письма | Приглашение в CR"
+    },
+    {
+      "desc": "SMTP: форма с «Что произойдёт»",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "SMTP: некорректный сервер — ошибка словами у формы",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "Сервисы · проверка S3",
+      "ok": null,
+      "detail": "см. снимок services-after-check"
+    },
+    {
+      "desc": "выключатель сервиса: «Что произойдёт», причина, пароль",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "сервис выключен вручную — виден в карточке",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "сервис включён обратно",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "модели ИИ: список ролей (9 строк)",
+      "ok": true,
+      "detail": "9"
+    },
+    {
+      "desc": "проверка модели: предупреждение о платном запросе",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "Модели · проверка без ключей",
+      "ok": null,
+      "detail": "Карточка | Модели ИИ | Диалог с клиентом | Сбой | anthropic · anthropic/claude-sonnet-5-5 · сегодня 0,00 USD | 401: Error code: 401 - {'error': {'message': 'litellm.AuthenticationError: AnthropicException - {\"type\":\"error\",\"error\":{\"type\":\"authentication_error\",\"message\":\"x-api-key header is required\"},\"reques | Ключ: не менялся из Платформы | Проверено: 27.10.2026 10:57 | Проверить | Сменить | Сб"
+    },
+    {
+      "desc": "смена ключа без правки предзаполненной модели проходит",
+      "ok": false,
+      "detail": "в поле «Модель» предзаполнено «anthropic/claude-haiku-5-5»; ответ: Проверьте заполнение полей."
+    },
+    {
+      "desc": "ключ провайдера на экране не появляется",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "Модели · смена с ключом",
+      "ok": null,
+      "detail": "Карточка | Модели ИИ | Диалог с клиентом | Сбой | anthropic · anthropic/claude-sonnet-5-5 · сегодня 0,00 USD | 401: Error code: 401 - {'error': {'message': 'litellm.AuthenticationError: AnthropicException - {\"type\":\"error\",\"error\":{\"type\":\"authentication_error\",\"message\":\"x-api-key header is required\"},\"reques | Ключ: не менялся из Платформы | Проверено: 27.10.2026 10:57 | Проверить | Сменить | Сбросить | Модель «Диалог с клиентом» не ответила | 1394 мс · 401: Error code: 401 - {'error': {'messa"
+    },
+    {
+      "desc": "маска ключа «•••• ХХХХ» после смены",
+      "ok": true,
+      "detail": " | Нет данных | anthropic · anthropic/claude-haiku-5-5 · сегодня 0,00 USD | Ключ: •••• ada8 | задан, последние символы ada8 |  задан в Платформе | Проверок ещё "
+    },
+    {
+      "desc": "сброс модели к значению по умолчанию",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "расходы: бот и весь ансамбль, таблицы",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "копия вне расписания: «Что произойдёт»",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "Бэкапы · «Запросить копию» без сервиса бэкапа",
+      "ok": null,
+      "detail": "Карточка | Хранилище и бэкапы | Хранилище файлов | Хранилище файлов (S3) | Работает | Документы клиентов, база знаний и вложения из Telegram | Хранилище отвечает | Проверено: 27.10.2026 10:58 | Резервные копии | Где лежат копии | том сервера | Последняя копия | нет | Свежесть | копий ещё нет | Сервис бэкапа | не отвечает | Копия по запросу ожидает сервис бэкапа с 27.10.2026 10:58. | Файлов копий пока нет. | Сделать копию сейчас"
+    },
+    {
+      "desc": "состояние системы: список компонентов",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "ошибки консоли / ответы 5xx",
+      "ok": null,
+      "detail": "Failed to load resource: the server responded with a status of 401 (Unauthorized) | Failed to load resource: the server responded with a status of 502 (Bad Gateway) | Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) | Failed to load resource: the server responded with a status of 502 (Bad Gateway) | Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) | Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) ;; 502 POST /api/v1/admin/integrations/smtp/check | 502 POST /api/v1/admin/integrations/smtp/check"
+    }
+  ],
+  "screens": [
+    {
+      "name": "overview",
+      "width": 1440,
+      "file": "s2-overview-1440.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "overview",
+      "width": 390,
+      "file": "s2-overview-390.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "card-erp",
+      "width": 1440,
+      "file": "s2-card-erp-1440.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "card-erp",
+      "width": 390,
+      "file": "s2-card-erp-390.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "card-telegram",
+      "width": 1440,
+      "file": "s2-card-telegram-1440.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "card-telegram",
+      "width": 390,
+      "file": "s2-card-telegram-390.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "card-mail",
+      "width": 1440,
+      "file": "s2-card-mail-1440.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "card-mail",
+      "width": 390,
+      "file": "s2-card-mail-390.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "card-services",
+      "width": 1440,
+      "file": "s2-card-services-1440.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "card-services",
+      "width": 390,
+      "file": "s2-card-services-390.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "card-models",
+      "width": 1440,
+      "file": "s2-card-models-1440.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "card-models",
+      "width": 390,
+      "file": "s2-card-models-390.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "card-spend",
+      "width": 1440,
+      "file": "s2-card-spend-1440.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "card-spend",
+      "width": 390,
+      "file": "s2-card-spend-390.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "card-storage",
+      "width": 1440,
+      "file": "s2-card-storage-1440.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "card-storage",
+      "width": 390,
+      "file": "s2-card-storage-390.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "card-system",
+      "width": 1440,
+      "file": "s2-card-system-1440.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "card-system",
+      "width": 390,
+      "file": "s2-card-system-390.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "telegram-token-form",
+      "width": 1440,
+      "file": "s2-telegram-token-form-1440.png"
+    },
+    {
+      "name": "telegram-token-error",
+      "width": 1440,
+      "file": "s2-telegram-token-error-1440.png"
+    },
+    {
+      "name": "mail-smtp-bad-host",
+      "width": 1440,
+      "file": "s2-mail-smtp-bad-host-1440.png"
+    },
+    {
+      "name": "services-after-check",
+      "width": 1440,
+      "file": "s2-services-after-check-1440.png"
+    },
+    {
+      "name": "services-disable-form",
+      "width": 1440,
+      "file": "s2-services-disable-form-1440.png"
+    },
+    {
+      "name": "models-check-no-key",
+      "width": 1440,
+      "file": "s2-models-check-no-key-1440.png"
+    },
+    {
+      "name": "models-change-form",
+      "width": 1440,
+      "file": "s2-models-change-form-1440.png"
+    },
+    {
+      "name": "models-change-422-prefilled",
+      "width": 1440,
+      "file": "s2-models-change-422-prefilled-1440.png"
+    },
+    {
+      "name": "models-after-change",
+      "width": 1440,
+      "file": "s2-models-after-change-1440.png"
+    },
+    {
+      "name": "storage-backup-request",
+      "width": 1440,
+      "file": "s2-storage-backup-request-1440.png"
+    }
+  ]
+}

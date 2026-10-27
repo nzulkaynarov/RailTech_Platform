@@ -1,0 +1,277 @@
+{
+  "rows": [
+    {
+      "desc": "рейл директора",
+      "ok": null,
+      "detail": "Dashboard, CRM, EDS, ERP, Chats, Admin"
+    },
+    {
+      "desc": "подменю Admin у директора",
+      "ok": null,
+      "detail": "Ролевая матрица (RBAC), Оргструктура, Внешние интеграции, Тикеты от команды, Компания, Настройки бота, Журнал аудита"
+    },
+    {
+      "desc": "в подменю Admin у директора нет «Журнала интеграций» (admin: full)",
+      "ok": true,
+      "detail": "Ролевая матрица (RBAC), Оргструктура, Внешние интеграции, Тикеты от команды, Компания, Настройки бота, Журнал аудита"
+    },
+    {
+      "desc": "в подменю Admin у директора есть «Внешние интеграции», «Журнал аудита»",
+      "ok": true,
+      "detail": "Ролевая матрица (RBAC), Оргструктура, Внешние интеграции, Тикеты от команды, Компания, Настройки бота, Журнал аудита"
+    },
+    {
+      "desc": "интеграции: плашка «Только просмотр», кнопок «Проверить» нет",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "director-integrations @1440: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=1440, innerWidth=1440"
+    },
+    {
+      "desc": "director-integrations @1440: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "director-integrations @390: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=390, innerWidth=390"
+    },
+    {
+      "desc": "director-integrations @390: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "ERP: открывается на чтение, кнопок изменения нет",
+      "ok": true,
+      "detail": "Карточка | ERP | Состояние | Сопряжена | Адрес | http://erp-backend:8000 | Токен CRM → ERP | •••• 1UYN | задан, последние символы 1UYN | Секрет событий | •••• v"
+    },
+    {
+      "desc": "Telegram: открывается на чтение, кнопок изменения нет",
+      "ok": true,
+      "detail": "Карточка | Telegram | Бот | — | не указано | Работает | токен не задан | Токен | не задан | Токен обновлён | — | не указано | Последняя ошибка | bot_process_nev"
+    },
+    {
+      "desc": "Почта: открывается на чтение, кнопок изменения нет",
+      "ok": true,
+      "detail": "Карточка | Почта | Состояние | Не настроена | Сервер | — | не указано | Шифрование | — | не указано | Адрес отправителя | — | не указано | Имя отправителя | — |"
+    },
+    {
+      "desc": "Модели ИИ: открывается на чтение, кнопок изменения нет",
+      "ok": true,
+      "detail": "Карточка | Модели ИИ | Режим просмотра: изменения доступны администратору. | Диалог с клиентом | Сбой | anthropic · anthropic/claude-sonnet-5-5 · сегодня 0,00 U"
+    },
+    {
+      "desc": "director-models @1440: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=1440, innerWidth=1440"
+    },
+    {
+      "desc": "director-models @1440: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "Бэкапы: открывается на чтение, кнопок изменения нет",
+      "ok": true,
+      "detail": "Карточка | Хранилище и бэкапы | Хранилище файлов | Хранилище файлов (S3) | Работает | Документы клиентов, база знаний и вложения из Telegram | Хранилище отвечае"
+    },
+    {
+      "desc": "director-storage @1440: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=1440, innerWidth=1440"
+    },
+    {
+      "desc": "director-storage @1440: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "Расходы: открывается на чтение, кнопок изменения нет",
+      "ok": true,
+      "detail": "Карточка | Расходы | Расходы бота | Диалоги и проверки бота за период, в долларах США. | Период | 30 дн. | Сегодня | 0,00 USD | Бюджет на день | 2,00 USD | За п"
+    },
+    {
+      "desc": "director-spend @1440: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=1440, innerWidth=1440"
+    },
+    {
+      "desc": "director-spend @1440: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "director-spend @390: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=390, innerWidth=390"
+    },
+    {
+      "desc": "director-spend @390: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "Состояние: открывается на чтение, кнопок изменения нет",
+      "ok": true,
+      "detail": "Карточка | Состояние системы | Итог: Сбой Проверено: 27.10.2026 10:17 | Модель ИИ: Диалог | Сбой | провайдер отклонил ключ — проверьте ключ API; бот не отвечает"
+    },
+    {
+      "desc": "журнал аудита: директор читает записи",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "director-audit @1440: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=1440, innerWidth=1440"
+    },
+    {
+      "desc": "director-audit @1440: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "director-audit @390: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=390, innerWidth=390"
+    },
+    {
+      "desc": "director-audit @390: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "оргструктура: «Только просмотр», ролей и «Сбросить пароль» нет",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "BFF POST /api/v1/admin/integrations/erp/rotate от директора -> 403 (не 2xx и не 5xx)",
+      "ok": true,
+      "detail": "HTTP 403 {\"code\":\"FORBIDDEN\",\"message\":\"Раздел или действие не положены вашей роли.\",\"source\":\"bff\",\"details\":{\"resource\":\"admin\""
+    },
+    {
+      "desc": "BFF PUT /api/v1/admin/integrations/models/qualifier-model от директора -> 403 (не 2xx и не 5xx)",
+      "ok": true,
+      "detail": "HTTP 403 {\"code\":\"FORBIDDEN\",\"message\":\"Раздел или действие не положены вашей роли.\",\"source\":\"bff\",\"details\":{\"resource\":\"admin\""
+    },
+    {
+      "desc": "BFF POST /api/v1/admin/integrations/models/qualifier-model/reset от директора -> 403 (не 2xx и не 5xx)",
+      "ok": true,
+      "detail": "HTTP 403 {\"code\":\"FORBIDDEN\",\"message\":\"Раздел или действие не положены вашей роли.\",\"source\":\"bff\",\"details\":{\"resource\":\"admin\""
+    },
+    {
+      "desc": "BFF POST /api/v1/admin/integrations/backups от директора -> 403 (не 2xx и не 5xx)",
+      "ok": true,
+      "detail": "HTTP 403 {\"code\":\"FORBIDDEN\",\"message\":\"Раздел или действие не положены вашей роли.\",\"source\":\"bff\",\"details\":{\"resource\":\"admin\""
+    },
+    {
+      "desc": "BFF POST /api/v1/admin/integrations/smtp/check от директора -> 403 (не 2xx и не 5xx)",
+      "ok": true,
+      "detail": "HTTP 403 {\"code\":\"FORBIDDEN\",\"message\":\"Раздел или действие не положены вашей роли.\",\"source\":\"bff\",\"details\":{\"resource\":\"admin\""
+    },
+    {
+      "desc": "BFF PUT /api/v1/admin/integrations/telegram/token от директора -> 403 (не 2xx и не 5xx)",
+      "ok": true,
+      "detail": "HTTP 403 {\"code\":\"FORBIDDEN\",\"message\":\"Раздел или действие не положены вашей роли.\",\"source\":\"bff\",\"details\":{\"resource\":\"admin\""
+    },
+    {
+      "desc": "BFF POST /api/v1/admin/users/1/temporary-password от директора -> 403 (не 2xx и не 5xx)",
+      "ok": true,
+      "detail": "HTTP 403 {\"code\":\"FORBIDDEN\",\"message\":\"Раздел или действие не положены вашей роли.\",\"source\":\"bff\",\"details\":{\"resource\":\"admin\""
+    },
+    {
+      "desc": "BFF POST /api/v1/admin/users/1/reset-password/email от директора -> 403 (не 2xx и не 5xx)",
+      "ok": true,
+      "detail": "HTTP 403 {\"code\":\"FORBIDDEN\",\"message\":\"Раздел или действие не положены вашей роли.\",\"source\":\"bff\",\"details\":{\"resource\":\"admin\""
+    },
+    {
+      "desc": "BFF GET /admin/bus от директора -> 403 (журнал шины только admin: full)",
+      "ok": true,
+      "detail": "HTTP 403"
+    },
+    {
+      "desc": "ротация ключей ERP от директора -> именно 403",
+      "ok": true,
+      "detail": "HTTP 403 {\"code\":\"FORBIDDEN\",\"message\":\"Раздел или действие не положены вашей роли.\",\"source\":\"bff\",\"details\":{\"resource\":\"admin\",\"need\":\"full\"}}"
+    },
+    {
+      "desc": "прямой URL /admin/bus у директора — «Нет доступа»",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "ошибки консоли / 5xx",
+      "ok": null,
+      "detail": "Failed to load resource: the server responded with a status of 401 (Unauthorized) | Failed to load resource: the server responded with a status of 403 (Forbidden) | Failed to load resource: the server responded with a status of 403 (Forbidden) | Failed to load resource: the server responded with a status of 403 (Forbidden) | Failed to load resource: the server responded with a status of 403 (Forbidden) | Failed to load resource: the server responded with a status of 403 (Forbidden) | Failed to load resource: the server responded with a status of 403 (Forbidden) | Failed to load resource: the server responded with a status of 403 (Forbidden) | Failed to load resource: the server responded with a status of 403 (Forbidden) | Failed to load resource: the server responded with a status of 403 (Forbidden) | Failed to load resource: the server responded with a status of 403 (Forbidden) ;; "
+    }
+  ],
+  "screens": [
+    {
+      "name": "director-integrations",
+      "width": 1440,
+      "file": "s7-director-integrations-1440.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "director-integrations",
+      "width": 390,
+      "file": "s7-director-integrations-390.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "director-models",
+      "width": 1440,
+      "file": "s7-director-models-1440.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "director-storage",
+      "width": 1440,
+      "file": "s7-director-storage-1440.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "director-spend",
+      "width": 1440,
+      "file": "s7-director-spend-1440.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "director-spend",
+      "width": 390,
+      "file": "s7-director-spend-390.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "director-audit",
+      "width": 1440,
+      "file": "s7-director-audit-1440.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "director-audit",
+      "width": 390,
+      "file": "s7-director-audit-390.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "director-org-readonly",
+      "width": 1440,
+      "file": "s7-director-org-readonly-1440.png"
+    }
+  ]
+}

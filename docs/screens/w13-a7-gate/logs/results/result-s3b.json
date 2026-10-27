@@ -1,0 +1,124 @@
+{
+  "rows": [
+    {
+      "desc": "в «Запросах» ожидают решения два запроса сотрудника",
+      "ok": true,
+      "detail": "Запросы (2)"
+    },
+    {
+      "desc": "запрос виден строкой со статусом «На рассмотрении»",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "company-category-requests @1440: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=1440, innerWidth=1440"
+    },
+    {
+      "desc": "company-category-requests @1440: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "company-category-requests @390: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=390, innerWidth=390"
+    },
+    {
+      "desc": "company-category-requests @390: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "отклонение: «Что произойдёт» и обязательная причина",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "запрос отклонён, причина в строке",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "категория, о которой просили, заведена администратором",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "одобрение: сказано, что сама категория этим действием не создаётся",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "запрос одобрен, статус в строке",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "company-category-requests-decided @1440: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=1440, innerWidth=1440"
+    },
+    {
+      "desc": "company-category-requests-decided @1440: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "company-category-requests-decided @390: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=390, innerWidth=390"
+    },
+    {
+      "desc": "company-category-requests-decided @390: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "ошибки консоли / 5xx",
+      "ok": null,
+      "detail": "Failed to load resource: the server responded with a status of 401 (Unauthorized) ;; "
+    }
+  ],
+  "screens": [
+    {
+      "name": "company-category-requests",
+      "width": 1440,
+      "file": "s3b-company-category-requests-1440.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "company-category-requests",
+      "width": 390,
+      "file": "s3b-company-category-requests-390.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "company-category-reject",
+      "width": 1440,
+      "file": "s3b-company-category-reject-1440.png"
+    },
+    {
+      "name": "company-category-approve",
+      "width": 1440,
+      "file": "s3b-company-category-approve-1440.png"
+    },
+    {
+      "name": "company-category-requests-decided",
+      "width": 1440,
+      "file": "s3b-company-category-requests-decided-1440.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "company-category-requests-decided",
+      "width": 390,
+      "file": "s3b-company-category-requests-decided-390.png",
+      "noHScroll": true,
+      "axe": []
+    }
+  ]
+}

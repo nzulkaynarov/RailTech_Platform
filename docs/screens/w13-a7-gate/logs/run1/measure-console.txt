@@ -1,0 +1,87 @@
+2026-10-27 05:24:21 --- фаза control
+ident_gen Counter({('client', 200): 5, ('user', 200): 5})
+crm_gen leads Counter({(201, 200): 25}) max_s=0.87
+eds_gen registered 8 of 8
+erp_par: опубликовано 25 из 25 ошибки: [] max_s=0.80
+ident_gen Counter({('client', 200): 5, ('user', 200): 5})
+crm_gen leads Counter({(201, 200): 25}) max_s=5.98
+eds_gen registered 8 of 8
+erp_par: опубликовано 25 из 25 ошибки: [] max_s=1.68
+2026-10-27 05:26:00 + подписчик slow (строка дописана в файл подписок на месте)
+2026-10-27 05:26:12 --- фаза x1
+ident_gen Counter({('client', 200): 6, ('user', 200): 6})
+eds_gen registered 10 of 10
+erp published 20 of 20
+crm_gen leads Counter({(201, 200): 30}) max_s=0.16
+2026-10-27 05:27:52 --- фаза burst
+--- волна 1  2026-10-27 05:27:52
+crm_gen leads Counter({(201, 200): 25}) max_s=1.56
+ident_gen Counter({('client', 200): 5, ('user', 200): 5})
+eds_gen registered 8 of 8
+erp_par: опубликовано 25 из 25 ошибки: [] max_s=0.44
+--- волна 2  2026-10-27 05:28:16
+ident_gen Counter({('client', 200): 5, ('user', 200): 5})
+crm_gen leads Counter({(201, 200): 25}) max_s=0.87
+erp_par: опубликовано 25 из 25 ошибки: [] max_s=0.49
+eds_gen registered 8 of 8
+--- волна 3  2026-10-27 05:28:41
+ident_gen Counter({('client', 200): 5, ('user', 200): 5})
+crm_gen leads Counter({(201, 200): 25}) max_s=1.24
+erp_par: опубликовано 25 из 25 ошибки: [] max_s=0.60
+eds_gen registered 8 of 8
+--- всплеск CRM 1  2026-10-27 05:29:05
+ident_gen Counter({('client', 200): 5, ('user', 200): 5})
+crm_gen leads Counter({(201, 200): 50}) max_s=0.91
+2026-10-27 05:29:27 жду, пока slow доберёт хвост (до 150 с)
+2026-10-27 05:29:28 slow не доставлено: 0
+
+## Фаза «control» 2026-10-27 05:24:21 .. 2026-10-27 05:26:00 UTC, slow=нет, недоставлено на момент выгрузки: 0
+издатель  подписчик         n    p50 мс    p95 мс    max мс  не с 1-й
+*         crm              50      1030      3091      3162         0
+erp       crm              50      1030      3091      3162         0
+*         eds              10      2892      6306      6465         0
+crm       eds              10      2892      6306      6465         0
+*         erp              10      3523      7324      7436         0
+crm       erp              10      3523      7324      7436         0
+*         platform-bff    176       485      6508      6744         0
+crm       platform-bff    110      3254      6561      6744         0
+eds       platform-bff     16       223       886      1858         0
+erp       platform-bff     50       461      1551      1793         0
+
+## Фаза «x1» 2026-10-27 05:26:12 .. 2026-10-27 05:27:52 UTC, slow=да, недоставлено на момент выгрузки: 0
+издатель  подписчик         n    p50 мс    p95 мс    max мс  не с 1-й
+*         crm              20        87       141       152         0  OK
+erp       crm              20        87       141       152         0
+*         eds               6        62       129       133         0  OK
+crm       eds               6        62       129       133         0
+*         erp               6        87       300       322         0  OK
+crm       erp               6        87       300       322         0
+*         platform-bff     96        65       169     28915         1  НАРУШЕНИЕ
+crm       platform-bff     66        70       183     28915         1
+eds       platform-bff     10        51       110       112         0
+erp       platform-bff     20        63        99       132         0
+*         slow             96      2557      2621      2686         0
+crm       slow             66      2557      2633      2686         0
+eds       slow             10      2564      2605      2609         0
+erp       slow             20      2552      2593      2593         0
+критерий фазы (быстрые подписчики по всем издателям: p95 <= 2000 мс, max <= 3000 мс): НЕ ВЫПОЛНЕН
+
+## Фаза «burst» 2026-10-27 05:27:52 .. 2026-10-27 05:29:27 UTC, slow=да, недоставлено на момент выгрузки: 0
+издатель  подписчик         n    p50 мс    p95 мс    max мс  не с 1-й
+*         crm              75        86       334       347         0  OK
+erp       crm              75        86       334       347         0
+*         eds              20       138       375      1296         0  OK
+crm       eds              20       138       375      1296         0
+*         erp              20       177       321       364         0  OK
+crm       erp              20       177       321       364         0
+*         platform-bff    369       135       422      1349         0  OK
+crm       platform-bff    270       174      1027      1349         0
+eds       platform-bff     24        56       137       154         0
+erp       platform-bff     75        68       132       138         0
+*         slow            369      2772      9589      9637         0
+crm       slow            270      4874      9591      9637         0
+eds       slow             24      2560      2633      2664         0
+erp       slow             75      2566      2633      2635         0
+критерий фазы (быстрые подписчики по всем издателям: p95 <= 2000 мс, max <= 3000 мс): ВЫПОЛНЕН
+
+ИТОГ: критерий НЕ выполнен

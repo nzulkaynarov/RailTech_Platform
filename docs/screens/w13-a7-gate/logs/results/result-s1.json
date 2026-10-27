@@ -1,0 +1,104 @@
+{
+  "rows": [
+    {
+      "desc": "вход без администратора ведёт на «Первый запуск» (/setup)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "setup-form @1440: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=1440, innerWidth=1440"
+    },
+    {
+      "desc": "setup-form @1440: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "setup-form @390: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=390, innerWidth=390"
+    },
+    {
+      "desc": "setup-form @390: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "код первого запуска найден в журнале crm-api (строка setup_code_issued)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "неверный код — понятное сообщение, форма остаётся",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "верный код: администратор создан, вход выполнен, мастер «Ваша компания»",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "wizard-company @1440: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=1440, innerWidth=1440"
+    },
+    {
+      "desc": "wizard-company @1440: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "wizard-company @390: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=390, innerWidth=390"
+    },
+    {
+      "desc": "wizard-company @390: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "ошибки консоли / ответы 5xx на шаге администратора",
+      "ok": null,
+      "detail": "Failed to load resource: the server responded with a status of 401 (Unauthorized) | Failed to load resource: the server responded with a status of 401 (Unauthorized) | Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) "
+    }
+  ],
+  "screens": [
+    {
+      "name": "setup-form",
+      "width": 1440,
+      "file": "s1-setup-form-1440.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "setup-form",
+      "width": 390,
+      "file": "s1-setup-form-390.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "setup-wrong-code",
+      "width": 1440,
+      "file": "s1-setup-wrong-code-1440.png"
+    },
+    {
+      "name": "wizard-company",
+      "width": 1440,
+      "file": "s1-wizard-company-1440.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "wizard-company",
+      "width": 390,
+      "file": "s1-wizard-company-390.png",
+      "noHScroll": true,
+      "axe": []
+    }
+  ]
+}

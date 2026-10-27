@@ -1,0 +1,291 @@
+{
+  "rows": [
+    {
+      "desc": "правка ролей сотрудника сохранена (источник событий identity.user.updated)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "подписчики трёх доменов: CRM, ERP и EDS отправляют, состояние словом",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "CRM отправляет",
+      "ok": null,
+      "detail": "CRM отправляет | Подписчик\tСостояние\tЖдут\tDLQ\tСтарейшее\tПоследняя ошибка | EDS | http://bus-dead:9000/bus/v1/events | \t | Есть недоставленные | \t | 0 | \t | 2 | Повторить | \t—\tнет | ERP | http://erp-backend:8000/bus/v1/events | \t | Работает | \t | 0 | \t | 0 | \t—\tнет | Платформа | http://platform-bff:8000/bus/v1/events | \t | Работает | \t | 0 | \t | 0 | \t—\tнет"
+    },
+    {
+      "desc": "у подписчика EDS в карточке CRM есть недоставленные (dead) — состояние словом",
+      "ok": true,
+      "detail": "CRM отправляет | Подписчик\tСостояние\tЖдут\tDLQ\tСтарейшее\tПоследняя ошибка | EDS | http://bus-dead:9000/bus/v1/events | \t | Есть недоставленные | \t | 0 | \t | 2 | Повторить | \t—\tнет | ERP | http://erp-backend:8000/bus/v1/events | \t | Работает | \t | 0 | \t | 0 | \t—\tнет | Платформа | http://platform-bff:8"
+    },
+    {
+      "desc": "bus-subscribers-broken @1440: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=1440, innerWidth=1440"
+    },
+    {
+      "desc": "bus-subscribers-broken @1440: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "bus-subscribers-broken @390: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=390, innerWidth=390"
+    },
+    {
+      "desc": "bus-subscribers-broken @390: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "счётчик DLQ в шапке",
+      "ok": null,
+      "detail": "Недоставлено (DLQ) 2 CRM, ERP и EDS"
+    },
+    {
+      "desc": "DLQ: dead-доставки видны, статус «Не доставлено»",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "в DLQ доставок",
+      "ok": null,
+      "detail": "2"
+    },
+    {
+      "desc": "bus-dlq @1440: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=1440, innerWidth=1440"
+    },
+    {
+      "desc": "bus-dlq @1440: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "bus-dlq @390: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=390, innerWidth=390"
+    },
+    {
+      "desc": "bus-dlq @390: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "доставка: тип события, ошибка словами, тело события не показывается",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "карточка dead-доставки",
+      "ok": null,
+      "detail": "Карточка | Доставка 16 · CRM | Не доставлено | Издатель | CRM | Подписчик | EDS | Тип события | uz.railtech.identity.user.updated.v1 | ID события | c3d3a0ab-8447-46af-b948-1eed6040397a | Объект | user/5 | Корреляция | b4ea6457-aab8-4078-8547-1671ad57a9e4 | Попыток | 1 | Последняя попытка | 27.10.2026 10:19 | Следующая попытка | — | не указано | Код ответа | 400 | Ошибка | HTTP 400: {\"error\": \"qa-dead-stub\"} | Создано | 27.10.2026 10:19 | Доставлено | — | не указано | Тело события в журнал не выводится: в нём могут быть данные клиентов. Достаточно типа, объекта и ID события. | ЧТО ПРОИЗОЙДЁТ | "
+    },
+    {
+      "desc": "«Повторить доставку» при ещё неисправном адресе (должна вернуться в DLQ)",
+      "ok": null,
+      "detail": "счётчик попыток начнётся с нуля. | 2 | Если подписчик на паузе, он сразу получит пробную доставку. | 3 | Повтор безопасен: приёмник отбрасывает дубли по ID события. В журнале домена останется, кто и когда повторил. | Повторить доставку | Поставлено на повтор. Журнал обновится через несколько секунд."
+    },
+    {
+      "desc": "«Повторить все dead»: «Что произойдёт» и число доставок",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "текст блока «Что произойдёт» (повтор всех dead)",
+      "ok": null,
+      "detail": "ЧТО ПРОИЗОЙДЁТ | 1 | Все доставки этого подписчика из DLQ (1) уйдут сейчас, попытки — с нуля. | 2 | Сначала исправьте причину: адрес приёмника, секрет пары или сам приёмник — иначе доставки вернутся в DLQ. | 3 | Если подписчик на паузе, он сразу получит пробную доставку. | 4 | Повтор безопасен: приёмник отбрасывает дубли по ID события. В журнале CRM останется, кто и когда повторил."
+    },
+    {
+      "desc": "повтор поставлен: «Поставлены на повтор N доставки»",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "после повтора DLQ пуст — доставлено",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "доставки CRM -> EDS в статусе «Доставлено» после повтора",
+      "ok": true,
+      "detail": "Доставлено: 8"
+    },
+    {
+      "desc": "фильтр без совпадений: «Доставок не найдено» и «Сбросить фильтры»",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "bus-deliveries @1440: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=1440, innerWidth=1440"
+    },
+    {
+      "desc": "bus-deliveries @1440: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "bus-deliveries @390: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=390, innerWidth=390"
+    },
+    {
+      "desc": "bus-deliveries @390: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "«Входящие с ошибками»: экран и пустое состояние словами",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "bus-inbox @1440: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=1440, innerWidth=1440"
+    },
+    {
+      "desc": "bus-inbox @1440: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "bus-inbox @390: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=390, innerWidth=390"
+    },
+    {
+      "desc": "bus-inbox @390: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "в журнале нет плашки «EDS не дал доступ»",
+      "ok": true,
+      "detail": "плашки нет, EDS-подписчики видны"
+    },
+    {
+      "desc": "bus-subscribers-fixed @1440: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=1440, innerWidth=1440"
+    },
+    {
+      "desc": "bus-subscribers-fixed @1440: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "bus-subscribers-fixed @390: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=390, innerWidth=390"
+    },
+    {
+      "desc": "bus-subscribers-fixed @390: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "ошибки консоли / 5xx",
+      "ok": null,
+      "detail": "Failed to load resource: the server responded with a status of 401 (Unauthorized) ;; "
+    }
+  ],
+  "screens": [
+    {
+      "name": "bus-subscribers-broken",
+      "width": 1440,
+      "file": "s4-bus-subscribers-broken-1440.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "bus-subscribers-broken",
+      "width": 390,
+      "file": "s4-bus-subscribers-broken-390.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "bus-dlq",
+      "width": 1440,
+      "file": "s4-bus-dlq-1440.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "bus-dlq",
+      "width": 390,
+      "file": "s4-bus-dlq-390.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "bus-delivery-panel",
+      "width": 1440,
+      "file": "s4-bus-delivery-panel-1440.png"
+    },
+    {
+      "name": "bus-retry-dead",
+      "width": 1440,
+      "file": "s4-bus-retry-dead-1440.png"
+    },
+    {
+      "name": "bus-retry-dead-done",
+      "width": 1440,
+      "file": "s4-bus-retry-dead-done-1440.png"
+    },
+    {
+      "name": "bus-deliveries-filtered",
+      "width": 1440,
+      "file": "s4-bus-deliveries-filtered-1440.png"
+    },
+    {
+      "name": "bus-deliveries",
+      "width": 1440,
+      "file": "s4-bus-deliveries-1440.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "bus-deliveries",
+      "width": 390,
+      "file": "s4-bus-deliveries-390.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "bus-inbox",
+      "width": 1440,
+      "file": "s4-bus-inbox-1440.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "bus-inbox",
+      "width": 390,
+      "file": "s4-bus-inbox-390.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "bus-subscribers-fixed",
+      "width": 1440,
+      "file": "s4-bus-subscribers-fixed-1440.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "bus-subscribers-fixed",
+      "width": 390,
+      "file": "s4-bus-subscribers-fixed-390.png",
+      "noHScroll": true,
+      "axe": []
+    }
+  ]
+}
