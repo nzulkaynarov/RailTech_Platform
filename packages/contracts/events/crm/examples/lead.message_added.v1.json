@@ -1,0 +1,27 @@
+{
+  "specversion": "1.0",
+  "id": "3d0b6f6e-5e21-5c4a-9a8e-7d2a1f4c9b01",
+  "source": "rt://crm",
+  "type": "uz.railtech.crm.lead.message_added.v1",
+  "time": "2026-10-27T09:12:00Z",
+  "subject": "lead/501",
+  "datacontenttype": "application/json",
+  "dataschema": "rt://contracts/events/crm/lead.message_added/v1",
+  "tenant": "railtech",
+  "correlationid": "9b1f0c2e-6a7d-5c3e-8f41-2d6b7a9e0c13",
+  "data": {
+    "crm_lead_id": 501,
+    "crm_client_id": null,
+    "message_id": 90412,
+    "direction": "in",
+    "author": "lead",
+    "channel": "telegram",
+    "has_attachments": false,
+    "handoff": true,
+    "crm_assigned_user_id": 7,
+    "sent_at": "2026-10-27T09:12:00Z",
+    "actor": {
+      "type": "bot"
+    }
+  }
+}

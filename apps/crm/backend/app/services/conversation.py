@@ -27,7 +27,7 @@ from app.models.leads import Conversation, Lead
 from app.repositories import leads as repo
 from app.schemas.settings import AppSettings
 from app.security.audit import Actor
-from app.services import escalation, stages
+from app.services import escalation, message_log, stages
 from app.services.conversation_erasure import DeliveryFailureMixin, ErasureMixin
 from app.services.conversation_records import RecordsMixin
 from app.services.conversation_support import (
@@ -131,7 +131,7 @@ class ConversationService(ErasureMixin, DeliveryFailureMixin, RecordsMixin):
             ):
                 return await consent_prompt(session, conversation, lead, cfg, is_new=True)
             text = cfg.texts.greeting.get(lang_of(lead), company=cfg.company.name)
-            await repo.add_message(session, conversation_id=conversation.id, role="bot", text=text)
+            await message_log.add(session, conversation, role="bot", text=text)
         return [Outgoing(text)]
 
     async def unsupported(self, tg_user_id: int) -> list[Outgoing]:
@@ -163,9 +163,7 @@ class ConversationService(ErasureMixin, DeliveryFailureMixin, RecordsMixin):
             text = (texts.consent_accepted_pending if question else texts.consent_accepted).get(
                 lang_of(lead)
             )
-            message = await repo.add_message(
-                session, conversation_id=conversation.id, role="bot", text=text
-            )
+            message = await message_log.add(session, conversation, role="bot", text=text)
             turn = None
             if question and lead.owner_mode == OwnerMode.BOT:
                 client_id = await verified_client(session, tg_user_id)
@@ -188,9 +186,7 @@ class ConversationService(ErasureMixin, DeliveryFailureMixin, RecordsMixin):
             language = lang_of(lead) if lead else "ru"
             text = cfg.texts.consent_declined.get(language)
             if conversation is not None:
-                await repo.add_message(
-                    session, conversation_id=conversation.id, role="bot", text=text
-                )
+                await message_log.add(session, conversation, role="bot", text=text)
         return [Outgoing(text)]
 
     async def set_language(self, tg_user_id: int, language: Language) -> list[Outgoing]:
@@ -207,9 +203,7 @@ class ConversationService(ErasureMixin, DeliveryFailureMixin, RecordsMixin):
             ):
                 return await consent_offer(session, conversation, lead, cfg)
             if conversation is not None:  # менеджер видит подтверждение в CRM
-                await repo.add_message(
-                    session, conversation_id=conversation.id, role="bot", text=confirmation[0].text
-                )
+                await message_log.add(session, conversation, role="bot", text=confirmation[0].text)
         return confirmation
 
     async def _receive(
@@ -219,9 +213,9 @@ class ConversationService(ErasureMixin, DeliveryFailureMixin, RecordsMixin):
         async with self._sessions() as session, session.begin():
             lead, conversation, is_new = await self._ensure_lead(session, inc)
             now = datetime.now(UTC)
-            await repo.add_message(
+            await message_log.add(
                 session,
-                conversation_id=conversation.id,
+                conversation,
                 role="lead",
                 text=inc.text,
                 tg_message_id=inc.message_id,
@@ -256,9 +250,7 @@ class ConversationService(ErasureMixin, DeliveryFailureMixin, RecordsMixin):
                 return out, None, escalated(lead.id, waiting.escalation_id)
             if inc.attachments and not inc.text.strip():
                 text = cfg.texts.attachment_received.get(lang_of(lead))
-                message = await repo.add_message(
-                    session, conversation_id=conversation.id, role="bot", text=text
-                )
+                message = await message_log.add(session, conversation, role="bot", text=text)
                 hits = evaluate(TriggerSignals(attachment_received=True), cfg.escalation.triggers())
                 applied = await escalation.apply(session, lead, hits, cfg, now)
                 out = [Outgoing(text, message_id=message.id, lead_id=lead.id)]
@@ -363,9 +355,9 @@ class ConversationService(ErasureMixin, DeliveryFailureMixin, RecordsMixin):
                 replies.append(notice_text)
             outgoing: list[Outgoing] = []
             for index, text in enumerate(replies):
-                message = await repo.add_message(
+                message = await message_log.add(
                     session,
-                    conversation_id=conversation.id,
+                    conversation,
                     role="bot",
                     text=text,
                     meta=turn_meta(result) if index == 0 else {"notice": notice},
