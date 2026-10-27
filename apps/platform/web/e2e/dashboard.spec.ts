@@ -177,9 +177,7 @@ test.describe("Центр уведомлений", () => {
     await center.getByRole("link", { name: /КП-2026\/118 ждёт вашего согласования/ }).click();
 
     await expect(page).toHaveURL(/\/eds\/drafts\/%D0%9A%D0%9F-2026%2F118\?panel=open&tab=approve$/);
-    await expect(
-      page.getByRole("heading", { level: 1, name: "Карточка КП-2026/118" }),
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "КП-2026/118" })).toBeVisible();
     await expect(page.getByRole("tab", { name: "Одобрение", selected: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "Центр уведомлений, 2 новых" })).toBeVisible();
     await expect(center).toHaveCount(0);
@@ -293,7 +291,9 @@ test.describe("Поиск ⌘K", () => {
       await expect(page).toHaveURL(
         /\/crm\/requests\?request=%D0%97%D0%92-2026-104&panel=open&tab=card$/,
       );
-      await expect(page.getByRole("heading", { level: 1, name: "Все заявки" })).toBeVisible();
+      await expect(
+        page.getByRole("heading", { level: 1, name: "Заявка ЗВ-2026-104" }),
+      ).toBeVisible();
     },
   );
 

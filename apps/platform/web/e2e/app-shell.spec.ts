@@ -112,7 +112,7 @@ test.describe("панели", () => {
       "page",
     );
     await expect(menu.getByRole("link", { name: "Моя очередь 3, требует действия" })).toBeVisible();
-    await expect(menu.getByRole("link", { name: "Все проекты 4" })).toBeVisible();
+    await expect(menu.getByRole("link", { name: "Все проекты 4, в старом ERP: 4" })).toBeVisible();
     await expect(page.getByRole("button", { name: /^Центр уведомлений, 3 новых/ })).toBeVisible();
   });
 
@@ -229,7 +229,7 @@ test.describe("узкие экраны", () => {
       await page.getByRole("button", { name: "Меню" }).click();
       const drawerMenu = page.getByRole("navigation", { name: "Разделы модуля" });
       await expect(drawerMenu).toBeVisible();
-      await drawerMenu.getByRole("link", { name: "Все проекты 4" }).click();
+      await drawerMenu.getByRole("link", { name: /^Все проекты 4/ }).click();
       await expect(page).toHaveURL(/\/dashboard\/projects$/);
       await expect(drawerMenu).toBeHidden();
 

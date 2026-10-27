@@ -23,6 +23,12 @@ async function shoot(page: Page, name: string): Promise<void> {
   for (const width of WIDTHS) {
     await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    // Ссылка из очереди открывает боковое окно; на 390 оно Drawer поверх страницы — для снимка закрываем.
+    const drawer = page.getByRole("dialog", { name: "Боковое окно" });
+    if (width === 390 && (await drawer.isVisible())) {
+      await drawer.getByRole("button", { name: "Скрыть боковое окно" }).click();
+      await expect(drawer).toBeHidden();
+    }
     await expectNoViolations(page, `${name} ${String(width)}`);
     await settledScreenshot(page, name);
   }

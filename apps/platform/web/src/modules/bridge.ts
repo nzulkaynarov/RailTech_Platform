@@ -64,7 +64,11 @@ const numericPath = (prefix: string) => (objectId: string) =>
 
 /** Ключ — `<модуль>.<раздел>`, как в `module.ts` модуля. */
 export const BRIDGE: Readonly<Record<string, BridgeEntry>> = {
-  "dashboard.projects": { legacy: erp("#crm-deals", "erpDeals"), when: "pilot" },
+  "dashboard.projects": {
+    legacy: erp("#crm-deals", "erpDeals"),
+    when: "pilot",
+    legacyCount: true,
+  },
   "dashboard.summary": { legacy: crm("/dashboard", "crmDashboard"), when: "pilot" },
 
   "crm.messages": { legacy: crm("/inbox", "crmInbox"), when: "soon", legacyCount: true },
