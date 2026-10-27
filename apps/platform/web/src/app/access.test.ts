@@ -18,6 +18,13 @@ describe("доступ по Me.resources", () => {
     expect(levelForRule(me, { anyOf: ["eds.inbox", "erp.calc"] })).toBeUndefined();
   });
 
+  it("раздел с level: full не виден при чтении (Admin · Журнал интеграций)", () => {
+    expect(canSee(me, { resource: "admin" })).toBe(true);
+    expect(canSee(me, { resource: "admin", level: "full" })).toBe(false);
+    expect(canSee(me, { resource: "crm.leads", level: "full" })).toBe(true);
+    expect(canSee(me, { anyOf: ["crm.clients", "crm.leads"], level: "full" })).toBe(true);
+  });
+
   it("запись — только при full", () => {
     expect(canEdit(me, "crm.leads")).toBe(true);
     expect(canEdit(me, "crm.clients")).toBe(false);

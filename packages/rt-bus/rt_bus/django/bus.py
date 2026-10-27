@@ -61,7 +61,19 @@ from ..delivery import (
 from ..envelope import Event
 from ..errors import InTransactionError, NotInTransactionError
 from ..handlers import HandlerRegistry, default_registry
-from ..journal import BusMetrics, DeliveryView, InboxView, build_metrics, log_metrics
+from ..journal import (
+    BusMetrics,
+    BusOverview,
+    DeliveryView,
+    InboxView,
+    SubscriberView,
+    build_metrics,
+    build_overview,
+    build_subscribers,
+    delivery_filters,
+    inbox_filters,
+    log_metrics,
+)
 from ..masking import SecretStash
 from ..receiver import ReceiveResult, Rejection, log_rejection
 
@@ -529,24 +541,26 @@ class DjangoBus:
 
     # --- ручное и журнал -------------------------------------------------------------------------------------------
 
-    def retry_delivery(self, delivery_id: int) -> bool:
-        """«Повторить»: доставка `dead` (или ожидающая) — сейчас, попытки с нуля; пауза предохранителя → проба."""
+    def retry_delivery(self, delivery_id: int, *, actor: str | None = None) -> bool:
+        """«Повторить»: доставка `dead` (или ожидающая) — сейчас, попытки с нуля; пауза предохранителя → проба.
+
+        `actor` — кто нажал (журнал Admin, CLI): попадает в запись лога `rt_bus_delivery_retry_manual`."""
         now = self.core.now()
         with self._atomic():
             rows, _ = self._exec(sql.RETRY_DELIVERY, {"id": delivery_id, "now": now})
             if rows:
                 self._exec(sql.PROBE_NOW, {"subscribers": [rows[0]["subscriber"]], "now": now})
         if rows:
-            logger.info("rt_bus_delivery_retry_manual", extra={"delivery_id": delivery_id})
+            logger.info("rt_bus_delivery_retry_manual", extra={"delivery_id": delivery_id, "actor": actor})
         return bool(rows)
 
-    def retry_all_dead(self, subscriber: str | None = None) -> int:
+    def retry_all_dead(self, subscriber: str | None = None, *, actor: str | None = None) -> int:
         now = self.core.now()
         with self._atomic():
             rows, _ = self._exec(sql.RETRY_ALL_DEAD, {"subscriber": subscriber, "now": now})
             if rows:
                 self._exec(sql.PROBE_NOW, {"subscribers": sorted({r["subscriber"] for r in rows}), "now": now})
-        logger.info("rt_bus_dead_retry_manual", extra={"subscriber": subscriber, "count": len(rows)})
+        logger.info("rt_bus_dead_retry_manual", extra={"subscriber": subscriber, "count": len(rows), "actor": actor})
         return len(rows)
 
     def list_deliveries(
@@ -556,21 +570,40 @@ class DjangoBus:
         subscriber: str | None = None,
         event_type: str | None = None,
         event_id: str | uuid.UUID | None = None,
+        type_contains: str | None = None,
+        created_from: datetime | None = None,
+        created_to: datetime | None = None,
         before_id: int | None = None,
         limit: int = 50,
     ) -> list[DeliveryView]:
+        """Журнал доставок, новые сверху; страница — `before_id` (id последней строки предыдущей страницы)."""
         rows, _ = self._exec(
             sql.LIST_DELIVERIES,
-            {
-                "status": status,
-                "subscriber": subscriber,
-                "event_type": event_type,
-                "event_id": None if event_id is None else uuid.UUID(str(event_id)),
-                "before_id": before_id,
-                "limit": limit,
-            },
+            delivery_filters(
+                status=status,
+                subscriber=subscriber,
+                event_type=event_type,
+                event_id=event_id,
+                type_contains=type_contains,
+                created_from=created_from,
+                created_to=created_to,
+                before_id=before_id,
+                limit=limit,
+            ),
         )
         return [DeliveryView.from_row(_uuid_fields(r, "event_id")) for r in rows]
+
+    def subscribers(self) -> list[SubscriberView]:
+        """Подписчики издателя: настройка из файла, очередь доставок, состояние предохранителя (журнал Admin)."""
+        deliveries, _ = self._exec(sql.METRICS_DELIVERY)
+        states, _ = self._exec(sql.SUBSCRIBER_STATES)
+        return build_subscribers(
+            self.core.now(), self.config.service, self.core.own_domains(), self.core.subscriptions(), deliveries, states
+        )
+
+    def overview(self) -> BusOverview:
+        """Сводка для «Журнала интеграций»: метрики шины и подписчики."""
+        return build_overview(self.config.service, self.metrics(), self.subscribers())
 
     # --- приёмник и inbox ----------------------------------------------------------------------------------------
 
@@ -656,12 +689,14 @@ class DjangoBus:
                 self._exec(sql.INBOX_FAILED, {"event_id": key})
             return sql.FAILED
 
-    def retry_inbox(self, event_id: str | uuid.UUID) -> bool:
+    def retry_inbox(self, event_id: str | uuid.UUID, *, actor: str | None = None) -> bool:
+        """«Повторить» запись inbox `failed`/`skipped`: снова `received` и в очередь (после коммита)."""
         key = uuid.UUID(str(event_id))
         with self._atomic():
             rows, _ = self._exec(sql.RETRY_INBOX, {"event_id": key, "now": self.core.now()})
         if not rows:
             return False
+        logger.info("rt_bus_inbox_retry_manual", extra={"event_id": str(key), "actor": actor})
         if self.enqueue is None:
             self.process_inbox(key)
         else:
@@ -686,11 +721,24 @@ class DjangoBus:
         *,
         status: str | None = None,
         event_type: str | None = None,
+        type_contains: str | None = None,
+        errors_only: bool = False,
         before: datetime | None = None,
+        before_event_id: str | uuid.UUID | None = None,
         limit: int = 50,
     ) -> list[InboxView]:
+        """Журнал inbox, новые сверху. `errors_only` — `failed` и ждущие автоповтора после ошибки обработчика."""
         rows, _ = self._exec(
-            sql.LIST_INBOX, {"status": status, "event_type": event_type, "before": before, "limit": limit}
+            sql.LIST_INBOX,
+            inbox_filters(
+                status=status,
+                event_type=event_type,
+                type_contains=type_contains,
+                errors_only=errors_only,
+                before=before,
+                before_event_id=before_event_id,
+                limit=limit,
+            ),
         )
         return [InboxView.from_row(_uuid_fields(r, "event_id")) for r in rows]
 

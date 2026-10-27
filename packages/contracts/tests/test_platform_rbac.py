@@ -26,7 +26,10 @@ EDS_CODES = {
     "registry.read",
     "registry.export",
     "payments.confirm",
+    "bus.manage",
 }
+#: Код журнала шины (W13-A2): только раздел `admin` уровня `full` — у директора (`admin: read`) его нет.
+BUS = "bus.manage"
 #: Публичные операции EDS: без токена доступа и без права.
 PUBLIC = {("get", "/health"), ("post", "/api/v1/auth/sso/exchange")}
 
@@ -60,7 +63,7 @@ def test_catalog_codes_are_exactly_the_eds_v1_codes() -> None:
 @pytest.mark.parametrize(
     ("code", "expected"),
     [
-        ("DIRECTOR", EDS_CODES),
+        ("DIRECTOR", EDS_CODES - {BUS}),
         ("MANAGER", {"letters.read", "registry.read", "memos.create"}),
         ("SUPPLY", {"registry.read", "memos.create"}),
         ("ENGINEER", {"registry.read", "memos.create"}),
@@ -71,9 +74,18 @@ def test_system_roles_and_templates_map_to_their_eds_codes(code: str, expected: 
     assert eds_permissions(role(code)) == expected
 
 
-def test_director_gets_every_eds_code() -> None:
-    assert len(EDS_CODES) == 9
-    assert eds_permissions(role("DIRECTOR")) == EDS_CODES
+def test_director_gets_every_eds_code_except_the_bus_journal() -> None:
+    assert len(EDS_CODES) == 10
+    assert eds_permissions(role("DIRECTOR")) == EDS_CODES - {BUS}
+
+
+def test_bus_journal_is_admin_full_only() -> None:
+    """W13-A2: «Журнал интеграций» — раздел `admin` уровня `full`; `read` (директор) кода не даёт."""
+    assert eds_permissions({"admin": "full"}) == {BUS}
+    assert eds_permissions({"admin": "read"}) == set()
+    for r in CATALOG["resources"]:
+        if r["key"] != "admin":
+            assert BUS not in str((r.get("backend") or {}).get("eds")), r["key"]
 
 
 def test_accountant_step_of_a_memo_is_decided_with_payments_confirm() -> None:
@@ -89,13 +101,13 @@ def test_accountant_step_of_a_memo_is_decided_with_payments_confirm() -> None:
 def test_administrator_sees_no_business_documents() -> None:
     """R3-D-2: системный «Администратор» бизнес-документов не видит — ни писем, ни реестра, ни маршрутов.
 
-    Единственное право — `memos.create` (раздел `eds.memo.create` у роли в каталоге): свои служебные записки, как у
-    любого сотрудника; чужих документов это право не открывает (eds.yaml: без `registry.read` — только свои и маршруты,
-    где он участник).
+    Права — `memos.create` (раздел `eds.memo.create` у роли в каталоге): свои служебные записки, как у любого
+    сотрудника; чужих документов это право не открывает (eds.yaml: без `registry.read` — только свои и маршруты, где он
+    участник) — и `bus.manage` (журнал шины, W13-A2): метаданные доставок без тел событий.
     """
     got = eds_permissions(role("ADMIN"))
-    assert got == {"memos.create"}
-    assert not got & (EDS_CODES - {"memos.create"})
+    assert got == {"memos.create", BUS}
+    assert not got & (EDS_CODES - {"memos.create", BUS})
 
 
 @pytest.mark.parametrize(
@@ -161,7 +173,7 @@ def test_eds_api_global_security_is_the_eds_access_token() -> None:
     assert EDS_YAML["security"] == [{"edsAccess": []}]
     scheme = EDS_YAML["components"]["securitySchemes"]["edsAccess"]
     assert (scheme["type"], scheme["scheme"], scheme["bearerFormat"]) == ("http", "bearer", "JWT")
-    assert EDS_YAML["info"]["version"] == "0.2.0"  # 0.2.0 — хвосты гейта C1 (F4, аддитивно)
+    assert EDS_YAML["info"]["version"] == "0.3.0"  # 0.3.0 — журнал шины и код `bus.manage` (W13-A2)
 
 
 def test_numbers_are_not_path_parameters() -> None:

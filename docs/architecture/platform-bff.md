@@ -80,6 +80,11 @@ SPA  POST /api/v1/auth/login {email, password}
 - Вход только по логину CRM. Форма входа ERP, страница `/sso/exchange` CRM, переключатель CRM ↔ ERP, ADR-0010
   «вход в ERP через страницу CRM» после T4 не нужны (T5 удаляет).
 - `platform_role_refs*` — роли Платформы сотрудника с их матрицами (R-1/R-2, §6); старое поле `platform_roles` (коды) удалено в R-1b.
+- **EDS (с W13-A2, `docs/architecture/sso-token.md`, «Токен сотрудника для EDS»).** Не при входе, а при первом обращении к EDS:
+  CRM `POST /api/v1/auth/sso/token {"aud": "eds"}` → EDS `POST /api/v1/auth/sso/exchange` → токен доступа EDS (15 минут, без
+  refresh) в сессии (`eds`); истёк или EDS ответил 401 — новый обмен. CRM не выдаёт токен (нет `permissions.eds`) или EDS не
+  знает сотрудника — 403 `FORBIDDEN` `details.reason = eds_not_granted`; сбой — 503 и пауза 15 с до следующей попытки.
+  Отказ EDS сессию Платформы не закрывает. Адрес — `PLATFORM_EDS_URL` (по умолчанию `http://eds-api:8000`, только сеть compose).
 
 ### 3.1. Первый запуск и временный пароль (W13-A4, BFF 0.10.0)
 
@@ -222,7 +227,7 @@ BFF отдаёт сам (`/admin/company/logo/image`, `/admin/company/brand/logo
 | Домен | `platform.railtech.uz` → VPS 1 (A-запись — владелец); TLS — Caddy, ACME как у остальных доменов |
 | Caddy | сайт `{$PLATFORM_DOMAIN}`: `/api/*` → `platform-bff:8000` (`flush_interval -1` для SSE), остальное → `platform-web`; заголовки безопасности и CSP как у CRM (`style-src 'unsafe-inline'` нужен Ant Design); `no_mcp` |
 | Сервисы compose | `platform-bff` (uvicorn, 2 процесса, лимит 256 МБ), `platform-web` (статика, лимит 64 МБ); образы `rt-platform-bff`, `rt-platform-web` в GHCR по тегу sha, собирает `deploy.yml` (INF-P0-5, #151). **Caddy не зависит от здоровья Платформы** (`depends_on: service_started`): сбой её образа даёт 502 только на `platform.`, остальные домены живут (INF-P1-0) |
-| Переменные | `PLATFORM_DOMAIN` (обязательна: `deploy.sh` без неё останавливается до pull — сначала DNS, потом строка в `/opt/rt/.env.prod`), `PLATFORM_SESSION_TTL_HOURS`, `PLATFORM_CRM_URL=http://crm-api:8000`, `PLATFORM_ERP_URL=http://erp-backend:8000`, `REDIS_URL`; необязательные (не секреты): `PLATFORM_LOGIN_RATE_PER_MINUTE` (10), `PLATFORM_CRM_TIMEOUT_SECONDS` (5), `PLATFORM_TRUSTED_PROXIES` (см. §8); нового секрета нет (сессия — случайный идентификатор, не подписанный токен) |
+| Переменные | `PLATFORM_DOMAIN` (обязательна: `deploy.sh` без неё останавливается до pull — сначала DNS, потом строка в `/opt/rt/.env.prod`), `PLATFORM_SESSION_TTL_HOURS`, `PLATFORM_CRM_URL=http://crm-api:8000`, `PLATFORM_ERP_URL=http://erp-backend:8000`, `PLATFORM_EDS_URL=http://eds-api:8000` (W13-A2; значение по умолчанию совпадает с compose), `REDIS_URL`; необязательные (не секреты): `PLATFORM_LOGIN_RATE_PER_MINUTE` (10), `PLATFORM_CRM_TIMEOUT_SECONDS` (5), `PLATFORM_TRUSTED_PROXIES` (см. §8); нового секрета нет (сессия — случайный идентификатор, не подписанный токен) |
 | Дев-стенд | `platform.localhost` в `Caddyfile.dev`, `make up` поднимает оба сервиса; `make check-platform` |
 | Деплой | существующий `deploy.yml` + `deploy.sh` (разрешено владельцем 2026-10-22, #151); smoke — четыре домена; smoke отката — тоже четыре (INF-P1-0) |
 | Память VPS 1 | +≈ 200 МБ к текущему стеку; после T4 −≈ 60 МБ (`crm-web`, `erp-web`) |

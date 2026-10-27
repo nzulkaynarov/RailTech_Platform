@@ -19,6 +19,10 @@ class Settings(BaseSettings):
     erp_url: str = Field(
         default="http://erp-backend:8000", validation_alias=AliasChoices("PLATFORM_ERP_URL")
     )
+    # EDS (ADR-0015): только сеть compose, вход сотрудника — обмен SSO-токена CRM (`aud=eds`).
+    eds_url: str = Field(
+        default="http://eds-api:8000", validation_alias=AliasChoices("PLATFORM_EDS_URL")
+    )
     redis_url: str = Field(
         default="redis://redis-cache:6379/0", validation_alias=AliasChoices("REDIS_URL")
     )

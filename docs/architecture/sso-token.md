@@ -75,7 +75,8 @@ ADR-0017), у ERP — `{"detail": "USER_NOT_PROVISIONED"}`; неактивный
 
 Решение лида L-C1-1 (волна 12, runbook [`wave12-eds-c1.md`](../runbooks/wave12-eds-c1.md) §2.2; контракт —
 `packages/contracts/openapi/eds.yaml`). У EDS нет своей формы входа и внешнего маршрута: сотрудник приходит только через BFF
-Платформы, BFF получает токен у CRM и обменивает его в EDS. Реализация: CRM — задача E4, EDS — E2.
+Платформы, BFF получает токен у CRM и обменивает его в EDS. Реализация: CRM — задача E4, EDS — E2, BFF — W13-A2 (при первом
+обращении к EDS; токен доступа EDS — в сессии BFF, `docs/architecture/platform-bff.md` §3).
 
 **Выдача (CRM).** Тот же JWT HS256 тем же `POST /api/v1/auth/sso/token` с телом `{"aud": "eds"}` (тело без `aud` или
 `{"aud": "erp"}` — токен для ERP, как раньше; совместимо). Claims: `iss = crm`, `aud = eds`, `sub` — `crm_user_id` строкой,

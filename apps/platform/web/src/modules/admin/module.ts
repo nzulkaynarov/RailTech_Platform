@@ -28,6 +28,14 @@ export const admin: ModuleConfig = {
       actionTo: "/admin/tickets",
     },
     {
+      // Журнал интеграций (W13-A2): шина CRM, ERP и EDS — только `admin: full` (BFF читает тоже по full).
+      key: "bus",
+      path: "/admin/bus",
+      access: { resource: "admin", level: "full" },
+      tabs: [{ key: "card" }],
+      actionTo: "/admin/integrations",
+    },
+    {
       key: "tickets",
       path: "/admin/tickets",
       access: { resource: "admin" },

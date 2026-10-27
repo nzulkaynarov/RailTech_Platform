@@ -19,7 +19,8 @@ export default defineConfig({
   // Медленный раннер CI: dev-сервер vite отдаёт antd несобранным, ленивые модули и Drawer успевают позже 5 секунд.
   expect: { timeout: 10_000 },
   retries: process.env["CI"] ? 1 : 0,
-  workers: 1,
+  // CI: два воркера — набор вырос (волна 13), на одном не укладывался в timeout задания; локально — один (стабильные снимки).
+  workers: process.env["CI"] ? 2 : 1,
   reporter: process.env["CI"] ? [["github"], ["html", { open: "never" }]] : "list",
   use: {
     baseURL: process.env["BASE_URL"] ?? `http://localhost:${String(PORT)}`,

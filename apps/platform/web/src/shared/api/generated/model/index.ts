@@ -78,6 +78,18 @@
  * он уходит только в CRM. Коды ошибок: `WRONG_PASSWORD` (422), `NOT_CONFIGURED`, `SECRETS_KEY_MISSING`,
  * `SERVICE_NOT_SWITCHABLE` (409), `INTEGRATION_FAILED` (502, причина в `details.reason`).
  *
+ * **0.9.0 (W13-A2) — добавляющее.** Admin · Журнал интеграций (тег `bus`): шина `rt_bus` всех трёх доменов в одном журнале
+ * вместо CLI `bus status|retry` и Django admin ERP. `GET /admin/bus` — сводка по доменам (outbox, DLQ, inbox с ошибками) и
+ * подписчики с состоянием словом (`BusSubscriberState`: работает, ошибки подряд, пауза предохранителя до `paused_until`,
+ * есть DLQ, выключен, убран из подписок); `GET /admin/bus/deliveries` — доставки с фильтрами (домен, статус, подписчик,
+ * подстрока типа, период), DLQ — `status=dead`; `GET /admin/bus/inbox` — принятые события (`errors=true` — обработка упала
+ * или ждёт автоповтора); повторы `POST /admin/bus/{domain}/deliveries/{id}/retry`, `…/deliveries/retry-dead` (все `dead`
+ * подписчика), `…/inbox/{event_id}/retry`. Списки трёх доменов сливаются по времени, страница — непрозрачный `cursor` из
+ * `next_cursor`; домен, который не ответил или отказал, — `sources.<домен>`, ответ 200 с остальными. Только раздел
+ * `admin: full` (директору — 403 в BFF); в каждый домен — с токеном сотрудника: CRM и ERP — как раньше, EDS — токен
+ * сотрудника CRM `aud=eds` → `POST /api/v1/auth/sso/exchange` EDS (`docs/architecture/sso-token.md`), 15 минут, в сессии BFF.
+ * Тел событий нет — только метаданные доставки. `Error.source` дополнен `eds`.
+ *
  * **0.10.0 (W13-A4) — добавляющее.** Первый запуск в Платформе (SPEC-v3 §7.6, тег `setup`): вместо `/setup` CRM и мастера ERP.
  * Без сессии: `GET /setup/state` (CRM `/setup/state`: администратора ещё нет — `needs_admin`) и `POST /setup/admin` (одноразовый
  * код первого запуска из журнала `crm-api`, имя, почта, пароль -> первый администратор; ответ — как у входа: `Session` и cookie).
@@ -154,6 +166,27 @@ export * from "./brandProfileLayoutPreset";
 export * from "./brandProfileUpdate";
 export * from "./brandProfileUpdateFontFamily";
 export * from "./brandProfileUpdateLayoutPreset";
+export * from "./busCursorParameter";
+export * from "./busDelivery";
+export * from "./busDeliveryPage";
+export * from "./busDeliveryStatus";
+export * from "./busDomain";
+export * from "./busDomainOverview";
+export * from "./busDomainQueryParameter";
+export * from "./busInboxEntry";
+export * from "./busInboxPage";
+export * from "./busInboxStatus";
+export * from "./busJournal";
+export * from "./busLimitParameter";
+export * from "./busRetryDeadIn";
+export * from "./busRetryResult";
+export * from "./busSources";
+export * from "./busSourceState";
+export * from "./busSubscriber";
+export * from "./busSubscriberName";
+export * from "./busSubscriberQueryParameter";
+export * from "./busSubscriberState";
+export * from "./busTypeQueryParameter";
 export * from "./catalogCategory";
 export * from "./catalogCategoryIn";
 export * from "./catalogCategoryList";
@@ -241,6 +274,8 @@ export * from "./integrationStatus";
 export * from "./invalidationHint";
 export * from "./invalidationTopic";
 export * from "./language";
+export * from "./listBusDeliveriesParams";
+export * from "./listBusInboxParams";
 export * from "./listCategoryRequestsParams";
 export * from "./listEmployeesParams";
 export * from "./listMailLogParams";

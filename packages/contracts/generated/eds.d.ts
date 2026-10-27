@@ -436,6 +436,108 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/bus/overview": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Сводка шины EDS — outbox, DLQ, inbox и подписчики */
+    get: operations["busOverview"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/bus/deliveries": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Доставки событий EDS подписчикам (DLQ — `status=dead`), новые сверху */
+    get: operations["busDeliveries"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/bus/deliveries/{delivery_id}/retry": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** «Повторить» доставку `dead` или ожидающую — сейчас, попытки с нуля; подписчик на паузе получает пробу */
+    post: operations["busRetryDelivery"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/bus/deliveries/retry-dead": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** «Повторить все dead подписчика» — после исправления причины */
+    post: operations["busRetryDead"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/bus/inbox": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Принятые события, новые сверху; `errors=true` — обработка упала или ждёт автоповтора */
+    get: operations["busInbox"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/bus/inbox/{event_id}/retry": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** «Повторить обработку» записи `failed` или `skipped` */
+    post: operations["busRetryInbox"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -457,7 +559,8 @@ export interface components {
     };
     /**
      * @description Код права EDS v1 (runbook волны 12 §2.2; `platform-rbac.yaml`, `backend.eds`). `payments.confirm` — шаг «бухгалтер»
-     *     маршрута служебной записки с суммой (решение архитектора). В событиях шины (`identity`, `eds`) код — строка по шаблону
+     *     маршрута служебной записки с суммой (решение архитектора). `bus.manage` (0.3.0, W13-A2) — «Журнал интеграций» шины:
+     *     раздел `admin` каталога, уровень `full`. В событиях шины (`identity`, `eds`) код — строка по шаблону
      *     `^[a-z_]+\.[a-z_]+$`, не перечень: новый код не ломает события v1.
      * @enum {string}
      */
@@ -470,9 +573,102 @@ export interface components {
       | "approvals.decide"
       | "registry.read"
       | "registry.export"
-      | "payments.confirm";
+      | "payments.confirm"
+      | "bus.manage";
     /** Format: uuid */
     Uuid: string;
+    /** @description Имя подписчика шины (`crm`, `erp`, `platform-bff`) */
+    BusSubscriberName: string;
+    /** @enum {string} */
+    BusDeliveryStatus: "pending" | "in_flight" | "delivered" | "dead";
+    /** @enum {string} */
+    BusInboxStatus: "received" | "processed" | "failed" | "skipped";
+    /**
+     * @description Подписчик издателя. `configured = false` — его больше нет в файле подписок, но остались доставки или состояние.
+     *     `paused_until` — действующая пауза предохранителя (в будущем), иначе `null`. `endpoint` — адрес приёмника: только
+     *     схема, хост, порт и путь. `oldest_undelivered_age_seconds` — возраст самого старого недоставленного (без `dead`).
+     */
+    BusSubscriber: {
+      name: string;
+      configured: boolean;
+      enabled: boolean;
+      drop: boolean;
+      endpoint: string | null;
+      pending: number;
+      in_flight: number;
+      dead: number;
+      oldest_undelivered_age_seconds: number | null;
+      consecutive_failures: number;
+      /** Format: date-time */
+      paused_until: string | null;
+      /** Format: date-time */
+      last_failure_at: string | null;
+      /** Format: date-time */
+      last_success_at: string | null;
+      last_error: string | null;
+    };
+    BusOverview: {
+      service: string;
+      outbox_pending: number;
+      oldest_undelivered_age_seconds: number | null;
+      dlq_size: number;
+      inbox_received: number;
+      inbox_retrying: number;
+      inbox_failed: number;
+      subscribers: components["schemas"]["BusSubscriber"][];
+    };
+    /** @description Метаданные доставки; тела события нет. */
+    BusDelivery: {
+      id: number;
+      event_id: components["schemas"]["Uuid"];
+      event_type: string;
+      subscriber: string;
+      status: components["schemas"]["BusDeliveryStatus"];
+      attempts: number;
+      /** Format: date-time */
+      next_attempt_at: string | null;
+      /** Format: date-time */
+      last_attempt_at: string | null;
+      last_status_code: number | null;
+      last_error: string | null;
+      /** Format: date-time */
+      delivered_at: string | null;
+      /** Format: date-time */
+      created_at: string;
+      subject: string | null;
+      correlation_id: string | null;
+      /** Format: date-time */
+      event_created_at: string | null;
+    };
+    BusDeliveryPage: {
+      items: components["schemas"]["BusDelivery"][];
+      has_more: boolean;
+    };
+    /** @description Принятое событие (метаданные; тела нет). */
+    BusInboxEntry: {
+      event_id: components["schemas"]["Uuid"];
+      type: string;
+      publisher: string;
+      subject: string | null;
+      correlation_id: string | null;
+      status: components["schemas"]["BusInboxStatus"];
+      attempts: number;
+      error: string | null;
+      /** Format: date-time */
+      received_at: string;
+      /** Format: date-time */
+      processed_at: string | null;
+    };
+    BusInboxPage: {
+      items: components["schemas"]["BusInboxEntry"][];
+      has_more: boolean;
+    };
+    BusRetryDeadIn: {
+      subscriber: components["schemas"]["BusSubscriberName"];
+    };
+    BusRetryResult: {
+      retried: number;
+    };
     /** @description Деньги строкой с двумя знаками */
     Amount: string;
     Currency: string;
@@ -1070,6 +1266,9 @@ export interface components {
     /** @description Непрозрачный курсор из `next_cursor` */
     Cursor: string;
     Limit: number;
+    BusSubscriberQuery: components["schemas"]["BusSubscriberName"];
+    /** @description Подстрока типа события (`quote.`, `letter.registered`) */
+    BusTypeQuery: string;
     /** @description Ключ повтора (24 часа) */
     IdempotencyKey: string;
     /** @description Вкладки реестра (несколько — повтором параметра) */
@@ -1793,6 +1992,173 @@ export interface operations {
       401: components["responses"]["Unauthorized"];
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
+    };
+  };
+  busOverview: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Сводка */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BusOverview"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+    };
+  };
+  busDeliveries: {
+    parameters: {
+      query?: {
+        status?: components["schemas"]["BusDeliveryStatus"];
+        subscriber?: components["parameters"]["BusSubscriberQuery"];
+        /** @description Подстрока типа события (`quote.`, `letter.registered`) */
+        type?: components["parameters"]["BusTypeQuery"];
+        /** @description Доставка создана не раньше (включительно) */
+        created_from?: string;
+        /** @description Доставка создана раньше (не включительно) */
+        created_to?: string;
+        /** @description Страница — id последней строки предыдущей страницы */
+        before_id?: number;
+        limit?: components["parameters"]["Limit"];
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Страница доставок */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BusDeliveryPage"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  busRetryDelivery: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        delivery_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Сколько поставлено на повтор (0 — доставлено, в работе или нет такой) */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BusRetryResult"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  busRetryDead: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["BusRetryDeadIn"];
+      };
+    };
+    responses: {
+      /** @description Сколько доставок `dead` поставлено на повтор */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BusRetryResult"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  busInbox: {
+    parameters: {
+      query?: {
+        errors?: boolean;
+        status?: components["schemas"]["BusInboxStatus"];
+        /** @description Подстрока типа события (`quote.`, `letter.registered`) */
+        type?: components["parameters"]["BusTypeQuery"];
+        /** @description Страница — `received_at` последней строки предыдущей страницы */
+        before?: string;
+        /** @description Страница — `event_id` последней строки (строки с тем же временем не теряются) */
+        before_event_id?: components["schemas"]["Uuid"];
+        limit?: components["parameters"]["Limit"];
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Страница принятых событий */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BusInboxPage"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  busRetryInbox: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        event_id: components["schemas"]["Uuid"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Сколько поставлено на повтор (0 — обработано, ждёт или нет такой записи) */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BusRetryResult"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
     };
   };
 }

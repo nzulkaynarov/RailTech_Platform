@@ -56,7 +56,8 @@ ROSTER: dict[str, Person] = {
     ),
     "supplier": Person(11, "Сардор Снабженцев", ["registry.read", "memos.create"]),
     "engineer": Person(12, "Ильдар Инженеров", ["registry.read", "memos.create"]),
-    "admin": Person(9, "Админ Админов", ["memos.create"]),
+    # «Администратор» каталога: служебные записки и журнал шины (`admin: full` → `bus.manage`, W13-A2).
+    "admin": Person(9, "Админ Админов", ["memos.create", "bus.manage"]),
     "nobody": Person(10, "Без Прав", []),
 }
 

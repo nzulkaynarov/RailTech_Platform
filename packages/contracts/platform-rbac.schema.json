@@ -121,7 +121,8 @@
         "approvals.decide",
         "registry.read",
         "registry.export",
-        "payments.confirm"
+        "payments.confirm",
+        "bus.manage"
       ],
       "description": "Код права EDS v1 (docs/runbooks/wave12-eds-c1.md §2.2; EdsPermission в openapi/eds.yaml)"
     },

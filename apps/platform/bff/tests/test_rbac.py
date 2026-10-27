@@ -218,7 +218,14 @@ def test_menu_sections_exist_and_cover_every_section() -> None:
 def test_menu_examples() -> None:
     admin = rbac.merge(roles("ADMIN"))
     assert rbac.menu_for(admin)["dashboard"] == ["queue"]
-    assert rbac.menu_for(admin)["admin"] == ["roles", "org", "integrations", "tickets", "company"]
+    assert rbac.menu_for(admin)["admin"] == [
+        "roles",
+        "org",
+        "integrations",
+        "bus",
+        "tickets",
+        "company",
+    ]
     assert "summary" in rbac.menu_for(rbac.merge(roles("ACCOUNTANT")))["dashboard"]
     assert "summary" not in rbac.menu_for(rbac.merge(roles("MANAGER", "SUPPLY")))["dashboard"]
     assert rbac.menu_for(rbac.merge(roles("SUPPLY")))["chats"] == ["all", "internal", "contacts"]

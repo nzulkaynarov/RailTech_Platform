@@ -222,6 +222,7 @@
       "roles": "Rollar matritsasi (RBAC)",
       "org": "Tashkiliy tuzilma",
       "integrations": "Tashqi integratsiyalar",
+      "bus": "Integratsiyalar jurnali",
       "tickets": "Jamoa tiketlari",
       "company": "Kompaniya",
       "setup": "Birinchi ishga tushirish"
@@ -241,6 +242,11 @@
         "title": "Integratsiyalar hali ulanmagan",
         "text": "Telegram-bot, pochta, fayl ombori, zaxira nusxalar va SI modellari: holat, oxirgi faollik, tekshirish va qayta ulash.",
         "action": "Jamoa tiketlari"
+      },
+      "bus": {
+        "title": "Integratsiyalar jurnali shu yerda ochiladi",
+        "text": "CRM, ERP va EDS hodisalar shinasi: obunachilar, yetkazishlar, yetkazilmaganlar va xatoli kiruvchilar.",
+        "action": "Tashqi integratsiyalar"
       },
       "tickets": {
         "title": "Tiketlar hozircha yo‘q",
