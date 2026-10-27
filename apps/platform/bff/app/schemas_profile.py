@@ -1,5 +1,5 @@
 """Профиль сотрудника для страницы /me (W15-H6) — схемы `Profile`, `ProfileUpdate`, `TelegramLink`,
-`DeputyUpdate`, `Colleague`, `ForgotPasswordIn`, `ResetPasswordIn` из platform-bff.yaml (0.17.0).
+`DeputyUpdate`, `Colleague`, `ForgotPasswordIn`, `ResetPasswordIn` из platform-bff.yaml (0.18.0).
 
 Данные приносит CRM (`GET /api/v1/me`, ADR-0015); BFF переводит поля и прячет числовой id Telegram.
 """

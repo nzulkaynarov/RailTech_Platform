@@ -1,0 +1,140 @@
+/* EDS · Документы: реестр, карточка в боковом окне, лист на мобильном (D1-5). Значения — макет v3: рамка #f0f0f0, вторичный #595959. */
+.pf-docs {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.pf-docs-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 16px;
+}
+.pf-docs-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.pf-docs-filter > label {
+  color: #595959;
+  font-size: 14px;
+}
+.pf-docs-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.pf-docs-table th,
+.pf-docs-table td {
+  padding: 10px 16px;
+  text-align: left;
+  vertical-align: middle;
+  border-bottom: 1px solid #f0f0f0;
+}
+.pf-docs-table th {
+  color: #595959;
+  font-weight: 500;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.pf-docs-table td.num,
+.pf-docs-table th.num {
+  text-align: right;
+}
+.pf-docs-table tr[data-selected="true"] {
+  background: #e6f4ff;
+}
+.pf-docs-subject {
+  overflow-wrap: anywhere;
+  min-width: 180px;
+}
+.pf-docs-link {
+  color: #0958d9;
+  text-decoration: none;
+}
+.pf-docs-link:hover {
+  text-decoration: underline;
+}
+.pf-docs-pager {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 12px 16px;
+}
+.pf-docs-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pf-docs-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+.pf-docs-item[data-selected="true"] {
+  background: #e6f4ff;
+}
+.pf-docs-item-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.pf-docs-item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  color: #595959;
+  font-size: 13px;
+}
+.pf-doc-text {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 22px;
+}
+.pf-doc-files {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pf-doc-file {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+}
+.pf-doc-file-name {
+  overflow-wrap: anywhere;
+}
+.pf-doc-comment {
+  margin: 4px 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: #1f1f1f;
+}
+/* Кнопки карточки: в боковом окне — под содержимым, на мобильном листе — прижаты к низу */
+.pf-doc-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.pf-doc-actions[data-sheet="true"] {
+  position: sticky;
+  bottom: -16px;
+  margin: 0 -16px -16px;
+  padding: 12px 16px;
+  background: #fff;
+  border-top: 1px solid #f0f0f0;
+  z-index: 1;
+}
+.pf-doc-actions[data-sheet="true"] > * {
+  flex: 1 1 0;
+}
