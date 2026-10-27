@@ -12,7 +12,9 @@ Workflow ансамбля — `.github/workflows/ci.yml` (GitHub читает т
   «CI ok» на sha.
 - **Раннер**: переменная репозитория `CI_RUNNER` (Settings → Variables), например `self-hosted`; пусто — `ubuntu-latest`.
 - Workflows внутри `apps/crm/.github/` не запускаются (не корень) — их шаги перенесены сюда с `working-directory: apps/crm`.
-  Локальный эквивалент всего workflow — `make ci-local` (`scripts/ci_local.sh`, `--full` включает e2e и аудит). CI — финальная проверка
+  Локальный эквивалент всего workflow — `make ci-local` (`scripts/ci_local.sh`, `--full` включает e2e и аудит; уже зелёное на этом дереве
+  задание пропускается по штампу `.ci-local/<задание>.ok` — дерево с незакоммиченным, для gitleaks ещё HEAD, для contracts — origin/main;
+  `args="--force"` или `CI_LOCAL_FORCE=1` — прогнать заново). CI — финальная проверка
   владельца в чистой среде, один прогон на PR; чинить падение надо локально (CLAUDE.md, «Среда разработки, тесты и CI»).
 
 ## События: что и когда идёт
