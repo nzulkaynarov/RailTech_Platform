@@ -10,7 +10,7 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.domain.consent import consent_required
-from app.repositories import leads as repo
+from app.services import message_log
 from app.services.conversation_support import current_lead
 from app.services.conversation_types import Incoming, Outgoing
 from app.services.settings import SettingsService
@@ -41,9 +41,9 @@ class RecordsMixin:
             lead, conversation = await current_lead(session, inc.tg_user_id)
             if lead is None or conversation is None or lead.erased_at is not None:
                 return None
-            await repo.add_message(
+            await message_log.add(
                 session,
-                conversation_id=conversation.id,
+                conversation,
                 role="lead",
                 text=inc.text,
                 tg_message_id=inc.message_id,
@@ -63,7 +63,5 @@ class RecordsMixin:
             if lead is None or conversation is None or lead.erased_at is not None:
                 return
             for item in pending:
-                await repo.add_message(
-                    session, conversation_id=conversation.id, role="bot", text=item.text
-                )
+                await message_log.add(session, conversation, role="bot", text=item.text)
             lead.last_bot_msg_at = datetime.now(UTC)

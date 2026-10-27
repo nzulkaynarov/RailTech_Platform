@@ -57,6 +57,12 @@ class Reason(StrEnum):
     # Зеркальная сделка ERP: сумму, валюту, стадию, название и причину отказа ведёт бэк-офис (I-26).
     DEAL_OWNED_BY_ERP = "deal_owned_by_erp"
     NO_CONSENT = "no_consent"
+    # Ответ с этим ключом повтора ещё отправляется (D1-1): повтор не шлёт сообщение второй раз.
+    REPLY_IN_PROGRESS = "reply_in_progress"
+    # Итог отправки ответа неизвестен: Telegram не ответил вовремя (502) или так и не
+    # подтвердил доставку (409).
+    DELIVERY_UNKNOWN = "delivery_unknown"
+    DELIVERY_UNCONFIRMED = "delivery_unconfirmed"
     LITELLM_UNAVAILABLE = "litellm_unavailable"
     MODEL_KEY_REQUIRED = "model_key_required"
     MODEL_IN_CONFIG = "model_in_config"
