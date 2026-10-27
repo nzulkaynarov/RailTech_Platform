@@ -492,24 +492,50 @@ async def test_broken_service_is_rechecked_with_decay_and_clears_itself(
 ) -> None:
     route = gateway.get(docling).mock(side_effect=httpx.ConnectError("refused"))
     container = client.app.state.container  # type: ignore[attr-defined]
-    seconds = {0: 1, 30: 1, 60: 2, 120: 2, 180: 3, 300: 3, 480: 4, 1000: 4, 1380: 5, 2000: 5}
+    # затухание 1, 2, 5, 7: проверки на 0-й, 1-й, 3-й, 8-й, 15-й и 22-й минутах полосы сбоя
+    seconds = {0: 1, 30: 1, 60: 2, 120: 2, 180: 3, 300: 3, 480: 4, 840: 4, 900: 5, 1200: 5, 1320: 6}
     # (момент в секундах от T0) -> сколько проверок docling должно быть записано к этому моменту
     for sec, expected in seconds.items():
         await container.external_checks.run("cheap", T0 + timedelta(seconds=sec))
         assert len(await docling_checks(sessions)) == expected, sec
-
-    route.mock(return_value=httpx.Response(200, json={"status": "ok"}))
-    await container.external_checks.run("cheap", T0 + timedelta(seconds=2280))  # 15 мин спустя
-    assert len(await docling_checks(sessions)) == 6
-    await container.external_checks.run("cheap", T0 + timedelta(seconds=2340))
-    assert len(await docling_checks(sessions)) == 7  # снова каждую минуту
-    await container.external_checks.run("cheap", T0 + timedelta(seconds=2640))  # ok уже 6 минут
-    async with sessions() as session:
+    async with sessions() as session:  # на 15-й минуте непрерывного сбоя открылся инцидент
         stmt = select(ExternalServiceIncident).where(
             ExternalServiceIncident.service_key == "docling"
         )
+        (opened,) = (await session.scalars(stmt)).all()
+    assert (opened.started_at, opened.ended_at) == (T0, None)
+
+    route.mock(return_value=httpx.Response(200, json={"status": "ok"}))
+    await container.external_checks.run("cheap", T0 + timedelta(seconds=1740))  # срок 7 минут
+    assert len(await docling_checks(sessions)) == 7
+    await container.external_checks.run("cheap", T0 + timedelta(seconds=1800))
+    assert len(await docling_checks(sessions)) == 8  # исправное — снова каждую минуту
+    await container.external_checks.run("cheap", T0 + timedelta(seconds=2100))  # ok уже 6 минут
+    async with sessions() as session:
         (incident,) = (await session.scalars(stmt)).all()
-    assert incident.ended_at is not None  # строка снялась сама
+    assert incident.ended_at == T0 + timedelta(seconds=1740)  # строка снялась сама
+
+
+async def test_recovering_heavy_only_service_is_checked_every_minute_until_restored(
+    sessions: async_sessionmaker[AsyncSession], client: TestClient
+) -> None:
+    container = client.app.state.container  # type: ignore[attr-defined]
+    async with sessions() as session, session.begin():
+        session.add(ExternalServiceIncident(service_key="tls.crm", started_at=T0, summary="x"))
+        session.add(
+            ExternalServiceCheck(
+                service_key="tls.crm",
+                checked_at=T0 + timedelta(minutes=20),
+                tier="heavy",
+                status="ok",
+                summary="ok",
+            )
+        )
+    assert (
+        await container.external_checks.recheck_broken(T0 + timedelta(minutes=20, seconds=30)) == []
+    )
+    results = await container.external_checks.recheck_broken(T0 + timedelta(minutes=21))
+    assert [r.key for r in results] == ["tls.crm"]  # не ждём 15-минутного прохода
 
 
 async def test_heavy_only_service_is_rechecked_by_its_own_schedule(
@@ -1227,3 +1253,78 @@ async def test_repeated_outages_give_one_broken_one_restored_per_day(
         "⚠️ Сломано",
         "✅ Восстановлено",
     ]
+
+
+async def test_suppressed_long_outage_is_announced_once_after_the_day_with_the_count(
+    sessions: async_sessionmaker[AsyncSession],
+    client: TestClient,
+    gateway: respx.MockRouter,
+    docling: str,
+    alerts: FakeAlerts,
+) -> None:
+    """«Сломано» 10:00, «Восстановлено» 10:40, новый сбой 11:00 на двое суток — одно «Сломано» через
+    сутки после первого (со сводкой N) и одно «Восстановлено» по окончании."""
+    route = gateway.get(docling)
+    route.mock(side_effect=httpx.ConnectError("down"))
+    for minute in (0, 8, 16):
+        await run_at(client, at(minute), "docling")  # «Сломано» в 16-й минуте
+    route.mock(return_value=httpx.Response(200, json={"status": "ok"}))
+    for minute in (20, 26, 40):
+        await run_at(client, at(minute), "docling")  # «Восстановлено»
+    assert [a.subject.split(":")[0] for _, a in alerts.sent] == ["⚠️ Сломано", "✅ Восстановлено"]
+
+    route.mock(side_effect=httpx.ConnectError("down"))
+    for minute in (60, 68, 76, 400, 1000, 1440):  # те же сутки: подавлено, сообщения нет
+        await run_at(client, at(minute), "docling")
+    assert len(alerts.sent) == 2
+    async with sessions() as session:
+        rows = (
+            await session.scalars(select(ExternalCauseAlert).order_by(ExternalCauseAlert.id))
+        ).all()
+    assert [(r.alerted_at is not None, r.suppressed_at is not None) for r in rows] == [
+        (True, False),
+        (False, True),
+    ]
+
+    await run_at(client, at(1460), "docling")  # сутки с «Сломано» (16-я минута) прошли, сбой идёт
+    assert [a.subject.split(":")[0] for _, a in alerts.sent] == [
+        "⚠️ Сломано",
+        "✅ Восстановлено",
+        "⚠️ Сломано",
+    ]
+    summary = alerts.sent[2][1].plain
+    assert "Нестабилен: 2 провала с прошлого сообщения" in summary
+    for minute in (2000, 2900):  # дальше сбой идёт двое суток — повторов нет
+        await run_at(client, at(minute), "docling")
+    assert len(alerts.sent) == 3
+
+    route.mock(return_value=httpx.Response(200, json={"status": "ok"}))
+    for minute in (3000, 3004, 3010):
+        await run_at(client, at(minute), "docling")
+    assert [a.subject.split(":")[0] for _, a in alerts.sent] == [
+        "⚠️ Сломано",
+        "✅ Восстановлено",
+        "⚠️ Сломано",
+        "✅ Восстановлено",
+    ]
+
+
+async def test_a_short_blip_after_recovery_does_not_delay_the_restored_message(
+    sessions: async_sessionmaker[AsyncSession],
+    client: TestClient,
+    gateway: respx.MockRouter,
+    docling: str,
+    alerts: FakeAlerts,
+) -> None:
+    route = gateway.get(docling)
+    route.mock(side_effect=httpx.ConnectError("down"))
+    for minute in (0, 8, 16):
+        await run_at(client, at(minute), "docling")
+    for minute, ok in ((21, True), (22, True), (23, False), (24, True), (26, True)):
+        if ok:
+            route.mock(return_value=httpx.Response(200, json={"status": "ok"}))
+        else:
+            route.mock(side_effect=httpx.ConnectError("blip"))
+        await run_at(client, at(minute), "docling")
+    # ok с 21-й минуты; провал на 23-й между двумя ok отсчёт не сбросил: на 26-й — «Восстановлено»
+    assert [a.subject.split(":")[0] for _, a in alerts.sent] == ["⚠️ Сломано", "✅ Восстановлено"]

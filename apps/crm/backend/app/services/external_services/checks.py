@@ -106,7 +106,7 @@ class ExternalChecks:
         """
         specs = registry(await self._collector.providers())
         heavy_only = [s.key for s in specs if "cheap" not in s.tiers]
-        due = await self._due_failed(heavy_only, now)
+        due = [*await self._due_failed(heavy_only, now), *await self._recovering(heavy_only, now)]
         if not due:
             return []
         return await self.run("heavy", now, keys=due)
@@ -125,6 +125,21 @@ class ExternalChecks:
             if (row := latest.get(k)) is not None
             and row.status == "fail"
             and cause.recheck_due(_count(streaks, k), row.checked_at, now)
+        ]
+
+    async def _recovering(self, keys: Collection[str], now: datetime) -> list[str]:
+        """Сервис только тяжёлого уровня после сбоя: пока «Восстановлено» ждёт 5 минут `ok`,
+        проверка раз в минуту, а не раз в 15 (иначе возврат объявляется через 15–20 минут)."""
+        async with self._sessions() as session:
+            latest = await repo.latest_checks(session)
+            open_ = await repo.open_incidents(session)
+        return [
+            k
+            for k in keys
+            if k in open_
+            and (row := latest.get(k)) is not None
+            and row.status == "ok"
+            and now - row.checked_at >= timedelta(minutes=1) - cause.BACKOFF_SLACK
         ]
 
     async def _skip_backing_off(self, keys: Collection[str], now: datetime) -> list[str]:
@@ -230,7 +245,15 @@ class ExternalChecks:
                     row = rows[step.cause_key]
                     group = by_id[step.cause_key]
                     row.alerted_at = now  # «занято» до отправки: параллельный проход не повторит
-                    text = cause.broken_alert(group, row.started_at, now, tz)
+                    prev, episodes = await repo.previous_alert(session, step.cause_key, row.id)
+                    text = cause.broken_alert(
+                        group,
+                        row.started_at,
+                        now,
+                        tz,
+                        repeats=episodes,
+                        since_previous=now - prev.alerted_at if prev and prev.alerted_at else None,
+                    )
                     pending.append(
                         _Pending("alert", step.cause_key, row.id, text, list(row.service_keys))
                     )

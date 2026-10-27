@@ -224,9 +224,11 @@ async def test_two_failed_attempts_are_a_fail_and_a_wrong_token_is_not_retried()
 
 
 def test_probe_timeouts_are_not_short() -> None:
+    from app.integrations import external_probes
     from app.services.external_services import collector
 
     assert collector.HTTP_TIMEOUT_S >= 10
+    assert external_probes.TLS_TIMEOUT_S >= 10
     assert collector.PROBE_TIMEOUT_S >= 2 * collector.HTTP_TIMEOUT_S
 
 

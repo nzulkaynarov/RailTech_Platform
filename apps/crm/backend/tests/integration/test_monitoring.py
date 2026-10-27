@@ -99,16 +99,11 @@ async def test_alerts_fire_once_repeat_and_resolve(
         "1 за последний час\nЧто делать: откройте документ в «Базе знаний» и загрузите заново",
     ]
     assert await svc.check(now + timedelta(minutes=1)) == []  # дедупликация
-    third = await svc.check(now + timedelta(minutes=2))
-    assert third == ["⚠️ LiteLLM: шлюз моделей недоступен дольше 2 минут"]  # после 2 минут
-
-    litellm[0] = True
-    resolved = await svc.check(now + timedelta(minutes=3))
-    assert resolved == ["✅ LiteLLM: в норме"]
+    # шлюз моделей — строка центра внешних сервисов, у монитора своего «Сбоя сразу» нет
+    assert await svc.check(now + timedelta(minutes=2)) == []
+    assert await svc.check(now + timedelta(minutes=30)) == []
     async with sessions() as session:
-        row = await session.get(SystemAlert, "litellm_down")
-    assert row is not None
-    assert (row.active, row.resolved_at is not None) == (False, True)
+        assert await session.get(SystemAlert, "litellm_down") is None
     assert all(chat == CHANNEL for chat, _ in bot.sent)
 
 

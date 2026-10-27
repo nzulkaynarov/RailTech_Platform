@@ -3,6 +3,7 @@ from datetime import UTC, datetime, timedelta
 import pytest
 
 from app.domain.alerts import (
+    RETIRED_KEYS,
     AlertState,
     Check,
     Decision,
@@ -29,7 +30,7 @@ def active(snapshot: HealthSnapshot, known: set[str] | None = None) -> set[str]:
         (HealthSnapshot(), set()),
         (HealthSnapshot(queue_size=100), set()),
         (HealthSnapshot(queue_size=101), {"queue_size"}),
-        (HealthSnapshot(litellm_ok=False), {"litellm_down"}),
+        (HealthSnapshot(litellm_ok=False), set()),  # шлюз — строка центра внешних сервисов
         (HealthSnapshot(spent_usd=8.0, daily_budget_usd=10.0), set()),
         (HealthSnapshot(spent_usd=8.01, daily_budget_usd=10.0), {"budget"}),
         (HealthSnapshot(spent_usd=500.0, daily_budget_usd=0.0), set()),
@@ -59,11 +60,18 @@ def test_recovered_task_with_failures_in_window_is_resolved() -> None:
     assert "failed_task:system_monitor" not in active(snap)
 
 
-def test_task_texts_and_ai_failures() -> None:
-    snap = HealthSnapshot(failed_tasks={"x": 1}, ai_failures=2)
+def test_task_texts() -> None:
+    snap = HealthSnapshot(failed_tasks={"x": 1})
     found = {c.key: c for c in checks(snap, set(), lambda t: (f"Задача «{t}»", "сделать"))}
     assert (found["failed_task:x"].title, found["failed_task:x"].hint) == ("Задача «x»", "сделать")
-    assert found["ai_failures"].active is True
+
+
+def test_gateway_and_ai_failures_are_not_the_monitors_alerts_any_more() -> None:
+    """«Сбой сразу» через 2 минуты и по первому провалу ИИ — вторая политика; их ведёт центр."""
+    snap = HealthSnapshot(litellm_ok=False)
+    keys = {c.key for c in checks(snap, set())}
+    assert keys.isdisjoint(RETIRED_KEYS)
+    assert {"litellm_down", "ai_failures"} == RETIRED_KEYS
 
 
 def check(active: bool = True, grace: timedelta = timedelta(0)) -> Check:

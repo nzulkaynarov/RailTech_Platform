@@ -26,6 +26,7 @@ CHANNEL = -100500
 class Store:
     def __init__(self) -> None:
         self.rows: dict[str, SystemAlert] = {}
+        self.queue = 0
 
 
 class FakeSession:
@@ -66,6 +67,9 @@ def store(monkeypatch: pytest.MonkeyPatch) -> Store:
     async def zero(*_: object) -> int:
         return 0
 
+    async def queue(*_: object) -> int:
+        return data.queue
+
     async def nothing(*_: object) -> dict[str, int]:
         return {}
 
@@ -79,8 +83,7 @@ def store(monkeypatch: pytest.MonkeyPatch) -> Store:
         return []
 
     monkeypatch.setattr(repo, "alert_states", alert_states)
-    monkeypatch.setattr(repo, "queue_size", zero)
-    monkeypatch.setattr(repo, "ai_failures", zero)
+    monkeypatch.setattr(repo, "queue_size", queue)
     monkeypatch.setattr(repo, "failed_tasks", nothing)
     monkeypatch.setattr(repo, "spent_since", spent)
     monkeypatch.setattr(repo, "recovered_tasks", recovered)
@@ -112,21 +115,44 @@ def service(store: Store, bot: FlakyBot, litellm: list[bool], models: Any = None
 
 
 async def test_telegram_down_keeps_state_and_retries_next_run(store: Store) -> None:
-    bot, litellm = FlakyBot(), [False]
-    svc = service(store, bot, litellm)
-    assert await svc.check(NOW) == []  # грейс 2 минуты
-    assert await svc.check(NOW + timedelta(minutes=2)) == []  # Telegram лежит — не упали
-    row = store.rows["litellm_down"]
+    bot = FlakyBot()
+    svc = service(store, bot, [True])
+    store.queue = 150
+    assert await svc.check(NOW) == []  # Telegram лежит — не упали
+    row = store.rows["queue_size"]
     assert (row.active, row.sent_at) == (True, None)  # состояние сохранено, не отправлено
     bot.down = False
-    sent = await svc.check(NOW + timedelta(minutes=3))
+    sent = await svc.check(NOW + timedelta(minutes=1))
     assert [text.splitlines()[0] for text in sent] == [
-        "⚠️ LiteLLM: шлюз моделей недоступен дольше 2 минут"
+        "⚠️ Очередь задач: 150 задач в ожидании (порог 100)"
     ]
-    assert row.sent_at == NOW + timedelta(minutes=3)
-    litellm[0] = True
-    assert await svc.check(NOW + timedelta(minutes=4)) == ["✅ LiteLLM: в норме"]
+    assert row.sent_at == NOW + timedelta(minutes=1)
+    store.queue = 0
+    assert await svc.check(NOW + timedelta(minutes=2)) == ["✅ Очередь задач: в норме"]
     assert row.active is False
+
+
+async def test_gateway_down_is_not_a_monitor_alert_and_old_rows_close_quietly(
+    store: Store,
+) -> None:
+    """Второго отправителя «Сбоя сразу» нет: шлюз — строка центра сервисов (15 минут подряд)."""
+    bot = FlakyBot()
+    bot.down = False
+    svc = service(store, bot, [False])
+    for minutes in (0, 2, 5, 30):
+        assert await svc.check(NOW + timedelta(minutes=minutes)) == []
+    assert "litellm_down" not in store.rows
+    assert bot.sent == []
+    # живая строка прежнего алерта (с прошлого релиза) закрывается молча, без «в норме»
+    store.rows["litellm_down"] = SystemAlert(
+        key="litellm_down", active=True, detail="x", first_seen_at=NOW, sent_at=NOW, updated_at=NOW
+    )
+    store.rows["ai_failures"] = SystemAlert(
+        key="ai_failures", active=True, detail="x", first_seen_at=NOW, sent_at=NOW, updated_at=NOW
+    )
+    assert await svc.check(NOW + timedelta(minutes=31)) == []
+    assert (store.rows["litellm_down"].active, store.rows["ai_failures"].active) == (False, False)
+    assert bot.sent == []
 
 
 async def test_healthy_model_gets_row_with_probe_time(store: Store) -> None:

@@ -202,12 +202,14 @@ class ModelsAdminService:
                 with suppress(UpstreamUnavailableError):
                     await self._admin_call(partial(self._admin.delete, model_id))
             raise
-        for deps in roles.values():
-            for dep in deps:
-                await self._admin_call(partial(self._admin.delete, dep.id))
+        # Новые deployment уже действуют: аудит и маски — до удаления прежних, чтобы сбой удаления
+        # не оставил смену ключа без следа в журнале.
         self._invalidate()
         await self._audit_provider_key(who, provider, sorted(roles), api_key)
         await self._remember_keys(who, sorted(roles), api_key)
+        for deps in roles.values():
+            for dep in deps:
+                await self._delete_with_retry(dep.id)
         logger.info("provider_key_changed", provider=provider, aliases=sorted(roles))
         return [
             ChangeOutcome(
@@ -220,6 +222,13 @@ class ModelsAdminService:
             )
             for alias in sorted(roles)
         ]
+
+    async def _delete_with_retry(self, model_id: str) -> None:
+        """Прежний deployment удаляется с одним повтором: сбой LiteLLM не оставит два ключа."""
+        try:
+            await self._admin_call(partial(self._admin.delete, model_id))
+        except UpstreamUnavailableError:
+            await self._admin_call(partial(self._admin.delete, model_id))
 
     async def reset(self, who: Principal, alias: str, password: str) -> ChangeOutcome:
         default = self._known(alias)

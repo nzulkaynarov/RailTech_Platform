@@ -63,10 +63,13 @@ RECOVERY_AFTER: Final = timedelta(minutes=5)
 #: Не больше одного «Сломано» на причину за это время; повторные провалы — сводка, не серия.
 ALERT_COOLDOWN: Final = timedelta(hours=24)
 #: Дребезг: столько провалов (полос `fail`) за `FLAP_WINDOW` — «Нестабильно», даже если сейчас `ok`.
+#: Короткий провал между двумя `ok` с таким промежутком не сбрасывает отсчёт восстановления.
+BLIP_GAP: Final = timedelta(minutes=3)
 FLAP_MIN: Final = 3
 FLAP_WINDOW: Final = timedelta(hours=3)
 #: Затухание повторных проверок сломанного, мин: после 1-го, 2-го, 3-го, 4-го и далее подряд сбоя.
-BACKOFF_MINUTES: Final = (1, 2, 5, 15)
+#: Проверки сбоя с 0-й минуты идут на 0, 1, 3, 8 и 15-й: 4 провала за 8 минут — ещё не «Сломано».
+BACKOFF_MINUTES: Final = (1, 2, 5, 7)
 BACKOFF_SLACK: Final = timedelta(seconds=10)
 TECHNICAL_LIMIT: Final = 600
 _SEVERITY: Final[dict[State, int]] = {
@@ -413,13 +416,40 @@ def since_for(
 
 
 def recheck_interval(consecutive_failures: int) -> timedelta:
-    """Через сколько перепроверять сломанное: 1, 2, 5, 15 мин по номеру сбоя подряд, дальше 15."""
+    """Через сколько перепроверять сломанное: 1, 2, 5, 7 мин по номеру сбоя подряд, дальше 7."""
     n = max(1, consecutive_failures)
     return timedelta(minutes=BACKOFF_MINUTES[min(n, len(BACKOFF_MINUTES)) - 1])
 
 
 def recheck_due(consecutive_failures: int, last_checked_at: datetime, now: datetime) -> bool:
     return now - last_checked_at + BACKOFF_SLACK >= recheck_interval(consecutive_failures)
+
+
+def ok_run_start(
+    rows: Sequence[tuple[str, datetime]], blip: timedelta = BLIP_GAP
+) -> datetime | None:
+    """Начало текущей непрерывной полосы `ok` по проверкам сервиса (новые первыми).
+
+    Короткий провал или `warn` между двумя `ok` с промежутком не больше `blip` отсчёт не сбрасывает
+    (дребезг не должен отодвигать «Восстановлено»); дольше — полоса начинается заново. Сейчас не
+    `ok` или проверок нет — `None`.
+    """
+    if not rows or rows[0][0] != "ok":
+        return None
+    start = rows[0][1]
+    i, n = 0, len(rows)
+    while i < n:
+        if rows[i][0] == "ok":
+            start = rows[i][1]
+            i += 1
+            continue
+        j = i
+        while j < n and rows[j][0] != "ok":
+            j += 1
+        if j >= n or rows[i - 1][1] - rows[j][1] > blip:
+            break
+        i = j
+    return start
 
 
 # --- оповещения: одно «сломано» и одно «восстановлено» на причину ---------------------------------
@@ -470,10 +500,13 @@ def plan_alerts(
             continue
         if row is None:
             steps.append(Step("open", cause_key, started))
-        if row is None or (row.alerted_at is None and row.suppressed_at is None):
-            steps.append(
-                Step("suppress" if cause_key in recently_alerted else "alert", cause_key, started)
-            )
+        if row is None or row.alerted_at is None:
+            if cause_key not in recently_alerted:
+                # Сутки с прошлого «Сломано» прошли, а сбой всё ещё непрерывный: одно сообщение
+                # со сводкой повторов (в том числе после подавления), а не молчание и не серия.
+                steps.append(Step("alert", cause_key, started))
+            elif row is None or row.suppressed_at is None:
+                steps.append(Step("suppress", cause_key, started))
     for cause_key, row in open_causes.items():
         if cause_key in broken:
             continue
@@ -490,9 +523,23 @@ def plan_alerts(
     return steps
 
 
-def broken_alert(group: Group, since: datetime, now: datetime, tz: str) -> AlertText:
+def broken_alert(
+    group: Group,
+    since: datetime,
+    now: datetime,
+    tz: str,
+    repeats: int = 0,
+    since_previous: timedelta | None = None,
+) -> AlertText:
+    """`repeats` — сколько раз причина срабатывала с прошлого «Сломано» (с ним и текущим):
+    больше одного — сводка «Нестабилен: N провалов» вместо серии сообщений."""
     lines = [f"С {_local(since, tz)} (уже {duration_text(now - since)})."]
-    if group.flaps_24h > 1:
+    if repeats > 1 and since_previous is not None:
+        lines.append(
+            f"Нестабилен: {repeats} {_plural(repeats)} с прошлого сообщения "
+            f"({duration_text(since_previous)} назад)."
+        )
+    elif group.flaps_24h > 1:
         lines.append(f"За сутки это уже {group.flaps_24h}-й провал: связь нестабильна.")
     if group.affected:
         lines.append(f"Не работают: {', '.join(group.affected)}.")
@@ -506,6 +553,15 @@ def broken_alert(group: Group, since: datetime, now: datetime, tz: str) -> Alert
         lines.append(f"Что сделать: {group.detail}")
     lines.append("Открыть: Платформа → Admin → Подключения.")
     return AlertText(f"⚠️ Сломано: {group.headline}", tuple(lines))
+
+
+def _plural(n: int) -> str:
+    """«2 провала», «5 провалов», «21 провал»."""
+    if n % 10 == 1 and n % 100 != 11:
+        return "провал"
+    if 2 <= n % 10 <= 4 and not 12 <= n % 100 <= 14:
+        return "провала"
+    return "провалов"
 
 
 def restored_alert(headline: str, lasted: timedelta) -> AlertText:

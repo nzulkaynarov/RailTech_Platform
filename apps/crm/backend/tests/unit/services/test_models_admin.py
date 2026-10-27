@@ -518,3 +518,41 @@ async def test_provider_key_refuses_roles_defined_in_litellm_config(
     with pytest.raises(ConflictError):
         await service.change_provider_key(ADMIN, "anthropic", FAKE_KEY, "pw")
     assert new.call_count == 0
+
+
+@respx.mock
+async def test_provider_key_is_audited_before_the_old_deployments_go_and_delete_is_retried(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    rec = _Recorder()
+    service, _ = _provider_service(rec, monkeypatch)
+    respx.get(f"{BASE}/model/info").mock(httpx.Response(200, json=ROLES))
+    respx.post(f"{BASE}/model/new").mock(httpx.Response(200, json={}))
+    order: list[str] = []
+
+    def deleted(request: httpx.Request) -> httpx.Response:
+        order.append(f"delete:{len(rec.audits)}")  # сколько записей аудита уже было
+        return httpx.Response(500) if len(order) == 1 else httpx.Response(200, json={})
+
+    respx.post(f"{BASE}/model/delete").mock(side_effect=deleted)
+
+    await service.change_provider_key(ADMIN, "anthropic", FAKE_KEY, "pw")
+
+    assert order[0] == "delete:1"  # аудит записан до первого удаления
+    assert len(order) == 3  # первое удаление упало и повторено, вторая роль — одно
+
+
+@respx.mock
+async def test_provider_key_delete_failure_after_the_retry_still_leaves_the_audit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    rec = _Recorder()
+    service, _ = _provider_service(rec, monkeypatch)
+    respx.get(f"{BASE}/model/info").mock(httpx.Response(200, json=ROLES))
+    respx.post(f"{BASE}/model/new").mock(httpx.Response(200, json={}))
+    respx.post(f"{BASE}/model/delete").mock(httpx.Response(500))
+
+    with pytest.raises(UpstreamUnavailableError):
+        await service.change_provider_key(ADMIN, "anthropic", FAKE_KEY, "pw")
+
+    assert len(rec.audits) == 1
