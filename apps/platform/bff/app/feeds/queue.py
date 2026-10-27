@@ -23,8 +23,22 @@ from app.feeds.models import (
     QueueItemKind,
     QueueOwner,
 )
-from app.feeds.numbers import deal_title, lead_number, lead_ref, quote_number, quote_ref
-from app.feeds.snapshot import Covered, Snapshot, wants_approvals, wants_inbox, wants_projects
+from app.feeds.numbers import (
+    deal_title,
+    lead_number,
+    lead_ref,
+    quote_number,
+    quote_ref,
+    ticket_ref,
+)
+from app.feeds.snapshot import (
+    Covered,
+    Snapshot,
+    wants_approvals,
+    wants_inbox,
+    wants_projects,
+    wants_tickets,
+)
 from app.feeds.text import ago, due_label, join, money, now_utc, parse_deadline, parse_dt, short
 from app.rbac import View
 
@@ -203,6 +217,43 @@ def quote_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
     return out
 
 
+_SUBJECT = {
+    "access": "доступ",
+    "notification": "уведомления",
+    "template": "шаблон документа",
+    "error": "ошибка",
+    "other": "другое",
+}
+
+
+def ticket_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
+    """Новые обращения сотрудников: администратору — строки «Моих задач» (W15-H7). Сроков нет."""
+    role_id = _role_id(view, "ticket")
+    out: list[Row] = []
+    for ticket in snap.tickets:
+        number = ticket.get("number")
+        if not isinstance(number, str) or not number:
+            continue
+        created = parse_dt(ticket.get("created_at"))
+        item = QueueItem(
+            id=f"ticket:{ticket.get('id', number)}",
+            role_id=role_id,
+            kind="ticket",
+            title=f"Ответить на обращение {number}",
+            subtitle=join(
+                str(ticket.get("author_name") or "") or None,
+                _SUBJECT.get(str(ticket.get("subject"))),
+                short(ticket.get("preview"), 80),
+                ago(created, now),
+            ),
+            due_label="later",
+            due_at=None,
+            object=ticket_ref(number),
+        )
+        out.append(Row(item, created))
+    return out
+
+
 def build_queue(feed: Feed, view: View, snap: Snapshot) -> list[QueueItem]:
     now = now_utc()
     rows_: list[Row] = []
@@ -214,6 +265,8 @@ def build_queue(feed: Feed, view: View, snap: Snapshot) -> list[QueueItem]:
             rows_ += covered_rows(covered, now, view, taken)
     if wants_approvals(view):
         rows_ += quote_rows(snap, now, view)
+    if wants_tickets(view):
+        rows_ += ticket_rows(snap, now, view)
     rows_.sort(key=_sort_key)
     return [row.item for row in rows_]
 
@@ -283,6 +336,15 @@ def build_counters(view: View, snap: Snapshot, queue: list[QueueItem]) -> list[M
     if wants_approvals(view):
         total = snap.approvals_total
         items.append(MenuCounter(module="eds", section="drafts", count=total, attention=total > 0))
+    if wants_tickets(view):
+        items.append(
+            MenuCounter(
+                module="admin",
+                section="tickets",
+                count=snap.tickets_total,
+                attention=snap.tickets_total > 0,
+            )
+        )
     if wants_projects(view):
         total = projects_in_work(snap)
         items.append(

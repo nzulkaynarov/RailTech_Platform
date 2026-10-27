@@ -1,7 +1,7 @@
-"""Центр уведомлений (контракт: tag `notifications`): лента ERP, CRM-лента появится с CRM-04."""
+"""Центр уведомлений (контракт: tag `notifications`): лента ERP и лента CRM (W15-H7)."""
 
 import re
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Query, Response
 
@@ -45,13 +45,16 @@ def _not_found() -> PlatformError:
 
 @router.post("/notifications/read-all", status_code=204, operation_id="markAllNotificationsRead")
 async def mark_all_read(authed: NotifyAuthed) -> Response:
-    """Отметить все прочитанными: у ERP такая операция есть, у CRM уведомлений пока нет (CRM-04)."""
+    """Отметить все прочитанными: и в ERP, и в CRM (у каждой своя лента)."""
     feed = Feed(authed)
     if feed.usable("erp"):
         status = await feed.send("erp", "PATCH", "/api/v1/notifications/mark_all_read/")
         if status >= 400:
             raise _failed(status)
-        await _forget(feed)
+    crm_status = await feed.send("crm", "POST", f"{service.CRM_PATH}/read-all")
+    if crm_status >= 400 and crm_status != 403:  # 403 — сначала смените временный пароль
+        raise _failed(crm_status, "crm")
+    await _forget(feed)
     return Response(status_code=204)
 
 
@@ -68,10 +71,15 @@ async def mark_read(notification_id: str, authed: NotifyAuthed) -> Response:
             details={"fields": ["id"]},
         )
     source, number = match.group(1), match.group(2)
-    if source == "crm":
-        # Уведомлений CRM пока нет (CRM-04): такого идентификатора не существует.
-        raise _not_found()
     feed = Feed(authed)
+    if source == "crm":
+        crm_status = await feed.send("crm", "POST", f"{service.CRM_PATH}/{number}/read")
+        if crm_status == 404:
+            raise _not_found()
+        if crm_status >= 400:
+            raise _failed(crm_status, "crm")
+        await _forget(feed)
+        return Response(status_code=204)
     status = await feed.send("erp", "PATCH", f"/api/v1/notifications/{number}/mark_read/")
     if status == 404:
         raise _not_found()
@@ -84,10 +92,11 @@ async def mark_read(notification_id: str, authed: NotifyAuthed) -> Response:
 async def _forget(feed: Feed) -> None:
     """Отметка «прочитано» устарила кэш ленты: следующий опрос должен увидеть новое состояние."""
     await feed.invalidate("erp", service.NOTIFICATIONS_PATH, service.NOTIFICATIONS_PARAMS)
+    await feed.invalidate("crm", service.CRM_PATH)
 
 
-def _failed(status: int) -> PlatformError:
+def _failed(status: int, source: Literal["crm", "erp"] = "erp") -> PlatformError:
     """Бэкенд отказал в отметке (права, лимит): код BFF по статусу ответа."""
     import httpx
 
-    return from_backend("erp", httpx.Response(status))
+    return from_backend(source, httpx.Response(status))
