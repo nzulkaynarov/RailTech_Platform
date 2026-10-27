@@ -319,6 +319,7 @@ export * from "./ticketRowOut";
 export * from "./ticketRowOutStatus";
 export * from "./ticketRowOutSubject";
 export * from "./ticketStatusIn";
+export * from "./ticketStatusInStatus";
 export * from "./tokenResponse";
 export * from "./transitionItem";
 export * from "./userCreate";

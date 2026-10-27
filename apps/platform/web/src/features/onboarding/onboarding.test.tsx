@@ -52,7 +52,7 @@ describe("Первый вход", () => {
     await waitFor(() => {
       expect(document.activeElement).toBe(tour);
     });
-    expect(tour).toHaveAttribute("aria-modal", "true");
+    expect(tour).not.toHaveAttribute("aria-modal"); // немодальный: страница под карточкой остаётся доступной
     expect(tour).toHaveAccessibleDescription(/Модули/);
     expect(within(tour).getByText("Шаг 1 из 4")).toBeInTheDocument();
 

@@ -70,3 +70,15 @@ async def test_without_platform_url_the_mail_still_says_where(
     await notice(mail, None, monkeypatch).linked(7, None)
     assert mail.sent[0][2]["profile_url"] == "Платформа → Профиль"
     assert mail.sent[0][2]["account"] == ""
+
+
+async def test_bell_failure_does_not_stop_the_mail(monkeypatch: pytest.MonkeyPatch) -> None:
+    class BrokenBell:
+        async def add(self, *_args: Any, **_kwargs: Any) -> None:
+            raise RuntimeError("bell is down")
+
+    mail = Mail(True)
+    service = notice(mail, "https://platform.example.com", monkeypatch)
+    service._notifications = BrokenBell()  # type: ignore[assignment]
+    await service.linked(7, "intruder")
+    assert [m[0] for m in mail.sent] == ["telegram_linked"]

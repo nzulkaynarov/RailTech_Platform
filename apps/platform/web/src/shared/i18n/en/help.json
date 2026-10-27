@@ -300,7 +300,7 @@
     "bodyTooLong": "The text is longer than 4000 characters: shorten it",
     "errors": {
       "TOO_MANY_REQUESTS": "You have sent too many requests. Wait a little and try again.",
-      "BACKEND_UNAVAILABLE": "The CRM is not responding. Try again in a minute.",
+      "BACKEND_UNAVAILABLE": "The requests service is not responding. Try again in a minute.",
       "default": "Could not send the request. Try again."
     }
   },

@@ -29,7 +29,7 @@ class TicketReplyIn(BaseModel):
 class TicketStatusIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    status: str = Field(max_length=32)
+    status: Status
 
 
 class TicketRowOut(BaseModel):

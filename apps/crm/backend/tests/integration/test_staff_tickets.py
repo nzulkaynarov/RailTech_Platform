@@ -13,9 +13,12 @@ from app.domain.errors import ConflictError, NotFoundError, RateLimitedError
 from app.main import create_app
 from app.models.auth import AuditLog, User
 from app.models.staff_tickets import StaffNotification
+from app.repositories import platform_roles as prepo
 from app.security.audit import Actor
 from app.services.staff_notifications import StaffNotificationService
 from app.services.staff_tickets import StaffTicketService
+from app.services.user_views import UserPatch
+from app.services.users import UserService
 from tests.integration.crm_helpers import login, make_user
 
 pytestmark = pytest.mark.integration
@@ -394,3 +397,44 @@ async def test_telegram_link_adds_a_bell_row_even_without_mail(
     assert [r.kind for r in rows] == ["telegram_linked"]
     assert "@dilshod_t" in rows[0].title
     assert rows[0].object_kind is None
+
+
+async def test_api_director_reads_tickets_but_cannot_reply_or_change_status(
+    client: TestClient, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    author, author_pw = await make_user(sessions, "dilshod@railtech.uz", ["manager"])
+    account, password = await make_user(sessions, "director@railtech.uz", ["viewer"])
+    async with sessions() as session:
+        ids = [r.id for r in await prepo.by_codes(session, ["DIRECTOR"])]
+    await UserService(sessions).update(Actor.system(), account.id, UserPatch(platform_role_ids=ids))
+    mine = login(client, author.email, author_pw)
+    director = login(client, account.email, password)
+    ticket_id = client.post(
+        "/api/v1/me/tickets", headers=mine, json={"subject": "error", "body": "Ошибка в КП"}
+    ).json()["id"]
+
+    assert client.get("/api/v1/staff-tickets", headers=director).status_code == 200
+    assert client.get(f"/api/v1/staff-tickets/{ticket_id}", headers=director).status_code == 200
+    reply = client.post(
+        f"/api/v1/staff-tickets/{ticket_id}/reply", headers=director, json={"body": "Смотрю"}
+    )
+    assert reply.status_code == 403, reply.text
+    status = client.post(
+        f"/api/v1/staff-tickets/{ticket_id}/status", headers=director, json={"status": "resolved"}
+    )
+    assert status.status_code == 403, status.text
+
+
+async def test_api_too_long_page_is_clipped_not_rejected(
+    client: TestClient, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    author, password = await make_user(sessions, "dilshod@railtech.uz", ["manager"])
+    headers = login(client, author.email, password)
+    page = "/eds/inbox/" + "a" * 600
+    response = client.post(
+        "/api/v1/me/tickets",
+        headers=headers,
+        json={"subject": "error", "body": "Не открывается", "page": page},
+    )
+    assert response.status_code == 201, response.text
+    assert response.json()["page"] == page[:300]

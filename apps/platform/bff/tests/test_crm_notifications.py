@@ -148,6 +148,28 @@ async def test_read_all_marks_both_feeds(web: Web, fb: FeedBackends) -> None:
     assert str(fb.crm_read.calls.last.request.url) == f"{CRM_URL}/api/v1/me/notifications/read-all"
 
 
+async def test_read_all_survives_one_source_down_and_fails_only_when_all_fail(
+    web: Web, fb: FeedBackends
+) -> None:
+    await web.login(["DIRECTOR"])
+    fb.crm_read_status = 502
+
+    partial = await web.send("POST", "/api/v1/notifications/read-all")
+
+    assert partial.status_code == 204, partial.text  # ERP отмечена, CRM недоступна
+    assert len(fb.mark_all.calls) == 1
+
+    fb.crm_read_status, fb.mark_all_status = 204, 502
+    other_way = await web.send("POST", "/api/v1/notifications/read-all")
+    assert other_way.status_code == 204, other_way.text  # CRM отмечена, ERP недоступна
+    fb.crm_read_status = 502
+
+    fb.mark_all_status = 502  # теперь и ERP недоступна
+    both = await web.send("POST", "/api/v1/notifications/read-all")
+
+    assert both.status_code >= 500
+
+
 async def test_onboarding_flag_comes_from_crm_and_is_closed_through_it(
     web: Web, be: Backends, check: ContractChecker
 ) -> None:

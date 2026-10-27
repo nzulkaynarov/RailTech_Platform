@@ -43,17 +43,37 @@ def _not_found() -> PlatformError:
     return PlatformError("NOT_FOUND", "Не найдено.", status_code=404)
 
 
+async def _mark_all(
+    feed: Feed, source: Literal["crm", "erp"], method: str, path: str
+) -> PlatformError | None:
+    """Отметка одной ленты: `None` — отмечена, иначе ошибка источника (сбой не обрывает вторую ленту)."""
+    try:
+        status = await feed.send(source, method, path)
+    except PlatformError as exc:
+        return exc
+    # 403 CRM — сначала смените временный пароль: ленты CRM у сотрудника ещё нет, не сбой.
+    if status >= 400 and not (source == "crm" and status == 403):
+        return _failed(status, source)
+    return None
+
+
 @router.post("/notifications/read-all", status_code=204, operation_id="markAllNotificationsRead")
 async def mark_all_read(authed: NotifyAuthed) -> Response:
-    """Отметить все прочитанными: и в ERP, и в CRM (у каждой своя лента)."""
+    """Отметить все прочитанными в обеих лентах (у каждой своя), сбой одной не отменяет другую.
+
+    Недоступный источник остаётся непрочитанным и виден в `sources` следующей выдачи ленты; ошибка
+    возвращается, только если не отмечена ни одна из лент.
+    """
     feed = Feed(authed)
+    results: list[PlatformError | None] = []
     if feed.usable("erp"):
-        status = await feed.send("erp", "PATCH", "/api/v1/notifications/mark_all_read/")
-        if status >= 400:
-            raise _failed(status)
-    crm_status = await feed.send("crm", "POST", f"{service.CRM_PATH}/read-all")
-    if crm_status >= 400 and crm_status != 403:  # 403 — сначала смените временный пароль
-        raise _failed(crm_status, "crm")
+        results.append(
+            await _mark_all(feed, "erp", "PATCH", "/api/v1/notifications/mark_all_read/")
+        )
+    results.append(await _mark_all(feed, "crm", "POST", f"{service.CRM_PATH}/read-all"))
+    failures = [r for r in results if r is not None]
+    if failures and len(failures) == len(results):
+        raise failures[0]
     await _forget(feed)
     return Response(status_code=204)
 

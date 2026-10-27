@@ -5107,6 +5107,9 @@ export const getMarkAllNotificationsReadUrl = () => {
 };
 
 /**
+ * Отмечает обе ленты — ERP и CRM (у каждой своя). Недоступность одной ленты не отменяет отметку другой: ответ 204,
+ * недоступный источник остаётся непрочитанным и виден в `sources` следующей выдачи `GET /notifications`. Ошибка
+ * возвращается, только если не отмечена ни одна лента.
  * @summary Отметить все прочитанными
  */
 export const markAllNotificationsRead = async (

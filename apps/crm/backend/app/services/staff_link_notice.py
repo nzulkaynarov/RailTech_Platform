@@ -33,7 +33,11 @@ class StaffLinkNotice:
         self._notifications = notifications
 
     async def linked(self, user_id: int, username: str | None) -> None:
-        await self._bell(user_id, username)
+        try:
+            await self._bell(user_id, username)
+        except Exception:
+            # Колокольчик — дополнение: письмо с предупреждением уходит в любом случае.
+            logger.exception("telegram_linked_bell_failed", user_id=user_id)
         try:
             await self._mail.ensure_configured()
         except ConflictError:

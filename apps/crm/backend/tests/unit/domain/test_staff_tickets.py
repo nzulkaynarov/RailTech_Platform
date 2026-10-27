@@ -110,13 +110,27 @@ def test_page_ok(page: str | None, expected: str | None) -> None:
         "/a\\b",
         "/<script>",
         "/line\nbreak",
-        "/" + "a" * PAGE_MAX_LEN,
     ],
 )
 def test_page_rejected(page: str) -> None:
     with pytest.raises(TicketValueError) as err:
         checked_page(page)
     assert (err.value.reason, err.value.field) == ("ticket_page_invalid", "page")
+
+
+def test_page_too_long_is_clipped_not_rejected() -> None:
+    long = "/eds/inbox?" + "x=1&" * 200
+    assert checked_page(long) == long[:PAGE_MAX_LEN]
+    assert len(checked_page(long) or "") == PAGE_MAX_LEN
+
+
+def test_telegram_text_without_platform_url_has_no_open_line() -> None:
+    text = telegram_text("ru", "ОБР-0012", "Доступ выдан", "")
+    assert "Открыть" not in text
+    assert "http" not in text
+    assert "ОБР-0012" in text
+    assert "Доступ выдан" in text
+    assert "Open:" not in telegram_text("en", "ОБР-0012", "ok", "")
 
 
 def test_role_clipped() -> None:

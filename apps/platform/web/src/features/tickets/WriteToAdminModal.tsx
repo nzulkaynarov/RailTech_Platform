@@ -42,7 +42,8 @@ export function WriteToAdminModal({
   const [body, setBody] = useState(defaultBody ?? "");
   const [touched, setTouched] = useState(false);
   // Страница фиксируется в момент открытия (окно монтируется при открытии), а не отправки.
-  const [page] = useState(`${location.pathname}${location.search}`);
+  // Только путь без query: в query бывают номера, поиск и другие данные, которым в обращении не место.
+  const [page] = useState(location.pathname);
   const [sent, setSent] = useState<string | null>(null);
 
   const create = useCreateTicket({

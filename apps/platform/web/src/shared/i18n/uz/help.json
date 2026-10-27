@@ -300,7 +300,7 @@
     "bodyTooLong": "Matn 4000 belgidan uzun: qisqartiring",
     "errors": {
       "TOO_MANY_REQUESTS": "Siz juda ko‘p murojaat yubordingiz. Biroz kutib, qayta urinib ko‘ring.",
-      "BACKEND_UNAVAILABLE": "CRM javob bermayapti. Bir daqiqadan keyin qayta urinib ko‘ring.",
+      "BACKEND_UNAVAILABLE": "Murojaatlar xizmati javob bermayapti. Bir daqiqadan keyin qayta urinib ko‘ring.",
       "default": "Murojaatni yuborib bo‘lmadi. Qayta urinib ko‘ring."
     }
   },

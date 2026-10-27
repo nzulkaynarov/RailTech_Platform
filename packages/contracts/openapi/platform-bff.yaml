@@ -1453,11 +1453,15 @@ paths:
       tags: [notifications]
       operationId: markAllNotificationsRead
       summary: Отметить все прочитанными
+      description: |
+        Отмечает обе ленты — ERP и CRM (у каждой своя). Недоступность одной ленты не отменяет отметку другой: ответ 204,
+        недоступный источник остаётся непрочитанным и виден в `sources` следующей выдачи `GET /notifications`. Ошибка
+        возвращается, только если не отмечена ни одна лента.
       parameters:
         - $ref: '#/components/parameters/CsrfToken'
       responses:
         '204':
-          description: Отмечены
+          description: Отмечены (хотя бы одна лента)
         '401':
           $ref: '#/components/responses/SessionExpired'
         '403':

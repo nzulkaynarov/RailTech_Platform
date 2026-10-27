@@ -159,7 +159,6 @@ function TourCard({
     <div
       ref={card}
       role="dialog"
-      aria-modal="true"
       aria-label={t("tour.label")}
       aria-describedby={`${titleId} ${textId}`}
       tabIndex={-1}

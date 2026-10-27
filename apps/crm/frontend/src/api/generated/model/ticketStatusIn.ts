@@ -4,8 +4,8 @@
  * RailTech CRM API
  * OpenAPI spec version: 0.10.0
  */
+import type { TicketStatusInStatus } from "./ticketStatusInStatus";
 
 export interface TicketStatusIn {
-  /** @maxLength 32 */
-  status: string;
+  status: TicketStatusInStatus;
 }

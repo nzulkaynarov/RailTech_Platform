@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { usePanelsStore } from "../../app/shell/panelsStore";
 import { resetFeedMocks } from "../../mocks/feedHandlers";
 import { endSession } from "../../mocks/mockSession";
-import { resetTicketsMock } from "../../mocks/ticketsStore";
+import { readTickets, resetTicketsMock } from "../../mocks/ticketsStore";
 import i18n from "../../shared/i18n";
 import { renderApp, signInAs } from "../../test/renderApp";
 import { setViewportWidth } from "../../test/viewport";
@@ -59,6 +59,20 @@ describe("Обращения к администратору", () => {
       "aria-invalid",
       "true",
     );
+  });
+
+  it("в обращение уходит только путь страницы, без query (там бывают чужие данные)", async () => {
+    signInAs("manager@demo.example");
+    renderApp("/admin/org?q=secret-client&employee=u-1");
+    fireEvent.click(await screen.findByRole("button", { name: "Написать администратору" }));
+    const dialog = await screen.findByRole("dialog", { name: "Написать администратору" });
+    expect(within(dialog).getByText(/страница \/admin\/org,/)).toBeInTheDocument();
+    fireEvent.change(within(dialog).getByRole("textbox", { name: "Что случилось" }), {
+      target: { value: "Нужен доступ" },
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Отправить" }));
+    await screen.findByText("Обращение ОБР-0001 отправлено");
+    expect(readTickets().tickets[0]?.page).toBe("/admin/org");
   });
 
   it("Escape закрывает окно без отправки", async () => {

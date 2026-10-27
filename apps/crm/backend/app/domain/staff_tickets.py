@@ -74,17 +74,20 @@ def checked_reply(text: str) -> str:
 
 
 def checked_page(page: str | None) -> str | None:
-    """Путь страницы Платформы (`/eds/inbox?panel=open`): только внутренний, без схемы и хоста."""
+    """Путь страницы Платформы (`/eds/inbox`): только внутренний, без схемы и хоста.
+
+    Слишком длинный путь обрезается до `PAGE_MAX_LEN`, а не отклоняется: обращение важнее адреса.
+    """
     if page is None:
         return None
     value = page.strip()
     if not value:
         return None
-    if len(value) > PAGE_MAX_LEN or not value.startswith("/") or value.startswith("//"):
+    if not value.startswith("/") or value.startswith("//"):
         raise TicketValueError("ticket_page_invalid", "page")
     if any(ord(ch) < 32 or ch in "\\<>" for ch in value):
         raise TicketValueError("ticket_page_invalid", "page")
-    return value
+    return value[:PAGE_MAX_LEN]
 
 
 def clipped_role(role: str | None) -> str | None:
@@ -141,9 +144,9 @@ _STATUS_TITLE: Final = {
     "en": "Request {number} is resolved",
 }
 _TELEGRAM: Final = {
-    "ru": "Администратор ответил на ваше обращение {number}:\n{text}\nОткрыть: {link}",
-    "uz": "Administrator {number} murojaatingizga javob berdi:\n{text}\nOchish: {link}",
-    "en": "The administrator replied to your request {number}:\n{text}\nOpen: {link}",
+    "ru": ("Администратор ответил на ваше обращение {number}:\n{text}", "Открыть"),
+    "uz": ("Administrator {number} murojaatingizga javob berdi:\n{text}", "Ochish"),
+    "en": ("The administrator replied to your request {number}:\n{text}", "Open"),
 }
 _SNIPPET: Final = 110
 
@@ -164,5 +167,8 @@ def resolved_note(language: str | None, number: str, text: str) -> ReplyNote:
 
 
 def telegram_text(language: str | None, number: str, text: str, link: str) -> str:
+    """Ответ автору в Telegram; строка «Открыть» — только если адрес Платформы известен."""
     lang = language if language in _TELEGRAM else "ru"
-    return _TELEGRAM[lang].format(number=number, text=snippet(text, 500), link=link)
+    body, open_label = _TELEGRAM[lang]
+    message = body.format(number=number, text=snippet(text, 500))
+    return f"{message}\n{open_label}: {link}" if link else message

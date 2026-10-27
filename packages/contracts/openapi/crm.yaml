@@ -6792,7 +6792,10 @@ components:
       additionalProperties: false
       properties:
         status:
-          maxLength: 32
+          enum:
+          - new
+          - in_progress
+          - resolved
           title: Status
           type: string
       required:

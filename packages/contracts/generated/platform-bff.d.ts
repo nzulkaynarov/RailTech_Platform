@@ -706,7 +706,12 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Отметить все прочитанными */
+    /**
+     * Отметить все прочитанными
+     * @description Отмечает обе ленты — ERP и CRM (у каждой своя). Недоступность одной ленты не отменяет отметку другой: ответ 204,
+     *     недоступный источник остаётся непрочитанным и виден в `sources` следующей выдачи `GET /notifications`. Ошибка
+     *     возвращается, только если не отмечена ни одна лента.
+     */
     post: operations["markAllNotificationsRead"];
     delete?: never;
     options?: never;
@@ -7634,7 +7639,7 @@ export interface operations {
     };
     requestBody?: never;
     responses: {
-      /** @description Отмечены */
+      /** @description Отмечены (хотя бы одна лента) */
       204: {
         headers: {
           [name: string]: unknown;
