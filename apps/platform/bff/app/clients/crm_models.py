@@ -101,6 +101,18 @@ class AiSystemBudget(BaseModel):
     today_usd: Annotated[float, Field(title="Today Usd")]
 
 
+class AssistOut(BaseModel):
+    """
+    Текст для поля ответа (клиенту не отправляется). `notice`: `numbers_removed` — из
+    черновика убраны предложения с числами не из базы знаний; `new_numbers` — правка добавила
+    числа, возвращён исходный текст.
+    """
+
+    cost_usd: Annotated[float | None, Field(title="Cost Usd")] = None
+    notice: Annotated[Notice | None, Field(title="Notice")] = None
+    text: Annotated[str, Field(title="Text")]
+
+
 class BackupDatabase(BaseModel):
     last_success_at: Annotated[AwareDatetime | None, Field(title="Last Success At")]
     """
@@ -196,6 +208,12 @@ class ChecklistItem(BaseModel):
     done: Annotated[bool, Field(title="Done")]
     key: Annotated[Key, Field(title="Key")]
     link: Annotated[str, Field(title="Link")]
+
+
+class ClientHandoffStatus(StrEnum):
+    pending = "pending"
+    done = "done"
+    failed = "failed"
 
 
 class ComponentStatusOut(BaseModel):
@@ -355,6 +373,20 @@ class Error1(StrEnum):
     bot_not_running = "bot_not_running"
 
 
+class EscalationOut(BaseModel):
+    created_at: Annotated[AwareDatetime, Field(title="Created At")]
+    id: Annotated[int, Field(title="Id")]
+    priority: Annotated[str, Field(title="Priority")]
+    reason_codes: Annotated[list[str], Field(title="Reason Codes")]
+    reason_text: Annotated[str | None, Field(title="Reason Text")]
+    recommendation: Annotated[str | None, Field(title="Recommendation")]
+    sla_due_at: Annotated[AwareDatetime | None, Field(title="Sla Due At")]
+    snoozed_until: Annotated[AwareDatetime | None, Field(title="Snoozed Until")]
+    status: Annotated[str, Field(title="Status")]
+    taken_at: Annotated[AwareDatetime | None, Field(title="Taken At")]
+    taken_by_user_id: Annotated[int | None, Field(title="Taken By User Id")]
+
+
 class ExternalServiceDetailOut(BaseModel):
     checks: Annotated[list[ServiceCheckOut], Field(title="Checks")]
     days: Annotated[list[ServiceDayOut], Field(title="Days")]
@@ -428,10 +460,45 @@ class Group(StrEnum):
     model = "model"
 
 
+class HandoffFacts(BaseModel):
+    """
+    Факты квалификации от бота (коды CRM: срок `<1m|<3m|<12m|>12m`, роль `decision_maker|…`).
+    """
+
+    budget_hint: Annotated[str | None, Field(title="Budget Hint")] = None
+    company: Annotated[str | None, Field(title="Company")] = None
+    company_size: Annotated[str | None, Field(title="Company Size")] = None
+    decision_role: Annotated[str | None, Field(title="Decision Role")] = None
+    interest: Annotated[list[str] | None, Field(title="Interest")] = None
+    region: Annotated[str | None, Field(title="Region")] = None
+    timeline: Annotated[str | None, Field(title="Timeline")] = None
+
+
+class HandoffNote(BaseModel):
+    """
+    Записка передачи (CRM-06, D1-1): запрос, факты, причина, рекомендуемый шаг — как в
+    карточке канала команды, без сырых кодов продуктов. Причины — коды `reason_codes`
+    (подписи — у экрана).
+    """
+
+    facts: HandoffFacts | None = None
+    last_lead_message: Annotated[str | None, Field(title="Last Lead Message")] = None
+    reason_codes: Annotated[list[str] | None, Field(title="Reason Codes")] = None
+    reason_text: Annotated[str | None, Field(title="Reason Text")] = None
+    recommendation: Annotated[str | None, Field(title="Recommendation")] = None
+    request: Annotated[str | None, Field(title="Request")] = None
+
+
 class Health(StrEnum):
     ok = "ok"
     problem = "problem"
     unknown = "unknown"
+
+
+class InboxResponse(BaseModel):
+    escalations: Annotated[list[LeadOut], Field(title="Escalations")]
+    mine: Annotated[list[LeadOut], Field(title="Mine")]
+    unassigned: Annotated[list[LeadOut], Field(title="Unassigned")]
 
 
 class IncidentOut(BaseModel):
@@ -517,6 +584,69 @@ class Kind(StrEnum):
     erp = "erp"
 
 
+class LeadDetail(BaseModel):
+    assigned_user_id: Annotated[int | None, Field(title="Assigned User Id")]
+    assigned_user_name: Annotated[str | None, Field(title="Assigned User Name")] = None
+    backoffice_mode: Annotated[str | None, Field(title="Backoffice Mode")] = "local"
+    client_handoff_error: Annotated[str | None, Field(title="Client Handoff Error")] = (
+        None
+    )
+    client_handoff_status: Annotated[
+        ClientHandoffStatus | None, Field(title="Client Handoff Status")
+    ] = None
+    client_id: Annotated[int | None, Field(title="Client Id")] = None
+    client_in_erp: Annotated[bool | None, Field(title="Client In Erp")] = False
+    client_phone_e164: Annotated[str | None, Field(title="Client Phone E164")] = None
+    company_name: Annotated[str | None, Field(title="Company Name")] = None
+    consent_given_at: Annotated[AwareDatetime | None, Field(title="Consent Given At")]
+    consent_method: Annotated[str | None, Field(title="Consent Method")] = None
+    created_at: Annotated[AwareDatetime, Field(title="Created At")]
+    display_name: Annotated[str, Field(title="Display Name")]
+    email: Annotated[str | None, Field(title="Email")] = None
+    erp_company_id: Annotated[int | None, Field(title="Erp Company Id")] = None
+    erp_deal_id: Annotated[int | None, Field(title="Erp Deal Id")] = None
+    escalation: EscalationOut | None = None
+    handoff_note: HandoffNote | None = None
+    id: Annotated[int, Field(title="Id")]
+    language: Annotated[str, Field(title="Language")]
+    last_lead_msg_at: Annotated[AwareDatetime | None, Field(title="Last Lead Msg At")]
+    need_summary: Annotated[str | None, Field(title="Need Summary")]
+    notes_count: Annotated[int, Field(title="Notes Count")]
+    open_service_request_id: Annotated[
+        int | None, Field(title="Open Service Request Id")
+    ] = None
+    owner_mode: Annotated[str, Field(title="Owner Mode")]
+    phone_e164: Annotated[str | None, Field(title="Phone E164")] = None
+    product_interest: Annotated[list[str], Field(title="Product Interest")]
+    qualification: Annotated[dict[str, Any], Field(title="Qualification")]
+    score: Annotated[int, Field(title="Score")]
+    snoozed_until: Annotated[AwareDatetime | None, Field(title="Snoozed Until")]
+    source: Annotated[str | None, Field(title="Source")] = "telegram"
+    stage: Annotated[str, Field(title="Stage")]
+    tg_username: Annotated[str | None, Field(title="Tg Username")]
+    unread: Annotated[bool | None, Field(title="Unread")] = False
+
+
+class LeadOut(BaseModel):
+    assigned_user_id: Annotated[int | None, Field(title="Assigned User Id")]
+    assigned_user_name: Annotated[str | None, Field(title="Assigned User Name")] = None
+    client_id: Annotated[int | None, Field(title="Client Id")] = None
+    created_at: Annotated[AwareDatetime, Field(title="Created At")]
+    display_name: Annotated[str, Field(title="Display Name")]
+    escalation: EscalationOut | None = None
+    handoff_note: HandoffNote | None = None
+    id: Annotated[int, Field(title="Id")]
+    language: Annotated[str, Field(title="Language")]
+    last_lead_msg_at: Annotated[AwareDatetime | None, Field(title="Last Lead Msg At")]
+    need_summary: Annotated[str | None, Field(title="Need Summary")]
+    owner_mode: Annotated[str, Field(title="Owner Mode")]
+    product_interest: Annotated[list[str], Field(title="Product Interest")]
+    score: Annotated[int, Field(title="Score")]
+    source: Annotated[str | None, Field(title="Source")] = "telegram"
+    stage: Annotated[str, Field(title="Stage")]
+    unread: Annotated[bool | None, Field(title="Unread")] = False
+
+
 class LeadSpend(BaseModel):
     calls: Annotated[int, Field(title="Calls")]
     cost_usd: Annotated[float, Field(title="Cost Usd")]
@@ -531,6 +661,16 @@ class LocalizedText(BaseModel):
     en: Annotated[str, Field(title="En")]
     ru: Annotated[str, Field(title="Ru")]
     uz: Annotated[str, Field(title="Uz")]
+
+
+class MessageOut(BaseModel):
+    attachments: Annotated[list[dict[str, Any]], Field(title="Attachments")]
+    created_at: Annotated[AwareDatetime, Field(title="Created At")]
+    id: Annotated[int, Field(title="Id")]
+    meta: Annotated[dict[str, Any], Field(title="Meta")]
+    role: Annotated[str, Field(title="Role")]
+    sent_by_user_id: Annotated[int | None, Field(title="Sent By User Id")]
+    text: Annotated[str, Field(title="Text")]
 
 
 class Mode(StrEnum):
@@ -565,6 +705,19 @@ class ModelTestResult(BaseModel):
     detail: Annotated[str | None, Field(title="Detail")]
     latency_ms: Annotated[int, Field(title="Latency Ms")]
     ok: Annotated[bool, Field(title="Ok")]
+
+
+class NoteOut(BaseModel):
+    created_at: Annotated[AwareDatetime, Field(title="Created At")]
+    id: Annotated[int, Field(title="Id")]
+    text: Annotated[str, Field(title="Text")]
+    user_id: Annotated[int | None, Field(title="User Id")]
+    visible_to_bot: Annotated[bool, Field(title="Visible To Bot")]
+
+
+class Notice(StrEnum):
+    numbers_removed = "numbers_removed"
+    new_numbers = "new_numbers"
 
 
 class PasswordReset(BaseModel):
@@ -846,6 +999,11 @@ class SystemStatusOut(BaseModel):
     checked_at: Annotated[AwareDatetime, Field(title="Checked At")]
     components: Annotated[list[ComponentStatusOut], Field(title="Components")]
     status: Annotated[Status6, Field(title="Status")]
+
+
+class TeamMember(BaseModel):
+    full_name: Annotated[str, Field(title="Full Name")]
+    id: Annotated[int, Field(title="Id")]
 
 
 class TelegramStatusOut(BaseModel):

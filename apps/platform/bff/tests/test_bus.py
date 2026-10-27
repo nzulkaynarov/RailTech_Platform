@@ -41,8 +41,17 @@ def test_subscription_row_matches_the_handlers() -> None:
 
 
 def test_every_subscribed_type_maps_to_known_topics() -> None:
-    assert topics_for("uz.railtech.erp.quote.sent.v1") == TOPICS
-    assert topics_for("uz.railtech.crm.lead.created.v1") == ("counters", "queue", "activity")
+    erp = ("notifications", "counters", "queue", "activity")
+    assert topics_for("uz.railtech.erp.quote.sent.v1") == erp
+    assert topics_for("uz.railtech.crm.lead.created.v1") == (
+        "counters",
+        "queue",
+        "activity",
+        "messages",
+    )
+    # D1-1: сообщение в переписке — «Ждут ответа», бейдж и «Моя очередь», не лента «Сегодня»
+    assert topics_for("uz.railtech.crm.lead.message_added.v1") == ("counters", "queue", "messages")
+    assert set(TOPICS) == {*erp, "messages"}
     assert topics_for("uz.railtech.identity.user.updated.v1") == ("counters", "queue")
     assert topics_for("uz.railtech.crm.client.updated.v1") == ()
 
@@ -51,7 +60,12 @@ async def test_signed_erp_event_becomes_a_hint(web: Web) -> None:
     headers, raw = delivery(envelope("erp", "quote.sent"))
     status, body = await post(web, headers, raw)
     assert (status, body["status"]) == (200, "processed")
-    assert hints(web) == [{"topics": list(TOPICS), "reason": "uz.railtech.erp.quote.sent.v1"}]
+    assert hints(web) == [
+        {
+            "topics": ["notifications", "counters", "queue", "activity"],
+            "reason": "uz.railtech.erp.quote.sent.v1",
+        }
+    ]
 
 
 async def test_crm_lead_event_hints_counters_and_queue(web: Web) -> None:
@@ -60,7 +74,7 @@ async def test_crm_lead_event_hints_counters_and_queue(web: Web) -> None:
     assert status == 200
     assert hints(web) == [
         {
-            "topics": ["counters", "queue", "activity"],
+            "topics": ["counters", "queue", "activity", "messages"],
             "reason": "uz.railtech.crm.lead.created.v1",
         }
     ]

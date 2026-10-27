@@ -27,15 +27,24 @@ EDS_EVENTS = "uz.railtech.eds.*.v1"
 SUBSCRIBED = (ERP_EVENTS, LEAD_EVENTS, USER_EVENTS, EDS_EVENTS)
 HANDLED = (ERP_EVENTS, LEAD_EVENTS, USER_EVENTS)
 
-# Что может изменить событие: уведомления, счётчики меню, «Моя очередь», лента «Сегодня».
+# Новое сообщение в переписке лида (D1-1): очередь «Ждут ответа» и открытая лента, бейдж
+# «Ждут ответа» и «Моя очередь» (непрочитанное); ленту «Сегодня» сообщение не меняет.
+MESSAGE_ADDED = "uz.railtech.crm.lead.message_added.v1"
+_TOPICS_BY_TYPE: dict[str, tuple[str, ...]] = {MESSAGE_ADDED: ("counters", "queue", "messages")}
+
+# Что может изменить событие: уведомления, счётчики меню, «Моя очередь», лента «Сегодня», переписка
+# (новая передача, «Забрать», смена ответственного — тоже «Ждут ответа»).
 _TOPICS_BY_MASK: tuple[tuple[str, tuple[str, ...]], ...] = (
-    (ERP_EVENTS, TOPICS),
-    (LEAD_EVENTS, ("counters", "queue", "activity")),
+    (ERP_EVENTS, ("notifications", "counters", "queue", "activity")),
+    (LEAD_EVENTS, ("counters", "queue", "activity", "messages")),
     (USER_EVENTS, ("counters", "queue")),
 )
 
 
 def topics_for(event_type: str) -> tuple[str, ...]:
+    exact = _TOPICS_BY_TYPE.get(event_type)
+    if exact is not None:
+        return tuple(t for t in TOPICS if t in exact)
     wanted: set[str] = set()
     for mask, topics in _TOPICS_BY_MASK:
         if fnmatchcase(event_type, mask):
