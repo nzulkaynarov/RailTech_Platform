@@ -1,7 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { Alert, Button, Form, Input, Spin } from "antd";
 import { useTranslation } from "react-i18next";
-import { Navigate, useNavigate, useSearchParams } from "react-router";
+import { Link, Navigate, useNavigate, useSearchParams } from "react-router";
 
 import {
   getGetMeQueryKey,
@@ -24,6 +24,7 @@ interface LoginValues {
 /** Страница «Вход»: почта и пароль CRM (SPEC-v3 §6, docs/architecture/platform-bff.md §3). Ошибки — по `Error.code`. */
 export function LoginPage() {
   const { t } = useTranslation("shell");
+  const { t: tProfile } = useTranslation("profile");
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [params] = useSearchParams();
@@ -32,6 +33,8 @@ export function LoginPage() {
   // Без явного адреса возврата — «домой» по ролям: у роли без Dashboard это её первый раздел.
   const target = (me: Me) => (asked ? next : homePath(me));
   const expired = params.get("reason") === "expired";
+  // Пароль только что сменён по ссылке из письма (`/reset-password`): подсказываем войти с новым.
+  const resetDone = params.get("reset") === "done";
   const existing = useGetSession({ query: { retry: false } });
   // Администратора ещё нет — вместо входа «Первый запуск» (W13-A4). Сбой запроса вход не блокирует.
   const setupState = useGetSetupState({ query: { retry: false } });
@@ -83,6 +86,15 @@ export function LoginPage() {
           style={{ marginBottom: 16 }}
         />
       ) : null}
+      {resetDone && !login.isError ? (
+        <Alert
+          type="success"
+          showIcon
+          role="status"
+          message={tProfile("reset.done")}
+          style={{ marginBottom: 16 }}
+        />
+      ) : null}
       {login.isError ? (
         <Alert
           type="error"
@@ -119,6 +131,9 @@ export function LoginPage() {
         <Button type="primary" htmlType="submit" block loading={login.isPending}>
           {t("login.submit")}
         </Button>
+        <div style={{ marginTop: 12, textAlign: "center" }}>
+          <Link to="/forgot-password">{tProfile("forgot.link")}</Link>
+        </div>
       </Form>
     </AuthLayout>
   );

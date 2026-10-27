@@ -1,26 +1,24 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { Descriptions, Dropdown, Modal, Tag } from "antd";
+import { Dropdown } from "antd";
 import type { MenuProps } from "antd";
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 
 import { getGetMeQueryKey, useLogout, useUpdateMe } from "../../shared/api/generated/platform-bff";
 import type { Language, Me } from "../../shared/api/generated/model";
-import { NotificationSettings } from "../../features/profile-notifications/NotificationSettings";
 import { LANGUAGES } from "../../shared/i18n";
+import { StaffAvatar } from "../../shared/ui/StaffAvatar";
 import "../../shared/ui/shell.css";
 import { roleCaption } from "./roleCaption";
 
 /**
- * Меню аватара (SPEC-v3 §6.1 зона 6): профиль, активная роль (если ролей несколько), язык ru/uz/en, смена пароля, выход.
+ * Меню аватара (SPEC-v3 §6.1 зона 6): профиль (страница `/me`, W15-H6), активная роль (если ролей несколько), язык ru/uz/en, смена пароля, выход.
  * Роль и язык сохраняются в `PATCH /me`; ответ — новый `Me` с пересчитанными модулями и разделами.
  */
 export function AvatarMenu({ me, placement }: { me: Me; placement: "topLeft" | "topRight" }) {
   const { t } = useTranslation("shell");
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [profileOpen, setProfileOpen] = useState(false);
 
   const update = useUpdateMe({
     mutation: {
@@ -98,7 +96,7 @@ export function AvatarMenu({ me, placement }: { me: Me; placement: "topLeft" | "
   ];
 
   const onClick: MenuProps["onClick"] = ({ key }) => {
-    if (key === "profile") setProfileOpen(true);
+    if (key === "profile") void navigate("/me");
     else if (key === "password") void navigate("/change-password");
     else if (key === "logout") logout.mutate();
     else if (key.startsWith("role:")) {
@@ -110,97 +108,50 @@ export function AvatarMenu({ me, placement }: { me: Me; placement: "topLeft" | "
   };
 
   return (
-    <>
-      <Dropdown
-        trigger={["click"]}
-        placement={placement}
-        menu={{
-          items,
-          onClick,
-          selectable: true,
-          selectedKeys: [`role:${selectedRole}`, `lang:${me.language}`],
-          style: { minWidth: 220 },
+    <Dropdown
+      trigger={["click"]}
+      placement={placement}
+      menu={{
+        items,
+        onClick,
+        selectable: true,
+        selectedKeys: [`role:${selectedRole}`, `lang:${me.language}`],
+        style: { minWidth: 220 },
+      }}
+    >
+      <button
+        type="button"
+        className="pf-focusable"
+        aria-label={t("avatar.open", { initials: me.initials, name: me.name, role: caption })}
+        aria-haspopup="menu"
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 2,
+          border: 0,
+          background: "transparent",
+          padding: 0,
+          font: "inherit",
+          cursor: "pointer",
         }}
       >
-        <button
-          type="button"
-          className="pf-focusable"
-          aria-label={t("avatar.open", { initials: me.initials, name: me.name, role: caption })}
-          aria-haspopup="menu"
+        <StaffAvatar initials={me.initials} src={me.avatar_url} />{" "}
+        <span
+          aria-hidden="true"
           style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            gap: 2,
-            border: 0,
-            background: "transparent",
-            padding: 0,
-            font: "inherit",
-            cursor: "pointer",
+            fontSize: 10,
+            lineHeight: "12px",
+            color: "#6e6e6e",
+            maxWidth: 60,
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
           }}
         >
-          <span
-            aria-hidden="true"
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: "50%",
-              border: "2px solid #91caff",
-              background: "#e6f4ff",
-              color: "#0958d9",
-              fontWeight: 600,
-              fontSize: 12,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            {me.initials}
-          </span>{" "}
-          <span
-            aria-hidden="true"
-            style={{
-              fontSize: 10,
-              lineHeight: "12px",
-              color: "#6e6e6e",
-              maxWidth: 60,
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-            }}
-          >
-            {caption}
-          </span>
-        </button>
-      </Dropdown>
-      <Modal
-        open={profileOpen}
-        title={t("profile.title")}
-        onCancel={() => {
-          setProfileOpen(false);
-        }}
-        footer={null}
-        destroyOnHidden
-      >
-        <Descriptions column={1} size="small" styles={{ label: { width: 130 } }}>
-          <Descriptions.Item label={t("profile.name")}>{me.name}</Descriptions.Item>
-          <Descriptions.Item label={t("profile.email")}>{me.email}</Descriptions.Item>
-          <Descriptions.Item label={t("profile.position")}>
-            {me.position ?? t("profile.noPosition")}
-          </Descriptions.Item>
-          <Descriptions.Item label={t("profile.roles")}>
-            {me.roles.map((role) => (
-              <Tag key={role.id}>{role.name}</Tag>
-            ))}
-          </Descriptions.Item>
-          <Descriptions.Item label={t("profile.access")}>
-            {[me.access.crm ? "CRM" : null, me.access.erp ? "ERP" : null]
-              .filter(Boolean)
-              .join(" · ")}
-          </Descriptions.Item>
-        </Descriptions>
-        <NotificationSettings me={me} />
-      </Modal>
-    </>
+          {caption}
+        </span>
+      </button>
+    </Dropdown>
   );
 }

@@ -25,6 +25,46 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/auth/forgot-password": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Забыли пароль — запросить ссылку сброса
+     * @description Без сессии. Ответ один и тот же для существующей и несуществующей учётной записи (перечислять сотрудников нельзя). Ссылка на Платформу уходит на почту (если подключён SMTP) или в Telegram (если привязан); нет ни того, ни другого — ничего не уходит, и экран заранее говорит «обратитесь к администратору». Ссылка одноразовая, живёт час; не больше трёх в час на учётную запись. Лимит BFF — 5 запросов в час на IP и на адрес, сверх него 429 `TOO_MANY_REQUESTS`.
+     */
+    post: operations["forgotPassword"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/auth/reset-password": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Задать новый пароль по ссылке сброса
+     * @description Без сессии. Токен из ссылки одноразовый; после успеха все открытые сессии сотрудника закрываются и вход идёт с новым паролем. Неверная, использованная или просроченная ссылка — 422 `VALIDATION_FAILED` с `details.reason = reset_token_invalid` (`details.fields = [token]`); слабый пароль — `weak_password` (`new_password`), ссылка остаётся действующей.
+     */
+    post: operations["resetPassword"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/auth/logout": {
     parameters: {
       query?: never;
@@ -256,6 +296,136 @@ export interface paths {
      */
     post: operations["sendTestNotification"];
     delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/me/profile": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Мой профиль для страницы /me
+     * @description Данные сотрудника из CRM (`GET /me`): имя, почта, должность, телефон, язык, часовой пояс, подпись для писем, фото, привязка Telegram и замещение. Доступно каждому вошедшему; чужой профиль этим путём не читается.
+     */
+    get: operations["getProfile"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /**
+     * Сохранить свой профиль
+     * @description Не присланное поле не меняется; пустая строка в `phone` и `email_signature` очищает поле. Должность и роли сюда не приходят (задаёт админ). Ошибка значения — 422 `VALIDATION_FAILED` с `details.fields` и `details.reason` (`phone_invalid`, `timezone_unknown`, `signature_invalid`).
+     */
+    patch: operations["updateProfile"];
+    trace?: never;
+  };
+  "/me/avatar": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Загрузить фото профиля
+     * @description `multipart/form-data`, поле `avatar`: уже обрезанная по кругу картинка (клиент режет её до 256x256), PNG, JPEG или WebP не больше 1 МБ. Тип проверяется по содержимому. Иначе 422 `VALIDATION_FAILED` с `details.reason`: `avatar_unsupported_type`, `avatar_type_mismatch`, `avatar_empty`; тело больше предела (1 МБ и запас на multipart) читается потоком и обрывается — 413 `PAYLOAD_TOO_LARGE` (`details.reason = avatar_too_large`). Ответ — обновлённый `Me` (`avatar_url` с новой версией).
+     */
+    put: operations["uploadAvatar"];
+    post?: never;
+    /** Удалить фото профиля */
+    delete: operations["deleteAvatar"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/staff/{id}/avatar": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Фото сотрудника
+     * @description Файл фото коллеги как есть (PNG, JPEG или WebP) с `X-Content-Type-Options: nosniff` и `Cache-Control: private`. Публичных ссылок на хранилище нет: картинку отдаёт только BFF вошедшему сотруднику. Нет фото или сотрудник отключён — 404 `NOT_FOUND` (рисуются инициалы).
+     */
+    get: operations["getStaffAvatar"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/me/telegram-link": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Привязать Telegram для уведомлений
+     * @description Выпускает одноразовую ссылку `https://t.me/<бот>?start=staff_<код>` на 10 минут; прежняя ссылка перестаёт работать. SPA показывает её кнопкой и QR. Бот по `/start staff_<код>` привязывает Telegram и отвечает подтверждением; клиентский путь бота от этого не меняется. Бот не подключён — 409 `NOT_CONFIGURED`; бот не запущен — 409 `CONFLICT`.
+     */
+    post: operations["createTelegramLink"];
+    /**
+     * Отвязать Telegram
+     * @description Снимает привязку и гасит неиспользованные ссылки. Без привязки — не ошибка.
+     */
+    delete: operations["deleteTelegramLink"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/me/deputy-candidates": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Кого можно назначить заместителем
+     * @description Активные коллеги с рабочей ролью CRM (менеджер или администратор), кроме самого сотрудника.
+     */
+    get: operations["listDeputyCandidates"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/me/deputy": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Назначить заместителя на период
+     * @description «На время отсутствия мои задачи видит {сотрудник} с {дата} по {дата}»: обе даты включительно, считаются по календарю замещаемого, период не в прошлом и не длиннее года. Заместитель видит очередь замещаемого строками с пометкой «за {имя}», права на объекты у него свои. 422 `VALIDATION_FAILED` с `details.reason`: `deputy_is_self`, `deputy_period_reversed`, `deputy_period_past`, `deputy_period_too_long`, `deputy_not_colleague`.
+     */
+    put: operations["setDeputy"];
+    post?: never;
+    /** Снять замещение */
+    delete: operations["clearDeputy"];
     options?: never;
     head?: never;
     patch?: never;
@@ -3790,6 +3960,8 @@ export interface components {
       initials: string;
       /** @description Должность — текст (не роль) */
       position?: string;
+      /** @description Адрес фото на BFF (`/staff/{id}/avatar?v=…`, тот же origin); нет — рисуются инициалы */
+      avatar_url?: string;
       language: components["schemas"]["Language"];
       /** @description Роли сотрудника (названия — данные CRM) */
       roles: components["schemas"]["RoleRef"][];
@@ -4009,6 +4181,103 @@ export interface components {
      * @enum {string}
      */
     DueLabel: "overdue" | "today" | "tomorrow" | "later" | "memo";
+    ForgotPasswordIn: {
+      /** @description Почта (логин) сотрудника */
+      identifier: string;
+    };
+    ForgotPasswordAccepted: {
+      /** @enum {boolean} */
+      accepted: true;
+    };
+    ResetPasswordIn: {
+      token: string;
+      new_password: string;
+    };
+    /**
+     * @description Имя пояса IANA — `Asia/Tashkent`
+     * @example Asia/Tashkent
+     */
+    Timezone: string;
+    TelegramState: {
+      linked: boolean;
+      /** @description Ник, с которого сотрудник привязал бота («Привязан как @…»); у привязки администратором ника нет */
+      username?: string;
+    };
+    DeputyPeriod: {
+      user_id: string;
+      name: string;
+      /** Format: date */
+      date_from: string;
+      /** Format: date */
+      date_to: string;
+    };
+    /** @description За кого сотрудник сегодня заместитель — его очередь показана в «Моей очереди» строками «за {имя}» */
+    Covering: {
+      user_id: string;
+      name: string;
+      /** Format: date */
+      date_from: string;
+      /** Format: date */
+      date_to: string;
+    };
+    /** @description Профиль сотрудника для страницы /me (данные CRM) */
+    Profile: {
+      name: string;
+      /** Format: email */
+      email: string;
+      /** @description Должность — только чтение, задаёт администратор */
+      position?: string;
+      /** @description `+` и цифры без пробелов */
+      phone?: string;
+      language: components["schemas"]["Language"];
+      timezone: components["schemas"]["Timezone"];
+      /** @description Подпись для исходящих писем */
+      email_signature?: string;
+      /** @description Адрес фото на BFF (`/staff/{id}/avatar?v=…`); нет — инициалы */
+      avatar_url?: string;
+      telegram: components["schemas"]["TelegramState"];
+      deputy?: components["schemas"]["DeputyPeriod"];
+      covering: components["schemas"]["Covering"][];
+    };
+    ProfileUpdate: {
+      name?: string;
+      /** @description Пустая строка очищает */
+      phone?: string;
+      language?: components["schemas"]["Language"];
+      timezone?: components["schemas"]["Timezone"];
+      /** @description Пустая строка очищает */
+      email_signature?: string;
+    };
+    AvatarUpload: {
+      /**
+       * Format: binary
+       * @description PNG, JPEG или WebP до 1 МБ (клиент уже обрезал по кругу)
+       */
+      avatar: string;
+    };
+    TelegramLink: {
+      /** @description `https://t.me/<бот>?start=staff_<код>` — открыть в Telegram или показать QR */
+      url: string;
+      /** Format: date-time */
+      expires_at: string;
+    };
+    Colleague: {
+      id: string;
+      name: string;
+      position?: string;
+    };
+    DeputyUpdate: {
+      deputy_id: string;
+      /** Format: date */
+      date_from: string;
+      /** Format: date */
+      date_to: string;
+    };
+    /** @description Чья это очередь, если строку видит заместитель */
+    QueueOwner: {
+      id: string;
+      name: string;
+    };
     QueueItem: {
       id: string;
       role_id: components["schemas"]["RoleId"];
@@ -4021,6 +4290,7 @@ export interface components {
       /** Format: date-time */
       due_at?: string;
       object: components["schemas"]["ObjectRef"];
+      on_behalf_of?: components["schemas"]["QueueOwner"];
     };
     Queue: {
       items: components["schemas"]["QueueItem"][];
@@ -5523,6 +5793,58 @@ export interface operations {
       };
     };
   };
+  forgotPassword: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ForgotPasswordIn"];
+      };
+    };
+    responses: {
+      /** @description Запрос принят */
+      202: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ForgotPasswordAccepted"];
+        };
+      };
+      422: components["responses"]["ValidationFailed"];
+      429: components["responses"]["TooManyRequests"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  resetPassword: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ResetPasswordIn"];
+      };
+    };
+    responses: {
+      /** @description Пароль задан */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      422: components["responses"]["ValidationFailed"];
+      429: components["responses"]["TooManyRequests"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
   logout: {
     parameters: {
       query?: never;
@@ -5954,6 +6276,290 @@ export interface operations {
           "application/json": components["schemas"]["Error"];
         };
       };
+    };
+  };
+  getProfile: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Профиль */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Profile"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  updateProfile: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ProfileUpdate"];
+      };
+    };
+    responses: {
+      /** @description Сохранено */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Profile"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["CsrfFailed"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  uploadAvatar: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["AvatarUpload"];
+      };
+    };
+    responses: {
+      /** @description Фото заменено */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Me"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["CsrfFailed"];
+      /** @description `PAYLOAD_TOO_LARGE` — фото больше 1 МБ */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  deleteAvatar: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Фото удалено (снова инициалы) */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Me"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["CsrfFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getStaffAvatar: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Изображение */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "image/*": string;
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  createTelegramLink: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Ссылка */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TelegramLink"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["CsrfFailed"];
+      /** @description `NOT_CONFIGURED` — бот не подключён; `CONFLICT` (`details.reason = bot_not_running`) — бот сейчас не запущен */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  deleteTelegramLink: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Отвязан; профиль без Telegram */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Profile"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["CsrfFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listDeputyCandidates: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Коллеги */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Colleague"][];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  setDeputy: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DeputyUpdate"];
+      };
+    };
+    responses: {
+      /** @description Назначен */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Profile"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["CsrfFailed"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  clearDeputy: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Замещения нет */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Profile"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["CsrfFailed"];
+      503: components["responses"]["BackendUnavailable"];
     };
   };
   getHealth: {

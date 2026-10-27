@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_serializer, model_valid
 
 from app.rbac import View, modules_for, view_roles
 from app.rbac_generated import ModuleCode, RestrictedField
+from app.schemas_profile import avatar_url
 from app.session import Language, SessionData, SessionRole
 
 RoleId = Annotated[str, Field(pattern=r"^[1-9][0-9]*$")]
@@ -75,6 +76,7 @@ class Me(BaseModel):
     name: str
     initials: str = Field(max_length=3)
     position: str | None = None
+    avatar_url: str | None = None
     language: Language
     roles: list[RoleRef]
     active_role: str | None
@@ -86,8 +88,9 @@ class Me(BaseModel):
     @model_serializer(mode="wrap")
     def _omit_empty_position(self, handler: Any) -> dict[str, Any]:
         out: dict[str, Any] = handler(self)
-        if out.get("position") is None:
-            out.pop("position", None)
+        for optional in ("position", "avatar_url"):
+            if out.get(optional) is None:
+                out.pop(optional, None)
         return out
 
 
@@ -112,6 +115,7 @@ def build_me(data: SessionData) -> Me:
         name=data.name,
         initials=initials_of(data.name, data.email),
         position=data.position,
+        avatar_url=avatar_url(data.user_id, data.avatar_version),
         language=data.language,
         roles=[RoleRef.of(r) for r in data.roles],
         active_role=str(active) if active is not None else None,

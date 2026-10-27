@@ -29,6 +29,7 @@ def test_registry_lists_every_external_service_of_the_ensemble() -> None:
         "litellm",
         "vendor.anthropic",
         "vendor.gemini",
+        "ai_replies",
         "langfuse",
         "mail",
         "s3",

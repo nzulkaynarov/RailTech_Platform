@@ -11,6 +11,7 @@ import {
 } from "./fixtures/feeds";
 import { computeAccess, type MockRole } from "./fixtures/roles";
 import { readSession, sessionRoles } from "./mockSession";
+import { coveredQueueItems } from "./profileStore";
 
 /**
  * Имитация сбоя ERP для скриншотов и e2e: `localStorage["rt-pf-mock-erp-down"] = "1"` (страница с MSW читает его при
@@ -95,8 +96,13 @@ export const feedHandlers = [
     if (!roles) return expired();
     const denied = noQueue(roles);
     if (denied) return denied;
-    const items = queueForView(roles.view).filter((i) => !erpDown() || i.kind.endsWith("_lead"));
-    return HttpResponse.json({ items, sources: sources() });
+    const own = queueForView(roles.view).filter((i) => !erpDown() || i.kind.endsWith("_lead"));
+    // Замещение (W15-H6): заместитель видит строки замещаемого с пометкой «за {имя}».
+    const session = readSession();
+    const userId = session ? sessionRoles(session)?.user.id : undefined;
+    const answerRole = own.find((i) => i.kind === "answer_lead")?.role_id;
+    const covered = userId && answerRole ? coveredQueueItems(userId, answerRole) : [];
+    return HttpResponse.json({ items: [...own, ...covered], sources: sources() });
   }),
 
   http.get("*/menu-counters", () => {

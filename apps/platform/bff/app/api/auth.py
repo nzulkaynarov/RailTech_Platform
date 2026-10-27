@@ -8,10 +8,20 @@ from fastapi import APIRouter, Request, Response, status
 
 from app.auth import FAILED_LOGIN_CODES
 from app.client_ip import UNKNOWN
+from app.clients.base import BackendUnavailableError
 from app.cookies import SESSION_COOKIE, clear_session_cookies, set_session_cookies
-from app.deps import AuthedDep, AuthServiceDep, LoginLimiterDep, SettingsDep
-from app.errors import PlatformError
+from app.deps import (
+    AuthedDep,
+    AuthServiceDep,
+    CrmDep,
+    ForgotLimiterDep,
+    LoginLimiterDep,
+    ResetLimiterDep,
+    SettingsDep,
+)
+from app.errors import PlatformError, backend_reason, backend_unavailable, from_backend
 from app.schemas import ChangePasswordIn, LoginIn, SessionOut, build_session
+from app.schemas_profile import ForgotPasswordAccepted, ForgotPasswordIn, ResetPasswordIn
 
 router = APIRouter(tags=["auth"])
 log = structlog.get_logger()
@@ -87,3 +97,61 @@ async def change_password(body: ChangePasswordIn, authed: AuthedDep) -> Response
 async def get_session(authed: AuthedDep) -> SessionOut:
     data = await authed.service.sync_profile(authed.sid, authed.data)
     return build_session(data)
+
+
+@router.post(
+    "/auth/forgot-password",
+    status_code=status.HTTP_202_ACCEPTED,
+    response_model=ForgotPasswordAccepted,
+    operation_id="forgotPassword",
+)
+async def forgot_password(
+    body: ForgotPasswordIn,
+    request: Request,
+    crm: CrmDep,
+    limiter: ForgotLimiterDep,
+) -> ForgotPasswordAccepted:
+    """«Забыли пароль?»: ответ один для любой учётной записи, счётчик расходуется всегда."""
+    await limiter.check(request.state.client_ip, body.identifier)
+    try:
+        response = await crm.forgot_password(body.identifier.strip())
+    except BackendUnavailableError as exc:
+        raise backend_unavailable("crm", exc.reason) from exc
+    if response.status_code >= 400:
+        # Отказ CRM по существу наружу не пробрасываем: иначе ответ различал бы учётные записи.
+        log.warning("forgot_password_refused", status=response.status_code)
+    return ForgotPasswordAccepted()
+
+
+@router.post(
+    "/auth/reset-password", status_code=status.HTTP_204_NO_CONTENT, operation_id="resetPassword"
+)
+async def reset_password(
+    body: ResetPasswordIn, request: Request, crm: CrmDep, limiter: ResetLimiterDep
+) -> Response:
+    await limiter.check(request.state.client_ip)
+    try:
+        response = await crm.reset_password(body.token, body.new_password)
+    except BackendUnavailableError as exc:
+        raise backend_unavailable("crm", exc.reason) from exc
+    if response.status_code == status.HTTP_204_NO_CONTENT:
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+    reason = backend_reason(response)
+    if response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT and reason in (
+        "reset_token_invalid",
+        "weak_password",
+    ):
+        field = "token" if reason == "reset_token_invalid" else "new_password"
+        message = (
+            "Ссылка недействительна или устарела. Запросите новую."
+            if field == "token"
+            else "Пароль слишком простой: нужно не меньше 10 символов, буквы и цифры."
+        )
+        raise PlatformError(
+            "VALIDATION_FAILED",
+            message,
+            status_code=422,
+            source="crm",
+            details={"fields": [field], "reason": reason},
+        )
+    raise from_backend("crm", response)

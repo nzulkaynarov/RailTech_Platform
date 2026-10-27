@@ -272,39 +272,46 @@ test.describe("Сброс пароля сотрудника", () => {
 test.describe("Профиль: уведомления", () => {
   test.skip(({ isMobile }) => isMobile, "ширины задаёт сам тест");
 
-  test("сотрудник меняет подписку и отправляет тестовое уведомление", async ({ page }) => {
-    await loginAndWait(page, "manager@demo.example");
+  async function openProfile(page: Page): Promise<void> {
     await openAvatarMenu(page);
     await page.getByRole("menuitem", { name: "Профиль" }).click();
-    const dialog = page.getByRole("dialog", { name: "Профиль" });
-    await expect(dialog.getByRole("heading", { name: "Уведомления" })).toBeVisible();
-    await expect(dialog.getByText("Привязан")).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Профиль" })).toBeVisible();
+  }
 
-    const leads = dialog.getByRole("switch", { name: "Лиды, которые ждут меня" });
+  test("сотрудник меняет подписку и отправляет тестовое уведомление", async ({ page }) => {
+    await loginAndWait(page, "manager@demo.example");
+    await openProfile(page);
+    const telegram = page.getByRole("region", { name: "Telegram для уведомлений" });
+    await expect(telegram.getByText("Привязан", { exact: true })).toBeVisible();
+    const section = page.getByRole("region", { name: "Уведомления" });
+
+    const leads = section.getByRole("switch", { name: "Лиды, которые ждут меня" });
     await expect(leads).toBeChecked();
     await leads.click();
     await expect(leads).not.toBeChecked();
 
-    await dialog.getByRole("button", { name: "Тестовое уведомление" }).click();
+    await section.getByRole("button", { name: "Тестовое уведомление" }).click();
     await expect(page.getByText("Тестовое сообщение отправлено в Telegram")).toBeVisible();
   });
 
   test("Telegram не привязан и доставка не удалась — словами", async ({ page }) => {
     await loginAndWait(page, "engineer@demo.example");
-    await openAvatarMenu(page);
-    await page.getByRole("menuitem", { name: "Профиль" }).click();
-    const dialog = page.getByRole("dialog", { name: "Профиль" });
-    await expect(dialog.getByText("Не привязан", { exact: true })).toBeVisible();
-    await expect(dialog.getByRole("button", { name: "Тестовое уведомление" })).toBeDisabled();
-    await page.locator(".ant-modal-close").click();
-    await expect(dialog).toBeHidden();
+    await openProfile(page);
+    await expect(
+      page
+        .getByRole("region", { name: "Telegram для уведомлений" })
+        .getByText("Не привязан", { exact: true }),
+    ).toBeVisible();
+    const section = page.getByRole("region", { name: "Уведомления" });
+    await expect(section.getByRole("button", { name: "Тестовое уведомление" })).toBeDisabled();
     await signOut(page);
 
     await loginAndWait(page, "accountant@demo.example");
-    await openAvatarMenu(page);
-    await page.getByRole("menuitem", { name: "Профиль" }).click();
+    await openProfile(page);
     await expect(
-      page.getByRole("dialog", { name: "Профиль" }).getByText(/Последнее сообщение бота не дошло/),
+      page
+        .getByRole("region", { name: "Уведомления" })
+        .getByText(/Последнее сообщение бота не дошло/),
     ).toBeVisible();
   });
 
@@ -312,10 +319,9 @@ test.describe("Профиль: уведомления", () => {
     test(`профиль на ${String(width)} px: axe 0`, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 });
       await loginAndWait(page, "admin@demo.example");
-      await openAvatarMenu(page);
-      await page.getByRole("menuitem", { name: "Профиль" }).click();
-      const dialog = page.getByRole("dialog", { name: "Профиль" });
-      await expect(dialog.getByRole("switch", { name: "Системные оповещения" })).toBeVisible();
+      await openProfile(page);
+      const section = page.getByRole("region", { name: "Уведомления" });
+      await expect(section.getByRole("switch", { name: "Системные оповещения" })).toBeVisible();
       await expectNoViolations(page, `профиль ${String(width)}`);
       await settledScreenshot(page, "profile-notifications");
     });

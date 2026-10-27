@@ -3,7 +3,7 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 from django.views.decorators.vary import vary_on_headers
 from django_filters.rest_framework import DjangoFilterBackend
-from drf_spectacular.utils import extend_schema, extend_schema_view
+from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view
 from rest_framework import filters, permissions, viewsets
 from rest_framework.response import Response
 
@@ -58,7 +58,14 @@ class DomainTypeViewSet(viewsets.ReadOnlyModelViewSet):
     retrieve=extend_schema(summary="Get category", tags=["Catalog"]),
     update=extend_schema(summary="Update category", tags=["Catalog"]),
     partial_update=extend_schema(summary="Partially update category", tags=["Catalog"]),
-    destroy=extend_schema(summary="Delete category", tags=["Catalog"]),
+    destroy=extend_schema(
+        summary="Delete category",
+        responses={
+            204: None,
+            400: OpenApiResponse(description="CATEGORY_HAS_CHILDREN — the subtree is kept; move or delete it first"),
+        },
+        tags=["Catalog"],
+    ),
 )
 @method_decorator(vary_on_headers("Accept-Language"), name="list")
 @method_decorator(cache_page(LOOKUP_CACHE_TTL), name="list")

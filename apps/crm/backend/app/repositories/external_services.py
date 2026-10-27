@@ -9,6 +9,8 @@ from sqlalchemy import String, bindparam, delete, func, select, text
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.domain.external_ai_replies import AiFacts
+from app.domain.external_cause import ok_run_start
 from app.domain.external_erp_events import STUCK_AFTER_MINUTES as EVENTS_STUCK_AFTER_MINUTES
 from app.domain.external_erp_events import WINDOW_DAYS as EVENTS_WINDOW_DAYS
 from app.domain.external_erp_handoff import STUCK_AFTER_MINUTES
@@ -22,6 +24,8 @@ from app.models.external_services import (
     ExternalServiceIncident,
     ExternalServiceSwitch,
 )
+from app.models.leads import Message
+from app.models.system import SystemAlert
 
 LOCK_SQL = text("SELECT pg_advisory_xact_lock(hashtext('external_service_checks'))")
 LATEST_SQL = text(
@@ -66,19 +70,18 @@ SINCE_SQL = text(
         ORDER BY c.checked_at LIMIT 1) f
     """
 ).bindparams(bindparam("keys", type_=ARRAY(String)))
-# Начало текущей полосы `ok`: сколько сервис непрерывно здоров — от этого зависит «Восстановлено».
-OK_SINCE_SQL = text(
+# Последние проверки сервиса (новые первыми): по ним `ok_run_start` находит начало полосы `ok`, не
+# считая коротких провалов между двумя `ok`. Не больше `OK_LOOKBACK` строк на сервис — O(сервисов).
+OK_LOOKBACK = 120
+RECENT_CHECKS_SQL = text(
     """
     WITH k AS (SELECT unnest(CAST(:keys AS text[])) AS service_key)
-    SELECT k.service_key, f.since FROM k
+    SELECT k.service_key, r.status, r.checked_at FROM k
     CROSS JOIN LATERAL (
-        SELECT max(o.checked_at) AS t FROM external_service_checks o
-        WHERE o.service_key = k.service_key AND o.status <> 'ok') lo
-    CROSS JOIN LATERAL (
-        SELECT c.checked_at AS since FROM external_service_checks c
-        WHERE c.service_key = k.service_key AND c.status = 'ok'
-          AND (lo.t IS NULL OR c.checked_at > lo.t)
-        ORDER BY c.checked_at LIMIT 1) f
+        SELECT c.status, c.checked_at FROM external_service_checks c
+        WHERE c.service_key = k.service_key
+        ORDER BY c.checked_at DESC LIMIT :n) r
+    ORDER BY k.service_key, r.checked_at DESC
     """
 ).bindparams(bindparam("keys", type_=ARRAY(String)))
 # Дребезг: сколько раз за сутки и за последние часы начиналась полоса `fail`.
@@ -102,12 +105,13 @@ FLAPS_SQL = text(
 FAIL_STREAK_SQL = text(
     """
     WITH k AS (SELECT unnest(CAST(:keys AS text[])) AS service_key)
-    SELECT k.service_key, s.n, s.since FROM k
+    SELECT k.service_key, s.n, s.since, s.last FROM k
     CROSS JOIN LATERAL (
         SELECT max(o.checked_at) AS t FROM external_service_checks o
         WHERE o.service_key = k.service_key AND o.status <> 'fail') lo
     CROSS JOIN LATERAL (
-        SELECT count(*) AS n, min(c.checked_at) AS since FROM external_service_checks c
+        SELECT count(*) AS n, min(c.checked_at) AS since, max(c.checked_at) AS last
+        FROM external_service_checks c
         WHERE c.service_key = k.service_key AND c.status = 'fail'
           AND (lo.t IS NULL OR c.checked_at > lo.t)) s
     WHERE s.n > 0
@@ -165,9 +169,13 @@ async def unhealthy_since(session: AsyncSession, keys: Collection[str]) -> dict[
 
 
 async def ok_since(session: AsyncSession, keys: Collection[str]) -> dict[str, datetime]:
-    """Сервис → начало текущей непрерывной полосы `ok` (первая `ok` после последней не-`ok`)."""
-    rows = (await session.execute(OK_SINCE_SQL, {"keys": list(keys)})).all()
-    return {r.service_key: r.since for r in rows}
+    """Сервис → начало текущей полосы `ok`; короткий провал между `ok` её не сбрасывает."""
+    rows = (await session.execute(RECENT_CHECKS_SQL, {"keys": list(keys), "n": OK_LOOKBACK})).all()
+    by_key: dict[str, list[tuple[str, datetime]]] = {}
+    for r in rows:
+        by_key.setdefault(r.service_key, []).append((r.status, r.checked_at))
+    found = {key: ok_run_start(history) for key, history in by_key.items()}
+    return {key: start for key, start in found.items() if start is not None}
 
 
 @dataclass(frozen=True, slots=True)
@@ -209,13 +217,14 @@ async def last_recovered(session: AsyncSession, since: datetime) -> dict[str, da
 @dataclass(frozen=True, slots=True)
 class FailStreak:
     count: int
-    since: datetime
+    since: datetime  # первая проверка полосы
+    last: datetime  # последняя: «непрерывные 15 минут» считаются по ней, а не по «сейчас»
 
 
 async def fail_streaks(session: AsyncSession, keys: Collection[str]) -> dict[str, FailStreak]:
     """Сервис → полоса `fail` подряд: сколько проверок и когда началась."""
     rows = (await session.execute(FAIL_STREAK_SQL, {"keys": list(keys)})).all()
-    return {r.service_key: FailStreak(int(r.n), r.since) for r in rows}
+    return {r.service_key: FailStreak(int(r.n), r.since, r.last) for r in rows}
 
 
 async def open_causes(
@@ -225,6 +234,30 @@ async def open_causes(
     if for_update:
         stmt = stmt.with_for_update()
     return {r.cause_key: r for r in await session.scalars(stmt)}
+
+
+async def previous_alert(
+    session: AsyncSession, cause_key: str, before_id: int
+) -> tuple[ExternalCauseAlert | None, int]:
+    """Прошлое «Сломано» по причине и сколько раз она срабатывала с него (с ним и текущим)."""
+    prev = await session.scalar(
+        select(ExternalCauseAlert)
+        .where(
+            ExternalCauseAlert.cause_key == cause_key,
+            ExternalCauseAlert.alerted_at.is_not(None),
+            ExternalCauseAlert.id < before_id,
+        )
+        .order_by(ExternalCauseAlert.alerted_at.desc())
+        .limit(1)
+    )
+    if prev is None:
+        return None, 1
+    episodes = await session.scalar(
+        select(func.count())
+        .select_from(ExternalCauseAlert)
+        .where(ExternalCauseAlert.cause_key == cause_key, ExternalCauseAlert.id >= prev.id)
+    )
+    return prev, int(episodes or 1)
 
 
 async def unannounced_recoveries(
@@ -397,6 +430,44 @@ async def erp_sync_stats(session: AsyncSession) -> tuple[int, int, str | None]:
         .limit(1)
     )
     return int(with_access or 0), int(failed or 0), last_error
+
+
+async def model_probe_problems(session: AsyncSession) -> dict[str, str]:
+    """Роли, где часовая проба моделей сейчас видит проблему: алиас → текст (`system_alerts`)."""
+    rows = await session.execute(
+        select(SystemAlert.key, SystemAlert.detail).where(
+            SystemAlert.key.like("model:%"), SystemAlert.active.is_(True)
+        )
+    )
+    return {key.split(":", 1)[1]: detail or "" for key, detail in rows.all()}
+
+
+async def resolve_model_probes(
+    session: AsyncSession, aliases: Collection[str], now: datetime
+) -> None:
+    """Ключ роли сменили: прежняя проблема пробы снимается (новую найдёт проба или трафик)."""
+    stmt = select(SystemAlert).where(SystemAlert.key.in_([f"model:{a}" for a in aliases]))
+    for row in await session.scalars(stmt):
+        if row.active:
+            row.active, row.resolved_at, row.first_seen_at, row.sent_at = False, now, None, None
+            row.updated_at = now
+
+
+async def ai_reply_stats(session: AsyncSession, since: datetime) -> AiFacts:
+    """Ответы бота клиентам за период: сбои агента и успешные ответы агента."""
+    failed = Message.meta["error"].astext == "agent_unavailable"
+    answered = Message.meta.has_key("action")
+    row = (
+        await session.execute(
+            select(
+                func.count().filter(failed),
+                func.count().filter(answered),
+                func.max(Message.created_at).filter(failed),
+                func.max(Message.created_at).filter(answered),
+            ).where(Message.role == "bot", Message.created_at >= since)
+        )
+    ).one()
+    return AiFacts(int(row[0]), int(row[1]), row[2], row[3])
 
 
 @dataclass(frozen=True, slots=True)

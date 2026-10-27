@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, Path, Request
 
 from app.api.deps import ContainerDep, require
 from app.integrations.litellm_admin import LiteLLMAdmin, load_defaults
+from app.repositories.external_services import resolve_model_probes
 from app.schemas.spend import (
     ModelChangeIn,
     ModelChangeResult,
@@ -89,6 +90,10 @@ async def change_provider_key(
     outcomes = await service.change_provider_key(
         who, provider, body.api_key.get_secret_value().strip(), body.password.get_secret_value()
     )
+    async with container.session_factory() as session, session.begin():
+        # Ключ сменили: прежняя проблема часовой пробы снимается, иначе строка провайдера в центре
+        # висела бы «Сломано» до следующей пробы; плохой новый ключ найдёт проба или трафик.
+        await resolve_model_probes(session, [o.alias for o in outcomes], datetime.now(UTC))
     checked = True
     try:
         await container.external_checks.run(
