@@ -85,6 +85,8 @@ _Result = tuple[str, str, str, str | None, int]
 class _Plan:
     sends: list[_Send]
     mails: list[_Mail]
+    # Telegram сейчас недоступен (бота нет, выключен, dry-run): отправки отложены до сборщика.
+    deferred: bool = False
 
 
 def _lease_for(sends: int) -> timedelta:
@@ -137,7 +139,7 @@ class ErpEventNotices:
             return 0
         done: list[str] = []
         results: list[_Result] = []
-        retry = await self._telegram(event_id, plan.sends, done, results)
+        retry = await self._telegram(event_id, plan.sends, done, results) or plan.deferred
         for mail in plan.mails:
             outcome = await notice_mail.send(self._mail, mail.template, mail.to, mail.content)
             if outcome == "error":
@@ -238,7 +240,7 @@ class ErpEventNotices:
                 # сразу.
                 if plan.sends and not plan.mails:
                     return _Plan([], [])
-                plan = _Plan([], plan.mails)
+                plan = _Plan([], plan.mails, deferred=bool(plan.sends))
             if not plan.sends and not plan.mails:
                 row.notified_at = now
                 return plan

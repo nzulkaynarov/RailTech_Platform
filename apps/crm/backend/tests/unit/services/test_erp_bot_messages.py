@@ -362,7 +362,7 @@ def test_delivery_line_texts_reject_wrong_placeholders() -> None:
 
 def accepted(
     source: str, language: Language = "ru", *, number: str = "ЗВ-2026-007", url: str = CABINET
-):
+) -> BotMessage | None:
     return client_message(
         "request.created",
         {"source": source, "erp_request_id": 7},

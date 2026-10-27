@@ -83,7 +83,11 @@ def _repeat_response(mapping: CrmClientMapping, channels: Optional[List[str]] = 
         wanted = channels or ["email"]
         if "email" in wanted and (primary.email or "").strip():
             sent_via.append("email")
-        if "telegram" in wanted and primary.telegram_user_id and CrmContactMapping.objects.filter(contact=primary).exists():
+        if (
+            "telegram" in wanted
+            and primary.telegram_user_id
+            and CrmContactMapping.objects.filter(contact=primary).exists()
+        ):
             sent_via.append("telegram")
     return {
         "erp_company_id": company.id,

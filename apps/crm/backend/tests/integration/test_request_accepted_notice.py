@@ -14,6 +14,7 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.domain.errors import ConflictError, Reason
+from app.models.auth import User
 from app.models.clients import ClientContact
 from app.models.integrations import ErpEventNotice
 from app.models.leads import TelegramIdentity
@@ -22,6 +23,7 @@ from app.services.mail_templates import RenderedEmail
 from app.services.settings import SettingsService
 from tests.bus_events import envelope_for
 from tests.integration.bus_harness import ERP_DEAL, T0, Harness, data_for, event_type_of
+from tests.integration.crm_helpers import make_user
 
 pytestmark = pytest.mark.integration
 
@@ -249,3 +251,43 @@ async def test_notice_items_carry_the_texts_in_the_leads_language(
     stored: ErpEventNotice | None = await harness.notice(event_id)
     assert stored is not None
     assert stored.items[0]["email"]["lang"] == "uz"
+
+
+async def test_letter_goes_even_when_the_bot_is_down_and_the_telegram_part_waits(
+    harness: Harness, mail: FakeMail, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    """Письмо не ждёт бота, а сообщение сотруднику в Telegram не теряется: уйдёт сборщиком."""
+    client_id, _ = await harness.seed_client(tg_user_id=None)
+    await add_email(sessions, client_id, "ivan@client.uz")
+    staff, _ = await make_user(sessions, "wait@railtech.uz", ["manager"])
+    async with sessions() as session, session.begin():
+        await session.execute(update(User).where(User.id == staff.id).values(tg_user_id=9001))
+    event_id = uuid.uuid4()
+    items = [
+        {
+            "kind": "client",
+            "client_id": client_id,
+            "text": "Заявка принята",
+            "buttons": [],
+            "track": "request_accepted",
+            "email": {"subject": "Заявка принята", "body": "Текст", "lang": "ru"},
+        },
+        {"kind": "staff", "user_id": staff.id, "text": "Клиент принял КП"},
+    ]
+    async with sessions() as session, session.begin():
+        session.add(ErpEventNotice(event_id=event_id, items=items, sent=[]))
+    harness.bot_available = False
+
+    assert await harness.notices.deliver(str(event_id)) == 1
+    waiting = await harness.notice(str(event_id))
+    assert waiting is not None
+    assert waiting.notified_at is None, "Telegram-часть ещё не ушла — строка остаётся для сборщика"
+    assert len(mail.sent) == 1
+
+    harness.bot_available = True
+    assert await harness.notices.deliver(str(event_id)) == 1
+    assert [chat for chat, _ in harness.bot.sent] == [9001]
+    assert len(mail.sent) == 1, "письмо второй раз не уходит"
+    done = await harness.notice(str(event_id))
+    assert done is not None
+    assert done.notified_at is not None

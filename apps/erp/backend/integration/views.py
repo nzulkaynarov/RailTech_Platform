@@ -13,12 +13,11 @@ import datetime
 import logging
 
 from django.conf import settings
+from parties.models import Contact
+from portal.services.invitation import invite_contact
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
-
-from parties.models import Contact
-from portal.services.invitation import invite_contact
 
 from .authentication import IntegrationTokenAuthentication
 from .exceptions import (

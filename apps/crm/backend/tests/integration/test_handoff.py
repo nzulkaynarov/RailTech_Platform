@@ -24,7 +24,7 @@ from app.domain.errors import (
     ValidationFailedError,
 )
 from app.domain.stages import Stage
-from app.integrations.erp import HandoffPayload, HandoffResult
+from app.integrations.erp import HandoffPayload, HandoffResult, InviteResult
 from app.models.auth import AuditLog
 from app.models.clients import Client, ClientContact
 from app.models.deals import Deal
@@ -70,6 +70,11 @@ class FakeErpClient:
             invite_sent_via=["email"],
             cabinet_url="https://cabinet.internal/magic/1",
         )
+
+    async def invite_client(
+        self, crm_client_id: int, channel: str, crm_contact_id: int | None
+    ) -> InviteResult:
+        return InviteResult(["email"], None)
 
 
 def erp_down() -> Exception:
