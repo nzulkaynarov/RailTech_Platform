@@ -1644,7 +1644,7 @@ export interface paths {
     put?: never;
     /**
      * Создать шаблон документа
-     * @description Раздел `company.settings` — полный.
+     * @description Раздел `company.settings` — полный. Активный шаблон договора, счёта или акта без обязательных блоков — 422 `VALIDATION_FAILED` с `details.reason = template_missing_required_blocks` и `details.missing_blocks` — список `{code, label}` недостающих блоков (подстановки `{{doc.…}}`); черновик (`is_active = false`) сохраняется без блоков.
      */
     post: operations["createDocumentTemplate"];
     delete?: never;
@@ -1712,7 +1712,7 @@ export interface paths {
     head?: never;
     /**
      * Изменить шаблон документа
-     * @description Образец платформы изменить нельзя — сначала копия. Раздел `company.settings` — полный.
+     * @description Образец платформы изменить нельзя — сначала копия. Раздел `company.settings` — полный. Итоговое состояние (вид, текст, `is_active`) проверяется как при создании: нехватка обязательных блоков — 422 `VALIDATION_FAILED` с `details.reason = template_missing_required_blocks` и `details.missing_blocks` (`{code, label}`).
      */
     patch: operations["updateDocumentTemplate"];
     trace?: never;
@@ -1728,7 +1728,7 @@ export interface paths {
     put?: never;
     /**
      * Скопировать образец платформы к себе
-     * @description Раздел `company.settings` — полный.
+     * @description Раздел `company.settings` — полный. Копия получает название из `name` (до 255 символов; пустое — 422 `VALIDATION_FAILED`).
      */
     post: operations["copyDocumentTemplate"];
     delete?: never;
@@ -2078,7 +2078,7 @@ export interface paths {
     put?: never;
     /**
      * Переиндексировать документ
-     * @description CRM `POST /kb/documents/{id}/reingest`. Раздел `admin` — полный. Документ, который сейчас индексируется, — 409 `CONFLICT` с `details.reason = document_indexing`.
+     * @description CRM `POST /kb/documents/{id}/reingest`. Раздел `admin` — полный. Документ, который сейчас индексируется или уже стоит в очереди на индексацию, — 409 `CONFLICT` с `details.reason = document_indexing`.
      */
     post: operations["reingestKbDocument"];
     delete?: never;
@@ -2098,7 +2098,7 @@ export interface paths {
     put?: never;
     /**
      * Что найдёт бот на этот вопрос
-     * @description CRM `POST /kb/search`: тот же поиск и порог, что у диалогового агента; ничего не меняет и не пишет в расходы (поиск по векторам и словам без вызова модели ответа).
+     * @description CRM `POST /kb/search`: тот же поиск и порог, что у диалогового агента; ничего не меняет и не пишет в расходы (поиск по векторам и словам без вызова модели ответа). Шлюз моделей отказал (нет ключа эмбеддингов, модель недоступна) — 422 `VALIDATION_FAILED` с `details.reason = model_key_required`; шлюз не отвечает по сети — 502 `INTEGRATION_FAILED` с `details.reason = litellm_unavailable`.
      */
     post: operations["searchKb"];
     delete?: never;
