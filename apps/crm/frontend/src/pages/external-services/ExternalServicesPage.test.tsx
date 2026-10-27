@@ -48,6 +48,7 @@ const base: ExternalServiceOut = {
   more_actions: [],
   since: null,
   last_recovered_at: null,
+  flaps_24h: 0,
 };
 
 const telegram: ExternalServiceOut = {

@@ -43,6 +43,7 @@ function service(overrides: Partial<ExternalServiceOut> = {}): ExternalServiceOu
     more_actions: [],
     since: null,
     last_recovered_at: null,
+    flaps_24h: 0,
     ...overrides,
   };
 }
