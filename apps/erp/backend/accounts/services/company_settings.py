@@ -87,7 +87,8 @@ def update_company_settings(
                     return None, "BAD_NUMBER"
             changed.append(field)
 
-    for int_field in ("default_offer_validity_days", "default_warranty_months"):
+    # `payment_terms_days` — PositiveSmallIntegerField: потолок 32767 (D2-0, Q-D20-1.1; раньше поле молча игнорировалось).
+    for int_field in ("default_offer_validity_days", "default_warranty_months", "payment_terms_days"):
         if int_field in data:
             raw = data.get(int_field)
             if raw in (None, ""):
@@ -97,7 +98,7 @@ def update_company_settings(
                     number = int(raw)
                 except (TypeError, ValueError):
                     return None, "BAD_NUMBER"
-                if number < 0:
+                if number < 0 or (int_field != "default_offer_validity_days" and number > 32767):
                     return None, "BAD_NUMBER"
                 setattr(settings_row, int_field, number)
             changed.append(int_field)

@@ -28,7 +28,7 @@
 | integration | `/api/integration/v1/` | CRM | сервисный токен |
 | mcp | `/mcp/erp` | агент CRM | `X-Agent-Context` (HMAC) |
 
-Contract-first действует для `portal`, `integration`, событий и `erp-mcp`: их файлы в `packages/contracts` пишутся руками и сверяются с кодом сторожами ERP. **`internal` — наоборот: `openapi/erp-internal.yaml` генерируется из drf-spectacular (срез `/api/v1/` выгрузки `apps/erp/backend/schema.json`; `make -C apps/erp openapi`) и руками не правится.** Дрейф кода и выгрузки ловит `make -C apps/erp openapi-check` (`make ci-local erp`, шаг CI «ERP · check»). Типы ERP SPA строятся из `backend/schema.json`, отдельного `generated/erp-internal.d.ts` нет.
+Contract-first действует для `portal`, `integration`, событий и `erp-mcp`: их файлы в `packages/contracts` пишутся руками и сверяются с кодом сторожами ERP. **`internal` — наоборот: `openapi/erp-internal.yaml` генерируется из drf-spectacular (срез `/api/v1/` выгрузки `apps/erp/backend/schema.json`; `make -C apps/erp openapi`) и руками не правится.** Дрейф кода и выгрузки ловит `make -C apps/erp openapi-check` (`make ci-local erp`, шаг CI «ERP · check»). Правдивость описания (D2-0, B-011): выгрузка `/api/v1/` строится без предупреждений drf-spectacular (`manage.py openapi_v1_check`, тоже в `openapi-check`), тела отказов описаны общими компонентами `ErrorDetail`/`BadRequest`, а живые ответы операций, которые зовёт BFF, сверяет с выгрузкой `core/tests/test_openapi_*_conformance.py` в тестах ERP. Типы ERP SPA строятся из `backend/schema.json`, отдельного `generated/erp-internal.d.ts` нет.
 
 ## 2. Integration API (CRM → ERP)
 

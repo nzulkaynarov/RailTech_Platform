@@ -1001,7 +1001,7 @@ ERP хранит его шифрованно. Ни один маршрут CRM �
    (`ExchangeRate`), коды ТН ВЭД (`HSCode`; есть лишь `hs-codes/{code}/duties/`), производители (`Manufacturer`; в API — чтение),
    статусы остаются в Django admin ERP; поля `SystemSetting` `maintenance_mode`, `is_two_factor_required` в API есть, в BFF намеренно
    не выведены (переключатели, способные закрыть вход всем). Под таблицей справочников экран говорит об этом словами.
-3. **OpenAPI ERP расходится с кодом — хвост** (`erp-internal.yaml`): (а) `PatchedCompanySettingsRequest` не содержит
+3. **OpenAPI ERP расходится с кодом — решено D2-0 (PR #282)** (`erp-internal.yaml`; расхождения BFF ↔ ERP — Q-D20-1, тоже решено): (а) `PatchedCompanySettingsRequest` не содержит
    `default_cost_currency` и `default_delivery_basis`, а сервис принимает именно их (коды справочников); (б) ответы
    `catalog/category-requests*` описаны схемой `Category`, а отдают `CategoryRequestSerializer`; (в) 400 с `{"detail": "КОД"}`
    описан по-разному в разных операциях. BFF опирается на код ERP, а не на описание. `SetupStatus.own_company_id` в схему добавлен.
@@ -1252,6 +1252,16 @@ BFF 0.19.0: `GET /bridge`, `POST /bridge/erp-sso` ([`platform-bff.md`](architect
    Fallback `matchSection` для номеров со «/» без кодирования — общий для всех карточек с `detail: …/:id` (`isDocNumber`), а не только письма.
    Черновик резолюции живёт в `sessionStorage` вкладки (переживает перезагрузку, не остаётся на общем компьютере) и стирается при 409 и
    когда письмо уже не ждёт резолюции.
+
+## Q-D20-1 · OpenAPI ERP стала правдой: расхождения BFF ↔ ERP, которые обнаружила сверка (D2-0 → лид и архитектор) — **решено D2-0 (PR #282)**
+
+**Контекст.** D2-0 (B-011): выгрузка `/api/v1` ERP описывает код (без предупреждений drf-spectacular, общий `ErrorDetail`, живые ответы 40+ операций, которые зовёт BFF, сверены с ней тестами `core/tests/test_openapi_*_conformance.py`). Сверка нашла четыре места, где BFF опирался на поведение, которого у ERP не было. По решению лида все четыре исправлены в том же PR (тест-first, схема перегенерирована):
+
+1. **`PATCH accounts/companies/{id}/settings/` принимает `payment_terms_days`** (срок оплаты счёта, дни; целое 0..32767, `null` — сбросить; неверное — 400 `BAD_NUMBER`). Раньше ERP отвечал 200 и молча оставлял старое значение. Тест: `test_payment_terms_days_is_accepted_validated_and_described`.
+2. **`POST crm/document-templates/` принимает `is_active`.** Без поля шаблон активен, как раньше; `false` — черновик, обязательные блоки юридического вида не проверяются (проверка остаётся у активного шаблона и при активации). Тест: `test_inactive_legal_template_is_saved_as_draft_without_required_blocks`.
+3. **`GET crm/activity-logs/` отдаёт `deal_id` и `entity_type`** (лента «Сегодня» BFF читает оба). Только столбцы строки журнала: обхода связей нет, число запросов не растёт с числом строк. Тесты: `test_timeline_and_activity_logs`, `test_activity_logs_new_fields_cost_no_extra_queries`.
+4. **Предпросмотр шаблона письма с произвольным `key` — не 500.** Если для ключа нет файла и нет активной строки на языке запроса, показывается просматриваемая строка БД; если нет и её (сервис `preview_template` без строки) — 404 `EMAIL_TEMPLATE_NOT_FOUND`. Тесты: `test_email_template_preview_*`.
+
 9. **Замещение: очередь EDS и ERP (W15-H6).** Заместитель получает в «Моей очереди» только дела CRM замещаемого (его «мои» лиды и взятые им
    передачи, `GET /inbox?on_behalf_of`). Одобрение КП (ERP `my-approval-queue` — по токену пользователя), резолюции и служебные записки
    (EDS, у него нет очереди «за коллегу») замещающему не переносятся: BFF не расширяет права и не вычисляет чужую очередь. **Варианты:**

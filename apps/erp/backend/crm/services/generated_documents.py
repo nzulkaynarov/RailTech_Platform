@@ -249,8 +249,11 @@ def _assert_legal_template_integrity(kind_code: str, body_html: str, is_active: 
 
 
 @transaction.atomic
-def create_template(company, user: CustomUser, *, name: str, kind_code: str, body_html: str):
-    """Create a company template: sanitise the body, derive its placeholders, save."""
+def create_template(company, user: CustomUser, *, name: str, kind_code: str, body_html: str, is_active: bool = True):
+    """Create a company template: sanitise the body, derive its placeholders, save.
+
+    Без `is_active` шаблон рождается активным (как раньше). `is_active=False` — черновик: обязательные блоки
+    юридического вида проверяются только у активного шаблона (D2-0, Q-D20-1.2)."""
     from ..models import DocumentTemplate
 
     if not (name or "").strip():
@@ -260,14 +263,15 @@ def create_template(company, user: CustomUser, *, name: str, kind_code: str, bod
     if len(body_html or "") > MAX_TEMPLATE_BODY_CHARS:
         raise ValidationError("TEMPLATE_BODY_TOO_LARGE")
     clean_html = sanitize_template_html(body_html)
-    # Новый шаблон рождается активным (модельный default) — целостность проверяется сразу.
-    _assert_legal_template_integrity(kind_code, clean_html, True)
+    # Новый шаблон рождается активным (модельный default) — целостность проверяется сразу; черновик — свободно.
+    _assert_legal_template_integrity(kind_code, clean_html, is_active)
     return DocumentTemplate.objects.create(
         company=company,
         name=name.strip(),
         kind=_kind(kind_code),
         body_html=clean_html,
         placeholders_used=extract_placeholders(clean_html),
+        is_active=is_active,
         created_by=user,
     )
 
