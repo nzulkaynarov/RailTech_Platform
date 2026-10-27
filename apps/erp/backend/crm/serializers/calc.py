@@ -6,6 +6,8 @@ from rest_framework import serializers
 ZONES = ("goods", "services", "payment_terms")
 LINE_ZONES = ("goods", "services")
 LINE_KINDS = ("goods", "goods_to_order", "service")
+#: Тип строки без карточки и карточки каталога: товар или услуга.
+ITEM_KINDS = ("goods", "service")
 VISA_STATES = ("none", "waiting", "done")
 CALC_STATES = ("not_started", "in_progress", "returned", "at_director", "rejected", "approved")
 READY_BLOCKERS = ("not_started", "not_draft", "no_lines", "visas_missing")
@@ -173,7 +175,7 @@ class CalcLineInSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=500, allow_blank=True, required=False, default="")
     quantity = serializers.IntegerField(min_value=1, max_value=1_000_000, required=False, default=1)
     unit = serializers.CharField(max_length=32, allow_blank=True, required=False, default="")
-    kind = serializers.ChoiceField(choices=("goods", "service"), required=False, default="goods")
+    kind = serializers.ChoiceField(choices=ITEM_KINDS, required=False, default="goods")
     product_id = serializers.IntegerField(required=False, allow_null=True, default=None)
     article = serializers.CharField(max_length=120, allow_blank=True, required=False, default="")
     note = serializers.CharField(max_length=1000, allow_blank=True, required=False, default="")
@@ -194,7 +196,7 @@ class CalcLinePatchSerializer(serializers.Serializer):
     crew_days = serializers.DecimalField(max_digits=6, decimal_places=1, min_value=0, required=False, allow_null=True)
     client_price = serializers.DecimalField(max_digits=14, decimal_places=2, min_value=0, required=False)
     product_id = serializers.IntegerField(required=False, allow_null=True)
-    kind = serializers.ChoiceField(choices=("goods", "service"), required=False)
+    kind = serializers.ChoiceField(choices=ITEM_KINDS, required=False)
 
 
 class CalcParseInSerializer(serializers.Serializer):
@@ -209,7 +211,7 @@ class CalcCatalogItemSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     name = serializers.CharField()
     article = serializers.CharField(allow_blank=True)
-    kind = serializers.ChoiceField(choices=("goods", "service"))
+    kind = serializers.ChoiceField(choices=ITEM_KINDS)
     on_hand = serializers.IntegerField()
     supplier_name = serializers.CharField(allow_null=True)
     lead_days = serializers.IntegerField(allow_null=True)

@@ -8,7 +8,8 @@ Plus quote action endpoints (POST, JSON): viewed beacon, request-code, accept, r
 """
 
 from documents.models import GeneratedDocument
-from drf_spectacular.utils import OpenApiResponse, extend_schema
+from drf_spectacular.utils import OpenApiResponse, extend_schema, inline_serializer
+from rest_framework import serializers as drf_serializers
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -241,7 +242,12 @@ class PublicQuoteRequestCodeView(_PublicQuoteBase):
 
     throttle_scope = "public_quote_code"
 
-    @extend_schema(summary="Request КП acceptance code", tags=["Portal"], request=None, responses={200: None})
+    @extend_schema(
+        summary="Request КП acceptance code",
+        tags=["Portal"],
+        request=None,
+        responses={200: inline_serializer("PublicCodeSent", fields={"detail": drf_serializers.CharField()})},
+    )
     def post(self, request, token):
         quote, gate_response = self._gate_or_response(request, token)
         if gate_response is not None:
@@ -257,7 +263,18 @@ class PublicQuoteAcceptView(_PublicQuoteBase):
 
     throttle_scope = "public_quote_accept"
 
-    @extend_schema(summary="Accept КП with email code", tags=["Portal"], responses={200: None})
+    @extend_schema(
+        summary="Accept КП with email code",
+        tags=["Portal"],
+        request=inline_serializer("PublicQuoteAcceptRequest", fields={"code": drf_serializers.CharField()}),
+        responses={
+            200: inline_serializer(
+                "PublicQuoteAccepted",
+                fields={"detail": drf_serializers.CharField(), "contract_number": drf_serializers.CharField()},
+            ),
+            400: OpenApiResponse(description="Wrong or expired code (error code from verify_code_and_accept)"),
+        },
+    )
     def post(self, request, token):
         quote, gate_response = self._gate_or_response(request, token)
         if gate_response is not None:
@@ -281,7 +298,15 @@ class PublicQuoteRejectView(_PublicQuoteBase):
 
     throttle_scope = "public_quote_accept"
 
-    @extend_schema(summary="Reject КП with reason", tags=["Portal"], responses={200: None})
+    @extend_schema(
+        summary="Reject КП with reason",
+        tags=["Portal"],
+        request=inline_serializer("PublicQuoteRejectRequest", fields={"reason": drf_serializers.CharField()}),
+        responses={
+            200: inline_serializer("PublicQuoteRejected", fields={"detail": drf_serializers.CharField()}),
+            400: OpenApiResponse(description="Reason missing or quote not rejectable (error code)"),
+        },
+    )
     def post(self, request, token):
         quote, gate_response = self._gate_or_response(request, token)
         if gate_response is not None:

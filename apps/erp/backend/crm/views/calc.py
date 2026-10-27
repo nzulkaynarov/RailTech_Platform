@@ -32,7 +32,9 @@ ERRORS = {
     400: OpenApiResponse(CalcErrorSerializer, description="Тело не прошло проверку или отказ правила строки"),
     403: OpenApiResponse(CalcErrorSerializer, description="Нет права (зона строки, роль) или не сотрудник"),
     404: OpenApiResponse(CalcErrorSerializer, description="Заявки, задания расчёта или строки нет"),
-    409: OpenApiResponse(CalcErrorSerializer, description="Состояние не позволяет (КП не черновик, нет виз, ИИ выключен)"),
+    409: OpenApiResponse(
+        CalcErrorSerializer, description="Состояние не позволяет (КП не черновик, нет виз, ИИ выключен)"
+    ),
 }
 READ_ERRORS = {403: ERRORS[403], 404: ERRORS[404]}
 VISA_ZONES = ("quote.visa_goods", "quote.visa_services")

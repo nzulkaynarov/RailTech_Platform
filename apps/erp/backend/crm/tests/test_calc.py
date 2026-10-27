@@ -409,3 +409,39 @@ def test_parse_without_text_is_409(world, settings):
     Deal.objects.filter(pk=world["deal"].pk).update(notes="")
     response = _api(world["supply"]).post(_url(world, "parse/"), {}, format="json")
     assert response.status_code == 409 and response.json() == {"detail": "REQUEST_TEXT_EMPTY"}
+
+
+# ── ответы совпадают с выгрузкой /api/v1 (страж D2-0: BFF читает ровно то, что обещает схема) ─────────────────────
+
+
+def test_every_calc_operation_conforms_to_the_v1_schema(world, settings):
+    from core.tests.openapi_fixtures import conforms, sends
+
+    base = "/api/v1/calc/"
+    deal = "{deal_id}/"
+    supply, engineer = _api(world["supply"]), _api(world["engineer"])
+    conforms(supply.get(f"{base}tasks/", {"scope": "all"}), f"{base}tasks/", "get", status=200)
+    conforms(supply.get(_url(world)), f"{base}{deal}", "get", status=200)
+    conforms(supply.post(_url(world, "start/")), f"{base}{deal}start/", "post", status=200)
+    body = {"lines": [{"product_id": world["rail"].pk, "quantity": 2, "name": "", "kind": "goods"}]}
+    sends(f"{base}{deal}lines/", "post", body)
+    added = supply.post(_url(world, "lines/"), body, format="json")
+    conforms(added, f"{base}{deal}lines/", "post", status=201)
+    goods_id = added.json()["created"][0]
+    patch = {"purchase_price": "90000000", "client_price": "99000000", "quantity": 2}
+    sends(f"{base}{deal}lines/{{item_id}}/", "patch", patch)
+    line = f"{base}{deal}lines/{{item_id}}/"
+    conforms(supply.patch(_url(world, f"lines/{goods_id}/"), patch, format="json"), line, "patch", status=200)
+    refused = engineer.patch(_url(world, f"lines/{goods_id}/"), {"quantity": 3}, format="json")
+    conforms(refused, line, "patch", status=403)
+    below = supply.patch(_url(world, f"lines/{goods_id}/"), {"client_price": "1"}, format="json")
+    conforms(below, line, "patch", status=400)
+    conforms(supply.post(_url(world, f"lines/{goods_id}/visa/")), f"{line}visa/", "post", status=200)
+    conforms(supply.get(f"{base}catalog/", {"q": "Р65"}), f"{base}catalog/", "get", status=200)
+    settings.AI_IMPORT_ENABLED = False
+    conforms(supply.post(_url(world, "parse/"), {}, format="json"), f"{base}{deal}parse/", "post", status=409)
+    conforms(supply.get(f"{base}999999/"), f"{base}{deal}", "get", status=404)
+    # Единственная строка подтверждена — «Расчёт готов»; дальше строки не правятся (409).
+    conforms(supply.post(_url(world, "ready/")), f"{base}{deal}ready/", "post", status=200)
+    conforms(supply.delete(_url(world, f"lines/{goods_id}/")), line, "delete", status=409)
+    conforms(supply.post(_url(world, "ready/")), f"{base}{deal}ready/", "post", status=409)
