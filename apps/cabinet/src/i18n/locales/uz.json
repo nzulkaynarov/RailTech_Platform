@@ -126,14 +126,17 @@
       "or": "yoki",
       "newClient": "Men yangi mijozman",
       "newClientHint": "Biz bilan hali ishlamaganmisiz? Soʻrov qoldiring — menejer siz bilan bogʻlanadi.",
-      "telegram": "Telegram orqali kirish"
+      "telegram": "Telegram orqali kirish",
+      "telegramHint": "Bot ochiladi, kirish taklifnoma orqali."
     },
     "sent": {
-      "title": "Xat yuborildi",
-      "text": "Agar {{email}} manzili kabinetda boʻlsa, unga kirish havolasi yuborildi. Havola 15 daqiqa amal qiladi va bir marta ochiladi.",
-      "textNoEmail": "Agar manzil kabinetda boʻlsa, unga kirish havolasi yuborildi. Havola 15 daqiqa amal qiladi va bir marta ochiladi.",
+      "title": "Pochtangizni tekshiring",
+      "text": "Agar {{email}} manzili roʻyxatdan oʻtgan boʻlsa, kirish havolasini yubordik. Havola 15 daqiqa amal qiladi va bir marta ochiladi.",
+      "textNoEmail": "Agar manzil roʻyxatdan oʻtgan boʻlsa, kirish havolasini yubordik. Havola 15 daqiqa amal qiladi va bir marta ochiladi.",
       "back": "Boshqa manzil kiritish",
-      "mockLink": "Xatdagi havolani ochish (mok)"
+      "mockLink": "Xatdagi havolani ochish (mok)",
+      "noLetter": "Xat kelmadimi? «Spam» jildini va manzilni tekshiring. Kabinet menejer taklifnomasi bilan ochiladi.",
+      "newClientLink": "Yangi mijozmisiz? Soʻrov qoldiring"
     },
     "magic": {
       "exchanging": "Havola orqali kirilmoqda…",
@@ -171,6 +174,7 @@
     "unavailableText": "Bizga Telegramda yozing — menejer javob beradi va sizni kabinetga taklif qiladi.",
     "sentTitle": "Rahmat! Soʻrov yuborildi",
     "sentText": "Menejer ish vaqtida siz bilan telefon yoki e-mail orqali bogʻlanadi. Yozishmalar qulayroq boʻlsa — bizga Telegramda yozing.",
+    "sentEmail": "Soʻrov tasdigʻini {{email}} manziliga yuboramiz.",
     "form": {
       "name": "Sizga qanday murojaat qilaylik",
       "company": "Kompaniya (ixtiyoriy)",

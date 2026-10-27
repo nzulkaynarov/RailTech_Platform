@@ -126,14 +126,17 @@
       "or": "or",
       "newClient": "I am a new client",
       "newClientHint": "Haven't worked with us yet? Leave a request and a manager will get in touch.",
-      "telegram": "Sign in with Telegram"
+      "telegram": "Sign in with Telegram",
+      "telegramHint": "The bot will open; sign-in is by invitation."
     },
     "sent": {
-      "title": "E-mail sent",
-      "text": "If {{email}} is in the cabinet, a sign-in link has been sent to it. It is valid for 15 minutes and opens once.",
-      "textNoEmail": "If the address is in the cabinet, a sign-in link has been sent to it. It is valid for 15 minutes and opens once.",
+      "title": "Check your e-mail",
+      "text": "If {{email}} is registered, we have sent a sign-in link. It is valid for 15 minutes and opens once.",
+      "textNoEmail": "If the address is registered, we have sent a sign-in link. It is valid for 15 minutes and opens once.",
       "back": "Use another address",
-      "mockLink": "Open the link from the email (mock)"
+      "mockLink": "Open the link from the email (mock)",
+      "noLetter": "No e-mail? Check your spam folder and the address. The cabinet opens by a manager's invitation.",
+      "newClientLink": "New client? Leave a request"
     },
     "magic": {
       "exchanging": "Signing in with the link…",
@@ -171,6 +174,7 @@
     "unavailableText": "Message us in Telegram and a manager will reply and invite you to the cabinet.",
     "sentTitle": "Thank you! Your request has been sent",
     "sentText": "A manager will contact you by phone or e-mail during business hours. If you prefer chatting, message us in Telegram.",
+    "sentEmail": "We will send a confirmation of your request to {{email}}.",
     "form": {
       "name": "Your name",
       "company": "Company (optional)",
