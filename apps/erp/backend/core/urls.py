@@ -70,7 +70,14 @@ from catalog.views import (
 )
 from core.file_streaming import serve_public_media
 from core.health import health_check
-from core.views import PageStatsView, PlatformDashboardView, SystemSettingsView
+from core.views import (
+    CurrentRateView,
+    ExchangeRateJournalView,
+    ManualRateView,
+    PageStatsView,
+    PlatformDashboardView,
+    SystemSettingsView,
+)
 from crm.views import (
     ActivityLogViewSet,
     ActViewSet,
@@ -308,6 +315,9 @@ urlpatterns = (
             name="public-document-link",
         ),
         path("api/v1/system-settings/", SystemSettingsView.as_view(), name="system-settings"),
+        path("api/v1/exchange-rates/current/", CurrentRateView.as_view(), name="exchange-rate-current"),
+        path("api/v1/exchange-rates/journal/", ExchangeRateJournalView.as_view(), name="exchange-rate-journal"),
+        path("api/v1/exchange-rates/manual/", ManualRateView.as_view(), name="exchange-rate-manual"),
         path("api/v1/accounts/me/", MeView.as_view(), name="current-user"),
         path("api/v1/setup/status/", SetupStatusView.as_view(), name="setup-status"),
         path("api/v1/setup/company/", SetupCompanyView.as_view(), name="setup-company"),
