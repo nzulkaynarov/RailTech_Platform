@@ -12,6 +12,7 @@ from app.domain.system_status import (
     BotFacts,
     Component,
     ErpFacts,
+    PlatformUrlFacts,
     QueueFacts,
     Status,
 )
@@ -100,6 +101,57 @@ def test_bot(facts: BotFacts | None, mode: str, status: str, needle: str) -> Non
 def test_crm_url_problem(url: str, problem: bool) -> None:
     assert (rules.crm_url_problem(url) is not None) is problem
     assert rules.crm_url(url, NOW).status == ("warn" if problem else "ok")
+
+
+PROD_OK = PlatformUrlFacts("https://platform.example.com", prod=True)
+CRM_OK = "https://crm.example.com"
+
+
+@pytest.mark.parametrize(
+    ("crm", "platform", "status", "needles"),
+    [
+        (CRM_OK, PROD_OK, "ok", []),
+        (CRM_OK, None, "ok", []),
+        # localhost на проде: понятный текст и действие (W15-H8a)
+        (
+            CRM_OK,
+            PlatformUrlFacts("http://localhost", True),
+            "warn",
+            ["Платформы", "localhost", "PLATFORM_DOMAIN"],
+        ),
+        (CRM_OK, PlatformUrlFacts("http://127.0.0.1:8088", True), "warn", ["localhost", "хостинг"]),
+        ("http://localhost", PROD_OK, "warn", ["Адрес CRM", "«Настройки» → «Компания»"]),
+        # на стенде localhost для Платформы — норма
+        (CRM_OK, PlatformUrlFacts("http://platform.localhost:8088", False), "ok", []),
+        # адреса нет совсем — честная строка в любом режиме, а не localhost в письме
+        (CRM_OK, PlatformUrlFacts(None, True), "warn", ["Платформы не задан", "PLATFORM_DOMAIN"]),
+        (CRM_OK, PlatformUrlFacts(None, False), "warn", ["Платформы не задан"]),
+    ],
+    ids=[
+        "ok",
+        "no-platform-check",
+        "platform-localhost",
+        "platform-127",
+        "crm-localhost",
+        "dev-ok",
+        "missing-prod",
+        "missing-dev",
+    ],
+)
+def test_crm_url_component_covers_platform(
+    crm: str, platform: PlatformUrlFacts | None, status: str, needles: list[str]
+) -> None:
+    result = rules.crm_url(crm, NOW, platform)
+    assert result.key == "crm_url"
+    assert result.status == status
+    for needle in needles:
+        assert needle in result.reason
+
+
+def test_crm_url_component_reports_both_problems_in_one_row() -> None:
+    result = rules.crm_url("http://localhost", NOW, PlatformUrlFacts(None, True))
+    assert "Адрес CRM" in result.reason
+    assert "Платформы не задан" in result.reason
 
 
 def _backup(

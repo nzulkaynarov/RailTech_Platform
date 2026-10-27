@@ -1,5 +1,5 @@
 # Карта интеграции: экраны → BFF → домены (CRM, EDS, ERP)
-Статус: действует · Владелец: архитектор · Обновлено: 2026-10-26
+Статус: действует · Владелец: архитектор · Обновлено: 2026-10-27
 
 Версия 1.0 · 2026-10-22 · Сверено с `main @ fb3a3928`: CRM — OpenAPI CRM (тогда `apps/crm/docs/api/openapi.json`, теперь `packages/contracts/openapi/crm.yaml`) (109 путей), ERP —
 `packages/contracts/openapi/erp-internal.yaml` (251 путь), шов — `erp-integration.yaml` 0.5.0, портал —
@@ -60,8 +60,8 @@
 
 | Экран / действие | BFF | ERP (если не указано) | Статус |
 |---|---|---|---|
-| Входящие, карточка письма | `GET /letters`, `GET /letters/{ВХ}` | сервис EDS | Δ EDS-01 |
-| **Утвердить резолюцию** / Вернуть менеджеру / Отклонить | `POST /requests/{ЗВ}/resolution {text, assignees[], due, min_margin}`; `/return`; `/reject {reason}` | сервис EDS; отклонение — `POST /crm/deals/{id}/change-stage/` в `CLOSED_LOST` | Δ EDS-01 |
+| Входящие, карточка письма | `GET /eds/letters`, `GET /eds/letters/{id или ВХ}`, вложение `GET /eds/letter-files/{id}` (BFF 0.16.0) | сервис EDS (`GET /letters`, `GET /letters/{id}`, по номеру — `GET /registry?number=`, файлы `GET /files/{id}`); шаг и название заявки — ERP `GET /crm/deals/{erp_deal_id}/` по ссылке письма, ERP не ответил — `sources.erp = unavailable` | ✓ **D1-3 (волна 16)** |
+| **Утвердить резолюцию** / Вернуть менеджеру / Отклонить | `POST /eds/letters/{id}/resolution {text, assignees[{id, zone}], due, min_margin_pct}`; `/return {comment}`; `/reject {reason}`; кандидаты — `GET /eds/resolution/assignees` (по разделам каталога, не по кодам ролей) | сервис EDS (`POST /letters/{id}/resolution|return|reject`); ERP узнаёт о решении по шине (`letter.resolved/rejected` → задание расчёта, `CLOSED_LOST`); BFF в ERP за решением не ходит | ✓ **D1-3 (волна 16)**; список кандидатов — разрыв, см. Q-D1-3-1 |
 | Черновик КП, карточка | `GET /quotes/{КП}` (себестоимость и маржа — только DIRECTOR, SUPPLY) | `GET /crm/quotes/{id}/`, `/approval-preview/`, `/download-pdf/` | ✓ |
 | **Одобрить КП → Исходящие** (каналы) | `POST /quotes/{КП}/approve {channels[]}` | сейчас два шага: `POST /crm/quotes/{id}/approval-act/` + `POST /crm/quotes/{id}/send-to-client/`; нужно атомарно с ИСХ-номером и выбором каналов | Δ ERP-11 |
 | Вернуть на доработку | `POST /quotes/{КП}/return {comment}` | `POST /crm/quotes/{id}/approval-act/` (reject) → `DRAFT`, новая версия | ✓ |
@@ -72,8 +72,8 @@
 | **Подтвердить оплату** / Частичная / Запросить платёжку | `POST /invoices/{СЧ}/confirm-payment {amount, date}`; `POST /invoices/{СЧ}/request-payment-doc` | `POST /crm/invoices/{id}/record-payment/` ✓; связь с платёжкой и запрос платёжки — новое | Δ ERP-04 |
 | Акт: выпустить, прикрепить скан, возврат | `POST /acts/{АКТ}/…` | `POST /crm/invoices/{id}/generate-act/`, `/acts/{id}/reissue/`, `/remind/`; загрузка скана сотрудником — новое; событие `act.returned` — FIX-62 | Δ ERP-13 |
 | На согласовании, служебная записка | `GET/POST /memos`, `POST /memos/{СЗ}/decision` | сервис EDS | Δ EDS-02 |
-| Создать документ (служебка, заявление, отчёт, письмо) | `POST /eds/documents {kind, subject, text, amount?, due_date?, file_ids, erp_deal_id?, recipient?, submit}`; сохранить черновик — `PUT /eds/documents/{id}`; вложения — `POST /eds/document-files`, `GET /eds/document-files/{id}`; связь с проектом — `GET /eds/deal-options?q=` | EDS `POST /documents`, `PATCH /documents/{id}` (eds.yaml 0.4.0), `POST /documents/{id}/submit`, `POST /files`; поиск заявки — сделки ERP (как сквозной поиск); бланк, PDF и шаблоны (`GET /crm/document-templates/`) — волна D-DOC | ✓ (BFF 0.16.0, D1-5): простой текст; письмо — `letter_out`, нужен `eds.inbox: full`; «Кому» — директор, выбор адресата — Q-D15-1 |
-| Все документы | `GET /eds/documents?scope=mine\|all&kind=&status=&cursor=`; карточка — `GET /eds/documents/{id}` (шаги маршрута из `GET /approvals/{id}`) | «Мои» — EDS `GET /documents?mine=1`; «Все» — EDS `GET /registry` (письма, КП, служебные, заявления, отчёты); договоры, счета и акты — когда EDS начнёт вести их проекции | ✓ частично (BFF 0.16.0, D1-5): «Мои» и реестр EDS; договоры, счета, акты — позже |
+| Создать документ (служебка, заявление, отчёт, письмо) | `POST /eds/documents {kind, subject, text, amount?, due_date?, file_ids, erp_deal_id?, recipient?, submit}`; сохранить черновик — `PUT /eds/documents/{id}`; вложения — `POST /eds/document-files`, `GET /eds/document-files/{id}`; связь с проектом — `GET /eds/deal-options?q=` | EDS `POST /documents`, `PATCH /documents/{id}` (eds.yaml 0.4.0), `POST /documents/{id}/submit`, `POST /files`; поиск заявки — сделки ERP (как сквозной поиск); бланк, PDF и шаблоны (`GET /crm/document-templates/`) — волна D-DOC | ✓ (BFF 0.17.0, D1-5): простой текст; письмо — `letter_out`, нужен `eds.inbox: full`; «Кому» — директор, выбор адресата — Q-D15-1 |
+| Все документы | `GET /eds/documents?scope=mine\|all&kind=&status=&cursor=`; карточка — `GET /eds/documents/{id}` (шаги маршрута из `GET /approvals/{id}`) | «Мои» — EDS `GET /documents?mine=1`; «Все» — EDS `GET /registry` (письма, КП, служебные, заявления, отчёты); договоры, счета и акты — когда EDS начнёт вести их проекции | ✓ частично (BFF 0.17.0, D1-5): «Мои» и реестр EDS; договоры, счета, акты — позже |
 
 ### 1.5. ERP
 

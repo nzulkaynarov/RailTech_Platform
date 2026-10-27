@@ -10,6 +10,7 @@ import enDictionary from "./en/dictionary.json";
 import enDocuments from "./en/documents.json";
 import enIntegrations from "./en/integrations.json";
 import enKb from "./en/kb.json";
+import enLetters from "./en/letters.json";
 import enModules from "./en/modules.json";
 import enShell from "./en/shell.json";
 import enUi from "./en/ui.json";
@@ -22,6 +23,7 @@ import ruDictionary from "./ru/dictionary.json";
 import ruDocuments from "./ru/documents.json";
 import ruIntegrations from "./ru/integrations.json";
 import ruKb from "./ru/kb.json";
+import ruLetters from "./ru/letters.json";
 import ruModules from "./ru/modules.json";
 import ruShell from "./ru/shell.json";
 import ruUi from "./ru/ui.json";
@@ -34,6 +36,7 @@ import uzDictionary from "./uz/dictionary.json";
 import uzDocuments from "./uz/documents.json";
 import uzIntegrations from "./uz/integrations.json";
 import uzKb from "./uz/kb.json";
+import uzLetters from "./uz/letters.json";
 import uzModules from "./uz/modules.json";
 import uzShell from "./uz/shell.json";
 import uzUi from "./uz/ui.json";
@@ -52,6 +55,7 @@ export const resources = {
     integrations: ruIntegrations,
     bus: ruBus,
     kb: ruKb,
+    letters: ruLetters,
     bot: ruBot,
     ui: ruUi,
     company: ruCompany,
@@ -66,6 +70,7 @@ export const resources = {
     integrations: uzIntegrations,
     bus: uzBus,
     kb: uzKb,
+    letters: uzLetters,
     bot: uzBot,
     ui: uzUi,
     company: uzCompany,
@@ -80,6 +85,7 @@ export const resources = {
     integrations: enIntegrations,
     bus: enBus,
     kb: enKb,
+    letters: enLetters,
     bot: enBot,
     ui: enUi,
     company: enCompany,
@@ -107,7 +113,7 @@ export function rememberLanguage(language: Language): void {
   }
 }
 
-/** ru — язык по умолчанию (SPEC-v3 §8); uz — латиница. Пространства имён: common, shell (каркас и вход), modules (меню и заглушки), dictionary (словарь SPEC-v3 §2: стадии и статусы), ui (тексты общих компонентов), integrations (Admin · Внешние интеграции), company (Admin · Компания), kb (CRM · База знаний), bot (Admin · Настройки бота), bus (Admin · Журнал интеграций), documents (EDS · Создать документ и «Мои документы»). */
+/** ru — язык по умолчанию (SPEC-v3 §8); uz — латиница. Пространства имён: common, shell (каркас и вход), modules (меню и заглушки), dictionary (словарь SPEC-v3 §2: стадии и статусы), ui (тексты общих компонентов), integrations (Admin · Внешние интеграции), company (Admin · Компания), kb (CRM · База знаний), bot (Admin · Настройки бота), bus (Admin · Журнал интеграций), documents (EDS · Создать документ и «Мои документы»), letters (EDS · Входящие письма и резолюция). */
 void i18n.use(initReactI18next).init({
   resources,
   lng: storedLanguage(),
@@ -125,6 +131,7 @@ void i18n.use(initReactI18next).init({
     "bus",
     "kb",
     "bot",
+    "letters",
   ],
   interpolation: { escapeValue: false },
 });

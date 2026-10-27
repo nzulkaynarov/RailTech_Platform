@@ -4,15 +4,23 @@ import { RequireAccess } from "../../app/RequireAccess";
 import { ModuleRoutes } from "../ModuleRoutes";
 import { matchSection } from "../registry";
 import { DocumentsPage } from "./documents/DocumentsPage";
+import { InboxScreen } from "./inbox/InboxScreen";
 import { NewDocumentPage } from "./new/NewDocumentPage";
 
 /**
- * Модуль EDS. «Все документы» (реестр и «Мои документы») и «Создать документ» (D1-5) — настоящие экраны; остальные
- * разделы пока заглушки каркаса.
+ * Модуль EDS. «Входящие письма» (D1-3), «Все документы» (реестр и «Мои документы») и «Создать документ» (D1-5) — настоящие
+ * экраны; остальные разделы пока заглушки каркаса.
  */
 export function Component() {
   const location = useLocation();
   const match = matchSection(location.pathname, location.search);
+  if (match?.module.code === "eds" && match.section.key === "inbox") {
+    return (
+      <RequireAccess rule={match.section.access}>
+        <InboxScreen objectId={match.objectId} />
+      </RequireAccess>
+    );
+  }
   if (match?.module.code === "eds" && match.section.key === "documents") {
     return (
       <RequireAccess rule={match.section.access}>

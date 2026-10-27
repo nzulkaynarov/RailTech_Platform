@@ -2503,6 +2503,146 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/eds/letters": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * EDS · Входящие письма: список
+     * @description EDS `GET /letters` (право `letters.read`). Раздел `eds.inbox` — чтение; менеджер и бухгалтер видят список, директор — тоже и решает. Порядок — от новых к старым. Страница — непрозрачный `cursor` из `next_cursor`. Клиент — название организации-отправителя из письма, заявка — бизнес-номер ЗВ из связей письма. EDS не ответил — 503 `BACKEND_UNAVAILABLE` (`source = eds`); у сотрудника нет прав в EDS — 403 `FORBIDDEN` (`details.reason = eds_not_granted`).
+     */
+    get: operations["listLetters"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/letters/{ref}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * EDS · Карточка входящего письма (по id или по номеру ВХ)
+     * @description EDS `GET /letters/{id}`; по номеру — сначала `GET /registry?number=` (EDS адресует письма UUID, в номере есть «/»). `ref` — UUID письма или номер `ВХ-104/26`; косая черта номера допускается в пути как есть и как `%2F`. Номера нет в реестре или он не письмо — 404 `NOT_FOUND`. Данные заявки (шаг пути, название) BFF читает в ERP по ссылке письма (`links.erp_deal_id`); ERP не ответил — ответ 200 без данных заявки, шаг выведен по самому письму, а `sources.erp = unavailable` (плашка «ERP не отвечает, данные неполные»). Шаг пути — по правилу `docs/architecture/integration-map.md` §2: ждёт резолюции — «Резолюция», резолюция наложена — «Расчёт» (или дальше, если заявка ERP уже дальше), возвращено — «Заявка», отклонено — «Отказ». Поле `resolution.min_margin_pct` (маржа) без группы `cost_margin` у ролей сотрудника не отдаётся. Раздел `eds.inbox` — чтение.
+     */
+    get: operations["getLetter"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/letters/{id}/resolution": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * EDS · Утвердить резолюцию → задание в расчёт
+     * @description EDS `POST /letters/{id}/resolution` (право `letters.resolve`). Раздел `eds.inbox` — полный: роль только для чтения получает 403 в BFF до EDS. Письмо должно ждать резолюции, иначе 409 `CONFLICT` (`details.reason = invalid_state`). Срок расчёта в прошлом (по `Asia/Tashkent`) — 422 `VALIDATION_FAILED`, `details.fields = [due]`, `details.reason = due_in_past`; исполнитель не найден или отключён — `details.fields = [assignees]`, `details.reason = not_active_employee`; исполнитель дважды в одной зоне — `duplicate`; `min_margin_pct` у роли без группы `cost_margin` — 422 BFF, `details.reason = margin_forbidden`, в EDS запрос не уходит. Текст ошибки — `message` EDS на языке сотрудника. Ответ — обновлённая карточка. Решение, кого можно назначить, остаётся за EDS и ERP: BFF только передаёт сотрудников и зоны (`GET /eds/resolution/assignees` подсказывает, кого выбрать).
+     */
+    post: operations["resolveLetter"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/letters/{id}/return": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * EDS · Вернуть письмо менеджеру с комментарием
+     * @description EDS `POST /letters/{id}/return` (право `letters.resolve`). Раздел `eds.inbox` — полный. Комментарий обязателен (пустой — 422 `details.fields = [comment]`). Письмо уходит к регистратору (статус «Возвращено»), событие `letter.returned`. Ответ — обновлённая карточка.
+     */
+    post: operations["returnLetter"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/letters/{id}/reject": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * EDS · Отклонить письмо с причиной
+     * @description EDS `POST /letters/{id}/reject` (право `letters.resolve`). Раздел `eds.inbox` — полный. Причина обязательна (пустая — 422 `details.fields = [reason]`). Статус «Отклонено», событие `letter.rejected`: ERP переводит заявку в «Отказ» с причиной. Ответ — обновлённая карточка.
+     */
+    post: operations["rejectLetter"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/resolution/assignees": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * EDS · Кого можно назначить исполнителем резолюции, по зонам
+     * @description Кандидаты по зонам резолюции: товары (склад и цены поставщиков), услуги (ТЗ, бригада), условия оплаты. Зона даёт сотрудникам **раздел каталога**, а не код роли: товары — `erp.calc.goods`, услуги — `erp.calc.services`, условия оплаты — `eds.payments` (все — уровень «полный»). BFF читает из CRM активных сотрудников и роли с их матрицами (`GET /users`, `GET /platform-roles`; нужен раздел `admin` не ниже чтения) и сводит матрицы ролей каждого. Если роли сотрудника не дают чтения справочника CRM — 200 с пустыми списками и `directory = forbidden`: выбор исполнителей недоступен до появления операции «сотрудники по разделу» в CRM (docs/QUESTIONS.md). Раздел `eds.inbox` — полный.
+     */
+    get: operations["listResolutionAssignees"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/letter-files/{file_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * EDS · Скачать вложение письма
+     * @description EDS `GET /files/{id}` потоком, последняя версия. Раздел `eds.inbox` — чтение. Файл отдаётся как вложение (`Content-Disposition: attachment`), тип содержимого браузер не исполняет (`X-Content-Type-Options: nosniff`, `Content-Security-Policy: sandbox`). Файла нет или он не виден сотруднику — 404 `NOT_FOUND`.
+     */
+    get: operations["downloadLetterFile"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -4775,6 +4915,183 @@ export interface components {
       title: string;
       text: components["schemas"]["LocalizedText"];
     };
+    /**
+     * @description Статус входящего письма (SPEC-v3 §2.4; EDS `LetterStatus`): `awaiting_resolution` — «Ждёт резолюции» (зарегистрировано), `resolved` — «Резолюция наложена», `returned` — «Возвращено» менеджеру, `rejected` — «Отклонено». Слова — в словаре интерфейса, не в API.
+     * @enum {string}
+     */
+    LetterStatus: "awaiting_resolution" | "resolved" | "returned" | "rejected";
+    /**
+     * @description Зона исполнителя резолюции: `goods` — товары, склад, цены поставщиков (снабженец), `services` — услуги, ТЗ, бригада (гл. инженер), `payment_terms` — условия оплаты (бухгалтер).
+     * @enum {string}
+     */
+    LetterZone: "goods" | "services" | "payment_terms";
+    /** @description Организация-отправитель; `null` — письмо по заявке ERP без этого поля */
+    LetterSender: {
+      name: string | null;
+      inn: string | null;
+      /** @description Контактное лицо */
+      contact: string | null;
+    };
+    /** @description Исходящий номер и дата письма у отправителя */
+    LetterSenderRef: {
+      number: string | null;
+      /** Format: date */
+      date: string | null;
+    };
+    LetterRow: {
+      /** Format: uuid */
+      id: string;
+      /**
+       * @description Номер ВХ-NNN/ГГ
+       * @example ВХ-104/26
+       */
+      number: string;
+      subject: string;
+      /** @description Название организации-отправителя */
+      client_name: string | null;
+      /** @description Бизнес-номер заявки ЗВ из связей письма; `null` — письмо ещё не связано с заявкой */
+      request_number: string | null;
+      /** Format: date */
+      received_at: string;
+      status: components["schemas"]["LetterStatus"];
+      urgent: boolean;
+      /**
+       * Format: date
+       * @description Срок расчёта из резолюции
+       */
+      due: string | null;
+    };
+    LetterPage: {
+      items: components["schemas"]["LetterRow"][];
+      next_cursor: string | null;
+    };
+    LetterFile: {
+      /** Format: uuid */
+      id: string;
+      name: string;
+      content_type: string;
+      /** @description Байт */
+      size: number;
+      /** Format: date-time */
+      uploaded_at: string;
+    };
+    /** @description Клиент письма из связей (CRM); без связи с клиентом в карточке блока нет */
+    LetterClient: {
+      /** @description `crm_client_id` */
+      id: string;
+      name: string | null;
+      inn: string | null;
+      /** @description Путь карточки клиента в SPA, `/crm/clients/{id}` */
+      path: string;
+    };
+    /** @description Заявка письма. Номер EDS знает из связей письма; название и путь — из ERP (сделка по `erp_deal_id`): ERP не ответил — `title = null`, путь ведёт в список заявок по номеру. */
+    LetterRequest: {
+      /** @example ЗВ-2026-104 */
+      number: string;
+      title: string | null;
+      path: string;
+    };
+    LetterAssignee: {
+      person: components["schemas"]["PersonRef"];
+      zone: components["schemas"]["LetterZone"];
+    };
+    LetterResolution: {
+      text: string;
+      assignees: components["schemas"]["LetterAssignee"][];
+      /**
+       * Format: date
+       * @description Срок расчёта
+       */
+      due: string;
+      /** @description «Маржа не ниже, %» строкой (`15`, `12.5`); `null` — без ограничения. Поля нет в ответе, если ни у одной роли сотрудника нет группы `cost_margin` (правило 6 CONVENTIONS Платформы). */
+      min_margin_pct?: string | null;
+      decided_by: components["schemas"]["PersonRef"];
+      /** Format: date-time */
+      decided_at: string;
+    };
+    LetterJournalEntry: {
+      /** Format: date-time */
+      at: string;
+      /** @description Код действия EDS (`letter.registered`, `letter.resolved`, `letter.returned`, `letter.rejected`, …) */
+      action: string;
+      /** @description `null` — система */
+      by: components["schemas"]["PersonRef"] | null;
+      comment: string | null;
+    };
+    LetterCard: {
+      /** Format: uuid */
+      id: string;
+      /** @example ВХ-104/26 */
+      number: string;
+      status: components["schemas"]["LetterStatus"];
+      subject: string;
+      /** @description Суть документа */
+      summary: string;
+      urgent: boolean;
+      /** Format: date */
+      received_at: string;
+      /** Format: date-time */
+      registered_at: string;
+      /** @description `null` — зарегистрировано системой по заявке ERP */
+      registered_by: components["schemas"]["PersonRef"] | null;
+      addressee: components["schemas"]["PersonRef"];
+      manager: components["schemas"]["PersonRef"] | null;
+      sender: components["schemas"]["LetterSender"];
+      sender_ref: components["schemas"]["LetterSenderRef"];
+      client: components["schemas"]["LetterClient"] | null;
+      request: components["schemas"]["LetterRequest"] | null;
+      stage: components["schemas"]["StepCode"];
+      /** @description Для `stage = LOST` — номер шага, на котором закрыли заявку (2 — резолюция); иначе `null` */
+      lost_at_step: number | null;
+      files: components["schemas"]["LetterFile"][];
+      resolution: components["schemas"]["LetterResolution"] | null;
+      return_comment: string | null;
+      reject_reason: string | null;
+      journal: components["schemas"]["LetterJournalEntry"][];
+      sources: components["schemas"]["Sources"];
+    };
+    ResolutionAssigneeIn: {
+      /** @description `crm_user_id` сотрудника */
+      id: string;
+      zone: components["schemas"]["LetterZone"];
+    };
+    ResolutionIn: {
+      text: string;
+      assignees: components["schemas"]["ResolutionAssigneeIn"][];
+      /**
+       * Format: date
+       * @description Срок расчёта — не раньше сегодняшней даты по Asia/Tashkent
+       */
+      due: string;
+      /** @description «Маржа не ниже, %»; нет или `null` — без ограничения */
+      min_margin_pct?: string | null;
+    };
+    LetterReturnIn: {
+      comment: string;
+    };
+    LetterRejectIn: {
+      reason: string;
+    };
+    ResolutionCandidate: {
+      /** @description `crm_user_id` */
+      id: string;
+      name: string;
+      initials: string;
+      position: string | null;
+    };
+    ResolutionZone: {
+      zone: components["schemas"]["LetterZone"];
+      candidates: components["schemas"]["ResolutionCandidate"][];
+    };
+    ResolutionAssignees: {
+      /** @description Всегда три зоны в порядке товары, услуги, условия оплаты */
+      zones: components["schemas"]["ResolutionZone"][];
+      /**
+       * @description `ok` — справочник сотрудников прочитан; `forbidden` — роли сотрудника не дают чтения справочника CRM (кандидатов нет); `unavailable` — CRM не ответила
+       * @enum {string}
+       */
+      directory: "ok" | "forbidden" | "unavailable";
+    };
   };
   responses: {
     /** @description `SESSION_EXPIRED` — сессии нет, истекла или сотрудник отключён */
@@ -4907,6 +5224,15 @@ export interface components {
         "application/json": components["schemas"]["Error"];
       };
     };
+    /** @description 409 `CONFLICT` — письмо уже не ждёт резолюции (решил другой директор, вернули, отклонили): `details.reason = invalid_state`; обновите карточку */
+    LetterConflict: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["Error"];
+      };
+    };
   };
   parameters: {
     /** @description `crm_user_id` — число без ведущих нулей (`07` и `007` — не адрес сотрудника) */
@@ -4944,6 +5270,8 @@ export interface components {
     CompanyItemId: components["schemas"]["CompanyItemRef"];
     /** @description Справочник ERP */
     ReferenceKindPath: components["schemas"]["ReferenceKind"];
+    /** @description UUID входящего письма (EDS) */
+    LetterIdPath: string;
   };
   requestBodies: never;
   headers: never;
@@ -9732,6 +10060,225 @@ export interface operations {
       401: components["responses"]["SessionExpired"];
       403: components["responses"]["Forbidden"];
       422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listLetters: {
+    parameters: {
+      query?: {
+        /** @description Только письма в этих статусах (параметр повторяется); без параметра — все */
+        status?: components["schemas"]["LetterStatus"][];
+        /** @description Поиск по номеру, теме, отправителю и номеру заявки */
+        q?: string;
+        /** @description Непрозрачный курсор из `next_cursor` */
+        cursor?: string;
+        /** @description Размер страницы */
+        limit?: components["parameters"]["PageLimit"];
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Страница писем */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LetterPage"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getLetter: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description UUID письма или номер `ВХ-NNN/ГГ` */
+        ref: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Карточка письма */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LetterCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  resolveLetter: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description UUID входящего письма (EDS) */
+        id: components["parameters"]["LetterIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ResolutionIn"];
+      };
+    };
+    responses: {
+      /** @description Резолюция наложена, задание в расчёт поставлено событием шины */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LetterCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["LetterConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  returnLetter: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description UUID входящего письма (EDS) */
+        id: components["parameters"]["LetterIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LetterReturnIn"];
+      };
+    };
+    responses: {
+      /** @description Возвращено менеджеру */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LetterCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["LetterConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  rejectLetter: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description UUID входящего письма (EDS) */
+        id: components["parameters"]["LetterIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LetterRejectIn"];
+      };
+    };
+    responses: {
+      /** @description Отклонено */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LetterCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["LetterConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listResolutionAssignees: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Кандидаты по трём зонам */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ResolutionAssignees"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  downloadLetterFile: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        file_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Содержимое файла */
+      200: {
+        headers: {
+          /** @description `attachment; filename*=UTF-8''…` */
+          "Content-Disposition"?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          "application/octet-stream": string;
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
       503: components["responses"]["BackendUnavailable"];
     };
   };

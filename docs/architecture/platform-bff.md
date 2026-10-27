@@ -85,6 +85,13 @@ SPA  POST /api/v1/auth/login {email, password}
   refresh) в сессии (`eds`); истёк или EDS ответил 401 — новый обмен. CRM не выдаёт токен (нет `permissions.eds`) или EDS не
   знает сотрудника — 403 `FORBIDDEN` `details.reason = eds_not_granted`; сбой — 503 и пауза 15 с до следующей попытки.
   Отказ EDS сессию Платформы не закрывает. Адрес — `PLATFORM_EDS_URL` (по умолчанию `http://eds-api:8000`, только сеть compose).
+  **Входящие письма и резолюция (D1-3, BFF 0.16.0).** Тем же токеном доступа EDS BFF вызывает письма (`/letters`, `/letters/{id}`,
+  `…/resolution|return|reject`), реестр для адресации по номеру (`GET /registry?kind=letter_in&number=ВХ-104/26`, EDS адресует письма
+  UUID) и файлы (`GET /files/{id}` потоком, ответ отдаётся только вложением). Раздел каталога — `eds.inbox`: чтение даёт список и карточку
+  (менеджер, бухгалтер), полный — решения (директор); BFF проверяет раздел до обращения в EDS, право `letters.*` и переходы статусов решает EDS.
+  Ошибки EDS переводятся в `Error` с `source = eds` и сохранённым `details.reason` / `details.fields` (`due_in_past`, `not_active_employee`,
+  `invalid_state`); `eds_not_granted` — как выше. Данные заявки (название, стадия сделки) приходят из ERP по `erp_deal_id` письма: ERP не
+  ответил — карточка 200 с `sources.erp = unavailable`. Поле «Маржа не ниже» (`min_margin_pct`) отдаётся только ролям с группой `cost_margin`.
 
 ### 3.1. Первый запуск и временный пароль (W13-A4, BFF 0.10.0)
 
@@ -121,7 +128,7 @@ SPA  POST /api/v1/setup/admin {code, name, email, password}
 
 | Сущность | Где | Приложение / модель | Почему |
 |---|---|---|---|
-| `Letter` (входящее письмо, ВХ-NNN/ГГ) | EDS | сервис `apps/eds` (ADR-0015), связь с заявкой — по id и событиям | шаг 2 пути заявки |
+| `Letter` (входящее письмо, ВХ-NNN/ГГ) | EDS | сервис `apps/eds` (ADR-0015), связь с заявкой — по id и событиям; экраны — BFF `/eds/letters*` (D1-3) | шаг 2 пути заявки |
 | `Resolution` (текст, исполнители, срок, мин. маржа) | EDS | `apps/eds`; событие `resolution.*` | ERP создаёт задание на расчёт по событию |
 | `LineApproval` (виза строки расчёта) | ERP | `sales`, связь с `QuoteItem` | часть расчёта |
 | `ContractStatusLog` (Проект → Согласован клиентом → Выставлен у оператора → Подписан, скан) | ERP | `sales`, связь с `Contract` | заменяет «подпись кликом» |
@@ -287,7 +294,7 @@ BFF отдаёт сам (`/admin/company/logo/image`, `/admin/company/brand/logo
   `Content-Type`. Выгрузка CSV: ответ CRM читается кусками (`aiter_raw`) и сразу уходит браузеру, файл в памяти BFF не накапливается, ответ CRM закрывается
   в фоне; ошибка CRM до первого байта — обычный `Error`. Песочница, поиск и пробный прогон ждут CRM как пробы (до 30 с). Ошибки формата документа, размера файла и пути
   невалидных полей настроек доходят в `details` (`reason`, `rule`, `messages`, `max_bytes`, `paths`); значения настроек и схемы форм BFF не знает и не разбирает.
-- **EDS · Создать документ и «Мои документы» (D1-5, 0.16.0).** `/eds/documents*`, `/eds/document-files*`, `/eds/deal-options` — прокси к EDS с токеном доступа EDS
+- **EDS · Создать документ и «Мои документы» (D1-5, 0.17.0).** `/eds/documents*`, `/eds/document-files*`, `/eds/deal-options` — прокси к EDS с токеном доступа EDS
   (обмен `aud=eds`); раздел `eds.memo.create` для создания, любой раздел EDS — для чтения, реестр «Все» — чтение `eds.inbox`, `eds.projects` или `eds.payments`.
   Создание с `submit` — два вызова EDS (`POST /documents`, `POST …/submit`): если отправка отклонена, ошибка называет сохранённый черновик
   (`details.document_id`, `saved`). Ошибки EDS переводятся в `Error` с `source = eds` (текст EDS сохраняется; 422 — `details.fields`, `messages`).
