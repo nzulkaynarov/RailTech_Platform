@@ -59,10 +59,13 @@ grep -q 'pull .* litellm' "$root/infra/deploy/deploy.sh" || fail "deploy.sh: rt-
 grep -q 'pull .* platform-bff platform-web' "$root/infra/deploy/deploy.sh" || fail "deploy.sh: образы Платформы не входят в pull"
 grep -q 'pull .* eds-api' "$root/infra/deploy/deploy.sh" || fail "deploy.sh: образ EDS не входит в pull"
 grep -q 'platform-bff' "$root/infra/deploy/rollback.sh" || fail "rollback.sh: образы Платформы не входят в pull"
-for img in rt-platform-bff rt-platform-web; do
-  grep -q "name: Образ $img" "$root/.github/workflows/deploy.yml" || fail "deploy.yml: нет сборки $img"
+# shellcheck source=deploy-images.sh
+source "$here/deploy-images.sh"
+deploy_yml="$root/.github/workflows/deploy.yml"
+deploy_images="$(deploy_image_names "$deploy_yml")" || fail "в deploy.yml не найдена таблица образов (images='[…]' в job prepare)"
+for img in rt-platform-bff rt-platform-web rt-litellm; do
+  grep -qx "$img" <<<"$deploy_images" || fail "deploy.yml: нет сборки $img"
 done
-grep -q 'name: Образ rt-litellm' "$root/.github/workflows/deploy.yml" || fail "deploy.yml: нет сборки rt-litellm"
 
 # 4. S0-7: одна таблица правил на два места (деплой на сервере и CI под qemu64), и она согласована с тем, что собирает deploy.yml,
 #    с матрицей ci.yml и с образами VPS 2. Docker не нужен: list/params только читают таблицы.
@@ -72,12 +75,10 @@ for n in $rules_names; do
   bash -c 'source "$1"; cpu_baseline_rules "$2" true' _ "$root/infra/deploy/cpu-baseline-rules.sh" "$n" || fail "cpu-baseline-rules.sh: для $n в списке имён нет правила"
 done
 built="$("$qcheck" list built)"
-deploy_images="$(awk '/- name: Образ rt-/{print $NF}' "$root/.github/workflows/deploy.yml")"
-[[ -n "$deploy_images" ]] || fail "в deploy.yml не найдены сборки образов"
 for img in $deploy_images; do
   grep -qx "$img" <<<"$built" || fail "$img собирается в deploy.yml, но scripts/qemu_cpu_check.sh не умеет его собирать и проверять (таблица build_spec)"
   # контекст сборки в deploy.yml и в таблице проверки совпадают
-  ctx_deploy="$(awk -v n="name: Образ $img" 'index($0,n){f=1;next} f&&/- name:/{exit} f&&/^ *context:/{print $2; exit}' "$root/.github/workflows/deploy.yml")"
+  ctx_deploy="$(deploy_image_field "$deploy_yml" "$img" context)"
   ctx_check="$("$qcheck" params "$img" | sed -n 's/^context=//p')"
   [[ "$ctx_deploy" == "$ctx_check" ]] || fail "$img: контекст сборки в deploy.yml ($ctx_deploy) и в qemu_cpu_check.sh ($ctx_check) расходятся"
   grep -q "^ *- $img\$" "$root/.github/workflows/ci.yml" || fail "$img нет в матрице задания cpu-image в ci.yml"
