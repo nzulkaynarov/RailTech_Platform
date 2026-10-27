@@ -44,6 +44,12 @@ def _trusted(ip: Address, networks: Sequence[Network]) -> bool:
     return any(ip.version == net.version and ip in net for net in networks)
 
 
+def is_trusted_peer(peer: str | None, networks: Sequence[Network]) -> bool:
+    """Сокет-партнёр — доверенный прокси (его `X-Forwarded-*` можно читать)."""
+    address = _address(peer) if peer else None
+    return address is not None and _trusted(address, networks)
+
+
 def resolve_client_ip(
     forwarded_for: str | None, peer: str | None, networks: Sequence[Network]
 ) -> str:

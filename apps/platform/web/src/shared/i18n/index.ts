@@ -2,6 +2,7 @@ import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 
 import enAudit from "./en/audit.json";
+import enBridge from "./en/bridge.json";
 import enBus from "./en/bus.json";
 import enBot from "./en/bot.json";
 import enCommon from "./en/common.json";
@@ -16,6 +17,7 @@ import enProfile from "./en/profile.json";
 import enShell from "./en/shell.json";
 import enUi from "./en/ui.json";
 import ruAudit from "./ru/audit.json";
+import ruBridge from "./ru/bridge.json";
 import ruBus from "./ru/bus.json";
 import ruBot from "./ru/bot.json";
 import ruCommon from "./ru/common.json";
@@ -30,6 +32,7 @@ import ruProfile from "./ru/profile.json";
 import ruShell from "./ru/shell.json";
 import ruUi from "./ru/ui.json";
 import uzAudit from "./uz/audit.json";
+import uzBridge from "./uz/bridge.json";
 import uzBus from "./uz/bus.json";
 import uzBot from "./uz/bot.json";
 import uzCommon from "./uz/common.json";
@@ -51,6 +54,7 @@ export const resources = {
   ru: {
     common: ruCommon,
     audit: ruAudit,
+    bridge: ruBridge,
     shell: ruShell,
     modules: ruModules,
     dictionary: ruDictionary,
@@ -67,6 +71,7 @@ export const resources = {
   uz: {
     common: uzCommon,
     audit: uzAudit,
+    bridge: uzBridge,
     shell: uzShell,
     modules: uzModules,
     dictionary: uzDictionary,
@@ -83,6 +88,7 @@ export const resources = {
   en: {
     common: enCommon,
     audit: enAudit,
+    bridge: enBridge,
     shell: enShell,
     modules: enModules,
     dictionary: enDictionary,
@@ -128,6 +134,7 @@ void i18n.use(initReactI18next).init({
   ns: [
     "common",
     "shell",
+    "bridge",
     "modules",
     "dictionary",
     "documents",

@@ -133,6 +133,17 @@
  * (директор читает), сброс пароля — `admin: full`; профиль доступен каждому вошедшему. Секреты из записей журнала BFF вырезает
  * (значения полей `password`, `secret`, `token`, `key`, `*_key`, `credentials`, `authorization`, `pin` и им подобных -> `***` целиком, любого типа).
  *
+ * **0.19.0 (W15-H1) — мост в старые экраны.** Добавляющее изменение (тег `bridge`). Пока раздел Платформы ещё заглушка, сотрудник
+ * открывает ту же работу в старой CRM или старом ERP новой вкладкой. `GET /bridge` отдаёт публичные адреса старых фронтов
+ * (`crm_url`, `erp_url`): настройки `PLATFORM_CRM_PUBLIC_URL` и `PLATFORM_ERP_PUBLIC_URL`, а если они пусты — адрес выводится из
+ * адреса, по которому открыта Платформа (`platform.<домен>` -> `crm.<домен>` и `erp.<домен>`, схема и порт те же); не задан и не
+ * выводится — `null`, SPA не показывает кнопку. `erp_sso` — у сотрудника есть доступ к ERP, и вход можно сделать без второго пароля.
+ * `POST /bridge/erp-sso` — тот же путь, каким старая CRM открывает ERP: BFF просит у CRM одноразовый SSO-токен (`POST
+ * /auth/sso/token`, живёт 60 секунд) токеном сотрудника и возвращает готовый адрес обмена `{ERP}/sso/exchange#token=…`; адрес
+ * ERP берёт сама CRM (`ERP_FRONTEND_URL`). Токен в журнал не пишется, ответ — `Cache-Control: no-store`. Права раздела не нужны:
+ * достаточно сессии и доступа к ERP (CRM не выдала токен — 403 `FORBIDDEN`, `details.reason`: `platform_access_denied` или
+ * `sso_disabled`).
+ *
  * **0.17.0 (D1-5) — EDS · Создать документ и «Мои документы».** Добавляющее изменение, тег `eds-documents`: `GET/POST /eds/documents`
  * (мои документы или реестр «Все документы»; создать и сразу отправить), `GET/PUT /eds/documents/{id}` (карточка с маршрутом и
  * решениями; сохранить черновик), `POST /eds/document-files` и `GET /eds/document-files/{file_id}` (вложения: загрузка потоком до 25 МБ,
@@ -254,6 +265,8 @@ import type {
   BotProfileState,
   BotSettings,
   BrandProfile,
+  Bridge,
+  BridgeErpSso,
   BusDeliveryPage,
   BusInboxPage,
   BusJournal,
@@ -523,6 +536,22 @@ export const getCreateOwnCompanyResponseMock = (
 ): SetupCompanyCreated => ({
   id: faker.number.int(),
   name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ...overrideResponse,
+});
+
+export const getGetBridgeResponseMock = (
+  overrideResponse: Partial<Extract<Bridge, object>> = {},
+): Bridge => ({
+  crm_url: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  erp_url: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  erp_sso: faker.datatype.boolean(),
+  ...overrideResponse,
+});
+
+export const getCreateBridgeErpSsoResponseMock = (
+  overrideResponse: Partial<Extract<BridgeErpSso, object>> = {},
+): BridgeErpSso => ({
+  url: faker.string.alpha({ length: { min: 10, max: 20 } }),
   ...overrideResponse,
 });
 
@@ -5607,6 +5636,51 @@ export const getCreateOwnCompanyMockHandler = (
   );
 };
 
+export const getGetBridgeMockHandler = (
+  overrideResponse?:
+    Bridge | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<Bridge> | Bridge),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/bridge",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetBridgeResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getCreateBridgeErpSsoMockHandler = (
+  overrideResponse?:
+    | BridgeErpSso
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<BridgeErpSso> | BridgeErpSso),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/bridge/erp-sso",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCreateBridgeErpSsoResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getGetMeMockHandler = (
   overrideResponse?:
     Me | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<Me> | Me),
@@ -9321,6 +9395,8 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getCreateFirstAdminMockHandler(),
   getGetSetupChecklistMockHandler(),
   getCreateOwnCompanyMockHandler(),
+  getGetBridgeMockHandler(),
+  getCreateBridgeErpSsoMockHandler(),
   getGetMeMockHandler(),
   getUpdateMeMockHandler(),
   getGetNotificationSettingsMockHandler(),

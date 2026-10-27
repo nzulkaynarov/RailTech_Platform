@@ -13,7 +13,7 @@ describe("Forbidden", () => {
     ).toBeVisible();
     const button = screen.getByRole("button", { name: /Написать администратору/ });
     expect(button).toBeDisabled();
-    expect(button).toHaveAccessibleName(/Появится в фазе P4/);
+    expect(button).toHaveAccessibleName(/Появится к пилоту/);
     expect(document.title).toBe("Нет доступа — RailTech Platform");
   });
 
