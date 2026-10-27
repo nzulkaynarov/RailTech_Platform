@@ -19,7 +19,7 @@ from app.errors import conflict, forbidden, forbidden_reason, invalid_fields, no
 from app.models import ApprovalRoute, Document, DocumentVersion, Employee, Letter
 from app.schemas.approvals import ApprovalTemplate
 from app.schemas.common import Money
-from app.schemas.documents import DocumentCreate, DocumentKind, DocumentStatus, DocumentSubmitIn
+from app.schemas.documents import DocumentCreate, DocumentKind, DocumentStatus, DocumentSubmitIn, DocumentUpdate
 from app.security.permissions import EdsPermission as P
 from app.services import access, approvals, document_state, events, files, journal, numbering
 from app.services.people import holds_permission, load_directory
@@ -195,6 +195,32 @@ async def _snapshot(session: AsyncSession, document: Document, employee: Employe
         )
     )
     await session.flush()
+
+
+async def update(
+    session: AsyncSession, *, employee: Employee, document_id: uuid.UUID, edits: DocumentUpdate
+) -> Document:
+    """Править черновик (или возвращённый документ) без отправки. Только автор; другой статус — 409 `invalid_state`."""
+    document = await get_for_update(session, document_id)
+    if not await access.can_view_document(session, employee, document.id):
+        raise not_found("Документ не найден.")
+    kind = DocumentKind(document.kind)
+    require_kind_permission(employee, kind)
+    if document.author_crm_user_id != employee.crm_user_id:
+        raise forbidden_reason("not_author", "Править документ может только его автор.")
+    allowed = {DocumentStatus.DRAFT.value} if kind is DocumentKind.LETTER_OUT else {"draft", "returned"}
+    if document.status not in allowed:
+        raise conflict("invalid_state", "Документ нельзя править в текущем статусе.", status=document.status)
+    _check_amount(edits.amount)
+    _apply_edits(document, edits)
+    if "erp_deal_id" in edits.model_fields_set:
+        document.erp_deal_id = edits.erp_deal_id
+        document.deal_number = await deal_number_for(session, edits.erp_deal_id)
+    document.updated_at = clock.now()
+    if edits.file_ids:
+        await files.attach(session, edits.file_ids, actor_id=employee.crm_user_id, document_id=document.id)
+    await journal.record(session, "document.updated", by=employee.crm_user_id, document_id=document.id)
+    return document
 
 
 async def submit(

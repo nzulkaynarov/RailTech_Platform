@@ -54,6 +54,12 @@ class DocumentSubmitIn(Strict):
     file_ids: FileIds | None = None
 
 
+class DocumentUpdate(DocumentSubmitIn):
+    """Правка черновика (или возвращённого документа) без отправки: те же поля, что у `submit`, и связь с проектом."""
+
+    erp_deal_id: int | None = None
+
+
 class DocumentDecision(BaseModel):
     round: int
     step: int
