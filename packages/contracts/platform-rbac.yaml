@@ -222,7 +222,7 @@ resources:
         full: [leads:read, leads:reply, leads:note, leads:assist]
   - key: admin
     module: admin
-    label: { ru: "Настройки · Роли и права, Сотрудники, Подключения, Telegram-бот, История действий, Обращения сотрудников", uz: "Sozlamalar · Rollar va huquqlar, xodimlar, ulanishlar, Telegram-bot, harakatlar tarixi, xodimlar murojaatlari", en: "Settings · Roles & permissions, employees, connections, Telegram bot, activity log, staff requests" }
+    label: { ru: "Настройки · Роли и права, Сотрудники, Подключения, Telegram-бот, Журнал, Обращения сотрудников", uz: "Sozlamalar · Rollar va huquqlar, xodimlar, ulanishlar, Telegram-bot, jurnal, xodimlar murojaatlari", en: "Settings · Roles & permissions, employees, connections, Telegram bot, log, staff requests" }
     backend:
       crm:
         # W13-A5: директор (admin: read) читает и настройки бота, шаблоны ответов и базу знаний — без правки; правка и
@@ -280,8 +280,9 @@ menu:
     clients: [crm.clients]
     requests: [crm.clients]
     channels: [crm.leads]
-    # W13-A5: базу знаний сопровождает администратор (kb:write у раздела admin), у него нет crm.leads — пункт открывает и admin.
-    kb: [crm.leads, admin]
+    # W15-H4: в подменю Клиентов база знаний — для ролей с лидами (чтение); администратор (kb:write у раздела admin) входит
+    # в неё из Настроек · Telegram-бот, адрес /crm/kb для него открыт (`access` раздела в apps/platform/web/src/modules/crm/module.ts).
+    kb: [crm.leads]
   eds:
     documents: [eds.inbox, eds.drafts, eds.projects, eds.payments, eds.memo.create, eds.memo.approve]
     inbox: [eds.inbox]
@@ -305,13 +306,14 @@ menu:
     roles: [admin]
     org: [admin]
     integrations: [admin]
-    # Журнал интеграций (W13-A2): данные BFF отдаёт только при `admin: full`, поэтому SPA показывает пункт лишь с уровнем
-    # `full` (`level` раздела в apps/platform/web/src/modules/admin/module.ts); здесь, как у всех пунктов, — раздел.
-    bus: [admin]
     tickets: [admin]
     company: [company.settings]
     bot: [admin]
+    # «Журнал» (W15-H4): действия людей и обмен между системами — фильтр одного экрана. «Обмен между системами» (шина,
+    # W13-A2) отдельного пункта не имеет и открывается только при `admin: full` (`level` в modules/admin/module.ts).
     audit: [admin]
+    # «Первый запуск» (W15-H4): пункт виден администратору, пока шаги мастера не завершены (`showWhile` в module.ts).
+    setup: [admin]
 
 # Поля с ограничением внутри экранов (SPEC-v3 §4.2). Роль перечисляет поля, которые она ВИДИТ; поле скрыто, если ни одна роль
 # сотрудника его не видит. Скрытие `supplier_prices` и `totals_only` делает BFF (у ERP для них нет отдельного права).

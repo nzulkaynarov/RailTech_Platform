@@ -74,7 +74,36 @@
       "label": "Bugungi voqealar",
       "loading": "Lenta yuklanmoqda…",
       "loadErrorTitle": "Lentani yuklab bo‘lmadi",
-      "loadErrorText": "Server javob bermadi. Birozdan keyin qayta urinib ko‘ring."
+      "loadErrorText": "Server javob bermadi. Birozdan keyin qayta urinib ko‘ring.",
+      "events": {
+        "admin": {
+          "company": {
+            "own_created": "O‘z kompaniyasi yaratildi",
+            "archived": "Kompaniya arxivga o‘tkazildi",
+            "unarchived": "Kompaniya arxivdan qaytarildi"
+          },
+          "user": {
+            "created": "Xodim qo‘shildi",
+            "deactivated": "Xodim o‘chirildi",
+            "activated": "Xodim yoqildi",
+            "role_changed": "Xodim rollari o‘zgartirildi"
+          },
+          "email_template": {
+            "created": "Xat shabloni qo‘shildi",
+            "updated": "Xat shabloni o‘zgartirildi",
+            "deleted": "Xat shabloni o‘chirildi"
+          },
+          "lookup": {
+            "created": "Ma’lumotnoma to‘ldirildi",
+            "updated": "Ma’lumotnoma o‘zgartirildi",
+            "deleted": "Ma’lumotnoma qatori o‘chirildi"
+          },
+          "exchange_rate": {
+            "manual": "Valyuta kursi qo‘lda kiritildi",
+            "auto_skipped": "Markaziy bank kursi qo‘llanmadi: qo‘lda kiritilgan kurs amal qiladi"
+          }
+        }
+      }
     }
   },
   "crm": {
@@ -140,7 +169,7 @@
       "company": "Kompaniya va blankalar",
       "setup": "Birinchi ishga tushirish",
       "bot": "Telegram-bot",
-      "audit": "Harakatlar tarixi"
+      "audit": "Jurnal"
     },
     "action": "Xodimni taklif qilish",
     "setup": {
@@ -178,7 +207,7 @@
         "REQUEST_TIMEOUT": "Server o'z vaqtida javob bermadi. Kompaniya allaqachon yaratilgan bo'lishi mumkin: holat yangilanmoqda — forma yo'qolsa, kompaniya bor, aks holda takrorlang."
       },
       "connectionsTitle": "Qolgan ulanishlar",
-      "connectionsLead": "Sozlashning to'rtta qadami: har biri o'z ekraniga olib boradi.",
+      "connectionsLead": "To‘rtta qadam: har birining shakli shu yerda, yon oynada ochiladi; saqlagandan so‘ng — keyingi qadam.",
       "progress": "Tayyor: {{done}} / {{total}}",
       "allDone": "Hammasi tayyor: Platforma sozlangan.",
       "loadError": "Sozlash holatini olib bo'lmadi",
@@ -225,19 +254,26 @@
         "company": "Kompaniyangiz ERP'da hali yo'q.",
         "next": "Keyingisi: {{step}}.",
         "open": "Sozlashni davom ettirish",
-        "hide": "Yashirish",
-        "hideLabel": "Sozlash bannerini yashirish",
-        "hidden": "Banner yashirildi. Ustoz Sozlamalardagi «Birinchi ishga tushirish» sahifasida (/admin/setup) qoladi."
+        "hide": "Ertagacha yashirish",
+        "hideLabel": "Ertagacha yashirish: sozlash banneri",
+        "hidden": "Banner ertagacha yashirildi. Uni «Birinchi ishga tushirish» ustozida qaytarish mumkin."
       },
       "erpTitle": "ERP ulanishi",
       "erpLead": "Kompaniya ERP'da yaratiladi, shuning uchun ERP birinchi ulanadi. Yangi o'rnatishda juftlash kodi kerak emas — «ERP ni ulash» tugmasi yetarli.",
-      "erpDone": "ERP ulangan. Aloqani integratsiya kartochkasida tekshirish mumkin.",
+      "erpDone": "ERP ulangan. Aloqani qadam shaklida yoki Sozlamalar · Ulanishlarda tekshirish mumkin.",
       "erpUnknown": "ERP holati noma'lum: CRM javob bermadi. ERP sozlamalarini oching va aloqani tekshiring.",
       "erpOpen": "ERP sozlamalarini ochish",
       "companyNeedsErp": "Avval ERP'ni ulang",
       "companyNeedsErpText": "Kompaniya ERP'da yaratiladi, shuning uchun ulanmagan paytda uni yaratib bo'lmaydi. Ulangandan keyin forma shu yerda paydo bo'ladi.",
       "companyNeedsErpAction": "ERP ni ulash",
-      "companyAlreadyCreated": "O'z kompaniyasi allaqachon yaratilgan — natija o'sha, qolgan qadamlar bilan davom eting."
+      "companyAlreadyCreated": "O'z kompaniyasi allaqachon yaratilgan — natija o'sha, qolgan qadamlar bilan davom eting.",
+      "stepOf": "{{total}} tadan {{index}}-qadam",
+      "stepDone": "Qadam bajarildi.",
+      "nextStep": "Keyingisi: {{step}}",
+      "finish": "Yopish",
+      "stepSaved": "«{{step}}» qadami tayyor.",
+      "bannerHidden": "Sozlash banneri ertagacha yashirilgan.",
+      "bannerReturn": "Bannerni qaytarish"
     },
     "org": {
       "title": "Xodimlar",
@@ -522,6 +558,11 @@
       "change": "O'zgartirish",
       "view": "Ochish",
       "modules": "Rol modullarni ochadi: {{modules}}."
+    },
+    "journal": {
+      "filterLabel": "Jurnalda nimani ko‘rsatish",
+      "people": "Odamlar harakatlari",
+      "systems": "Tizimlararo almashinuv"
     }
   },
   "tabs": {
@@ -539,7 +580,8 @@
     "files": "Fayllar",
     "role": "Rol",
     "employees": "Xodimlar",
-    "journal": "Jurnal"
+    "journal": "Jurnal",
+    "step": "Qadam"
   },
   "panel": {
     "today": {
@@ -601,6 +643,10 @@
     "journal": {
       "title": "Yozuv tanlanmagan",
       "text": "Jurnaldan yozuvni tanlang — bu yerda tafsilotlar paydo bo'ladi: kim, qachon va nima o'zgardi."
+    },
+    "step": {
+      "title": "Qadam tanlanmagan",
+      "text": "Qadam yonidagi tugmani bosing — uning shakli ustozdan chiqmasdan shu yerda ochiladi."
     }
   }
 }

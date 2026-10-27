@@ -16,6 +16,7 @@ import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { CounterCard, CounterGrid } from "../../../shared/ui/CounterCard";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { PageHeader } from "../../../shared/ui/PageHeader";
+import { JournalFilter } from "../journal/JournalFilter";
 import { DeliveryPanel, InboxPanel, RetryDeadPanel } from "./BusPanels";
 import { DeliveriesView } from "./DeliveriesView";
 import { deliveryKey, inboxKey } from "./format";
@@ -58,8 +59,10 @@ function totals(journal: BusJournal | undefined) {
  */
 export function BusJournalPage() {
   const { t } = useTranslation(["bus", "modules"]);
-  const title = t("modules:admin.sections.bus");
-  useDocumentTitle(title);
+  // Один «Журнал» (W15-H4): это его фильтр «Обмен между системами».
+  const title = t("modules:admin.sections.audit");
+  // Вкладка браузера различает фильтр журнала: «Журнал · Обмен между системами»
+  useDocumentTitle(`${title} · ${t("modules:admin.journal.systems")}`);
   const [params, setParams] = useSearchParams();
   const view: View = isView(params.get("view")) ? (params.get("view") as View) : "subscribers";
   const journal = useGetBusJournal();
@@ -129,6 +132,7 @@ export function BusJournalPage() {
   return (
     <div className="pf-bus">
       <PageHeader title={title} subtitle={t("bus:subtitle")} />
+      <JournalFilter current="systems" />
       <BusSourcesNote
         sources={journal.data?.sources}
         onRetry={() => {

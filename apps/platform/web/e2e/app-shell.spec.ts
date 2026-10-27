@@ -38,8 +38,8 @@ test.describe("панели", () => {
     await expect(panel).toHaveCount(0);
 
     // другой раздел — свои умолчания (обе панели открыты)
-    await page.goto("/dashboard/projects");
-    await expect(page.getByRole("heading", { level: 1, name: "Проекты" })).toBeVisible();
+    await page.goto("/eds/inbox");
+    await expect(page.getByRole("tab", { name: "Резолюция" })).toBeVisible();
     await expect(menu).toBeVisible();
     await expect(panel).toBeVisible();
 
@@ -63,7 +63,7 @@ test.describe("панели", () => {
     await expect(page.getByRole("navigation", { name: "Разделы модуля" })).toBeVisible();
   });
 
-  test("умолчания по приложению А: Клиенты · Лиды — без бокового окна, Расчёт · Мои расчёты — без подменю", async ({
+  test("умолчания по приложению А: Клиенты · Лиды — без бокового окна, Расчёт · Мои расчёты — без подменю; у заглушки окно закрыто", async ({
     page,
   }) => {
     await loginAndWait(page, "all@demo.example");
@@ -79,7 +79,9 @@ test.describe("панели", () => {
     await page.goto("/erp/calc");
     await expect(page.getByRole("heading", { level: 1, name: "Мои расчёты" })).toBeVisible();
     await expect(menu).toHaveCount(0);
-    await expect(panel).toBeVisible();
+    // раздел-заглушка: выбирать нечего — боковое окно закрыто (W15-H4); «Панель» открывает его
+    await expect(panel).toHaveCount(0);
+    await page.getByRole("button", { name: "Панель", exact: true }).click();
     await expect(page.getByRole("tab", { name: "Задание" })).toBeVisible();
     await settledScreenshot(page, "erp-calc");
 

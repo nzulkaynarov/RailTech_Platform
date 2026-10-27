@@ -306,7 +306,7 @@
     "reply_template": "Шаблон ответа",
     "sandbox": "Песочница бота",
     "export": "Выгрузка",
-    "integration_secret": "Подключение",
+    "integration_secret": "Ключ подключения",
     "integration": "Подключение",
     "external_service": "Внешний сервис",
     "platform_role": "Роль Платформы",

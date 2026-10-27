@@ -133,7 +133,7 @@
  * (директор читает), сброс пароля — `admin: full`; профиль доступен каждому вошедшему. Секреты из записей журнала BFF вырезает
  * (значения полей `password`, `secret`, `token`, `key`, `*_key`, `credentials`, `authorization`, `pin` и им подобных -> `***` целиком, любого типа).
  *
- * **0.23.0 (W15-H7) — помощь, первый вход и обращения к администратору.** Добавляющее изменение (тег `tickets`). **Обращения
+ * **0.24.0 (W15-H7) — помощь, первый вход и обращения к администратору.** Добавляющее изменение (тег `tickets`). **Обращения
  * сотрудников** (домен CRM, ADR-0015): `POST /tickets` (тема из списка `access|notification|template|error|other`, текст,
  * адрес страницы; роль автора BFF берёт из сессии), `GET /tickets` и `GET /tickets/{number}` — только свои обращения
  * (чужое — 404), не больше пяти в час (429 `TOO_MANY_REQUESTS`, `details.reason = ticket_rate_limited`). Админ:
@@ -147,6 +147,14 @@
  * ответ и решение уходят автору, новое обращение — администраторам; `POST /notifications/{id}/read` и `read-all` отмечают
  * обе ленты. **Первый вход:** `Me.onboarding_done` и `PUT /me/onboarding` («Пропустить» / «Больше не показывать» —
  * флаг хранит CRM, не браузер).
+ *
+ * **0.23.0 (W15-H8) — Admin · Компания: шаблоны документов и лента.** Добавляющее изменение. `DocumentTemplateIn.kind` — вид
+ * шаблона при создании (`letter`, `report`, `custom`, `contract`, `invoice`, `act`, `receipt`, `delivery_note`; без поля — `custom`,
+ * как раньше); `DocumentTemplate.kind` отдаёт вид кодом. `DocumentTemplatePreviewIn.kind` — предпросмотр договора, счёта и акта идёт
+ * на каркасе своего вида и с образцами блоков (остальные виды — общий каркас и подписанные заглушки). `ActivityItem.code` — код
+ * административного события ERP (`admin.*`), по которому SPA собирает фразу на языке сотрудника; для остальных событий `null`.
+ * Журнал ручных курсов в ERP виден только с правом `settings.edit` (имена и почта коллег): `GET /admin/company/fx-rate` без
+ * этого права отдаёт текущий курс и пустой журнал с `journal_available = false` (не ошибку; директор раздел смотрит).
  *
  * **0.22.0 (D1-1, волна 16) — Клиенты · Ждут ответа.** Добавляющее изменение (тег `messages`): очередь передач от бота с
  * запиской (CRM-06) и SLA — `GET /crm/messages`; карточка лида, лента диалога с подгрузкой истории и вложениями через BFF —
@@ -230,7 +238,7 @@
  * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; «Забыли пароль?» — 5 запросов в час на IP и на адрес; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.23.0
+ * OpenAPI spec version: 0.24.0
  */
 import { faker } from "@faker-js/faker";
 
@@ -248,6 +256,7 @@ import {
   BusSubscriberState,
   CategoryRequestStatus,
   DocumentKind,
+  DocumentTemplateKind,
   DueLabel,
   EdsDocumentKind,
   EdsRegistryKind,
@@ -1448,6 +1457,7 @@ export const getGetActivityTodayResponseMock = (
       initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
     },
     text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    code: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
     module: faker.helpers.arrayElement(Object.values(ModuleCode)),
     at: faker.date.past().toISOString().slice(0, 19) + "Z",
     object: faker.helpers.arrayElement([
@@ -4350,6 +4360,7 @@ export const getListDocumentTemplatesResponseMock = (
   items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
     id: faker.helpers.fromRegExp("^[0-9]+$"),
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    kind: faker.helpers.arrayElement(Object.values(DocumentTemplateKind)),
     kind_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     body_html: faker.string.alpha({ length: { min: 10, max: 20 } }),
     is_sample: faker.datatype.boolean(),
@@ -4369,6 +4380,7 @@ export const getCreateDocumentTemplateResponseMock = (
 ): DocumentTemplate => ({
   id: faker.helpers.fromRegExp("^[0-9]+$"),
   name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  kind: faker.helpers.arrayElement(Object.values(DocumentTemplateKind)),
   kind_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
   body_html: faker.string.alpha({ length: { min: 10, max: 20 } }),
   is_sample: faker.datatype.boolean(),
@@ -4418,6 +4430,7 @@ export const getUpdateDocumentTemplateResponseMock = (
 ): DocumentTemplate => ({
   id: faker.helpers.fromRegExp("^[0-9]+$"),
   name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  kind: faker.helpers.arrayElement(Object.values(DocumentTemplateKind)),
   kind_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
   body_html: faker.string.alpha({ length: { min: 10, max: 20 } }),
   is_sample: faker.datatype.boolean(),
@@ -4436,6 +4449,7 @@ export const getCopyDocumentTemplateResponseMock = (
 ): DocumentTemplate => ({
   id: faker.helpers.fromRegExp("^[0-9]+$"),
   name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  kind: faker.helpers.arrayElement(Object.values(DocumentTemplateKind)),
   kind_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
   body_html: faker.string.alpha({ length: { min: 10, max: 20 } }),
   is_sample: faker.datatype.boolean(),
@@ -4829,6 +4843,7 @@ export const getGetFxRateResponseMock = (
       entered_at: faker.date.past().toISOString().slice(0, 19) + "Z",
     }),
   ),
+  journal_available: faker.datatype.boolean(),
   ...overrideResponse,
 });
 
@@ -4870,6 +4885,7 @@ export const getCreateFxRateResponseMock = (
       entered_at: faker.date.past().toISOString().slice(0, 19) + "Z",
     }),
   ),
+  journal_available: faker.datatype.boolean(),
   ...overrideResponse,
 });
 

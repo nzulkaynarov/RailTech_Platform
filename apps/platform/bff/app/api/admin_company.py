@@ -23,6 +23,7 @@ from app.schemas_company import (
     KIND_TO_ERP,
     MARGIN_FIELDS,
     REFERENCE_PATH,
+    TEMPLATE_KIND_TO_ERP,
     BrandPreviewIn,
     BrandProfile,
     BrandProfileUpdate,
@@ -451,7 +452,12 @@ async def preview_document_template(
     body: DocumentTemplatePreviewIn, authed: Reader
 ) -> DocumentPreview:
     raw = await _erp(authed).data(
-        "POST", "crm/document-templates/preview/", json={"body_html": body.body_html}
+        "POST",
+        "crm/document-templates/preview/",
+        json={
+            "body_html": body.body_html,
+            **({"kind": TEMPLATE_KIND_TO_ERP[body.kind]} if body.kind else {}),
+        },
     )
     warnings = [text(w) for w in raw.get("warnings") or []]
     erp = _erp(authed)
@@ -748,12 +754,22 @@ FX_JOURNAL_LIMIT = 20
 
 async def _fx_overview(erp: ErpCompany) -> FxRateOverview:
     current = await erp.data("GET", "exchange-rates/current/", params={"currency": "USD"})
-    journal = await erp.data(
-        "GET", "exchange-rates/journal/", params={"currency": "USD", "limit": FX_JOURNAL_LIMIT}
-    )
+    journal: Any = []
+    available = True
+    try:
+        journal = await erp.data(
+            "GET", "exchange-rates/journal/", params={"currency": "USD", "limit": FX_JOURNAL_LIMIT}
+        )
+    except PlatformError as error:
+        # Журнал с именами и почтой коллег ERP отдаёт только с `settings.edit` (W15-H8).
+        # Директор читает раздел «Компания» без этого права: курс виден, журнала нет.
+        if error.status_code != 403:
+            raise
+        available = False
     return to_fx_overview(
         current if isinstance(current, dict) else {},
         [row for row in journal if isinstance(row, dict)] if isinstance(journal, list) else [],
+        journal_available=available,
     )
 
 

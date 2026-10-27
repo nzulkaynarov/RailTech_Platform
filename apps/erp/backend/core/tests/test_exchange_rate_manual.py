@@ -1,6 +1,6 @@
 """W13C-F6: ручной ввод курса USD→UZS на дату, журнал и «автокурс не перетирает ручной».
 
-Право на ввод — `settings.edit` или администратор; журнал — сотруднику бэк-офиса; текущий курс — любому вошедшему.
+Право на ввод и на чтение журнала — `settings.edit` или администратор; текущий курс — любому вошедшему.
 """
 
 import datetime
@@ -251,13 +251,25 @@ def test_journal_limit_and_currency_filter():
     assert len(_editor().get(JOURNAL, {"limit": "x"}).json()) == 3
 
 
-def test_read_only_staff_sees_the_journal_but_cannot_write():
+def test_staff_without_settings_edit_cannot_read_the_journal_with_names_and_emails():
+    """Журнал несёт имена и почту коллег: его видит только право `settings.edit` (W15-H8)."""
     currency("USD")
     _editor().post(MANUAL, _body(), format="json")
     reader = _client("reader@f6.test", ["catalog.manage"])
 
-    assert len(reader.get(JOURNAL).json()) == 1
+    denied = reader.get(JOURNAL)
+    assert denied.status_code == 403
+    assert "editor@f6.test" not in denied.content.decode()
     assert reader.post(MANUAL, _body("1"), format="json").status_code == 403
+    assert reader.get(CURRENT).status_code == 200  # текущий курс по-прежнему открыт любому вошедшему
+    assert len(_editor().get(JOURNAL).json()) == 1
+
+
+def test_superuser_reads_the_journal():
+    currency("USD")
+    admin = _client("root@f6.test", superuser=True)
+    admin.post(MANUAL, _body(), format="json")
+    assert len(admin.get(JOURNAL).json()) == 1
 
 
 # --- текущий курс ---------------------------------------------------------------------------------------------------

@@ -22,7 +22,12 @@ export interface Panels {
  * дальше умолчание раздела. На экранах < 1200 боковое окно — Drawer поверх основного: по умолчанию закрыт, открывается
  * только явным `?panel=open` и не записывается в сохранённое состояние широкого экрана.
  */
-export function usePanels(userId: string, section: SectionConfig | undefined): Panels {
+export function usePanels(
+  userId: string,
+  section: SectionConfig | undefined,
+  /** Умолчание бокового окна, если у раздела нет своего (`defaults.panelOpen`): у заглушки — закрыто */
+  fallbackOpen = true,
+): Panels {
   const { wide } = useViewport();
   const [params, setParams] = useSearchParams();
   const key = panelsKey(userId, section?.path.split("?")[0] ?? "-");
@@ -37,7 +42,7 @@ export function usePanels(userId: string, section: SectionConfig | undefined): P
       ? true
       : urlPanel === "closed"
         ? false
-        : (entry?.panelOpen ?? section?.defaults?.panelOpen ?? true)
+        : (entry?.panelOpen ?? section?.defaults?.panelOpen ?? fallbackOpen)
     : urlPanel === "open";
   const menuOpen = entry?.menuOpen ?? section?.defaults?.menuOpen ?? true;
 

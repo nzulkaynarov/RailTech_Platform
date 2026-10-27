@@ -549,6 +549,47 @@ async def test_activity_drops_service_events_and_never_shows_a_raw_code(
         assert raw not in response.text
 
 
+async def test_activity_admin_events_are_words_not_raw_verbs(
+    web: Web, fb: FeedBackends, check: ContractChecker
+) -> None:
+    """O-5 (W15-H8): «Справочник deleted: ZZ», «Шаблон письма created: …» словами, не глаголами."""
+    m = fb.m
+    fb.state["activity_logs"] = {
+        "results": [
+            log(1, m.ago(minutes=1), "Справочник deleted: ZZ", event_code="admin.lookup.deleted"),
+            log(
+                2,
+                m.ago(minutes=2),
+                "Шаблон письма created: act_issued",
+                event_code="admin.email_template.created",
+            ),
+            # кода нет в таблице, а фраза журнала — с сырым глаголом: нейтральная фраза, не глагол
+            log(3, m.ago(minutes=3), "Банк updated: 5", event_code="admin.bank.updated"),
+            log(4, m.ago(minutes=4), "quote.sent", event_code="quote.sent"),
+        ]
+    }
+    await web.login(["DIRECTOR"])
+
+    response = await web.client.get("/api/v1/activity/today")
+
+    check(response, "/activity/today", "get")
+    items = response.json()["items"]
+    assert [i["text"] for i in items] == [
+        "Строка справочника удалена",
+        "Шаблон письма добавлен",
+        "Административное действие в ERP",
+        "КП отправлено клиенту",
+    ]
+    assert [i.get("code") for i in items] == [
+        "admin.lookup.deleted",
+        "admin.email_template.created",
+        None,  # кода нет в таблице: SPA покажет фразу BFF
+        None,  # не административное событие
+    ]
+    for raw in ("deleted", "created", "updated"):
+        assert all(raw not in i["text"] for i in items)
+
+
 async def test_activity_falls_back_to_deal_timelines_when_log_is_closed(
     web: Web, fb: FeedBackends, check: ContractChecker
 ) -> None:

@@ -326,6 +326,24 @@
       "empty": {
         "title": "No document templates yet",
         "text": "Create a contract or act template or copy a platform sample."
+      },
+      "preview": "Preview",
+      "previewNamed": "Preview: {{name}}",
+      "viewSampleTitle": "Platform sample",
+      "viewSampleHint": "The sample is view-only. Copy it to your company to edit the text.",
+      "kindField": "Document type",
+      "kindFixed": "The type is set on creation and cannot be changed later.",
+      "kindHint": "A contract, an invoice and an act are printed on their own layout and must contain blocks (table, totals, signatures).",
+      "prefilled": "The platform sample for this type is filled in: edit the text, keep the blocks in place.",
+      "kinds": {
+        "letter": "Letter",
+        "report": "Report",
+        "custom": "Custom",
+        "contract": "Contract",
+        "invoice": "Invoice",
+        "act": "Act",
+        "receipt": "Payment receipt",
+        "delivery_note": "Delivery note"
       }
     },
     "emails": {
@@ -410,6 +428,11 @@
     "empty": {
       "title": "No rows yet",
       "text": "Add the first row of the list."
+    },
+    "search": "Search by code and name",
+    "noMatch": {
+      "title": "Nothing found",
+      "text": "No rows match “{{query}}”. Change the query or clear the search."
     }
   },
   "categories": {
