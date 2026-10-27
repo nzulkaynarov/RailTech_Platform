@@ -248,4 +248,13 @@ def test_reason_values_are_a_stable_contract() -> None:
         "deputy_not_colleague",
         "not_a_deputy",
         "reset_token_invalid",
+        "ticket_subject_unknown",
+        "ticket_text_empty",
+        "ticket_text_too_long",
+        "ticket_page_invalid",
+        "ticket_status_unknown",
+        "ticket_status_transition",
+        "ticket_reply_empty",
+        "ticket_reply_too_long",
+        "ticket_rate_limited",
     }
