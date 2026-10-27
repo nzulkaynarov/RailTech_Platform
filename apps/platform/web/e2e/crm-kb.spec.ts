@@ -194,7 +194,8 @@ test.describe("База знаний: администратор", () => {
     await link.getByRole("combobox", { name: "Документ с ответом" }).click();
     await page.getByTitle("Гарантия на продукцию").click();
     await link.getByRole("button", { name: "Привязать и закрыть пробел" }).click();
-    await expect(page.getByText("Пробел закрыт")).toBeVisible();
+    // exact: иначе совпадает ещё и тост «Документ добавлен, пробел закрыт — …» предыдущего шага, пока он не исчез (strict mode).
+    await expect(page.getByText("Пробел закрыт", { exact: true })).toBeVisible();
 
     await page.getByRole("link", { name: "Открыть пробел: Do you deliver to Samarkand?" }).click();
     await panel.getByRole("button", { name: "Игнорировать" }).click();
