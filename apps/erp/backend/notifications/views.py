@@ -14,6 +14,7 @@ from .models import EmailTemplate, Notification
 from .serializers import (
     EmailTemplatePreviewResultSerializer,
     EmailTemplatePreviewSerializer,
+    EmailTemplateRenderErrorSerializer,
     EmailTemplateSerializer,
     EmailTemplateTestSendResultSerializer,
     EmailTemplateTestSendSerializer,
@@ -185,8 +186,10 @@ class EmailTemplateViewSet(RoleGatedViewMixin, AuditedWriteMixin, viewsets.Model
         request=EmailTemplatePreviewSerializer,
         responses={
             200: EmailTemplatePreviewResultSerializer,
-            404: OpenApiResponse(
-                description="EMAIL_TEMPLATE_NOT_FOUND: no DB row and no file template for the key (or the template is not found)"
+            400: OpenApiResponse(
+                response=EmailTemplateRenderErrorSerializer,
+                description="EMAIL_TEMPLATE_RENDER_FAILED: `details.reason` is template_does_not_exist "
+                "(include/extends of a missing file) or template_syntax_error; or serializer field errors",
             ),
         },
         tags=["Admin"],
@@ -202,7 +205,13 @@ class EmailTemplateViewSet(RoleGatedViewMixin, AuditedWriteMixin, viewsets.Model
                 template.key, context=override_context, template=template
             )
         except services_email_templates.EmailTemplateNotFound:
+            # Защита: строка просматриваемого шаблона есть всегда (`get_object`), поэтому через API недостижимо.
             return Response({"detail": "EMAIL_TEMPLATE_NOT_FOUND"}, status=404)
+        except services_email_templates.EmailTemplateRenderFailed as exc:
+            return Response(
+                {"detail": "EMAIL_TEMPLATE_RENDER_FAILED", "details": {"reason": exc.reason, "message": exc.message}},
+                status=400,
+            )
         return Response(result)
 
     @extend_schema(

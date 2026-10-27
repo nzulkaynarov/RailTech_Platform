@@ -78,3 +78,15 @@ class EmailTemplateTestSendResultSerializer(serializers.Serializer):
     status = serializers.CharField(help_text="Статус записи EmailLog или UNKNOWN")
     email_log_id = serializers.IntegerField(allow_null=True)
     to_email = serializers.EmailField()
+
+
+class _RenderFailureDetailsSerializer(serializers.Serializer):
+    reason = serializers.ChoiceField(choices=["template_does_not_exist", "template_syntax_error"])
+    message = serializers.CharField(help_text="Текст ошибки Django (до 300 символов)")
+
+
+class EmailTemplateRenderErrorSerializer(serializers.Serializer):
+    """Отказ предпросмотра: шаблон не собирается (D2-0)."""
+
+    detail = serializers.CharField(help_text="EMAIL_TEMPLATE_RENDER_FAILED")
+    details = _RenderFailureDetailsSerializer()

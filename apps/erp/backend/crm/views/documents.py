@@ -70,8 +70,8 @@ def _brand_preview_field():
     )
 
 
-def _as_flag(value, *, default: bool) -> bool:
-    """`is_active` из тела: не прислан или `null` — `default`; строки `false`/`0`/`no` формы — ложь."""
+def _as_flag(value, *, default: bool | None) -> bool | None:
+    """`is_active` из тела: не прислан или `null` — `default` (при правке `None` — «не менять»); строки `false`/`0`/`no` — ложь."""
     if value is None:
         return default
     if isinstance(value, str):
@@ -212,7 +212,7 @@ class DocumentTemplateViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
                 name=request.data.get("name"),
                 kind_code=request.data.get("kind"),
                 body_html=request.data.get("body_html"),
-                is_active=request.data.get("is_active"),
+                is_active=_as_flag(request.data.get("is_active"), default=None),
             )
         except DjangoValidationError as exc:
             return _template_error(exc)

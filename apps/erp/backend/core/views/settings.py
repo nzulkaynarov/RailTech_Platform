@@ -1,5 +1,11 @@
 from django.conf import settings as django_settings
-from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_field, inline_serializer
+from drf_spectacular.utils import (
+    OpenApiResponse,
+    PolymorphicProxySerializer,
+    extend_schema,
+    extend_schema_field,
+    inline_serializer,
+)
 from rest_framework import serializers as drf_serializers
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -102,12 +108,25 @@ class SystemSettingsView(RoleGatedViewMixin, APIView):
         responses={
             200: SystemSettingSerializer,
             400: OpenApiResponse(
-                response=inline_serializer(
-                    "SharedSettingReadOnlyError",
-                    fields={
-                        "detail": drf_serializers.CharField(),
-                        "fields": drf_serializers.ListField(child=drf_serializers.CharField()),
-                    },
+                response=PolymorphicProxySerializer(
+                    component_name="SystemSettingsPatchError",
+                    serializers=[
+                        inline_serializer(
+                            "SharedSettingReadOnlyError",
+                            fields={
+                                "detail": drf_serializers.CharField(),
+                                "fields": drf_serializers.ListField(child=drf_serializers.CharField()),
+                            },
+                        ),
+                        inline_serializer(
+                            "SystemSettingsFieldErrors",
+                            fields={
+                                name: drf_serializers.ListField(child=drf_serializers.CharField(), required=False)
+                                for name in ("vat_rate", "maintenance_mode", "is_two_factor_required")
+                            },
+                        ),
+                    ],
+                    resource_type_field_name=None,
                 ),
                 description="SHARED_SETTING_READ_ONLY (`fields` names the rejected shared fields) or serializer field errors",
             ),

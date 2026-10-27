@@ -2626,18 +2626,19 @@ paths:
               schema:
                 $ref: '#/components/schemas/EmailTemplatePreviewResult'
           description: ''
-        '404':
-          description: 'EMAIL_TEMPLATE_NOT_FOUND: no DB row and no file template for the key (or the template is not found)'
+        '400':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorDetail'
-        '400':
-          $ref: '#/components/responses/BadRequestResponse'
+                $ref: '#/components/schemas/EmailTemplateRenderError'
+          description: 'EMAIL_TEMPLATE_RENDER_FAILED: `details.reason` is template_does_not_exist (include/extends of a missing
+            file) or template_syntax_error; or serializer field errors'
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
         '403':
           $ref: '#/components/responses/ForbiddenResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundResponse'
   /api/v1/admin/email-templates/{id}/test-send/:
     post:
       operationId: admin_email_templates_test_send_create
@@ -12895,18 +12896,19 @@ paths:
               schema:
                 $ref: '#/components/schemas/EmailTemplatePreviewResult'
           description: ''
-        '404':
-          description: 'EMAIL_TEMPLATE_NOT_FOUND: no DB row and no file template for the key (or the template is not found)'
+        '400':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ErrorDetail'
-        '400':
-          $ref: '#/components/responses/BadRequestResponse'
+                $ref: '#/components/schemas/EmailTemplateRenderError'
+          description: 'EMAIL_TEMPLATE_RENDER_FAILED: `details.reason` is template_does_not_exist (include/extends of a missing
+            file) or template_syntax_error; or serializer field errors'
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
         '403':
           $ref: '#/components/responses/ForbiddenResponse'
+        '404':
+          $ref: '#/components/responses/NotFoundResponse'
   /api/v1/settings/email-templates/{id}/test-send/:
     post:
       operationId: settings_email_templates_test_send_create
@@ -13759,7 +13761,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SharedSettingReadOnlyError'
+                $ref: '#/components/schemas/SystemSettingsPatchError'
           description: SHARED_SETTING_READ_ONLY (`fields` names the rejected shared fields) or serializer field errors
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
@@ -17064,6 +17066,18 @@ components:
       - key
       - subject
       - text_body
+    EmailTemplateRenderError:
+      type: object
+      description: 'Отказ предпросмотра: шаблон не собирается (D2-0).'
+      properties:
+        detail:
+          type: string
+          description: EMAIL_TEMPLATE_RENDER_FAILED
+        details:
+          $ref: '#/components/schemas/_RenderFailureDetails'
+      required:
+      - detail
+      - details
     EmailTemplateRequest:
       type: object
       description: DB-editable email template — Platform-Operator admin CRUD.
@@ -22099,6 +22113,14 @@ components:
       required:
       - code
       - name
+    ReasonEnum:
+      enum:
+      - template_does_not_exist
+      - template_syntax_error
+      type: string
+      description: |-
+        * `template_does_not_exist` - template_does_not_exist
+        * `template_syntax_error` - template_syntax_error
     ReassignProductRequest:
       type: object
       properties:
@@ -22754,6 +22776,25 @@ components:
       - platform_name
       - support_email
       - updated_at
+    SystemSettingsFieldErrors:
+      type: object
+      properties:
+        vat_rate:
+          type: array
+          items:
+            type: string
+        maintenance_mode:
+          type: array
+          items:
+            type: string
+        is_two_factor_required:
+          type: array
+          items:
+            type: string
+    SystemSettingsPatchError:
+      oneOf:
+      - $ref: '#/components/schemas/SharedSettingReadOnlyError'
+      - $ref: '#/components/schemas/SystemSettingsFieldErrors'
     TOTPDisableRequest:
       type: object
       properties:
@@ -23218,6 +23259,17 @@ components:
       - rate_date
       - rate_to_uzs
       - source
+    _RenderFailureDetails:
+      type: object
+      properties:
+        reason:
+          $ref: '#/components/schemas/ReasonEnum'
+        message:
+          type: string
+          description: Текст ошибки Django (до 300 символов)
+      required:
+      - message
+      - reason
   securitySchemes:
     jwtAuth:
       type: http

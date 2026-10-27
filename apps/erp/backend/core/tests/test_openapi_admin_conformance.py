@@ -99,6 +99,20 @@ def test_document_templates_crud_and_refusals(admin, company):
     conforms(admin.delete(one), item, "delete", status=204)
 
 
+def test_template_update_reads_is_active_the_same_way_as_create(admin, company):
+    """Ревью #282: `"false"` строкой (форма) на правке — выключить, а не включить (`bool("false")` был бы истиной)."""
+    listing = f"{API}crm/document-templates/"
+    created = admin.post(listing, {"name": "Флаг", "body_html": DOCUMENT_BODY}, format="json")
+    one = f"{listing}{created.json()['id']}/"
+    off = admin.patch(one, {"is_active": "false"}, format="json")
+    conforms(off, f"{API}crm/document-templates/{{id}}/", "patch", status=200)
+    assert off.json()["is_active"] is False
+    assert admin.patch(one, {"is_active": "true"}, format="json").json()["is_active"] is True
+    assert admin.patch(one, {"is_active": "0"}, format="json").json()["is_active"] is False
+    # Без поля активность не трогается.
+    assert admin.patch(one, {"name": "Флаг 2"}, format="json").json()["is_active"] is False
+
+
 def test_inactive_legal_template_is_saved_as_draft_without_required_blocks(admin, company):
     """Q-D20-1.2: `is_active=false` при создании — черновик; обязательные блоки проверяются только у активного."""
     from crm.models import DocumentTemplateKind
@@ -205,20 +219,36 @@ def test_email_template_preview_service_without_row_and_file_raises_not_found(db
         preview_template("d2_0_nowhere")
 
 
-def test_email_template_preview_view_maps_not_found_to_404_with_code(admin, company, monkeypatch):
-    from notifications import services_email_templates as service
+@pytest.mark.parametrize(
+    ("subject", "reason"),
+    [
+        ('{% include "d2_0_missing.html" %}', "template_does_not_exist"),
+        ('{% extends "d2_0_missing_base.html" %}', "template_does_not_exist"),
+        ("{% if %}", "template_syntax_error"),
+        ("{% unknown_tag %}", "template_syntax_error"),
+    ],
+)
+def test_email_template_preview_render_failure_is_400_with_code(admin, company, subject, reason):
+    """Ревью #282: сбой рендера строки БД (include/extends мимо файла, ошибка синтаксиса) — 400 с кодом, не 500."""
     from notifications.models import EmailTemplate
 
-    template = EmailTemplate.objects.create(key="d2_0_gone", subject="s", text_body="t", is_active=True)
+    template = EmailTemplate.objects.create(key="d2_0_broken", subject=subject, text_body="t", is_active=True)
+    url = f"{API}settings/email-templates/{template.id}/preview/"
+    response = admin.post(url, {}, format="json")
+    assert response.status_code == 400
+    body = response.json()
+    assert body["detail"] == "EMAIL_TEMPLATE_RENDER_FAILED"
+    assert body["details"]["reason"] == reason
+    assert body["details"]["message"]
+    conforms(response, f"{API}settings/email-templates/{{id}}/preview/", "post", status=400)
 
-    def gone(*args, **kwargs):
-        raise service.EmailTemplateNotFound("d2_0_gone")
 
-    monkeypatch.setattr(service, "preview_template", gone)
-    response = admin.post(f"{API}settings/email-templates/{template.id}/preview/", {}, format="json")
-    assert response.status_code == 404
-    assert response.json() == {"detail": "EMAIL_TEMPLATE_NOT_FOUND"}
-    conforms(response, f"{API}settings/email-templates/{{id}}/preview/", "post", status=404)
+def test_email_template_preview_describes_no_unreachable_404_code():
+    """404 `EMAIL_TEMPLATE_NOT_FOUND` через API недостижим (строка есть всегда) — в описании операции его нет."""
+    from core.tests.openapi_internal import operation
+
+    description = operation(f"{API}settings/email-templates/{{id}}/preview/", "post")["responses"]["404"]
+    assert "EMAIL_TEMPLATE_NOT_FOUND" not in str(description)
 
 
 # --- справочники ------------------------------------------------------------------------------------------------
@@ -350,6 +380,10 @@ def test_system_settings_and_shared_field_refusal(admin, company):
     refused = admin.patch(template, {"platform_name": "X"}, format="json")
     assert refused.json()["detail"] == "SHARED_SETTING_READ_ONLY"
     conforms(refused, template, "patch", status=400)
+    # Ревью #282: 400 бывает и ошибкой полей сериализатора — схема допускает обе формы.
+    invalid = admin.patch(template, {"vat_rate": "не число"}, format="json")
+    assert invalid.status_code == 400 and "vat_rate" in invalid.json()
+    conforms(invalid, template, "patch", status=400)
 
 
 def test_exchange_rates_current_journal_manual(admin, company):

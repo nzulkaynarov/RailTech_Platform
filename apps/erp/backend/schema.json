@@ -5519,24 +5519,24 @@
                         },
                         "description": ""
                     },
-                    "404": {
-                        "description": "EMAIL_TEMPLATE_NOT_FOUND: no DB row and no file template for the key (or the template is not found)",
+                    "400": {
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/ErrorDetail"
+                                    "$ref": "#/components/schemas/EmailTemplateRenderError"
                                 }
                             }
-                        }
-                    },
-                    "400": {
-                        "$ref": "#/components/responses/BadRequestResponse"
+                        },
+                        "description": "EMAIL_TEMPLATE_RENDER_FAILED: `details.reason` is template_does_not_exist (include/extends of a missing file) or template_syntax_error; or serializer field errors"
                     },
                     "401": {
                         "$ref": "#/components/responses/UnauthorizedResponse"
                     },
                     "403": {
                         "$ref": "#/components/responses/ForbiddenResponse"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFoundResponse"
                     }
                 }
             }
@@ -21338,24 +21338,24 @@
                         },
                         "description": ""
                     },
-                    "404": {
-                        "description": "EMAIL_TEMPLATE_NOT_FOUND: no DB row and no file template for the key (or the template is not found)",
+                    "400": {
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/ErrorDetail"
+                                    "$ref": "#/components/schemas/EmailTemplateRenderError"
                                 }
                             }
-                        }
-                    },
-                    "400": {
-                        "$ref": "#/components/responses/BadRequestResponse"
+                        },
+                        "description": "EMAIL_TEMPLATE_RENDER_FAILED: `details.reason` is template_does_not_exist (include/extends of a missing file) or template_syntax_error; or serializer field errors"
                     },
                     "401": {
                         "$ref": "#/components/responses/UnauthorizedResponse"
                     },
                     "403": {
                         "$ref": "#/components/responses/ForbiddenResponse"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFoundResponse"
                     }
                 }
             }
@@ -22630,7 +22630,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/SharedSettingReadOnlyError"
+                                    "$ref": "#/components/schemas/SystemSettingsPatchError"
                                 }
                             }
                         },
@@ -26866,6 +26866,23 @@
                     "key",
                     "subject",
                     "text_body"
+                ]
+            },
+            "EmailTemplateRenderError": {
+                "type": "object",
+                "description": "Отказ предпросмотра: шаблон не собирается (D2-0).",
+                "properties": {
+                    "detail": {
+                        "type": "string",
+                        "description": "EMAIL_TEMPLATE_RENDER_FAILED"
+                    },
+                    "details": {
+                        "$ref": "#/components/schemas/_RenderFailureDetails"
+                    }
+                },
+                "required": [
+                    "detail",
+                    "details"
                 ]
             },
             "EmailTemplateRequest": {
@@ -33235,6 +33252,14 @@
                     "name"
                 ]
             },
+            "ReasonEnum": {
+                "enum": [
+                    "template_does_not_exist",
+                    "template_syntax_error"
+                ],
+                "type": "string",
+                "description": "* `template_does_not_exist` - template_does_not_exist\n* `template_syntax_error` - template_syntax_error"
+            },
             "ReassignProductRequest": {
                 "type": "object",
                 "properties": {
@@ -34099,6 +34124,39 @@
                     "updated_at"
                 ]
             },
+            "SystemSettingsFieldErrors": {
+                "type": "object",
+                "properties": {
+                    "vat_rate": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "maintenance_mode": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "is_two_factor_required": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                }
+            },
+            "SystemSettingsPatchError": {
+                "oneOf": [
+                    {
+                        "$ref": "#/components/schemas/SharedSettingReadOnlyError"
+                    },
+                    {
+                        "$ref": "#/components/schemas/SystemSettingsFieldErrors"
+                    }
+                ]
+            },
             "TOTPDisableRequest": {
                 "type": "object",
                 "properties": {
@@ -34684,6 +34742,22 @@
                     "rate_date",
                     "rate_to_uzs",
                     "source"
+                ]
+            },
+            "_RenderFailureDetails": {
+                "type": "object",
+                "properties": {
+                    "reason": {
+                        "$ref": "#/components/schemas/ReasonEnum"
+                    },
+                    "message": {
+                        "type": "string",
+                        "description": "Текст ошибки Django (до 300 символов)"
+                    }
+                },
+                "required": [
+                    "message",
+                    "reason"
                 ]
             },
             "ErrorDetail": {

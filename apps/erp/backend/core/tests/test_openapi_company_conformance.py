@@ -62,6 +62,16 @@ def test_payment_terms_days_is_accepted_validated_and_described(admin, company):
     assert admin.get(url).json()["payment_terms_days"] is None
 
 
+def test_default_warranty_months_above_smallint_is_a_refusal_not_a_500(admin, company):
+    """Ревью #282: `default_warranty_months` — smallint; 32768 раньше давало ошибку БД, теперь 400 `BAD_NUMBER`."""
+    template = f"{API}accounts/companies/{{id}}/settings/"
+    url = f"{API}accounts/companies/{company.id}/settings/"
+    refused = admin.patch(url, {"default_warranty_months": 32768}, format="json")
+    assert refused.json() == {"detail": "BAD_NUMBER"}
+    conforms(refused, template, "patch", status=400)
+    assert admin.patch(url, {"default_warranty_months": 32767}, format="json").status_code == 200
+
+
 def test_company_settings_patch_refusal_is_described(admin, company):
     template = f"{API}accounts/companies/{{id}}/settings/"
     response = admin.patch(

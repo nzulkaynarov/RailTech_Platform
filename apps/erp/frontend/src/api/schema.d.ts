@@ -9485,6 +9485,12 @@ export interface components {
                 [key: string]: unknown;
             };
         };
+        /** @description Отказ предпросмотра: шаблон не собирается (D2-0). */
+        EmailTemplateRenderError: {
+            /** @description EMAIL_TEMPLATE_RENDER_FAILED */
+            detail: string;
+            details: components["schemas"]["_RenderFailureDetails"];
+        };
         /** @description DB-editable email template — Platform-Operator admin CRUD. */
         EmailTemplateRequest: {
             /**
@@ -13096,6 +13102,12 @@ export interface components {
             code: string;
             name: string;
         };
+        /**
+         * @description * `template_does_not_exist` - template_does_not_exist
+         *     * `template_syntax_error` - template_syntax_error
+         * @enum {string}
+         */
+        ReasonEnum: "template_does_not_exist" | "template_syntax_error";
         ReassignProductRequest: {
             product_id: number | null;
         };
@@ -13494,6 +13506,12 @@ export interface components {
              */
             readonly updated_at: string;
         };
+        SystemSettingsFieldErrors: {
+            vat_rate?: string[];
+            maintenance_mode?: string[];
+            is_two_factor_required?: string[];
+        };
+        SystemSettingsPatchError: components["schemas"]["SharedSettingReadOnlyError"] | components["schemas"]["SystemSettingsFieldErrors"];
         TOTPDisableRequest: {
             code: string;
             current_password: string;
@@ -13775,6 +13793,11 @@ export interface components {
             rate_date: string;
             /** @description CBU (автозагрузка ЦБ РУз) или MANUAL (вручную). */
             source: string;
+        };
+        _RenderFailureDetails: {
+            reason: components["schemas"]["ReasonEnum"];
+            /** @description Текст ошибки Django (до 300 символов) */
+            message: string;
         };
         /** @description Отказ ERP: `detail` — код ошибки (`UPPER_SNAKE`, например `REASON_REQUIRED`; допустимые коды операции перечислены в описании ответа) или английская фраза DRF для ошибок авторизации и лимитов. `message` — текст для человека, если ERP его присылает. */
         ErrorDetail: {
@@ -17543,18 +17566,18 @@ export interface operations {
                     "application/json": components["schemas"]["EmailTemplatePreviewResult"];
                 };
             };
-            400: components["responses"]["BadRequestResponse"];
-            401: components["responses"]["UnauthorizedResponse"];
-            403: components["responses"]["ForbiddenResponse"];
-            /** @description EMAIL_TEMPLATE_NOT_FOUND: no DB row and no file template for the key (or the template is not found) */
-            404: {
+            /** @description EMAIL_TEMPLATE_RENDER_FAILED: `details.reason` is template_does_not_exist (include/extends of a missing file) or template_syntax_error; or serializer field errors */
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ErrorDetail"];
+                    "application/json": components["schemas"]["EmailTemplateRenderError"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     admin_email_templates_test_send_create: {
@@ -26221,18 +26244,18 @@ export interface operations {
                     "application/json": components["schemas"]["EmailTemplatePreviewResult"];
                 };
             };
-            400: components["responses"]["BadRequestResponse"];
-            401: components["responses"]["UnauthorizedResponse"];
-            403: components["responses"]["ForbiddenResponse"];
-            /** @description EMAIL_TEMPLATE_NOT_FOUND: no DB row and no file template for the key (or the template is not found) */
-            404: {
+            /** @description EMAIL_TEMPLATE_RENDER_FAILED: `details.reason` is template_does_not_exist (include/extends of a missing file) or template_syntax_error; or serializer field errors */
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ErrorDetail"];
+                    "application/json": components["schemas"]["EmailTemplateRenderError"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     settings_email_templates_test_send_create: {
@@ -27070,7 +27093,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SharedSettingReadOnlyError"];
+                    "application/json": components["schemas"]["SystemSettingsPatchError"];
                 };
             };
             401: components["responses"]["UnauthorizedResponse"];
