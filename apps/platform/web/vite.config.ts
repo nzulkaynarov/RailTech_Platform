@@ -7,9 +7,15 @@ import { defineConfig } from "vitest/config";
 const apiTarget = process.env["VITE_API_PROXY_TARGET"] ?? "http://localhost:8000";
 
 export default defineConfig({
-  // msw/vite (worker-only) отдаёт mockServiceWorker.js только в dev-сервере (apply: serve);
-  // в dist его нет, код мокирования — под import.meta.env.DEV.
-  plugins: [react(), { ...msw({ mode: "worker-only" }), apply: "serve" }],
+  // msw/vite (worker-only) отдаёт mockServiceWorker.js в dev-сервере и в сборке e2e (`vite build --mode mock`, W14-S2);
+  // в боевой dist его нет, код мокирования — под import.meta.env.DEV.
+  plugins: [
+    react(),
+    {
+      ...msw({ mode: "worker-only" }),
+      apply: (_config, { command, mode }) => command === "serve" || mode === "mock",
+    },
+  ],
   server: {
     host: "0.0.0.0",
     port: 5173,

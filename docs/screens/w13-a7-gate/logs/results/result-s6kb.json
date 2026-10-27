@@ -1,0 +1,232 @@
+{
+  "rows": [
+    {
+      "desc": "загрузка: форма с «Что произойдёт», кнопка недоступна без файла",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "загрузка PDF — «Принимаются только файлы Markdown (.md)»",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "загрузка .md без front matter — ошибка словами от CRM",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "верный .md принят: «Документ добавлен — индексация займёт до минуты»",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "ручной ввод: документ добавлен",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "документы и статусы индексации через ~30 с",
+      "ok": null,
+      "detail": "Рассрочка платежа 15 Русский Без продукта В очереди 0 27.10.2026 10:44 ;; Сроки и условия поставки 15 Русский Без продукта Обрабатывается 0 27.10.2026 10:44 ;; Рассрочка платежа Русский Без продукта Ошибка 0 27.10.2026 10:27 ;; Сроки и условия поставки Русский Без продукта Ошибка 0 27.10.2026 10:27 ;; Рассрочка платежа Русский Без продукта Ошибка 0 27.10.2026 10:25 ;; price.pdf Русский Без продукта Ошибка 0 27.10.2026 10:25"
+    },
+    {
+      "desc": "у каждого документа статус индексации словом",
+      "ok": true,
+      "detail": "В очереди, Обрабатывается, Ошибка"
+    },
+    {
+      "desc": "kb-documents @1440: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=1440, innerWidth=1440"
+    },
+    {
+      "desc": "kb-documents @1440: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "kb-documents @390: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=390, innerWidth=390"
+    },
+    {
+      "desc": "kb-documents @390: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "карточка документа",
+      "ok": null,
+      "detail": "Карточка | Чат проекта | Документы | Сроки и условия поставки 15 | В очереди | Участвует в поиске бота | Язык | Русский | Продукт | — | не указано | Источник | Файл | Версия | 1 | Фрагментов | 0 | Создан | 27.10.2026 10:44 | Обновлён | 27.10.2026 10:44 | Действия | Выключить документ | Переиндексировать | Фрагменты | Так документ видит поиск бота: бот отвечает по этим кускам текста. | Фрагментов пока нет: документ ещё не проиндексирован."
+    },
+    {
+      "desc": "kb-document-card @1440: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=1440, innerWidth=1440"
+    },
+    {
+      "desc": "kb-document-card @1440: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "kb-document-card @390: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=390, innerWidth=390"
+    },
+    {
+      "desc": "kb-document-card @390: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "переиндексация: «Что произойдёт»",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "после «Переиндексировать»",
+      "ok": null,
+      "detail": "Рассрочка платежа 15 Русский Без продукта В очереди 0 27.10.2026 10:44 ;; Сроки и условия поставки 15 Русский Без продукта Обрабатывается 0 27.10.2026 10:44 ;; Рассрочка платежа Русский Без продукта Ошибка 0 27.10.2026 10:27 ;; Сроки и условия поставки Русский Без продукта Ошибка 0 27.10.2026 10:27 ;; Рассрочка платежа Русский Без продукта Ошибка 0 27.10.2026 10:25 ;; price.pdf Русский Без продукта Ошибка 0 27.10.2026 10:25"
+    },
+    {
+      "desc": "«Что найдёт бот»: ответ поиска",
+      "ok": null,
+      "detail": "Что найдёт бот», пробелы — вопросы без ответа — и песочница для проверки бота. | Загрузить файл | Добавить вручную | Документы | Пробелы | Песочница бота | Что найдёт бот | Проверьте, какие фрагменты бот найдёт на вопрос клиента и ответит ли он. Поиск ничего не меняет. | Вопрос клиента | Язык вопроса | Любой язык | Найти | CRM не отвечает. Подождите минуту и повторите. | Документы | Документы базы знаний | Название\tЯзык\tПродукт\tИндексация\tФрагментов\tОбновлён | Рассрочка платежа 15\tРусский\tБез продукта\tВ очереди\t0\t27.10.2026 10:44 | Сроки и условия поставки 15\tРусский\tБез продукта\tОбрабатывается\t0\t27.10.2026 10:44 | Рассрочка платежа\tРусский\tБез продукта\tОшибка\t0\t27.10.2026 10:27 | Сроки и ус"
+    },
+    {
+      "desc": "пробелы: экран и пустое состояние словами",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "kb-gaps @1440: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=1440, innerWidth=1440"
+    },
+    {
+      "desc": "kb-gaps @1440: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "kb-gaps @390: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=390, innerWidth=390"
+    },
+    {
+      "desc": "kb-gaps @390: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "песочница: ответ без ключей моделей",
+      "ok": null,
+      "detail": "Вопрос клиента | ЧТО ПРОИЗОЙДЁТ | 1 | Сообщение уйдёт боту от имени тестового клиента: бот ответит по базе знаний, текстам и правилам передачи. | 2 | Ответ платный: вызовы модели попадут в «Расходы» с пометкой «тест». | 3 | Передача менеджеру только показывается ниже, в CRM она не создаётся. | Отправить боту"
+    },
+    {
+      "desc": "песочница: без ключей модели — ожидаемая ошибка словами, не белый экран",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "kb-sandbox @1440: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=1440, innerWidth=1440"
+    },
+    {
+      "desc": "kb-sandbox @1440: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "kb-sandbox @390: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=390, innerWidth=390"
+    },
+    {
+      "desc": "kb-sandbox @390: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "ошибки консоли / 5xx",
+      "ok": null,
+      "detail": "Failed to load resource: the server responded with a status of 401 (Unauthorized) | Failed to load resource: the server responded with a status of 403 (Forbidden) | Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) | Failed to load resource: the server responded with a status of 403 (Forbidden) | Failed to load resource: the server responded with a status of 503 (Service Unavailable) | Failed to load resource: the server responded with a status of 503 (Service Unavailable) ;; 503 POST /api/v1/crm/kb/documents/5/reingest | 503 POST /api/v1/crm/kb/search"
+    }
+  ],
+  "screens": [
+    {
+      "name": "kb-upload-format-error",
+      "width": 1440,
+      "file": "s6kb-kb-upload-format-error-1440.png"
+    },
+    {
+      "name": "kb-documents",
+      "width": 1440,
+      "file": "s6kb-kb-documents-1440.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "kb-documents",
+      "width": 390,
+      "file": "s6kb-kb-documents-390.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "kb-document-card",
+      "width": 1440,
+      "file": "s6kb-kb-document-card-1440.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "kb-document-card",
+      "width": 390,
+      "file": "s6kb-kb-document-card-390.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "kb-search",
+      "width": 1440,
+      "file": "s6kb-kb-search-1440.png"
+    },
+    {
+      "name": "kb-gaps",
+      "width": 1440,
+      "file": "s6kb-kb-gaps-1440.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "kb-gaps",
+      "width": 390,
+      "file": "s6kb-kb-gaps-390.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "kb-sandbox-no-key",
+      "width": 1440,
+      "file": "s6kb-kb-sandbox-no-key-1440.png"
+    },
+    {
+      "name": "kb-sandbox",
+      "width": 1440,
+      "file": "s6kb-kb-sandbox-1440.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "kb-sandbox",
+      "width": 390,
+      "file": "s6kb-kb-sandbox-390.png",
+      "noHScroll": true,
+      "axe": []
+    }
+  ]
+}

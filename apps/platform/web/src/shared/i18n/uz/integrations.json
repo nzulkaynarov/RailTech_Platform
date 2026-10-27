@@ -354,6 +354,12 @@
       "title": "Modelni almashtirish: {{alias}}",
       "provider": "Provayder",
       "model": "Model",
+      "modelHint": "Provayderdagi model nomi, masalan {{example}}. «{{provider}}/» old qo'shimchasini kiritish shart emas.",
+      "example": {
+        "anthropic": "claude-sonnet-5-5, claude-haiku-5-5",
+        "gemini": "gemini-3.8-flash, gemini-embedding-2",
+        "openai": "OpenAI konsolidagi identifikator"
+      },
       "key": "Provayder kaliti",
       "keyHint": "Server sozlamalaridagi kalitdan foydalanish uchun bo‘sh qoldiring. Kiritilgan kalit ko‘rsatilmaydi.",
       "base": "API manzili (ixtiyoriy)",
@@ -496,6 +502,11 @@
     "VALIDATION_FAILED": "Maydonlarni tekshiring.",
     "CONFLICT": "Holat o‘zgargan. Sahifani yangilab, qayta urinib ko‘ring.",
     "SESSION_EXPIRED": "Seans tugadi. Qaytadan kiring.",
+    "fields": {
+      "model": "Model nomi qabul qilinmadi. Provayderdagi model nomini probelsiz kiriting, masalan claude-haiku-5-5. «provayder/» old qo'shimchasini qoldirish mumkin, lekin faqat tanlangan provayderniki.",
+      "api_key": "Kalit qabul qilinmadi: uning uzunligi 8 dan 512 gacha belgi bo'lishi kerak.",
+      "api_base": "API manzili noto'g'ri: u http:// yoki https:// bilan boshlanib, probelsiz bo'lishi kerak."
+    },
     "reasons": {
       "erp_not_configured": "ERP hali ulanmagan.",
       "erp_invalid_url": "ERP manzili noto‘g‘ri kiritilgan.",

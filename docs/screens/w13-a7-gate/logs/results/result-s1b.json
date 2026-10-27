@@ -1,0 +1,119 @@
+{
+  "rows": [
+    {
+      "desc": "форма «Ваша компания» стала доступна после сопряжения ERP",
+      "ok": true,
+      "detail": "ожидание 0 с"
+    },
+    {
+      "desc": "неверный ИНН — ошибка у поля словами",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "компания создана",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "чек-лист: пять шагов",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "прогресс чек-листа",
+      "ok": null,
+      "detail": "Готово 2 из 5"
+    },
+    {
+      "desc": "wizard-after-company @1440: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=1440, innerWidth=1440"
+    },
+    {
+      "desc": "wizard-after-company @1440: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "wizard-after-company @390: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=390, innerWidth=390"
+    },
+    {
+      "desc": "wizard-after-company @390: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "баннер «Настройка Платформы» на других экранах",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "текст баннера",
+      "ok": null,
+      "detail": "Настройка Платформы: готово 2 из 5 | Дальше: Telegram-бот. | Продолжить настройку | Скрыть"
+    },
+    {
+      "desc": "banner-org @1440: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=1440, innerWidth=1440"
+    },
+    {
+      "desc": "banner-org @1440: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "banner-org @390: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=390, innerWidth=390"
+    },
+    {
+      "desc": "banner-org @390: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "screens": [
+    {
+      "name": "wizard-company-form",
+      "width": 1440,
+      "file": "s1b-wizard-company-form-1440.png"
+    },
+    {
+      "name": "wizard-company-inn-error",
+      "width": 1440,
+      "file": "s1b-wizard-company-inn-error-1440.png"
+    },
+    {
+      "name": "wizard-after-company",
+      "width": 1440,
+      "file": "s1b-wizard-after-company-1440.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "wizard-after-company",
+      "width": 390,
+      "file": "s1b-wizard-after-company-390.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "banner-org",
+      "width": 1440,
+      "file": "s1b-banner-org-1440.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "banner-org",
+      "width": 390,
+      "file": "s1b-banner-org-390.png",
+      "noHScroll": true,
+      "axe": []
+    }
+  ]
+}

@@ -1,0 +1,70 @@
+{
+  "rows": [
+    {
+      "desc": "CSV «Лиды»: файл скачан",
+      "ok": true,
+      "detail": "leads-20261027-1015.csv"
+    },
+    {
+      "desc": "CSV «Лиды»: имя с датой, разделитель «;», заголовки",
+      "ok": true,
+      "detail": "leads-20261027-1015.csv, 1 строк (с заголовком), первая строка: ﻿ID;Имя;Язык;Стадия;Оценка;Ответственный;Клиент ID;Потребность;Интерес к продуктам;Последнее сообщение;Создан\r"
+    },
+    {
+      "desc": "CSV «Клиенты»: файл скачан",
+      "ok": true,
+      "detail": "clients-20261027-1015.csv"
+    },
+    {
+      "desc": "CSV «Клиенты»: имя с датой, разделитель «;», заголовки",
+      "ok": true,
+      "detail": "clients-20261027-1015.csv, 1 строк (с заголовком), первая строка: ﻿ID;Название;ИНН;Сегмент;Ответственный;Активен;Открытых сделок;Последняя активность;Создан\r"
+    },
+    {
+      "desc": "CSV «Сделки»: файл скачан",
+      "ok": true,
+      "detail": "deals-20261027-1015.csv"
+    },
+    {
+      "desc": "CSV «Сделки»: имя с датой, разделитель «;», заголовки",
+      "ok": true,
+      "detail": "deals-20261027-1015.csv, 1 строк (с заголовком), первая строка: ﻿ID;Название;Клиент;Продукт;Сумма;Валюта;Стадия;Ожидаемое закрытие;Закрыта;Причина отказа;Ответственный;Создана\r"
+    },
+    {
+      "desc": "bot-exports-admin-manager @1440: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=1440, innerWidth=1440"
+    },
+    {
+      "desc": "bot-exports-admin-manager @1440: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "bot-exports-admin-manager @390: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=390, innerWidth=390"
+    },
+    {
+      "desc": "bot-exports-admin-manager @390: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    }
+  ],
+  "screens": [
+    {
+      "name": "bot-exports-admin-manager",
+      "width": 1440,
+      "file": "s6csv-bot-exports-admin-manager-1440.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "bot-exports-admin-manager",
+      "width": 390,
+      "file": "s6csv-bot-exports-admin-manager-390.png",
+      "noHScroll": true,
+      "axe": []
+    }
+  ]
+}
