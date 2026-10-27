@@ -1,4 +1,6 @@
 # dev-стенд ансамбля: hot reload CRM, порты наружу только на 127.0.0.1, без TLS.
+# Образ CRM target dev не содержит код, промпты и шаблоны писем: они монтируются томами (шаблоны — /app/templates,
+# без них «Тестовое письмо» и приглашение по почте падают, C2A-G-3).
 # Порты на хосте задаются в .env (HTTP_PORT, DEV_*_PORT), если заняты другим проектом.
 
 services:
@@ -26,6 +28,7 @@ services:
       - ../../apps/crm/backend/alembic:/app/alembic:ro
       - ../../apps/crm/backend/alembic.ini:/app/alembic.ini:ro
       - ../../apps/crm/backend/prompts:/app/prompts:ro
+      - ../../apps/crm/backend/templates:/app/templates:ro
       - ../../apps/crm/backend/evals:/app/evals:ro
       - ../../apps/crm/backend/tests:/app/tests:ro
 
@@ -43,6 +46,7 @@ services:
       - ../../apps/crm/backend/alembic:/app/alembic:ro
       - ../../apps/crm/backend/alembic.ini:/app/alembic.ini:ro
       - ../../apps/crm/backend/prompts:/app/prompts:ro
+      - ../../apps/crm/backend/templates:/app/templates:ro
       - ../../apps/crm/backend/evals:/app/evals:ro
       - ../../apps/crm/backend/tests:/app/tests:ro
       - ../../apps/crm/infra/casbin:/app/casbin:ro
