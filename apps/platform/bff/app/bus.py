@@ -8,7 +8,9 @@
 BFF не публикует. Снаружи `/bus/*` домена Платформы не публикуется (Caddy отвечает 404).
 """
 
+from collections.abc import Mapping
 from fnmatch import fnmatchcase
+from typing import Any
 
 from rt_bus import BusConfig, Event, HandlerRegistry
 from rt_bus.memory import MemoryReceiver
@@ -27,10 +29,12 @@ EDS_EVENTS = "uz.railtech.eds.*.v1"
 SUBSCRIBED = (ERP_EVENTS, LEAD_EVENTS, USER_EVENTS, EDS_EVENTS)
 HANDLED = (ERP_EVENTS, LEAD_EVENTS, USER_EVENTS)
 
-# Новое сообщение в переписке лида (D1-1): очередь «Ждут ответа» и открытая лента, бейдж
-# «Ждут ответа» и «Моя очередь» (непрочитанное); ленту «Сегодня» сообщение не меняет.
+# Новое сообщение в переписке лида (D1-1): очередь «Ждут ответа» и открытая лента; если лид не у
+# бота (`handoff`), ещё бейдж «Ждут ответа» и «Моя очередь» (непрочитанное). Диалог с ботом
+# счётчиков не меняет; ленту «Сегодня» сообщение не меняет.
 MESSAGE_ADDED = "uz.railtech.crm.lead.message_added.v1"
-_TOPICS_BY_TYPE: dict[str, tuple[str, ...]] = {MESSAGE_ADDED: ("counters", "queue", "messages")}
+_MESSAGE_TOPICS: tuple[str, ...] = ("messages",)
+_HANDOFF_MESSAGE_TOPICS: tuple[str, ...] = ("counters", "queue", "messages")
 
 # Что может изменить событие: уведомления, счётчики меню, «Моя очередь», лента «Сегодня», переписка
 # (новая передача, «Забрать», смена ответственного — тоже «Ждут ответа»).
@@ -41,9 +45,10 @@ _TOPICS_BY_MASK: tuple[tuple[str, tuple[str, ...]], ...] = (
 )
 
 
-def topics_for(event_type: str) -> tuple[str, ...]:
-    exact = _TOPICS_BY_TYPE.get(event_type)
-    if exact is not None:
+def topics_for(event_type: str, data: Mapping[str, Any] | None = None) -> tuple[str, ...]:
+    if event_type == MESSAGE_ADDED:
+        handoff = bool((data or {}).get("handoff", True))
+        exact = _HANDOFF_MESSAGE_TOPICS if handoff else _MESSAGE_TOPICS
         return tuple(t for t in TOPICS if t in exact)
     wanted: set[str] = set()
     for mask, topics in _TOPICS_BY_MASK:
@@ -60,7 +65,7 @@ def create_receiver(hub: EventHub) -> MemoryReceiver:
     registry = HandlerRegistry()
 
     async def on_event(event: Event) -> None:
-        await hub.publish(Hint(topics_for(event.type), event.type))
+        await hub.publish(Hint(topics_for(event.type, event.data), event.type))
 
     for mask in HANDLED:
         registry.add(mask, on_event)

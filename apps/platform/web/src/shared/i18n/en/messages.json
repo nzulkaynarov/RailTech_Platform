@@ -125,7 +125,8 @@
     "select": {
       "title": "Choose a conversation",
       "text": "On the left are bot handoffs and your conversations. Open one to reply to the client."
-    }
+    },
+    "olderFailed": "Could not load the history. Try again"
   },
   "composer": {
     "mode": "Who we write to",
@@ -193,6 +194,7 @@
     "NOT_FOUND": "Lead not found",
     "BACKEND_UNAVAILABLE": "CRM is not responding. Try again",
     "VALIDATION_FAILED": "Check the text: 1 to 4000 characters",
-    "generic": "Something went wrong. Try again"
+    "generic": "Something went wrong. Try again",
+    "reply_in_progress": "The message is still being sent — wait a moment and press Retry"
   }
 }

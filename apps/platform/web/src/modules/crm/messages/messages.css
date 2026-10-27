@@ -262,8 +262,16 @@
 
 .pf-msg-older {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
   padding: 4px 0 8px;
+}
+
+.pf-msg-older-error {
+  margin: 0;
+  font-size: 12px;
+  color: #a8071a;
 }
 
 .pf-msg-items {

@@ -18,7 +18,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.bus import runtime
+from app.bus import runtime, snapshots
 from app.bus.runtime import build_bus
 from app.config import Settings
 from app.domain.triggers import TriggerSignals, evaluate
@@ -92,6 +92,10 @@ async def test_a_lead_message_is_published_in_its_transaction_without_text(
     data = row["envelope"]["data"]
     async with sessions() as session:
         message_id = await session.scalar(select(func.max(Message.id)))
+        created_at = await session.scalar(
+            select(Message.created_at).where(Message.id == message_id)
+        )
+    assert created_at is not None
     assert data == {
         "crm_lead_id": lead_id,
         "crm_client_id": None,
@@ -102,7 +106,7 @@ async def test_a_lead_message_is_published_in_its_transaction_without_text(
         "has_attachments": False,
         "handoff": True,
         "crm_assigned_user_id": None,
-        "sent_at": data["sent_at"],
+        "sent_at": snapshots.utc(created_at),  # время строки сообщения, а не часы приложения
         "actor": {"type": "bot"},
     }
     assert "Р65" not in str(row["envelope"])  # текст сообщения в шину не уходит

@@ -327,9 +327,9 @@ class LeadService:
             raise ValidationFailedError("message must be 1..4000 characters", field="text")
         if client_message_id is not None:  # «Повторить» после обрыва: ответ уже ушёл — не дублируем
             async with self._sessions() as session:
-                sent = await crm_repo.message_by_client_id(session, lead_id, client_message_id)
-            if sent is not None:
-                return sent
+                done = await crm_repo.reply_by_key(session, lead_id, client_message_id)
+            if done is not None and (done.meta or {}).get("delivery") != "sending":
+                return done.id
         async with self._sessions() as session, session.begin():
             lead = await _lead(session, lead_id)
             if lead.owner_mode != OwnerMode.HUMAN:
@@ -340,12 +340,14 @@ class LeadService:
                 raise ConflictError("lead has not given consent", reason=Reason.NO_CONSENT)
             lead.last_human_msg_at = datetime.now(UTC)
             await audit.record(session, who.actor, "lead.reply", "lead", lead_id)
-        meta = {"mode": "manager"}
         if client_message_id is not None:
-            meta["client_message_id"] = client_message_id
-        message_id = await self._messenger.send(
-            lead_id, body, meta, role="manager", sent_by_user_id=who.user_id
-        )
+            message_id = await self._messenger.send_once(
+                lead_id, body, client_message_id, sent_by_user_id=who.user_id
+            )
+        else:
+            message_id = await self._messenger.send(
+                lead_id, body, {"mode": "manager"}, role="manager", sent_by_user_id=who.user_id
+            )
         if message_id is None:
             raise DeliveryError("telegram delivery failed")
         return message_id

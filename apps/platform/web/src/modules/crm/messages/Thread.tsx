@@ -73,6 +73,7 @@ export function Thread({ lead, name }: { lead: string; name: string }) {
   const [older, setOlder] = useState<ThreadMessage[]>([]);
   const [olderHasMore, setOlderHasMore] = useState<boolean | null>(null);
   const [loadingOlder, setLoadingOlder] = useState(false);
+  const [olderFailed, setOlderFailed] = useState(false);
   const scroller = useRef<HTMLDivElement>(null);
   const hasMore = olderHasMore ?? latest.data?.has_more ?? false;
   const entries = useMemo(
@@ -92,10 +93,13 @@ export function Thread({ lead, name }: { lead: string; name: string }) {
     );
     if (!first) return;
     setLoadingOlder(true);
+    setOlderFailed(false);
     try {
       const page = await getCrmThread(lead, { before: first.message.id, limit: PAGE_SIZE });
       setOlder((prev) => [...page.items, ...prev]);
       setOlderHasMore(page.has_more);
+    } catch {
+      setOlderFailed(true);
     } finally {
       setLoadingOlder(false);
     }
@@ -120,6 +124,11 @@ export function Thread({ lead, name }: { lead: string; name: string }) {
               <Button size="small" onClick={() => void loadOlder()} loading={loadingOlder}>
                 {loadingOlder ? t("thread.loadingOlder") : t("thread.older")}
               </Button>
+              {olderFailed ? (
+                <p className="pf-msg-older-error" role="alert">
+                  {t("thread.olderFailed")}
+                </p>
+              ) : null}
             </div>
           ) : null}
           {entries.length ? (

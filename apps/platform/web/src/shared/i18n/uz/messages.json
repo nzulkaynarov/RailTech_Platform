@@ -125,7 +125,8 @@
     "select": {
       "title": "Suhbatni tanlang",
       "text": "Chapda — botdan o'tkazilganlar va sizning suhbatlaringiz. Mijozga javob berish uchun suhbatni oching."
-    }
+    },
+    "olderFailed": "Tarixni yuklab bo'lmadi. Qayta urinib ko'ring"
   },
   "composer": {
     "mode": "Kimga yozamiz",
@@ -193,6 +194,7 @@
     "NOT_FOUND": "Lid topilmadi",
     "BACKEND_UNAVAILABLE": "CRM javob bermayapti. Qayta urinib ko'ring",
     "VALIDATION_FAILED": "Matnni tekshiring: 1 dan 4000 belgigacha",
-    "generic": "Bo'lmadi. Qayta urinib ko'ring"
+    "generic": "Bo'lmadi. Qayta urinib ko'ring",
+    "reply_in_progress": "Xabar hali yuborilmoqda — biroz kuting va «Qayta urinish»ni bosing"
   }
 }

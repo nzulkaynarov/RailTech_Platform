@@ -4847,6 +4847,7 @@ components:
       - deal_won_final
       - deal_owned_by_erp
       - no_consent
+      - reply_in_progress
       - litellm_unavailable
       - model_key_required
       - model_in_config

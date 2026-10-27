@@ -163,22 +163,24 @@ async def lead_message(session: AsyncSession, lead_id: int, message_id: int) -> 
     return found
 
 
-async def message_by_client_id(
+async def reply_by_key(
     session: AsyncSession, lead_id: int, client_message_id: str
-) -> int | None:
-    """Ответ менеджера с этим ключом повтора уже записан (D1-1: «Повторить» не дублирует)."""
+) -> Message | None:
+    """Ответ менеджера с этим ключом повтора (D1-1: «Повторить» не дублирует); `meta.delivery` —
+    `sending` (отправка идёт или её итог неизвестен) или `sent`."""
     stmt = (
-        select(Message.id)
+        select(Message)
         .join(Conversation, Conversation.id == Message.conversation_id)
         .where(
             Conversation.lead_id == lead_id,
             Message.role == "manager",
             Message.meta["client_message_id"].astext == client_message_id,
         )
+        .order_by(Message.id)
         .limit(1)
     )
-    value: int | None = await session.scalar(stmt)
-    return value
+    found: Message | None = (await session.scalars(stmt)).first()
+    return found
 
 
 async def last_lead_texts(session: AsyncSession, lead_ids: Sequence[int]) -> dict[int, str]:

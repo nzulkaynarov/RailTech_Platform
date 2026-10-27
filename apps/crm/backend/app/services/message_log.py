@@ -8,7 +8,6 @@
 переписку API CRM с правами сотрудника.
 """
 
-from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -47,14 +46,21 @@ async def add(
         attachments=attachments,
         meta=meta,
     )
-    lead = await session.get(Lead, conversation.lead_id)
-    if lead is not None:
-        await bus_events.lead_message_added(
-            session,
-            lead,
-            message,
-            channel=conversation.channel or "telegram",
-            sent_at=datetime.now(UTC),
-            actor=_actor(role, sent_by_user_id),
-        )
+    await announce(session, conversation, message)
     return message
+
+
+async def announce(session: AsyncSession, conversation: Conversation, message: Message) -> None:
+    """Событие о записанном сообщении; `sent_at` — `created_at` строки (время базы)."""
+    lead = await session.get(Lead, conversation.lead_id)
+    if lead is None:
+        return
+    await session.refresh(message, attribute_names=["created_at"])
+    await bus_events.lead_message_added(
+        session,
+        lead,
+        message,
+        channel=conversation.channel or "telegram",
+        sent_at=message.created_at,
+        actor=_actor(message.role, message.sent_by_user_id),
+    )

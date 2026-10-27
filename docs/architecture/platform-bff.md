@@ -171,7 +171,8 @@ SPA  POST /api/v1/setup/admin {code, name, email, password}
   `uz.railtech.crm.lead.message_added.v1` на каждое сообщение переписки (входящее и исходящее; сигнал без текста, outbox в той же
   транзакции, что и строка сообщения) и `lead.updated` с `changed_fields = ["handoff"]` на новую передачу от бота. Темы: ERP —
   `notifications`, `counters`, `queue`, `activity`; события лида — `counters`, `queue`, `activity`, `messages`;
-  `lead.message_added` — `counters`, `queue`, `messages` (лента «Сегодня» от сообщения не меняется). SPA на `messages`
+  `lead.message_added` — `counters`, `queue`, `messages`, если лид не у бота (`handoff = true`), и только `messages` для диалога
+  с ботом (лента «Сегодня» от сообщения не меняется). SPA на `messages`
   перезапрашивает `listCrmMessages` и открытую переписку (`/crm/messages/{lead}`, `/thread`), на `counters` — бейдж «Ждут ответа»
   в меню (`getMenuCounters` → CRM `/inbox`). Путь сообщения клиента до экрана: бот пишет сообщение и строку outbox одной
   транзакцией → после коммита `wakeup` ставит `rt_bus.pump` (без ожидания тика 5 с) → доставка `POST /bus/v1/events` в BFF →
@@ -244,8 +245,10 @@ credential, authorization, passphrase, passcode, cookie, bearer, signature, hmac
 **D1-1 (BFF 0.16.0): Клиенты · Ждут ответа.** `/crm/messages*` — прокси к CRM с токеном сотрудника: очередь (`/inbox` с
 запиской передачи CRM-06), карточка лида, лента (`/leads/{id}/messages` с `before_id`, заметки, имена `/team`), вложение потоком
 (`Content-Disposition: attachment`, `nosniff`, ключ хранилища наружу не уходит), «Забрать», ответ «От себя» с ключом повтора
-`client_message_id` (CRM не шлёт второе сообщение с тем же ключом; Telegram не ответил — 502 `INTEGRATION_FAILED`,
-`delivery_failed`), «Заметка команде», «Подсказать ответ» (ИИ — только CRM/LiteLLM, таймаут пробы), «Вернуть боту»; шаблоны —
+`client_message_id`: CRM занимает ключ до отправки (строка `meta.delivery = sending` под advisory-блокировкой на лид и
+ключ), поэтому и параллельный повтор не шлёт второе сообщение — пока первый идёт, 409 `CONFLICT` `reply_in_progress`; Telegram
+ждём 20 с (меньше таймаута BFF 30 с); отказ Telegram освобождает ключ (502 `INTEGRATION_FAILED`, `delivery_failed`), таймаут
+и «Telegram принял, запись итога упала» оставляют ответ `sending` — повтор через 2 минуты получает его, а не дубль, «Заметка команде», «Подсказать ответ» (ИИ — только CRM/LiteLLM, таймаут пробы), «Вернуть боту»; шаблоны —
 `GET /crm/reply-templates`. Раздел `crm.leads`: чтение — `read` (директор видит очередь без действий; CRM `/inbox` с D1-1 —
 `leads:read`), действия и шаблоны — `full`. Служебные пометки причины CRM (`dialog: …`) и неизвестные коды экрану не отдаются.
 

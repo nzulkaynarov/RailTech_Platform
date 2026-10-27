@@ -191,6 +191,7 @@ def test_reason_values_are_a_stable_contract() -> None:
         "deal_won_final",
         "deal_owned_by_erp",
         "no_consent",
+        "reply_in_progress",
         "litellm_unavailable",
         "model_key_required",
         "model_in_config",

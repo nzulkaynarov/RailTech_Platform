@@ -11,6 +11,8 @@ import {
 import { invalidateTopics } from "../../../shared/api/useEventStream";
 import { renderAt, setupBotTests, signIn } from "../../../test/botKit";
 import i18n from "../../../shared/i18n";
+import { ApiError } from "../../../shared/api/errors";
+import { sendFailure } from "./labels";
 import { mergeThread } from "./logic";
 import { durationParts, slaState } from "./sla";
 import { SlaTimer } from "./SlaTimer";
@@ -247,5 +249,37 @@ describe("лента: склейка страниц и заметок", () => {
       2,
       3,
     ]);
+  });
+});
+
+describe("итог неудачной отправки", () => {
+  const t = i18n.getFixedT("ru");
+
+  it("«Повторить» — при сбое Telegram, CRM и пока ответ ещё отправляется; без сравнения строк", () => {
+    expect(
+      sendFailure(
+        t,
+        new ApiError(502, "INTEGRATION_FAILED", "x", "crm", { reason: "delivery_failed" }),
+      ),
+    ).toEqual({
+      text: "Не отправлено: Telegram не ответил.",
+      retry: true,
+    });
+    expect(sendFailure(t, new ApiError(503, "BACKEND_UNAVAILABLE", "x", "crm")).retry).toBe(true);
+    expect(sendFailure(t, new TypeError("Failed to fetch")).retry).toBe(true);
+    const busy = sendFailure(
+      t,
+      new ApiError(409, "CONFLICT", "x", "crm", { reason: "reply_in_progress" }),
+    );
+    expect(busy).toEqual({
+      text: "Сообщение ещё отправляется — подождите немного и нажмите «Повторить»",
+      retry: true,
+    });
+    expect(
+      sendFailure(t, new ApiError(409, "CONFLICT", "x", "crm", { reason: "take_first" })),
+    ).toEqual({
+      text: "Сначала заберите лида",
+      retry: false,
+    });
   });
 });

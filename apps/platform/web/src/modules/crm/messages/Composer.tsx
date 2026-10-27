@@ -11,7 +11,7 @@ import {
   useReplyCrmLead,
 } from "../../../shared/api/generated/platform-bff";
 import { useRefreshMessages } from "./actions";
-import { actionError, isDeliveryFailure } from "./labels";
+import { type SendFailure, actionError, sendFailure } from "./labels";
 import { fillTemplate } from "./logic";
 import { newMessageKey } from "./sla";
 
@@ -33,7 +33,7 @@ export function Composer({ card }: { card: ConversationCard }) {
   const [mode, setMode] = useState<ComposerMode>("self");
   const [text, setText] = useState("");
   const [key, setKey] = useState(newMessageKey);
-  const [failed, setFailed] = useState<string | null>(null);
+  const [failed, setFailed] = useState<SendFailure | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const mine = card.owner_mode === "manager" && card.assigned?.id === me.id;
   const templates = useListCrmReplyTemplates({ query: { staleTime: 60_000 } });
@@ -58,7 +58,7 @@ export function Composer({ card }: { card: ConversationCard }) {
         done(t("composer.sent"));
       },
       onError: (error) => {
-        setFailed(isDeliveryFailure(error) ? t("composer.failed") : actionError(t, error));
+        setFailed(sendFailure(t, error));
       },
     },
   });
@@ -68,7 +68,7 @@ export function Composer({ card }: { card: ConversationCard }) {
         done(t("composer.noteSaved"));
       },
       onError: (error) => {
-        setFailed(actionError(t, error));
+        setFailed({ text: actionError(t, error), retry: false });
       },
     },
   });
@@ -90,7 +90,6 @@ export function Composer({ card }: { card: ConversationCard }) {
 
   const blocked = mode === "self" && !mine;
   const busy = reply.isPending || note.isPending;
-  const delivery = failed === t("composer.failed");
   const send = () => {
     const body = text.trim();
     if (!body || busy) return;
@@ -197,9 +196,9 @@ export function Composer({ card }: { card: ConversationCard }) {
           type="error"
           showIcon
           role="alert"
-          message={failed}
+          message={failed.text}
           action={
-            delivery ? (
+            failed.retry ? (
               <Button size="small" danger onClick={send}>
                 {t("composer.retry")}
               </Button>

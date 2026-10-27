@@ -76,12 +76,25 @@ export function actionError(t: TFunction, error: unknown): string {
   return byCode || t("messages:errors.generic");
 }
 
-/** Отправка не прошла, потому что Telegram не ответил (502 `INTEGRATION_FAILED`, `delivery_failed`) или CRM не ответила. */
-export function isDeliveryFailure(error: unknown): boolean {
-  if (!(error instanceof ApiError)) return true;
-  return (
-    error.code === "INTEGRATION_FAILED" ||
-    error.code === "BACKEND_UNAVAILABLE" ||
-    error.status >= 500
-  );
+/** Итог неудачной отправки ответа: текст для сотрудника и можно ли «Повторить» с тем же ключом. */
+export interface SendFailure {
+  text: string;
+  retry: boolean;
+}
+
+/**
+ * Telegram не ответил (502 `INTEGRATION_FAILED`, `delivery_failed`) — «Не отправлено: Telegram не ответил»; CRM не ответила
+ * (`BACKEND_UNAVAILABLE`, сеть) — «CRM не отвечает»; ответ ещё отправляется (409 `reply_in_progress`) — «ещё отправляется».
+ * Во всех трёх «Повторить» безопасно: ключ повтора тот же, CRM не продублирует сообщение. Прочие отказы — без повтора.
+ */
+export function sendFailure(t: TFunction, error: unknown): SendFailure {
+  if (!(error instanceof ApiError))
+    return { text: t("messages:errors.BACKEND_UNAVAILABLE"), retry: true };
+  if (error.details["reason"] === "reply_in_progress")
+    return { text: t("messages:errors.reply_in_progress"), retry: true };
+  if (error.code === "INTEGRATION_FAILED")
+    return { text: t("messages:composer.failed"), retry: true };
+  if (error.code === "BACKEND_UNAVAILABLE" || error.status >= 500)
+    return { text: t("messages:errors.BACKEND_UNAVAILABLE"), retry: true };
+  return { text: actionError(t, error), retry: false };
 }
