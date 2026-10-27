@@ -15,6 +15,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.domain.public_urls import is_schema_default
 from app.models.leads import Setting
 from app.schemas.settings import SETTINGS_MODELS, AppSettings
 from app.security import audit
@@ -33,25 +34,38 @@ class SettingsService:
         session_factory: async_sessionmaker[AsyncSession],
         ttl_s: float = 30.0,
         clock: Callable[[], float] = time.monotonic,
+        crm_base_url_default: str | None = None,
     ) -> None:
         self._sessions = session_factory
+        self._crm_base_url_default = crm_base_url_default
         self._ttl = ttl_s
         self._clock = clock
         self._cached: AppSettings | None = None
+        self._stored: AppSettings | None = None
         self._loaded_at = 0.0
 
     async def get(self) -> AppSettings:
-        if self._cached is not None and self._clock() - self._loaded_at < self._ttl:
-            return self._cached
+        return (await self._snapshot())[1]
+
+    async def _snapshot(self) -> tuple[AppSettings, AppSettings]:
+        """(сохранённые значения, эффективные с подменой из окружения), кэш по TTL."""
+        fresh = self._clock() - self._loaded_at < self._ttl
+        if fresh and self._cached is not None and self._stored is not None:
+            return self._stored, self._cached
         async with self._sessions() as session:
             rows = (await session.scalars(select(Setting))).all()
-        self._cached = _merge({row.key: row.value for row in rows})
+        self._stored = _merge({row.key: row.value for row in rows})
+        self._cached = _with_env_defaults(self._stored, self._crm_base_url_default)
         self._loaded_at = self._clock()
-        return self._cached
+        return self._stored, self._cached
 
     async def raw(self) -> dict[str, dict[str, Any]]:
-        """Текущие эффективные значения всех ключей (для API настроек)."""
-        current = await self.get()
+        """Сохранённые значения всех ключей (для API и формы «Настройки»), без подмены из окружения.
+
+        Адрес CRM из окружения подставляет только `get()` (потребители); форма его не видит, поэтому
+        сохранение секции «Компания» не фиксирует выведенный адрес в БД.
+        """
+        current, _ = await self._snapshot()
         return {key: getattr(current, key).model_dump(mode="json") for key in SETTINGS_MODELS}
 
     async def update(
@@ -138,6 +152,18 @@ class SettingsService:
 
     def invalidate(self) -> None:
         self._cached = None
+
+
+def _with_env_defaults(cfg: AppSettings, crm_base_url: str | None) -> AppSettings:
+    """`company.crm_base_url` по умолчанию — публичный адрес CRM из окружения, а не `localhost`.
+
+    Подменяется только заводское значение (ключа нет в БД или в нём `http://localhost`); адрес,
+    заданный админом в «Настройки» → «Компания», остаётся как есть. В БД ничего не пишется.
+    """
+    if not crm_base_url or not is_schema_default(cfg.company.crm_base_url):
+        return cfg
+    company = cfg.company.model_copy(update={"crm_base_url": crm_base_url})
+    return cfg.model_copy(update={"company": company})
 
 
 def _merge(rows: dict[str, dict[str, Any]]) -> AppSettings:

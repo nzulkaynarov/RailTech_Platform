@@ -24,7 +24,7 @@ CONTEXT = {
     "full_name": "Азиз",
     "email": "aziz@railtech.uz",
     "temporary_password": "Tmp-pass-4321",
-    "crm_url": "https://crm.example.com",
+    "platform_url": "https://platform.example.com",
     "company": "RailTech",
 }
 
