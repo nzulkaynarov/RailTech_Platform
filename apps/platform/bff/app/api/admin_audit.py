@@ -25,7 +25,7 @@ from app.schemas_audit import (
 router = APIRouter(tags=["admin"])
 
 Reader = Annotated[Authed, Depends(require("admin", "read"))]
-RoleIdPath = Annotated[str, Path(pattern=r"^[0-9]+$")]
+RoleIdPath = Annotated[str, Path(pattern=r"^[1-9][0-9]*$")]
 
 AUDIT = "/api/v1/audit"
 # Входы и неудачные попытки (`auth.login`, `auth.login_failed`) и обмен SSO — не изменения данных.
@@ -54,7 +54,7 @@ async def _audit(authed: Authed, params: dict[str, Any]) -> dict[str, Any]:
 )
 async def list_audit(
     authed: Reader,
-    actor_id: Annotated[str | None, Query(pattern=r"^[0-9]+$")] = None,
+    actor_id: Annotated[str | None, Query(pattern=r"^[1-9][0-9]*$")] = None,
     action: Annotated[str | None, Query(max_length=64)] = None,
     entity_type: Annotated[str | None, Query(max_length=32)] = None,
     entity_id: Annotated[str | None, Query(max_length=64)] = None,

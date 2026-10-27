@@ -16,7 +16,7 @@ router = APIRouter(tags=["dashboard"])
 
 QueueAuthed = Annotated[Authed, Depends(require("dashboard.queue", "read"))]
 RoleParam = Annotated[
-    str | None, Query(pattern=r"^[0-9]+$", description="Только очередь этой роли (id)")
+    str | None, Query(pattern=r"^[1-9][0-9]*$", description="Только очередь этой роли (id)")
 ]
 
 

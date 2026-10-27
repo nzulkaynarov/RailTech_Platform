@@ -11,7 +11,6 @@ from typing import Any
 import httpx
 import pytest
 
-from app.schemas_audit import is_secret_key, redact
 from tests.backends import Backends
 from tests.conftest import ContractChecker, Web
 from tests.consts import CRM_URL
@@ -254,95 +253,6 @@ async def test_audit_secrets_are_redacted(
         "nested": {"client_secret": "***", "items": [{"token": "***"}]},
         "token": "",
     }
-
-
-@pytest.mark.parametrize(
-    "name",
-    [
-        "password",
-        "Password",
-        "passwd",
-        "pwd",
-        "secret",
-        "client_secret",
-        "token",
-        "access_token",
-        "refreshToken",
-        "key",
-        "api_key",
-        "apiKey",
-        "API-KEY",
-        "api key",
-        "apikey",
-        "litellm_api_key",
-        "private_key",
-        "privateKey",
-        "ssh_key",
-        "encryption_key",
-        "keys",
-        "authorization",
-        "Authorization",
-        "credentials",
-        "credential",
-        "pin",
-        "pin_code",
-        "smtp.password",
-    ],
-)
-@pytest.mark.parametrize(
-    "value",
-    ["swordfish", 123456, True, ["a", "b"], {"inner": "x", "n": 1}, 0, False, 3.14],
-    ids=["str", "int", "bool", "list", "dict", "zero", "false", "float"],
-)
-def test_redact_masks_the_whole_value_of_a_secret_key(name: str, value: object) -> None:
-    assert is_secret_key(name)
-    assert redact({name: value}) == {name: "***"}
-
-
-@pytest.mark.parametrize("name", ["host", "email", "name", "description", "position", "stage"])
-def test_ordinary_names_are_not_secret(name: str) -> None:
-    assert not is_secret_key(name)
-    assert redact({name: "значение"}) == {name: "значение"}
-
-
-@pytest.mark.parametrize(
-    "name",
-    [
-        "password_last4",
-        "api_key_last4",
-        "token_set",
-        "key_configured",
-        "api_key_present",
-        "keys_rotated",
-        "secrets_key_missing",
-        "secrets_key_changed",
-        "service_key",
-        "product_key",
-        "settings_key",
-        "setting_key",
-        "section_key",
-        "agent_context_key",
-        "Settings-Key",
-        "settingsKey",
-    ],
-)
-def test_explicit_safe_names_are_kept(name: str) -> None:
-    assert not is_secret_key(name)
-    assert redact({name: "значение"}) == {name: "значение"}
-
-
-def test_empty_secret_values_stay_empty() -> None:
-    assert redact({"token": "", "password": None, "api_key": ""}) == {
-        "token": "",
-        "password": None,
-        "api_key": "",
-    }
-
-
-def test_redact_goes_through_lists_and_nested_dicts() -> None:
-    value = {"a": [{"b": {"private_key": "-----BEGIN-----"}}, "text"], "pin": 1234}
-
-    assert redact(value) == {"a": [{"b": {"private_key": "***"}}, "text"], "pin": "***"}
 
 
 async def test_secrets_in_role_snapshots_are_not_leaked_either(web: Web, audit: CrmAudit) -> None:

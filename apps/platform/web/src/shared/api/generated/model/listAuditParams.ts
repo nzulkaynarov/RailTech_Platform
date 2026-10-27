@@ -113,7 +113,7 @@ import type { PageOffsetParameter } from "./pageOffsetParameter";
 export type ListAuditParams = {
   /**
    * Автор записи (`crm_user_id`)
-   * @pattern ^[0-9]+$
+   * @pattern ^[1-9][0-9]*$
    */
   actor_id?: string;
   /**

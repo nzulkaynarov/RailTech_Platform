@@ -30,7 +30,7 @@ router = APIRouter(tags=["admin"])
 
 Admin = Annotated[Authed, Depends(require("admin", "full"))]
 Reader = Annotated[Authed, Depends(require("admin", "read"))]
-RoleId = Annotated[str, Path(pattern=r"^[0-9]+$")]
+RoleId = Annotated[str, Path(pattern=r"^[1-9][0-9]*$")]
 
 
 def _roles(authed: Authed) -> CrmRoles:

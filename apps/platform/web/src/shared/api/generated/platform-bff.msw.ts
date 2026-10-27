@@ -214,7 +214,7 @@ export const getLoginResponseMock = (
     language: faker.helpers.arrayElement(Object.values(Language)),
     roles: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
       () => ({
-        id: faker.helpers.fromRegExp("^[0-9]+$"),
+        id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
         name: faker.string.alpha({ length: { min: 10, max: 20 } }),
         system: faker.datatype.boolean(),
         code: faker.helpers.arrayElement([
@@ -223,7 +223,7 @@ export const getLoginResponseMock = (
         ]),
       }),
     ),
-    active_role: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+    active_role: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[1-9][0-9]*$"), null]),
     modules: faker.helpers.arrayElements(Object.values(ModuleCode)),
     resources: {
       [faker.string.alphanumeric(5)]: faker.helpers.arrayElement(Object.values(AccessLevel)),
@@ -254,7 +254,7 @@ export const getGetSessionResponseMock = (
     language: faker.helpers.arrayElement(Object.values(Language)),
     roles: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
       () => ({
-        id: faker.helpers.fromRegExp("^[0-9]+$"),
+        id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
         name: faker.string.alpha({ length: { min: 10, max: 20 } }),
         system: faker.datatype.boolean(),
         code: faker.helpers.arrayElement([
@@ -263,7 +263,7 @@ export const getGetSessionResponseMock = (
         ]),
       }),
     ),
-    active_role: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+    active_role: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[1-9][0-9]*$"), null]),
     modules: faker.helpers.arrayElements(Object.values(ModuleCode)),
     resources: {
       [faker.string.alphanumeric(5)]: faker.helpers.arrayElement(Object.values(AccessLevel)),
@@ -290,7 +290,7 @@ export const getGetMeResponseMock = (overrideResponse: Partial<Extract<Me, objec
   ]),
   language: faker.helpers.arrayElement(Object.values(Language)),
   roles: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
-    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     system: faker.datatype.boolean(),
     code: faker.helpers.arrayElement([
@@ -298,7 +298,7 @@ export const getGetMeResponseMock = (overrideResponse: Partial<Extract<Me, objec
       undefined,
     ]),
   })),
-  active_role: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+  active_role: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[1-9][0-9]*$"), null]),
   modules: faker.helpers.arrayElements(Object.values(ModuleCode)),
   resources: {
     [faker.string.alphanumeric(5)]: faker.helpers.arrayElement(Object.values(AccessLevel)),
@@ -324,7 +324,7 @@ export const getUpdateMeResponseMock = (
   ]),
   language: faker.helpers.arrayElement(Object.values(Language)),
   roles: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
-    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     system: faker.datatype.boolean(),
     code: faker.helpers.arrayElement([
@@ -332,7 +332,7 @@ export const getUpdateMeResponseMock = (
       undefined,
     ]),
   })),
-  active_role: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+  active_role: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[1-9][0-9]*$"), null]),
   modules: faker.helpers.arrayElements(Object.values(ModuleCode)),
   resources: {
     [faker.string.alphanumeric(5)]: faker.helpers.arrayElement(Object.values(AccessLevel)),
@@ -408,7 +408,7 @@ export const getGetQueueResponseMock = (
 ): Queue => ({
   items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
     id: faker.string.alpha({ length: { min: 10, max: 20 } }),
-    role_id: faker.helpers.fromRegExp("^[0-9]+$"),
+    role_id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
     kind: faker.helpers.arrayElement(Object.values(QueueItemKind)),
     title: faker.string.alpha({ length: { min: 10, max: 20 } }),
     subtitle: faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -1745,7 +1745,7 @@ export const getListEmployeesResponseMock = (
     ]),
     roles: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
       () => ({
-        id: faker.helpers.fromRegExp("^[0-9]+$"),
+        id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
         name: faker.string.alpha({ length: { min: 10, max: 20 } }),
         system: faker.datatype.boolean(),
         code: faker.helpers.arrayElement([
@@ -1778,7 +1778,7 @@ export const getInviteEmployeeResponseMock = (
     undefined,
   ]),
   roles: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
-    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     system: faker.datatype.boolean(),
     code: faker.helpers.arrayElement([
@@ -1809,7 +1809,7 @@ export const getResendInviteResponseMock = (
     undefined,
   ]),
   roles: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
-    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     system: faker.datatype.boolean(),
     code: faker.helpers.arrayElement([
@@ -1840,7 +1840,7 @@ export const getGetEmployeeResponseMock = (
     undefined,
   ]),
   roles: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
-    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     system: faker.datatype.boolean(),
     code: faker.helpers.arrayElement([
@@ -1871,7 +1871,7 @@ export const getUpdateEmployeeResponseMock = (
     undefined,
   ]),
   roles: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
-    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     system: faker.datatype.boolean(),
     code: faker.helpers.arrayElement([
@@ -1903,7 +1903,7 @@ export const getListRolesResponseMock = (
   overrideResponse: Partial<Extract<RoleList, object>> = {},
 ): RoleList => ({
   items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
-    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     description: faker.string.alpha({ length: { min: 10, max: 20 } }),
     system: faker.datatype.boolean(),
@@ -1925,7 +1925,7 @@ export const getListRolesResponseMock = (
 export const getCreateRoleResponseMock = (
   overrideResponse: Partial<Extract<Role, object>> = {},
 ): Role => ({
-  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
   name: faker.string.alpha({ length: { min: 10, max: 20 } }),
   description: faker.string.alpha({ length: { min: 10, max: 20 } }),
   system: faker.datatype.boolean(),
@@ -1946,7 +1946,7 @@ export const getCreateRoleResponseMock = (
 export const getPreviewRoleResponseMock = (
   overrideResponse: Partial<Extract<RolePreview, object>> = {},
 ): RolePreview => ({
-  role_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+  role_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[1-9][0-9]*$"), null]),
   employees_total: faker.number.int({ min: 0 }),
   employees: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
     () => ({
@@ -1989,7 +1989,7 @@ export const getPreviewRoleResponseMock = (
 export const getGetRoleResponseMock = (
   overrideResponse: Partial<Extract<Role, object>> = {},
 ): Role => ({
-  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
   name: faker.string.alpha({ length: { min: 10, max: 20 } }),
   description: faker.string.alpha({ length: { min: 10, max: 20 } }),
   system: faker.datatype.boolean(),
@@ -2010,7 +2010,7 @@ export const getGetRoleResponseMock = (
 export const getUpdateRoleResponseMock = (
   overrideResponse: Partial<Extract<Role, object>> = {},
 ): Role => ({
-  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
   name: faker.string.alpha({ length: { min: 10, max: 20 } }),
   description: faker.string.alpha({ length: { min: 10, max: 20 } }),
   system: faker.datatype.boolean(),

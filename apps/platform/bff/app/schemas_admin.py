@@ -69,7 +69,7 @@ class EmployeeUpdate(BaseModel):
     role_ids: list[RoleId] | None = None
     position: str | None = Field(default=None, max_length=_MAX_TEXT)
     is_active: bool | None = None
-    transfer_to_user_id: str | None = Field(default=None, pattern=r"^[0-9]+$")
+    transfer_to_user_id: str | None = Field(default=None, pattern=r"^[1-9][0-9]*$")
 
     @field_validator("role_ids")
     @classmethod

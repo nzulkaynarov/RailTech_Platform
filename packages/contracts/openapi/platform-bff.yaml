@@ -2007,7 +2007,7 @@ paths:
           description: Автор записи (`crm_user_id`)
           schema:
             type: string
-            pattern: '^[0-9]+$'
+            pattern: '^[1-9][0-9]*$'
         - name: action
           in: query
           required: false
@@ -3463,7 +3463,7 @@ components:
 
     RoleId:
       type: string
-      pattern: '^[0-9]+$'
+      pattern: '^[1-9][0-9]*$'
       description: Id роли Платформы в CRM (роли — данные, ADR-0012)
       examples: ['3']
 
@@ -4747,7 +4747,7 @@ components:
           type: boolean
         transfer_to_user_id:
           type: string
-          pattern: '^[0-9]+$'
+          pattern: '^[1-9][0-9]*$'
           description: >-
             Кому передать лиды в работе (`crm_user_id` коллеги), если отключение или новые роли отнимают у сотрудника работу
             с лидами; без поля при таких лидах — 409 `CONFLICT` (`details.reason = user_has_active_leads`)

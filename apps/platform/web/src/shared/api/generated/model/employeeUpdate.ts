@@ -120,7 +120,7 @@ export interface EmployeeUpdate {
   is_active?: boolean;
   /**
    * Кому передать лиды в работе (`crm_user_id` коллеги), если отключение или новые роли отнимают у сотрудника работу с лидами; без поля при таких лидах — 409 `CONFLICT` (`details.reason = user_has_active_leads`)
-   * @pattern ^[0-9]+$
+   * @pattern ^[1-9][0-9]*$
    */
   transfer_to_user_id?: string;
 }

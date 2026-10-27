@@ -23,23 +23,47 @@ _ACTOR_TYPES: frozenset[str] = frozenset({"user", "system", "bot"})
 _ROLE_ACTIONS: frozenset[str] = frozenset({"create", "update", "delete"})
 _LEVELS: frozenset[str] = frozenset({"full", "read"})
 _FIELDS: frozenset[str] = frozenset({"cost_margin", "supplier_prices", "totals_only"})
+_CAMEL = re.compile(r"(?<=[a-z0-9])(?=[A-Z])")
+_SEPARATORS = re.compile(r"[^a-z0-9]+")
+_TRAILING_DIGITS = re.compile(r"\d+$")
 MASK = "***"
 
-# Имя поля нормализуется (регистр, `-`, пробел, `.`, camelCase -> `snake_case`) и режется на слова.
-# Секретно поле, в имени которого есть слово: password, passwd, pwd, secret, token, credential(s),
-# authorization, pin, key (в том числе `*_key`: api_key, private_key, litellm_api_key); склейки
-# `apikey`, `privatekey`, `secretkey`, `accesskey` и множественное число (`keys`, `tokens`) тоже.
-# Значение под таким полем маскируется целиком, каким бы оно ни было: строка, число, флаг, список,
-# словарь. Пустое значение (`null`, `""`) остаётся: оно говорит «не задано» и ничего не раскрывает.
-_WORD = re.compile(r"^(?:password|passwd|pwd|secret|token|credentials?|authorization|pin|key)s?$")
-_GLUED = ("apikey", "privatekey", "secretkey", "accesskey")
-# Безопасные исключения — явно и только по причине:
-# 1) имена-идентификаторы, где «key» значит «код», а не ключ доступа (CRM пишет их в аудит сервисов,
-#    продуктов и настроек): `service_key`, `product_key`, `settings_key`, `setting_key`,
-#    `section_key`, `agent_context_key`;
-# 2) признаки и маски: `*_last4` (последние 4 символа), `*_set`, `*_configured`, `*_present`
-#    («задан»), `*_rotated`, `*_missing`, `*_changed` (итог операции над ключами): секрета нет.
-_SAFE_NAMES = frozenset(
+# Имя поля нормализуется: регистр, `-`, пробел, `.` и camelCase -> `snake_case`
+# (`apiKey` -> `api_key`).
+# Секретным считается поле по одному из правил:
+# 1) длинная основа есть в имени ПОДСТРОКОЙ, склейки тоже (`accesstoken`, `newpassword`,
+#    `passwordhash`, `clientsecret`): password, passwd, secret, token, credential, authorization,
+#    passphrase, passcode, cookie, bearer, signature, hmac, а также склейки apikey, privatekey,
+#    secretkey, accesskey, databaseurl;
+# 2) короткие основы — только ЦЕЛЫМ словом (слова режутся по `_`), с отрезанием хвостовых цифр
+#    (`key1` -> `key`) и допуском множественного числа: key, pin, pwd, otp, cvv, jwt, dsn.
+# Значение под таким полем маскируется целиком, любого типа: строка, число, флаг, список, словарь.
+# Пустое значение (`null`, `""`) остаётся: оно говорит «не задано» и ничего не раскрывает.
+_STEMS = (
+    "password",
+    "passwd",
+    "secret",
+    "token",
+    "credential",
+    "authorization",
+    "passphrase",
+    "passcode",
+    "cookie",
+    "bearer",
+    "signature",
+    "hmac",
+    "apikey",
+    "privatekey",
+    "secretkey",
+    "accesskey",
+    "databaseurl",
+)
+_WORDS = frozenset({"key", "pin", "pwd", "otp", "cvv", "jwt", "dsn"})
+
+# Исключения — явно и только по причине.
+# A) Имена-коды, где «key» значит «код», а не ключ доступа (CRM пишет их в аудит сервисов, продуктов
+#    и настроек): значение видно всегда.
+_OPEN_NAMES = frozenset(
     {
         "service_key",
         "product_key",
@@ -49,17 +73,22 @@ _SAFE_NAMES = frozenset(
         "agent_context_key",
     }
 )
-_SAFE_SUFFIXES = (
-    "_last4",
+# B) Признаки итога и метаданные пароля/токена: видны, только если значение — флаг, число или
+#    `null`; строка, список и словарь под таким именем маскируются (в них мог оказаться секрет).
+_SCALAR_SUFFIXES = (
     "_set",
     "_configured",
     "_present",
     "_rotated",
     "_missing",
     "_changed",
+    "_tokens",  # счётчики LLM: prompt_tokens, max_tokens
 )
-_CAMEL = re.compile(r"(?<=[a-z0-9])(?=[A-Z])")
-_SEPARATORS = re.compile(r"[^a-z0-9]+")
+_SCALAR_NAMES = frozenset({"must_change_password", "has_password"})
+# C) Маска «последние 4 символа»: видна, только если это строка не длиннее 4 символов.
+_LAST4_SUFFIX = "_last4"
+
+Policy = Literal["open", "mask", "scalar", "last4"]
 
 
 def normalize_key(name: str) -> str:
@@ -67,11 +96,44 @@ def normalize_key(name: str) -> str:
     return _SEPARATORS.sub("_", _CAMEL.sub("_", name).lower()).strip("_")
 
 
-def is_secret_key(name: str) -> bool:
+def _secretish(key: str) -> bool:
+    compact = key.replace("_", "")
+    if any(stem in compact for stem in _STEMS):
+        return True
+    for part in key.split("_"):
+        word = _TRAILING_DIGITS.sub("", part)
+        if word in _WORDS or (word.endswith("s") and word[:-1] in _WORDS):
+            return True
+    return False
+
+
+def key_policy(name: str) -> Policy:
+    """Что можно показать под полем: всё, ничего, только флаг или число, только 4 символа."""
     key = normalize_key(name)
-    if key in _SAFE_NAMES or key.endswith(_SAFE_SUFFIXES):
+    if key in _OPEN_NAMES or not _secretish(key):
+        return "open"
+    if key.endswith(_LAST4_SUFFIX):
+        return "last4"
+    if key in _SCALAR_NAMES or key.endswith(_SCALAR_SUFFIXES):
+        return "scalar"
+    return "mask"
+
+
+def is_secret_key(name: str) -> bool:
+    """Имя похоже на секретное (значение может быть скрыто); решение по значению — `is_hidden`."""
+    return key_policy(name) != "open"
+
+
+def is_hidden(name: str, value: Any) -> bool:
+    """Скрыть ли значение `value` под полем `name`."""
+    policy = key_policy(name)
+    if policy == "open" or value is None or value == "":
         return False
-    return any(_WORD.match(part) for part in key.split("_")) or any(g in key for g in _GLUED)
+    if policy == "scalar":
+        return not isinstance(value, bool | int | float)
+    if policy == "last4":
+        return not (isinstance(value, str) and len(value) <= 4)
+    return True
 
 
 def redact(value: Any) -> Any:
@@ -80,8 +142,7 @@ def redact(value: Any) -> Any:
         out: dict[str, Any] = {}
         for key, item in value.items():
             name = str(key)
-            hidden = is_secret_key(name) and item is not None and item != ""
-            out[name] = MASK if hidden else redact(item)
+            out[name] = MASK if is_hidden(name, item) else redact(item)
         return out
     if isinstance(value, list):
         return [redact(item) for item in value]

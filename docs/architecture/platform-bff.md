@@ -185,10 +185,13 @@ SPA  POST /api/v1/auth/login {email, password}
 `NOT_CONFIGURED`. Выдача пароля без почты — эндпоинты W13-A4, в карточке подключается после слияния. (2) `GET /admin/audit` →
 CRM `/audit` (`audit:read`; BFF — раздел `admin` от чтения: читают администратор и директор, записи не меняет никто): фильтры автор,
 действие (код или префикс), объект, период; входы (`auth.login`, `sso.exchange`) скрыты, пока не задан `include_logins`. Коды действий
-и объектов остаются кодами CRM — слова к ним даёт SPA (ru/uz/en); значения полей с именем `password`, `passwd`, `pwd`, `secret`, `token`, `key`, `*_key`, `credentials`, `authorization`, `pin` (регистр и
-разделители не важны) в `before`/`after` BFF заменяет на `***` целиком, любого типа; исключения явные — `*_last4`, `*_set`, `*_configured`,
-`*_present`, `*_rotated`, `*_missing`, `*_changed` и имена-коды `service_key`, `product_key`, `settings_key`, `setting_key`, `section_key`,
-`agent_context_key`. Номер сотрудника в адресе — без ведущих нулей (`^[1-9][0-9]*$`), «это я» сравнивается числом; журнал несуществующей роли — 404. Экран — пункт «Журнал аудита» меню Admin (раздел `admin`, пункт каталога `menu.admin.audit`).
+и объектов остаются кодами CRM — слова к ним даёт SPA (ru/uz/en); значения секретных полей в `before`/`after` BFF заменяет на `***` целиком, любого типа. Имя нормализуется (регистр,
+разделители, camelCase). Подстрокой (в том числе в склейках `accesstoken`, `newpassword`, `passwordhash`): password, passwd, secret, token,
+credential, authorization, passphrase, passcode, cookie, bearer, signature, hmac, apikey, privatekey, databaseurl; целым словом с отрезанием
+хвостовых цифр (`key1`): key, pin, pwd, otp, cvv, jwt, dsn. Исключения явные: имена-коды `service_key`, `product_key`, `settings_key`,
+`setting_key`, `section_key`, `agent_context_key` видны всегда; признаки и метаданные (`*_set`, `*_configured`, `*_present`, `*_rotated`,
+`*_missing`, `*_changed`, `*_tokens`, `must_change_password`, `has_password`) видны только как флаг, число или `null` (строка — маска);
+`*_last4` — только строка до 4 символов. Пустое значение (`null`, `""`) не скрывается. Номера сотрудника, роли и автора журнала в адресе — без ведущих нулей (`^[1-9][0-9]*$`), «это я» сравнивается числом; журнал несуществующей роли — 404. Экран — пункт «Журнал аудита» меню Admin (раздел `admin`, пункт каталога `menu.admin.audit`).
 (3) `GET /admin/roles/{id}/journal` — записи аудита CRM `platform_role.create|update|delete` этой роли (CRM пишет их в той же
 транзакции, что и изменение, с `before`/`after`); сравнение «что изменилось» делает экран. Смена набора ролей сотрудника
 пишется CRM как `user.update` (`platform_role_names`) и видна в общем журнале. Вкладка «Журнал» вернулась в боковое окно роли.

@@ -112,7 +112,7 @@ import type { RoleQueryParameter } from "./roleQueryParameter";
 export type GetQueueCardsParams = {
   /**
    * Id роли Платформы в CRM (роли — данные, ADR-0012)
-   * @pattern ^[0-9]+$
+   * @pattern ^[1-9][0-9]*$
    */
   role?: RoleQueryParameter;
 };
