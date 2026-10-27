@@ -29,11 +29,21 @@ test-unit: ## Только тесты без базы (секунды, Docker н
 test: ## Все тесты: ядро, SQLAlchemy (psycopg, asyncpg), Django (psycopg2 как ERP, psycopg) — на PostgreSQL
 	RT_BUS_REQUIRE_PG=1 ./scripts/with_pg.sh $(MAKE) --no-print-directory _test
 
+# Три прогона pytest идут ПАРАЛЛЕЛЬНО на одном PostgreSQL (W14-S2). Базы у них свои и не пересекаются:
+# ядро и SQLAlchemy — rt_bus_sa; Django psycopg2 — rt_bus_dj_psycopg2 и rt_bus_schema_sa_psycopg2; Django psycopg 3 — rt_bus_dj_psycopg
+# и rt_bus_schema_sa_psycopg (tests/conftest.py, tests/dj/conftest.py, test_django_schema.py). Вывод каждого — в свой файл и после
+# завершения всех трёх подряд на экран, чтобы строки не перемешивались; код выхода — провал любого из трёх.
 .PHONY: _test
 _test:
-	uv run pytest
-	RT_BUS_DJANGO_DRIVER=psycopg2 uv run pytest tests/dj
-	RT_BUS_DJANGO_DRIVER=psycopg uv run pytest tests/dj
+	uv sync --frozen
+	@d=$$(mktemp -d); trap 'rm -rf "$$d"' EXIT; \
+	uv run --no-sync pytest >"$$d/1-core.log" 2>&1 & p1=$$!; \
+	RT_BUS_DJANGO_DRIVER=psycopg2 uv run --no-sync pytest tests/dj >"$$d/2-django-psycopg2.log" 2>&1 & p2=$$!; \
+	RT_BUS_DJANGO_DRIVER=psycopg uv run --no-sync pytest tests/dj >"$$d/3-django-psycopg.log" 2>&1 & p3=$$!; \
+	rc=0; wait $$p1 || rc=1; wait $$p2 || rc=1; wait $$p3 || rc=1; \
+	for f in "$$d"/*.log; do echo "=== $$(basename "$$f" .log) ==="; cat "$$f"; done; \
+	[ $$rc -eq 0 ] || echo "rt-bus: pytest упал хотя бы в одном из трёх прогонов (см. выше)"; \
+	exit $$rc
 
 .PHONY: migrations-check
 migrations-check: ## Миграция Django соответствует моделям (без базы)
