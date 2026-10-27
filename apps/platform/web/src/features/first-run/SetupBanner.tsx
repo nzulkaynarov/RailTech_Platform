@@ -1,5 +1,4 @@
 import { App, Button } from "antd";
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "react-router";
 
@@ -7,14 +6,14 @@ import { canEdit } from "../../app/access";
 import { useAuth } from "../../app/auth/useAuth";
 import { WIZARD_PATH, needsSetup, nextStep } from "../../entities/setup/steps";
 import { LinkButton } from "../../shared/ui/LinkButton";
-import { hideBanner, isBannerHidden } from "./hidden";
+import { hideBanner, useBannerHidden } from "./hidden";
 import { useSetupChecklist } from "./useSetupChecklist";
 
 import "./first-run.css";
 
 /**
  * Баннер «Настройка Платформы» над основным окном (SPEC-v3 §7.6): сколько из пяти шагов сделано, что дальше, одна ссылка
- * в мастер и «Скрыть» (запоминается в браузере). Только администратору (`admin` — полный): чек-лист отдаёт BFF с этим
+ * в мастер и «Скрыть до завтра» (W15-H4; запоминается в браузере, вернуть — в мастере). Только администратору (`admin` — полный): чек-лист отдаёт BFF с этим
  * правом, а шаги ведут на экраны, которые меняет администратор; директор баннера не видит. Пока шагов не осталось, а
  * компания создана, баннера нет. На самой странице мастера он не нужен.
  */
@@ -25,7 +24,7 @@ export function SetupBanner() {
   const location = useLocation();
   const allowed = canEdit(me, "admin");
   const checklist = useSetupChecklist(allowed);
-  const [hidden, setHidden] = useState(() => isBannerHidden(me.id));
+  const hidden = useBannerHidden(me.id);
 
   if (!allowed || hidden || location.pathname === WIZARD_PATH) return null;
   const data = checklist.data;
@@ -53,7 +52,6 @@ export function SetupBanner() {
           aria-label={t("admin.setup.banner.hideLabel")}
           onClick={() => {
             hideBanner(me.id);
-            setHidden(true);
             void message.info(t("admin.setup.banner.hidden"));
           }}
         >

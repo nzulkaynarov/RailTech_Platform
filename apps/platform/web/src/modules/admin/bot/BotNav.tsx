@@ -12,10 +12,12 @@ interface Props {
   /** Адрес раздела: сохраняет прочие параметры экрана, кроме относящихся к панели. */
   hrefOf: (section: string) => string;
   onSelect: (section: string) => void;
+  /** Показывать «Шаблоны ответов» и «Выгрузки» в списке (W15-H4: у них свои вкладки экрана — по умолчанию нет) */
+  withExtras?: boolean;
 }
 
 /** Разделы экрана: на широком — список со ссылками по группам, на узком — выпадающий список. */
-export function BotNav({ groups, current, hrefOf, onSelect }: Props) {
+export function BotNav({ groups, current, hrefOf, onSelect, withExtras = false }: Props) {
   const { t } = useTranslation("bot");
   const { mobile } = useViewport();
   const label = (key: string) => t(`keys.${key}`, { defaultValue: key });
@@ -25,7 +27,7 @@ export function BotNav({ groups, current, hrefOf, onSelect }: Props) {
       sections: ["templates", "exports"],
     },
   ];
-  const all = [...groups, ...extra];
+  const all = withExtras ? [...groups, ...extra] : [...groups];
   const groupLabel = (key: string) => t(`groups.${key}`, { defaultValue: key });
   const itemLabel = (key: string) =>
     key === "templates" || key === "exports" ? t(`nav.${key}`) : label(key);

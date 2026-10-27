@@ -14,6 +14,13 @@ async function openPanel(card: string, email = "admin@demo.example"): Promise<HT
   return panelEl();
 }
 
+/** Подключение бота — вкладка Настроек · Telegram-бот (W15-H4), не боковое окно «Подключений». */
+async function openBotConnection(email = "admin@demo.example"): Promise<HTMLElement> {
+  signIn(email);
+  renderAt("/admin/bot?part=connection");
+  return screen.findByRole("tabpanel");
+}
+
 function type(label: string | RegExp, value: string, root: HTMLElement = document.body) {
   fireEvent.change(within(root).getByLabelText(label), { target: { value } });
 }
@@ -34,6 +41,19 @@ function attention(): HTMLElement {
 function submitPassword(form: HTMLElement, password = PASSWORD) {
   type("Ваш пароль администратора", password, form);
 }
+
+describe("Telegram в «Подключениях» — кратко (W15-H4)", () => {
+  it("состояние бота и «Настроить бота», без формы токена и канала", async () => {
+    const side = await openPanel("telegram");
+    expect(await within(side).findByText("@demo_railtech_bot")).toBeVisible();
+    expect(within(side).getByRole("link", { name: "Настроить бота" })).toHaveAttribute(
+      "href",
+      "/admin/bot?part=connection",
+    );
+    expect(within(side).queryByRole("button", { name: "Сменить токен" })).toBeNull();
+    expect(within(side).queryByRole("button", { name: "Тестовое сообщение" })).toBeNull();
+  });
+});
 
 describe("карточка ERP", () => {
   it("состояние сопряжения с масками; «Проверить связь» отвечает словами", async () => {
@@ -118,7 +138,7 @@ describe("карточка ERP", () => {
 
 describe("карточка Telegram", () => {
   it("токен: ввод, маска, ошибки; сохранённый токен на экране не остаётся", async () => {
-    const side = await openPanel("telegram");
+    const side = await openBotConnection();
     expect(await within(side).findByText("@demo_railtech_bot")).toBeVisible();
     expect(within(side).getByText("•••• Qw7x")).toBeVisible();
 
@@ -143,7 +163,7 @@ describe("карточка Telegram", () => {
   });
 
   it("канал команды: список чатов, подключить, тестовое сообщение", async () => {
-    const side = await openPanel("telegram");
+    const side = await openBotConnection();
     expect(await within(side).findByText("Подключён: Команда RailTech (демо)")).toBeVisible();
 
     fireEvent.click(
@@ -158,7 +178,7 @@ describe("карточка Telegram", () => {
   });
 
   it("профиль бота: счётчик, слишком длинный текст блокирует сохранение, сохранение публикует", async () => {
-    const side = await openPanel("telegram");
+    const side = await openBotConnection();
     const name = await within(side).findByLabelText("Имя бота");
     expect(name).toHaveValue("RailTech Помощник");
 

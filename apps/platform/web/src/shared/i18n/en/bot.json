@@ -1,5 +1,5 @@
 {
-  "subtitle": "Texts, behaviour and handoff rules of the Telegram bot, quick reply templates and CSV exports. Changes take effect immediately.",
+  "subtitle": "Connection, texts, behaviour and knowledge base of the Telegram bot, quick reply templates and CSV exports. Changes take effect immediately.",
   "readOnlySubtitle": "View only: the bot settings are changed by the administrator.",
   "viewOnly": "View only",
   "common": {
@@ -80,8 +80,8 @@
     "stay": "Stay"
   },
   "qualificationHint": "A lead becomes \"Qualified\" when all required facts are known and at least the set number of additional ones. The AI extracts the facts, the system decides.",
-  "channelMoved": "The team channel is chosen in \"Connections\" → Telegram; here — whom to mention and how often to write to a manager.",
-  "openIntegrations": "Open Telegram",
+  "channelMoved": "The team channel is chosen on the “Connection” tab; here — whom to mention and how often to write to a manager.",
+  "openIntegrations": "Open “Connection”",
   "weekdays": {
     "mon": "Mon",
     "tue": "Tue",
@@ -729,5 +729,21 @@
     "fallback": "If not delivered to anyone personally",
     "always": "Always",
     "never": "Never"
+  },
+  "parts": {
+    "label": "Telegram bot sections",
+    "connection": "Connection",
+    "texts": "Texts",
+    "behavior": "Behaviour & handoff",
+    "kb": "Knowledge base",
+    "templates": "Reply templates",
+    "exports": "Exports",
+    "none": "CRM did not send this settings section. Reload the page later."
+  },
+  "kbEntry": {
+    "title": "Knowledge base documents",
+    "text": "The documents the bot answers from, the “What the bot finds” search, gaps and the sandbox are on the knowledge base screen. Below — how the bot uses the base.",
+    "readOnlyText": "Documents, gaps and the “What the bot finds” search are on the knowledge base screen, read only.",
+    "open": "Open the knowledge base"
   }
 }

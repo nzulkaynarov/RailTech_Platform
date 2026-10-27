@@ -19,6 +19,7 @@ import {
 } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { DefinitionList } from "../../../shared/ui/DefinitionList";
+import { LinkButton } from "../../../shared/ui/LinkButton";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import {
   ActionForm,
@@ -278,11 +279,24 @@ function ProfileForm({ state, editable }: { state: BotProfileState; editable: bo
   );
 }
 
-function TelegramBody({ bot, editable }: { bot: TelegramConnector; editable: boolean }) {
+/** Где настраивается бот целиком (W15-H4): Настройки · Telegram-бот, вкладка «Подключение». */
+export const BOT_CONNECTION_PATH = "/admin/bot?part=connection";
+
+function TelegramBody({
+  bot,
+  editable,
+  summary,
+  initialTokenOpen,
+}: {
+  bot: TelegramConnector;
+  editable: boolean;
+  summary: boolean;
+  initialTokenOpen: boolean;
+}) {
   const { t } = useTranslation("integrations");
   const { date } = useFormat();
-  const [tokenOpen, setTokenOpen] = useState(false);
-  const profile = useGetBotProfile({ query: { enabled: bot.configured } });
+  const [tokenOpen, setTokenOpen] = useState(initialTokenOpen && editable && !bot.configured);
+  const profile = useGetBotProfile({ query: { enabled: bot.configured && !summary } });
   return (
     <div className="pf-panel-stack">
       <DefinitionList
@@ -325,7 +339,14 @@ function TelegramBody({ bot, editable }: { bot: TelegramConnector; editable: boo
       {!bot.secrets_enabled ? (
         <Alert type="warning" showIcon message={t("common.secretsOff")} />
       ) : null}
-      {editable ? (
+      {summary ? (
+        <div>
+          <LinkButton type="primary" to={BOT_CONNECTION_PATH}>
+            {t(editable ? "telegram.configureBot" : "telegram.viewBot")}
+          </LinkButton>
+        </div>
+      ) : null}
+      {summary ? null : editable ? (
         <ActionToggle
           label={bot.configured ? t("telegram.token.change") : t("telegram.token.set")}
           open={tokenOpen}
@@ -342,8 +363,8 @@ function TelegramBody({ bot, editable }: { bot: TelegramConnector; editable: boo
           {t("common.readOnly")}
         </p>
       )}
-      <ChannelBlock bot={bot} editable={editable} />
-      {bot.configured ? (
+      {summary ? null : <ChannelBlock bot={bot} editable={editable} />}
+      {bot.configured && !summary ? (
         <PanelState query={profile}>
           {(state) => <ProfileForm state={state} editable={editable} />}
         </PanelState>
@@ -352,15 +373,34 @@ function TelegramBody({ bot, editable }: { bot: TelegramConnector; editable: boo
   );
 }
 
-/** Карточка «Telegram»: токен бота (ввод, маска), канал команды (список, подключить, тест), профиль бота. */
-export function TelegramPanel({ editable }: { editable: boolean }) {
+/**
+ * Подключение Telegram-бота: токен (ввод, маска), канал команды (список, подключить, тест), профиль бота. Целиком — на
+ * вкладке «Подключение» в Настройках · Telegram-бот и в шаге мастера (`initialTokenOpen` — форма токена сразу открыта,
+ * пока токена нет); в «Подключениях» — кратко (`summary`): состояние и «Настроить бота» (W15-H4).
+ */
+export function TelegramPanel({
+  editable,
+  summary = false,
+  initialTokenOpen = false,
+}: {
+  editable: boolean;
+  summary?: boolean;
+  initialTokenOpen?: boolean;
+}) {
   const { t } = useTranslation("integrations");
   const query = useGetTelegramConnector();
   return (
     <div className="pf-panel-stack">
       <PanelTitle>{t("cards.telegram.title")}</PanelTitle>
       <PanelState query={query}>
-        {(bot) => <TelegramBody bot={bot} editable={editable} />}
+        {(bot) => (
+          <TelegramBody
+            bot={bot}
+            editable={editable}
+            summary={summary}
+            initialTokenOpen={initialTokenOpen}
+          />
+        )}
       </PanelState>
     </div>
   );

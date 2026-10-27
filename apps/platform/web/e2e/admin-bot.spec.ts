@@ -39,8 +39,9 @@ async function expectNoViolations(page: Page, context: string): Promise<void> {
   ).toEqual([]);
 }
 
+/** Без раздела — вкладка «Поведение и передача» (W15-H4: у экрана вкладки; раздел из старого адреса ведёт на свою вкладку). */
 async function openBot(page: Page, section?: string, extra = ""): Promise<void> {
-  const query = [section ? `section=${section}` : "", extra].filter(Boolean).join("&");
+  const query = [section ? `section=${section}` : "part=behavior", extra].filter(Boolean).join("&");
   await spaGoto(page, `/admin/bot${query ? `?${query}` : ""}`);
   await expect(page.getByRole("heading", { level: 1, name: "Telegram-бот" })).toBeVisible();
   await expect(page.locator(".ant-skeleton")).toHaveCount(0);
@@ -64,7 +65,7 @@ test.describe("Настройки бота: администратор", () => {
     await openBot(page);
 
     await expect(page.getByRole("heading", { level: 2, name: "Компания" })).toBeVisible();
-    await expect(nav(page).getByRole("link")).toHaveCount(16);
+    await expect(nav(page).getByRole("link")).toHaveCount(12);
     await expect(page.getByLabel("Название компании")).toHaveValue("RailTech (демо)");
     await expect(page.getByRole("group", { name: "Что произойдёт" })).toBeVisible();
     await settledScreenshot(page, "company");
@@ -137,7 +138,7 @@ test.describe("Настройки бота: администратор", () => {
       page.getByText("Anthropic (диалог, квалификатор, проверка качества)"),
     ).toBeVisible();
     await openBot(page, "notifications");
-    await expect(page.getByRole("link", { name: "Открыть Telegram" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Открыть «Подключение»" })).toBeVisible();
   });
 
   test("тексты бота: таблица по группам, поиск, правка в боковом окне с предпросмотром, пустой перевод отклоняется", async ({
@@ -283,6 +284,54 @@ test.describe("Настройки бота: выгрузки CSV", () => {
   });
 });
 
+test.describe("Telegram-бот в одном месте (W15-H4)", () => {
+  test.skip(({ isMobile }) => isMobile, "сценарии на десктопе; ширины проверяет блок axe");
+
+  test("вкладки: подключение (токен), тексты, поведение, база знаний (вход), шаблоны, выгрузки; боковое окно закрыто", async ({
+    page,
+  }) => {
+    await loginAndWait(page, "admin@demo.example");
+    await spaGoto(page, "/admin/bot");
+    await expect(page.getByRole("heading", { level: 1, name: "Telegram-бот" })).toBeVisible();
+    const tabs = page.getByRole("tablist", { name: "Разделы Telegram-бота" });
+    await expect(tabs.getByRole("tab")).toHaveText([
+      "Подключение",
+      "Тексты",
+      "Поведение и передача",
+      "База знаний",
+      "Шаблоны ответов",
+      "Выгрузки",
+    ]);
+    // Выбирать нечего — бокового окна с «Объект не выбран» нет
+    await expect(page.getByRole("complementary", { name: "Боковое окно" })).toHaveCount(0);
+    const panel = page.getByRole("tabpanel");
+    await expect(panel.getByText("@demo_railtech_bot")).toBeVisible();
+    await expect(panel.getByRole("button", { name: "Сменить токен" })).toBeVisible();
+    await settledScreenshot(page, "bot-connection");
+
+    await tabs.getByRole("tab", { name: "Тексты" }).click();
+    await expect(page.getByText(/Приветствие и согласие · /)).toBeVisible();
+    await tabs.getByRole("tab", { name: "Поведение и передача" }).click();
+    await expect(nav(page).getByRole("link", { name: "Правила передачи" })).toBeVisible();
+
+    await tabs.getByRole("tab", { name: "База знаний" }).click();
+    await expect(page.getByText("Минимальное сходство, чтобы бот отвечал (0–1)")).toBeVisible();
+    await settledScreenshot(page, "bot-kb");
+    await page.getByRole("link", { name: "Открыть базу знаний" }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "База знаний бота" })).toBeVisible();
+    // администратор остаётся в Настройках: подсвечен «Telegram-бот», в рейле нет Клиентов
+    const menu = page.getByRole("navigation", { name: "Разделы модуля" });
+    await expect(menu.getByRole("link", { name: "Telegram-бот" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    await expect(
+      page.getByRole("navigation", { name: "Модули" }).getByRole("link", { name: "Клиенты" }),
+    ).toHaveCount(0);
+    await settledScreenshot(page, "bot-kb-documents");
+  });
+});
+
 test.describe("Настройки бота: права", () => {
   test.skip(({ isMobile }) => isMobile, "сценарии на десктопе; ширины проверяет блок axe");
 
@@ -346,6 +395,13 @@ test.describe("Настройки бота: axe и снимки", () => {
           await settledScreenshot(page, `a11y-${section}`);
         }
       }
+
+      // W15-H4: вкладка «Подключение» — токен, канал команды и профиль бота
+      await spaGoto(page, "/admin/bot?part=connection");
+      await expect(page.getByRole("tabpanel").getByText("@demo_railtech_bot")).toBeVisible();
+      await expect(page.locator(".ant-skeleton")).toHaveCount(0);
+      await expectNoViolations(page, `connection ${String(width)}`);
+      await settledScreenshot(page, "a11y-connection");
 
       await openBot(page, "texts", "text=greeting&panel=open");
       await expect(

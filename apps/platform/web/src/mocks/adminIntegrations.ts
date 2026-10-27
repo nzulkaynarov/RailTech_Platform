@@ -505,6 +505,7 @@ export const adminIntegrationsHandlers = [
         last_error: null,
       };
     });
+    markStepDone("bot"); // как BFF: шаг «Telegram-бот» сделан, когда токен задан (W15-H4)
     return HttpResponse.json(state.telegram);
   }),
   http.get("*/admin/integrations/telegram/channels", () => {
@@ -580,6 +581,7 @@ export const adminIntegrationsHandlers = [
           : {}),
       };
     });
+    if (state.smtp.configured) markStepDone("mail"); // шаг «Почта» (W15-H4)
     return HttpResponse.json(state.smtp);
   }),
   http.post("*/admin/integrations/smtp/check", () => {
@@ -761,6 +763,7 @@ export const adminIntegrationsHandlers = [
       if (vendor) settleOk(vendor, MOCK_NOW, "Ошибок за 15 минут нет");
     });
     if (roles.length === 0) return failure(404, "NOT_FOUND", "Не найдено.", "crm");
+    markStepDone("models"); // шаг «Модели ИИ» (W15-H4)
     return HttpResponse.json({ provider, roles, checked: true });
   }),
   http.get("*/admin/integrations/models", () => {

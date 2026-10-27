@@ -169,7 +169,7 @@
       "company": "Company & letterhead",
       "setup": "First-time setup",
       "bot": "Telegram bot",
-      "audit": "Activity log"
+      "audit": "Log"
     },
     "action": "Invite employee",
     "setup": {
@@ -207,7 +207,7 @@
         "REQUEST_TIMEOUT": "The server did not respond in time. The company may already be created: the state is refreshing — if the form disappears, the company exists; otherwise try again."
       },
       "connectionsTitle": "Other connections",
-      "connectionsLead": "Four setup steps: each leads to its own screen.",
+      "connectionsLead": "Four steps: each form opens here, in the side panel; after saving, the next step follows.",
       "progress": "Done {{done}} of {{total}}",
       "allDone": "All done: the Platform is set up.",
       "loadError": "Could not load the setup state",
@@ -254,19 +254,26 @@
         "company": "Your company is not in ERP yet.",
         "next": "Next: {{step}}.",
         "open": "Continue setup",
-        "hide": "Hide",
-        "hideLabel": "Hide the setup banner",
-        "hidden": "Banner hidden. The wizard stays on the “First-time setup” page in Settings (/admin/setup)."
+        "hide": "Hide until tomorrow",
+        "hideLabel": "Hide until tomorrow: setup banner",
+        "hidden": "The banner is hidden until tomorrow. Bring it back in the “First-time setup” wizard."
       },
       "erpTitle": "ERP connection",
       "erpLead": "The company is created in ERP, so ERP is connected first. A new installation needs no pairing code — the \"Connect ERP\" button is enough.",
-      "erpDone": "ERP is connected. You can check the link on the integration card.",
+      "erpDone": "ERP is connected. Check the connection in the step form or in Settings · Connections.",
       "erpUnknown": "ERP state is unknown: CRM did not respond. Open the ERP settings and check the link.",
       "erpOpen": "Open ERP settings",
       "companyNeedsErp": "Connect ERP first",
       "companyNeedsErpText": "The company is created in ERP, so it cannot be created before ERP is connected. The form will appear here once it is.",
       "companyNeedsErpAction": "Connect ERP",
-      "companyAlreadyCreated": "Your company already exists — that is the same result, continue with the other steps."
+      "companyAlreadyCreated": "Your company already exists — that is the same result, continue with the other steps.",
+      "stepOf": "Step {{index}} of {{total}}",
+      "stepDone": "Step done.",
+      "nextStep": "Next: {{step}}",
+      "finish": "Close",
+      "stepSaved": "Step “{{step}}” is done.",
+      "bannerHidden": "The setup banner is hidden until tomorrow.",
+      "bannerReturn": "Bring the banner back"
     },
     "org": {
       "title": "Employees",
@@ -551,6 +558,11 @@
       "change": "Change",
       "view": "Open",
       "modules": "The role opens modules: {{modules}}."
+    },
+    "journal": {
+      "filterLabel": "What the log shows",
+      "people": "People’s actions",
+      "systems": "System exchange"
     }
   },
   "tabs": {
@@ -568,7 +580,8 @@
     "files": "Files",
     "role": "Role",
     "employees": "Employees",
-    "journal": "Journal"
+    "journal": "Journal",
+    "step": "Step"
   },
   "panel": {
     "today": {
@@ -630,6 +643,10 @@
     "journal": {
       "title": "No entry selected",
       "text": "Select an entry in the log to see the details here: who, when and what changed."
+    },
+    "step": {
+      "title": "No step selected",
+      "text": "Press the button next to a step — its form opens here without leaving the wizard."
     }
   }
 }

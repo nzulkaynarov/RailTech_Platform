@@ -124,13 +124,19 @@ test.describe("Внешние интеграции: администратор",
     await expect(tile(page, "erp").getByText("Идёт переход на новые ключи")).toBeVisible();
   });
 
-  test("Telegram: токен (маска, ошибка), канал команды, тестовое сообщение, профиль бота", async ({
+  test("Telegram: в «Подключениях» — состояние и «Настроить бота»; токен, канал и профиль — в Настройках · Telegram-бот", async ({
     page,
   }) => {
     await loginAndWait(page, "admin@demo.example");
     await openIntegrations(page, "telegram");
-    const panel = side(page);
-    await expect(panel.getByText("@demo_railtech_bot")).toBeVisible();
+    const summary = side(page);
+    await expect(summary.getByText("@demo_railtech_bot")).toBeVisible();
+    await expect(summary.getByRole("button", { name: "Сменить токен" })).toHaveCount(0);
+    await settledScreenshot(page, "telegram-summary");
+    await summary.getByRole("link", { name: "Настроить бота" }).click();
+    await expect(page).toHaveURL(/\/admin\/bot\?part=connection/);
+    await expect(page.getByRole("heading", { level: 1, name: "Telegram-бот" })).toBeVisible();
+    const panel = page.getByRole("tabpanel");
     await expect(panel.getByText("•••• Qw7x")).toBeVisible();
 
     await panel.getByRole("button", { name: "Сменить токен" }).click();
@@ -356,8 +362,8 @@ test.describe("Внешние интеграции: axe и снимки", () => 
       await side(page).getByRole("button", { name: "Подключить заново" }).click();
       await expect(side(page).getByRole("form", { name: "Подключить ERP" })).toBeVisible();
       await expectNoViolations(page, `erp form ${String(width)}`);
-      await openIntegrations(page, "telegram");
-      await side(page).getByRole("button", { name: "Сменить токен" }).click();
+      await spaGoto(page, "/admin/bot?part=connection");
+      await page.getByRole("tabpanel").getByRole("button", { name: "Сменить токен" }).click();
       await expectNoViolations(page, `telegram form ${String(width)}`);
       await openIntegrations(page, "models");
       await side(page).getByRole("button", { name: "Сменить модель: Диалог с клиентом" }).click();
