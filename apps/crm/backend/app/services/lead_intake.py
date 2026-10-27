@@ -4,6 +4,13 @@
 окно по IP — пороги из `settings.web_form`), источник `web`, попадает во «Входящие» в «Без
 ответственного» (`owner_mode=paused`, бот ему написать не может — Telegram-идентичности нет).
 Повторный запрос с тем же номером/почтой не плодит карточек: текст уходит заметкой в существующую.
+После приёма (D1-9) в той же транзакции заводятся подтверждение клиенту (`client_notices`: письмо
+или Telegram, SPEC-v3
+§8) и срок первого ответа (`first_response_due_at`, `settings.web_form.first_response_sla_minutes`);
+после коммита
+`on_web_lead` ставит задачи очереди — отправка подтверждения, личное сообщение менеджерам, проверка
+срока. Сбой постановки
+задач запрос не отменяет: лид уже в «Входящих» (и в «Моей очереди» через `lead.created`).
 Согласие на обработку ПДн (`consent: true`, DECISIONS Q-12) обязательно: у нового лида — это
 `consent_given_at` с версией `WEB_CONSENT_VERSION` (бот всё равно спросит своё согласие — версия
 другая); у существующей карточки согласие не перезаписывается, факт — в аудите `lead.web_request`.
@@ -13,6 +20,8 @@
 409 с идентификатором найденного: фронт предлагает открыть, а не дублировать.
 """
 
+from collections.abc import Awaitable, Callable
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
 import structlog
@@ -34,10 +43,11 @@ from app.models.leads import Lead, LeadNote
 from app.repositories import events
 from app.repositories import lead_intake as repo
 from app.schemas.lead_intake import ManualLeadIn, WebFormToken, WebLeadIn
-from app.schemas.settings import WebFormSettings
+from app.schemas.settings import AppSettings, WebFormSettings
 from app.security import audit
 from app.security.principal import Principal
-from app.services import stages
+from app.services import stages, web_lead_sla
+from app.services.client_notices import ClientNoticeService
 from app.services.settings import SettingsService
 
 logger = structlog.get_logger(__name__)
@@ -84,6 +94,21 @@ def _audit_view(lead: Lead) -> dict[str, object]:
     }
 
 
+@dataclass(frozen=True, slots=True)
+class WebLeadFollowUp:
+    """Что поставить в очередь после коммита запроса с сайта (`on_web_lead`)."""
+
+    lead_id: int
+    notice_id: (
+        int | None
+    )  # подтверждение клиенту; None — не требуется (повтор) или нечем (`skipped`)
+    sla_due_at: datetime | None  # срок первого ответа; None — у повторного запроса не заводится
+    repeat: bool
+
+
+FollowUpHook = Callable[[WebLeadFollowUp], Awaitable[None]]
+
+
 class LeadIntakeService:
     def __init__(
         self,
@@ -91,11 +116,15 @@ class LeadIntakeService:
         settings: SettingsService,
         form_key: bytes,
         limiter: SlidingWindowLimiter | None = None,
+        notices: ClientNoticeService | None = None,
+        on_web_lead: FollowUpHook | None = None,
     ) -> None:
         self._sessions = sessions
         self._settings = settings
         self._key = form_key
         self._limiter = limiter or SlidingWindowLimiter(limit=1, window_s=_HOUR_S)
+        self._notices = notices
+        self._on_web_lead = on_web_lead
 
     async def form_token(self, now: datetime | None = None) -> WebFormToken:
         cfg = (await self._settings.get()).web_form
@@ -111,7 +140,8 @@ class LeadIntakeService:
     ) -> int | None:
         """202: id лида; None — honeypot (запрос молча отброшен). Ошибки антиспама — 422/429."""
         moment = now or datetime.now(UTC)
-        cfg = (await self._settings.get()).web_form
+        full_cfg = await self._settings.get()
+        cfg = full_cfg.web_form
         if is_honeypot_filled(body.website):
             logger.info("web_lead_honeypot", ip=ip)
             return None
@@ -132,35 +162,34 @@ class LeadIntakeService:
         async with self._sessions() as session, session.begin():
             existing = await _find_existing(session, phone, email)
             if existing is not None:
-                return await _repeat_request(session, existing, text, ip, moment)
-            lead = Lead(
-                display_name=body.name.strip()[:255],
-                language=body.language,
-                stage=Stage.NEW.value,
-                owner_mode=OwnerMode.PAUSED.value,
-                source=LeadSource.WEB.value,
-                phone_e164=phone,
-                email=email,
-                company_name=_clean(body.company, 255),
-                need_summary=text[:_SUMMARY_MAX],
-                last_lead_msg_at=moment,
-                consent_given_at=moment,
-                consent_version=WEB_CONSENT_VERSION,
-            )
-            session.add(lead)
-            await session.flush()
-            await audit.record(
-                session,
-                audit.Actor(None, "system", ip),
-                "lead.create_web",
-                "lead",
-                lead.id,
-                after={**_audit_view(lead), **_consent_view(moment)},
-            )
-            await bus_events.lead_created(session, lead, audit.Actor.system())
-            await events.publish(session, "lead.updated", lead_id=lead.id, owner_mode="paused")
-            logger.info("web_lead_created", lead_id=lead.id, language=lead.language)
-            return lead.id
+                lead_id, request_id = await _repeat_request(session, existing, text, ip, moment)
+                notice = await self._plan(session, existing, request_id)
+                follow_up = WebLeadFollowUp(lead_id, notice, None, repeat=True)
+            else:
+                lead = await _new_web_lead(session, body, phone, email, text, ip, moment, full_cfg)
+                notice = await self._plan(session, lead, None)
+                follow_up = WebLeadFollowUp(
+                    lead.id, notice, lead.first_response_due_at, repeat=False
+                )
+        await self._follow_up(follow_up)
+        return follow_up.lead_id
+
+    async def _plan(self, session: AsyncSession, lead: Lead, request_id: int | None) -> int | None:
+        """Подтверждение клиенту: id строки на отправку; None — слать нечем или уже подтверждено."""
+        if self._notices is None:
+            return None
+        notice = await self._notices.plan_web_confirmation(session, lead, request_id)
+        return notice.id if notice is not None and notice.status == "queued" else None
+
+    async def _follow_up(self, follow_up: WebLeadFollowUp) -> None:
+        if self._on_web_lead is None:
+            return
+        try:
+            await self._on_web_lead(follow_up)
+        except Exception:
+            # Лид уже создан и виден в «Входящих»; потеря постановки задач — в лог, а не 500
+            # клиенту.
+            logger.exception("web_lead_follow_up_failed", lead_id=follow_up.lead_id)
 
     def _check_spam(
         self, body: WebLeadIn, cfg: WebFormSettings, ip: str | None, now: datetime
@@ -221,6 +250,49 @@ class LeadIntakeService:
             return lead.id
 
 
+async def _new_web_lead(
+    session: AsyncSession,
+    body: WebLeadIn,
+    phone: str | None,
+    email: str | None,
+    text: str,
+    ip: str | None,
+    moment: datetime,
+    cfg: AppSettings,
+) -> Lead:
+    """Карточка запроса с сайта: «Входящие» → «Без ответственного», срок первого ответа, аудит,
+    события."""
+    lead = Lead(
+        display_name=body.name.strip()[:255],
+        language=body.language,
+        stage=Stage.NEW.value,
+        owner_mode=OwnerMode.PAUSED.value,
+        source=LeadSource.WEB.value,
+        phone_e164=phone,
+        email=email,
+        company_name=_clean(body.company, 255),
+        need_summary=text[:_SUMMARY_MAX],
+        last_lead_msg_at=moment,
+        consent_given_at=moment,
+        consent_version=WEB_CONSENT_VERSION,
+        first_response_due_at=web_lead_sla.due_at(cfg, moment),
+    )
+    session.add(lead)
+    await session.flush()
+    await audit.record(
+        session,
+        audit.Actor(None, "system", ip),
+        "lead.create_web",
+        "lead",
+        lead.id,
+        after={**_audit_view(lead), **_consent_view(moment)},
+    )
+    await bus_events.lead_created(session, lead, audit.Actor.system())
+    await events.publish(session, "lead.updated", lead_id=lead.id, owner_mode="paused")
+    logger.info("web_lead_created", lead_id=lead.id, language=lead.language)
+    return lead
+
+
 def _require_contact(source: LeadSource, phone: str | None, email: str | None) -> None:
     if source == LeadSource.PHONE and phone is None:
         raise ValidationFailedError(
@@ -273,17 +345,17 @@ def _consent_view(moment: datetime) -> dict[str, object]:
 
 async def _repeat_request(
     session: AsyncSession, lead: Lead, text: str, ip: str | None, moment: datetime
-) -> int:
+) -> tuple[int, int]:
     """Повторный запрос с сайта от известного контакта — заметкой в существующую карточку.
 
     Согласие карточки не трогаем: у Telegram-лида, ещё не давшего согласие боту, оно открыло бы
     обработку диалога ИИ (квалификатор). Согласие формы фиксируется в аудите.
     """
-    session.add(
-        LeadNote(
-            lead_id=lead.id, user_id=None, text=(WEB_NOTE_MARK + text)[:4000], visible_to_bot=True
-        )
+    note = LeadNote(
+        lead_id=lead.id, user_id=None, text=(WEB_NOTE_MARK + text)[:4000], visible_to_bot=True
     )
+    session.add(note)
+    await session.flush()
     lead.notes_count += 1
     if not lead.need_summary:
         lead.need_summary = text[:_SUMMARY_MAX]
@@ -297,4 +369,4 @@ async def _repeat_request(
     )
     await events.publish(session, "lead.updated", lead_id=lead.id)
     logger.info("web_lead_repeat", lead_id=lead.id)
-    return lead.id
+    return lead.id, note.id

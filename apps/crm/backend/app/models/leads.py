@@ -74,6 +74,11 @@ class Lead(TimestampMixin, Base):
     handoff_notice_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # Последнее личное уведомление менеджеру о сообщении лида (троттлинг, Q-010).
     manager_notified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Срок первого ответа человека на запрос с сайта (D1-9,
+    # `settings.web_form.first_response_sla_minutes`, рабочие
+    # часы) и когда о просрочке написали менеджерам; у лидов других источников — NULL.
+    first_response_due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    first_response_notified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     erased_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # `telegram` | `web` | `phone` | `email` | `referral` (`domain/lead_sources.py`) | `sandbox`.
     source: Mapped[str] = mapped_column(String(16), server_default=sql("'telegram'"))

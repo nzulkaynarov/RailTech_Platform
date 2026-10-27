@@ -1102,6 +1102,10 @@ components:
           - type: string
           - type: 'null'
           title: Inn
+        invitation:
+          anyOf:
+          - $ref: '#/components/schemas/InvitationOut'
+          - type: 'null'
         is_active:
           title: Is Active
           type: boolean
@@ -1425,6 +1429,15 @@ components:
             type: string
           - type: 'null'
           title: Position
+        preferred_channel:
+          anyOf:
+          - enum:
+            - email
+            - telegram
+            - both
+            type: string
+          - type: 'null'
+          title: Preferred Channel
         telegram_identity_id:
           anyOf:
           - exclusiveMinimum: 0.0
@@ -1470,6 +1483,15 @@ components:
           - type: string
           - type: 'null'
           title: Position
+        preferred_channel:
+          anyOf:
+          - enum:
+            - email
+            - telegram
+            - both
+            type: string
+          - type: 'null'
+          title: Preferred Channel
         telegram_identity_id:
           anyOf:
           - type: integer
@@ -3090,6 +3112,112 @@ components:
       - recovery_alerted
       title: IncidentOut
       type: object
+    InvitationOut:
+      description: 'Приглашение клиента в кабинет: последняя попытка и что можно сделать дальше.'
+      properties:
+        available_channels:
+          items:
+            enum:
+            - email
+            - telegram
+            type: string
+          title: Available Channels
+          type: array
+        can_resend:
+          default: false
+          title: Can Resend
+          type: boolean
+        channel:
+          enum:
+          - telegram
+          - email
+          - both
+          - none
+          title: Channel
+          type: string
+        contact_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Contact Id
+        contact_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Contact Name
+        created_at:
+          format: date-time
+          title: Created At
+          type: string
+        error:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Error
+        error_text:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Error Text
+        id:
+          title: Id
+          type: integer
+        sent_at:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          title: Sent At
+        sent_via:
+          items:
+            enum:
+            - email
+            - telegram
+            type: string
+          title: Sent Via
+          type: array
+        status:
+          enum:
+          - queued
+          - sent
+          - failed
+          - skipped
+          title: Status
+          type: string
+        suggested_channel:
+          anyOf:
+          - enum:
+            - email
+            - telegram
+            - both
+            type: string
+          - type: 'null'
+          title: Suggested Channel
+      required:
+      - id
+      - channel
+      - status
+      - created_at
+      title: InvitationOut
+      type: object
+    InviteRequest:
+      properties:
+        channel:
+          enum:
+          - email
+          - telegram
+          - both
+          title: Channel
+          type: string
+        contact_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Contact Id
+      required:
+      - channel
+      title: InviteRequest
+      type: object
     KbChunkOut:
       properties:
         content:
@@ -3346,6 +3474,10 @@ components:
           - type: string
           - type: 'null'
           title: Company Name
+        confirmation:
+          anyOf:
+          - $ref: '#/components/schemas/NoticeOut'
+          - type: 'null'
         consent_given_at:
           anyOf:
           - format: date-time
@@ -3383,9 +3515,23 @@ components:
           anyOf:
           - $ref: '#/components/schemas/EscalationOut'
           - type: 'null'
+        first_response_due_at:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          title: First Response Due At
+        first_response_overdue:
+          default: false
+          title: First Response Overdue
+          type: boolean
         id:
           title: Id
           type: integer
+        invitation:
+          anyOf:
+          - $ref: '#/components/schemas/InvitationOut'
+          - type: 'null'
         language:
           title: Language
           type: string
@@ -4194,6 +4340,54 @@ components:
       - created_at
       title: NoteOut
       type: object
+    NoticeOut:
+      properties:
+        channel:
+          enum:
+          - telegram
+          - email
+          - both
+          - none
+          title: Channel
+          type: string
+        created_at:
+          format: date-time
+          title: Created At
+          type: string
+        error:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Error
+        error_text:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Error Text
+        id:
+          title: Id
+          type: integer
+        sent_at:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          title: Sent At
+        status:
+          enum:
+          - queued
+          - sent
+          - failed
+          - skipped
+          title: Status
+          type: string
+      required:
+      - id
+      - channel
+      - status
+      - created_at
+      title: NoticeOut
+      type: object
     PasswordReset:
       properties:
         temporary_password:
@@ -4772,6 +4966,7 @@ components:
       - erp_unavailable
       - erp_bad_response
       - erp_rate_limited
+      - client_not_in_erp
       - erp_inn_conflict
       - erp_pairing_code_invalid
       - erp_pairing_code_expired
@@ -6304,7 +6499,7 @@ components:
       type: http
 info:
   title: RailTech CRM API
-  version: 0.5.0
+  version: 0.6.0
 openapi: 3.1.0
 paths:
   /api/v1/admin/ai-spend:
@@ -7389,6 +7584,54 @@ paths:
       security:
       - HTTPBearer: []
       summary: Get Client Receivables
+      tags:
+      - clients
+  /api/v1/clients/{client_id}/invitation:
+    post:
+      description: '«Отправить приглашение в кабинет» выбранным каналом (D1-9): e-mail, Telegram или оба.
+
+
+        Ответ 200 всегда описывает итог попытки: `status=failed` с `error` и `error_text` — приглашение
+
+        не ушло (у контакта
+
+        нет почты, он не писал боту, почта не отработала). 409 `client_not_in_erp` — клиент ещё не
+
+        передан в ERP;
+
+        404 — клиента или контакта нет. `suggested_channel` в ответе — чем повторить, если не
+
+        получилось.'
+      operationId: resend_invitation
+      parameters:
+      - in: path
+        name: client_id
+        required: true
+        schema:
+          title: Client Id
+          type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InviteRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InvitationOut'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Resend Invitation
       tags:
       - clients
   /api/v1/clients/{client_id}/telegram:

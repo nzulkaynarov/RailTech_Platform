@@ -22,6 +22,7 @@ from app.security.rbac import Rbac
 from app.services.budget import BudgetedModel
 from app.services.client_bot import ClientBotService
 from app.services.conversation import ActivityHook, ConversationService, EscalationHook
+from app.services.start_links import StartLinkService
 
 logger = structlog.get_logger(__name__)
 
@@ -174,6 +175,10 @@ async def bot_lifespan(
                 rbac=rbac,
                 client_bot=build_client_bot(container, on_escalation),
                 telegram_paused=lambda: container.switch_board.is_disabled("telegram"),
+                start_links=StartLinkService(
+                    container.session_factory,
+                    container.settings.jwt_secret.get_secret_value().encode("utf-8"),
+                ),
             )
 
         async def resolve() -> tuple[str, TokenSource]:

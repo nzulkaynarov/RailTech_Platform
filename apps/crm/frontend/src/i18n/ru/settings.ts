@@ -271,6 +271,7 @@ export const settings = {
     token_ttl_minutes: "Срок действия открытой формы",
     rate_limit_per_hour: "Запросов с одного адреса в час",
     max_text_chars: "Максимум символов в поле «Что нужно»",
+    first_response_sla_minutes: "Срок первого ответа на запрос с сайта",
     telegram_admins: "Личное сообщение админам в Telegram",
     telegram_channel: "Сообщение в канал команды",
     email_admins: "Письмо админам на почту",
@@ -302,6 +303,8 @@ export const settings = {
     min_fill_seconds: "Форма, отправленная быстрее, отклоняется: так отсекаются роботы.",
     token_ttl_minutes: "После этого срока страницу формы нужно обновить.",
     rate_limit_per_hour: "Сверх лимита запросы с этого IP отклоняются до конца часа.",
+    first_response_sla_minutes:
+      "Рабочих минут. Если запрос с сайта за это время никто не взял, менеджерам с включёнными уведомлениями о лидах придёт напоминание в Telegram.",
     telegram_admins:
       "Тем админам, у кого в профиле привязан Telegram и включены системные уведомления.",
     telegram_channel:
@@ -314,6 +317,7 @@ export const settings = {
   units: {
     repeat_minutes: "мин",
     min_fill_seconds: "с",
+    first_response_sla_minutes: "мин",
     token_ttl_minutes: "мин",
     manager_dm_throttle_minutes: "мин",
     sla_minutes: "мин",

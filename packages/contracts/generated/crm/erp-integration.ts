@@ -31,7 +31,12 @@
  * одобрение КП директором ведёт маршрут EDS (EDS-03, решение архитектора волны 12 §4 п. 3), в ERP этого права больше нет.
  * CRM (карта прав и каталог ролей Платформы) перестаёт его выдавать в том же PR.
  *
- * OpenAPI spec version: 0.7.0
+ * 0.8.0 (волна 16, D1-9; аддитивно): `HandoffResponse.invite.error` — причина, по которой приглашение не ушло (код ERP);
+ * `POST /clients/{crm_client_id}/invite` — повторное приглашение контакта другим каналом из карточки клиента CRM;
+ * канал `telegram` в приглашении доставляется ботом CRM по событию `uz.railtech.erp.invite.requested.v1` (ERP в Telegram не
+ * пишет), поэтому `sent_via: [telegram]` значит «передано боту», а итог доставки CRM знает сама.
+ *
+ * OpenAPI spec version: 0.8.0
  */
 import type {
   AiUsageRow,
@@ -50,6 +55,8 @@ import type {
   HandoffRequest,
   HandoffResponse,
   Health,
+  InviteRequest,
+  InviteResponse,
   PairingAcceptRequest,
   PairingAccepted,
   PairingRotateRequest,
@@ -105,6 +112,58 @@ export const handoffClient = async (
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
 
   const data: HandoffResponse = body ? JSON.parse(body) : {};
+  return data;
+};
+
+export const getInviteClientContactUrl = (crmClientId: number) => {
+  return `/clients/${crmClientId}/invite`;
+};
+
+/**
+ * Менеджер CRM нажимает «Отправить повторно другим каналом» в карточке клиента. `email` — ERP отправляет письмо сама
+ * (`portal_invitation`); `telegram` — ERP публикует `uz.railtech.erp.invite.requested.v1`, доставляет бот CRM;
+ * `both` — оба канала. Контакт — по `crm_contact_id`, без него — основной контакт компании. Ответ всегда 200:
+ * `error` называет причину, по которой приглашение не ушло ни одним из каналов
+ * (`CONTACT_EMAIL_REQUIRED`, `CONTACT_TELEGRAM_REQUIRED`, `EMAIL_DELIVERY_FAILED`, `INVALID_CHANNEL`,
+ * `CONTACT_WITHOUT_COMPANY`, `COMPANY_ARCHIVED`, `CONTACT_ARCHIVED`); CRM переводит её в слова для менеджера.
+ * Не идемпотентно по смыслу (каждое нажатие — новое приглашение), `Idempotency-Key` защищает только от
+ * повтора одного запроса.
+ * @summary Повторное приглашение контакта клиента в Cabinet выбранным каналом
+ */
+export const inviteClientContact = async (
+  crmClientId: number,
+  inviteRequest: InviteRequest,
+  options?: RequestInit,
+): Promise<InviteResponse> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  const res = await fetch(getInviteClientContactUrl(crmClientId), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(inviteRequest),
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: InviteResponse = body ? JSON.parse(body) : {};
   return data;
 };
 

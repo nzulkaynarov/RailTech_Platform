@@ -406,6 +406,12 @@ class WebFormSettings(StrictModel):
     max_text_chars: int = Field(
         default=4000, ge=100, le=10000, description="Максимум символов в поле «Что нужно»"
     )
+    first_response_sla_minutes: int = Field(
+        default=15,
+        ge=1,
+        le=1440,
+        description="За сколько рабочих минут человек должен ответить на запрос с сайта",
+    )
 
 
 SETTINGS_MODELS: Final[dict[str, type[BaseModel]]] = {

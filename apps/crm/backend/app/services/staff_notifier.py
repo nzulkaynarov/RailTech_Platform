@@ -21,6 +21,8 @@ from app.domain.staff_notify import (
     lead_dm_due,
     lead_dm_target,
     lead_dm_text,
+    new_lead_recipients,
+    web_lead_dm_text,
 )
 from app.models.auth import Role, User, UserRole
 from app.models.leads import Conversation, Lead, Message
@@ -103,6 +105,43 @@ class StaffNotifier:
             link=tx.CRM_OPEN.format(url=url),
         )
         return await self._deliver(user_id, user.tg_user_id, body, key="handover", lead_id=lead_id)
+
+    async def web_lead(
+        self, lead_id: int, base: str, minutes: int, *, overdue: bool = False
+    ) -> int:
+        """Запрос с сайта (D1-9) → личное сообщение менеджерам с включёнными уведомлениями о лидах.
+
+        Новый запрос без ответственного — всем подписанным; повторный запрос лида, которого уже
+        ведёт человек, —
+        только ему. `overdue` — напоминание «никто не взял»: пишем всем подписанным, пока лид не
+        взят.
+        Возвращает число доставленных сообщений; отказ Telegram отдельному менеджеру остальным не
+        мешает.
+        """
+        if self._bot is None:
+            return 0
+        async with self._sessions() as session:
+            lead = await session.get(Lead, lead_id)
+            if lead is None or lead.erased_at is not None:
+                return 0
+            staff = await _staff(session)
+        if lead.assigned_user_id is not None and not overdue and lead.owner_mode == "human":
+            staff = [s for s in staff if s.user_id == lead.assigned_user_id]
+        template = tx.WEB_LEAD_OVERDUE_DM if overdue else tx.NEW_WEB_LEAD_DM
+        body = web_lead_dm_text(
+            template,
+            name=lead.display_name or "",
+            company=lead.company_name,
+            need=lead.need_summary,
+            minutes=minutes,
+            crm_url=base,
+            lead_id=lead_id,
+        )
+        delivered = 0
+        for chat_id in new_lead_recipients(staff):
+            if await self._try_send(chat_id, body, key="web_lead", lead_id=lead_id):
+                delivered += 1
+        return delivered
 
     async def _deliver(self, user_id: int, chat_id: int, text: str, **log: object) -> bool:
         """Личное сообщение сотруднику с отметкой «Telegram отказал» в профиле."""
