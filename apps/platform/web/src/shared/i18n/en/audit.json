@@ -1,0 +1,328 @@
+{
+  "page": {
+    "title": "Audit log",
+    "subtitle": "Who changed what and when in CRM and the Platform. Entries are read-only: they cannot be edited or deleted."
+  },
+  "filters": {
+    "label": "Log filters",
+    "actor": "Author",
+    "allActors": "All authors",
+    "action": "Action",
+    "allActions": "All actions",
+    "entity": "Object",
+    "allEntities": "All objects",
+    "from": "From date",
+    "to": "To date",
+    "logins": "Show sign-ins",
+    "reset": "Reset filters"
+  },
+  "count": "Entries: {{count}}",
+  "columns": {
+    "when": "When",
+    "actor": "Who",
+    "action": "What was done",
+    "entity": "On what"
+  },
+  "listLabel": "Audit log entries",
+  "pager": "Log pages",
+  "open": "Open entry: {{action}}, {{when}}",
+  "actorKind": {
+    "system": "System",
+    "bot": "Bot",
+    "unknown": "Employee #{{id}}"
+  },
+  "entityText": {
+    "withId": "{{type}} #{{id}}",
+    "withName": "{{type}}: {{name}}"
+  },
+  "empty": {
+    "title": "No entries yet",
+    "text": "Every change will appear here: who granted a role, reset a password, or changed settings or a connection, with date and time."
+  },
+  "noMatch": {
+    "title": "No entries match these filters",
+    "text": "Change the author, action or period, or reset the filters.",
+    "action": "Reset filters"
+  },
+  "loadError": {
+    "title": "Could not load the log",
+    "text": "The log is kept by CRM. Retry; if the error persists, check CRM in Admin · Integrations.",
+    "retry": "Retry"
+  },
+  "card": {
+    "title": "Log entry",
+    "hint": "Select an entry in the log to see the details here: who, when, and what exactly changed.",
+    "hintTitle": "No entry selected",
+    "notFound": "Entry not found on this page",
+    "when": "When",
+    "actor": "Who",
+    "action": "What was done",
+    "entity": "On what",
+    "ip": "IP address",
+    "changes": "What changed",
+    "noChanges": "This action does not record before and after values.",
+    "from": "was",
+    "to": "now",
+    "open": "Open: {{name}}"
+  },
+  "values": {
+    "yes": "Yes",
+    "no": "No",
+    "none": "not set"
+  },
+  "role": {
+    "created": "Role “{{name}}” created",
+    "updated": "Role changed",
+    "deleted": "Role deleted",
+    "renamed": "Name: “{{from}}” → “{{to}}”",
+    "descriptionChanged": "Description changed",
+    "section": "{{section}}: {{from}} → {{to}}",
+    "sectionNew": "{{section}}: {{to}}",
+    "fieldShown": "Field “{{field}}”: now visible",
+    "fieldHidden": "Field “{{field}}”: now hidden",
+    "nothing": "The role content did not change.",
+    "level": {
+      "hidden": "Hidden",
+      "read": "Read only",
+      "full": "Full access"
+    },
+    "noSections": "No sections"
+  },
+  "roleJournal": {
+    "title": "Journal of role “{{name}}”",
+    "label": "Role changes",
+    "hint": "Who changed the role, when, and what. Entries are read-only.",
+    "by": "{{when}} · {{who}}",
+    "unknownAuthor": "author not recorded",
+    "empty": "No changes yet",
+    "emptyText": "System roles come from the Platform catalog and never change. For a role created by an administrator, its creation and every save will appear here.",
+    "error": "Could not load the role journal",
+    "errorText": "The journal is kept by CRM. Retry.",
+    "retry": "Retry",
+    "more": "Show more",
+    "all": "Full audit log"
+  },
+  "resetPassword": {
+    "button": "Reset password",
+    "title": "Password reset",
+    "method": "How to deliver the new password",
+    "byEmail": "By email",
+    "byTemporary": "With a temporary password",
+    "whatHappens": "What will happen",
+    "step1": "The employee will get an email at {{email}} with a new temporary password; the old password stops working.",
+    "step2": "All their sessions in the Platform, CRM and ERP will end.",
+    "step3": "On sign-in they must change the password; until then their status is “Invited”.",
+    "confirm": "Reset and send email",
+    "cancel": "Cancel",
+    "self": "You cannot reset your own password here: choose “Change password” in the avatar menu.",
+    "sent": "An email with the new password was sent to {{email}}",
+    "errors": {
+      "NOT_CONFIGURED": "Mail is not connected, the password is unchanged. Connect mail in Admin · Integrations and retry.",
+      "SECRETS_KEY_MISSING": "The server has no secrets encryption key: the email cannot be sent. Set it in the server settings.",
+      "SELF_RESET": "You cannot reset your own password here: choose “Change password” in the avatar menu.",
+      "FORBIDDEN": "Not enough rights: passwords are reset by an administrator.",
+      "NOT_FOUND": "Employee not found. Refresh the list.",
+      "BACKEND_UNAVAILABLE": "CRM is not responding. The password is unchanged, retry later.",
+      "DEFAULT": "Could not reset the password. Please retry."
+    },
+    "integrations": "Open Admin · Integrations",
+    "temporaryHint": "No email: you see the new password once and hand it to the employee in person; the old one stops working.",
+    "confirmTemporary": "Issue password"
+  },
+  "profile": {
+    "notifications": "Notifications",
+    "intro": "Direct messages from the bot in Telegram: what you get and where.",
+    "loadError": "Could not load notification settings. Try again later.",
+    "retry": "Retry",
+    "telegram": "Telegram",
+    "linked": "Linked",
+    "notLinked": "Not linked",
+    "linkHint": "An administrator links Telegram in the employee card (Admin · Organization). Until it is linked, subscriptions do not work.",
+    "failed": "The bot's last message was not delivered ({{time}}). Open the bot in Telegram, press Start, then send a test notification.",
+    "leads": "Leads waiting for me",
+    "leadsHint": "The bot writes when a lead is handed to a manager or a client replies.",
+    "system": "System alerts",
+    "systemHint": "Integration and monitoring failures, for administrators.",
+    "saved": "Saved",
+    "test": "Test notification",
+    "testHint": "The bot sends you a test message in Telegram, so you can check that delivery works.",
+    "testSent": "Test message sent to Telegram",
+    "errors": {
+      "NOT_LINKED": "Telegram is not linked: ask an administrator to link it in the employee card.",
+      "REFUSED": "Telegram did not accept the message. Open the bot, press Start and make sure it is not blocked.",
+      "NOT_CONFIGURED": "The bot is not connected. An administrator connects it in Admin · Integrations.",
+      "BACKEND_UNAVAILABLE": "CRM is not responding. Retry later.",
+      "DEFAULT": "The action failed. Please retry."
+    }
+  },
+  "actions": {
+    "auth": {
+      "login": "Sign-in",
+      "login_failed": "Failed sign-in"
+    },
+    "sso": {
+      "exchange": "Sign-in via SSO (from ERP)"
+    },
+    "lead": {
+      "take": "Took a lead",
+      "reply": "Replied to a lead",
+      "note": "Added a note",
+      "snooze": "Snoozed a lead",
+      "unsnooze": "Returned a lead from snoozed",
+      "return_to_bot": "Returned a lead to the bot",
+      "close_won": "Deal won",
+      "close_lost": "Closed a lead as lost",
+      "make_customer": "Converted a lead to a client",
+      "consent_recorded": "Recorded lead consent",
+      "new_deal": "Opened a new deal",
+      "assign": "Handed a lead to a colleague",
+      "acknowledge": "Acknowledged a lead",
+      "assist": "AI reply assistance",
+      "create": "Created a lead manually",
+      "create_web": "Request from the website",
+      "web_request": "Repeated request from the website",
+      "merge": "Merged lead cards",
+      "updated": "Updated a lead"
+    },
+    "deal": {
+      "create": "Created a deal",
+      "update": "Updated a deal",
+      "open": "Opened a deal",
+      "won": "Deal won",
+      "lost": "Deal lost"
+    },
+    "user": {
+      "create": "Created an employee",
+      "update": "Updated an employee",
+      "reset_password": "Reset a password",
+      "reset_password_email": "Reset a password and emailed it",
+      "change_password": "Changed a password",
+      "notify": "Changed notifications",
+      "bootstrap_admin": "First administrator",
+      "invite": "Sent an invitation by email",
+      "hand_over": "Handed over leads and clients"
+    },
+    "setup": {
+      "admin_created": "First administrator (setup wizard)"
+    },
+    "system": {
+      "backup_requested": "Requested a backup"
+    },
+    "platform_access": {
+      "granted": "Granted ERP access",
+      "revoked": "Revoked ERP access"
+    },
+    "platform_role": {
+      "create": "Created a Platform role",
+      "update": "Updated a Platform role",
+      "delete": "Deleted a Platform role"
+    },
+    "client": {
+      "create": "Created a client",
+      "update": "Updated a client",
+      "link_telegram": "Linked a client's Telegram",
+      "unlink_telegram": "Unlinked a client's Telegram",
+      "erp_handoff": "Requested a client re-handoff to ERP",
+      "erp_handoff_done": "Client handed off to ERP",
+      "erp_handoff_failed": "Client handoff to ERP failed",
+      "close_request": "Closed a service request",
+      "contact_create": "Added a client contact",
+      "contact_update": "Updated a client contact",
+      "contact_delete": "Deleted a client contact"
+    },
+    "document": {
+      "upload": "Uploaded a document",
+      "update": "Updated a document"
+    },
+    "kb": {
+      "upload": "Uploaded to the knowledge base",
+      "update": "Updated a knowledge base document",
+      "reingest": "Reindexed the knowledge base",
+      "product": "Updated a product",
+      "gap_resolve": "Resolved a knowledge gap",
+      "gap_ignore": "Ignored a knowledge gap",
+      "gap_reopen": "Reopened a knowledge gap"
+    },
+    "settings": {
+      "update": "Changed settings"
+    },
+    "model": {
+      "test": "Tested an AI model",
+      "update": "Changed an AI model",
+      "reset": "Reset an AI model to default"
+    },
+    "reply_template": {
+      "create": "Created a reply template",
+      "update": "Updated a reply template",
+      "delete": "Deleted a reply template"
+    },
+    "sandbox": {
+      "message": "Messaged the bot in the sandbox",
+      "reset": "Cleared the bot sandbox"
+    },
+    "integrations": {
+      "telegram_token": "Connected the Telegram bot",
+      "erp": "Configured the ERP connector",
+      "smtp": "Configured the Mail connector",
+      "erp_pair": "Paired with ERP",
+      "erp_rotate": "Rotated ERP pairing keys"
+    },
+    "export": {
+      "leads": "Exported leads to CSV",
+      "clients": "Exported clients to CSV",
+      "deals": "Exported deals to CSV"
+    },
+    "external_service": {
+      "disable": "Disabled an external service",
+      "enable": "Enabled an external service"
+    }
+  },
+  "entities": {
+    "lead": "Lead",
+    "user": "Employee",
+    "client": "Client",
+    "document": "Client document",
+    "kb_document": "Knowledge base document",
+    "kb_gap": "Knowledge gap",
+    "settings": "Settings",
+    "product": "Product",
+    "service_request": "Service request",
+    "system": "System",
+    "model": "AI model",
+    "deal": "Deal",
+    "reply_template": "Reply template",
+    "sandbox": "Bot sandbox",
+    "export": "Export",
+    "integration_secret": "Connection",
+    "integration": "Connection",
+    "external_service": "External service",
+    "platform_role": "Platform role"
+  },
+  "fields": {
+    "email": "Email",
+    "full_name": "Name",
+    "name": "Name",
+    "description": "Description",
+    "roles": "CRM roles",
+    "platform_role_names": "Platform roles",
+    "platform_access": "Access",
+    "erp_role_codes": "ERP roles",
+    "is_active": "Active",
+    "tg_user_id": "Telegram",
+    "position": "Position",
+    "language": "Language",
+    "access": "Section permissions",
+    "restricted_fields": "Restricted fields",
+    "stage": "Stage",
+    "assigned_user_id": "Assignee",
+    "owner_user_id": "Owner",
+    "host": "Host",
+    "from_email": "Sender address",
+    "base_url": "URL",
+    "alias": "Model role",
+    "model": "Model",
+    "enabled": "Enabled",
+    "key": "Key",
+    "roles_count": "Number of roles"
+  }
+}

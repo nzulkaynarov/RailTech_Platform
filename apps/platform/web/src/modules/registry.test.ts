@@ -58,6 +58,7 @@ describe("меню модулей дословно SPEC-v3 §6.2", () => {
       "Тикеты от команды",
       "Компания",
       "Настройки бота",
+      "Журнал аудита",
     ]);
   });
 
@@ -113,6 +114,7 @@ describe("карта маршрутов SPEC-v3 §6.3", () => {
     "/admin/integrations",
     "/admin/tickets",
     "/admin/company",
+    "/admin/audit",
     "/admin/setup",
     "/admin/bot",
   ];

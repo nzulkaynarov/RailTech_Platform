@@ -117,3 +117,10 @@ export function updateSession(patch: Partial<MockSession>): MockSession | null {
   writeSession(next);
   return next;
 }
+
+/** Сотрудник текущей сессии мока — автор записей журнала аудита. */
+export function currentActor(): { id: string; name: string } | null {
+  const session = readSession();
+  const user = session ? findUserById(session.userId) : undefined;
+  return user ? { id: user.id, name: user.name } : null;
+}

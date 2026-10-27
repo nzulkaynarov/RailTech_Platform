@@ -60,6 +60,12 @@ function expectGone(password: string, queryClient: { getMutationCache: () => unk
   expect(JSON.stringify(cached.map((m) => m.state.data ?? null))).not.toContain(password);
 }
 
+/** «Сбросить пароль» → способ «Временным паролем» (без почты). */
+async function openTemporary(side: HTMLElement): Promise<void> {
+  fireEvent.click(await within(side).findByRole("button", { name: "Сбросить пароль" }));
+  fireEvent.click(await within(side).findByRole("radio", { name: "Временным паролем" }));
+}
+
 describe("Приглашение без почты: временный пароль показывается один раз", () => {
   it("создание: пароль, предупреждение, «Копировать»; после «Готово» пароля нигде нет", async () => {
     const issued = `Tmp-${globalThis.crypto.randomUUID().replaceAll("-", "").slice(0, 14)}`;
@@ -164,7 +170,7 @@ describe("Приглашение без почты: временный паро�
     signInAs("admin@demo.example");
     renderApp("/admin/org?employee=u-demo-invited&panel=open");
     const side = await panel();
-    fireEvent.click(await within(side).findByRole("button", { name: "Выдать временный пароль" }));
+    await openTemporary(side);
     fireEvent.click(await within(side).findByRole("button", { name: "Выдать пароль" }));
     await within(side).findByLabelText("Временный пароль");
 
@@ -174,15 +180,15 @@ describe("Приглашение без почты: временный паро�
   });
 });
 
-describe("Карточка приглашённого: «Выдать временный пароль»", () => {
+describe("Карточка сотрудника: «Сбросить пароль» → «Временным паролем»", () => {
   it("подтверждение с «Что произойдёт», затем пароль один раз", async () => {
     signInAs("admin@demo.example");
     const { queryClient } = renderApp("/admin/org?employee=u-demo-invited&panel=open");
     const side = await panel();
 
-    fireEvent.click(await within(side).findByRole("button", { name: "Выдать временный пароль" }));
+    await openTemporary(side);
 
-    const group = await within(side).findByRole("group", { name: "Выдать временный пароль" });
+    const group = await within(side).findByRole("group", { name: "Сброс пароля" });
     expect(within(group).getByText("Что произойдёт")).toBeVisible();
     expect(within(group).getByText(/Прежний пароль перестанет действовать/)).toBeVisible();
 
@@ -199,7 +205,7 @@ describe("Карточка приглашённого: «Выдать време
     });
     expectGone(password, queryClient);
     // кнопка вернулась в исходное состояние; пароль повторно не получить — только выдать новый
-    expect(within(side).getByRole("button", { name: "Выдать временный пароль" })).toBeVisible();
+    expect(within(side).getByRole("button", { name: "Сбросить пароль" })).toBeVisible();
   });
 
   it("«Отмена» ничего не выдаёт", async () => {
@@ -213,10 +219,10 @@ describe("Карточка приглашённого: «Выдать време
     signInAs("admin@demo.example");
     renderApp("/admin/org?employee=u-demo-invited&panel=open");
     const side = await panel();
-    fireEvent.click(await within(side).findByRole("button", { name: "Выдать временный пароль" }));
+    await openTemporary(side);
     fireEvent.click(await within(side).findByRole("button", { name: "Отмена" }));
 
-    expect(within(side).getByRole("button", { name: "Выдать временный пароль" })).toBeVisible();
+    expect(within(side).getByRole("button", { name: "Сбросить пароль" })).toBeVisible();
     expect(calls).toBe(0);
   });
 
@@ -229,20 +235,31 @@ describe("Карточка приглашённого: «Выдать време
     signInAs("admin@demo.example");
     renderApp("/admin/org?employee=u-demo-invited&panel=open");
     const side = await panel();
-    fireEvent.click(await within(side).findByRole("button", { name: "Выдать временный пароль" }));
+    await openTemporary(side);
     fireEvent.click(await within(side).findByRole("button", { name: "Выдать пароль" }));
 
     expect(await within(side).findByRole("alert")).toBeVisible();
     expect(screen.queryByLabelText("Временный пароль")).toBeNull();
   });
 
-  it("у активного сотрудника кнопки нет (сброс пароля — отдельная задача)", async () => {
+  it("у активного сотрудника способ «временным паролем» тоже есть (W13-A6)", async () => {
     signInAs("admin@demo.example");
     renderApp("/admin/org?employee=u-demo-manager&panel=open");
     const side = await panel();
     await within(side).findByRole("heading", { level: 3, name: "Демо Менеджеров" });
 
-    expect(within(side).queryByRole("button", { name: "Выдать временный пароль" })).toBeNull();
+    await openTemporary(side);
+
+    expect(within(side).getByRole("button", { name: "Выдать пароль" })).toBeVisible();
+  });
+
+  it("себе временный пароль не выдать: кнопка недоступна", async () => {
+    signInAs("admin@demo.example");
+    renderApp("/admin/org?employee=u-demo-admin&panel=open");
+    const side = await panel();
+    await within(side).findByRole("heading", { level: 3, name: "Демо Админов" });
+
+    expect(within(side).getByRole("button", { name: "Сбросить пароль" })).toBeDisabled();
   });
 
   it("директор (admin: чтение) не видит ни кнопки, ни способа «без почты»", async () => {
@@ -251,7 +268,7 @@ describe("Карточка приглашённого: «Выдать време
     const side = await panel();
     await within(side).findByRole("heading", { level: 3, name: "Демо Приглашённая" });
 
-    expect(within(side).queryByRole("button", { name: "Выдать временный пароль" })).toBeNull();
-    expect(screen.queryByRole("radio", { name: "Временным паролем, без почты" })).toBeNull();
+    expect(within(side).queryByRole("button", { name: "Сбросить пароль" })).toBeNull();
+    expect(screen.queryByRole("radio", { name: "Временным паролем" })).toBeNull();
   });
 });

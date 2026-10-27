@@ -97,6 +97,8 @@
 | Внешний чат клиента (Telegram, почта) | `GET /chats/external`, `POST /chats/external/{lead}/messages {as: SELF|BOT|NOTE}` | `GET/POST /leads/{id}/messages`, `POST /leads/{id}/actions/note`, `POST /leads/{id}/assist` | — | ✓ (`as: BOT` — Δ CRM-07) |
 | Сделать служебку из сообщения | `POST /chats/{id}/messages/{msg}/memo` | — | сервис EDS + чаты | Δ EDS-02, ERP-08 |
 | Контакты | `GET /contacts` | `GET /team`, `GET /clients/{id}/contacts` | — | ✓ |
+| Журнал аудита, журнал роли (W13-A6) | `GET /admin/audit`, `GET /admin/roles/{id}/journal` | `GET /audit` (`audit:read`) | ✓ | — |
+| Сброс пароля по почте, уведомления профиля (W13-A6) | `POST /admin/users/{id}/reset-password/email`, `/me/notification-settings`, `/me/test-notification` | `POST /users/{id}/reset-password/email`, `GET/PATCH /me`, `POST /me/test-notification` | — | — |
 | Ролевая матрица | `GET /admin/roles` | — (матрица — файл `platform-rbac.yaml`) | — | ✓, редактирование — вопрос 8 |
 | Оргструктура, карточка сотрудника, пригласить | `GET/PUT /admin/users/{id}`, `POST /admin/users/invite` | `GET/POST/PATCH /users`, `/users/{id}/invite` (провижининг в ERP с `role_codes` — FIX-63) | провижининг ✓ | Δ CRM-01 |
 | Внешние интеграции (обзор «Требует внимания», карточки со статусом пятью уровнями) | `GET /admin/integrations` — сводит реестр `/admin/external-services`, `/system/status`, `/integrations/erp` и `/integrations/telegram`, `/models`, `/system/backups`, `/spend` | как в следующих строках | `/health` `externals[]` (M3-ERP-06, PR #129) | ✓ (BFF 0.7.0, W13-A1) |

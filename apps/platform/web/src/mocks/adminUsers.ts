@@ -10,8 +10,9 @@ import {
   writeEmployees,
   writePendingPasswordIds,
 } from "./fixtures/employees";
+import { recordAudit } from "./fixtures/audit";
 import { ROLE_ID, readRoles } from "./fixtures/roles";
-import { buildMe, readSession } from "./mockSession";
+import { buildMe, currentActor, readSession } from "./mockSession";
 import { rememberTemporaryPassword, registerUser, updateExtraUser } from "./fixtures/users";
 import { markStepDone } from "./setupState";
 
@@ -167,6 +168,11 @@ export const adminUsersHandlers = [
     const password = randomTemporaryPassword();
     rememberTemporaryPassword(next.email, password);
     updateExtraUser(next.id, { mustChangePassword: true });
+    recordAudit(currentActor(), {
+      action: "user.reset_password",
+      entityType: "user",
+      entityId: next.id,
+    });
     return HttpResponse.json(
       { employee: toEmployee(next), temporary_password: password },
       { headers: { "Cache-Control": "no-store" } },
@@ -297,6 +303,21 @@ export const adminUsersHandlers = [
       else delete next.position;
     }
     writeEmployees(items.map((e) => (e.id === next.id ? next : e)));
+    const roleNames = (ids: string[]) =>
+      toEmployee({ ...current, role_ids: ids }).roles.map((r) => r.name);
+    recordAudit(currentActor(), {
+      action: "user.update",
+      entityType: "user",
+      entityId: next.id,
+      before: {
+        platform_role_names: roleNames(current.role_ids),
+        is_active: current.status !== "disabled",
+      },
+      after: {
+        platform_role_names: roleNames(next.role_ids),
+        is_active: next.status !== "disabled",
+      },
+    });
     return HttpResponse.json(toEmployee(next));
   }),
 ];

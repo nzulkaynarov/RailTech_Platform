@@ -10,7 +10,7 @@ from app.rbac import View, modules_for, view_roles
 from app.rbac_generated import ModuleCode, RestrictedField
 from app.session import Language, SessionData, SessionRole
 
-RoleId = Annotated[str, Field(pattern=r"^[0-9]+$")]
+RoleId = Annotated[str, Field(pattern=r"^[1-9][0-9]*$")]
 
 _EMAIL = r"^[^@\s]+@[^@\s]+$"
 

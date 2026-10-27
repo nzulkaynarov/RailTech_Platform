@@ -226,7 +226,8 @@
       "tickets": "Team tickets",
       "company": "Company",
       "setup": "First run",
-      "bot": "Bot settings"
+      "bot": "Bot settings",
+      "audit": "Audit log"
     },
     "stub": {
       "roles": {
@@ -268,6 +269,11 @@
         "title": "Bot settings will open here",
         "text": "Telegram bot texts, behaviour and handoff rules, reply templates and CSV exports.",
         "action": "Org chart"
+      },
+      "audit": {
+        "title": "No entries yet",
+        "text": "Every change will appear here: who granted a role, reset a password or changed settings, with date and time.",
+        "action": "Org structure"
       }
     },
     "action": "Invite employee",
@@ -654,7 +660,8 @@
     "about": "About the chat",
     "files": "Files",
     "role": "Role",
-    "employees": "Employees"
+    "employees": "Employees",
+    "journal": "Journal"
   },
   "panel": {
     "today": {
@@ -712,6 +719,10 @@
     "role": {
       "title": "No role selected",
       "text": "Click a role column in the matrix and the role description and its employees appear here."
+    },
+    "journal": {
+      "title": "No entry selected",
+      "text": "Select an entry in the log to see the details here: who, when and what changed."
     }
   }
 }

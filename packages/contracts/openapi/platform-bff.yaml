@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.11.0
+  version: 0.12.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -117,6 +117,15 @@ info:
     базу знаний (права CRM `settings:read`, `reply_templates:read`, `kb:read`); пункт меню CRM «База знаний» открывает и раздел
     `admin`; в Admin новый пункт «Настройки бота». Нового кода ошибки нет: ошибки формата документа и пути невалидных полей настроек
     — `VALIDATION_FAILED` с `details.reason`, `details.rule`, `details.messages`, `details.paths`.
+
+    **0.12.0 (W13-A6) — Admin · Оргструктура, Журнал аудита, профиль.** Чисто добавляющее изменение: `POST /admin/users/{id}/reset-password/email`
+    (сброс пароля сотрудника с письмом; себе — 409 `CONFLICT` с `details.reason = self_reset`; почта не подключена — 409
+    `NOT_CONFIGURED`), `GET /admin/audit` (журнал аудита CRM «кто, что, когда» с фильтрами по автору, действию, объекту и периоду и
+    постраничным ответом), `GET /admin/roles/{id}/journal` (изменения роли: кто, когда и что — матрица до и после; вкладка «Журнал»
+    роли, скрытая с R-1b), `GET/PATCH /me/notification-settings` и `POST /me/test-notification` (личные уведомления от бота: Telegram
+    привязан ли, подписки, последняя неудача доставки, пробное сообщение). Журнал и журнал роли — раздел `admin` от чтения
+    (директор читает), сброс пароля — `admin: full`; профиль доступен каждому вошедшему. Секреты из записей журнала BFF вырезает
+    (значения полей `password`, `secret`, `token`, `key`, `*_key`, `credentials`, `authorization`, `pin` и им подобных -> `***` целиком, любого типа).
 
     0.2.4: `423 ACCOUNT_LOCKED` объявлен и на `POST /auth/change-password` (CRM блокирует учётную запись после неверных
     текущих паролей).
@@ -463,6 +472,90 @@ paths:
           $ref: '#/components/responses/CsrfFailed'
         '422':
           $ref: '#/components/responses/ValidationFailed'
+
+  /me/notification-settings:
+    get:
+      tags: [me]
+      operationId: getNotificationSettings
+      summary: Личные уведомления сотрудника от бота (профиль)
+      description: >-
+        Привязан ли Telegram, подписки на личные сообщения бота и последняя неудача их доставки (CRM `/me`). Доступно каждому
+        вошедшему сотруднику.
+      responses:
+        '200':
+          description: Настройки
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationSettings'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+    patch:
+      tags: [me]
+      operationId: updateNotificationSettings
+      summary: Включить или выключить подписки на личные сообщения бота
+      description: >-
+        Не присланное поле не меняется; хотя бы одно поле обязательно. Подписка «системные» относится к оповещениям
+        администратору; CRM принимает её от любого сотрудника, но получают её только те, кому положены системные оповещения.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationSettingsUpdate'
+      responses:
+        '200':
+          description: Сохранено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationSettings'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/CsrfFailed'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          description: '`BACKEND_UNAVAILABLE` — CRM не ответила'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /me/test-notification:
+    post:
+      tags: [me]
+      operationId: sendTestNotification
+      summary: Тестовое уведомление себе в Telegram
+      description: >-
+        Бот присылает сотруднику пробное личное сообщение (CRM `/me/test-notification`); успех снимает предупреждение
+        «доставка не удалась». Доступно каждому вошедшему. Telegram не привязан — 409 `CONFLICT` с
+        `details.reason = telegram_not_linked`; бот не подключён — 409 `NOT_CONFIGURED`; Telegram отказал (человек не нажал «Старт»
+        или заблокировал бота) — 409 `CONFLICT` с `details.reason = telegram_refused`.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      responses:
+        '204':
+          description: Сообщение отправлено
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/CsrfFailed'
+        '409':
+          description: '`NOT_CONFIGURED`; `CONFLICT` (`details.reason` = `telegram_not_linked` или `telegram_refused`)'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: '`BACKEND_UNAVAILABLE`'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /health:
     get:
@@ -2110,6 +2203,46 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /admin/users/{id}/reset-password/email:
+    post:
+      tags: [admin]
+      operationId: resetEmployeePasswordByEmail
+      summary: Сбросить пароль сотрудника и отправить временный по почте
+      description: >-
+        CRM `/users/{id}/reset-password/email`: новый временный пароль, письмо через коннектор «Почта», сессии сотрудника
+        завершаются, при входе он обязан сменить пароль (статус «Приглашён»). Пароль в ответе не возвращается. Раздел `admin` —
+        полный. Себе сбросить нельзя — 409 `CONFLICT` с `details.reason = self_reset` (в CRM запрос не уходит; свой пароль —
+        «Сменить пароль» в меню аватара). Почта не подключена — 409 `NOT_CONFIGURED`, пароль не меняется; нет ключа шифрования
+        секретов — 409 `SECRETS_KEY_MISSING`.
+      parameters:
+        - $ref: '#/components/parameters/EmployeeId'
+        - $ref: '#/components/parameters/CsrfToken'
+      responses:
+        '200':
+          description: Письмо поставлено в отправку
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MailQueued'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: '`CONFLICT` (`details.reason = self_reset`), `NOT_CONFIGURED`, `SECRETS_KEY_MISSING`'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: '`BACKEND_UNAVAILABLE`'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
   /admin/roles:
     get:
       tags: [admin]
@@ -2281,6 +2414,123 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           description: '`ROLE_IN_USE`, `ROLE_SYSTEM`'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/roles/{id}/journal:
+    get:
+      tags: [admin]
+      operationId: getRoleJournal
+      summary: Журнал изменений роли — кто, когда и что (вкладка «Журнал» бокового окна роли)
+      description: >-
+        Записи аудита CRM `platform_role.create|update|delete` этой роли (`/audit?entity_type=platform_role&entity_id=<id>`), новые
+        первыми. В каждой — автор, время и содержимое роли до и после (название, описание, матрица разделов, поля с
+        ограничением); сравнение «что изменилось» делает экран. Роли нет — 404 `NOT_FOUND`. Раздел `admin` — от чтения (директор
+        читает).
+      parameters:
+        - $ref: '#/components/parameters/RoleIdPath'
+        - $ref: '#/components/parameters/PageLimit'
+        - $ref: '#/components/parameters/PageOffset'
+      responses:
+        '200':
+          description: Журнал роли
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleJournal'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          description: '`BACKEND_UNAVAILABLE` — CRM не ответила'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /admin/audit:
+    get:
+      tags: [admin]
+      operationId: listAudit
+      summary: Журнал аудита — кто, что и когда изменил
+      description: >-
+        Журнал аудита CRM (`/audit`, право `audit:read`): новые записи первыми, постранично. Фильтры: автор (`actor_id`),
+        действие (`action` — код или префикс, например `user` — все действия над сотрудниками), объект (`entity_type` и
+        `entity_id`) и период (`from` включительно, `to` не включая). Входы в систему по умолчанию скрыты (`include_logins`).
+        Раздел `admin` — от чтения: журнал читает администратор и директор; изменить записи нельзя никому. Значения секретных
+        полей в `before` и `after` (пароль, токен, ключ, `*_key`, учётные данные, `authorization`, `pin`) BFF заменяет на `***` целиком, любого типа.
+      parameters:
+        - name: actor_id
+          in: query
+          required: false
+          description: Автор записи (`crm_user_id`)
+          schema:
+            type: string
+            pattern: '^[1-9][0-9]*$'
+        - name: action
+          in: query
+          required: false
+          description: Код действия или его префикс (`user.update`, `platform_role`)
+          schema:
+            type: string
+            maxLength: 64
+        - name: entity_type
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 32
+        - name: entity_id
+          in: query
+          required: false
+          schema:
+            type: string
+            maxLength: 64
+        - name: from
+          in: query
+          required: false
+          description: Начало периода, включительно
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          required: false
+          description: Конец периода, не включая
+          schema:
+            type: string
+            format: date-time
+        - name: include_logins
+          in: query
+          required: false
+          description: Показывать входы и неудачные попытки входа (по умолчанию скрыты — забивают журнал изменений)
+          schema:
+            type: boolean
+            default: false
+        - $ref: '#/components/parameters/PageLimit'
+        - $ref: '#/components/parameters/PageOffset'
+      responses:
+        '200':
+          description: Страница журнала
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditPage'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          description: '`BACKEND_UNAVAILABLE` — CRM не ответила'
           content:
             application/json:
               schema:
@@ -4209,10 +4459,10 @@ components:
       name: id
       in: path
       required: true
-      description: '`crm_user_id`'
+      description: '`crm_user_id` — число без ведущих нулей (`07` и `007` — не адрес сотрудника)'
       schema:
         type: string
-        pattern: '^[0-9]+$'
+        pattern: '^[1-9][0-9]*$'
     RoleIdPath:
       name: id
       in: path
@@ -4227,6 +4477,25 @@ components:
       description: Только по этой роли сотрудника (id); чужая роль — 403
       schema:
         $ref: '#/components/schemas/RoleId'
+    PageLimit:
+      name: limit
+      in: query
+      required: false
+      description: Размер страницы
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 50
+    PageOffset:
+      name: offset
+      in: query
+      required: false
+      description: Сколько записей пропустить
+      schema:
+        type: integer
+        minimum: 0
+        default: 0
     BusDomainQuery:
       name: domain
       in: query
@@ -4589,7 +4858,7 @@ components:
 
     RoleId:
       type: string
-      pattern: '^[0-9]+$'
+      pattern: '^[1-9][0-9]*$'
       description: Id роли Платформы в CRM (роли — данные, ADR-0012)
       examples: ['3']
 
@@ -4667,6 +4936,146 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Role'
+
+    RoleSnapshot:
+      type: object
+      additionalProperties: false
+      description: Содержимое роли на момент записи аудита CRM
+      required: [name, description, access, restricted_fields]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        access:
+          $ref: '#/components/schemas/ResourceAccess'
+        restricted_fields:
+          type: array
+          items:
+            $ref: '#/components/schemas/RestrictedField'
+
+    RoleChange:
+      type: object
+      additionalProperties: false
+      description: Одно изменение роли. `create` — только `after`, `delete` — только `before`, `update` — оба.
+      required: [id, at, action]
+      properties:
+        id:
+          type: string
+        at:
+          type: string
+          format: date-time
+        action:
+          type: string
+          enum: [create, update, delete]
+        actor_id:
+          type: string
+          description: Кто изменил (`crm_user_id`); нет — автор неизвестен (система или удалённый пользователь)
+        actor_name:
+          type: string
+        before:
+          $ref: '#/components/schemas/RoleSnapshot'
+        after:
+          $ref: '#/components/schemas/RoleSnapshot'
+
+    RoleJournal:
+      type: object
+      additionalProperties: false
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/RoleChange'
+        total:
+          type: integer
+          minimum: 0
+
+    AuditActorType:
+      type: string
+      enum: [user, system, bot]
+
+    AuditEntry:
+      type: object
+      additionalProperties: false
+      description: Запись аудита CRM. `action` и `entity_type` — коды CRM (`user.update`, `platform_role`); слова к ним даёт SPA по языку сотрудника.
+      required: [id, at, actor_type, action, entity_type]
+      properties:
+        id:
+          type: string
+        at:
+          type: string
+          format: date-time
+        actor_type:
+          $ref: '#/components/schemas/AuditActorType'
+        actor_id:
+          type: string
+        actor_name:
+          type: string
+        action:
+          type: string
+        entity_type:
+          type: string
+        entity_id:
+          type: string
+        before:
+          type: object
+          additionalProperties: true
+          description: Значения до изменения; секретные поля заменены на `***`
+        after:
+          type: object
+          additionalProperties: true
+          description: Значения после изменения; секретные поля заменены на `***`
+        ip:
+          type: string
+
+    AuditPage:
+      type: object
+      additionalProperties: false
+      required: [items, total, limit, offset]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditEntry'
+        total:
+          type: integer
+          minimum: 0
+          description: Записей по фильтрам всего
+        limit:
+          type: integer
+        offset:
+          type: integer
+
+    NotificationSettings:
+      type: object
+      additionalProperties: false
+      description: Личные уведомления сотрудника от бота (профиль)
+      required: [telegram_linked, notify_leads, notify_system]
+      properties:
+        telegram_linked:
+          type: boolean
+          description: Telegram привязан; без него подписки не работают и пробное сообщение не отправить
+        notify_leads:
+          type: boolean
+          description: Сообщать боту, когда лид ждёт сотрудника
+        notify_system:
+          type: boolean
+          description: Системные оповещения (мониторинг, сбои) — администратору
+        delivery_failed_at:
+          type: string
+          format: date-time
+          description: Когда последний раз личное сообщение бота не дошло; нет — доставка исправна
+
+    NotificationSettingsUpdate:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        notify_leads:
+          type: boolean
+        notify_system:
+          type: boolean
 
     RoleCreate:
       type: object
@@ -5866,7 +6275,7 @@ components:
           type: boolean
         transfer_to_user_id:
           type: string
-          pattern: '^[0-9]+$'
+          pattern: '^[1-9][0-9]*$'
           description: >-
             Кому передать лиды в работе (`crm_user_id` коллеги), если отключение или новые роли отнимают у сотрудника работу
             с лидами; без поля при таких лидах — 409 `CONFLICT` (`details.reason = user_has_active_leads`)

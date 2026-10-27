@@ -116,6 +116,15 @@
  * `admin`; в Admin новый пункт «Настройки бота». Нового кода ошибки нет: ошибки формата документа и пути невалидных полей настроек
  * — `VALIDATION_FAILED` с `details.reason`, `details.rule`, `details.messages`, `details.paths`.
  *
+ * **0.12.0 (W13-A6) — Admin · Оргструктура, Журнал аудита, профиль.** Чисто добавляющее изменение: `POST /admin/users/{id}/reset-password/email`
+ * (сброс пароля сотрудника с письмом; себе — 409 `CONFLICT` с `details.reason = self_reset`; почта не подключена — 409
+ * `NOT_CONFIGURED`), `GET /admin/audit` (журнал аудита CRM «кто, что, когда» с фильтрами по автору, действию, объекту и периоду и
+ * постраничным ответом), `GET /admin/roles/{id}/journal` (изменения роли: кто, когда и что — матрица до и после; вкладка «Журнал»
+ * роли, скрытая с R-1b), `GET/PATCH /me/notification-settings` и `POST /me/test-notification` (личные уведомления от бота: Telegram
+ * привязан ли, подписки, последняя неудача доставки, пробное сообщение). Журнал и журнал роли — раздел `admin` от чтения
+ * (директор читает), сброс пароля — `admin: full`; профиль доступен каждому вошедшему. Секреты из записей журнала BFF вырезает
+ * (значения полей `password`, `secret`, `token`, `key`, `*_key`, `credentials`, `authorization`, `pin` и им подобных -> `***` целиком, любого типа).
+ *
  * 0.2.4: `423 ACCOUNT_LOCKED` объявлен и на `POST /auth/change-password` (CRM блокирует учётную запись после неверных
  * текущих паролей).
  *
@@ -134,7 +143,7 @@
  * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.11.0
+ * OpenAPI spec version: 0.12.0
  */
 import type { DocumentPlaceholder } from "./documentPlaceholder";
 

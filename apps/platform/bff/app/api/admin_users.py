@@ -22,13 +22,21 @@ from app.schemas_admin import (
     EmployeeUpdate,
     to_employee,
 )
+from app.schemas_integrations import MailQueued
 from app.session import SessionData
 
 router = APIRouter(tags=["admin"])
 
 Reader = Annotated[Authed, Depends(require("admin", "read"))]
 Writer = Annotated[Authed, Depends(require("admin", "full"))]
-EmployeeId = Annotated[str, Path(pattern=r"^[0-9]+$")]
+# Номер без ведущих нулей: «07» и «007» — не тот же адрес, что «7», и «это я» их не пропустит.
+EmployeeId = Annotated[str, Path(pattern=r"^[1-9][0-9]*$")]
+
+
+def _is_self(employee_id: str, authed: Authed) -> bool:
+    """Сотрудник из адреса — сам работающий: сравнение числом, а не строкой."""
+    return int(employee_id) == int(authed.data.user_id)
+
 
 INVITE_CRM_UNAVAILABLE = (
     "CRM недоступна, повторите позже. Сотрудник уже добавлен, но письмо не отправлено."
@@ -139,6 +147,31 @@ async def resend_invite(id: EmployeeId, authed: Writer) -> Employee:
     return to_employee(await users.get(id))
 
 
+SELF_RESET_MESSAGE = "Свой пароль здесь не сбросить: выберите «Сменить пароль» в меню аватара."
+
+
+@router.post(
+    "/admin/users/{id}/reset-password/email",
+    response_model=MailQueued,
+    operation_id="resetEmployeePasswordByEmail",
+)
+async def reset_employee_password_by_email(id: EmployeeId, authed: Writer) -> MailQueued:
+    """Сбросить пароль сотрудника: CRM выдаёт новый временный пароль и шлёт письмо, сессии гаснут.
+
+    Себе сбросить нельзя: CRM завершила бы собственную сессию администратора, а письмо ушло бы
+    на его же адрес — для своего пароля есть «Сменить пароль». Запрос в CRM в этом случае не уходит.
+    Пароль в ответ не попадает."""
+    if _is_self(id, authed):
+        raise PlatformError(
+            "CONFLICT",
+            SELF_RESET_MESSAGE,
+            status_code=status.HTTP_409_CONFLICT,
+            details={"reason": "self_reset"},
+        )
+    queued = await _users(authed).reset_password_email(id)
+    return MailQueued.model_validate(queued)
+
+
 @router.get(
     "/admin/users/{id}",
     response_model=Employee,
@@ -173,7 +206,7 @@ async def update_employee(id: EmployeeId, body: EmployeeUpdate, authed: Writer) 
     if "is_active" in body.model_fields_set:
         payload["is_active"] = body.is_active
     employee = to_employee(await _users(authed).update(id, payload))
-    if id == str(authed.data.user_id):
+    if _is_self(id, authed):
         # Свои роли изменены: следующий `/me` перечитывает профиль CRM, а не ждёт конца кэша (60 с).
         await authed.service.store.update(authed.sid, _expire_profile)
     return employee

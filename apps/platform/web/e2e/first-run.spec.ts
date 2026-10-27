@@ -282,10 +282,9 @@ test.describe("Первый запуск: axe и скриншоты", () => {
         page.locator(PANEL).getByRole("heading", { level: 3, name: "Тест Без Почты" }),
       ).toBeVisible();
 
-      await page.locator(PANEL).getByRole("button", { name: "Выдать временный пароль" }).click();
-      await expect(
-        page.locator(PANEL).getByRole("group", { name: "Выдать временный пароль" }),
-      ).toBeVisible();
+      await page.locator(PANEL).getByRole("button", { name: "Сбросить пароль" }).click();
+      await page.locator(PANEL).getByRole("radio", { name: "Временным паролем" }).check();
+      await expect(page.locator(PANEL).getByRole("group", { name: "Сброс пароля" })).toBeVisible();
       await expectNoViolations(page, `issue ${String(width)}`);
       await settledScreenshot(page, "first-run-issue-confirm");
     });

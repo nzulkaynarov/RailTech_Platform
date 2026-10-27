@@ -1,0 +1,95 @@
+/* Admin · Журнал аудита и вкладка «Журнал» роли (W13-A6). Значения — макет v3 и docs/architecture/platform-frontend.md. */
+.pf-audit-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  padding: 16px 24px;
+  border-bottom: 1px solid #f0f0f0;
+}
+.pf-audit-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.pf-audit-field > label {
+  font-size: 12px;
+  line-height: 20px;
+  color: #595959;
+}
+.pf-audit-logins {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+}
+.pf-audit-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 24px;
+  border-top: 1px solid #f0f0f0;
+}
+.pf-audit-link {
+  color: #0958d9;
+  font-weight: 500;
+  text-decoration: none;
+}
+.pf-audit-link:hover {
+  text-decoration: underline;
+}
+.pf-audit-link[aria-current="true"] {
+  color: #1f1f1f;
+}
+.pf-audit-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  overflow-wrap: break-word;
+}
+.pf-audit-row:last-child {
+  border-bottom: 0;
+}
+.pf-audit-row-selected {
+  background: #e6f4ff;
+}
+.ant-table-wrapper .ant-table-tbody > tr.pf-audit-table-row-selected > td,
+.ant-table-wrapper .ant-table-tbody > tr.pf-audit-table-row-selected:hover > td {
+  background: #e6f4ff;
+}
+.pf-audit-lines {
+  margin: 0;
+  padding: 0 0 0 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.pf-audit-change {
+  display: grid;
+  gap: 2px;
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f0;
+  overflow-wrap: anywhere;
+}
+.pf-audit-change:last-child {
+  border-bottom: 0;
+}
+.pf-audit-change-name {
+  font-weight: 500;
+}
+.pf-audit-journal {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.pf-audit-journal-body {
+  margin: 4px 0 0 28px;
+}

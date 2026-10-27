@@ -308,6 +308,7 @@ menu:
     tickets: [admin]
     company: [company.settings]
     bot: [admin]
+    audit: [admin]
 
 # Поля с ограничением внутри экранов (SPEC-v3 §4.2). Роль перечисляет поля, которые она ВИДИТ; поле скрыто, если ни одна роль
 # сотрудника его не видит. Скрытие `supplier_prices` и `totals_only` делает BFF (у ERP для них нет отдельного права).

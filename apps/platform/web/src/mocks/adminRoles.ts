@@ -15,7 +15,9 @@ import type {
   SectionLevel,
 } from "../shared/api/generated/model";
 import { failure, guard } from "./adminUsers";
+import { recordAudit } from "./fixtures/audit";
 import { readEmployees } from "./fixtures/employees";
+import { currentActor } from "./mockSession";
 import { type MockRole, readRoles, rolesOf, toRole, writeRoles } from "./fixtures/roles";
 
 /**
@@ -72,6 +74,13 @@ function diff(
   }
   return { gained, lost };
 }
+
+const snapshotOf = (role: MockRole) => ({
+  name: role.name,
+  description: role.description,
+  access: role.access,
+  restricted_fields: role.restricted_fields,
+});
 
 const unique = <T>(items: T[], key: (item: T) => string) => {
   const seen = new Set<string>();
@@ -173,6 +182,12 @@ export const adminRolesHandlers = [
       updated_at: new Date().toISOString(),
     };
     writeRoles([...roles, role]);
+    recordAudit(currentActor(), {
+      action: "platform_role.create",
+      entityType: "platform_role",
+      entityId: role.id,
+      after: snapshotOf(role),
+    });
     return HttpResponse.json(toRole(role, 0), { status: 201 });
   }),
 
@@ -219,6 +234,13 @@ export const adminRolesHandlers = [
       updated_at: new Date().toISOString(),
     };
     writeRoles(roles.map((r) => (r.id === next.id ? next : r)));
+    recordAudit(currentActor(), {
+      action: "platform_role.update",
+      entityType: "platform_role",
+      entityId: next.id,
+      before: snapshotOf(role),
+      after: snapshotOf(next),
+    });
     return HttpResponse.json(toRole(next, holders(next.id)));
   }),
 
@@ -240,6 +262,12 @@ export const adminRolesHandlers = [
       );
     }
     writeRoles(roles.filter((r) => r.id !== role.id));
+    recordAudit(currentActor(), {
+      action: "platform_role.delete",
+      entityType: "platform_role",
+      entityId: role.id,
+      before: snapshotOf(role),
+    });
     return new HttpResponse(null, { status: 204 });
   }),
 ];

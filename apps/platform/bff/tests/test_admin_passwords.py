@@ -335,16 +335,15 @@ async def test_own_password_is_changed_in_the_profile(
 
 
 @pytest.mark.parametrize("spelling", [f"0{ADMIN_ID}", f"00{ADMIN_ID}"])
-async def test_own_password_is_refused_for_any_spelling_of_the_id(
+async def test_own_password_with_leading_zeros_never_reaches_crm(
     web: Web, crm: CrmUsers, pw: Passwords, spelling: str
 ) -> None:
-    """Ведущие нули не обходят запрет: «07» — тот же сотрудник, что «7»."""
+    """Ведущие нули не обходят запрет: «07» отклоняется шаблоном адреса (422, W13-A6) до CRM."""
     await web.login(["ADMIN"])
 
     response = await web.send("POST", f"/api/v1/admin/users/{spelling}/temporary-password")
 
-    assert response.status_code == 409
-    assert response.json()["details"]["reason"] == "own_account"
+    assert response.status_code == 422
     assert pw.reset.call_count == 0
 
 

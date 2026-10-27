@@ -20,7 +20,7 @@ from app.schemas_setup import EmployeeCredentials
 router = APIRouter(tags=["admin"])
 
 Writer = Annotated[Authed, Depends(require("admin", "full"))]
-EmployeeId = Annotated[str, Path(pattern=r"^[0-9]+$")]
+EmployeeId = Annotated[str, Path(pattern=r"^[1-9][0-9]*$")]
 
 OWN_ACCOUNT_MESSAGE = "Свой пароль меняется в профиле. Временный пароль выдают другим сотрудникам."
 
@@ -63,7 +63,7 @@ async def issue_temporary_password(
     id: EmployeeId, authed: Writer, response: Response
 ) -> EmployeeCredentials:
     """Новый временный пароль (CRM `reset-password`); прежний пароль и сессии не действуют."""
-    # Сравнение числом: «07» и «7» — один сотрудник (шаблон пути допускает ведущие нули).
+    # Сравнение числом остаётся страховкой к шаблону пути: «07» и «7» — один сотрудник.
     if int(id) == authed.data.user_id:
         raise PlatformError(
             "CONFLICT",

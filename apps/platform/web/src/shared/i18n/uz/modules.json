@@ -226,7 +226,8 @@
       "tickets": "Jamoa tiketlari",
       "company": "Kompaniya",
       "setup": "Birinchi ishga tushirish",
-      "bot": "Bot sozlamalari"
+      "bot": "Bot sozlamalari",
+      "audit": "Audit jurnali"
     },
     "stub": {
       "roles": {
@@ -268,6 +269,11 @@
         "title": "Bot sozlamalari shu yerda ochiladi",
         "text": "Telegram-botning matnlari, xulq-atvori va uzatish qoidalari, javob shablonlari va CSV yuklamalar.",
         "action": "Tuzilma"
+      },
+      "audit": {
+        "title": "Hozircha yozuvlar yo'q",
+        "text": "Bu yerda har bir o'zgarish paydo bo'ladi: kim rol bergan, parolni tiklagan yoki sozlamani o'zgartirgan — sana va vaqt bilan.",
+        "action": "Tashkiliy tuzilma"
       }
     },
     "action": "Xodimni taklif qilish",
@@ -654,7 +660,8 @@
     "about": "Chat haqida",
     "files": "Fayllar",
     "role": "Rol",
-    "employees": "Xodimlar"
+    "employees": "Xodimlar",
+    "journal": "Jurnal"
   },
   "panel": {
     "today": {
@@ -712,6 +719,10 @@
     "role": {
       "title": "Rol tanlanmagan",
       "text": "Matritsadagi rol ustunini bosing — bu yerda rol tavsifi va shu roldagi xodimlar paydo bo‘ladi."
+    },
+    "journal": {
+      "title": "Yozuv tanlanmagan",
+      "text": "Jurnaldan yozuvni tanlang — bu yerda tafsilotlar paydo bo'ladi: kim, qachon va nima o'zgardi."
     }
   }
 }

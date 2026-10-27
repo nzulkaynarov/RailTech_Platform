@@ -177,6 +177,50 @@ export interface paths {
     patch: operations["updateMe"];
     trace?: never;
   };
+  "/me/notification-settings": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Личные уведомления сотрудника от бота (профиль)
+     * @description Привязан ли Telegram, подписки на личные сообщения бота и последняя неудача их доставки (CRM `/me`). Доступно каждому вошедшему сотруднику.
+     */
+    get: operations["getNotificationSettings"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /**
+     * Включить или выключить подписки на личные сообщения бота
+     * @description Не присланное поле не меняется; хотя бы одно поле обязательно. Подписка «системные» относится к оповещениям администратору; CRM принимает её от любого сотрудника, но получают её только те, кому положены системные оповещения.
+     */
+    patch: operations["updateNotificationSettings"];
+    trace?: never;
+  };
+  "/me/test-notification": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Тестовое уведомление себе в Telegram
+     * @description Бот присылает сотруднику пробное личное сообщение (CRM `/me/test-notification`); успех снимает предупреждение «доставка не удалась». Доступно каждому вошедшему. Telegram не привязан — 409 `CONFLICT` с `details.reason = telegram_not_linked`; бот не подключён — 409 `NOT_CONFIGURED`; Telegram отказал (человек не нажал «Старт» или заблокировал бота) — 409 `CONFLICT` с `details.reason = telegram_refused`.
+     */
+    post: operations["sendTestNotification"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/health": {
     parameters: {
       query?: never;
@@ -1168,6 +1212,26 @@ export interface paths {
     patch: operations["updateEmployee"];
     trace?: never;
   };
+  "/admin/users/{id}/reset-password/email": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Сбросить пароль сотрудника и отправить временный по почте
+     * @description CRM `/users/{id}/reset-password/email`: новый временный пароль, письмо через коннектор «Почта», сессии сотрудника завершаются, при входе он обязан сменить пароль (статус «Приглашён»). Пароль в ответе не возвращается. Раздел `admin` — полный. Себе сбросить нельзя — 409 `CONFLICT` с `details.reason = self_reset` (в CRM запрос не уходит; свой пароль — «Сменить пароль» в меню аватара). Почта не подключена — 409 `NOT_CONFIGURED`, пароль не меняется; нет ключа шифрования секретов — 409 `SECRETS_KEY_MISSING`.
+     */
+    post: operations["resetEmployeePasswordByEmail"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/admin/roles": {
     parameters: {
       query?: never;
@@ -1235,6 +1299,46 @@ export interface paths {
      * @description Не присланное поле не меняется (кроме `version` нужно хотя бы одно — иначе 422); `version` — обязательная версия роли, которую видел клиент. Права сотрудников с этой ролью CRM пересчитывает сразу (CRM) и фоном (ERP). Системную роль изменить нельзя — 409 `ROLE_SYSTEM`; изменение, после которого не остаётся ни одного администратора, — 409 `LAST_ADMIN`; роль изменена после чтения клиентом — 409 `CONFLICT` с `details.reason = role_version_conflict` (SPA предлагает обновить страницу).
      */
     patch: operations["updateRole"];
+    trace?: never;
+  };
+  "/admin/roles/{id}/journal": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Журнал изменений роли — кто, когда и что (вкладка «Журнал» бокового окна роли)
+     * @description Записи аудита CRM `platform_role.create|update|delete` этой роли (`/audit?entity_type=platform_role&entity_id=<id>`), новые первыми. В каждой — автор, время и содержимое роли до и после (название, описание, матрица разделов, поля с ограничением); сравнение «что изменилось» делает экран. Роли нет — 404 `NOT_FOUND`. Раздел `admin` — от чтения (директор читает).
+     */
+    get: operations["getRoleJournal"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/audit": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Журнал аудита — кто, что и когда изменил
+     * @description Журнал аудита CRM (`/audit`, право `audit:read`): новые записи первыми, постранично. Фильтры: автор (`actor_id`), действие (`action` — код или префикс, например `user` — все действия над сотрудниками), объект (`entity_type` и `entity_id`) и период (`from` включительно, `to` не включая). Входы в систему по умолчанию скрыты (`include_logins`). Раздел `admin` — от чтения: журнал читает администратор и директор; изменить записи нельзя никому. Значения секретных полей в `before` и `after` (пароль, токен, ключ, `*_key`, учётные данные, `authorization`, `pin`) BFF заменяет на `***` целиком, любого типа.
+     */
+    get: operations["listAudit"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
     trace?: never;
   };
   "/admin/company": {
@@ -2460,6 +2564,78 @@ export interface components {
     };
     RoleList: {
       items: components["schemas"]["Role"][];
+    };
+    /** @description Содержимое роли на момент записи аудита CRM */
+    RoleSnapshot: {
+      name: string;
+      description: string;
+      access: components["schemas"]["ResourceAccess"];
+      restricted_fields: components["schemas"]["RestrictedField"][];
+    };
+    /** @description Одно изменение роли. `create` — только `after`, `delete` — только `before`, `update` — оба. */
+    RoleChange: {
+      id: string;
+      /** Format: date-time */
+      at: string;
+      /** @enum {string} */
+      action: "create" | "update" | "delete";
+      /** @description Кто изменил (`crm_user_id`); нет — автор неизвестен (система или удалённый пользователь) */
+      actor_id?: string;
+      actor_name?: string;
+      before?: components["schemas"]["RoleSnapshot"];
+      after?: components["schemas"]["RoleSnapshot"];
+    };
+    RoleJournal: {
+      items: components["schemas"]["RoleChange"][];
+      total: number;
+    };
+    /** @enum {string} */
+    AuditActorType: "user" | "system" | "bot";
+    /** @description Запись аудита CRM. `action` и `entity_type` — коды CRM (`user.update`, `platform_role`); слова к ним даёт SPA по языку сотрудника. */
+    AuditEntry: {
+      id: string;
+      /** Format: date-time */
+      at: string;
+      actor_type: components["schemas"]["AuditActorType"];
+      actor_id?: string;
+      actor_name?: string;
+      action: string;
+      entity_type: string;
+      entity_id?: string;
+      /** @description Значения до изменения; секретные поля заменены на `***` */
+      before?: {
+        [key: string]: unknown;
+      };
+      /** @description Значения после изменения; секретные поля заменены на `***` */
+      after?: {
+        [key: string]: unknown;
+      };
+      ip?: string;
+    };
+    AuditPage: {
+      items: components["schemas"]["AuditEntry"][];
+      /** @description Записей по фильтрам всего */
+      total: number;
+      limit: number;
+      offset: number;
+    };
+    /** @description Личные уведомления сотрудника от бота (профиль) */
+    NotificationSettings: {
+      /** @description Telegram привязан; без него подписки не работают и пробное сообщение не отправить */
+      telegram_linked: boolean;
+      /** @description Сообщать боту, когда лид ждёт сотрудника */
+      notify_leads: boolean;
+      /** @description Системные оповещения (мониторинг, сбои) — администратору */
+      notify_system: boolean;
+      /**
+       * Format: date-time
+       * @description Когда последний раз личное сообщение бота не дошло; нет — доставка исправна
+       */
+      delivery_failed_at?: string;
+    };
+    NotificationSettingsUpdate: {
+      notify_leads?: boolean;
+      notify_system?: boolean;
     };
     RoleCreate: {
       name: string;
@@ -4339,12 +4515,16 @@ export interface components {
     };
   };
   parameters: {
-    /** @description `crm_user_id` */
+    /** @description `crm_user_id` — число без ведущих нулей (`07` и `007` — не адрес сотрудника) */
     EmployeeId: string;
     /** @description Id роли Платформы (CRM) */
     RoleIdPath: components["schemas"]["RoleId"];
     /** @description Только по этой роли сотрудника (id); чужая роль — 403 */
     RoleQuery: components["schemas"]["RoleId"];
+    /** @description Размер страницы */
+    PageLimit: number;
+    /** @description Сколько записей пропустить */
+    PageOffset: number;
     /** @description Только этот домен (по умолчанию — все три) */
     BusDomainQuery: components["schemas"]["BusDomain"];
     BusDomainPath: components["schemas"]["BusDomain"];
@@ -4714,6 +4894,107 @@ export interface operations {
       401: components["responses"]["SessionExpired"];
       403: components["responses"]["CsrfFailed"];
       422: components["responses"]["ValidationFailed"];
+    };
+  };
+  getNotificationSettings: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Настройки */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["NotificationSettings"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+    };
+  };
+  updateNotificationSettings: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["NotificationSettingsUpdate"];
+      };
+    };
+    responses: {
+      /** @description Сохранено */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["NotificationSettings"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["CsrfFailed"];
+      422: components["responses"]["ValidationFailed"];
+      /** @description `BACKEND_UNAVAILABLE` — CRM не ответила */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  sendTestNotification: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Сообщение отправлено */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["CsrfFailed"];
+      /** @description `NOT_CONFIGURED`; `CONFLICT` (`details.reason` = `telegram_not_linked` или `telegram_refused`) */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      /** @description `BACKEND_UNAVAILABLE` */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
     };
   };
   getHealth: {
@@ -6167,7 +6448,7 @@ export interface operations {
         "X-CSRF-Token": components["parameters"]["CsrfToken"];
       };
       path: {
-        /** @description `crm_user_id` */
+        /** @description `crm_user_id` — число без ведущих нулей (`07` и `007` — не адрес сотрудника) */
         id: components["parameters"]["EmployeeId"];
       };
       cookie?: never;
@@ -6214,7 +6495,7 @@ export interface operations {
         "X-CSRF-Token": components["parameters"]["CsrfToken"];
       };
       path: {
-        /** @description `crm_user_id` */
+        /** @description `crm_user_id` — число без ведущих нулей (`07` и `007` — не адрес сотрудника) */
         id: components["parameters"]["EmployeeId"];
       };
       cookie?: never;
@@ -6252,7 +6533,7 @@ export interface operations {
       query?: never;
       header?: never;
       path: {
-        /** @description `crm_user_id` */
+        /** @description `crm_user_id` — число без ведущих нулей (`07` и `007` — не адрес сотрудника) */
         id: components["parameters"]["EmployeeId"];
       };
       cookie?: never;
@@ -6281,7 +6562,7 @@ export interface operations {
         "X-CSRF-Token": components["parameters"]["CsrfToken"];
       };
       path: {
-        /** @description `crm_user_id` */
+        /** @description `crm_user_id` — число без ведущих нулей (`07` и `007` — не адрес сотрудника) */
         id: components["parameters"]["EmployeeId"];
       };
       cookie?: never;
@@ -6315,6 +6596,53 @@ export interface operations {
       };
       /** @description `ROLES_REQUIRED` — пустой набор `role_ids` (`details.fields = [role_ids]`); `VALIDATION_FAILED` — прочие поля (`details.fields`) */
       422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  resetEmployeePasswordByEmail: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description `crm_user_id` — число без ведущих нулей (`07` и `007` — не адрес сотрудника) */
+        id: components["parameters"]["EmployeeId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Письмо поставлено в отправку */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["MailQueued"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      /** @description `CONFLICT` (`details.reason = self_reset`), `NOT_CONFIGURED`, `SECRETS_KEY_MISSING` */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      /** @description `BACKEND_UNAVAILABLE` */
+      503: {
         headers: {
           [name: string]: unknown;
         };
@@ -6528,6 +6856,96 @@ export interface operations {
         };
       };
       422: components["responses"]["ValidationFailed"];
+    };
+  };
+  getRoleJournal: {
+    parameters: {
+      query?: {
+        /** @description Размер страницы */
+        limit?: components["parameters"]["PageLimit"];
+        /** @description Сколько записей пропустить */
+        offset?: components["parameters"]["PageOffset"];
+      };
+      header?: never;
+      path: {
+        /** @description Id роли Платформы (CRM) */
+        id: components["parameters"]["RoleIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Журнал роли */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RoleJournal"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      422: components["responses"]["ValidationFailed"];
+      /** @description `BACKEND_UNAVAILABLE` — CRM не ответила */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+    };
+  };
+  listAudit: {
+    parameters: {
+      query?: {
+        /** @description Автор записи (`crm_user_id`) */
+        actor_id?: string;
+        /** @description Код действия или его префикс (`user.update`, `platform_role`) */
+        action?: string;
+        entity_type?: string;
+        entity_id?: string;
+        /** @description Начало периода, включительно */
+        from?: string;
+        /** @description Конец периода, не включая */
+        to?: string;
+        /** @description Показывать входы и неудачные попытки входа (по умолчанию скрыты — забивают журнал изменений) */
+        include_logins?: boolean;
+        /** @description Размер страницы */
+        limit?: components["parameters"]["PageLimit"];
+        /** @description Сколько записей пропустить */
+        offset?: components["parameters"]["PageOffset"];
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Страница журнала */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AuditPage"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+      /** @description `BACKEND_UNAVAILABLE` — CRM не ответила */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
     };
   };
   getCompany: {

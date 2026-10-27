@@ -12,6 +12,7 @@ from typing import Any
 import httpx
 
 from app.clients.base import Backend
+from app.clients.crm_integrations import integration_error
 from app.errors import PlatformError, backend_code, backend_reason, from_backend
 
 Call = Callable[..., Awaitable[httpx.Response]]
@@ -159,6 +160,21 @@ class CrmUsers:
     async def invite(self, user_id: str) -> None:
         """Письмо-приглашение с новым временным паролем (коннектор «Почта» CRM)."""
         await self._json("POST", f"/api/v1/users/{user_id}/invite", 200)
+
+    async def reset_password_email(self, user_id: str) -> dict[str, Any]:
+        """Новый временный пароль и письмо о нём (коннектор «Почта» CRM); сессии сотрудника гаснут.
+
+        Ошибки переводит `integration_error`: «почта не подключена» -> 409 `NOT_CONFIGURED`,
+        «нет ключа шифрования» -> 409 `SECRETS_KEY_MISSING`; 404 и 403 CRM — как есть.
+        """
+        backend: Backend = "crm"
+        response = await self._call(
+            backend, "POST", f"/api/v1/users/{user_id}/reset-password/email"
+        )
+        if response.status_code != 200:
+            raise integration_error(response)
+        queued: dict[str, Any] = response.json()
+        return queued
 
 
 ROLES = "/api/v1/platform-roles"

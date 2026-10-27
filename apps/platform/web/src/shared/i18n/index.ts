@@ -1,6 +1,7 @@
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 
+import enAudit from "./en/audit.json";
 import enBus from "./en/bus.json";
 import enBot from "./en/bot.json";
 import enCommon from "./en/common.json";
@@ -11,6 +12,7 @@ import enKb from "./en/kb.json";
 import enModules from "./en/modules.json";
 import enShell from "./en/shell.json";
 import enUi from "./en/ui.json";
+import ruAudit from "./ru/audit.json";
 import ruBus from "./ru/bus.json";
 import ruBot from "./ru/bot.json";
 import ruCommon from "./ru/common.json";
@@ -21,6 +23,7 @@ import ruKb from "./ru/kb.json";
 import ruModules from "./ru/modules.json";
 import ruShell from "./ru/shell.json";
 import ruUi from "./ru/ui.json";
+import uzAudit from "./uz/audit.json";
 import uzBus from "./uz/bus.json";
 import uzBot from "./uz/bot.json";
 import uzCommon from "./uz/common.json";
@@ -38,6 +41,7 @@ export type Language = (typeof LANGUAGES)[number];
 export const resources = {
   ru: {
     common: ruCommon,
+    audit: ruAudit,
     shell: ruShell,
     modules: ruModules,
     dictionary: ruDictionary,
@@ -50,6 +54,7 @@ export const resources = {
   },
   uz: {
     common: uzCommon,
+    audit: uzAudit,
     shell: uzShell,
     modules: uzModules,
     dictionary: uzDictionary,
@@ -62,6 +67,7 @@ export const resources = {
   },
   en: {
     common: enCommon,
+    audit: enAudit,
     shell: enShell,
     modules: enModules,
     dictionary: enDictionary,

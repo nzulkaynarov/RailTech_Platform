@@ -258,6 +258,7 @@ export const MENU = {
     tickets: ["admin"],
     company: ["company.settings"],
     bot: ["admin"],
+    audit: ["admin"],
   },
 } as const satisfies Record<ModuleCode, Record<string, readonly ResourceKey[]>>;
 
