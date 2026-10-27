@@ -1,5 +1,5 @@
 # docs/runbooks — эксплуатация и волны агентов
-Статус: действует · Владелец: лид · Обновлено: 2026-10-23
+Статус: действует · Владелец: лид · Обновлено: 2026-10-27
 
 **Ансамбль**
 - [`stand.md`](stand.md) — локальный стенд `make up`; [`servers.md`](servers.md) — серверы VPS1/VPS2; [`deploy.md`](deploy.md) — деплой и откат прода;
@@ -21,4 +21,5 @@
 
 **Отчёты прогонов глазами** — [`m1_qa_02_report.md`](m1_qa_02_report.md), [`m2_qa_01_report.md`](m2_qa_01_report.md),
 [`m2_qa_02_report.md`](m2_qa_02_report.md), [`plt_p1_gate_report.md`](plt_p1_gate_report.md);
-[`c1_eds_gate_report.md`](c1_eds_gate_report.md) (гейт этапа C1, сервис EDS; скрипты и выводы — `qa/c1-eds/`); снимки — `qa/`.
+[`c1_eds_gate_report.md`](c1_eds_gate_report.md) (гейт этапа C1, сервис EDS; скрипты и выводы — `qa/c1-eds/`);
+[`c2a_admin_gate_report.md`](c2a_admin_gate_report.md) (гейт этапа C2a, паритет Admin в Платформе, волна 13; скрипты — `qa/w13-a7-gate/`, снимки — `../screens/w13-a7-gate/`); снимки — `qa/`.

@@ -1,0 +1,360 @@
+{
+  "rows": [
+    {
+      "desc": "настройки бота: 16 разделов в навигации по группам",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "«Есть несохранённые изменения» + «Отменить изменения»",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "раздел «Компания» сохранён",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "bot-company @1440: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=1440, innerWidth=1440"
+    },
+    {
+      "desc": "bot-company @1440: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "bot-company @390: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=390, innerWidth=390"
+    },
+    {
+      "desc": "bot-company @390: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "раздел «Компания»: открывается без ошибок загрузки",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "раздел «Рабочие часы»: открывается без ошибок загрузки",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "раздел «Тексты бота»: открывается без ошибок загрузки",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "раздел «Поведение бота»: открывается без ошибок загрузки",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "раздел «Поиск по базе знаний»: открывается без ошибок загрузки",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "раздел «Стоп-слова»: открывается без ошибок загрузки",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "раздел «Конкуренты»: открывается без ошибок загрузки",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "раздел «Правила передачи»: открывается без ошибок загрузки",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "раздел «Квалификация»: открывается без ошибок загрузки",
+      "ok": true,
+      "detail": "Лид становится «Квалифицирован», когда известны все обязательные факты и не меньше заданного числа дополнительных. Факты извлекает ИИ, решение принимает система."
+    },
+    {
+      "desc": "раздел «Форма «Запрос» с сайта»: открывается без ошибок загрузки",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "раздел «Канал команды»: открывается без ошибок загрузки",
+      "ok": true,
+      "detail": "Канал команды выбирается в «Внешних интеграциях» → Telegram; здесь — кого упоминать и как часто писать менеджеру.\nОткрыть Telegram"
+    },
+    {
+      "desc": "раздел «Оповещения о сбоях сервисов»: открывается без ошибок загрузки",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "раздел «Сделки»: открывается без ошибок загрузки",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "раздел «Бюджет моделей»: открывается без ошибок загрузки",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "«Рабочие часы»: изменение сохранено",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "bot-hours @1440: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=1440, innerWidth=1440"
+    },
+    {
+      "desc": "bot-hours @1440: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "bot-hours @390: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=390, innerWidth=390"
+    },
+    {
+      "desc": "bot-hours @390: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "«Поведение бота»: сохранено",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "«Тексты бота»: таблица по группам, поиск",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "bot-texts-panel @1440: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=1440, innerWidth=1440"
+    },
+    {
+      "desc": "bot-texts-panel @1440: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "bot-texts-panel @390: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=390, innerWidth=390"
+    },
+    {
+      "desc": "bot-texts-panel @390: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "пустой перевод отклоняется словами («Нет перевода»)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "«Тексты бота»: сохранено с переводом",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "пробный прогон: «Что произойдёт»",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "пробный прогон эскалаций на пустой базе диалогов",
+      "ok": null,
+      "detail": "Пробный прогон правил передачи | Покажет, сколько передач менеджеру было бы при значениях из формы. Ничего не меняет. | ЧТО ПРОИЗОЙДЁТ | 1 | Правила считаются на последних 50 диалогах бота по значениям, которые сейчас в форме, даже несохранённым. | 2 | Вы увидите, сколько передач менеджеру было сейчас и сколько стало бы, и каких лидов это касается. | 3 | Ничего не сохраняется и не меняется: ни настройки, ни диалоги, ни лиды. | Проверить на последних 50 диалогах | Диалогов | 0 | Передач сейчас | "
+    },
+    {
+      "desc": "пробный прогон отработал и ничего не сохранил (итог словами)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "bot-escalation-dry-run @1440: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=1440, innerWidth=1440"
+    },
+    {
+      "desc": "bot-escalation-dry-run @1440: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "bot-escalation-dry-run @390: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=390, innerWidth=390"
+    },
+    {
+      "desc": "bot-escalation-dry-run @390: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "шаблон ответа создан",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "шаблон ответа изменён",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "bot-reply-templates @1440: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=1440, innerWidth=1440"
+    },
+    {
+      "desc": "bot-reply-templates @1440: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "bot-reply-templates @390: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=390, innerWidth=390"
+    },
+    {
+      "desc": "bot-reply-templates @390: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "шаблон ответа удалён",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "выгрузки: у администратора без роли с данными CRM кнопки недоступны, причина словами",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "bot-exports-admin @1440: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=1440, innerWidth=1440"
+    },
+    {
+      "desc": "bot-exports-admin @1440: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "bot-exports-admin @390: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=390, innerWidth=390"
+    },
+    {
+      "desc": "bot-exports-admin @390: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "ошибки консоли / 5xx",
+      "ok": null,
+      "detail": "Failed to load resource: the server responded with a status of 401 (Unauthorized) ;; "
+    }
+  ],
+  "screens": [
+    {
+      "name": "bot-company",
+      "width": 1440,
+      "file": "s6bot-bot-company-1440.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "bot-company",
+      "width": 390,
+      "file": "s6bot-bot-company-390.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "bot-hours",
+      "width": 1440,
+      "file": "s6bot-bot-hours-1440.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "bot-hours",
+      "width": 390,
+      "file": "s6bot-bot-hours-390.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "bot-texts-panel",
+      "width": 1440,
+      "file": "s6bot-bot-texts-panel-1440.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "bot-texts-panel",
+      "width": 390,
+      "file": "s6bot-bot-texts-panel-390.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "bot-escalation-dry-run",
+      "width": 1440,
+      "file": "s6bot-bot-escalation-dry-run-1440.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "bot-escalation-dry-run",
+      "width": 390,
+      "file": "s6bot-bot-escalation-dry-run-390.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "bot-reply-templates",
+      "width": 1440,
+      "file": "s6bot-bot-reply-templates-1440.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "bot-reply-templates",
+      "width": 390,
+      "file": "s6bot-bot-reply-templates-390.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "bot-exports-admin",
+      "width": 1440,
+      "file": "s6bot-bot-exports-admin-1440.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "bot-exports-admin",
+      "width": 390,
+      "file": "s6bot-bot-exports-admin-390.png",
+      "noHScroll": true,
+      "axe": []
+    }
+  ]
+}
