@@ -3,8 +3,8 @@
 Автозагрузку курса ЦБ РУз ведёт задача Beat (`master_data.tasks.refresh_exchange_rates`). Если она не сработала,
 оператор вводит курс на дату вручную: право `settings.edit` (его даёт раздел Платформы «Компания») или администратор.
 Строка справочника `core.ExchangeRate` с источником `MANUAL` автозагрузка не перетирает; кто, когда и что ввёл — в
-журнале ERP (`crm.ActivityLog`, `event_code = admin.exchange_rate.*`). Чтение — любому вошедшему (текущий курс уже
-отдаёт `system-settings`) и сотруднику бэк-офиса (журнал: в нём имена коллег).
+журнале ERP (`crm.ActivityLog`, `event_code = admin.exchange_rate.*`). Текущий курс читает любой вошедший (его уже
+отдаёт `system-settings`); журнал с именами и почтой коллег — только `settings.edit` или администратор (W15-H8).
 """
 
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema
@@ -22,7 +22,7 @@ from rest_framework import permissions, serializers, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from core.permissions import IsBackOfficeStaff, RoleGatedViewMixin
+from core.permissions import RoleGatedViewMixin
 
 JOURNAL_DEFAULT_LIMIT = 20
 JOURNAL_MAX_LIMIT = 100
@@ -99,6 +99,22 @@ def _entry(log) -> dict:
     }
 
 
+class CanReadRateJournal(permissions.BasePermission):
+    """Журнал курсов видит тот, кто может править настройки: `settings.edit` или администратор."""
+
+    message = "SETTINGS_EDIT_REQUIRED"
+
+    def has_permission(self, request, view):
+        user = request.user
+        if not (user and user.is_authenticated):
+            return False
+        if user.is_superuser:
+            return True
+        from accounts.services.permissions import is_seller, staff_has_permission
+
+        return is_seller(user) and staff_has_permission(user, "settings.edit")
+
+
 class CurrentRateView(APIView):
     """GET /api/v1/exchange-rates/current/ — курс на сегодня, его дата и источник."""
 
@@ -134,11 +150,11 @@ class CurrentRateView(APIView):
 class ExchangeRateJournalView(APIView):
     """GET /api/v1/exchange-rates/journal/ — последние ручные вводы курса и пропуски автозагрузки."""
 
-    permission_classes = [permissions.IsAuthenticated, IsBackOfficeStaff]
+    permission_classes = [permissions.IsAuthenticated, CanReadRateJournal]
 
     @extend_schema(
         summary="Exchange rate manual-entry journal",
-        description="Newest first. `kind=manual` — entered by an operator; `kind=auto_skipped` — the CBU rate for the same date was not applied because a manual rate is kept.",
+        description="Needs `settings.edit` or administrator (the journal carries colleagues' names and emails). Newest first. `kind=manual` — entered by an operator; `kind=auto_skipped` — the CBU rate for the same date was not applied because a manual rate is kept.",
         parameters=[
             _CURRENCY_PARAM,
             OpenApiParameter("limit", int, description=f"1..{JOURNAL_MAX_LIMIT}, default {JOURNAL_DEFAULT_LIMIT}."),

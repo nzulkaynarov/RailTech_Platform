@@ -179,6 +179,14 @@
  * EDS, полученным обменом токена сотрудника CRM `aud=eds` (`docs/architecture/platform-bff.md` §3); ошибки EDS переводятся в
  * формат `Error` (`source = eds`, `details.reason` и `details.fields` EDS сохраняются).
  *
+ * **0.22.0 (W15-H8) — Admin · Компания: шаблоны документов и лента.** Добавляющее изменение. `DocumentTemplateIn.kind` — вид
+ * шаблона при создании (`letter`, `report`, `custom`, `contract`, `invoice`, `act`, `receipt`, `delivery_note`; без поля — `custom`,
+ * как раньше); `DocumentTemplate.kind` отдаёт вид кодом. `DocumentTemplatePreviewIn.kind` — предпросмотр договора, счёта и акта идёт
+ * на каркасе своего вида и с образцами блоков (остальные виды — общий каркас и подписанные заглушки). `ActivityItem.code` — код
+ * административного события ERP (`admin.*`), по которому SPA собирает фразу на языке сотрудника; для остальных событий `null`.
+ * Журнал ручных курсов (`GET /admin/company/fx-rate`) в ERP виден только с правом `settings.edit` (имена и почта коллег): отказ ERP
+ * доходит как 403 с `source = erp`.
+ *
  * **0.21.0 (W15-H6) — Профиль сотрудника.** Добавляющее изменение, тег `me`: `GET/PATCH /me/profile` (имя, телефон, язык, часовой
  * пояс, подпись для писем; должность и роли только читаются, правит админ), `PUT/DELETE /me/avatar` и `GET /staff/{id}/avatar`
  * (фото: клиент обрезает по кругу, CRM хранит в S3, BFF отдаёт без публичных ссылок; `Me.avatar_url` — вместо инициалов),
@@ -207,7 +215,7 @@
  * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; «Забыли пароль?» — 5 запросов в час на IP и на адрес; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.21.0
+ * OpenAPI spec version: 0.22.0
  */
 import { faker } from "@faker-js/faker";
 
@@ -225,6 +233,7 @@ import {
   BusSubscriberState,
   CategoryRequestStatus,
   DocumentKind,
+  DocumentTemplateKind,
   DueLabel,
   EdsDocumentKind,
   EdsRegistryKind,
@@ -1107,6 +1116,7 @@ export const getGetActivityTodayResponseMock = (
       initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
     },
     text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    code: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
     module: faker.helpers.arrayElement(Object.values(ModuleCode)),
     at: faker.date.past().toISOString().slice(0, 19) + "Z",
     object: faker.helpers.arrayElement([
@@ -4009,6 +4019,7 @@ export const getListDocumentTemplatesResponseMock = (
   items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
     id: faker.helpers.fromRegExp("^[0-9]+$"),
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    kind: faker.helpers.arrayElement(Object.values(DocumentTemplateKind)),
     kind_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     body_html: faker.string.alpha({ length: { min: 10, max: 20 } }),
     is_sample: faker.datatype.boolean(),
@@ -4028,6 +4039,7 @@ export const getCreateDocumentTemplateResponseMock = (
 ): DocumentTemplate => ({
   id: faker.helpers.fromRegExp("^[0-9]+$"),
   name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  kind: faker.helpers.arrayElement(Object.values(DocumentTemplateKind)),
   kind_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
   body_html: faker.string.alpha({ length: { min: 10, max: 20 } }),
   is_sample: faker.datatype.boolean(),
@@ -4077,6 +4089,7 @@ export const getUpdateDocumentTemplateResponseMock = (
 ): DocumentTemplate => ({
   id: faker.helpers.fromRegExp("^[0-9]+$"),
   name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  kind: faker.helpers.arrayElement(Object.values(DocumentTemplateKind)),
   kind_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
   body_html: faker.string.alpha({ length: { min: 10, max: 20 } }),
   is_sample: faker.datatype.boolean(),
@@ -4095,6 +4108,7 @@ export const getCopyDocumentTemplateResponseMock = (
 ): DocumentTemplate => ({
   id: faker.helpers.fromRegExp("^[0-9]+$"),
   name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  kind: faker.helpers.arrayElement(Object.values(DocumentTemplateKind)),
   kind_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
   body_html: faker.string.alpha({ length: { min: 10, max: 20 } }),
   is_sample: faker.datatype.boolean(),

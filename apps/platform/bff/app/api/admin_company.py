@@ -23,6 +23,7 @@ from app.schemas_company import (
     KIND_TO_ERP,
     MARGIN_FIELDS,
     REFERENCE_PATH,
+    TEMPLATE_KIND_TO_ERP,
     BrandPreviewIn,
     BrandProfile,
     BrandProfileUpdate,
@@ -451,7 +452,12 @@ async def preview_document_template(
     body: DocumentTemplatePreviewIn, authed: Reader
 ) -> DocumentPreview:
     raw = await _erp(authed).data(
-        "POST", "crm/document-templates/preview/", json={"body_html": body.body_html}
+        "POST",
+        "crm/document-templates/preview/",
+        json={
+            "body_html": body.body_html,
+            **({"kind": TEMPLATE_KIND_TO_ERP[body.kind]} if body.kind else {}),
+        },
     )
     warnings = [text(w) for w in raw.get("warnings") or []]
     erp = _erp(authed)

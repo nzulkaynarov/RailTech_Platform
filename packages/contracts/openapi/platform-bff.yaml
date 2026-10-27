@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.21.0
+  version: 0.22.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -180,6 +180,14 @@ info:
     (менеджер, бухгалтер), полный — резолюция, возврат, отказ (директор). EDS — отдельный домен: вызовы идут с токеном доступа
     EDS, полученным обменом токена сотрудника CRM `aud=eds` (`docs/architecture/platform-bff.md` §3); ошибки EDS переводятся в
     формат `Error` (`source = eds`, `details.reason` и `details.fields` EDS сохраняются).
+
+    **0.22.0 (W15-H8) — Admin · Компания: шаблоны документов и лента.** Добавляющее изменение. `DocumentTemplateIn.kind` — вид
+    шаблона при создании (`letter`, `report`, `custom`, `contract`, `invoice`, `act`, `receipt`, `delivery_note`; без поля — `custom`,
+    как раньше); `DocumentTemplate.kind` отдаёт вид кодом. `DocumentTemplatePreviewIn.kind` — предпросмотр договора, счёта и акта идёт
+    на каркасе своего вида и с образцами блоков (остальные виды — общий каркас и подписанные заглушки). `ActivityItem.code` — код
+    административного события ERP (`admin.*`), по которому SPA собирает фразу на языке сотрудника; для остальных событий `null`.
+    Журнал ручных курсов (`GET /admin/company/fx-rate`) в ERP виден только с правом `settings.edit` (имена и почта коллег): отказ ERP
+    доходит как 403 с `source = erp`.
 
     **0.21.0 (W15-H6) — Профиль сотрудника.** Добавляющее изменение, тег `me`: `GET/PATCH /me/profile` (имя, телефон, язык, часовой
     пояс, подпись для писем; должность и роли только читаются, правит админ), `PUT/DELETE /me/avatar` и `GET /staff/{id}/avatar`
@@ -8001,6 +8009,11 @@ components:
         text:
           type: string
           description: Что сделал — «подтвердила оплату по ПР-2026-099»
+        code:
+          type:
+            - string
+            - 'null'
+          description: Код административного события ERP (`admin.*`), для которого SPA собирает фразу на языке сотрудника; иначе `null`
         module:
           $ref: '#/components/schemas/ModuleCode'
         at:
@@ -9034,12 +9047,17 @@ components:
           type: integer
         is_active:
           type: boolean
+    DocumentTemplateKind:
+      type: string
+      enum: [letter, report, custom, contract, invoice, act, receipt, delivery_note]
+      description: Вид шаблона документа
     DocumentTemplate:
       type: object
       additionalProperties: false
       required:
         - id
         - name
+        - kind
         - kind_name
         - body_html
         - is_sample
@@ -9052,6 +9070,8 @@ components:
           $ref: '#/components/schemas/CompanyItemRef'
         name:
           type: string
+        kind:
+          $ref: '#/components/schemas/DocumentTemplateKind'
         kind_name:
           type: string
           description: Вид документа словами
@@ -9092,6 +9112,8 @@ components:
           type: string
           minLength: 1
           maxLength: 255
+        kind:
+          $ref: '#/components/schemas/DocumentTemplateKind'
         body_html:
           type: string
         is_active:
@@ -9165,6 +9187,8 @@ components:
       properties:
         body_html:
           type: string
+        kind:
+          $ref: '#/components/schemas/DocumentTemplateKind'
     EmailTemplate:
       type: object
       additionalProperties: false

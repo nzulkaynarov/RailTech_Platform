@@ -270,7 +270,13 @@ class DocumentTemplateViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
         tags=["CRM"],
         request=inline_serializer(
             "DocumentTemplatePreviewRequest",
-            fields={"body_html": drf_serializers.CharField(required=False, allow_blank=True)},
+            fields={
+                "body_html": drf_serializers.CharField(required=False, allow_blank=True),
+                "kind": drf_serializers.CharField(
+                    required=False,
+                    help_text="Код вида шаблона (CONTRACT, INVOICE, ACT — каркас вида и образцы блоков; иначе общий каркас).",
+                ),
+            },
         ),
         responses={
             200: inline_serializer(
@@ -305,6 +311,7 @@ class DocumentTemplateViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
                 Company.objects.get(pk=company_id),
                 request.user,
                 body_html=request.data.get("body_html", ""),
+                kind_code=request.data.get("kind") or None,
             )
         except DjangoValidationError as exc:
             return Response({"detail": exc.messages[0]}, status=400)

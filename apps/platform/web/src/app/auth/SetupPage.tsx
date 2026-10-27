@@ -31,7 +31,8 @@ const MIN_PASSWORD = 10;
 
 /**
  * «Первый запуск» до входа (SPEC-v3 §7.6, W13-A4): пока в CRM нет администратора, вместо входа открывается этот экран.
- * Код первого запуска сервер пишет в журнал `crm-api`; по коду, имени, почте и паролю BFF создаёт администратора в CRM
+ * Код первого запуска выдаёт тот, кто разворачивал Платформу (сервер пишет его в журнал `crm-api` — об этом в свёрнутом блоке
+ * «Подробнее для техспециалиста»); по коду, имени, почте и паролю BFF создаёт администратора в CRM
  * и открывает его сессию — дальше мастер в Admin (`/admin/setup`). Когда администратор уже есть, экран отправляет ко входу.
  */
 export function SetupPage() {
@@ -126,7 +127,15 @@ export function SetupPage() {
         <Form.Item
           name="code"
           label={t("setup.code")}
-          extra={t("setup.codeHelp")}
+          extra={
+            <>
+              {t("setup.codeHelp")}
+              <details style={{ marginTop: 4 }}>
+                <summary style={{ cursor: "pointer" }}>{t("setup.codeTechSummary")}</summary>
+                {t("setup.codeTechText")}
+              </details>
+            </>
+          }
           rules={[{ required: true, whitespace: true, message: t("setup.codeRequired") }]}
         >
           <Input autoComplete="off" spellCheck={false} autoFocus />

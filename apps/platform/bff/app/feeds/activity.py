@@ -9,7 +9,7 @@
 import asyncio
 from typing import Any
 
-from app.feeds.events import event_text, is_service_event
+from app.feeds.events import EVENT_TEXTS, event_text, is_service_event
 from app.feeds.feed import SNAPSHOT_TTL_SECONDS, Feed, rows
 from app.feeds.models import ActivityFeed, ActivityItem, PersonRef
 from app.feeds.numbers import deal_number, deal_ref
@@ -43,6 +43,7 @@ def _item(entry: dict[str, Any], deals: dict[int, dict[str, Any]]) -> ActivityIt
         id=f"erp:{entry['id']}",
         actor=PersonRef(id="", name=name, initials=initials_of(name, "")),
         text=text,
+        code=code if code.startswith("admin.") and code in EVENT_TEXTS else None,
         module=module,
         at=at,
         object=deal_ref(deal) if deal is not None else None,

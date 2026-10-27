@@ -19,6 +19,31 @@ DocumentKind = Literal["quote", "contract", "invoice", "act", "letter"]
 ResetPeriod = Literal["never", "yearly", "monthly"]
 ReferenceKind = Literal["countries", "currencies", "units", "delivery-basis"]
 RequestStatus = Literal["pending", "approved", "rejected"]
+TemplateKind = Literal[
+    "letter", "report", "custom", "contract", "invoice", "act", "receipt", "delivery_note"
+]
+
+# Вид шаблона документа контракта <-> код вида ERP (`DocumentTemplateKind.code`).
+TEMPLATE_KIND_TO_ERP: dict[str, str] = {
+    "letter": "LETTER",
+    "report": "REPORT",
+    "custom": "CUSTOM",
+    "contract": "CONTRACT",
+    "invoice": "INVOICE",
+    "act": "ACT",
+    "receipt": "RECEIPT",
+    "delivery_note": "DELIVERY_NOTE",
+}
+TEMPLATE_KIND_FROM_ERP: dict[str, TemplateKind] = {
+    "LETTER": "letter",
+    "REPORT": "report",
+    "CUSTOM": "custom",
+    "CONTRACT": "contract",
+    "INVOICE": "invoice",
+    "ACT": "act",
+    "RECEIPT": "receipt",
+    "DELIVERY_NOTE": "delivery_note",
+}
 
 # Вид документа контракта <-> код ERP.
 KIND_TO_ERP: dict[str, str] = {
@@ -498,6 +523,7 @@ def to_charge_template(raw: Mapping[str, Any]) -> ChargeTemplate:
 class DocumentTemplate(BaseModel):
     id: str
     name: str
+    kind: TemplateKind
     kind_name: str
     body_html: str
     is_sample: bool
@@ -513,8 +539,17 @@ class DocumentTemplateList(BaseModel):
 
 class DocumentTemplateIn(Body):
     name: str = Field(min_length=1, max_length=255)
+    kind: TemplateKind | None = None
     body_html: str | None = None
     is_active: bool | None = None
+
+    def sent(self) -> dict[str, Any]:
+        data = super().sent()
+        if data.get("kind") is not None:
+            data["kind"] = TEMPLATE_KIND_TO_ERP[data["kind"]]
+        else:
+            data.pop("kind", None)  # без вида ERP ставит CUSTOM
+        return data
 
 
 class DocumentTemplateUpdate(Patch):
@@ -533,6 +568,7 @@ class DocumentTemplatePreviewIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     body_html: str
+    kind: TemplateKind | None = None
 
 
 class DocumentPlaceholder(BaseModel):
@@ -555,6 +591,7 @@ def to_document_template(raw: Mapping[str, Any]) -> DocumentTemplate:
     return DocumentTemplate(
         id=ident(raw.get("id")),
         name=text(raw.get("name")),
+        kind=TEMPLATE_KIND_FROM_ERP.get(text(raw.get("kind_code") or raw.get("kind")), "custom"),
         kind_name=text(raw.get("kind_name")),
         body_html=text(raw.get("body_html")),
         is_sample=flag(raw.get("is_sample")),

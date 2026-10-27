@@ -6086,7 +6086,7 @@ export interface paths {
         };
         /**
          * Exchange rate manual-entry journal
-         * @description Newest first. `kind=manual` — entered by an operator; `kind=auto_skipped` — the CBU rate for the same date was not applied because a manual rate is kept.
+         * @description Needs `settings.edit` or administrator (the journal carries colleagues' names and emails). Newest first. `kind=manual` — entered by an operator; `kind=auto_skipped` — the CBU rate for the same date was not applied because a manual rate is kept.
          */
         get: operations["exchange_rates_journal_list"];
         put?: never;
@@ -9376,6 +9376,8 @@ export interface components {
         };
         DocumentTemplatePreviewRequestRequest: {
             body_html?: string;
+            /** @description Код вида шаблона (CONTRACT, INVOICE, ACT — каркас вида и образцы блоков; иначе общий каркас). */
+            kind?: string;
         };
         /**
          * @description Тело `PUT/PATCH crm/document-templates/{id}/` — ровно то, что читает `DocumentTemplateViewSet.update`.

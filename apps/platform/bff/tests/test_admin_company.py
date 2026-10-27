@@ -1154,6 +1154,56 @@ async def test_document_templates_crud_copy_preview_and_placeholders(
     assert sent(copy) == {"name": "Копия"}
 
 
+async def test_document_template_kind_goes_to_erp_as_a_code_and_comes_back_as_a_word(
+    web: Web, erp: respx.MockRouter, check: ContractChecker
+) -> None:
+    """B-012 (W15-H8): вид выбирается при создании и предпросмотр идёт на каркасе своего вида."""
+    await web.login(["DIRECTOR"])
+    create = erp.post(f"{API}/crm/document-templates/").mock(
+        return_value=httpx.Response(
+            201, json=doc_template_json(id=9, kind="DELIVERY_NOTE", kind_code="DELIVERY_NOTE")
+        )
+    )
+    preview = erp.post(f"{API}/crm/document-templates/preview/").mock(
+        return_value=httpx.Response(
+            200, json={"rendered_html": "<p>x</p>", "document_html": "<p>x</p>", "warnings": []}
+        )
+    )
+    erp.get(f"{API}/crm/document-templates/").mock(
+        return_value=httpx.Response(
+            200,
+            json=[
+                doc_template_json(kind="WEIRD", kind_code="WEIRD"),
+                doc_template_json(id=8, kind="ACT", kind_code="ACT"),
+            ],
+        )
+    )
+
+    created = await web.send(
+        "POST",
+        "/api/v1/admin/company/document-templates",
+        json={"name": "Накладная", "kind": "delivery_note"},
+    )
+    rendered = await web.send(
+        "POST",
+        "/api/v1/admin/company/document-templates/preview",
+        json={"body_html": "<p/>", "kind": "contract"},
+    )
+    listed = await web.client.get("/api/v1/admin/company/document-templates")
+    bad = await web.send(
+        "POST", "/api/v1/admin/company/document-templates", json={"name": "X", "kind": "poem"}
+    )
+
+    assert sent(create) == {"name": "Накладная", "kind": "DELIVERY_NOTE"}
+    assert created.json()["kind"] == "delivery_note"
+    check(created, "/admin/company/document-templates", "post")
+    assert sent(preview) == {"body_html": "<p/>", "kind": "CONTRACT"}
+    check(rendered, "/admin/company/document-templates/preview", "post")
+    assert [t["kind"] for t in listed.json()["items"]] == ["custom", "act"]  # чужой код — «custom»
+    check(listed, "/admin/company/document-templates", "get")
+    assert bad.status_code == 422
+
+
 async def test_document_template_in_use_is_409(
     web: Web, erp: respx.MockRouter, check: ContractChecker
 ) -> None:
@@ -1769,6 +1819,25 @@ async def test_fx_rate_get_shows_current_rate_source_and_journal(
     )
     assert routes["journal"].calls.last.request.url.params["limit"] == "20"
     assert routes["current"].calls.last.request.url.params["currency"] == "USD"
+
+
+async def test_fx_rate_journal_erp_403_is_not_shown_to_the_caller(
+    web: Web, erp: respx.MockRouter
+) -> None:
+    """Журнал курсов — только `settings.edit` в ERP (W15-H8): отказ ERP доходит 403, без имён."""
+    await web.login(["DIRECTOR"])
+    erp.get(f"{API}/exchange-rates/current/").mock(
+        return_value=httpx.Response(200, json=FX_CURRENT)
+    )
+    erp.get(f"{API}/exchange-rates/journal/").mock(
+        return_value=httpx.Response(403, json={"detail": "SETTINGS_EDIT_REQUIRED"})
+    )
+
+    response = await web.client.get("/api/v1/admin/company/fx-rate")
+
+    assert response.status_code == 403
+    assert response.json()["source"] == "erp"
+    assert "Иванова" not in response.text
 
 
 async def test_fx_rate_without_a_rate_is_null_not_zero(
