@@ -67,7 +67,8 @@
       "decisions": "D",
       "clients": "C",
       "system": "!"
-    }
+    },
+    "where": "Where to look"
   },
   "panel": {
     "label": "Side panel",
@@ -219,6 +220,16 @@
       "chat": "Chat",
       "ticket": "Staff request",
       "integration": "Integration"
-    }
+    },
+    "actions": {
+      "group": "Actions",
+      "tag": "Action",
+      "createRequest": "Create a request",
+      "createDocument": "Create a memo",
+      "inviteEmployee": "Invite an employee",
+      "legacyHint": "For now done in the old system — press to see where"
+    },
+    "where": "Where to look",
+    "whereClose": "Close the hint"
   }
 }

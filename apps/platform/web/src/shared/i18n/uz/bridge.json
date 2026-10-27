@@ -62,5 +62,10 @@
   "panel": {
     "title": "Bo‘lim hali ko‘chirilmoqda",
     "text": "Bo‘lim Platformaga ko‘chgach, obyekt kartochkasi va u bo‘yicha amallar shu yerda paydo bo‘ladi."
+  },
+  "short": {
+    "legacy": "Hozir — {{system}}: {{where}}.",
+    "none": "Hozir bu ish interfeysda yo‘q. Uni bajaradi: {{who}}.",
+    "internal": "Hozir — Platformaning «{{section}}» bo‘limida."
   }
 }
