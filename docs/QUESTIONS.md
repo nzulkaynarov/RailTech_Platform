@@ -1001,7 +1001,7 @@ ERP хранит его шифрованно. Ни один маршрут CRM �
    (`ExchangeRate`), коды ТН ВЭД (`HSCode`; есть лишь `hs-codes/{code}/duties/`), производители (`Manufacturer`; в API — чтение),
    статусы остаются в Django admin ERP; поля `SystemSetting` `maintenance_mode`, `is_two_factor_required` в API есть, в BFF намеренно
    не выведены (переключатели, способные закрыть вход всем). Под таблицей справочников экран говорит об этом словами.
-3. **OpenAPI ERP расходится с кодом — решено D2-0 (PR #PR_NUMBER)** (`erp-internal.yaml`; остаточные расхождения BFF ↔ ERP — Q-D20-1): (а) `PatchedCompanySettingsRequest` не содержит
+3. **OpenAPI ERP расходится с кодом — решено D2-0 (PR #282)** (`erp-internal.yaml`; остаточные расхождения BFF ↔ ERP — Q-D20-1): (а) `PatchedCompanySettingsRequest` не содержит
    `default_cost_currency` и `default_delivery_basis`, а сервис принимает именно их (коды справочников); (б) ответы
    `catalog/category-requests*` описаны схемой `Category`, а отдают `CategoryRequestSerializer`; (в) 400 с `{"detail": "КОД"}`
    описан по-разному в разных операциях. BFF опирается на код ERP, а не на описание. `SetupStatus.own_company_id` в схему добавлен.
