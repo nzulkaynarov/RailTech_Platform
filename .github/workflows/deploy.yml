@@ -1,9 +1,18 @@
-# Деплой прода (M5-INF-01): только вручную (workflow_dispatch), на PR и push не запускается.
-# Вход: git-ref (по умолчанию main) и действие deploy | rollback. Окружение `production` (GitHub environment) —
-# защита вручную: required reviewers задаёт владелец. ci.yml не трогает.
+# Деплой прода (M5-INF-01, W14-S4). Запуск:
+#   - автоматически после зелёного CI на push в main (workflow_run по workflow «CI»): сборка образов, затем job deploy ждёт
+#     одобрения владельца в environment `production` (required reviewers) и выкладывает тот же sha;
+#   - вручную (workflow_dispatch): action = deploy | rollback | build. На PR и push сам по себе не запускается.
+# Красный CI, ночной прогон (schedule) и ручной прогон CI (workflow_dispatch) деплой не запускают. ci.yml не трогает.
 #
-# deploy:   сборка девяти образов -> push в GHCR с тегом = полный git sha -> загрузка infra/ на VPS 1 по SSH ->
-#           deploy.sh на сервере (pg_dump-гейт баз crm, erp и eds, миграции, up) -> smoke четырёх доменов с раннера.
+# prepare:  без environment и секретов — sha, «sha входит в main» (deploy), зелёная проверка «CI ok» на этом sha (deploy), матрица образов.
+# build:    девять образов параллельно (matrix, по job'у на образ), каждый со своим кэшем type=gha,scope=<образ>; push в GHCR с тегом =
+#           полный git sha (только при deploy). Без environment: нужны лишь packages: write и GITHUB_TOKEN.
+#           Образ rt-cabinet в режиме deploy собирает job deploy (build-args берутся из variables environment production, а в job
+#           без environment они недоступны), поэтому в матрице deploy — восемь образов.
+# deploy:   environment production (одобрение владельца) -> образ rt-cabinet -> загрузка infra/ на VPS 1 по SSH -> deploy.sh на сервере
+#           (pg_dump-гейт баз crm, erp и eds, миграции, up) -> smoke четырёх доменов с раннера.
+# build:    (action = build) только сборка без выкладки: любой ref (ветка задачи), push в GHCR НЕТ (push: false), SSH и production не
+#           используются — режим проверки скорости и целостности сборки.
 # rollback: rollback.sh на VPS 1 — предыдущий тег (по state на сервере), затем smoke с раннера: те же четыре домена, если в релизе
 #           отката есть Платформа. Миграции БД не откатываются.
 #
@@ -12,36 +21,182 @@
 # Variables environment `production`: DEPLOY_HOST (публичный IP/имя VPS 1), DEPLOY_USER, CRM_DOMAIN, ERP_DOMAIN,
 # CABINET_DOMAIN, TELEGRAM_BOT_USERNAME (необязательно), PLATFORM_DOMAIN (необязательно: по умолчанию platform.railtech.uz; домен для
 # smoke с раннера — сам домен читают Caddy и deploy.sh из /opt/rt/.env.prod на сервере). Секреты приложений лежат на сервере (/opt/rt/.env.prod), не здесь.
+#
+# workflow_run берёт этот файл из ветки по умолчанию (main): автозапуск начинает работать после слияния изменения.
 name: Deploy
 
 on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
     inputs:
       ref:
-        description: Git-ref для сборки и деплоя (ветка, тег или sha; должен входить в main)
+        description: Git-ref (ветка, тег или sha). deploy — должен входить в main; build — любой ref; rollback — не используется
         required: true
         default: main
         type: string
       action:
-        description: Действие
+        description: Действие (build — сборка образов без выкладки и без push в GHCR)
         required: true
         default: deploy
         type: choice
-        options: [deploy, rollback]
+        options: [deploy, rollback, build]
 
+# Одна выкладка за раз, идущая не отменяется (cancel-in-progress: false). Из ожидающих в группе остаётся только самый новый:
+# GitHub отменяет более старый ожидающий запуск, когда приходит следующий. Запуски, которые ничего не деплоят (CI не успешен,
+# событие не push, режим build), получают собственную группу — иначе они вытесняли бы настоящий ожидающий деплой.
 concurrency:
-  group: deploy-production
+  group: ${{ ((github.event_name == 'workflow_dispatch' && inputs.action != 'build') || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main')) && 'deploy-production' || format('deploy-aux-{0}', github.run_id) }}
   cancel-in-progress: false
 
 permissions:
   contents: read
 
-
 jobs:
-  deploy:
-    if: inputs.action == 'deploy'
+  prepare:
+    name: Проверка и матрица образов
+    # workflow_run: только успешный CI, только push (не schedule и не dispatch CI), только main. Ручной запуск: deploy и build.
+    if: >-
+      (github.event_name == 'workflow_dispatch' && inputs.action != 'rollback')
+      || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success'
+          && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      checks: read  # проверка «CI ok» на sha (check-runs)
+    outputs:
+      sha: ${{ steps.ver.outputs.sha }}
+      owner: ${{ steps.ver.outputs.owner }}
+      action: ${{ steps.ver.outputs.action }}
+      push: ${{ steps.ver.outputs.push }}
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    env:
+      # Входы — через env, а не подстановкой в скрипт (ref вводит человек)
+      EVENT_NAME: ${{ github.event_name }}
+      INPUT_ACTION: ${{ inputs.action }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || inputs.ref }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Режим, sha и тег
+        id: ver
+        run: |
+          if [ "$EVENT_NAME" = "workflow_run" ]; then action=deploy; else action="$INPUT_ACTION"; fi
+          sha="$(git rev-parse HEAD)"
+          # push в GHCR — только при deploy: образы ветки задачи (режим build) в реестр не попадают
+          if [ "$action" = "deploy" ]; then push=true; else push=false; fi
+          {
+            echo "sha=$sha"
+            echo "action=$action"
+            echo "push=$push"
+            echo "owner=${GITHUB_REPOSITORY_OWNER,,}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: ref должен входить в main
+        if: steps.ver.outputs.action == 'deploy'
+        env:
+          SHA: ${{ steps.ver.outputs.sha }}
+        run: |
+          git rev-parse --verify -q origin/main >/dev/null \
+            || { echo "::error::нет origin/main в клоне — не проверить, что sha входит в main"; exit 1; }
+          git merge-base --is-ancestor "$SHA" origin/main \
+            || { echo "::error::$SHA не входит в main — деплой только слитого кода"; exit 1; }
+
+      - name: Зелёный «CI ok» на этом sha
+        if: steps.ver.outputs.action == 'deploy'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ steps.ver.outputs.sha }}
+        run: |
+          runs="$(gh api -X GET "repos/$GITHUB_REPOSITORY/commits/$SHA/check-runs" \
+            -f check_name='CI ok' -f filter=latest -f per_page=100 \
+            --jq '[.check_runs[] | {status, conclusion}]')"
+          total="$(jq 'length' <<<"$runs")"
+          if [ "$total" -eq 0 ]; then
+            echo "::error::на $SHA нет проверки «CI ok» — CI на этом коммите не запускался; деплой только после зелёного CI"
+            exit 1
+          fi
+          ok="$(jq '[.[] | select(.status == "completed" and .conclusion == "success")] | length' <<<"$runs")"
+          if [ "$ok" -ne "$total" ]; then
+            echo "::error::«CI ok» на $SHA не зелёная ($(jq -c . <<<"$runs")) — деплой не идёт"
+            exit 1
+          fi
+          echo "«CI ok» на $SHA: success"
+
+      - name: Матрица образов
+        id: matrix
+        env:
+          ACTION: ${{ steps.ver.outputs.action }}
+        run: |
+          # context/target/build-contexts/build-args — как в прежних шагах сборки. rtbus и contracts — именованные контексты Dockerfile
+          # (шина rt_bus и контракты, L14). scope кэша прежние — кэш не теряется.
+          images='[
+            {"image":"rt-crm-backend","context":"apps/crm/backend","target":"prod","contexts":"rtbus=packages/rt-bus\ncontracts=packages/contracts","args":"","scope":"crm-backend"},
+            {"image":"rt-crm-frontend","context":"apps/crm/frontend","target":"prod","contexts":"","args":"","scope":"crm-frontend"},
+            {"image":"rt-erp-backend","context":"apps/erp/backend","target":"","contexts":"rtbus=packages/rt-bus\ncontracts=packages/contracts","args":"","scope":"erp-backend"},
+            {"image":"rt-erp-frontend","context":"apps/erp/frontend","target":"","contexts":"","args":"VITE_API_URL=\nVITE_WS_URL=","scope":"erp-frontend"},
+            {"image":"rt-cabinet","context":"apps/cabinet","target":"","contexts":"","args":"VITE_API_URL=","scope":"cabinet"},
+            {"image":"rt-litellm","context":"infra/ai/litellm","target":"","contexts":"","args":"","scope":"litellm"},
+            {"image":"rt-platform-bff","context":"apps/platform/bff","target":"prod","contexts":"rtbus=packages/rt-bus\ncontracts=packages/contracts","args":"","scope":"platform-bff"},
+            {"image":"rt-platform-web","context":"apps/platform/web","target":"prod","contexts":"","args":"","scope":"platform-web"},
+            {"image":"rt-eds","context":"apps/eds","target":"prod","contexts":"rtbus=packages/rt-bus\ncontracts=packages/contracts","args":"","scope":"eds"}
+          ]'
+          # deploy: rt-cabinet собирает job deploy (его build-args — из variables environment production); build: все девять
+          echo "matrix=$(jq -c --arg a "$ACTION" '{include: (if $a == "build" then . else map(select(.image != "rt-cabinet")) end)}' <<<"$images")" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Образ ${{ matrix.image }}
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Без environment production: образы не требуют ни секретов, ни одобрения. Нужны только push в GHCR (при deploy) и GITHUB_TOKEN.
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        if: needs.prepare.outputs.push == 'true'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Образ ${{ matrix.image }}
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          build-contexts: ${{ matrix.contexts }}
+          build-args: ${{ matrix.args }}
+          target: ${{ matrix.target }}
+          # push: false (режим build) — образ только собирается: ветка задачи не кладёт в GHCR образы с тегом не из main
+          push: ${{ needs.prepare.outputs.push == 'true' }}
+          tags: ghcr.io/${{ needs.prepare.outputs.owner }}/${{ matrix.image }}:${{ needs.prepare.outputs.sha }}
+          cache-from: type=gha,scope=${{ matrix.scope }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.scope }}
+
+  deploy:
+    name: Выкладка на VPS 1
+    needs: [prepare, build]
+    if: needs.prepare.outputs.action == 'deploy'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
     environment: production
     permissions:
       contents: read
@@ -60,20 +215,12 @@ jobs:
             [ -n "${!v}" ] || { echo "::error::не задана переменная environment production: $v"; exit 1; }
           done
 
+      # Тот же sha, что собран в build (не ref: за время ожидания одобрения ветка могла уйти вперёд)
       - uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.ref }}
-          fetch-depth: 0
+          ref: ${{ needs.prepare.outputs.sha }}
+          fetch-depth: 1
           persist-credentials: false
-
-      - name: Тег = git sha; ref должен входить в main
-        id: ver
-        run: |
-          sha="$(git rev-parse HEAD)"
-          git merge-base --is-ancestor "$sha" origin/main \
-            || { echo "::error::$sha не входит в main — деплой только слитого кода"; exit 1; }
-          echo "tag=$sha" >> "$GITHUB_OUTPUT"
-          echo "owner=${GITHUB_REPOSITORY_OWNER,,}" >> "$GITHUB_OUTPUT"
 
       - uses: docker/setup-buildx-action@v3
 
@@ -83,56 +230,9 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Образ rt-crm-backend
-        uses: docker/build-push-action@v6
-        with:
-          context: apps/crm/backend
-          # Шина событий rt_bus (L14): пакет и контракт — именованные контексты Dockerfile.
-          build-contexts: |
-            rtbus=packages/rt-bus
-            contracts=packages/contracts
-          target: prod
-          push: true
-          tags: ghcr.io/${{ steps.ver.outputs.owner }}/rt-crm-backend:${{ steps.ver.outputs.tag }}
-          cache-from: type=gha,scope=crm-backend
-          cache-to: type=gha,mode=max,scope=crm-backend
-
-      - name: Образ rt-crm-frontend
-        uses: docker/build-push-action@v6
-        with:
-          context: apps/crm/frontend
-          target: prod
-          push: true
-          tags: ghcr.io/${{ steps.ver.outputs.owner }}/rt-crm-frontend:${{ steps.ver.outputs.tag }}
-          cache-from: type=gha,scope=crm-frontend
-          cache-to: type=gha,mode=max,scope=crm-frontend
-
-      - name: Образ rt-erp-backend
-        # rt_bus и контракты шины вшиваются именованными контекстами (L14): COPY --from=rtbus / --from=contracts в Dockerfile
-        uses: docker/build-push-action@v6
-        with:
-          context: apps/erp/backend
-          build-contexts: |
-            rtbus=packages/rt-bus
-            contracts=packages/contracts
-          push: true
-          tags: ghcr.io/${{ steps.ver.outputs.owner }}/rt-erp-backend:${{ steps.ver.outputs.tag }}
-          cache-from: type=gha,scope=erp-backend
-          cache-to: type=gha,mode=max,scope=erp-backend
-
-      - name: Образ rt-erp-frontend
-        uses: docker/build-push-action@v6
-        with:
-          context: apps/erp/frontend
-          build-args: |
-            VITE_API_URL=
-            VITE_WS_URL=
-          push: true
-          tags: ghcr.io/${{ steps.ver.outputs.owner }}/rt-erp-frontend:${{ steps.ver.outputs.tag }}
-          cache-from: type=gha,scope=erp-frontend
-          cache-to: type=gha,mode=max,scope=erp-frontend
-
       - name: Образ rt-cabinet
+        # VITE_BOT_USERNAME и VITE_CRM_URL зашиваются в образ и берутся из variables environment production, поэтому образ
+        # собирается здесь, а не в job build (без environment этих значений нет).
         uses: docker/build-push-action@v6
         with:
           context: apps/cabinet
@@ -141,65 +241,18 @@ jobs:
             VITE_BOT_USERNAME=${{ vars.TELEGRAM_BOT_USERNAME }}
             VITE_CRM_URL=https://${{ vars.CRM_DOMAIN }}
           push: true
-          tags: ghcr.io/${{ steps.ver.outputs.owner }}/rt-cabinet:${{ steps.ver.outputs.tag }}
+          tags: ghcr.io/${{ needs.prepare.outputs.owner }}/rt-cabinet:${{ needs.prepare.outputs.sha }}
           cache-from: type=gha,scope=cabinet
           cache-to: type=gha,mode=max,scope=cabinet
-
-      - name: Образ rt-litellm
-        # Свой образ на Debian: официальный (Wolfi) требует x86-64-v2, прод-CPU его не даёт (M5-INF-02, servers.md)
-        uses: docker/build-push-action@v6
-        with:
-          context: infra/ai/litellm
-          push: true
-          tags: ghcr.io/${{ steps.ver.outputs.owner }}/rt-litellm:${{ steps.ver.outputs.tag }}
-          cache-from: type=gha,scope=litellm
-          cache-to: type=gha,mode=max,scope=litellm
-
-      - name: Образ rt-platform-bff
-        uses: docker/build-push-action@v6
-        with:
-          context: apps/platform/bff
-          # Шина событий rt_bus (B5, L14): пакет и контракты — именованные контексты Dockerfile.
-          build-contexts: |
-            rtbus=packages/rt-bus
-            contracts=packages/contracts
-          target: prod
-          push: true
-          tags: ghcr.io/${{ steps.ver.outputs.owner }}/rt-platform-bff:${{ steps.ver.outputs.tag }}
-          cache-from: type=gha,scope=platform-bff
-          cache-to: type=gha,mode=max,scope=platform-bff
-
-      - name: Образ rt-platform-web
-        uses: docker/build-push-action@v6
-        with:
-          context: apps/platform/web
-          target: prod
-          push: true
-          tags: ghcr.io/${{ steps.ver.outputs.owner }}/rt-platform-web:${{ steps.ver.outputs.tag }}
-          cache-from: type=gha,scope=platform-web
-          cache-to: type=gha,mode=max,scope=platform-web
-
-      - name: Образ rt-eds
-        # Сервис документооборота (волна 12, ADR-0015): api, worker и миграции — один образ; rt_bus и контракты — как у CRM (L14).
-        uses: docker/build-push-action@v6
-        with:
-          context: apps/eds
-          build-contexts: |
-            rtbus=packages/rt-bus
-            contracts=packages/contracts
-          target: prod
-          push: true
-          tags: ghcr.io/${{ steps.ver.outputs.owner }}/rt-eds:${{ steps.ver.outputs.tag }}
-          cache-from: type=gha,scope=eds
-          cache-to: type=gha,mode=max,scope=eds
 
       - name: SSH к VPS 1
         env:
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
           DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
         run: |
-          [ -n "$DEPLOY_SSH_KEY" ] && [ -n "$DEPLOY_KNOWN_HOSTS" ] \
-            || { echo "::error::нет секретов DEPLOY_SSH_KEY / DEPLOY_KNOWN_HOSTS в environment production"; exit 1; }
+          if [ -z "$DEPLOY_SSH_KEY" ] || [ -z "$DEPLOY_KNOWN_HOSTS" ]; then
+            echo "::error::нет секретов DEPLOY_SSH_KEY / DEPLOY_KNOWN_HOSTS в environment production"; exit 1
+          fi
           install -d -m 700 ~/.ssh
           printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_deploy
           chmod 600 ~/.ssh/id_deploy
@@ -215,7 +268,7 @@ jobs:
 
       - name: Загрузка релиза на VPS 1
         env:
-          TAG: ${{ steps.ver.outputs.tag }}
+          TAG: ${{ needs.prepare.outputs.sha }}
         run: |
           # TAG — полный git sha из шага ver; подстановка на клиенте намеренная
           tar -czf release.tgz infra apps/crm/infra/casbin packages/contracts/mcp-tools.json
@@ -226,7 +279,7 @@ jobs:
 
       - name: Деплой на VPS 1 (pg_dump-гейт, миграции, up)
         env:
-          TAG: ${{ steps.ver.outputs.tag }}
+          TAG: ${{ needs.prepare.outputs.sha }}
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GHCR_USER: ${{ github.actor }}
         run: |
@@ -246,7 +299,7 @@ jobs:
         run: ssh app "docker logout ghcr.io" || true
 
   rollback:
-    if: inputs.action == 'rollback'
+    if: github.event_name == 'workflow_dispatch' && inputs.action == 'rollback'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: production
@@ -274,8 +327,9 @@ jobs:
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
           DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
         run: |
-          [ -n "$DEPLOY_SSH_KEY" ] && [ -n "$DEPLOY_KNOWN_HOSTS" ] \
-            || { echo "::error::нет секретов DEPLOY_SSH_KEY / DEPLOY_KNOWN_HOSTS в environment production"; exit 1; }
+          if [ -z "$DEPLOY_SSH_KEY" ] || [ -z "$DEPLOY_KNOWN_HOSTS" ]; then
+            echo "::error::нет секретов DEPLOY_SSH_KEY / DEPLOY_KNOWN_HOSTS в environment production"; exit 1
+          fi
           install -d -m 700 ~/.ssh
           printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/id_deploy
           chmod 600 ~/.ssh/id_deploy
