@@ -1,0 +1,491 @@
+/* Клиенты · Ждут ответа (D1-1): список ≈280 px + диалог; на < 768 px — по очереди, диалог на весь экран.
+   Цвета — токены темы (docs/architecture/platform-frontend.md §3): текст #1f1f1f/#595959/#6e6e6e, граница #f0f0f0,
+   выбранное #e6f4ff, ошибка #a8071a. Без теней и цветных полосок; статус — словом. */
+
+.pf-msg-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+}
+
+.pf-msg {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 16px;
+  height: calc(100vh - 56px - 48px - 60px - 16px);
+  min-height: 520px;
+}
+
+.pf-msg--mobile {
+  grid-template-columns: minmax(0, 1fr);
+  height: auto;
+  min-height: 0;
+}
+
+.pf-msg-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  color: #595959;
+}
+
+/* --- список --------------------------------------------------------------------------------------------- */
+
+.pf-msg-list {
+  background: #fff;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.pf-msg-group {
+  margin: 8px 4px 4px;
+  font-size: 12px;
+  line-height: 20px;
+  font-weight: 500;
+  color: #6e6e6e;
+}
+
+.pf-msg-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.pf-msg-row {
+  border-radius: 6px;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pf-msg-row + .pf-msg-row {
+  margin-top: 2px;
+}
+
+.pf-msg-row:hover {
+  background: #f5f5f5;
+}
+
+.pf-msg-row--active,
+.pf-msg-row--active:hover {
+  background: #e6f4ff;
+}
+
+.pf-msg-row-link {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: #1f1f1f;
+  text-decoration: none;
+  min-width: 0;
+}
+
+.pf-msg-row-link:focus-visible {
+  outline: 2px solid #1668dc;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.pf-msg-row-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.pf-msg-row-name {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pf-msg-unread {
+  font-size: 12px;
+  line-height: 18px;
+  padding: 0 6px;
+  border-radius: 4px;
+  background: #e6f4ff;
+  color: #0958d9;
+  border: 1px solid #91caff;
+  flex: none;
+}
+
+.pf-msg-row-summary {
+  font-size: 13px;
+  line-height: 20px;
+  color: #595959;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.pf-msg-row-reasons {
+  font-size: 12px;
+  line-height: 18px;
+  color: #6e6e6e;
+}
+
+.pf-msg-row-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pf-msg-row-meta .ant-btn {
+  margin-left: auto;
+}
+
+.pf-msg-sla {
+  font-size: 12px;
+  line-height: 20px;
+  color: #595959;
+  font-variant-numeric: tabular-nums;
+}
+
+.pf-msg-sla--overdue {
+  color: #a8071a;
+  font-weight: 500;
+}
+
+/* --- диалог --------------------------------------------------------------------------------------------- */
+
+.pf-msg-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+  background: #fff;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.pf-msg--mobile .pf-msg-dialog {
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+
+.pf-msg-dialog-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.pf-msg-back {
+  flex-basis: 100%;
+  color: #0958d9;
+}
+
+.pf-msg-dialog-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.pf-msg-dialog-title h2 {
+  margin: 0;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
+}
+
+.pf-msg-dialog-title p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 20px;
+  color: #595959;
+}
+
+.pf-msg-dialog-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.pf-msg-note {
+  background: #fafafa;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.pf-msg-note-title {
+  margin: 0 0 4px;
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: 600;
+}
+
+.pf-msg-note-list {
+  margin: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.pf-msg-note-row {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  gap: 8px;
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.pf-msg-note-row dt {
+  color: #595959;
+}
+
+.pf-msg-note-row dd {
+  margin: 0;
+}
+
+.pf-msg-scroll {
+  flex: 1;
+  min-height: 160px;
+  overflow-y: auto;
+  border-top: 1px solid #f0f0f0;
+  padding-top: 8px;
+}
+
+.pf-msg-scroll:focus-visible {
+  outline: 2px solid #1668dc;
+  outline-offset: 2px;
+}
+
+.pf-msg-older {
+  display: flex;
+  justify-content: center;
+  padding: 4px 0 8px;
+}
+
+.pf-msg-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pf-msg-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 620px;
+}
+
+.pf-msg-item--manager {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+.pf-msg-item-head {
+  display: flex;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 18px;
+  color: #595959;
+}
+
+.pf-msg-author {
+  font-weight: 500;
+  color: #1f1f1f;
+}
+
+.pf-msg-bubble {
+  background: #f5f5f5;
+  border-radius: 2px 8px 8px 8px;
+  padding: 8px 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.pf-msg-item--manager .pf-msg-bubble {
+  background: #e6f4ff;
+  border-radius: 8px 2px 8px 8px;
+}
+
+.pf-msg-item--note .pf-msg-bubble {
+  background: #fffbe6;
+  border: 1px dashed #ffe58f;
+}
+
+.pf-msg-tag-note {
+  font-weight: 500;
+  color: #874d00;
+}
+
+.pf-msg-files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pf-msg-file {
+  font-size: 13px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  padding: 2px 8px;
+  color: #0958d9;
+}
+
+.pf-msg-file--missing {
+  color: #595959;
+  border-style: dashed;
+}
+
+/* --- поле ответа ---------------------------------------------------------------------------------------- */
+
+.pf-msg-composer {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-top: 1px solid #f0f0f0;
+  padding-top: 12px;
+}
+
+.pf-msg--mobile .pf-msg-composer {
+  position: sticky;
+  bottom: 0;
+  background: #f5f5f5;
+  padding-bottom: 8px;
+}
+
+.pf-msg-composer-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.pf-msg-composer-tools {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.pf-msg-composer-label {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.pf-msg-composer-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.pf-msg-hint {
+  font-size: 12px;
+  line-height: 20px;
+  color: #595959;
+}
+
+.pf-msg-hint--note {
+  color: #874d00;
+}
+
+.pf-msg-notice {
+  margin: 0;
+  font-size: 12px;
+  color: #595959;
+}
+
+.pf-msg-readonly {
+  margin: 0;
+  font-size: 13px;
+  color: #595959;
+  border-top: 1px solid #f0f0f0;
+  padding-top: 12px;
+}
+
+/* --- карточка лида -------------------------------------------------------------------------------------- */
+
+.pf-msg-card {
+  padding: 16px 20px;
+}
+
+.pf-msg-card-title {
+  margin: 0;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
+}
+
+.pf-msg-card-sub {
+  margin: 0 0 12px;
+  color: #595959;
+  font-size: 12px;
+}
+
+.pf-msg-card-h {
+  margin: 16px 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.pf-msg-card-list {
+  margin: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.pf-msg-card-row {
+  display: grid;
+  grid-template-columns: 130px minmax(0, 1fr);
+  gap: 8px;
+  font-size: 13px;
+  line-height: 20px;
+}
+
+.pf-msg-card-row dt {
+  color: #595959;
+}
+
+.pf-msg-card-row dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.pf-msg-card-none {
+  margin: 0;
+  color: #595959;
+  font-size: 13px;
+}
+
+.pf-msg-sheet-foot {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 767px) {
+  .pf-msg-note-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+}
+
+/* 390 px: лента — часть страницы (прокручивается вся страница), пузыри клиента и бота — на белом, фон страницы серый. */
+.pf-msg--mobile .pf-msg-scroll {
+  overflow: visible;
+  min-height: 0;
+}
+
+.pf-msg--mobile .pf-msg-item--lead .pf-msg-bubble,
+.pf-msg--mobile .pf-msg-item--bot .pf-msg-bubble,
+.pf-msg--mobile .pf-msg-item--system .pf-msg-bubble {
+  background: #fff;
+  border: 1px solid #f0f0f0;
+}

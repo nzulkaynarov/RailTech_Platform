@@ -133,6 +133,15 @@
  * (директор читает), сброс пароля — `admin: full`; профиль доступен каждому вошедшему. Секреты из записей журнала BFF вырезает
  * (значения полей `password`, `secret`, `token`, `key`, `*_key`, `credentials`, `authorization`, `pin` и им подобных -> `***` целиком, любого типа).
  *
+ * **0.16.0 (D1-1, волна 16) — Клиенты · Ждут ответа.** Добавляющее изменение (тег `messages`): очередь передач от бота с
+ * запиской (CRM-06) и SLA — `GET /crm/messages`; карточка лида, лента диалога с подгрузкой истории и вложениями через BFF —
+ * `GET /crm/messages/{lead}`, `/thread`, `/attachments/{message}/{index}`; действия — `take`, `reply` (ключ повтора
+ * `client_message_id`: «Повторить» не дублирует сообщение; Telegram не ответил — 502 `INTEGRATION_FAILED`, `delivery_failed`),
+ * `note` (заметка команде), `assist` (подсказка ответа через CRM/LiteLLM), `return-to-bot`; шаблоны — `GET /crm/reply-templates`
+ * (раздел `crm.leads` полный). Чтение — `crm.leads` от чтения (директор), действия — полный. Новая тема подсказки потока
+ * `InvalidationTopic.messages`: событие CRM `lead.message_added` (новое сообщение в переписке) и события лида — экран
+ * перезапрашивает очередь и открытую ленту.
+ *
  * **0.15.0 (W13C-F1) — первый запуск: ERP раньше компании (дефект гейта C2A-G-1).** Добавляющее изменение. Порядок шагов чек-листа —
  * `erp`, `bot`, `mail`, `models`, `first_employee`: сначала подключается ERP, затем создаётся компания. Все пять шагов
  * `GET /setup/checklist` приносит CRM (`/setup/checklist`, ключи `erp`, `mail`, `first_employee`), BFF сам их не вычисляет. Шаг
@@ -158,7 +167,7 @@
  * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.15.0
+ * OpenAPI spec version: 0.16.0
  */
 import type { KbGap } from "./kbGap";
 

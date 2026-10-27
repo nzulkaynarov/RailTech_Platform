@@ -1,0 +1,198 @@
+{
+  "subtitle": "Botdan o'tkazilgan va mijoz javob kutayotgan suhbatlar",
+  "viewOnly": "Faqat ko'rish",
+  "loadFailed": "Yuklab bo'lmadi. Aloqani tekshiring va yangilang.",
+  "reload": "Yangilash",
+  "list": {
+    "label": "Javob kutayotgan suhbatlar",
+    "groups": {
+      "handoff": "Botdan o'tkazilganlar",
+      "mine": "Mening suhbatlarim",
+      "unassigned": "Menejersiz"
+    },
+    "unread": "Yangi",
+    "takenBy": "{{name}} olib boryapti",
+    "noRequest": "So'rov hali aniq emas",
+    "empty": {
+      "title": "Barcha o'tkazishlar ko'rib chiqildi",
+      "text": "Mijoz inson so'ramaguncha bot o'zi javob beradi.",
+      "action": "Lidlarni ochish"
+    }
+  },
+  "sla": {
+    "waiting": "{{duration}} kutmoqda",
+    "overdue": "muddat o'tdi",
+    "dueAt": "{{time}} gacha javob bering",
+    "snoozed": "{{time}} gacha qoldirilgan",
+    "taken": "{{name}} oldi"
+  },
+  "duration": {
+    "minutes": "{{count}} daq",
+    "hours": "{{h}} soat {{m}} daq",
+    "days": "{{d}} kun {{h}} soat"
+  },
+  "priority": {
+    "hot": "Shoshilinch",
+    "warm": "Muhim",
+    "info": "Ma'lumot uchun"
+  },
+  "reasons": {
+    "human_requested": "Inson so'rayapti",
+    "callback_requested": "Qo'ng'iroq so'rayapti",
+    "price_or_contract_asked": "Narx yoki shartlarni so'rayapti",
+    "negative_sentiment": "Norozi",
+    "complaint": "Shikoyat",
+    "kb_gap_streak": "Bot javob topmadi",
+    "no_progress": "Suhbat oldinga siljimayapti",
+    "competitor_mentioned": "Raqobatchini tilga oldi",
+    "high_score": "Issiq lid",
+    "qualifier_recommend": "Bot aralashishni maslahat beradi",
+    "document_not_found": "Hujjat topilmadi",
+    "service_request": "Buyurtma bo'yicha savol",
+    "attachment_received": "Fayl yubordi",
+    "agent_unavailable": "Bot javob bera olmadi",
+    "stop_word": "Xabarda taqiqlangan so'z",
+    "other": "Boshqa sabab"
+  },
+  "channels": {
+    "telegram": "Telegram",
+    "web": "Veb-shakl",
+    "email": "Pochta",
+    "phone": "Qo'ng'iroq",
+    "referral": "Tavsiya",
+    "other": "Boshqa kanal"
+  },
+  "timeline": {
+    "<1m": "bir oy ichida",
+    "<3m": "3 oygacha",
+    "<12m": "bir yilgacha",
+    ">12m": "bir yildan ortiq"
+  },
+  "roles": {
+    "decision_maker": "qaror qabul qiladi",
+    "influencer": "qarorga ta'sir qiladi",
+    "researcher": "variantlarni o'rganmoqda"
+  },
+  "note": {
+    "title": "O'tkazish eslatmasi",
+    "request": "So'rov",
+    "reason": "Sabab",
+    "next": "Tavsiya etilgan qadam",
+    "facts": "Faktlar",
+    "interest": "Qiziqish",
+    "timeline": "Muddat",
+    "role": "Rol",
+    "budget": "Byudjet",
+    "company": "Kompaniya",
+    "companySize": "Kompaniya hajmi",
+    "region": "Hudud",
+    "lastMessage": "Oxirgi xabar",
+    "none": "ma'lumot yo'q"
+  },
+  "owner": {
+    "bot": "Suhbatni bot olib boryapti",
+    "waiting": "Bot suhbatni o'tkazdi va menejerni kutmoqda",
+    "manager": "Suhbatni {{name}} olib boryapti",
+    "you": "Suhbatni siz olib boryapsiz"
+  },
+  "actions": {
+    "take": "Olish",
+    "taking": "Olinmoqda…",
+    "taken": "Lid sizda. Siz suhbatda ekansiz, bot jim turadi.",
+    "returnToBot": "Botga qaytarish",
+    "returned": "Lid yana botda",
+    "card": "Lid kartasi",
+    "back": "Barcha suhbatlar",
+    "close": "Yopish"
+  },
+  "consequence": {
+    "take": "Bot jim bo'ladi, suhbat sizga o'tadi; o'tkazish hamkasblar navbatidan chiqadi."
+  },
+  "thread": {
+    "label": "{{name}} bilan yozishma",
+    "older": "Oldingilarini ko'rsatish",
+    "loadingOlder": "Yuklanmoqda…",
+    "authors": {
+      "lead": "Mijoz",
+      "bot": "Bot",
+      "manager": "Menejer",
+      "system": "Tizim"
+    },
+    "noteTag": "Jamoaga eslatma",
+    "download": "{{name}} ni yuklab olish",
+    "notStored": "{{name}} — fayl saqlanmagan",
+    "empty": "Hozircha xabar yo'q",
+    "select": {
+      "title": "Suhbatni tanlang",
+      "text": "Chapda — botdan o'tkazilganlar va sizning suhbatlaringiz. Mijozga javob berish uchun suhbatni oching."
+    }
+  },
+  "composer": {
+    "mode": "Kimga yozamiz",
+    "self": "O'zimdan",
+    "note": "Jamoaga eslatma",
+    "selfLabel": "Mijozga xabar",
+    "noteLabel": "Jamoa uchun eslatma",
+    "selfHint": "Mijozga Telegramda yuboriladi",
+    "noteHint": "Faqat jamoa ko'radi",
+    "send": "Yuborish",
+    "sending": "Yuborilmoqda…",
+    "save": "Eslatmani saqlash",
+    "templates": "Javob shabloni",
+    "templatesPlaceholder": "Shablon qo'yish",
+    "assist": "Javob taklif qilish",
+    "assistDone": "Taklif maydonda — tekshirib, o'zingiz yuboring",
+    "assistNotice": {
+      "numbers_removed": "Bilimlar bazasida yo'q raqamlar taklifdan olib tashlandi",
+      "new_numbers": "Tahrir raqamlar qo'shgan edi — sizning matningiz qoldirildi"
+    },
+    "failed": "Yuborilmadi: Telegram javob bermadi.",
+    "retry": "Qayta urinish",
+    "sent": "Mijozga yuborildi",
+    "noteSaved": "Eslatma saqlandi",
+    "takeFirst": "Javob berish uchun lidni oling",
+    "readOnly": "Faqat ko'rish: menejerlar javob beradi"
+  },
+  "card": {
+    "title": "Lid kartasi",
+    "contacts": "Kontaktlar",
+    "telegram": "Telegram",
+    "phone": "Telefon",
+    "email": "Pochta",
+    "company": "Kompaniya",
+    "channel": "Kanal",
+    "language": "Til",
+    "consent": "Ma'lumotlarga rozilik",
+    "consentGiven": "{{date}} olingan",
+    "consentMissing": "yo'q — mijozga yozish mumkin emas",
+    "client": "ERP dagi mijoz",
+    "clientYes": "ha",
+    "clientNo": "hali yo'q",
+    "facts": "Saralash faktlari",
+    "request": "So'rov",
+    "empty": "Suhbatni tanlang — bu yerda lid kartasi bo'ladi: kontaktlar, kanallar va botdan faktlar",
+    "languages": {
+      "ru": "rus tili",
+      "uz": "o'zbek tili",
+      "en": "ingliz tili"
+    }
+  },
+  "errors": {
+    "lead_taken": "Lidni {{name}} allaqachon olgan",
+    "lead_taken_unknown": "Lidni boshqa xodim allaqachon olgan",
+    "take_first": "Avval lidni oling",
+    "no_consent": "Mijoz ma'lumotlarni qayta ishlashga rozilik bermagan — yozish mumkin emas",
+    "not_lead_owner": "Suhbatni boshqa xodim olib boryapti",
+    "already_with_bot": "Lid allaqachon botda",
+    "assist_disabled": "Javob takliflari administrator tomonidan o'chirilgan",
+    "assist_budget": "Bugungi sun'iy intellekt xarajatlari limiti tugadi",
+    "assist_empty": "Taklif qilinadigan narsa yo'q: bilimlar bazasida kerakli faktlar yo'q",
+    "assist_no_history": "Mijoz hali hech narsa so'ramadi",
+    "assist_unavailable": "Sun'iy intellekt modeli javob bermadi. Qayta urinib ko'ring",
+    "FORBIDDEN": "Bu amal rolingizga ruxsat etilmagan",
+    "NOT_FOUND": "Lid topilmadi",
+    "BACKEND_UNAVAILABLE": "CRM javob bermayapti. Qayta urinib ko'ring",
+    "VALIDATION_FAILED": "Matnni tekshiring: 1 dan 4000 belgigacha",
+    "generic": "Bo'lmadi. Qayta urinib ko'ring"
+  }
+}

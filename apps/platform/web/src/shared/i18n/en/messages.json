@@ -1,0 +1,198 @@
+{
+  "subtitle": "Bot handoffs and conversations where the client is waiting for a reply",
+  "viewOnly": "View only",
+  "loadFailed": "Could not load. Check the connection and refresh.",
+  "reload": "Refresh",
+  "list": {
+    "label": "Conversations awaiting reply",
+    "groups": {
+      "handoff": "Bot handoffs",
+      "mine": "My conversations",
+      "unassigned": "No manager"
+    },
+    "unread": "New",
+    "takenBy": "Handled by {{name}}",
+    "noRequest": "Request not clear yet",
+    "empty": {
+      "title": "All handoffs are handled",
+      "text": "The bot replies on its own until the client asks for a person.",
+      "action": "Open leads"
+    }
+  },
+  "sla": {
+    "waiting": "waiting {{duration}}",
+    "overdue": "overdue",
+    "dueAt": "reply by {{time}}",
+    "snoozed": "snoozed until {{time}}",
+    "taken": "taken by {{name}}"
+  },
+  "duration": {
+    "minutes": "{{count}} min",
+    "hours": "{{h}} h {{m}} min",
+    "days": "{{d}} d {{h}} h"
+  },
+  "priority": {
+    "hot": "Urgent",
+    "warm": "Important",
+    "info": "For information"
+  },
+  "reasons": {
+    "human_requested": "Asks for a person",
+    "callback_requested": "Asks for a call",
+    "price_or_contract_asked": "Asks about price or terms",
+    "negative_sentiment": "Unhappy",
+    "complaint": "Complaint",
+    "kb_gap_streak": "Bot found no answer",
+    "no_progress": "Conversation is stuck",
+    "competitor_mentioned": "Mentioned a competitor",
+    "high_score": "Hot lead",
+    "qualifier_recommend": "Bot suggests stepping in",
+    "document_not_found": "Document not found",
+    "service_request": "Question about an order",
+    "attachment_received": "Sent a file",
+    "agent_unavailable": "Bot could not reply",
+    "stop_word": "Stop word in the message",
+    "other": "Other reason"
+  },
+  "channels": {
+    "telegram": "Telegram",
+    "web": "Web form",
+    "email": "Email",
+    "phone": "Phone call",
+    "referral": "Referral",
+    "other": "Other channel"
+  },
+  "timeline": {
+    "<1m": "within a month",
+    "<3m": "up to 3 months",
+    "<12m": "up to a year",
+    ">12m": "over a year"
+  },
+  "roles": {
+    "decision_maker": "makes the decision",
+    "influencer": "influences the decision",
+    "researcher": "researching options"
+  },
+  "note": {
+    "title": "Handoff note",
+    "request": "Request",
+    "reason": "Reason",
+    "next": "Recommended next step",
+    "facts": "Facts",
+    "interest": "Interest",
+    "timeline": "Timeline",
+    "role": "Role",
+    "budget": "Budget",
+    "company": "Company",
+    "companySize": "Company size",
+    "region": "Region",
+    "lastMessage": "Last message",
+    "none": "no data"
+  },
+  "owner": {
+    "bot": "The bot handles the conversation",
+    "waiting": "The bot handed over and waits for a manager",
+    "manager": "Handled by {{name}}",
+    "you": "You handle the conversation"
+  },
+  "actions": {
+    "take": "Take",
+    "taking": "Taking…",
+    "taken": "The lead is yours. The bot stays silent while you are in the conversation.",
+    "returnToBot": "Return to bot",
+    "returned": "The lead is back with the bot",
+    "card": "Lead card",
+    "back": "All conversations",
+    "close": "Close"
+  },
+  "consequence": {
+    "take": "The bot goes silent and the conversation moves to you; the handoff leaves your colleagues' queue."
+  },
+  "thread": {
+    "label": "Conversation with {{name}}",
+    "older": "Show earlier",
+    "loadingOlder": "Loading…",
+    "authors": {
+      "lead": "Client",
+      "bot": "Bot",
+      "manager": "Manager",
+      "system": "System"
+    },
+    "noteTag": "Team note",
+    "download": "Download {{name}}",
+    "notStored": "{{name}} — file not saved",
+    "empty": "No messages yet",
+    "select": {
+      "title": "Choose a conversation",
+      "text": "On the left are bot handoffs and your conversations. Open one to reply to the client."
+    }
+  },
+  "composer": {
+    "mode": "Who we write to",
+    "self": "As myself",
+    "note": "Team note",
+    "selfLabel": "Message to the client",
+    "noteLabel": "Note for the team",
+    "selfHint": "Will be sent to the client in Telegram",
+    "noteHint": "Only the team will see it",
+    "send": "Send",
+    "sending": "Sending…",
+    "save": "Save note",
+    "templates": "Reply template",
+    "templatesPlaceholder": "Insert a template",
+    "assist": "Suggest a reply",
+    "assistDone": "The suggestion is in the field — check it and send it yourself",
+    "assistNotice": {
+      "numbers_removed": "Figures not found in the knowledge base were removed from the suggestion",
+      "new_numbers": "The edit added figures — your text was kept"
+    },
+    "failed": "Not sent: Telegram did not respond.",
+    "retry": "Retry",
+    "sent": "Sent to the client",
+    "noteSaved": "Note saved",
+    "takeFirst": "Take the lead to reply",
+    "readOnly": "View only: managers reply"
+  },
+  "card": {
+    "title": "Lead card",
+    "contacts": "Contacts",
+    "telegram": "Telegram",
+    "phone": "Phone",
+    "email": "Email",
+    "company": "Company",
+    "channel": "Channel",
+    "language": "Language",
+    "consent": "Data consent",
+    "consentGiven": "given {{date}}",
+    "consentMissing": "no — writing to the client is not allowed",
+    "client": "Client in ERP",
+    "clientYes": "yes",
+    "clientNo": "not yet",
+    "facts": "Qualification facts",
+    "request": "Request",
+    "empty": "Choose a conversation — the lead card will be here: contacts, channels and facts from the bot",
+    "languages": {
+      "ru": "Russian",
+      "uz": "Uzbek",
+      "en": "English"
+    }
+  },
+  "errors": {
+    "lead_taken": "The lead was already taken by {{name}}",
+    "lead_taken_unknown": "The lead was already taken by a colleague",
+    "take_first": "Take the lead first",
+    "no_consent": "The client has not consented to data processing — writing is not allowed",
+    "not_lead_owner": "Another colleague handles this conversation",
+    "already_with_bot": "The lead is already with the bot",
+    "assist_disabled": "Reply suggestions are turned off by the administrator",
+    "assist_budget": "Today's AI spending limit is reached",
+    "assist_empty": "Nothing to suggest: the knowledge base has no matching facts",
+    "assist_no_history": "The client has not asked anything yet",
+    "assist_unavailable": "The AI model did not respond. Try again",
+    "FORBIDDEN": "This action is not allowed for your role",
+    "NOT_FOUND": "Lead not found",
+    "BACKEND_UNAVAILABLE": "CRM is not responding. Try again",
+    "VALIDATION_FAILED": "Check the text: 1 to 4000 characters",
+    "generic": "Something went wrong. Try again"
+  }
+}
