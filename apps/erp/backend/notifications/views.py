@@ -1,6 +1,7 @@
 from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view, inline_serializer
-from rest_framework import permissions, viewsets
+from rest_framework import permissions
 from rest_framework import serializers as drf_serializers
+from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle

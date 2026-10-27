@@ -31,7 +31,9 @@ _INCLUDE_INACTIVE = [
         description="`1`/`true` — вместе с отключёнными строками; только для держателя `settings.edit` или администратора",
     )
 ]
-_IN_USE = OpenApiResponse(description="LOOKUP_IN_USE[:Модели,…] — на строку ссылаются данные; отключите её вместо удаления")
+_IN_USE = OpenApiResponse(
+    description="LOOKUP_IN_USE[:Модели,…] — на строку ссылаются данные; отключите её вместо удаления"
+)
 
 
 def _lookup_snapshot(instance) -> dict:

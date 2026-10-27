@@ -1001,7 +1001,7 @@ ERP хранит его шифрованно. Ни один маршрут CRM �
    (`ExchangeRate`), коды ТН ВЭД (`HSCode`; есть лишь `hs-codes/{code}/duties/`), производители (`Manufacturer`; в API — чтение),
    статусы остаются в Django admin ERP; поля `SystemSetting` `maintenance_mode`, `is_two_factor_required` в API есть, в BFF намеренно
    не выведены (переключатели, способные закрыть вход всем). Под таблицей справочников экран говорит об этом словами.
-3. **OpenAPI ERP расходится с кодом — хвост** (`erp-internal.yaml`): (а) `PatchedCompanySettingsRequest` не содержит
+3. **OpenAPI ERP расходится с кодом — решено D2-0 (PR #PR_NUMBER)** (`erp-internal.yaml`; остаточные расхождения BFF ↔ ERP — Q-D20-1): (а) `PatchedCompanySettingsRequest` не содержит
    `default_cost_currency` и `default_delivery_basis`, а сервис принимает именно их (коды справочников); (б) ответы
    `catalog/category-requests*` описаны схемой `Category`, а отдают `CategoryRequestSerializer`; (в) 400 с `{"detail": "КОД"}`
    описан по-разному в разных операциях. BFF опирается на код ERP, а не на описание. `SetupStatus.own_company_id` в схему добавлен.
@@ -1252,3 +1252,14 @@ BFF 0.19.0: `GET /bridge`, `POST /bridge/erp-sso` ([`platform-bff.md`](architect
    Fallback `matchSection` для номеров со «/» без кодирования — общий для всех карточек с `detail: …/:id` (`isDocNumber`), а не только письма.
    Черновик резолюции живёт в `sessionStorage` вкладки (переживает перезагрузку, не остаётся на общем компьютере) и стирается при 409 и
    когда письмо уже не ждёт резолюции.
+
+## Q-D20-1 · OpenAPI ERP стала правдой: расхождения BFF ↔ ERP, которые обнаружила сверка (D2-0 → лид и архитектор) — **открыто**
+
+**Контекст.** D2-0 (B-011): выгрузка `/api/v1` ERP описывает код (без предупреждений drf-spectacular, общий `ErrorDetail`, живые ответы 40+ операций, которые зовёт BFF, сверены с ней тестами `core/tests/test_openapi_*_conformance.py`). Сверка нашла четыре места, где BFF опирается на поведение, которого у ERP нет. Поведение ERP в D2-0 не менялось — схема говорит как есть; решать нужно, чинить ли код.
+
+1. **`PATCH accounts/companies/{id}/settings/` не принимает `payment_terms_days`** (срок оплаты счёта, дни). BFF (`QuoteDefaultsUpdate`) и экран «Условия КП» его отправляют, ERP отвечает 200 и молча оставляет старое значение (`update_company_settings` его не пишет, хотя `billing.py` читает). **Варианты:** (1) принять поле в сервисе (целое ≥ 0, `null` — сбросить, `BAD_NUMBER` при ошибке) и в схеме запроса; (2) убрать поле из BFF и экрана. **Рекомендация:** (1) — это единственный путь задать срок оплаты из Платформы; тест `test_payment_terms_days_is_read_only_in_settings_patch` тогда меняется на запись.
+2. **`POST crm/document-templates/` не принимает `is_active`** (новый шаблон всегда активен, а активный юридический шаблон обязан нести обязательные блоки). BFF (`DocumentTemplateIn.is_active`) поле отправляет, и ERP его теряет, а «создать выключенным» одним вызовом невозможно. **Варианты:** (1) принять `is_active` при создании (при `false` целостность не проверять, как при правке); (2) убрать поле из BFF, а выключенный шаблон делать вторым вызовом (`PATCH is_active=false`). **Рекомендация:** (1).
+3. **`GET crm/activity-logs/` не отдаёт `deal_id` и `entity_type`** (`ActivityLogSerializer`), а лента «Сегодня» (`feeds/activity.py`) читает оба: без `deal_id` у события пропадает подпись «· ЗВ-…» и ссылка на заявку, без `entity_type` модуль всегда «eds» (администраторские сущности `user`, `setting`, `integration`, `email_template` должны быть «erp»). Таймлайн сделки (`crm/timeline/`) оба поля отдаёт. **Рекомендация:** добавить два поля в `ActivityLogSerializer` (аддитивно, контракт 0.x) — отдельным мелким PR ERP.
+4. **Предпросмотр шаблона письма с произвольным `key` — 500.** `POST settings/email-templates/{id}/preview/` собирает письмо файловыми шаблонами `emails/<key>_subject.txt`; для ключа без файла (BFF разрешает создавать любой `key`) вьюха падает `TemplateDoesNotExist`. **Варианты:** (1) предпросмотр берёт тело из строки БД, файл — запасной; (2) BFF ограничивает `key` известными ключами каталога. **Рекомендация:** (1) в ERP, 500 на пользовательском вводе — дефект.
+
+Тесты 1–3 закреплены: `test_payment_terms_days_is_read_only_in_settings_patch`, `test_document_templates_crud_and_refusals` (`is_active` не описан в запросе создания), `test_timeline_and_activity_logs` (комментарий). После решения — править тест вместе с кодом.

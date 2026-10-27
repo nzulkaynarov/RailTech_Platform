@@ -11,9 +11,10 @@ from rest_framework.test import APIClient
 
 from accounts.models import Company, CompanyType
 from core.models import Notification
-from core.tests.test_openapi_company_conformance import API, admin, company, conforms, sends  # noqa: F401
+from core.tests.openapi_fixtures import API, conforms, sends
 from crm.models import ActivityLog, Deal, DealStage
 
+pytest_plugins = ["core.tests.openapi_fixtures"]  # фикстуры `admin` и `company`
 pytestmark = pytest.mark.django_db
 
 

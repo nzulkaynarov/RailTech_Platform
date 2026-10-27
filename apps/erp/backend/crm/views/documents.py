@@ -277,9 +277,7 @@ class DocumentTemplateViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
                     "document_html": drf_serializers.CharField(),
                 },
             ),
-            400: OpenApiResponse(
-                description="NO_COMPANY / TEMPLATE_BODY_TOO_LARGE (error code)"
-            ),
+            400: OpenApiResponse(description="NO_COMPANY / TEMPLATE_BODY_TOO_LARGE (error code)"),
         },
     )
     @action(detail=False, methods=["post"], url_path="preview", throttle_classes=[DocumentPreviewThrottle])

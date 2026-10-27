@@ -10,10 +10,11 @@ import pytest
 
 from accounts.models import CustomUser
 from catalog.models import Category, CategoryRequest
+from core.tests.openapi_fixtures import API, conforms, sends
 from core.tests.openapi_internal import request_fields_missing
-from core.tests.test_openapi_company_conformance import API, admin, company, conforms, sends  # noqa: F401
 from master_data.models import Currency, DeliveryBasis
 
+pytest_plugins = ["core.tests.openapi_fixtures"]  # фикстуры `admin` и `company`
 pytestmark = pytest.mark.django_db
 
 
@@ -63,7 +64,9 @@ def test_charge_types_and_templates_crud(admin, company):
     item = f"{API}crm/charge-templates/{{id}}/"
     one = f"{listing}{created.json()['id']}/"
     sends(item, "patch", {"default_amount": "11.00", "default_rate_percent": None, "is_active": False})
-    conforms(admin.patch(one, {"default_amount": "11.00", "is_active": False}, format="json"), item, "patch", status=200)
+    conforms(
+        admin.patch(one, {"default_amount": "11.00", "is_active": False}, format="json"), item, "patch", status=200
+    )
     duplicate = admin.post(listing, body, format="json")
     conforms(duplicate, listing, "post", status=400)
     conforms(admin.delete(one), item, "delete", status=204)
@@ -78,9 +81,7 @@ def test_document_templates_crud_and_refusals(admin, company):
     listing = f"{API}crm/document-templates/"
     item = f"{API}crm/document-templates/{{id}}/"
     conforms(admin.get(listing), listing, "get", status=200)
-    conforms(
-        admin.get(f"{listing}placeholders/"), f"{listing}placeholders/", "get", status=200
-    )
+    conforms(admin.get(f"{listing}placeholders/"), f"{listing}placeholders/", "get", status=200)
     # BFF шлёт и `is_active`, но `create` его не принимает (шаблон рождается активным) — схема запроса честно
     # называет только name/kind/body_html; расхождение BFF ↔ ERP описано в QUESTIONS (Q-D20-1).
     body = {"name": "Мой шаблон", "body_html": DOCUMENT_BODY}
@@ -148,7 +149,14 @@ def test_email_templates_crud_and_preview(admin, company):
 # --- справочники ------------------------------------------------------------------------------------------------
 
 REFERENCES = {
-    "countries": {"code": "ZZ", "name": "Страна Зет", "alpha2": "ZZ", "alpha3": "ZZZ", "iso_numeric": "999", "vat_rate": "12.00"},
+    "countries": {
+        "code": "ZZ",
+        "name": "Страна Зет",
+        "alpha2": "ZZ",
+        "alpha3": "ZZZ",
+        "iso_numeric": "999",
+        "vat_rate": "12.00",
+    },
     "currencies": {"code": "ZZZ", "name": "Зет", "symbol": "Z"},
     "units": {"code": "zz", "name": "зет"},
     "delivery-basis": {
@@ -174,7 +182,12 @@ def test_reference_lists_crud(admin, company, kind):
     conforms(created, listing, "post", status=201)
     one = f"{listing}{created.json()['id']}/"
     sends(item, "patch", {"name": "Новое имя", "sort_order": 100, "is_active": False})
-    conforms(admin.patch(one, {"name": "Новое имя", "sort_order": 100, "is_active": False}, format="json"), item, "patch", status=200)
+    conforms(
+        admin.patch(one, {"name": "Новое имя", "sort_order": 100, "is_active": False}, format="json"),
+        item,
+        "patch",
+        status=200,
+    )
     conforms(admin.delete(one), item, "delete", status=204)
 
 
@@ -219,7 +232,9 @@ def test_category_requests_list_approve_reject(admin, company):
     conforms(again, approve, "post", status=400)
     reject = f"{API}catalog/category-requests/{{id}}/reject/"
     sends(reject, "post", {"reason": "Дубль"})
-    conforms(admin.post(f"{listing}{pending[1].id}/reject/", {"reason": "Дубль"}, format="json"), reject, "post", status=200)
+    conforms(
+        admin.post(f"{listing}{pending[1].id}/reject/", {"reason": "Дубль"}, format="json"), reject, "post", status=200
+    )
     no_reason = admin.post(f"{listing}{pending[2].id}/reject/", {}, format="json")
     assert no_reason.json() == {"detail": "REASON_REQUIRED"}
     conforms(no_reason, reject, "post", status=400)

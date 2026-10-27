@@ -6,51 +6,13 @@
 """
 
 import pytest
-from rest_framework.test import APIClient
 
-from accounts.models import Company, CompanyMember, CustomUser, WorkspaceRole
-from accounts.testing import make_own_company
-from core.tests.openapi_internal import request_fields_missing, response_errors
-from master_data.models import Country, Currency, DeliveryBasis, UnitOfMeasure
+from core.tests.openapi_fixtures import API, conforms, sends
+from core.tests.openapi_internal import request_fields_missing
+from master_data.models import Country, Currency, DeliveryBasis
 
+pytest_plugins = ["core.tests.openapi_fixtures"]  # фикстуры `admin` и `company`
 pytestmark = pytest.mark.django_db
-
-API = "/api/v1/"
-
-
-@pytest.fixture
-def admin():
-    user = CustomUser.objects.create_user(
-        email="admin@d2-0.test", username="admin@d2-0.test", password="pw", is_superuser=True, is_active=True
-    )
-    client = APIClient()
-    client.force_authenticate(user)
-    client.user = user
-    return client
-
-
-@pytest.fixture
-def company(admin):
-    """Своя компания ERP: SUPPLIER + участник (так её находит `core.tenant.own_company`)."""
-    own = make_own_company(Company.objects.create(name="Контрактная компания", inn="300000099"))
-    role = WorkspaceRole.objects.get_or_create(code="OWNER", defaults={"name": "Владелец", "sort_order": 1})[0]
-    CompanyMember.objects.create(user=admin.user, company=own, role=role, is_primary=True, is_active=True)
-    return own
-
-
-def conforms(response, template, method, *, status=None):
-    """Статус и тело ответа совпадают с операцией `template` выгрузки."""
-    if status is not None:
-        assert response.status_code == status, (response.status_code, getattr(response, "data", None))
-    errors = response_errors(response, template, method)
-    assert not errors, f"{method.upper()} {template} → {response.status_code}: " + "; ".join(errors)
-
-
-def sends(template, method, body):
-    """Поля тела, которые шлёт BFF, описаны схемой запроса."""
-    missing = request_fields_missing(template, method, body)
-    assert not missing, f"{method.upper()} {template}: схема запроса не содержит полей {missing}"
-
 
 # --- настройки компании (B-011 а) --------------------------------------------------------------------------------
 
@@ -80,6 +42,15 @@ def test_company_settings_patch_describes_codes_bff_sends(admin, company):
     conforms(response, template, "patch", status=200)
     assert response.json()["default_cost_currency_code"] == "USD"
     conforms(admin.get(f"{API}accounts/companies/{company.id}/settings/"), template, "get", status=200)
+
+
+def test_payment_terms_days_is_read_only_in_settings_patch(admin, company):
+    """BFF шлёт `payment_terms_days`, а PATCH его не принимает: схема честно держит поле только в ответе (Q-D20-1)."""
+    template = f"{API}accounts/companies/{{id}}/settings/"
+    assert request_fields_missing(template, "patch", {"payment_terms_days": 30}) == ["payment_terms_days"]
+    response = admin.patch(f"{API}accounts/companies/{company.id}/settings/", {"payment_terms_days": 30}, format="json")
+    conforms(response, template, "patch", status=200)
+    assert response.json()["payment_terms_days"] is None  # молча проигнорировано сервисом, как и описано
 
 
 def test_company_settings_patch_refusal_is_described(admin, company):
@@ -171,6 +142,27 @@ def test_document_profile_service_whitelist_is_in_request_schema():
         ),
     )
     assert not described, described
+
+
+# Минимальный PNG 1×1 (сигнатура и IHDR/IDAT/IEND): проходит проверку содержимого загрузок (`core/validators.py`).
+PNG_1X1 = bytes.fromhex(
+    "89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c4890000000d49444154789c6364f8ffff3f0005fe02fea7"
+    "35816a0000000049454e44ae426082"
+)
+
+
+def test_logo_uploads_return_the_documented_objects(admin, company, settings, tmp_path):
+    from django.core.files.uploadedfile import SimpleUploadedFile
+
+    settings.MEDIA_ROOT = str(tmp_path)
+    logo = SimpleUploadedFile("logo.png", PNG_1X1, content_type="image/png")
+    template = f"{API}accounts/companies/{{id}}/upload-logo/"
+    response = admin.post(f"{API}accounts/companies/{company.id}/upload-logo/", {"logo": logo}, format="multipart")
+    conforms(response, template, "post", status=200)
+    brand = SimpleUploadedFile("brand.png", PNG_1X1, content_type="image/png")
+    template = f"{API}accounts/companies/{{id}}/document-profile/upload-logo/"
+    url = f"{API}accounts/companies/{company.id}/document-profile/upload-logo/"
+    conforms(admin.post(url, {"logo": brand}, format="multipart"), template, "post", status=200)
 
 
 def test_company_logo_upload_refusals_are_described(admin, company):
