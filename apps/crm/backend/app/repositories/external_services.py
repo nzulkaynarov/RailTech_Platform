@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any
 
-from sqlalchemy import String, bindparam, delete, func, select, text
+from sqlalchemy import ColumnElement, String, bindparam, delete, func, select, text
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -453,21 +453,33 @@ async def resolve_model_probes(
             row.updated_at = now
 
 
-async def ai_reply_stats(session: AsyncSession, since: datetime) -> AiFacts:
-    """Ответы бота клиентам за период: сбои агента и успешные ответы агента."""
+async def ai_reply_stats(
+    session: AsyncSession, window_since: datetime, day_since: datetime
+) -> AiFacts:
+    """Ответы бота клиентам: счётчики за окно и последние сбой и успешный ответ за сутки.
+
+    Запросы идут по частичному индексу `ix_messages_bot_created_at` (`role = 'bot'`).
+    """
     failed = Message.meta["error"].astext == "agent_unavailable"
     answered = Message.meta.has_key("action")
     row = (
         await session.execute(
-            select(
-                func.count().filter(failed),
-                func.count().filter(answered),
-                func.max(Message.created_at).filter(failed),
-                func.max(Message.created_at).filter(answered),
-            ).where(Message.role == "bot", Message.created_at >= since)
+            select(func.count().filter(failed), func.count().filter(answered)).where(
+                Message.role == "bot", Message.created_at >= window_since
+            )
         )
     ).one()
-    return AiFacts(int(row[0]), int(row[1]), row[2], row[3])
+
+    async def last(condition: ColumnElement[bool]) -> datetime | None:
+        stmt = (
+            select(Message.created_at)
+            .where(Message.role == "bot", Message.created_at >= day_since, condition)
+            .order_by(Message.created_at.desc())
+            .limit(1)
+        )
+        return await session.scalar(stmt)
+
+    return AiFacts(int(row[0]), int(row[1]), await last(failed), await last(answered))
 
 
 @dataclass(frozen=True, slots=True)
