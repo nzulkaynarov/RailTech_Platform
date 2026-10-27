@@ -211,8 +211,9 @@
  * `PATCH|DELETE …/lines/{line_id}`, `POST …/lines/{line_id}/visa` (виза строки по зоне: товар — `erp.calc.goods`, услуга —
  * `erp.calc.services`), `POST …/ready` («Расчёт готов → черновик КП директору», только со всеми визами, проверка в ERP),
  * `POST …/parse` и `GET /erp/calc-jobs/{job_id}` (ИИ-разбор текста заявки — предложение без записи), `GET /erp/calc/catalog`
- * (сопоставление с каталогом). Себестоимость, закупка и наценка — только группе `cost_margin` (итоги — и `totals_only`),
- * цены предложений поставщиков — `supplier_prices`; BFF вырезает поля из ответа.
+ * (сопоставление с каталогом). Себестоимость строки — `cost_margin` или держателю зоны строки, наценка и итоги
+ * себестоимости — только `cost_margin`, цены поставщиков — `supplier_prices` или держателю зоны товаров; ERP и BFF
+ * вырезают поля. Бухгалтер (`totals_only`) — цены клиенту, итоги и НДС (каталог: без `supplier_prices`).
  *
  * 0.2.4: `423 ACCOUNT_LOCKED` объявлен и на `POST /auth/change-password` (CRM блокирует учётную запись после неверных
  * текущих паролей).
@@ -269,15 +270,15 @@ export interface CalcLine {
    * @nullable
    */
   lead_days: number | null;
-  /** Закупка товара за единицу в валюте строки — только группе `cost_margin` */
+  /** Закупка товара за единицу в валюте строки — `cost_margin` или держателю `erp.calc.goods` */
   purchase_price?: DecimalString | null;
-  /** Валюта закупки — только группе `cost_margin` */
+  /** Валюта закупки — `cost_margin` или держателю зоны строки */
   purchase_currency?: string;
-  /** Услуга — ставка бригады, сум/день (вводит гл. инженер) */
+  /** Услуга — ставка бригады, сум/день (вводит гл. инженер); `cost_margin` или держателю `erp.calc.services`, иначе null */
   crew_rate: DecimalString | null;
-  /** Услуга — дней работы бригады */
+  /** Услуга — дней работы бригады; `cost_margin` или держателю `erp.calc.services`, иначе null */
   crew_days: DecimalString | null;
-  /** Себестоимость за единицу, сум (закупка с пошлиной по курсу) — только группе `cost_margin` */
+  /** Себестоимость за единицу, сум (закупка с пошлиной по курсу) — `cost_margin` или держателю зоны строки */
   cost?: DecimalString | null;
   /** Клиенту за единицу, сум, без НДС */
   client_price: DecimalString;

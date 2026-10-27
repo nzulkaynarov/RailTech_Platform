@@ -3260,6 +3260,31 @@ paths:
           description: Нет права (зона строки, роль) или не сотрудник
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
+  /api/v1/calc/deals/:
+    get:
+      operationId: calc_deal_refs
+      description: GET /api/v1/calc/deals/ — лёгкий справочник заявок с заданием расчёта (id, создана, стадия) для поиска
+        по номеру.
+      summary: 'Заявки с заданием расчёта: id, дата создания, стадия'
+      tags:
+      - Calc
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcDealRefList'
+          description: ''
+        '403':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CalcError'
+          description: Нет права (зона строки, роль) или не сотрудник
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
   /api/v1/calc/tasks/:
     get:
       operationId: calc_tasks_list
@@ -15138,6 +15163,29 @@ components:
       - manager_name
       - stage_code
       - title
+    CalcDealRef:
+      type: object
+      properties:
+        id:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        stage_code:
+          type: string
+      required:
+      - created_at
+      - id
+      - stage_code
+    CalcDealRefList:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/CalcDealRef'
+      required:
+      - results
     CalcError:
       type: object
       properties:
@@ -15146,6 +15194,8 @@ components:
         missing:
           type: integer
         zone:
+          type: string
+        stage:
           type: string
       required:
       - detail
@@ -15610,6 +15660,7 @@ components:
           type: string
           format: decimal
           pattern: ^-?\d{0,14}(?:\.\d{0,2})?$
+          nullable: true
         client:
           type: string
           format: decimal

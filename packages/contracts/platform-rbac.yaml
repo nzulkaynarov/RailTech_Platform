@@ -104,7 +104,9 @@ templates:
       erp.stock: read
       chats.internal: full
       chats.external: full
-    restricted_fields: [totals_only, supplier_prices]
+    # Решение архитектора 2026-10-28 (Q-D2-1-4): бухгалтер видит цены клиенту, итоги и НДС — без цен поставщиков,
+    # себестоимости и маржи.
+    restricted_fields: [totals_only]
 
 # Базовая роль CRM (admin|manager|viewer) для старого фронта до T4: максимум по ролям сотрудника.
 # Роль с кодом из `by_code` (системные и шаблоны) — как в версии 1; роль без кода — по `by_access`; иначе viewer.

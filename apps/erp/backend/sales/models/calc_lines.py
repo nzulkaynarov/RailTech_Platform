@@ -60,6 +60,12 @@ class CalcLine(models.Model):
     )
     visa_by_name = models.CharField(max_length=255, blank=True, default="", verbose_name=_("Визировал (имя)"))
     visa_zone = models.CharField(max_length=16, blank=True, default="", verbose_name=_("Зона визы"))
+    visa_item_version = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        verbose_name=_("Версия строки при визе"),
+        help_text=_("QuoteItem.version на момент визы: другая версия — строка менялась, виза не действует"),
+    )
     visa_at = models.DateTimeField(null=True, blank=True, verbose_name=_("Время визы"))
     updated_at = models.DateTimeField(auto_now=True)
 

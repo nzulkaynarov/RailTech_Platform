@@ -319,8 +319,11 @@ def test_strip_removes_fields_nobody_of_the_roles_sees() -> None:
 
 
 def test_strip_keeps_fields_visible_to_any_role() -> None:
+    # Бухгалтер (Q-D2-1-4) — без цен поставщиков и себестоимости; цены поставщиков видит снабженец.
     accountant = rbac.strip_restricted(PAYLOAD, rbac.fields_of(roles("ACCOUNTANT")), RULES)
-    assert accountant["lines"][0] == {"name": "Рельс", "supplier_price": 650}
+    assert accountant["lines"][0] == {"name": "Рельс"}
+    supply = rbac.strip_restricted(PAYLOAD, rbac.fields_of(roles("SUPPLY")), RULES)
+    assert supply["lines"][0]["supplier_price"] == 650
     assert rbac.strip_restricted(PAYLOAD, rbac.fields_of(roles("DIRECTOR")), RULES) == PAYLOAD
     both = rbac.strip_restricted(PAYLOAD, rbac.fields_of(roles("MANAGER", "SUPPLY")), RULES)
     assert both == PAYLOAD

@@ -15,6 +15,7 @@ from core.permissions import RoleGatedViewMixin
 
 from ..serializers.calc import (
     CalcCatalogSerializer,
+    CalcDealRefListSerializer,
     CalcErrorSerializer,
     CalcJobSerializer,
     CalcLinePatchSerializer,
@@ -71,6 +72,24 @@ class CalcTaskListView(APIView):
         except CalcError as exc:
             return _fail(exc)
         return Response({"results": rows})
+
+
+class CalcDealRefsView(APIView):
+    """GET /api/v1/calc/deals/ — лёгкий справочник заявок с заданием расчёта (id, создана, стадия) для поиска по номеру."""
+
+    permission_classes = [IsAuthenticated]
+
+    @extend_schema(
+        operation_id="calc_deal_refs",
+        summary="Заявки с заданием расчёта: id, дата создания, стадия",
+        tags=TAGS,
+        responses={200: CalcDealRefListSerializer, 403: ERRORS[403]},
+    )
+    def get(self, request):
+        try:
+            return Response({"results": calc.deal_refs(request.user)})
+        except CalcError as exc:
+            return _fail(exc)
 
 
 class CalcSheetView(APIView):

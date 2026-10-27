@@ -167,18 +167,19 @@ function Supplier({ line }: { line: CalcLine }) {
   );
 }
 
-function Purchase({
-  line,
-  sheet,
-  actions,
-}: {
-  line: CalcLine;
-  sheet: CalcSheet;
-  actions: Actions;
-}) {
+function Purchase({ line, actions }: { line: CalcLine; actions: Actions }) {
   const { t } = useTranslation("calc");
   const { money } = useFormat();
   if (line.zone === "services") {
+    // Ставку и дни бригады видит `cost_margin` или держатель зоны услуг; остальным — прочерк, а не пустые поля.
+    if (
+      !line.can_edit &&
+      line.crew_rate === null &&
+      line.crew_days === null &&
+      line.cost === undefined
+    ) {
+      return <span className="pf-hint">{t("lines.hidden")}</span>;
+    }
     return (
       <div className="pf-calc-crew">
         <label className="pf-calc-crew-field">
@@ -210,7 +211,7 @@ function Purchase({
       </div>
     );
   }
-  if (!sheet.rights.cost || line.purchase_price === undefined) {
+  if (line.purchase_price === undefined || line.purchase_price === null) {
     return <span className="pf-hint">{t("lines.hidden")}</span>;
   }
   return (
@@ -407,7 +408,7 @@ export function LinesTable({ sheet }: { sheet: CalcSheet }) {
                 <span className="pf-hint">{t("lines.columns.supplier")}</span>
                 <Supplier line={line} />
                 <span className="pf-hint">{t("lines.columns.purchase")}</span>
-                <Purchase line={line} sheet={sheet} actions={actions} />
+                <Purchase line={line} actions={actions} />
                 <span className="pf-hint">{t("lines.columns.client")}</span>
                 <ClientPrice line={line} actions={actions} />
                 {showMarkup ? (
@@ -470,7 +471,7 @@ export function LinesTable({ sheet }: { sheet: CalcSheet }) {
                   <Supplier line={line} />
                 </td>
                 <td>
-                  <Purchase line={line} sheet={sheet} actions={actions} />
+                  <Purchase line={line} actions={actions} />
                 </td>
                 <td>
                   <ClientPrice line={line} actions={actions} />

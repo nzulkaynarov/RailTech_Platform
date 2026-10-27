@@ -2881,6 +2881,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/calc/deals/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Заявки с заданием расчёта: id, дата создания, стадия
+         * @description GET /api/v1/calc/deals/ — лёгкий справочник заявок с заданием расчёта (id, создана, стадия) для поиска по номеру.
+         */
+        get: operations["calc_deal_refs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/calc/tasks/": {
         parameters: {
             query?: never;
@@ -7912,10 +7932,20 @@ export interface components {
             client_name: string | null;
             manager_name: string | null;
         };
+        CalcDealRef: {
+            id: number;
+            /** Format: date-time */
+            created_at: string;
+            stage_code: string;
+        };
+        CalcDealRefList: {
+            results: components["schemas"]["CalcDealRef"][];
+        };
         CalcError: {
             detail: string;
             missing?: number;
             zone?: string;
+            stage?: string;
         };
         /**
          * @description * `goods` - goods
@@ -8092,7 +8122,7 @@ export interface components {
         };
         CalcTotals: {
             /** Format: decimal */
-            purchase: string;
+            purchase: string | null;
             /** Format: decimal */
             client: string;
             /** Format: decimal */
@@ -19156,6 +19186,35 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CalcCatalog"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права (зона строки, роль) или не сотрудник */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+        };
+    };
+    calc_deal_refs: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcDealRefList"];
                 };
             };
             401: components["responses"]["UnauthorizedResponse"];

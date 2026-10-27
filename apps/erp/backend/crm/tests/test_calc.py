@@ -242,7 +242,9 @@ def test_engineer_fills_crew_and_supply_fills_purchase_and_client_price(world):
     assert response.status_code == 200, response.json()
     service = next(line for line in response.json()["lines"] if line["id"] == service_id)
     assert service["crew_rate"] == "1500000.00" and service["crew_days"] == "3.0"
-    assert service["cost"] is None and service["markup_pct"] is None, "у гл. инженера нет права на себестоимость"
+    # Q-D2-1-2: себестоимость строк своей зоны гл. инженер видит, наценку и итоги — нет (нет cost_margin).
+    assert service["cost"] == "4500000.00" and service["markup_pct"] is None
+    assert response.json()["totals"]["purchase"] is None and response.json()["totals"]["markup_pct"] is None
     item = QuoteItem.objects.get(pk=service_id)
     assert item.frozen_base_price == Decimal("4500000.00") and item.landed_cost == Decimal("4500000.00")
     assert (
@@ -445,3 +447,129 @@ def test_every_calc_operation_conforms_to_the_v1_schema(world, settings):
     conforms(supply.post(_url(world, "ready/")), f"{base}{deal}ready/", "post", status=200)
     conforms(supply.delete(_url(world, f"lines/{goods_id}/")), line, "delete", status=409)
     conforms(supply.post(_url(world, "ready/")), f"{base}{deal}ready/", "post", status=409)
+
+
+# ── доработки по ревью: ERP сам режет себестоимость, зона после правки, виза по версии, стадия ──────────────────
+
+
+COST_KEYS = ("purchase_price", "cost", "markup_pct", "crew_rate", "crew_days")
+
+
+def _priced_and_signed_goods(world):
+    goods_id, service_id = _priced(world)
+    return goods_id, service_id
+
+
+def test_accountant_gets_no_cost_from_erp_directly(world):
+    """Прямой вызов ERP /api/v1/calc/* бухгалтером: ни закупки, ни ставок бригады, ни цен поставщика, ни итогов
+    себестоимости и наценки (решение по Q-D2-1-4) — режет сам ERP, не только BFF."""
+    _priced(world)
+    body = _sheet(world, world["accountant"])
+    for line in body["lines"]:
+        assert all(line[key] is None for key in COST_KEYS), line
+        if line["supplier"]:
+            assert line["supplier"]["offer_price"] is None and line["supplier"]["offer_currency"] is None
+    assert body["totals"]["purchase"] is None and body["totals"]["markup_pct"] is None
+    assert body["totals"]["client"] == "208800000.00"
+    assert body["rights"] == {"goods": False, "services": False, "build": False, "cost": False}
+
+
+def test_role_without_zone_gets_no_cost_even_in_write_responses(world):
+    """Роль со строительством КП, но без зон и без себестоимости: чтение и ответ на «Начать расчёт» без себестоимости."""
+    builder = _staff(world["seller"], "builder@demo.test", ["quote.build", "quote.edit_pricing", "deal.manage"])
+    _priced(world)
+    response = _api(builder).post(_url(world, "start/"))  # запись (повтор — без изменений) отдаёт расчёт
+    assert response.status_code == 200
+    for body in (response.json(), _sheet(world, builder)):
+        for line in body["lines"]:
+            assert all(line[key] is None for key in COST_KEYS), line
+            if line["supplier"]:
+                assert line["supplier"]["offer_price"] is None
+        assert body["totals"]["purchase"] is None and body["totals"]["markup_pct"] is None
+    assert (
+        _api(builder)
+        .patch(_url(world, f"lines/{response.json()['lines'][0]['id']}/"), {"quantity": 3}, format="json")
+        .status_code
+        == 403
+    )
+
+
+def test_zone_holders_see_cost_of_their_zone_only(world):
+    _priced(world)
+    engineer = _sheet(world, world["engineer"])
+    goods, service = engineer["lines"]
+    assert service["crew_rate"] == "1500000.00" and service["cost"] == "4500000.00"
+    assert goods["purchase_price"] is None and goods["cost"] is None and goods["supplier"]["offer_price"] is None
+    assert engineer["totals"]["purchase"] is None
+    supply = _sheet(world, world["supply"])
+    assert supply["lines"][0]["supplier"]["offer_price"] == "90000000.00"
+    assert supply["totals"]["purchase"] == "189000000.00" and supply["totals"]["markup_pct"] is not None
+
+
+def test_unbinding_a_service_card_keeps_the_service_zone(world):
+    """Обход зоны через `product_id: null`: строка с карточкой услуги без карточки остаётся услугой."""
+    _goods_id, service_id = _started(world)
+    assert (
+        _api(world["supply"])
+        .patch(_url(world, f"lines/{service_id}/"), {"product_id": None}, format="json")
+        .status_code
+        == 403
+    )
+    response = _api(world["engineer"]).patch(_url(world, f"lines/{service_id}/"), {"product_id": None}, format="json")
+    assert response.status_code == 200
+    line = next(line for line in response.json()["lines"] if line["id"] == service_id)
+    assert line["zone"] == "services" and line["product_id"] is None
+    # Привязать к строке-услуге карточку товара гл. инженер не может: зона после правки — товары.
+    rebind = _api(world["engineer"]).patch(
+        _url(world, f"lines/{service_id}/"), {"product_id": world["rail"].pk}, format="json"
+    )
+    assert rebind.status_code == 403
+
+
+def test_visa_does_not_survive_an_edit_through_the_old_quote_item_path(world):
+    goods_id, _ = _priced(world)
+    assert _api(world["supply"]).post(_url(world, f"lines/{goods_id}/visa/")).status_code == 200
+    item = QuoteItem.objects.get(pk=goods_id)
+    item.version += 1  # так правит позицию старый `crm/quote-items` (PATCH и bulk-update поднимают версию)
+    item.quantity = 5
+    item.save()
+    line = next(line for line in _sheet(world, world["supply"])["lines"] if line["id"] == goods_id)
+    assert line["visa"] is None
+    assert CalcLine.objects.get(item_id=goods_id).visa_at is not None, "факт визы в журнале строки остаётся"
+
+
+def test_ready_refuses_a_closed_deal(world):
+    goods_id, service_id = _priced(world)
+    _api(world["supply"]).post(_url(world, f"lines/{goods_id}/visa/"))
+    _api(world["engineer"]).post(_url(world, f"lines/{service_id}/visa/"))
+    Deal.objects.filter(pk=world["deal"].pk).update(stage=DealStage.objects.get(code="CLOSED_LOST"))
+    response = _api(world["supply"]).post(_url(world, "ready/"))
+    assert response.status_code == 409
+    assert response.json() == {"detail": "DEAL_NOT_IN_CALCULATION", "stage": "CLOSED_LOST"}
+    assert bus_support.published("quote.ready_for_approval") == []
+
+
+def test_deal_refs_are_light_and_newest_first(world):
+    from core.tests.openapi_fixtures import conforms
+
+    other = Deal.objects.create(
+        title="Вторая", company=world["deal"].company, stage=DealStage.objects.get(code="RFQ_OPEN")
+    )
+    calc_tasks.apply_resolution(
+        other,
+        eds_letter_id=uuid.UUID("0b1f5c0e-9a51-4c43-8a0e-3c1f0a2d5e02"),
+        letter_number="ВХ-105/26",
+        letter_subject="",
+        text="Посчитать",
+        due=date(2026, 11, 2),
+        min_margin_pct=None,
+        decided_by_crm_user_id=3,
+        decided_by_name="Демо Директоров",
+        decided_at=datetime(2026, 10, 27, 7, 0, tzinfo=timezone.utc),
+        assignees=[calc_tasks.Assignment(11, "goods")],
+    )
+    response = _api(world["accountant"]).get("/api/v1/calc/deals/")
+    conforms(response, "/api/v1/calc/deals/", "get", status=200)
+    rows = response.json()["results"]
+    assert [row["id"] for row in rows] == [other.pk, world["deal"].pk]
+    assert set(rows[0]) == {"id", "created_at", "stage_code"} and rows[0]["stage_code"] == "CALCULATING"

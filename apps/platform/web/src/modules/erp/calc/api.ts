@@ -85,3 +85,16 @@ export function useStateLabels(): QueryStateLabels {
 export function isOverdue(due: string, today: string): boolean {
   return due < today;
 }
+
+/** Почему «Расчёт готов» неактивна: «не черновик» уточняется состоянием КП (у директора, одобрено, отклонено). */
+export function readyHintKey(sheet: Pick<CalcSheet, "ready" | "quote">): string {
+  const blocker = sheet.ready.blocker;
+  const state = sheet.quote?.state;
+  if (
+    blocker === "not_draft" &&
+    (state === "at_director" || state === "approved" || state === "rejected")
+  ) {
+    return state;
+  }
+  return blocker ?? "not_draft";
+}

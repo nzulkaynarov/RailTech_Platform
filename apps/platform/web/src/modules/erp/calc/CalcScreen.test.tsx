@@ -2,6 +2,7 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { panelEl, renderAt, setupCalcTests, signIn } from "../../../test/calcKit";
+import { readyHintKey } from "./api";
 
 setupCalcTests();
 
@@ -129,14 +130,29 @@ describe("Расчёт по заявке", () => {
     ).toBeVisible();
   });
 
-  it("бухгалтер — только чтение: без кнопок визы, итог закупки виден («только итоги»)", async () => {
+  it("бухгалтер — только чтение: цены клиенту и итог, без себестоимости, ставок бригады и цен поставщика", async () => {
     await openCalc("accountant@demo.example");
     expect(screen.getByText(/Только чтение: строки правит и визирует снабженец/)).toBeVisible();
     expect(screen.queryByRole("button", { name: /Подтвердить строку/ })).toBeNull();
     expect(screen.queryByRole("button", { name: READY })).toBeNull();
     const totals = screen.getByText("Итого").closest("tr");
     if (!totals) throw new Error("нет итогов");
-    expect(within(totals).getByText("239 000 000")).toBeVisible();
+    expect(within(totals).getByText("275 300 000")).toBeVisible();
+    expect(screen.queryByText("239 000 000")).toBeNull();
+    expect(screen.queryByText(/1 500 000/)).toBeNull();
+    expect(screen.queryByText(/Цена поставщика/)).toBeNull();
+    expect(screen.queryByLabelText(/Ставка бригады/)).toBeNull();
+  });
+
+  it("подсказка «Расчёт готов» для закрытого расчёта называет состояние КП", () => {
+    const quote = { number: "КП-1", version: 1, director_comment: null, vat_rate: "12.00" };
+    const ready = { allowed: false, blocker: "not_draft", missing: 0 } as const;
+    expect(readyHintKey({ ready, quote: { ...quote, state: "approved" } })).toBe("approved");
+    expect(readyHintKey({ ready, quote: { ...quote, state: "rejected" } })).toBe("rejected");
+    expect(readyHintKey({ ready, quote: { ...quote, state: "at_director" } })).toBe("at_director");
+    expect(readyHintKey({ ready: { ...ready, blocker: "visas_missing" }, quote: null })).toBe(
+      "visas_missing",
+    );
   });
 
   it("снабженец визирует товары, гл. инженер — услугу; после второй визы «Расчёт готов» отправляет КП директору", async () => {

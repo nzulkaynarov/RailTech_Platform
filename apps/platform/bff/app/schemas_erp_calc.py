@@ -9,7 +9,7 @@ ERP-09 номер составляет BFF, `app.feeds.numbers`), вырезан
 """
 
 import datetime as dt
-from collections.abc import Collection
+from collections.abc import Collection, Mapping
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -293,7 +293,11 @@ def to_row(raw: dict[str, Any]) -> CalcRequestRow:
     )
 
 
-def _line(raw: dict[str, Any], *, cost: bool, supplier_prices: bool) -> CalcLine:
+def _line(raw: dict[str, Any], *, cost: bool, zones: Collection[str], offers: bool) -> CalcLine:
+    """Строка: себестоимость (закупка, ставка и дни бригады) — `cost_margin` или держателю зоны
+    строки; наценка — только `cost_margin`; цены поставщика — `supplier_prices` или держателю зоны
+    товаров (решения архитектора по Q-D2-1-2 и Q-D2-1-4)."""
+    zone_cost = cost or raw["zone"] in zones
     supplier = raw.get("supplier")
     supplier_model = None
     if isinstance(supplier, dict):
@@ -303,7 +307,7 @@ def _line(raw: dict[str, Any], *, cost: bool, supplier_prices: bool) -> CalcLine
             min_order_qty=supplier["min_order_qty"],
             price_valid_until=supplier.get("price_valid_until"),
         )
-        if supplier_prices:
+        if offers and supplier.get("offer_price") is not None:
             supplier_model.offer_price = supplier.get("offer_price")
             supplier_model.offer_currency = supplier.get("offer_currency")
     visa = raw.get("visa")
@@ -321,25 +325,36 @@ def _line(raw: dict[str, Any], *, cost: bool, supplier_prices: bool) -> CalcLine
         stock=CalcStock(**raw["stock"]),
         supplier=supplier_model,
         lead_days=raw.get("lead_days"),
-        crew_rate=raw.get("crew_rate"),
-        crew_days=raw.get("crew_days"),
+        crew_rate=raw.get("crew_rate") if zone_cost else None,
+        crew_days=raw.get("crew_days") if zone_cost else None,
         client_price=raw["client_price"],
         visa=CalcLineVisa(**visa) if isinstance(visa, dict) else None,
         can_edit=bool(raw.get("can_edit")),
     )
-    if cost:
+    if zone_cost:
         line.purchase_price = raw.get("purchase_price")
         line.purchase_currency = raw.get("purchase_currency")
         line.cost = raw.get("cost")
+    if cost:
         line.markup_pct = raw.get("markup_pct")
     return line
 
 
-def to_sheet(raw: dict[str, Any], fields: Collection[str]) -> CalcSheet:
-    """Расчёт ERP -> ответ Платформы; поля с ограничением — только группам, которые их видят."""
+ZONE_SECTIONS = {"goods": "erp.calc.goods", "services": "erp.calc.services"}
+
+
+def zones_of(access: Mapping[str, str]) -> set[str]:
+    """Зоны строк, которые сотрудник визирует (разделы каталога с уровнем «полный»)."""
+    return {zone for zone, section in ZONE_SECTIONS.items() if access.get(section) == "full"}
+
+
+def to_sheet(raw: dict[str, Any], fields: Collection[str], access: Mapping[str, str]) -> CalcSheet:
+    """Расчёт ERP -> ответ Платформы; поля с ограничением — только тем, кто их видит. Итоги
+    себестоимости и наценки — только `cost_margin`; «только итоги» (`totals_only`, бухгалтер) — цены
+    клиенту, итоги и НДС."""
     cost = "cost_margin" in fields
-    totals_visible = cost or "totals_only" in fields
-    supplier_prices = "supplier_prices" in fields
+    zones = zones_of(access)
+    offers = "supplier_prices" in fields or "goods" in zones
     deal = raw["deal"]
     number = deal_number(deal)
     task = raw["task"]
@@ -357,7 +372,7 @@ def to_sheet(raw: dict[str, Any], fields: Collection[str]) -> CalcSheet:
     quote = raw.get("quote")
     totals = raw["totals"]
     totals_model = CalcTotals(client=totals["client"], vat_included=False)
-    if totals_visible:
+    if cost and totals.get("purchase") is not None:
         totals_model.purchase = totals.get("purchase")
         totals_model.markup_pct = totals.get("markup_pct")
     return CalcSheet(
@@ -377,7 +392,7 @@ def to_sheet(raw: dict[str, Any], fields: Collection[str]) -> CalcSheet:
             director_comment=quote.get("director_comment"),
             vat_rate=quote["vat_rate"],
         ),
-        lines=[_line(item, cost=cost, supplier_prices=supplier_prices) for item in raw["lines"]],
+        lines=[_line(item, cost=cost, zones=zones, offers=offers) for item in raw["lines"]],
         totals=totals_model,
         visas=CalcVisaGroups(**raw["visas"]),
         ready=CalcReady(**raw["ready"]),

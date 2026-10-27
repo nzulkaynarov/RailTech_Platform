@@ -478,10 +478,7 @@ ROLE_RESTRICTED_FIELDS: Final[dict[str, tuple[str, ...]]] = {
         "supplier_prices",
     ),
     "ENGINEER": (),
-    "ACCOUNTANT": (
-        "totals_only",
-        "supplier_prices",
-    ),
+    "ACCOUNTANT": ("totals_only",),
 }
 
 # Базовая роль CRM для старого фронта: роль с кодом (порядок — прежние шесть ролей).

@@ -211,8 +211,9 @@
  * `PATCH|DELETE …/lines/{line_id}`, `POST …/lines/{line_id}/visa` (виза строки по зоне: товар — `erp.calc.goods`, услуга —
  * `erp.calc.services`), `POST …/ready` («Расчёт готов → черновик КП директору», только со всеми визами, проверка в ERP),
  * `POST …/parse` и `GET /erp/calc-jobs/{job_id}` (ИИ-разбор текста заявки — предложение без записи), `GET /erp/calc/catalog`
- * (сопоставление с каталогом). Себестоимость, закупка и наценка — только группе `cost_margin` (итоги — и `totals_only`),
- * цены предложений поставщиков — `supplier_prices`; BFF вырезает поля из ответа.
+ * (сопоставление с каталогом). Себестоимость строки — `cost_margin` или держателю зоны строки, наценка и итоги
+ * себестоимости — только `cost_margin`, цены поставщиков — `supplier_prices` или держателю зоны товаров; ERP и BFF
+ * вырезают поля. Бухгалтер (`totals_only`) — цены клиенту, итоги и НДС (каталог: без `supplier_prices`).
  *
  * 0.2.4: `423 ACCOUNT_LOCKED` объявлен и на `POST /auth/change-password` (CRM блокирует учётную запись после неверных
  * текущих паролей).
@@ -241,9 +242,9 @@ import type { DecimalString } from "./decimalString";
  */
 export interface CalcTotals {
   client: DecimalString;
-  /** Закупка итого — группам `cost_margin` и `totals_only` */
+  /** Закупка итого — только группе `cost_margin` */
   purchase?: DecimalString;
-  /** Наценка итого — группам `cost_margin` и `totals_only` */
+  /** Наценка итого — только группе `cost_margin` */
   markup_pct?: DecimalString | null;
   vat_included: false;
 }

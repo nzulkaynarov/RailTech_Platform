@@ -107,6 +107,7 @@ from crm.views import (
 )
 from crm.views.calc import (
     CalcCatalogView,
+    CalcDealRefsView,
     CalcLinesView,
     CalcLineView,
     CalcLineVisaView,
@@ -271,6 +272,7 @@ urlpatterns = (
         # D2-1 — «Расчёт по заявке» Платформы (crm.views.calc).
         path("api/v1/calc/tasks/", CalcTaskListView.as_view(), name="calc-tasks"),
         path("api/v1/calc/catalog/", CalcCatalogView.as_view(), name="calc-catalog"),
+        path("api/v1/calc/deals/", CalcDealRefsView.as_view(), name="calc-deals"),
         path("api/v1/calc/<int:deal_id>/", CalcSheetView.as_view(), name="calc-sheet"),
         path("api/v1/calc/<int:deal_id>/start/", CalcStartView.as_view(), name="calc-start"),
         path("api/v1/calc/<int:deal_id>/lines/", CalcLinesView.as_view(), name="calc-lines"),

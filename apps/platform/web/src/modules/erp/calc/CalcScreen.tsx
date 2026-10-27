@@ -21,7 +21,7 @@ import { PageHeader } from "../../../shared/ui/PageHeader";
 import { RequestSteps } from "../../../shared/ui/RequestSteps";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { AddLineModal } from "./AddLineModal";
-import { calcRef, useApplySheet, useErrorText, useStateLabels } from "./api";
+import { calcRef, readyHintKey, useApplySheet, useErrorText, useStateLabels } from "./api";
 import { LinesTable } from "./LinesTable";
 import { ParseModal } from "./ParseModal";
 import { TaskSlot } from "./TaskPanel";
@@ -153,7 +153,7 @@ function Ready({ sheet }: { sheet: CalcSheet }) {
     <div className="pf-calc-ready">
       {blocker ? (
         <p id={hintId} className="pf-calc-ready-hint">
-          {t(`ready.hint.${blocker}`, { count: sheet.ready.missing })}
+          {t(`ready.hint.${readyHintKey(sheet)}`, { count: sheet.ready.missing })}
           {blocker === "visas_missing" && waiting.length
             ? ` ${t("ready.missingGroups", { groups: waiting.join(", ") })}`
             : ""}

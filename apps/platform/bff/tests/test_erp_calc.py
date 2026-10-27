@@ -153,11 +153,21 @@ def sheet(**extra: Any) -> dict[str, Any]:
 
 @pytest.fixture
 def erp(be: Backends) -> respx.MockRouter:
-    """ERP: заявка с заданием расчёта — среди открытых (`scope=open`)."""
+    """ERP: заявка с заданием расчёта в списке и в лёгком справочнике для поиска по номеру."""
     be.router.get(f"{CALC}/tasks/").mock(
         return_value=httpx.Response(200, json={"results": [task_row()]})
     )
+    be.router.get(f"{CALC}/deals/").mock(return_value=httpx.Response(200, json=refs(deal())))
     return be.router
+
+
+def refs(*deals: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "results": [
+            {"id": d["id"], "created_at": d["created_at"], "stage_code": d["stage_code"]}
+            for d in deals
+        ]
+    }
 
 
 def erp_data_calls(router: respx.MockRouter) -> list[Any]:
@@ -250,9 +260,11 @@ async def test_sheet_for_supply_has_cost_and_supplier_prices(
     }
 
 
-async def test_engineer_without_cost_margin_gets_no_cost_and_no_supplier_prices(
+async def test_engineer_sees_cost_of_services_only(
     web: Web, erp: respx.MockRouter, check: ContractChecker
 ) -> None:
+    """Q-D2-1-2: держатель зоны услуг видит себестоимость своих строк (ставка, дни), но не товаров,
+    не цены поставщиков, не наценку и не итоги себестоимости."""
     await web.login(["ENGINEER"])
     erp.get(f"{CALC}/104/").mock(return_value=httpx.Response(200, json=sheet()))
 
@@ -260,29 +272,24 @@ async def test_engineer_without_cost_margin_gets_no_cost_and_no_supplier_prices(
 
     check(response, "/erp/calc/{number}", "get")
     body = response.json()
-    assert body["rights"]["cost"] is False, (
-        "право ERP на себестоимость без группы каталога не показывается"
-    )
-    text = json.dumps({k: v for k, v in body.items() if k != "rights"}, ensure_ascii=False)
-    for key in (
-        "purchase_price",
-        "purchase_currency",
-        '"cost"',
-        "markup_pct",
-        "offer_price",
-        "min_margin_pct",
-    ):
-        assert key not in text, key
-    assert "90000000" not in text, "закупка не утекает ни в одном поле"
-    service = body["lines"][1]
+    assert body["rights"]["cost"] is False
+    goods, service = body["lines"]
     assert service["crew_rate"] == "1500000.00"
     assert service["crew_days"] == "3.0"
+    assert service["cost"] == "4500000.00"
+    assert "markup_pct" not in service
+    text = json.dumps(goods, ensure_ascii=False)
+    for key in ("purchase_price", '"cost"', "markup_pct", "offer_price"):
+        assert key not in text, key
+    assert "90000000" not in json.dumps(body, ensure_ascii=False)
+    assert "min_margin_pct" not in body["task"]
     assert body["totals"] == {"client": "208800000.00", "vat_included": False}
 
 
-async def test_accountant_sees_totals_only_and_supplier_prices(
+async def test_accountant_sees_client_prices_and_totals_only(
     web: Web, erp: respx.MockRouter, check: ContractChecker
 ) -> None:
+    """Q-D2-1-4: бухгалтер — цены клиенту, итоги и НДС; без цен поставщика, себестоимости, маржи."""
     await web.login(["ACCOUNTANT"])
     erp.get(f"{CALC}/104/").mock(return_value=httpx.Response(200, json=sheet()))
 
@@ -290,23 +297,26 @@ async def test_accountant_sees_totals_only_and_supplier_prices(
 
     check(response, "/erp/calc/{number}", "get")
     body = response.json()
-    assert body["totals"]["purchase"] == "189000000.00"
-    assert body["totals"]["markup_pct"] == "10.5"
-    assert "cost" not in body["lines"][0]
-    assert "markup_pct" not in body["lines"][0]
-    assert body["lines"][0]["supplier"]["offer_price"] == "90000000.00"
+    assert body["totals"] == {"client": "208800000.00", "vat_included": False}
+    assert body["quote"]["vat_rate"] == "12.00"
+    for line in body["lines"]:
+        assert line["crew_rate"] is None
+        assert line["crew_days"] is None
+        for key in ("purchase_price", "cost", "markup_pct"):
+            assert key not in line, key
+    assert "offer_price" not in body["lines"][0]["supplier"]
+    assert "1500000" not in json.dumps(body, ensure_ascii=False)
 
 
-async def test_number_is_found_among_all_tasks_when_not_open(
+async def test_number_is_found_in_the_light_reference_of_erp(
     web: Web, be: Backends, check: ContractChecker
 ) -> None:
+    """Заявка по номеру — лёгкий справочник ERP (без строк и виз), и ушедшая дальше расчёта."""
     await web.login(["SUPPLY"])
-    be.router.get(f"{CALC}/tasks/", params={"scope": "open"}).mock(
-        return_value=httpx.Response(200, json={"results": []})
-    )
     done = deal(stage_code="QUOTE_SENT")
-    be.router.get(f"{CALC}/tasks/", params={"scope": "all"}).mock(
-        return_value=httpx.Response(200, json={"results": [task_row(deal=done, state="approved")]})
+    other = deal(id=7, created_at="2026-01-05T09:00:00+05:00")
+    route = be.router.get(f"{CALC}/deals/").mock(
+        return_value=httpx.Response(200, json=refs(other, done))
     )
     be.router.get(f"{CALC}/104/").mock(return_value=httpx.Response(200, json=sheet(deal=done)))
 
@@ -314,11 +324,12 @@ async def test_number_is_found_among_all_tasks_when_not_open(
 
     assert response.status_code == 200
     assert response.json()["step"] == "QUOTE"
+    assert route.call_count == 1
 
 
 async def test_unknown_number_is_404(web: Web, be: Backends, check: ContractChecker) -> None:
     await web.login(["SUPPLY"])
-    be.router.get(f"{CALC}/tasks/").mock(return_value=httpx.Response(200, json={"results": []}))
+    be.router.get(f"{CALC}/deals/").mock(return_value=httpx.Response(200, json={"results": []}))
 
     response = await web.client.get("/api/v1/erp/calc/ЗВ-2026-999")
 

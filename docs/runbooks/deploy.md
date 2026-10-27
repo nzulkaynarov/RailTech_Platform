@@ -503,6 +503,10 @@ Smoke с раннера в задании `rollback` устроен так же:
 (воркер не стартовал, в логе сбой шины, нужно немедленно): на VPS 1 `docker compose … exec crm-api python -m app republish-identity
 --dry-run` (счёт), затем `… republish-identity`; повтор безопасен (Q-W13-A2-3, решено в W13C-F4).
 
+**Права ERP при смене каталога (D2-1, B-073).** Так же сам: при старте `crm-worker` сравнивает отпечаток ERP-части каталога
+(`identity_catalog_state`, ключ `erp_permissions`) и при изменении ставит провижининг всем активным сотрудникам с доступом к ERP
+(лог `erp_rights_reprovisioned`, сбой — `erp_rights_reprovision_failed`). Резерв: `docker compose … exec crm-api python -m app reprovision-erp`.
+
 **Откат.** `rollback.sh` на тег до EDS убирает его контейнеры (`--remove-orphans`) и не проверяет здоровье; на тег с EDS тянет `eds-api` и ждёт `healthy`.
 Миграции Alembic EDS не откатываются (как у CRM и ERP). Сброс `reset-prod.sh` (S0-8) включает базу `eds` и бакет `eds-private`: список — `crm,erp,eds`, дамп `eds` обязателен, подтверждение на VPS 2 — ввод `crm,erp,eds`.
 

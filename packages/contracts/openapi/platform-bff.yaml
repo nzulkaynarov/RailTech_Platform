@@ -213,8 +213,9 @@ info:
     `PATCH|DELETE …/lines/{line_id}`, `POST …/lines/{line_id}/visa` (виза строки по зоне: товар — `erp.calc.goods`, услуга —
     `erp.calc.services`), `POST …/ready` («Расчёт готов → черновик КП директору», только со всеми визами, проверка в ERP),
     `POST …/parse` и `GET /erp/calc-jobs/{job_id}` (ИИ-разбор текста заявки — предложение без записи), `GET /erp/calc/catalog`
-    (сопоставление с каталогом). Себестоимость, закупка и наценка — только группе `cost_margin` (итоги — и `totals_only`),
-    цены предложений поставщиков — `supplier_prices`; BFF вырезает поля из ответа.
+    (сопоставление с каталогом). Себестоимость строки — `cost_margin` или держателю зоны строки, наценка и итоги
+    себестоимости — только `cost_margin`, цены поставщиков — `supplier_prices` или держателю зоны товаров; ERP и BFF
+    вырезают поля. Бухгалтер (`totals_only`) — цены клиенту, итоги и НДС (каталог: без `supplier_prices`).
 
     0.2.4: `423 ACCOUNT_LOCKED` объявлен и на `POST /auth/change-password` (CRM блокирует учётную запись после неверных
     текущих паролей).
@@ -5980,8 +5981,10 @@ paths:
         (резолюция директора — проекция события EDS в ERP: текст, дата, кто; исполнители по зонам), КП расчёта, строки
         (позиция и тип, кол-во, склад, поставщик и срок, закупка и цена клиенту без НДС, наценка, виза), итоги без НДС,
         визы по трём индикаторам, готовность «Расчёт готов» с причиной и права сотрудника по зонам. Поля с ограничением BFF
-        вырезает: себестоимость, закупка и наценка по строкам и порог маржи резолюции — без группы `cost_margin`; итоги
-        закупки и наценки — без `cost_margin` и без `totals_only`; цены предложений поставщиков — без `supplier_prices`.
+        вырезает (и ERP режет сам): закупку и себестоимость строки (в том числе ставку и дни бригады услуги) видит группа
+        `cost_margin` или держатель зоны этой строки (`erp.calc.goods` — товары, `erp.calc.services` — услуги); наценку,
+        итоги себестоимости и наценки и порог маржи резолюции — только `cost_margin`; цены предложений поставщиков —
+        `supplier_prices` или держатель зоны товаров. Бухгалтер (`totals_only`) — цены клиенту, итоги и НДС.
         Номера нет среди заявок с заданием — 404. Раздел `erp.calc` — чтение.
       parameters:
         - $ref: '#/components/parameters/CalcNumberPath'
@@ -11474,12 +11477,12 @@ components:
         min_order_qty: {type: integer, description: Квота — минимальный заказ у поставщика}
         price_valid_until: {type: [string, 'null'], format: date}
         offer_price:
-          description: Цена предложения поставщика — только группе `supplier_prices`
+          description: Цена предложения поставщика — группе `supplier_prices` или держателю `erp.calc.goods`
           oneOf:
             - {$ref: '#/components/schemas/DecimalString'}
             - {type: 'null'}
         offer_currency:
-          description: Валюта предложения — только группе `supplier_prices`
+          description: Валюта предложения — группе `supplier_prices` или держателю `erp.calc.goods`
           type: [string, 'null']
 
     CalcLineVisa:
@@ -11533,25 +11536,25 @@ components:
             - {type: 'null'}
         lead_days: {type: [integer, 'null'], description: 'Срок поставки строки, дней'}
         purchase_price:
-          description: Закупка товара за единицу в валюте строки — только группе `cost_margin`
+          description: Закупка товара за единицу в валюте строки — `cost_margin` или держателю `erp.calc.goods`
           oneOf:
             - {$ref: '#/components/schemas/DecimalString'}
             - {type: 'null'}
         purchase_currency:
-          description: Валюта закупки — только группе `cost_margin`
+          description: Валюта закупки — `cost_margin` или держателю зоны строки
           type: string
         crew_rate:
-          description: Услуга — ставка бригады, сум/день (вводит гл. инженер)
+          description: Услуга — ставка бригады, сум/день (вводит гл. инженер); `cost_margin` или держателю `erp.calc.services`, иначе null
           oneOf:
             - {$ref: '#/components/schemas/DecimalString'}
             - {type: 'null'}
         crew_days:
-          description: Услуга — дней работы бригады
+          description: Услуга — дней работы бригады; `cost_margin` или держателю `erp.calc.services`, иначе null
           oneOf:
             - {$ref: '#/components/schemas/DecimalString'}
             - {type: 'null'}
         cost:
-          description: Себестоимость за единицу, сум (закупка с пошлиной по курсу) — только группе `cost_margin`
+          description: Себестоимость за единицу, сум (закупка с пошлиной по курсу) — `cost_margin` или держателю зоны строки
           oneOf:
             - {$ref: '#/components/schemas/DecimalString'}
             - {type: 'null'}
@@ -11577,10 +11580,10 @@ components:
       properties:
         client: {$ref: '#/components/schemas/DecimalString'}
         purchase:
-          description: Закупка итого — группам `cost_margin` и `totals_only`
+          description: Закупка итого — только группе `cost_margin`
           $ref: '#/components/schemas/DecimalString'
         markup_pct:
-          description: Наценка итого — группам `cost_margin` и `totals_only`
+          description: Наценка итого — только группе `cost_margin`
           oneOf:
             - {$ref: '#/components/schemas/DecimalString'}
             - {type: 'null'}

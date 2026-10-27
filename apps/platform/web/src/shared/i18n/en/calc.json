@@ -183,7 +183,10 @@
       "visas_missing": "The button becomes active when every line is signed off: {{count}} without sign-off.",
       "no_lines": "Add at least one line.",
       "not_started": "Start costing first.",
-      "not_draft": "Costing has already gone to the director."
+      "not_draft": "Costing has already gone to the director.",
+      "at_director": "The draft quote is already with the director: lines are locked until the decision.",
+      "approved": "The director approved the quote — costing is closed. Change it with a new quote version.",
+      "rejected": "The director rejected the quote — costing is closed."
     },
     "missingGroups": "Waiting for sign-off: {{groups}}.",
     "consequence": [

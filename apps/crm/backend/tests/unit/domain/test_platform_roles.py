@@ -474,7 +474,7 @@ def test_manager_plus_accountant_is_the_union_of_their_rights() -> None:
     assert derived.access["crm.leads"] == "full"  # от менеджера
     assert derived.access["eds.payments"] == "full"  # от бухгалтера
     assert derived.access["eds.projects"] == "full"  # максимум: менеджер read, бухгалтер full
-    assert derived.restricted_fields == ("supplier_prices", "totals_only")
+    assert derived.restricted_fields == ("totals_only",)
     assert set(derived.erp_permissions) == ROLE_ERP["MANAGER"] | ROLE_ERP["ACCOUNTANT"]
     assert crm_policies(make_grant("MANAGER").access) <= derived.crm_permissions
 

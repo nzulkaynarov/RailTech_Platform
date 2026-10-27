@@ -197,11 +197,27 @@ def _visa_group(kind: str) -> str:
     return {"goods": "stock", "goods_to_order": "supply", "service": "engineer"}[kind]
 
 
+def is_signed(item: QuoteItem, calc: Optional[CalcLine] = None) -> bool:
+    """Виза действует, если поставлена в зоне строки и строка с тех пор не менялась (версия `QuoteItem` та же —
+    правку через любой путь, в том числе старый `crm/quote-items`, виза не переживает)."""
+    calc = calc if calc is not None else calc_of(item)
+    return (
+        calc is not None
+        and calc.visa_at is not None
+        and calc.visa_zone == zone_of(item)
+        and calc.visa_item_version == item.version
+    )
+
+
 def line_payload(item: QuoteItem, ctx: _Context, *, show_cost: bool, rights: dict[str, bool], editable: bool) -> dict:
+    """Строка расчёта. Видимость себестоимости (решение архитектора по Q-D2-1-2): закупку и себестоимость строки
+    видит держатель `quote.view_cost_margin` или права визы зоны этой строки (гл. инженер — ставку и дни бригады своих
+    услуг, снабженец — закупку и цены поставщика своих товаров); наценку — только `quote.view_cost_margin`."""
     zone = zone_of(item)
     kind, on_hand = _line_kind(item, zone, ctx)
     calc = calc_of(item)
-    signed = calc is not None and calc.visa_at is not None and calc.visa_zone == zone
+    zone_cost = show_cost or rights.get(zone, False)
+    offer_visible = show_cost or rights.get(Zone.GOODS, False)
     supplier = None
     offer = item.offer if item.offer_id and item.offer.supplier_id != _own_company_id() else None
     offer = offer or (ctx.suppliers.get(item.product_id) if item.product_id and zone == Zone.GOODS else None)
@@ -211,11 +227,11 @@ def line_payload(item: QuoteItem, ctx: _Context, *, show_cost: bool, rights: dic
             "lead_days": offer.order_lead_time_days or offer.in_stock_lead_time_days or None,
             "min_order_qty": offer.min_order_qty,
             "price_valid_until": offer.valid_until.isoformat() if offer.valid_until else None,
-            "offer_price": _money(offer.base_price),
-            "offer_currency": offer.currency.code if offer.currency_id else None,
+            "offer_price": _money(offer.base_price) if offer_visible else None,
+            "offer_currency": (offer.currency.code if offer.currency_id else None) if offer_visible else None,
         }
-    cost = item.landed_cost if show_cost else None
     product = item.product if item.product_id else None
+    services = zone == Zone.SERVICES
     return {
         "id": item.id,
         "position": item.position,
@@ -232,13 +248,19 @@ def line_payload(item: QuoteItem, ctx: _Context, *, show_cost: bool, rights: dic
         "stock": {"on_hand": on_hand, "cell": None, "reserved": None},
         "supplier": supplier,
         "lead_days": item.lead_time_days or None,
-        "purchase_price": _money(item.frozen_base_price) if show_cost and zone == Zone.GOODS else None,
+        "purchase_price": _money(item.frozen_base_price) if zone_cost and not services else None,
         "purchase_currency": (
-            (item.frozen_currency.code if item.frozen_currency_id else "UZS") if zone == Zone.GOODS else "UZS"
+            (item.frozen_currency.code if item.frozen_currency_id else "UZS") if not services else "UZS"
         ),
-        "crew_rate": _money(calc.crew_rate) if calc is not None and calc.crew_rate is not None else None,
-        "crew_days": str(calc.crew_days) if calc is not None and calc.crew_days is not None else None,
-        "cost": _money(cost) if show_cost else None,
+        "crew_rate": (
+            _money(calc.crew_rate)
+            if zone_cost and services and calc is not None and calc.crew_rate is not None
+            else None
+        ),
+        "crew_days": (
+            str(calc.crew_days) if zone_cost and services and calc is not None and calc.crew_days is not None else None
+        ),
+        "cost": _money(item.landed_cost) if zone_cost else None,
         "client_price": _money(item.final_price_excl_vat),
         "markup_pct": _markup(item.landed_cost, item.final_price_excl_vat) if show_cost else None,
         "visa": (
@@ -246,7 +268,7 @@ def line_payload(item: QuoteItem, ctx: _Context, *, show_cost: bool, rights: dic
                 "by": calc.visa_by_name or person_name(calc.visa_by),
                 "at": calc.visa_at.isoformat(),
             }
-            if signed
+            if is_signed(item, calc)
             else None
         ),
         "group": _visa_group(kind),
@@ -351,7 +373,7 @@ def _groups(items: list[QuoteItem], ctx: _Context) -> dict[str, dict]:
         group = out[_visa_group(kind)]
         group["total"] += 1
         calc = calc_of(item)
-        if calc is not None and calc.visa_at is not None and calc.visa_zone == zone:
+        if is_signed(item, calc):
             group["signed"] += 1
             name = calc.visa_by_name or person_name(calc.visa_by)
             if name and name not in group["by"]:
@@ -413,8 +435,9 @@ def list_tasks(user, *, mine: bool = False, scope: str = "open") -> list[dict]:
     `scope=open` — заявки на стадиях «Расчёт» (подбор, расчёт); `all` — все с заданием (адресация карточки по
     номеру). `mine` — где сотрудник исполнитель резолюции (по пользователю ERP или его `crm_user_id`)."""
     _require_staff(user)
+    # Срез — с новых заявок: при потолке строк теряются старые, а не только что пришедшие.
     tasks = CalcTask.objects.select_related("deal__company", "deal__stage", "deal__manager").order_by(
-        "deal_id", "-decided_at", "-id"
+        "-deal_id", "-decided_at", "-id"
     )
     if scope == "open":
         tasks = tasks.filter(deal__stage__code__in=OPEN_STAGES)
@@ -443,6 +466,25 @@ def list_tasks(user, *, mine: bool = False, scope: str = "open") -> list[dict]:
             }
         )
     return rows
+
+
+MAX_REFS = 5000
+
+
+def deal_refs(user) -> list[dict]:
+    """Лёгкий справочник заявок с заданием расчёта (без КП, строк и виз): id, дата создания, стадия — для поиска
+    заявки по номеру ЗВ в BFF до ERP-09 (B-010, B-075). С новых заявок."""
+    _require_staff(user)
+    rows = (
+        Deal.objects.filter(calc_tasks__isnull=False)
+        .distinct()
+        .order_by("-id")
+        .values("id", "created_at", "stage__code")[:MAX_REFS]
+    )
+    return [
+        {"id": row["id"], "created_at": row["created_at"].isoformat(), "stage_code": row["stage__code"] or "DRAFT"}
+        for row in rows
+    ]
 
 
 # ── экран расчёта ──────────────────────────────────────────────────────────────────────────────────────────────────
@@ -496,10 +538,11 @@ def _sheet(deal: Deal, task: CalcTask, user) -> dict:
             }
         ),
         "lines": lines,
+        # Итоги себестоимости и наценки по заявке — только `quote.view_cost_margin` (Q-D2-1-2, Q-D2-1-4).
         "totals": {
-            "purchase": _money(purchase),
+            "purchase": _money(purchase) if show_cost else None,
             "client": _money(client),
-            "markup_pct": _markup(purchase, client),
+            "markup_pct": _markup(purchase, client) if show_cost else None,
             "vat_included": False,
         },
         "visas": {name: groups[name] for name in VISA_GROUPS},
@@ -631,6 +674,7 @@ def _reset_visa(calc: Optional[CalcLine]) -> bool:
     calc.visa_by = None
     calc.visa_by_name = ""
     calc.visa_zone = ""
+    calc.visa_item_version = None
     calc.visa_at = None
     return True
 
@@ -767,6 +811,9 @@ def update_line(deal_id: int, item_id: int, user, data: dict) -> dict:
         _require_zone(user, new_zone)
         if item.offer_id and (product is None or item.offer.product_id != product.id):
             item.offer = None
+        if product is None:
+            # Снять карточку — строка остаётся в своей зоне: тип строки без карточки берётся из прежней зоны.
+            calc.kind = CalcLineKind.SERVICE if zone == Zone.SERVICES else CalcLineKind.GOODS
         item.product = product
         if product is not None:
             _prefill_from_offer(item, product)
@@ -815,6 +862,13 @@ def update_line(deal_id: int, item_id: int, user, data: dict) -> dict:
         else:
             item.frozen_base_price = Decimal("0")
         item.frozen_currency = _currency("UZS") if _has_currency("UZS") else None
+    # Зона строки ПОСЛЕ правки (карточка или тип строки): правит тот, у кого право и прежней, и новой зоны.
+    final_zone = (
+        (Zone.SERVICES if item.product.is_service else Zone.GOODS)
+        if item.product_id
+        else (Zone.SERVICES if calc.kind == CalcLineKind.SERVICE else Zone.GOODS)
+    )
+    _require_zone(user, final_zone)
     _reset_visa(calc)
     calc.save()
     item.version = (item.version or 0) + 1
@@ -888,13 +942,14 @@ def sign_line(deal_id: int, item_id: int, user) -> dict:
     zone = zone_of(item)
     _require_zone(user, zone)
     calc, _ = CalcLine.objects.get_or_create(item=item)
-    if calc.visa_at is not None and calc.visa_zone == zone:
+    if is_signed(item, calc):
         return _sheet(deal, task, user)
     if (item.landed_cost or 0) <= 0 or (item.final_price_excl_vat or 0) <= 0:
         raise CalcError("LINE_INCOMPLETE", 409)
     calc.visa_by = user
     calc.visa_by_name = person_name(user)[:255]
     calc.visa_zone = zone
+    calc.visa_item_version = item.version
     calc.visa_at = timezone.now()
     calc.save()
     _log(
@@ -912,8 +967,7 @@ def sign_line(deal_id: int, item_id: int, user) -> dict:
 
 
 def _signed(item: QuoteItem) -> bool:
-    calc = calc_of(item)
-    return calc is not None and calc.visa_at is not None and calc.visa_zone == zone_of(item)
+    return is_signed(item)
 
 
 def _notify_all_signed(deal: Deal, task: CalcTask, actor) -> None:
@@ -961,6 +1015,10 @@ def mark_ready(deal_id: int, user) -> dict:
     _require(user, Permission.QUOTE_BUILD.value)
     deal = _locked_deal_or_404(deal_id)
     task = _task_or_404(deal)
+    stage = deal.stage.code if deal.stage_id else DealStageCode.DRAFT
+    if stage not in OPEN_STAGES:
+        # Заявка закрыта, проиграна или ушла дальше расчёта — КП директору из расчёта не отправляется.
+        raise CalcError("DEAL_NOT_IN_CALCULATION", 409, stage=stage)
     quote = _draft_or_409(deal)
     items = _billable(quote)
     if not items:
@@ -990,7 +1048,7 @@ def mark_ready(deal_id: int, user) -> dict:
         quote.save(update_fields=[*claim, "updated_at"])
     _set_quote_status(quote, QuoteStatusCode.PENDING_APPROVAL)
     fix_quote_rates(quote, user)
-    request_director_approval(quote, user)
+    request_director_approval(quote, user, line_visas=True)
     _log(
         deal,
         user,
@@ -1008,7 +1066,7 @@ def line_visas(quote: Quote) -> list[tuple[str, Any, Any]]:
     rows: dict[tuple[str, int], tuple[str, Any, Any]] = {}
     for item in quote.items.billable().select_related("calc__visa_by", "product__domain_type"):
         calc = calc_of(item)
-        if calc is None or calc.visa_at is None or calc.visa_by_id is None or calc.visa_zone != zone_of(item):
+        if calc is None or calc.visa_by_id is None or not is_signed(item, calc):
             continue
         key = (calc.visa_zone, calc.visa_by_id)
         current = rows.get(key)

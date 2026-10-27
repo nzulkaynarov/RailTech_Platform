@@ -29,6 +29,7 @@ from app.schemas_erp_calc import (
     CalcSheet,
     to_row,
     to_sheet,
+    zones_of,
 )
 
 router = APIRouter(prefix="/erp", tags=["calc"])
@@ -73,13 +74,13 @@ class ErpCalc(ErpCompany):
     """Вызовы `/api/v1/calc/*` от имени сотрудника и поиск заявки по номеру ЗВ."""
 
     async def deal_id(self, number: str) -> int:
+        """Заявка по номеру ЗВ: лёгкий справочник ERP `GET /calc/deals/` (id, создана, стадия — без
+        строк и виз); номер — как в списках, `id` из номера не разбирается (до ERP-09)."""
         wanted = {number, number_query(number) or number}
-        for scope in ("open", "all"):
-            data = await self.data("GET", "calc/tasks/", params={"scope": scope})
-            for row in data.get("results", []) if isinstance(data, dict) else []:
-                deal = row.get("deal") if isinstance(row, dict) else None
-                if isinstance(deal, dict) and deal_number(deal) in wanted:
-                    return int(deal["id"])
+        data = await self.data("GET", "calc/deals/")
+        for deal in data.get("results", []) if isinstance(data, dict) else []:
+            if isinstance(deal, dict) and deal_number(deal) in wanted:
+                return int(deal["id"])
         raise PlatformError(
             "NOT_FOUND",
             "Заявки нет среди заявок с заданием расчёта.",
@@ -147,7 +148,7 @@ async def _sheet(
     erp = _erp(authed)
     deal_id = await erp.deal_id(number)
     raw = await erp.call_calc(method, f"{deal_id}/{suffix}", json=json)
-    return to_sheet(raw, authed.fields)
+    return to_sheet(raw, authed.fields, authed.access)
 
 
 @router.get(
@@ -288,7 +289,12 @@ async def update_line(
             details={"reason": "nothing_to_change"},
         )
     cost_fields = sorted({"purchase_price", "purchase_currency"} & set(patch))
-    if cost_fields and "cost_margin" not in authed.fields:
+    # Закупку товара правит тот, кто её видит: `cost_margin` или держатель зоны товаров (Q-D2-1-2).
+    if (
+        cost_fields
+        and "cost_margin" not in authed.fields
+        and "goods" not in zones_of(authed.access)
+    ):
         raise PlatformError(
             "VALIDATION_FAILED",
             "Закупку правит сотрудник с доступом к себестоимости.",

@@ -183,7 +183,10 @@
       "visas_missing": "Barcha qatorlar tasdiqlanganda tugma faollashadi: vizasiz {{count}} ta.",
       "no_lines": "Kamida bitta qator qo‘shing.",
       "not_started": "Avval hisob-kitobni boshlang.",
-      "not_draft": "Hisob-kitob allaqachon direktorga topshirilgan."
+      "not_draft": "Hisob-kitob allaqachon direktorga topshirilgan.",
+      "at_director": "TK qoralamasi allaqachon direktorda: qaror qabul qilinguncha qatorlar yopiq.",
+      "approved": "TK direktor tomonidan ma’qullangan — hisob-kitob yopiq. Uni TKning yangi versiyasi bilan o‘zgartirish mumkin.",
+      "rejected": "Direktor TKni rad etdi — hisob-kitob yopiq."
     },
     "missingGroups": "Viza kutmoqda: {{groups}}.",
     "consequence": [

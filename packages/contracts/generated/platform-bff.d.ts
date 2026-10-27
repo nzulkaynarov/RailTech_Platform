@@ -3142,7 +3142,7 @@ export interface paths {
     };
     /**
      * Расчёт · Расчёт по заявке ЗВ-…
-     * @description ERP `GET /calc/{deal_id}/` (заявку по номеру BFF находит среди заявок с заданием расчёта). Заявка, задание (резолюция директора — проекция события EDS в ERP: текст, дата, кто; исполнители по зонам), КП расчёта, строки (позиция и тип, кол-во, склад, поставщик и срок, закупка и цена клиенту без НДС, наценка, виза), итоги без НДС, визы по трём индикаторам, готовность «Расчёт готов» с причиной и права сотрудника по зонам. Поля с ограничением BFF вырезает: себестоимость, закупка и наценка по строкам и порог маржи резолюции — без группы `cost_margin`; итоги закупки и наценки — без `cost_margin` и без `totals_only`; цены предложений поставщиков — без `supplier_prices`. Номера нет среди заявок с заданием — 404. Раздел `erp.calc` — чтение.
+     * @description ERP `GET /calc/{deal_id}/` (заявку по номеру BFF находит среди заявок с заданием расчёта). Заявка, задание (резолюция директора — проекция события EDS в ERP: текст, дата, кто; исполнители по зонам), КП расчёта, строки (позиция и тип, кол-во, склад, поставщик и срок, закупка и цена клиенту без НДС, наценка, виза), итоги без НДС, визы по трём индикаторам, готовность «Расчёт готов» с причиной и права сотрудника по зонам. Поля с ограничением BFF вырезает (и ERP режет сам): закупку и себестоимость строки (в том числе ставку и дни бригады услуги) видит группа `cost_margin` или держатель зоны этой строки (`erp.calc.goods` — товары, `erp.calc.services` — услуги); наценку, итоги себестоимости и наценки и порог маржи резолюции — только `cost_margin`; цены предложений поставщиков — `supplier_prices` или держатель зоны товаров. Бухгалтер (`totals_only`) — цены клиенту, итоги и НДС. Номера нет среди заявок с заданием — 404. Раздел `erp.calc` — чтение.
      */
     get: operations["getCalcSheet"];
     put?: never;
@@ -6242,9 +6242,9 @@ export interface components {
       min_order_qty: number;
       /** Format: date */
       price_valid_until: string | null;
-      /** @description Цена предложения поставщика — только группе `supplier_prices` */
+      /** @description Цена предложения поставщика — группе `supplier_prices` или держателю `erp.calc.goods` */
       offer_price?: components["schemas"]["DecimalString"] | null;
-      /** @description Валюта предложения — только группе `supplier_prices` */
+      /** @description Валюта предложения — группе `supplier_prices` или держателю `erp.calc.goods` */
       offer_currency?: string | null;
     };
     CalcLineVisa: {
@@ -6273,15 +6273,15 @@ export interface components {
       supplier: components["schemas"]["CalcSupplier"] | null;
       /** @description Срок поставки строки, дней */
       lead_days: number | null;
-      /** @description Закупка товара за единицу в валюте строки — только группе `cost_margin` */
+      /** @description Закупка товара за единицу в валюте строки — `cost_margin` или держателю `erp.calc.goods` */
       purchase_price?: components["schemas"]["DecimalString"] | null;
-      /** @description Валюта закупки — только группе `cost_margin` */
+      /** @description Валюта закупки — `cost_margin` или держателю зоны строки */
       purchase_currency?: string;
-      /** @description Услуга — ставка бригады, сум/день (вводит гл. инженер) */
+      /** @description Услуга — ставка бригады, сум/день (вводит гл. инженер); `cost_margin` или держателю `erp.calc.services`, иначе null */
       crew_rate: components["schemas"]["DecimalString"] | null;
-      /** @description Услуга — дней работы бригады */
+      /** @description Услуга — дней работы бригады; `cost_margin` или держателю `erp.calc.services`, иначе null */
       crew_days: components["schemas"]["DecimalString"] | null;
-      /** @description Себестоимость за единицу, сум (закупка с пошлиной по курсу) — только группе `cost_margin` */
+      /** @description Себестоимость за единицу, сум (закупка с пошлиной по курсу) — `cost_margin` или держателю зоны строки */
       cost?: components["schemas"]["DecimalString"] | null;
       /** @description Клиенту за единицу, сум, без НДС */
       client_price: components["schemas"]["DecimalString"];
@@ -6294,9 +6294,9 @@ export interface components {
     /** @description Итоги без НДС */
     CalcTotals: {
       client: components["schemas"]["DecimalString"];
-      /** @description Закупка итого — группам `cost_margin` и `totals_only` */
+      /** @description Закупка итого — только группе `cost_margin` */
       purchase?: components["schemas"]["DecimalString"];
-      /** @description Наценка итого — группам `cost_margin` и `totals_only` */
+      /** @description Наценка итого — только группе `cost_margin` */
       markup_pct?: components["schemas"]["DecimalString"] | null;
       /** @constant */
       vat_included: false;

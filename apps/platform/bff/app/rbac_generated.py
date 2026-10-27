@@ -433,9 +433,6 @@ TEMPLATES: Final[dict[str, CatalogRole]] = {
             "chats.internal": "full",
             "chats.external": "full",
         },
-        "restricted_fields": (
-            "supplier_prices",
-            "totals_only",
-        ),
+        "restricted_fields": ("totals_only",),
     },
 }

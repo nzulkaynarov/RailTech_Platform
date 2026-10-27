@@ -48,6 +48,16 @@ class CalcTaskListSerializer(serializers.Serializer):
     results = CalcTaskRowSerializer(many=True)
 
 
+class CalcDealRefSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    created_at = serializers.DateTimeField()
+    stage_code = serializers.CharField()
+
+
+class CalcDealRefListSerializer(serializers.Serializer):
+    results = CalcDealRefSerializer(many=True)
+
+
 class CalcTaskBriefSerializer(serializers.Serializer):
     letter_number = serializers.CharField()
     letter_subject = serializers.CharField(allow_blank=True)
@@ -120,7 +130,7 @@ class CalcLineSerializer(serializers.Serializer):
 
 
 class CalcTotalsSerializer(serializers.Serializer):
-    purchase = serializers.DecimalField(max_digits=16, decimal_places=2)
+    purchase = serializers.DecimalField(max_digits=16, decimal_places=2, allow_null=True)
     client = serializers.DecimalField(max_digits=16, decimal_places=2)
     markup_pct = serializers.DecimalField(max_digits=7, decimal_places=1, allow_null=True)
     vat_included = serializers.BooleanField()
@@ -225,3 +235,4 @@ class CalcErrorSerializer(serializers.Serializer):
     detail = serializers.CharField()
     missing = serializers.IntegerField(required=False)
     zone = serializers.CharField(required=False)
+    stage = serializers.CharField(required=False)

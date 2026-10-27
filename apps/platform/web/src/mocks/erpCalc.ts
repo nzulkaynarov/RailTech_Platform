@@ -19,7 +19,7 @@ import { buildMe, readSession } from "./mockSession";
  * Моки «Расчёта по заявке» (D2-1, BFF 0.24.0) — поведение BFF и ERP вместе: доступ по разделам каталога (`erp.calc` —
  * чтение и полный, зоны строк — `erp.calc.goods` и `erp.calc.services`), виза строки по зоне, любая правка снимает визу,
  * «Расчёт готов» только со всеми визами (409 `visas_missing`), себестоимость и наценка — только группе `cost_margin`,
- * итоги закупки — и `totals_only`, цены поставщиков — `supplier_prices`. Состояние — в `localStorage` страницы (как сессия
+ * себестоимость строки — `cost_margin` или держателю её зоны, итоги — только `cost_margin`. Состояние — в `localStorage` страницы (как сессия
  * мока): сценарий «снабженец → гл. инженер» переживает выход и вход другого сотрудника.
  */
 const KEY = "rt-pf-mock-calc-v1";
@@ -127,6 +127,10 @@ function presentLine(line: MockLine, user: Me, editable: boolean): CalcLine {
   const kind = lineKind(line);
   const zone = zoneOf(line);
   const unit = costOf(line);
+  // Себестоимость строки — `cost_margin` или держателю зоны строки; наценка — только `cost_margin`; цены поставщика —
+  // `supplier_prices` или держателю зоны товаров (решения по Q-D2-1-2 и Q-D2-1-4).
+  const zoneCost = cost || canZone(user, zone);
+  const offers = held.has("supplier_prices") || canZone(user, "goods");
   return {
     id: String(line.id),
     name: line.name,
@@ -145,23 +149,21 @@ function presentLine(line: MockLine, user: Me, editable: boolean): CalcLine {
           lead_days: line.supplier.leadDays,
           min_order_qty: line.supplier.minOrderQty,
           price_valid_until: line.supplier.validUntil,
-          ...(held.has("supplier_prices")
-            ? { offer_price: line.supplier.offerPrice, offer_currency: "UZS" }
-            : {}),
+          ...(offers ? { offer_price: line.supplier.offerPrice, offer_currency: "UZS" } : {}),
         }
       : null,
     lead_days: line.leadDays,
-    crew_rate: line.crewRate === null ? null : money(line.crewRate),
-    crew_days: line.crewDays === null ? null : line.crewDays.toFixed(1),
+    crew_rate: zoneCost && line.crewRate !== null ? money(line.crewRate) : null,
+    crew_days: zoneCost && line.crewDays !== null ? line.crewDays.toFixed(1) : null,
     client_price: money(line.client),
-    ...(cost
+    ...(zoneCost
       ? {
           purchase_price: zone === "goods" ? money(line.purchase) : null,
           purchase_currency: "UZS",
           cost: money(unit),
-          markup_pct: markup(unit, line.client),
         }
       : {}),
+    ...(cost ? { markup_pct: markup(unit, line.client) } : {}),
     visa: signed(line) && line.visa ? { by: line.visa.by, at: line.visa.at } : null,
     can_edit: editable && canZone(user, zone),
   };
@@ -237,9 +239,7 @@ function present(calc: MockCalc, user: Me): CalcSheet {
     lines,
     totals: {
       client: money(client),
-      ...(cost || held.has("totals_only")
-        ? { purchase: money(purchase), markup_pct: markup(purchase, client) }
-        : {}),
+      ...(cost ? { purchase: money(purchase), markup_pct: markup(purchase, client) } : {}),
       vat_included: false,
     },
     visas: groups(calc),
