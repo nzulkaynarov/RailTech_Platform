@@ -326,6 +326,24 @@
       "empty": {
         "title": "Hozircha hujjat shablonlari yo'q",
         "text": "Shartnoma yoki dalolatnoma shablonini yarating yoki platforma namunasini nusxalang."
+      },
+      "preview": "Ko‘rish",
+      "previewNamed": "Ko‘rish: {{name}}",
+      "viewSampleTitle": "Platforma namunasi",
+      "viewSampleHint": "Namuna faqat ko‘rish uchun. Matnni tahrirlash uchun uni o‘zingizga nusxalang.",
+      "kindField": "Hujjat turi",
+      "kindFixed": "Tur yaratishda belgilanadi va keyin o‘zgarmaydi.",
+      "kindHint": "Shartnoma, hisob va dalolatnoma o‘z maketida chop etiladi va bloklarni (jadval, jami, imzolar) o‘z ichiga olishi shart.",
+      "prefilled": "Bu tur uchun platforma namunasi qo‘yildi: matnni tahrirlang, bloklarni joyida qoldiring.",
+      "kinds": {
+        "letter": "Xat",
+        "report": "Raport / hisobot",
+        "custom": "Ixtiyoriy",
+        "contract": "Shartnoma",
+        "invoice": "Hisob",
+        "act": "Dalolatnoma",
+        "receipt": "To‘lov kvitansiyasi",
+        "delivery_note": "Yuk xati"
       }
     },
     "emails": {
@@ -410,6 +428,11 @@
     "empty": {
       "title": "Hozircha qatorlar yo'q",
       "text": "Ma'lumotnomaning birinchi qatorini qo'shing."
+    },
+    "search": "Kod va nom bo‘yicha qidirish",
+    "noMatch": {
+      "title": "Hech narsa topilmadi",
+      "text": "«{{query}}» so‘rovi bo‘yicha qatorlar yo‘q. So‘rovni o‘zgartiring yoki qidiruvni tozalang."
     }
   },
   "categories": {

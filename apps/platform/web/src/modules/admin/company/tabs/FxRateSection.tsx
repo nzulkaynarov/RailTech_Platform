@@ -36,7 +36,8 @@ function decimals(rate: string) {
 
 /**
  * Курс USD → UZS на вкладке «Платформа» (W13C-F6): текущий курс с датой и источником и ручной ввод курса на дату — на
- * случай, если автозагрузка курса ЦБ (`erp-beat`) не сработала. Ниже — журнал последних записей: кто, когда и что ввёл.
+ * случай, если автозагрузка курса ЦБ (`erp-beat`) не сработала. Ниже — журнал последних записей: кто, когда и что ввёл;
+ * без права `settings.edit` в ERP (`journal_available = false`) журнала нет — в нём имена и почта коллег.
  */
 export function FxRateSection() {
   const { t } = useTranslation("company");
@@ -52,7 +53,7 @@ export function FxRateSection() {
           <>
             <CurrentRate current={overview.current} maxAgeDays={overview.max_age_days} />
             <FxForm />
-            <FxJournal rows={overview.journal} />
+            {overview.journal_available ? <FxJournal rows={overview.journal} /> : null}
           </>
         )}
       </QueryGate>
