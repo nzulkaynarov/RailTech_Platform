@@ -54,10 +54,21 @@ grep -v '^#' "$root/.env.example" | sed 's/CHANGE_ME/ci-only-value/' > "$tmp/env
 dev_secure() { docker compose -f "$root/infra/compose/base.yml" -f "$root/infra/compose/dev.yml" --env-file "$1" config --format json \
   | jq -r '.services["platform-bff"].environment.PLATFORM_COOKIE_SECURE'; }
 [[ "$(dev_secure "$tmp/env.dev")" == false ]] || fail "dev: на http-стенде PLATFORM_COOKIE_SECURE должен быть false по умолчанию"
+dev_crm_env() { docker compose -f "$root/infra/compose/base.yml" -f "$root/infra/compose/dev.yml" --env-file "$1" config --format json \
+  | jq -r --arg k "$2" '.services["crm-api"].environment[$k]'; }
+[[ "$(dev_crm_env "$tmp/env.dev" PLATFORM_PUBLIC_URL)" == "http://platform.localhost:$(sed -n 's/^HTTP_PORT=//p' "$tmp/env.dev")" ]] \
+  || fail "dev: PLATFORM_PUBLIC_URL должен быть http://platform.localhost:\${HTTP_PORT}"
 echo 'PLATFORM_COOKIE_SECURE=true' >> "$tmp/env.dev"
 [[ "$(dev_secure "$tmp/env.dev")" == true ]] || fail "dev: PLATFORM_COOKIE_SECURE=true из .env не применился"
 [[ "$(q '.services["platform-bff"].depends_on["redis-cache"].condition')" == service_healthy ]] || fail "platform-bff: нет зависимости от redis-cache"
 [[ "$(q '.services.caddy.environment.PLATFORM_DOMAIN')" == platform.railtech.uz ]] || fail "caddy: PLATFORM_DOMAIN не передан"
+# W15-H8a: письма сотрудникам (приглашение, сброс пароля) ведут в Платформу — адрес из PLATFORM_DOMAIN во всех сервисах CRM.
+for svc in crm-api crm-worker crm-bot; do
+  [[ "$(q --arg s "$svc" '.services[$s].environment.PLATFORM_PUBLIC_URL')" == https://platform.railtech.uz ]] \
+    || fail "$svc: PLATFORM_PUBLIC_URL не выведен из PLATFORM_DOMAIN"
+  [[ "$(q --arg s "$svc" '.services[$s].environment.CRM_PUBLIC_URL')" == https://crm.railtech.uz ]] \
+    || fail "$svc: CRM_PUBLIC_URL не выведен из CRM_DOMAIN"
+done
 for svc in platform-bff platform-web; do
   [[ "$(q --arg s "$svc" '.services.caddy.depends_on[$s].condition // "none"')" == service_started ]] \
     || fail "caddy должен зависеть от $svc по service_started (не service_healthy: INF-P1-0)"

@@ -36,6 +36,9 @@ x-crm-prod-env: &crm-prod-env
   # по docs/kb/FORMAT.md, встроенный конвертер; docling нужен лишь тексту документов клиентов.
   DOCLING_URL: ""
   ERP_FRONTEND_URL: https://${ERP_DOMAIN:?set in .env}
+  # Ссылка «Вход» в письмах сотрудникам — Платформа (W15-H8a): из PLATFORM_DOMAIN; PLATFORM_PUBLIC_URL в .env.prod — переопределение.
+  PLATFORM_PUBLIC_URL: ${PLATFORM_PUBLIC_URL:-https://${PLATFORM_DOMAIN:?set in .env}}
+  CRM_PUBLIC_URL: https://${CRM_DOMAIN:?set in .env}
   # Адрес вебхука Telegram (FIX-66) — из домена CRM, путь тот же, что в Caddyfile.prod; явный
   # TELEGRAM_WEBHOOK_URL в .env.prod остаётся переопределением. Пустой адрес в CRM — не «удалить вебхук».
   TELEGRAM_WEBHOOK_URL: ${TELEGRAM_WEBHOOK_URL:-https://${CRM_DOMAIN:?set in .env}/telegram/webhook}
