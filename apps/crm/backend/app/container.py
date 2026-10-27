@@ -59,11 +59,15 @@ if TYPE_CHECKING:
     from app.services.leads import LeadService
     from app.services.llm_usage import DbUsageRecorder
     from app.services.mail import MailService
+    from app.services.password_reset import PasswordResetService
     from app.services.platform_roles import PlatformRoleService
     from app.services.sandbox import SandboxService
     from app.services.setup import SetupService
     from app.services.smtp_connector import SmtpConnectorService
     from app.services.sso import SsoService
+    from app.services.staff_deputy import StaffDeputyService
+    from app.services.staff_profile import StaffProfileService
+    from app.services.staff_telegram_link import StaffTelegramLinkService
     from app.services.user_invites import UserInviteService
     from app.services.users import UserService
 
@@ -521,6 +525,43 @@ class Container:
             self.session_factory,
             self.mail_service,
             self.settings_service,
+            self.settings.platform_base_url,
+        )
+
+    @cached_property
+    def staff_profile(self) -> "StaffProfileService":
+        """Профиль сотрудника: поля, имя и фото в бакете файлов CRM (W15-H6)."""
+        from app.services.staff_profile import StaffProfileService
+
+        return StaffProfileService(
+            self.session_factory,
+            self.user_service,
+            self.storage,
+            self.settings.s3_bucket_documents,
+        )
+
+    @cached_property
+    def staff_telegram_link(self) -> "StaffTelegramLinkService":
+        from app.services.staff_telegram_link import StaffTelegramLinkService
+
+        return StaffTelegramLinkService(self.session_factory, self.bot_state)
+
+    @cached_property
+    def staff_deputy(self) -> "StaffDeputyService":
+        from app.services.staff_deputy import StaffDeputyService
+
+        return StaffDeputyService(self.session_factory)
+
+    @cached_property
+    def password_reset(self) -> "PasswordResetService":
+        """«Забыли пароль?»: ссылка на Платформу (`PLATFORM_PUBLIC_URL`) по почте или в Telegram."""
+        from app.services.password_reset import PasswordResetService
+
+        return PasswordResetService(
+            self.session_factory,
+            self.mail_service,
+            self.settings_service,
+            self.telegram_bot,
             self.settings.platform_base_url,
         )
 

@@ -456,7 +456,10 @@ def _apply(user: User, patch: UserPatch) -> None:
         user.is_active = patch.is_active
     if patch.clear_tg_user_id:
         user.tg_user_id = None
+        user.tg_username = None
     elif patch.tg_user_id is not None:
+        if patch.tg_user_id != user.tg_user_id:
+            user.tg_username = None  # ник относился к прежнему аккаунту
         user.tg_user_id = patch.tg_user_id
     if patch.platform_access is not None:
         user.platform_access = sorted(set(patch.platform_access) | {"crm"})

@@ -1,12 +1,13 @@
 """Пользователи, роли, refresh-токены, аудит, политики Casbin (SPEC §5.1, ADR-0005)."""
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 
 from sqlalchemy import (
     BigInteger,
     Boolean,
     CheckConstraint,
+    Date,
     DateTime,
     ForeignKey,
     Identity,
@@ -48,6 +49,14 @@ class User(TimestampMixin, Base):
         ),
         # Язык интерфейса сотрудника (CRM-01b, Q-PLT-10-1 п. 6).
         CheckConstraint("language IN ('ru', 'uz', 'en')", name="language"),
+        # Замещение (W15-H6): заместитель и обе даты заданы вместе, период не пустой, не сам себе.
+        CheckConstraint(
+            "(deputy_user_id IS NULL AND deputy_from IS NULL AND deputy_to IS NULL) OR "
+            "(deputy_user_id IS NOT NULL AND deputy_from IS NOT NULL AND deputy_to IS NOT NULL "
+            "AND deputy_from <= deputy_to AND deputy_user_id <> id)",
+            name="deputy_period",
+        ),
+        Index("ix_users_deputy_user_id", "deputy_user_id"),
     )
 
     id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
@@ -84,6 +93,22 @@ class User(TimestampMixin, Base):
     # Последняя ошибка синхронизации с ERP (провижининг или отзыв); NULL — ERP в курсе. Читает
     # проверка «Синхронизация с ERP» центра внешних сервисов (ADR-0024); пользователю не видна.
     erp_sync_error: Mapped[str | None] = mapped_column(Text)
+    # Профиль, который правит сам сотрудник (W15-H6, ADR-0015: владелец полей — CRM).
+    phone: Mapped[str | None] = mapped_column(String(32))
+    timezone: Mapped[str] = mapped_column(String(64), server_default=sql("'Asia/Tashkent'"))
+    email_signature: Mapped[str | None] = mapped_column(Text)
+    # Ник Telegram, с которого сотрудник привязал бота («Привязан как @…»); у привязки админом NULL.
+    tg_username: Mapped[str | None] = mapped_column(String(64))
+    # Фото: ключ объекта в бакете файлов CRM (`domain/staff_profile.avatar_key`) и время замены
+    # (версия адреса картинки). Файл отдаёт только API, публичных ссылок на S3 нет.
+    avatar_key: Mapped[str | None] = mapped_column(String(255))
+    avatar_updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Замещение: на период включительно очередь сотрудника видит заместитель.
+    deputy_user_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("users.id", ondelete="SET NULL")
+    )
+    deputy_from: Mapped[date | None] = mapped_column(Date)
+    deputy_to: Mapped[date | None] = mapped_column(Date)
 
 
 class Role(Base):
@@ -104,6 +129,38 @@ class UserRole(Base):
     )
     granted_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
     granted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class StaffTelegramLink(Base):
+    """Одноразовый код привязки Telegram сотрудником (W15-H6): в БД только хеш, срок 10 минут."""
+
+    __tablename__ = "staff_telegram_links"
+    __table_args__ = (Index("ix_staff_telegram_links_user_id", "user_id"),)
+
+    id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    code_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class PasswordResetToken(Base):
+    """Токен сброса пароля по ссылке (W15-H6): одноразовый, хеш, срок 60 минут."""
+
+    __tablename__ = "password_reset_tokens"
+    __table_args__ = (
+        CheckConstraint("channel IN ('email', 'telegram')", name="channel"),
+        Index("ix_password_reset_tokens_user_id", "user_id", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    channel: Mapped[str] = mapped_column(String(8))
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class RefreshToken(TimestampMixin, Base):

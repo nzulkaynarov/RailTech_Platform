@@ -33,6 +33,7 @@ from app.api.v1 import (
     sandbox,
     setup,
     spend,
+    staff,
     stream,
     system,
     system_status,
@@ -93,7 +94,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app = FastAPI(
         title="RailTech CRM API",
-        version="0.5.0",  # 0.5.0 (W13C-F1): ключи erp, mail, first_employee в чек-листе
+        version="0.6.0",  # 0.6.0 (W15-H6): профиль, фото, Telegram сам, замещение, «Забыли пароль?»
         lifespan=lifespan,
         # operationId = имя функции роута → читаемые имена в клиенте orval.
         generate_unique_id_function=lambda route: route.name,
@@ -116,6 +117,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     routers = (
         auth,
         me,
+        staff,
         users,
         platform_roles,
         # Раньше `leads`: `/leads/web*` не должен перехватываться `/leads/{lead_id}`.

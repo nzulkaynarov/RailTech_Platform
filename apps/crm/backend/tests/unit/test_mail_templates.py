@@ -41,6 +41,19 @@ def test_dev_stand_link_points_to_platform_not_crm(template: str) -> None:
     assert "crm.localhost" not in body
 
 
+@pytest.mark.parametrize("lang", ["ru", "uz", "en"])
+def test_reset_link_letter_carries_the_link_not_a_password(lang: str) -> None:
+    """«Забыли пароль?» (W15-H6): в письме ссылка на Платформу, временного пароля нет."""
+    url = "https://platform.example.com/reset-password?token=abc"
+    rendered = mail_templates.render(
+        "password_reset_link", lang, full_name="Азиз", reset_url=url, company="RailTech"
+    )
+    assert rendered.lang == lang
+    assert url in rendered.body
+    assert "$" not in rendered.subject + rendered.body
+    assert "emporary" not in rendered.body
+
+
 @pytest.mark.parametrize("lang", [None, "", "de", "UZ", "en-US"])
 def test_language_resolution(lang: str | None) -> None:
     code = mail_templates.resolve_language(lang)

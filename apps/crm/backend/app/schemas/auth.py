@@ -1,9 +1,9 @@
 """DTO аутентификации, профиля и пользователей (SPEC §10.1)."""
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Literal, cast
 
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.domain.erp_roles import ErpRoleCode, normalize_erp_roles
 from app.domain.platform_roles import POSITION_MAX_LEN
@@ -76,6 +76,16 @@ class UserOut(BaseModel):
     position: str | None = None
     # Язык интерфейса сотрудника (CRM-01b): ru|uz|en, по умолчанию ru.
     language: Language = "ru"
+    # Профиль, который правит сам сотрудник (W15-H6): телефон, пояс, подпись для писем, ник Telegram
+    # (если привязан самим), версия фото (None — фото нет) и замещение на период (включительно).
+    phone: str | None = None
+    timezone: str = "Asia/Tashkent"
+    email_signature: str | None = None
+    tg_username: str | None = None
+    avatar_version: int | None = None
+    deputy_user_id: int | None = None
+    deputy_from: date | None = None
+    deputy_to: date | None = None
 
 
 class PlatformRoleGrantRef(PlatformRoleRef):
@@ -99,15 +109,66 @@ class MeOut(UserOut):
 
     # Переход в ERP по SSO включён (PLATFORM_SSO_ENABLED, FIX-03); иначе кнопки «В бэк-офис» нет.
     sso_enabled: bool = False
+    # Имя заместителя (W15-H6), чтобы экран не ходил за справочником.
+    deputy_name: str | None = None
 
 
 class MePatch(BaseModel):
-    """Своё: режим навигации и подписки на личные уведомления от бота (Q-010)."""
+    """Своё: режим навигации, подписки на личные уведомления бота (Q-010) и профиль (W15-H6).
+
+    Должность, роли и прочее чужое здесь запрещены (`extra=forbid` -> 422): сотрудник правит только
+    свой профиль, должность задаёт админ. Пустая строка в `phone` и `email_signature` очищает поле.
+    """
+
+    model_config = ConfigDict(extra="forbid")
 
     ui_mode: UiMode | None = None
     notify_system: bool | None = None
     notify_leads: bool | None = None
     language: Language | None = None
+    full_name: str | None = Field(default=None, min_length=1, max_length=255)
+    phone: str | None = Field(default=None, max_length=40)
+    timezone: str | None = Field(default=None, max_length=64)
+    email_signature: str | None = Field(default=None, max_length=2000)
+
+
+class DeputyIn(BaseModel):
+    """Замещение на период: `PUT /me/deputy`."""
+
+    deputy_user_id: int = Field(gt=0)
+    date_from: date
+    date_to: date
+
+
+class DeputyCandidate(BaseModel):
+    id: int
+    full_name: str
+    position: str | None = None
+
+
+class TelegramLinkOut(BaseModel):
+    """Одноразовая ссылка привязки Telegram: открыть в Telegram или отсканировать QR."""
+
+    url: str
+    expires_at: datetime
+
+
+class CoveredOut(BaseModel):
+    """За кого заместитель видит очередь сегодня."""
+
+    user_id: int
+    full_name: str
+    date_from: date
+    date_to: date
+
+
+class ForgotPasswordRequest(BaseModel):
+    identifier: str = Field(min_length=1, max_length=255)
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str = Field(min_length=20, max_length=128)
+    new_password: str = Field(min_length=1, max_length=256)
 
 
 class PermissionsResponse(BaseModel):

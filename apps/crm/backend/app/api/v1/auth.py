@@ -9,7 +9,9 @@ from app.config import Settings
 from app.domain.errors import AuthError
 from app.schemas.auth import (
     ChangePasswordRequest,
+    ForgotPasswordRequest,
     LoginRequest,
+    ResetPasswordRequest,
     SsoExchangeRequest,
     SsoTokenRequest,
     SsoTokenResponse,
@@ -85,6 +87,24 @@ async def change_password(
     await container.user_service.change_password(
         principal.actor, principal.user_id, body.current_password, body.new_password
     )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/forgot-password", status_code=status.HTTP_202_ACCEPTED)
+async def forgot_password(body: ForgotPasswordRequest, container: ContainerDep) -> dict[str, bool]:
+    """«Забыли пароль?»: ответ один и тот же для любой учётной записи (перечислять нельзя).
+
+    Ссылка уходит на почту или в Telegram, если у найденного сотрудника есть канал; иначе тихо
+    ничего — экран входа заранее говорит «если нет ни того, ни другого, обратитесь к
+    администратору». Частоту по адресу и учётной записи ограничивают BFF и сам сервис (3 в час)."""
+    await container.password_reset.request(body.identifier)
+    return {"accepted": True}
+
+
+@router.post("/reset-password", status_code=status.HTTP_204_NO_CONTENT)
+async def reset_password_by_link(body: ResetPasswordRequest, container: ContainerDep) -> Response:
+    """Новый пароль по одноразовой ссылке; токен неверный, использованный или просроченный — 422."""
+    await container.password_reset.reset(body.token, body.new_password)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
