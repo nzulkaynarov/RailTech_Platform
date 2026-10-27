@@ -16,6 +16,7 @@ export const SUPPLY_PERSON = person(31, "Демо Снабженцев");
 export const ENGINEER_PERSON = person(41, "Демо Инженеров");
 export const MANAGER_PERSON = person(2, "Демо Менеджеров");
 export const DIRECTOR_PERSON = person(1, "Демо Директоров");
+export const OFFICE_PERSON = person(61, "Демо Офисовая");
 export const ACCOUNTANT_PERSON = person(51, "Демо Бухгалтеров");
 /** Сотрудник сессии мока -> `crm_user_id` автора (менеджер мока пишет служебки от своего имени). */
 export const MOCK_USER_CRM_ID: Record<string, number> = {
@@ -306,6 +307,16 @@ const MEMO_SEEDS: readonly MemoSeed[] = [
     subject: "Отчёт по остаткам склада за октябрь",
     text: "Остатки на 28 октября сверены с учётом. Расхождений нет, неликвид — 3 позиции.",
     author: SUPPLY_PERSON,
+  },
+  {
+    n: 31,
+    kind: "memo",
+    prefix: "СЗ",
+    subject: "Закупка кофе для офиса",
+    text: "Прошу согласовать закупку кофе и расходников для офиса на квартал.",
+    author: OFFICE_PERSON,
+    amount: "1800000.00",
+    due: "2026-11-05",
   },
   {
     n: 15,

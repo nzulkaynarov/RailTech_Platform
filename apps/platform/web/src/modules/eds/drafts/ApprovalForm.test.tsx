@@ -280,4 +280,13 @@ describe("Одобрение КП: форма", () => {
     fireEvent.click(screen.getByRole("link", { name: "Показать КП КП-2026/115 в боковом окне" }));
     expect(router.state.location.search).toContain("quote=40000000-0000-4000-8000-000000000115");
   });
+
+  it("ссылка из «Моей очереди» (КП-2026/118, panel=open) открывает карточку и «Одобрение»", async () => {
+    signIn("director@demo.example");
+    renderAt(`/eds/drafts/${encodeURIComponent("КП-2026/118")}?panel=open&tab=approve`);
+
+    expect(await screen.findByRole("heading", { level: 1, name: "КП-2026/118" })).toBeVisible();
+    const panel = await panelEl();
+    expect(await within(panel).findByRole("form", { name: "Одобрение КП" })).toBeVisible();
+  });
 });

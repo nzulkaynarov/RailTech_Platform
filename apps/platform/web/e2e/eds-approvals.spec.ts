@@ -270,7 +270,7 @@ test.describe("На согласовании: служебные записки"
     await expect(first.getByText("Оплата аренды склада за ноябрь")).toBeVisible();
     await expect(first.getByText("Демо Менеджеров")).toBeVisible();
     await expect(first.getByText("На согласовании · Директор")).toBeVisible();
-    await expect(page.getByRole("row")).toHaveCount(1 + 4);
+    await expect(page.getByRole("row")).toHaveCount(1 + 5);
     await settledScreenshot(page, "memos-list");
     await expectNoViolations(page, "список согласований");
 
