@@ -11,7 +11,6 @@ import pytest
 from accounts.models import CustomUser
 from catalog.models import Category, CategoryRequest
 from core.tests.openapi_fixtures import API, conforms, sends
-from core.tests.openapi_internal import request_fields_missing
 from master_data.models import Currency, DeliveryBasis
 
 pytest_plugins = ["core.tests.openapi_fixtures"]  # фикстуры `admin` и `company`
@@ -82,14 +81,11 @@ def test_document_templates_crud_and_refusals(admin, company):
     item = f"{API}crm/document-templates/{{id}}/"
     conforms(admin.get(listing), listing, "get", status=200)
     conforms(admin.get(f"{listing}placeholders/"), f"{listing}placeholders/", "get", status=200)
-    # BFF шлёт и `is_active`, но `create` его не принимает (шаблон рождается активным) — схема запроса честно
-    # называет только name/kind/body_html; расхождение BFF ↔ ERP описано в QUESTIONS (Q-D20-1).
     body = {"name": "Мой шаблон", "body_html": DOCUMENT_BODY}
-    sends(listing, "post", body)
+    sends(listing, "post", {**body, "is_active": False})  # Q-D20-1.2: create принимает is_active
     created = admin.post(listing, body, format="json")
-    assert created.json()["is_active"] is True
-    assert request_fields_missing(listing, "post", {"is_active": True}) == ["is_active"]
     conforms(created, listing, "post", status=201)
+    assert created.json()["is_active"] is True  # без is_active шаблон рождается активным, как раньше
     one = f"{listing}{created.json()['id']}/"
     patch = {"name": "Мой шаблон 2", "body_html": DOCUMENT_BODY, "is_active": False}
     sends(item, "patch", patch)
@@ -101,6 +97,25 @@ def test_document_templates_crud_and_refusals(admin, company):
     sends(f"{listing}preview/", "post", {"body_html": DOCUMENT_BODY})
     conforms(preview, f"{listing}preview/", "post", status=200)
     conforms(admin.delete(one), item, "delete", status=204)
+
+
+def test_inactive_legal_template_is_saved_as_draft_without_required_blocks(admin, company):
+    """Q-D20-1.2: `is_active=false` при создании — черновик; обязательные блоки проверяются только у активного."""
+    from crm.models import DocumentTemplateKind
+
+    listing = f"{API}crm/document-templates/"
+    kind = DocumentTemplateKind.objects.get(code="CONTRACT")
+    draft = {"name": "Черновик договора", "kind": kind.code, "body_html": "<p>пусто</p>", "is_active": False}
+    sends(listing, "post", draft)
+    created = admin.post(listing, draft, format="json")
+    conforms(created, listing, "post", status=201)
+    assert created.json()["is_active"] is False
+    active = admin.post(listing, {**draft, "is_active": True}, format="json")
+    assert active.json()["detail"] == "TEMPLATE_MISSING_REQUIRED_BLOCKS"
+    conforms(active, listing, "post", status=400)
+    # Активация черновика проверяется так же, как и раньше.
+    activated = admin.patch(f"{listing}{created.json()['id']}/", {"is_active": True}, format="json")
+    assert activated.json()["detail"] == "TEMPLATE_MISSING_REQUIRED_BLOCKS"
 
 
 def test_active_legal_template_without_blocks_names_missing_blocks(admin, company):
@@ -144,6 +159,66 @@ def test_email_templates_crud_and_preview(admin, company):
     preview = admin.post(f"{one}preview/", {}, format="json")
     conforms(preview, f"{item}preview/", "post", status=200)
     conforms(admin.delete(one), item, "delete", status=204)
+
+
+def test_email_template_preview_without_a_file_uses_the_database_row(admin, company):
+    """Q-D20-1.4: ключ без файла `templates/emails/<key>_*.txt` — предпросмотр из строки БД, а не 500."""
+    listing = f"{API}settings/email-templates/"
+    body = {
+        "key": "d2_0_custom_only_in_db",
+        "language": "",
+        "subject": "Тема для {{ name }}",
+        "html_body": "<p>Привет, {{ name }}</p>",
+        "text_body": "Привет, {{ name }}",
+        "available_variables": "name",
+        "is_active": True,
+    }
+    created = admin.post(listing, body, format="json")
+    conforms(created, listing, "post", status=201)
+    preview = admin.post(f"{listing}{created.json()['id']}/preview/", {"context": {"name": "Анна"}}, format="json")
+    conforms(preview, f"{listing}{{id}}/preview/", "post", status=200)
+    assert preview.json()["subject"] == "Тема для Анна"
+    assert "Привет, Анна" in preview.json()["text_body"]
+
+
+def test_email_template_preview_of_inactive_row_without_a_file_uses_the_row(admin, company):
+    """Q-D20-1.4: неактивная строка тоже просматривается (раньше — 500, потому что ни файла, ни активной строки)."""
+    from notifications.models import EmailTemplate
+
+    template = EmailTemplate.objects.create(
+        key="d2_0_inactive", subject="Т {{ x }}", text_body="Т {{ x }}", is_active=False
+    )
+    response = admin.post(
+        f"{API}settings/email-templates/{template.id}/preview/", {"context": {"x": "1"}}, format="json"
+    )
+    conforms(response, f"{API}settings/email-templates/{{id}}/preview/", "post", status=200)
+    assert response.json()["subject"] == "Т 1"
+
+
+def test_email_template_preview_service_without_row_and_file_raises_not_found(db):
+    """Q-D20-1.4: ни строки, ни файла — `EmailTemplateNotFound`, а вьюха отвечает 404 `EMAIL_TEMPLATE_NOT_FOUND`."""
+    import pytest
+
+    from notifications.services_email_templates import EmailTemplateNotFound, preview_template
+
+    with pytest.raises(EmailTemplateNotFound):
+        preview_template("d2_0_nowhere")
+
+
+def test_email_template_preview_view_maps_not_found_to_404_with_code(admin, company, monkeypatch):
+    from notifications import services_email_templates as service
+    from notifications.models import EmailTemplate
+
+    template = EmailTemplate.objects.create(key="d2_0_gone", subject="s", text_body="t", is_active=True)
+
+    def gone(*args, **kwargs):
+        raise service.EmailTemplateNotFound("d2_0_gone")
+
+    monkeypatch.setattr(service, "preview_template", gone)
+    response = admin.post(f"{API}settings/email-templates/{template.id}/preview/", {}, format="json")
+    assert response.status_code == 404
+    assert response.json() == {"detail": "EMAIL_TEMPLATE_NOT_FOUND"}
+    conforms(response, f"{API}settings/email-templates/{{id}}/preview/", "post", status=404)
 
 
 # --- справочники ------------------------------------------------------------------------------------------------

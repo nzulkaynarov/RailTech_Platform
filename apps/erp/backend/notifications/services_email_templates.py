@@ -17,7 +17,9 @@ sent to real users.
 
 from __future__ import annotations
 
-from .emails import _render_bodies, send_templated_email
+from django.template import TemplateDoesNotExist
+
+from .emails import _render_bodies, render_bodies_from_row, send_templated_email
 
 # Sample merge contexts per template key — what the editor sees in a preview.
 # Mirrors the context dicts the production services build (accounts/services/*,
@@ -74,14 +76,26 @@ def sample_context_for(key: str) -> dict:
     return SAMPLE_CONTEXTS.get(key, dict(_GENERIC_SAMPLE_CONTEXT))
 
 
-def preview_template(key: str, context: dict | None = None) -> dict:
+class EmailTemplateNotFound(Exception):
+    """Для ключа нет ни строки в БД, ни файловых шаблонов — показывать нечего (вьюха отвечает 404)."""
+
+
+def preview_template(key: str, context: dict | None = None, *, template=None) -> dict:
     """Render subject/html/text for a key against a sample context. No send.
 
     Uses the same `_render_bodies` pipeline as production, so it transparently
     reflects whether a DB override or the file template is active for the key.
+    Ключ без файла (оператор завёл произвольный `key`) и без АКТИВНОЙ строки на языке запроса раньше давал
+    `TemplateDoesNotExist` → 500; теперь показывается сама просматриваемая строка `template` (D2-0, Q-D20-1.4),
+    а если её нет — `EmailTemplateNotFound`.
     """
     rendering_context = context if context is not None else sample_context_for(key)
-    subject, text_body, html_body = _render_bodies(key, rendering_context)
+    try:
+        subject, text_body, html_body = _render_bodies(key, rendering_context)
+    except TemplateDoesNotExist as exc:
+        if template is None:
+            raise EmailTemplateNotFound(key) from exc
+        subject, text_body, html_body = render_bodies_from_row(template, rendering_context)
     return {
         "key": key,
         "subject": subject,

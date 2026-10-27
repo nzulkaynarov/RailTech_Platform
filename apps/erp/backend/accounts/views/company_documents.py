@@ -200,7 +200,7 @@ class CompanyDocumentsMixin:
             "маржа, срок действия) and its document-numbering prefix. GET returns the settings "
             "(auto-created); PATCH updates them. delivery_basis / cost_currency are sent as "
             "master-data CODES (e.g. 'USD', 'FCA'). OWNER of THIS company (or platform admin) only. "
-            "PATCH does not accept `payment_terms_days` (read-only here)."
+            "`payment_terms_days` is the invoice payment term in days (0..32767, null = platform default)."
         ),
         request=CompanySettingsUpdateSerializer,
         responses={

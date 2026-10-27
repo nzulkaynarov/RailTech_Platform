@@ -79,8 +79,25 @@ def test_timeline_and_activity_logs(admin, company, deal):
     logs = f"{API}crm/activity-logs/"
     response = admin.get(logs, {"page_size": 50})
     conforms(response, logs, "get", status=200)
-    # BFF (`feeds/activity.py`) читает ещё `deal_id` и `entity_type`, а журнал платформы их не отдаёт — Q-D20-2.
-    assert {"id", "timestamp", "event_code", "action", "user_name"} <= set(response.json()["results"][0])
+    # Q-D20-1.3: журнал отдаёт связь со сделкой и тип сущности — их читает лента «Сегодня» BFF (`feeds/activity.py`).
+    row = response.json()["results"][0]
+    assert {"id", "timestamp", "event_code", "action", "user_name", "entity_type", "deal_id"} <= set(row)
+    assert (row["entity_type"], row["deal_id"]) == ("deal", deal.id)
+
+
+def test_activity_logs_new_fields_cost_no_extra_queries(admin, company, deal, django_assert_max_num_queries):
+    for index in range(6):
+        ActivityLog.objects.create(
+            user=admin.user,
+            action=f"Событие {index}",
+            detail="",
+            event_code="deal.created",
+            deal=deal,
+            entity_type="deal",
+        )
+    with django_assert_max_num_queries(8):  # не растёт с числом строк: связей, которые надо обходить, нет
+        response = admin.get(f"{API}crm/activity-logs/", {"page_size": 50})
+    assert response.status_code == 200 and len(response.json()["results"]) == 6
 
 
 def test_my_approval_queue_and_document_search(admin, company, deal):

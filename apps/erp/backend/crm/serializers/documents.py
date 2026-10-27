@@ -63,11 +63,12 @@ class DocumentTemplateWriteSerializer(serializers.Serializer):
 
 
 class DocumentTemplateCreateSerializer(serializers.Serializer):
-    """Тело `POST crm/document-templates/`: `is_active` не принимается — новый шаблон рождается активным."""
+    """Тело `POST crm/document-templates/`; без `is_active` шаблон активен, `false` — черновик (блоки не проверяются)."""
 
     name = serializers.CharField(max_length=255)
     kind = serializers.CharField(required=False, default="CUSTOM", help_text="Код вида шаблона; по умолчанию CUSTOM")
     body_html = serializers.CharField(required=False, allow_blank=True, max_length=100_000)
+    is_active = serializers.BooleanField(required=False, default=True)
 
 
 class DocumentTemplateCopySerializer(serializers.Serializer):

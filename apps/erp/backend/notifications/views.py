@@ -183,7 +183,12 @@ class EmailTemplateViewSet(RoleGatedViewMixin, AuditedWriteMixin, viewsets.Model
         description="Render the template's subject/html/text against a SAMPLE context (or a "
         "provided override context). Does NOT send. Reflects DB override vs file fallback.",
         request=EmailTemplatePreviewSerializer,
-        responses={200: EmailTemplatePreviewResultSerializer},
+        responses={
+            200: EmailTemplatePreviewResultSerializer,
+            404: OpenApiResponse(
+                description="EMAIL_TEMPLATE_NOT_FOUND: no DB row and no file template for the key (or the template is not found)"
+            ),
+        },
         tags=["Admin"],
     )
     @action(detail=True, methods=["post"])
@@ -192,7 +197,12 @@ class EmailTemplateViewSet(RoleGatedViewMixin, AuditedWriteMixin, viewsets.Model
         serializer = EmailTemplatePreviewSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         override_context = serializer.validated_data.get("context")
-        result = services_email_templates.preview_template(template.key, context=override_context)
+        try:
+            result = services_email_templates.preview_template(
+                template.key, context=override_context, template=template
+            )
+        except services_email_templates.EmailTemplateNotFound:
+            return Response({"detail": "EMAIL_TEMPLATE_NOT_FOUND"}, status=404)
         return Response(result)
 
     @extend_schema(

@@ -745,8 +745,8 @@ paths:
       operationId: accounts_companies_settings_retrieve
       description: The selling company's КП defaults (Incoterm, валюта себестоимости, ставка НДС, маржа, срок действия) and
         its document-numbering prefix. GET returns the settings (auto-created); PATCH updates them. delivery_basis / cost_currency
-        are sent as master-data CODES (e.g. 'USD', 'FCA'). OWNER of THIS company (or platform admin) only. PATCH does not
-        accept `payment_terms_days` (read-only here).
+        are sent as master-data CODES (e.g. 'USD', 'FCA'). OWNER of THIS company (or platform admin) only. `payment_terms_days`
+        is the invoice payment term in days (0..32767, null = platform default).
       summary: Read / update company КП defaults + numbering
       parameters:
       - in: path
@@ -787,8 +787,8 @@ paths:
       operationId: accounts_companies_settings_partial_update
       description: The selling company's КП defaults (Incoterm, валюта себестоимости, ставка НДС, маржа, срок действия) and
         its document-numbering prefix. GET returns the settings (auto-created); PATCH updates them. delivery_basis / cost_currency
-        are sent as master-data CODES (e.g. 'USD', 'FCA'). OWNER of THIS company (or platform admin) only. PATCH does not
-        accept `payment_terms_days` (read-only here).
+        are sent as master-data CODES (e.g. 'USD', 'FCA'). OWNER of THIS company (or platform admin) only. `payment_terms_days`
+        is the invoice payment term in days (0..32767, null = platform default).
       summary: Read / update company КП defaults + numbering
       parameters:
       - in: path
@@ -2626,14 +2626,18 @@ paths:
               schema:
                 $ref: '#/components/schemas/EmailTemplatePreviewResult'
           description: ''
+        '404':
+          description: 'EMAIL_TEMPLATE_NOT_FOUND: no DB row and no file template for the key (or the template is not found)'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
         '400':
           $ref: '#/components/responses/BadRequestResponse'
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
         '403':
           $ref: '#/components/responses/ForbiddenResponse'
-        '404':
-          $ref: '#/components/responses/NotFoundResponse'
   /api/v1/admin/email-templates/{id}/test-send/:
     post:
       operationId: admin_email_templates_test_send_create
@@ -7190,8 +7194,8 @@ paths:
           $ref: '#/components/responses/ForbiddenResponse'
     post:
       operationId: crm_document_templates_create
-      description: A new template is born active; `is_active` is not accepted. An active legal template must carry its required
-        blocks.
+      description: A new template is active unless `is_active=false` (a draft). An active legal template must carry its required
+        blocks; a draft is saved freely.
       summary: Create a company template
       tags:
       - CRM
@@ -12891,14 +12895,18 @@ paths:
               schema:
                 $ref: '#/components/schemas/EmailTemplatePreviewResult'
           description: ''
+        '404':
+          description: 'EMAIL_TEMPLATE_NOT_FOUND: no DB row and no file template for the key (or the template is not found)'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
         '400':
           $ref: '#/components/responses/BadRequestResponse'
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
         '403':
           $ref: '#/components/responses/ForbiddenResponse'
-        '404':
-          $ref: '#/components/responses/NotFoundResponse'
   /api/v1/settings/email-templates/{id}/test-send/:
     post:
       operationId: settings_email_templates_test_send_create
@@ -14025,8 +14033,19 @@ components:
           format: date-time
           readOnly: true
           title: Время события
+        entity_type:
+          type: string
+          title: Тип сущности
+          description: Код сущности, к которой относится запись (company, user, deal, subscription, ...)
+          maxLength: 40
+        deal_id:
+          type: integer
+          nullable: true
+          title: Сделка
+          readOnly: true
       required:
       - action
+      - deal_id
       - id
       - timestamp
       - user_name
@@ -16832,7 +16851,7 @@ components:
           maxLength: 255
     DocumentTemplateCreateRequest:
       type: object
-      description: 'Тело `POST crm/document-templates/`: `is_active` не принимается — новый шаблон рождается активным.'
+      description: Тело `POST crm/document-templates/`; без `is_active` шаблон активен, `false` — черновик (блоки не проверяются).
       properties:
         name:
           type: string
@@ -16846,6 +16865,9 @@ components:
         body_html:
           type: string
           maxLength: 100000
+        is_active:
+          type: boolean
+          default: true
       required:
       - name
     DocumentTemplateError:
@@ -19140,7 +19162,7 @@ components:
         сервису, который сам разбирает поля, а ошибку возвращает кодом `BAD_*`. Справочники (`default_cost_currency`,
         `default_delivery_basis`) пишутся КОДОМ строки справочника (`"USD"`, `"FCA"`; пусто или `null` — сбросить), а
         читаются как `default_cost_currency_code` / `default_delivery_basis_code` (`CompanySettingsSerializer`).
-        `payment_terms_days` сервис не принимает — поле только читается (срок оплаты счёта).
+        `payment_terms_days` — срок оплаты счёта в днях (0..32767, `null` — платформенное умолчание).
       properties:
         default_cost_currency:
           type: string
@@ -19183,6 +19205,14 @@ components:
           nullable: true
           title: Срок действия КП по умолчанию (дней)
           description: Через сколько дней истекает новый КП (valid_until = сегодня + N)
+        payment_terms_days:
+          type: integer
+          maximum: 32767
+          minimum: 0
+          nullable: true
+          title: Срок оплаты счёта (дней)
+          description: Через сколько дней после ВЫСТАВЛЕНИЯ счёт должен быть оплачен. Пусто — платформенное умолчание. От
+            этого срока считается напоминание об оплате.
         default_payment_terms:
           type: string
           title: Условия оплаты по умолчанию

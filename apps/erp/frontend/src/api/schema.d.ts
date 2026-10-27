@@ -1528,7 +1528,7 @@ export interface paths {
         };
         /**
          * Read / update company КП defaults + numbering
-         * @description The selling company's КП defaults (Incoterm, валюта себестоимости, ставка НДС, маржа, срок действия) and its document-numbering prefix. GET returns the settings (auto-created); PATCH updates them. delivery_basis / cost_currency are sent as master-data CODES (e.g. 'USD', 'FCA'). OWNER of THIS company (or platform admin) only. PATCH does not accept `payment_terms_days` (read-only here).
+         * @description The selling company's КП defaults (Incoterm, валюта себестоимости, ставка НДС, маржа, срок действия) and its document-numbering prefix. GET returns the settings (auto-created); PATCH updates them. delivery_basis / cost_currency are sent as master-data CODES (e.g. 'USD', 'FCA'). OWNER of THIS company (or platform admin) only. `payment_terms_days` is the invoice payment term in days (0..32767, null = platform default).
          */
         get: operations["accounts_companies_settings_retrieve"];
         put?: never;
@@ -1538,7 +1538,7 @@ export interface paths {
         head?: never;
         /**
          * Read / update company КП defaults + numbering
-         * @description The selling company's КП defaults (Incoterm, валюта себестоимости, ставка НДС, маржа, срок действия) and its document-numbering prefix. GET returns the settings (auto-created); PATCH updates them. delivery_basis / cost_currency are sent as master-data CODES (e.g. 'USD', 'FCA'). OWNER of THIS company (or platform admin) only. PATCH does not accept `payment_terms_days` (read-only here).
+         * @description The selling company's КП defaults (Incoterm, валюта себестоимости, ставка НДС, маржа, срок действия) and its document-numbering prefix. GET returns the settings (auto-created); PATCH updates them. delivery_basis / cost_currency are sent as master-data CODES (e.g. 'USD', 'FCA'). OWNER of THIS company (or platform admin) only. `payment_terms_days` is the invoice payment term in days (0..32767, null = platform default).
          */
         patch: operations["accounts_companies_settings_partial_update"];
         trace?: never;
@@ -4527,7 +4527,7 @@ export interface paths {
         put?: never;
         /**
          * Create a company template
-         * @description A new template is born active; `is_active` is not accepted. An active legal template must carry its required blocks.
+         * @description A new template is active unless `is_active=false` (a draft). An active legal template must carry its required blocks; a draft is saved freely.
          */
         post: operations["crm_document_templates_create"];
         delete?: never;
@@ -7441,6 +7441,13 @@ export interface components {
              * Format: date-time
              */
             readonly timestamp: string;
+            /**
+             * Тип сущности
+             * @description Код сущности, к которой относится запись (company, user, deal, subscription, ...)
+             */
+            entity_type?: string;
+            /** Сделка */
+            readonly deal_id: number | null;
         };
         AddMembershipRequestRequest: {
             company: number;
@@ -9336,7 +9343,7 @@ export interface components {
         DocumentTemplateCopyRequest: {
             name?: string;
         };
-        /** @description Тело `POST crm/document-templates/`: `is_active` не принимается — новый шаблон рождается активным. */
+        /** @description Тело `POST crm/document-templates/`; без `is_active` шаблон активен, `false` — черновик (блоки не проверяются). */
         DocumentTemplateCreateRequest: {
             name: string;
             /**
@@ -9345,6 +9352,8 @@ export interface components {
              */
             kind: string;
             body_html?: string;
+            /** @default true */
+            is_active: boolean;
         };
         /**
          * @description Отказ записи шаблона: `{detail: CODE}`; у `TEMPLATE_MISSING_REQUIRED_BLOCKS` ещё `missing_blocks`.
@@ -10792,7 +10801,7 @@ export interface components {
          *     сервису, который сам разбирает поля, а ошибку возвращает кодом `BAD_*`. Справочники (`default_cost_currency`,
          *     `default_delivery_basis`) пишутся КОДОМ строки справочника (`"USD"`, `"FCA"`; пусто или `null` — сбросить), а
          *     читаются как `default_cost_currency_code` / `default_delivery_basis_code` (`CompanySettingsSerializer`).
-         *     `payment_terms_days` сервис не принимает — поле только читается (срок оплаты счёта).
+         *     `payment_terms_days` — срок оплаты счёта в днях (0..32767, `null` — платформенное умолчание).
          */
         PatchedCompanySettingsUpdateRequest: {
             /** @description Код валюты справочника, например USD */
@@ -10828,6 +10837,11 @@ export interface components {
              * @description Через сколько дней истекает новый КП (valid_until = сегодня + N)
              */
             default_offer_validity_days?: number | null;
+            /**
+             * Срок оплаты счёта (дней)
+             * @description Через сколько дней после ВЫСТАВЛЕНИЯ счёт должен быть оплачен. Пусто — платформенное умолчание. От этого срока считается напоминание об оплате.
+             */
+            payment_terms_days?: number | null;
             /**
              * Условия оплаты по умолчанию
              * @description Напр. «100% предоплата» — подставляется в блок «Условия поставки» КП
@@ -17532,7 +17546,15 @@ export interface operations {
             400: components["responses"]["BadRequestResponse"];
             401: components["responses"]["UnauthorizedResponse"];
             403: components["responses"]["ForbiddenResponse"];
-            404: components["responses"]["NotFoundResponse"];
+            /** @description EMAIL_TEMPLATE_NOT_FOUND: no DB row and no file template for the key (or the template is not found) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
         };
     };
     admin_email_templates_test_send_create: {
@@ -26202,7 +26224,15 @@ export interface operations {
             400: components["responses"]["BadRequestResponse"];
             401: components["responses"]["UnauthorizedResponse"];
             403: components["responses"]["ForbiddenResponse"];
-            404: components["responses"]["NotFoundResponse"];
+            /** @description EMAIL_TEMPLATE_NOT_FOUND: no DB row and no file template for the key (or the template is not found) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
         };
     };
     settings_email_templates_test_send_create: {

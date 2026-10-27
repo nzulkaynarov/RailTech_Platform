@@ -70,6 +70,15 @@ def _brand_preview_field():
     )
 
 
+def _as_flag(value, *, default: bool) -> bool:
+    """`is_active` из тела: не прислан или `null` — `default`; строки `false`/`0`/`no` формы — ложь."""
+    if value is None:
+        return default
+    if isinstance(value, str):
+        return value.strip().lower() not in ("", "0", "false", "no", "off")
+    return bool(value)
+
+
 def _template_error(exc):
     """400 `{"detail": CODE}`; у `TEMPLATE_MISSING_REQUIRED_BLOCKS` — ещё `missing_blocks`
     (`[{code, label}]`): редактор называет недостающие блоки по именам (C2A-G-5)."""
@@ -96,7 +105,7 @@ _TEMPLATE_FORBIDDEN = OpenApiResponse(
 @extend_schema_view(
     create=extend_schema(
         summary="Create a company template",
-        description="A new template is born active; `is_active` is not accepted. An active legal template must carry its required blocks.",
+        description="A new template is active unless `is_active=false` (a draft). An active legal template must carry its required blocks; a draft is saved freely.",
         request=DocumentTemplateCreateSerializer,
         responses={201: DocumentTemplateSerializer, 400: _TEMPLATE_REFUSAL, 403: _TEMPLATE_FORBIDDEN},
         tags=["CRM"],
@@ -183,6 +192,7 @@ class DocumentTemplateViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
                 name=request.data.get("name", ""),
                 kind_code=request.data.get("kind", "CUSTOM"),
                 body_html=request.data.get("body_html", ""),
+                is_active=_as_flag(request.data.get("is_active"), default=True),
             )
         except DjangoValidationError as exc:
             # Сервисные коды обязаны доехать как {"detail": CODE} — без перехвата Django

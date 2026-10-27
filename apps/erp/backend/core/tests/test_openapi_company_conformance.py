@@ -30,6 +30,7 @@ def test_company_settings_patch_describes_codes_bff_sends(admin, company):
         "min_margin_percent": "5.00",
         "target_margin_percent": "20.00",
         "default_offer_validity_days": 30,
+        "payment_terms_days": 14,
         "default_payment_terms": "100% предоплата",
         "default_warranty_months": 12,
         "catalog_price_visibility": "cabinet",
@@ -44,13 +45,21 @@ def test_company_settings_patch_describes_codes_bff_sends(admin, company):
     conforms(admin.get(f"{API}accounts/companies/{company.id}/settings/"), template, "get", status=200)
 
 
-def test_payment_terms_days_is_read_only_in_settings_patch(admin, company):
-    """BFF шлёт `payment_terms_days`, а PATCH его не принимает: схема честно держит поле только в ответе (Q-D20-1)."""
+def test_payment_terms_days_is_accepted_validated_and_described(admin, company):
+    """Q-D20-1.1: PATCH принимает `payment_terms_days` (целое 0..32767, `null` — сбросить), неверное — 400 `BAD_NUMBER`."""
     template = f"{API}accounts/companies/{{id}}/settings/"
-    assert request_fields_missing(template, "patch", {"payment_terms_days": 30}) == ["payment_terms_days"]
-    response = admin.patch(f"{API}accounts/companies/{company.id}/settings/", {"payment_terms_days": 30}, format="json")
+    url = f"{API}accounts/companies/{company.id}/settings/"
+    sends(template, "patch", {"payment_terms_days": 30})
+    response = admin.patch(url, {"payment_terms_days": 30}, format="json")
     conforms(response, template, "patch", status=200)
-    assert response.json()["payment_terms_days"] is None  # молча проигнорировано сервисом, как и описано
+    assert response.json()["payment_terms_days"] == 30
+    cleared = admin.patch(url, {"payment_terms_days": None}, format="json")
+    assert cleared.json()["payment_terms_days"] is None
+    for bad in (-1, "abc", 32768):
+        refused = admin.patch(url, {"payment_terms_days": bad}, format="json")
+        assert refused.json() == {"detail": "BAD_NUMBER"}, bad
+        conforms(refused, template, "patch", status=400)
+    assert admin.get(url).json()["payment_terms_days"] is None
 
 
 def test_company_settings_patch_refusal_is_described(admin, company):
