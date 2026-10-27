@@ -45,7 +45,8 @@ export interface paths {
      *     `both` — оба канала. Контакт — по `crm_contact_id`, без него — основной контакт компании. Ответ всегда 200:
      *     `error` называет причину, по которой приглашение не ушло ни одним из каналов
      *     (`CONTACT_EMAIL_REQUIRED`, `CONTACT_TELEGRAM_REQUIRED`, `EMAIL_DELIVERY_FAILED`, `INVALID_CHANNEL`,
-     *     `CONTACT_WITHOUT_COMPANY`, `COMPANY_ARCHIVED`, `CONTACT_ARCHIVED`); CRM переводит её в слова для менеджера.
+     *     `CONTACT_WITHOUT_COMPANY`, `COMPANY_ARCHIVED`, `CONTACT_ARCHIVED`, `CONTACT_NOT_FOUND` — в компании нет такого контакта
+     *     или он не сопоставлен с контактом CRM); CRM переводит её в слова для менеджера. 404 — неизвестен сам клиент.
      *     Не идемпотентно по смыслу (каждое нажатие — новое приглашение), `Idempotency-Key` защищает только от
      *     повтора одного запроса.
      */
@@ -470,7 +471,7 @@ export interface components {
         sent_via: ("telegram" | "email")[];
         /** Format: uri */
         cabinet_url: string;
-        /** @description Код причины, по которой приглашение не ушло ни одним каналом (0.8.0): `CONTACT_EMAIL_REQUIRED`, `CONTACT_TELEGRAM_REQUIRED`, `EMAIL_DELIVERY_FAILED`, `INVALID_CHANNEL`, `CONTACT_WITHOUT_COMPANY`, `COMPANY_ARCHIVED`, `CONTACT_ARCHIVED`, `CONTACT_CHANNEL_REQUIRED`, `COMPANY_LINKED_BY_INN` (передача нашла компанию по ИНН — приглашение не отправлено до проверки контактов); `null` — ушло или приглашение не запрашивалось. Терпимый читатель: незнакомый код CRM показывает как «причина не определена». */
+        /** @description Код причины, по которой приглашение не ушло ни одним каналом (0.8.0): `CONTACT_EMAIL_REQUIRED`, `CONTACT_TELEGRAM_REQUIRED`, `EMAIL_DELIVERY_FAILED`, `INVALID_CHANNEL`, `CONTACT_WITHOUT_COMPANY`, `COMPANY_ARCHIVED`, `CONTACT_ARCHIVED`, `CONTACT_CHANNEL_REQUIRED`, `CONTACT_NOT_FOUND`, `COMPANY_LINKED_BY_INN` (передача нашла компанию по ИНН — приглашение не отправлено до проверки контактов); `null` — ушло или приглашение не запрашивалось. Терпимый читатель: незнакомый код CRM показывает как «причина не определена». */
         error?: string | null;
       };
     };
