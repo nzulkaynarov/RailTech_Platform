@@ -15,7 +15,7 @@ CONTEXT = {
     "full_name": "Азиз Каримов",
     "email": "aziz@railtech.uz",
     "temporary_password": "Tmp-pass-4321",
-    "crm_url": "https://crm.example.com",
+    "platform_url": "https://platform.example.com",
     "company": "RailTech",
 }
 
@@ -28,7 +28,17 @@ def test_renders_every_language_without_leftover_placeholders(template: str, lan
     assert rendered.subject
     assert not re.search(r"\$[a-z_]+", rendered.subject + rendered.body)
     assert CONTEXT["temporary_password"] in rendered.body
-    assert f"{CONTEXT['crm_url']}/login" in rendered.body
+    assert f"{CONTEXT['platform_url']}/login" in rendered.body
+    assert "localhost" not in rendered.subject + rendered.body
+
+
+@pytest.mark.parametrize("template", ["invite", "password_reset"])
+def test_dev_stand_link_points_to_platform_not_crm(template: str) -> None:
+    """Стенд: ссылка «Вход» — `platform.localhost:<порт>/login` (маршрут входа Платформы)."""
+    values = {**CONTEXT, "platform_url": "http://platform.localhost:8088"}
+    body = mail_templates.render(template, "ru", **values).body
+    assert "Вход: http://platform.localhost:8088/login" in body
+    assert "crm.localhost" not in body
 
 
 @pytest.mark.parametrize("lang", [None, "", "de", "UZ", "en-US"])

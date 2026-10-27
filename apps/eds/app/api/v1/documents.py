@@ -16,6 +16,7 @@ from app.schemas.documents import (
     DocumentPage,
     DocumentStatus,
     DocumentSubmitIn,
+    DocumentUpdate,
 )
 from app.schemas.pagination import Cursor, Limit
 from app.security.permissions import EdsPermission as P
@@ -72,6 +73,13 @@ async def create_document(
 @router.get("/documents/{document_id}", response_model=Document, operation_id="getDocument")
 async def get_document(document_id: uuid.UUID, employee: Reader, session: Session) -> Document:
     return await documents_read.present(session, await documents_read.get_visible(session, employee, document_id))
+
+
+@router.patch("/documents/{document_id}", response_model=Document, operation_id="updateDocument")
+async def update_document(document_id: uuid.UUID, body: DocumentUpdate, employee: Author, session: Session) -> Document:
+    async with session.begin():
+        document = await documents.update(session, employee=employee, document_id=document_id, edits=body)
+        return await documents_read.present(session, document)
 
 
 @router.post("/documents/{document_id}/submit", response_model=Document, operation_id="submitDocument")

@@ -60,7 +60,12 @@ def harness() -> Harness:
 def client(
     sessions: async_sessionmaker[AsyncSession], live_settings: Settings, harness: Harness
 ) -> Iterator[TestClient]:
-    settings = live_settings.model_copy(update={"secrets_key": SecretStr(SECRETS_KEY)})
+    settings = live_settings.model_copy(
+        update={
+            "secrets_key": SecretStr(SECRETS_KEY),
+            "platform_public_url": "https://platform.example.com",
+        }
+    )
     app = create_app(settings)
     with TestClient(app) as test_client:
         container = app.state.container
@@ -198,6 +203,8 @@ async def test_connector_saved_checked_and_letters_flow_through_journal(
     (to, subject, body) = harness.transport.sent[0]
     assert to == "m@railtech.uz"
     assert "RailTech" in subject
+    assert "Вход: https://platform.example.com/login" in body  # Платформа, не localhost (W15-H8a)
+    assert "localhost" not in body
     temporary = body.split("Временный пароль: ")[1].splitlines()[0]
     login(client, manager.email, temporary)  # письмо содержит рабочий временный пароль
 

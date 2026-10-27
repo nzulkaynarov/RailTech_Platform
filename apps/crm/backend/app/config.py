@@ -13,6 +13,8 @@ from urllib.parse import quote
 from pydantic import AnyHttpUrl, Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from app.domain.public_urls import public_url
+
 
 def _default_casbin_dir() -> Path:
     """В контейнере — `/app/casbin` (volume из `infra/casbin`), локально — из репозитория."""
@@ -133,6 +135,15 @@ class Settings(BaseSettings):
     platform_sso_enabled: bool = False
     erp_frontend_url: str = "http://erp.localhost"
 
+    # Публичные адреса для ссылок в письмах сотрудникам (W15-H8a). Сотрудники входят в Платформу
+    # (`<адрес>/login`), не в старый фронт CRM. Явный `*_PUBLIC_URL` главнее домена; compose
+    # собирает его из PLATFORM_DOMAIN/CRM_DOMAIN (прод) или `*.localhost:${HTTP_PORT}` (стенд).
+    # Нет ни адреса, ни домена — письма со ссылкой не уходят, «Состояние системы» говорит почему.
+    platform_public_url: str = ""
+    platform_domain: str = ""
+    crm_public_url: str = ""
+    crm_domain: str = ""
+
     jwt_secret: SecretStr = SecretStr("")
     access_token_ttl_s: int = Field(default=900, ge=60)
     refresh_token_ttl_days: int = Field(default=30, ge=1)
@@ -145,6 +156,16 @@ class Settings(BaseSettings):
     # `rustfs` — бакет `backups`, куда пишет VPS 2 (прод), `auto` — том, если он смонтирован
     # в api, иначе бакет. Переменная BACKUP_SOURCE; на стенде и в проде менять не нужно.
     backup_source: Literal["auto", "volume", "rustfs"] = "auto"
+
+    @property
+    def platform_base_url(self) -> str | None:
+        """Адрес Платформы для писем: `PLATFORM_PUBLIC_URL`, иначе из `PLATFORM_DOMAIN`."""
+        return public_url(self.platform_public_url, self.platform_domain)
+
+    @property
+    def crm_base_url_default(self) -> str | None:
+        """Публичный адрес CRM из окружения: значение по умолчанию `company.crm_base_url`."""
+        return public_url(self.crm_public_url, self.crm_domain)
 
     def _postgres_dsn(self, scheme: str) -> str:
         user = quote(self.postgres_user, safe="")
