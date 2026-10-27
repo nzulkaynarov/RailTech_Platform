@@ -81,7 +81,7 @@ jobs:
           filters: |
             # CRM: свой код; rt-bus и токены (вшиты в образ / интерфейс); контракты — только те, что читают код и тесты CRM:
             # crm.yaml (экспорт OpenAPI и orval), erp-integration.yaml (клиент ERP), eds.yaml и platform-bff.yaml (тесты-сторожа
-            # прав и ролей), platform-rbac.yaml (генератор ролей), mcp-tools.json (инструменты агента), события, подписки,
+            # прав и ролей), platform-rbac* (генератор ролей; тесты читают и схему platform-rbac.schema.json), mcp-tools.json (инструменты агента), события, подписки,
             # пример pairing (examples/pairing-bootstrap.json), модели rt_contracts (generated/python — path-зависимость pyproject).
             crm:
               - 'apps/crm/**'
@@ -91,7 +91,7 @@ jobs:
               - 'packages/contracts/openapi/erp-integration.yaml'
               - 'packages/contracts/openapi/eds.yaml'
               - 'packages/contracts/openapi/platform-bff.yaml'
-              - 'packages/contracts/platform-rbac.yaml'
+              - 'packages/contracts/platform-rbac*'
               - 'packages/contracts/mcp-tools.json'
               - 'packages/contracts/events/**'
               - 'packages/contracts/bus/**'
@@ -129,8 +129,7 @@ jobs:
               - 'packages/contracts/openapi/platform-bff.yaml'
               - 'packages/contracts/openapi/crm.yaml'
               - 'packages/contracts/openapi/eds.yaml'
-              - 'packages/contracts/platform-rbac.yaml'
-              - 'packages/contracts/platform-rbac.schema.json'
+              - 'packages/contracts/platform-rbac*'
               - 'packages/contracts/events/**'
               - 'packages/contracts/bus/**'
               # справка формата базы знаний: docs/kb копируется в web (pnpm kb:sync), тест kbDocs сверяет копию с источником
@@ -238,6 +237,14 @@ jobs:
           fi
       - name: Install
         run: make install
+      # Ровно один head миграций (без базы): два слитых PR с миграциями дают второй head — ловим на PR и на push в main
+      - name: Alembic — единственный head
+        working-directory: apps/crm/backend
+        run: |
+          heads=$(uv run alembic heads)
+          echo "$heads"
+          [ "$(echo "$heads" | grep -c '(head)')" = "1" ] \
+            || { echo "::error::В миграциях CRM не один head — слейте ветки миграций (alembic merge)"; exit 1; }
       - name: Backend — ruff, mypy
         working-directory: apps/crm/backend
         run: |
@@ -527,6 +534,9 @@ jobs:
     if: needs.changes.outputs.erp == 'true' && needs.changes.outputs.heavy == 'true'
     runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 40
+    env:
+      # свой набор контейнеров и сеть на задание: на self-hosted раннере (CI_RUNNER) задания не пересекаются
+      ERP_TEST_NS: ci-${{ github.run_id }}-pytest
     steps:
       - uses: actions/checkout@v7
       # pytest в контейнере на одноразовых Postgres 17 и Redis (apps/erp/scripts/test_backend_local.sh)
@@ -541,6 +551,8 @@ jobs:
     if: needs.changes.outputs.erp == 'true'
     runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 20
+    env:
+      ERP_TEST_NS: ci-${{ github.run_id }}-schema
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v7

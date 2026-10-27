@@ -49,8 +49,7 @@ compose). Задание `packages · contracts` идёт на любую пра
 | `…/openapi/erp-internal.yaml` | contracts, ERP (выгрузка из кода, `openapi-check`) |
 | `…/openapi/platform-bff.yaml` | contracts, Platform, CRM (тест ролей читает OpenAPI BFF) |
 | `…/openapi/eds.yaml` | contracts, EDS, Platform (клиент EDS), CRM (снимок прав EDS) |
-| `…/platform-rbac.yaml` | contracts, CRM (генератор ролей), Platform (матрица, меню) |
-| `…/platform-rbac.schema.json` | contracts, Platform (генератор) |
+| `…/platform-rbac*` (`platform-rbac.yaml`, `platform-rbac.schema.json`) | contracts, CRM (генератор ролей, тесты читают и схему), Platform (матрица, меню, генератор) |
 | `…/mcp-tools.json` | contracts, CRM (инструменты агента), ERP (MCP-сервер) |
 | `…/events/**`, `…/bus/**` | contracts, rt-bus, CRM, ERP, EDS, Platform (схемы и подписки читает каждый участник шины и вшивает в образ) |
 | `…/examples/pairing-bootstrap.json` | contracts, CRM, ERP |
