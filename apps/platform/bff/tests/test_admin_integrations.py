@@ -897,6 +897,31 @@ async def test_field_errors_name_the_field(
     assert response.json()["details"]["reason"] == reason
 
 
+async def test_model_change_rejection_names_the_model_field(
+    web: Web, crm: CrmIntegrationsFake, check: ContractChecker
+) -> None:
+    """CRM не принял имя модели (W13C-F2): в ответе BFF поле `model`, без подкода и без значений."""
+    crm.error("PUT", "models/dialog-model", 422, "validation_failed", field="model")
+    await web.login(["ADMIN"])
+
+    response = await web.send(
+        "PUT",
+        f"{BASE}/models/dialog-model",
+        json={
+            "provider": "openai",
+            "model": "anthropic/claude-x",
+            "api_key": "demo-provider-key-91zx",
+            "password": PASSWORD,
+        },
+    )
+
+    assert response.status_code == 422
+    check(response, "/admin/integrations/models/{alias}", "put")
+    assert response.json()["code"] == "VALIDATION_FAILED"
+    assert response.json()["details"]["fields"] == ["model"]
+    assert "demo-provider-key-91zx" not in response.text
+
+
 async def test_crm_refusal_is_forbidden_with_crm_source(
     web: Web, crm: CrmIntegrationsFake, check: ContractChecker
 ) -> None:

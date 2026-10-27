@@ -362,6 +362,19 @@ test.describe("Внешние интеграции: axe и снимки", () => 
       await openIntegrations(page, "models");
       await side(page).getByRole("button", { name: "Сменить модель: Диалог с клиентом" }).click();
       await expectNoViolations(page, `models form ${String(width)}`);
+      // W13C-F2: поле «Модель» без префикса провайдера; чужой префикс — ошибка у поля словами, без потери ключа и пароля
+      const models = side(page).getByRole("form", { name: "Сменить модель: Диалог с клиентом" });
+      await expect(models.getByLabel("Модель")).toHaveValue("claude-demo-chat");
+      await tallScreenshot(page, "f2-model-default");
+      await models.getByLabel("Модель").fill("openai/gpt-demo");
+      await models.getByLabel("Ключ провайдера").fill("demo-provider-key-91zx");
+      await password(models);
+      await models.getByRole("button", { name: "Сменить модель" }).click();
+      await expect(models.getByRole("alert")).toContainText("Имя модели не принято");
+      await expect(models.getByLabel("Модель")).toHaveAttribute("aria-invalid", "true");
+      await expect(models.getByLabel("Ключ провайдера")).toHaveValue("demo-provider-key-91zx");
+      await expectNoViolations(page, `models form error ${String(width)}`);
+      await tallScreenshot(page, "f2-model-error");
       await openIntegrations(page, "services");
       await side(page).getByRole("button", { name: "Выключить сервис: Telegram Bot API" }).click();
       await expectNoViolations(page, `services form ${String(width)}`);

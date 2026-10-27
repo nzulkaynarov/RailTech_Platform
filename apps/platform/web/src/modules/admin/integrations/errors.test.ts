@@ -2,7 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import { ApiError } from "../../../shared/api/errors";
 import i18n from "../../../shared/i18n";
-import { integrationErrorText, isForbidden, isWrongPassword } from "./errors";
+import {
+  failedFields,
+  hasFailedField,
+  integrationErrorText,
+  isForbidden,
+  isWrongPassword,
+} from "./errors";
 
 const t = i18n.getFixedT("ru");
 
@@ -34,6 +40,26 @@ describe("integrationErrorText", () => {
     expect(integrationErrorText(t, new Error("boom"))).toBe(
       "Не удалось выполнить действие. Повторите позже.",
     );
+  });
+
+  it("422 с названным полем — текст про поле, а не общее «Проверьте заполнение»", () => {
+    expect(integrationErrorText(t, error(422, "VALIDATION_FAILED", { fields: ["model"] }))).toMatch(
+      /Имя модели не принято/,
+    );
+    expect(
+      integrationErrorText(t, error(422, "VALIDATION_FAILED", { fields: ["api_key"] })),
+    ).toMatch(/от 8 до 512/);
+    // поле без собственного текста и 422 без полей — общий текст кода
+    expect(integrationErrorText(t, error(422, "VALIDATION_FAILED", { fields: ["host"] }))).toBe(
+      "Проверьте заполнение полей.",
+    );
+    expect(integrationErrorText(t, error(422, "VALIDATION_FAILED"))).toBe(
+      "Проверьте заполнение полей.",
+    );
+    expect(failedFields(error(422, "VALIDATION_FAILED", { fields: ["model", 3] }))).toEqual([
+      "model",
+    ]);
+    expect(hasFailedField(new Error("x"), "model")).toBe(false);
   });
 
   it("тексты не содержат ничего из тела ошибки BFF (секретов там нет, но и показывать его не нужно)", () => {

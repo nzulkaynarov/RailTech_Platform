@@ -63,6 +63,8 @@ infra/     Docker Compose (base/dev/prod) · Caddy · LiteLLM · Langfuse · Rus
 
 Один тест: `cd apps/crm/backend && uv run pytest tests/<файл>.py -x -q`; фронтенд — `cd apps/crm/frontend && pnpm test -- <шаблон>`. Unit-тесты не требуют Postgres (домен изолирован от БД; репозитории тестируются в integration).
 
+**Шаблоны писем и образы (W13C-F3, C2A-G-3).** `backend/templates/email/` нужен каждому сервису CRM, который пишет письма. Прод-образ (`target: prod`, и `backup` поверх него) копирует каталог (`COPY templates ./templates`); dev-образ (`target: dev`) не содержит ни кода, ни шаблонов, поэтому `infra/compose/dev.yml` монтирует `apps/crm/backend/templates:/app/templates:ro` в `crm-migrate`, `crm-api`, `crm-worker` и MCP-сервисы (общий якорь `crm-src`) — как `prompts/`. Новый сервис CRM на target `dev`, который рендерит письма, получает тот же том. Нет файла шаблона → `MailService.send` отвечает 500 с кодом `mail_template_missing` без путей (`TemplateMissingError` в лог). Страховка в unit-тестах (`tests/unit/test_mail_templates.py`): все шаблоны, на которые ссылается код, есть и рендерятся; `Dockerfile` копирует `templates`, `.dockerignore` их не исключает; `dev.yml` монтирует том. Ручная проверка собранного образа (скрипты CI не трогают): `docker build --target prod --build-context rtbus=packages/rt-bus --build-context contracts=packages/contracts -t rt-crm-check apps/crm/backend && docker run --rm rt-crm-check python -c "from app.services import mail_templates as m; print(m.render('invite', 'ru', full_name='x', email='x', temporary_password='x', crm_url='x', company='x').subject)"`.
+
 ## 4. Соглашения кода
 
 **Python**

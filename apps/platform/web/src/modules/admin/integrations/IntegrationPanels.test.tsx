@@ -362,6 +362,68 @@ describe("карточка «Модели ИИ»", () => {
     });
   });
 
+  it("«Сменить»: поле «Модель» без префикса провайдера, подсказка с примером", async () => {
+    const side = await openPanel("models");
+    const row = (await within(side).findByText("Диалог с клиентом")).closest("li");
+    // в строке роли — имя без префикса, хотя CRM отдаёт «anthropic/claude-demo-chat»
+    expect(within(row as HTMLElement).getByText(/anthropic · claude-demo-chat/)).toBeVisible();
+    expect(within(row as HTMLElement).queryByText(/anthropic\/claude-demo-chat/)).toBeNull();
+
+    fireEvent.click(
+      within(side).getByRole("button", { name: "Сменить модель: Диалог с клиентом" }),
+    );
+    const form = within(side).getByRole("form", { name: "Сменить модель: Диалог с клиентом" });
+    expect(within(form).getByLabelText("Модель")).toHaveValue("claude-demo-chat");
+    expect(within(form).getByLabelText("Модель")).not.toHaveAttribute("aria-invalid");
+    expect(within(form).getByText(/Префикс «anthropic\/» вводить не нужно/)).toBeVisible();
+  });
+
+  it("«Сменить»: префикс выбранного провайдера принимается", async () => {
+    const side = await openPanel("models");
+    fireEvent.click(
+      await within(side).findByRole("button", { name: "Сменить модель: Диалог с клиентом" }),
+    );
+    const form = within(side).getByRole("form", { name: "Сменить модель: Диалог с клиентом" });
+    type("Модель", "anthropic/claude-demo-chat-2", form);
+    type("Ключ провайдера", "demo-provider-key-91zx", form);
+    submitPassword(form);
+    press(form, "Сменить модель");
+
+    expect(
+      await within(side).findByText("Модель сменена: anthropic · claude-demo-chat-2"),
+    ).toBeVisible();
+  });
+
+  it("«Сменить»: чужой префикс — 422 по полю: подсвечено, понятный текст, ключ и пароль на месте", async () => {
+    const side = await openPanel("models");
+    fireEvent.click(
+      await within(side).findByRole("button", { name: "Сменить модель: Диалог с клиентом" }),
+    );
+    const form = within(side).getByRole("form", { name: "Сменить модель: Диалог с клиентом" });
+    type("Модель", "openai/gpt-demo", form);
+    type("Ключ провайдера", "demo-provider-key-91zx", form);
+    submitPassword(form);
+    press(form, "Сменить модель");
+
+    const alert = await within(form).findByRole("alert");
+    expect(alert).toHaveTextContent(/Имя модели не принято/);
+    expect(alert).not.toHaveTextContent("Проверьте заполнение полей");
+    const field = within(form).getByLabelText("Модель");
+    expect(field).toHaveAttribute("aria-invalid", "true");
+    expect(field.getAttribute("aria-describedby")).toContain("model-dialog-model-error");
+    expect(field.closest(".ant-input")).toHaveClass("ant-input-status-error");
+    expect(within(form).getByLabelText("Ключ провайдера")).not.toHaveAttribute("aria-invalid");
+    // секретные поля не очищаются: исправить имя и отправить снова можно без повторного ввода
+    expect(within(form).getByLabelText("Ключ провайдера")).toHaveValue("demo-provider-key-91zx");
+    expect(within(form).getByLabelText("Ваш пароль администратора")).toHaveValue(PASSWORD);
+
+    type("Модель", "claude-demo-chat-2", form);
+    press(form, "Сменить модель");
+    expect(
+      await within(side).findByText("Модель сменена: anthropic · claude-demo-chat-2"),
+    ).toBeVisible();
+  });
+
   it("директор читает модели и маску ключа, кнопок изменения нет", async () => {
     const side = await openPanel("models", "director@demo.example");
     expect(await within(side).findByText("Диалог с клиентом")).toBeVisible();

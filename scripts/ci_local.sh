@@ -22,6 +22,13 @@ usage() {
   scripts/ci_local.sh --full               всё, включая crm-e2e и platform-e2e (Playwright), crm-audit и cpu-baseline
   scripts/ci_local.sh crm contracts        только выбранные
   scripts/ci_local.sh --quick              без crm-integration и crm-build (быстрый гейт)
+  scripts/ci_local.sh --force              не пропускать уже зелёные на этом дереве задания (или CI_LOCAL_FORCE=1);
+                                           make ci-local args="--force". Сочетается с остальными флагами и именами заданий.
+
+Пропуск уже зелёного: после успеха задание пишет штамп .ci-local/<задание>.ok с ключом — хешем дерева (коммит + незакоммиченные
+и неотслеживаемые, но не игнорируемые файлы; тот же скрипт входит в дерево) плюс «внешнее»: для gitleaks — HEAD (сканируется
+история), для contracts — origin/main (oasdiff). Тот же ключ на следующем запуске — «пропуск»; любая правка файла, новый коммит
+или merge меняют ключ, и задание идёт заново. Провал удаляет штамп. Не штампуются: crm-audit (база уязвимостей меняется сама).
 
 Задания:
   gitleaks          секреты в истории текущей ветки (.gitleaks.toml, legacy/ в allowlist) и ссылки документации
@@ -48,10 +55,12 @@ usage() {
 EOF
 }
 
+FORCE="${CI_LOCAL_FORCE:-0}"
 STAGES=()
 for a in "$@"; do
   case "$a" in
     -h | --help) usage; exit 0 ;;
+    --force) FORCE=1 ;;
     --quick) STAGES=(gitleaks crm contracts tokens infra erp cabinet platform eds rt-bus) ;;
     --full) STAGES=("${ALL[@]}") ;;
     *) STAGES+=("$a") ;;
@@ -71,6 +80,41 @@ done
 command -v docker >/dev/null && docker info >/dev/null 2>&1 \
   || { echo "Docker не запущен: open -a Docker, затем повторите."; exit 1; }
 mkdir -p "$LOGS"
+
+# --- Пропуск уже зелёных заданий: штамп .ci-local/<задание>.ok с ключом дерева -------------------------------------------
+# Дерево = коммит + незакоммиченные + неотслеживаемые (не игнорируемые) файлы: во временном индексе (основной не трогаем,
+# в worktree работает) read-tree HEAD → add -A → write-tree. Сбой вычисления ключа = ключа нет: не пропускаем и не штампуем.
+tree_sha() {
+  local tmp sha rc=0
+  tmp="$(mktemp -d "${TMPDIR:-/tmp}/ci-local-idx.XXXXXX")" || return 1
+  sha="$(cd "$ROOT" \
+    && GIT_INDEX_FILE="$tmp/index" git read-tree HEAD \
+    && GIT_INDEX_FILE="$tmp/index" git add -A \
+    && GIT_INDEX_FILE="$tmp/index" git write-tree)" || rc=$?
+  rm -rf "$tmp"
+  [ $rc -eq 0 ] && [ -n "$sha" ] && printf '%s' "$sha"
+}
+
+# Что, кроме дерева, влияет на итог задания: gitleaks сканирует историю (HEAD), contracts сравнивает с origin/main.
+stage_extra() {
+  case "$1" in
+    gitleaks) git -C "$ROOT" rev-parse HEAD ;;
+    contracts) git -C "$ROOT" rev-parse --verify -q "${CONTRACTS_BASE_REF:-origin/main}" || echo none ;;
+    *) echo - ;;
+  esac
+}
+
+# Ключ задания: хеш от дерева (2-й аргумент или вычисляется), внешнего и имени задания; пусто, если дерево не вычислилось
+# или задание не штампуется.
+stage_key() {
+  local tree="${2:-}" extra
+  case "$1" in crm-audit) return 0 ;; esac
+  [ -n "$tree" ] || tree="$(tree_sha)" || return 0
+  extra="$(stage_extra "$1")" || extra=none
+  printf 'ci_local/v1 %s %s %s\n' "$1" "$tree" "$extra" | git hash-object --stdin
+}
+
+stage_stamp_ok() { [ -n "$2" ] && [ -f "$LOGS/$1.ok" ] && [ "$(cat "$LOGS/$1.ok")" = "$2" ]; }
 
 stage_gitleaks() {
   # В git worktree `.git` — файл со ссылкой на общий каталог за пределами $ROOT; без него в контейнере git не видит историю
@@ -183,6 +227,14 @@ stage_cpu-baseline() {
 declare -a RESULT=()
 failed=0
 for s in "${STAGES[@]}"; do
+  tree="$(tree_sha || true)"
+  key=""
+  [ -z "$tree" ] || key="$(stage_key "$s" "$tree")"
+  if [ "$FORCE" != 1 ] && stage_stamp_ok "$s" "$key"; then
+    echo "━━ $s ━━ пропуск: зелёная на этом дереве (${key:0:10}); принудительно — --force"
+    RESULT+=("↷ $s  пропуск: зелёная на этом дереве (${key:0:10})")
+    continue
+  fi
   echo "━━ $s ━━ (лог: .ci-local/$s.log)"
   start=$(date +%s)
   set +e
@@ -192,8 +244,14 @@ for s in "${STAGES[@]}"; do
   ) >"$LOGS/$s.log" 2>&1
   rc=$?
   set -e
+  rm -f "$LOGS/$s.ok"
   if [ $rc -eq 0 ]; then
     RESULT+=("✔ $s  $(($(date +%s) - start)) с")
+    # Штамп — только если дерево за время задания не изменилось (генерация файлов не должна выдавать себя за «зелёное»).
+    # Внешнее (origin/main после fetch в contracts) берётся заново: задание прошло против него.
+    if [ -n "$key" ] && [ "$(tree_sha || true)" = "$tree" ]; then
+      stage_key "$s" "$tree" >"$LOGS/$s.ok"
+    fi
   else
     RESULT+=("✘ $s  $(($(date +%s) - start)) с — tail -50 .ci-local/$s.log")
     failed=1

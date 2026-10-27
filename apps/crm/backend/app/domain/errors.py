@@ -236,6 +236,18 @@ class ErpRateLimitedError(UpstreamUnavailableError):
         self.retry_after_s = retry_after_s
 
 
+class MailTemplateMissingError(DomainError):
+    """В образе или стенде нет файла шаблона письма (ошибка развёртывания, не запроса): 500 с кодом.
+
+    Сообщение без путей и имён файлов; шаблон и язык — в логе сервера (`mail_template_missing`).
+    """
+
+    code = "mail_template_missing"
+
+    def __init__(self) -> None:
+        super().__init__("email template is not found; contact the administrator of the deployment")
+
+
 class RateLimitedError(DomainError):
     """Слишком много запросов с одного адреса (429) — публичная форма «Запрос»."""
 

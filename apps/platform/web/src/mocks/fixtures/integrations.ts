@@ -243,7 +243,8 @@ function seedModels(): AiModel[] {
     {
       alias: "dialog-model",
       provider: "anthropic",
-      model: "claude-demo-chat",
+      // CRM отдаёт имя так, как оно записано в шлюзе: с префиксом провайдера
+      model: "anthropic/claude-demo-chat",
       health: "ok",
       today_usd: 1.25,
       ...crmKey,
