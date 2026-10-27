@@ -182,9 +182,9 @@ async def test_change_password_swaps_in_the_new_token_pair(web: Web) -> None:
 
 
 async def test_change_password_holds_the_session_lock_against_a_second_tab(web: Web) -> None:
-    """Вторая вкладка во время смены пароля: без блокировки она берёт из Redis прежнюю пару, которую CRM уже
-    закрыла, получает 401 и по закрытому refresh-токену убивает сессию. Под блокировкой она ждёт и идёт
-    уже на новой паре."""
+    """Вторая вкладка во время смены пароля: без блокировки она берёт из Redis прежнюю пару, которую
+    CRM уже закрыла, получает 401 и по закрытому refresh-токену убивает сессию. Под блокировкой она
+    ждёт и идёт уже на новой паре."""
     await web.login()
     web.be.change_password_delay = 0.3
     web.clock.advance(61)  # профиль устарел: следующий /me идёт в CRM
