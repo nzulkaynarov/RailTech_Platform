@@ -11,6 +11,7 @@ import { adminIntegrationsHandlers } from "./adminIntegrations";
 import { adminCompanyHandlers } from "./adminCompany";
 import { adminRolesHandlers } from "./adminRoles";
 import { botKbHandlers } from "./botKb";
+import { edsApprovalsHandlers } from "./edsApprovals";
 import { edsLettersHandlers } from "./edsLetters";
 import { adminUsersHandlers } from "./adminUsers";
 import { edsDocumentsHandlers } from "./edsDocuments";
@@ -147,6 +148,7 @@ export const handlers = [
   ...botKbHandlers,
   ...edsDocumentsHandlers,
   ...edsLettersHandlers,
+  ...edsApprovalsHandlers,
 
   getGetHealthMockHandler({
     status: "ok",

@@ -133,6 +133,18 @@
  * (директор читает), сброс пароля — `admin: full`; профиль доступен каждому вошедшему. Секреты из записей журнала BFF вырезает
  * (значения полей `password`, `secret`, `token`, `key`, `*_key`, `credentials`, `authorization`, `pin` и им подобных -> `***` целиком, любого типа).
  *
+ * **0.18.0 (D1-4) — EDS · КП на одобрение и документы на согласовании.** Добавляющее изменение, тег `eds-approvals`: `GET /eds/quotes`
+ * (КП на одобрение: «на моём шаге» или все), `GET /eds/quotes/{ref}` (карточка КП по id маршрута или номеру `КП-2026/115`: шаги маршрута,
+ * чек-лист с датой и автором, состав и итоги из ERP, письмо и заявка, каналы отправки по контакту клиента; **внутренний блок**
+ * `internal` — себестоимость, маржа, порог, сроки — и значение маржи в чек-листе BFF вырезает у роли без группы `cost_margin`),
+ * `POST /eds/quotes/{id}/decision` («Одобрить КП → отправить клиенту» с `channels`, «Вернуть на доработку», «Отклонить»; чек-лист
+ * проверяет EDS: красная блокирующая строка — 409 `checklist_not_green`, строка «срок» — предупреждение, КП одобряется с отметкой),
+ * `GET /eds/memo-approvals` и `GET /eds/memo-approvals/{ref}` (служебные записки, заявления, отчёты на согласовании; карточка по id
+ * документа или номеру `СЗ-2026/014`, шаги маршрута, вложения), `POST /eds/memo-approvals/{id}/decision` («Согласовать», «Вернуть
+ * на доработку», «Отклонить»). Разделы: КП — `eds.drafts` (полный — решение, чтение — менеджер); служебки — `eds.memo.approve`
+ * (полный — решение), чтение также у `eds.memo.create` (автор видит свой документ). `comment` для `return` и `reject` обязателен
+ * (422 в BFF до EDS). Ошибки EDS (`not_your_step`, `route_closed`, `checklist_not_green` с `details.failed`) приходят в формате `Error`.
+ *
  * **0.17.0 (D1-5) — EDS · Создать документ и «Мои документы».** Добавляющее изменение, тег `eds-documents`: `GET/POST /eds/documents`
  * (мои документы или реестр «Все документы»; создать и сразу отправить), `GET/PUT /eds/documents/{id}` (карточка с маршрутом и
  * решениями; сохранить черновик), `POST /eds/document-files` и `GET /eds/document-files/{file_id}` (вложения: загрузка потоком до 25 МБ,
@@ -177,7 +189,7 @@
  * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.17.0
+ * OpenAPI spec version: 0.18.0
  */
 import type { EscalationDryRunByCodeCandidate } from "./escalationDryRunByCodeCandidate";
 import type { EscalationDryRunByCodeCurrent } from "./escalationDryRunByCodeCurrent";

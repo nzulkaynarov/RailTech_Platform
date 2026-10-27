@@ -1,0 +1,233 @@
+{
+  "state": {
+    "retry": "Try again",
+    "loadError": {
+      "title": "Quotes did not load",
+      "text": "Could not get the data. Please try again."
+    },
+    "unavailable": {
+      "title": "Document flow is not responding",
+      "text": "The documents service is temporarily unavailable. Nothing is lost — try again shortly."
+    },
+    "forbidden": {
+      "title": "No access",
+      "text": "The \"Quotes for approval\" section is not available to your role."
+    },
+    "notGranted": {
+      "title": "No access to document flow",
+      "text": "Your account has not been added to document flow yet. Write to the administrator."
+    },
+    "notFound": {
+      "title": "Quote not found",
+      "text": "There is no such quote, or your role cannot see it.",
+      "action": "Back to quotes"
+    }
+  },
+  "list": {
+    "subtitle": "Quotes waiting for the director's approval. Nothing goes to the client without a decision.",
+    "caption": "Quotes for approval",
+    "scroll": "Table of quotes for approval",
+    "scope": {
+      "label": "Which quotes to show",
+      "mine": "On my step",
+      "all": "All quotes"
+    },
+    "columns": {
+      "number": "Quote",
+      "request": "Request",
+      "client": "Client",
+      "total": "Total incl. VAT",
+      "due": "Costing due",
+      "received": "Received",
+      "status": "Status",
+      "action": "Action"
+    },
+    "select": "Show quote {{number}} in the side panel",
+    "open": "Open",
+    "openLabel": "Open the card of quote {{number}}",
+    "version": "version {{version}}",
+    "more": "Show more",
+    "empty": {
+      "mine": {
+        "title": "No quotes on your step",
+        "text": "They arrive from ERP when costing is ready and all visas are collected. Sending to the client is impossible without the director's approval.",
+        "action": "Show all quotes"
+      },
+      "all": {
+        "title": "No quotes yet",
+        "text": "When costing is ready and visas are collected, the quote will appear here.",
+        "action": "Refresh"
+      }
+    }
+  },
+  "card": {
+    "title": "{{number}}",
+    "version": "Version {{version}}",
+    "draftTag": "Draft · sending is blocked",
+    "lateTag": "Approved late",
+    "readOnly": "View only",
+    "readOnlyHint": "Approval belongs to the director. You see the quote without internal fields.",
+    "steps": "Request path",
+    "approve": "Approve quote",
+    "lines": "Quote lines",
+    "linesScroll": "Table of quote lines",
+    "noLines": "The quote lines were not received from ERP. The total and the decision are available; lines will appear after a refresh.",
+    "emptyLines": "The quote has no lines.",
+    "optional": "optional",
+    "days": "{{count}} d.",
+    "columns": {
+      "position": "No.",
+      "name": "Item",
+      "quantity": "Qty",
+      "price": "Price",
+      "amount": "Amount",
+      "term": "Lead time"
+    },
+    "totals": {
+      "subtotal": "Total excl. VAT",
+      "vat": "VAT",
+      "vatRate": "VAT {{rate}} %",
+      "total": "Total incl. VAT"
+    },
+    "internal": {
+      "title": "Internal data",
+      "cost": "Cost",
+      "margin": "Margin",
+      "minMargin": "Margin threshold from the resolution",
+      "paymentTerms": "Payment terms",
+      "validUntil": "Quote valid until",
+      "supplierUntil": "Supplier price valid until",
+      "note": "The client will get a PDF without these fields."
+    },
+    "route": "Approval route",
+    "routeStep": {
+      "pending": "{{label}}: not their turn yet",
+      "current": "{{label}}: awaiting decision",
+      "approved": "{{label}}: approved",
+      "returned": "{{label}}: returned for rework",
+      "rejected": "{{label}}: rejected",
+      "skipped": "{{label}}: skipped"
+    },
+    "requisites": "Details",
+    "fields": {
+      "client": "Client",
+      "request": "Request",
+      "letter": "Letter",
+      "calculatedBy": "Costed by",
+      "date": "Costing ready",
+      "due": "Costing due",
+      "outgoing": "Outgoing number"
+    },
+    "zones": {
+      "goods": "goods",
+      "services": "services"
+    }
+  },
+  "panel": {
+    "sheetTitle": "Approval {{number}}",
+    "sheetLabel": "Quote approval",
+    "sheetClose": "Close",
+    "briefOpen": "Open the quote card",
+    "brief": {
+      "client": "Client",
+      "request": "Request",
+      "total": "Total incl. VAT",
+      "due": "Costing due"
+    },
+    "openReadOnly": {
+      "title": "The quote awaits the director's decision",
+      "text": "Approval and return for rework belong to the director. You see the quote without cost and margin."
+    },
+    "decided": {
+      "approved": {
+        "title": "Quote approved",
+        "text": "The decision is made and the outgoing number is assigned. ERP sends it to the client through the chosen channels."
+      },
+      "returned": {
+        "title": "Quote returned for rework",
+        "text": "Assignees received the task again. A new version will come for approval after costing."
+      },
+      "rejected": {
+        "title": "Quote rejected",
+        "text": "The decision on the quote is made and closed."
+      }
+    }
+  },
+  "form": {
+    "name": "Quote approval",
+    "draft": "Comment restored from the draft.",
+    "checklist": {
+      "legend": "Approval checklist",
+      "visa_goods": "Supply visa",
+      "visa_services": "Chief engineer visa",
+      "margin": "Margin not below the resolution threshold",
+      "due": "Client deadline met",
+      "warning": "overdue, this is a warning",
+      "lateNote": "The quote was ready after the costing due date ({{due}}). You can approve: the journal will note \"approved late\"."
+    },
+    "blockedItem": {
+      "visa_goods": "no supply visa",
+      "visa_services": "no chief engineer visa",
+      "margin": "margin below the resolution threshold",
+      "due": "costing due date"
+    },
+    "blocked": {
+      "checklist": "Cannot approve: {{items}}.",
+      "generic": "Approval is not available right now."
+    },
+    "channels": {
+      "legend": "Send to the client via",
+      "hint": "Choose where the PDF without internal fields goes.",
+      "contact": "Client contact: {{name}}.",
+      "unknown": "The client contact was not received from ERP: channel availability will be checked on sending.",
+      "telegram": {
+        "name": "Telegram bot"
+      },
+      "cabinet": {
+        "name": "Cabinet"
+      },
+      "email": {
+        "name": "Email"
+      },
+      "unavailable": {
+        "noTelegram": "Unavailable: the contact is not connected to the bot.",
+        "noCabinet": "Unavailable: the client company has no cabinet.",
+        "noEmail": "Unavailable: the contact has no e-mail."
+      }
+    },
+    "consequence": {
+      "title": "What will happen",
+      "step1": "The quote gets an outgoing number.",
+      "step2": "The client gets a PDF without cost and margin: {{channels}}.",
+      "step2None": "No channels chosen: the quote is approved and the request manager sends it to the client.",
+      "step3": "The request moves to \"Quote · Sent\"; we will remind the client of the validity period."
+    },
+    "other": {
+      "title": "Return for rework",
+      "comment": "Comment",
+      "commentHint": "Required to return the quote: assignees will see it in the task.",
+      "return": "Return for rework",
+      "disabled": "The button is inactive until there is a comment."
+    },
+    "submit": "Approve quote → send to client",
+    "done": {
+      "approve": "Quote {{number}} approved: {{outgoing}}",
+      "return": "Quote {{number}} returned for rework"
+    },
+    "failed": {
+      "approve": "Not saved: {{reason}}",
+      "return": "Not saved: {{reason}}"
+    },
+    "reasons": {
+      "route_closed": "the quote was already decided by another director or replaced by a new version, the card is refreshed",
+      "checklist_not_green": "the checklist is not complete ({{items}}), the card is refreshed",
+      "checklist_not_green_plain": "the checklist is not complete, the card is refreshed",
+      "not_your_step": "it is not your step now",
+      "eds_not_granted": "you are not added to document flow",
+      "forbidden": "the action is not available to your role",
+      "unavailable": "the documents service is not responding, what you typed stays in the form",
+      "validation": "check the comment",
+      "unknown": "something went wrong, what you typed stays in the form"
+    }
+  }
+}

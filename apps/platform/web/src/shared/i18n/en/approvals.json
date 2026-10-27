@@ -1,0 +1,182 @@
+{
+  "state": {
+    "retry": "Try again",
+    "loadError": {
+      "title": "Documents did not load",
+      "text": "Could not get the data. Please try again."
+    },
+    "unavailable": {
+      "title": "Document flow is not responding",
+      "text": "The documents service is temporarily unavailable. Nothing is lost — try again shortly."
+    },
+    "forbidden": {
+      "title": "No access",
+      "text": "The \"For approval\" section is not available to your role."
+    },
+    "notGranted": {
+      "title": "No access to document flow",
+      "text": "Your account has not been added to document flow yet. Write to the administrator."
+    },
+    "notFound": {
+      "title": "Document not found",
+      "text": "There is no such document, it was not sent for approval, or your role cannot see it.",
+      "action": "Back to approvals"
+    }
+  },
+  "kinds": {
+    "memo": "Memo",
+    "application": "Application",
+    "report": "Report"
+  },
+  "list": {
+    "subtitle": "Memos, applications and reports awaiting approval.",
+    "caption": "Documents for approval",
+    "scroll": "Table of documents for approval",
+    "scope": {
+      "label": "Which documents to show",
+      "mine": "On my step",
+      "all": "All my approvals"
+    },
+    "columns": {
+      "number": "Number",
+      "subject": "Subject",
+      "author": "From",
+      "amount": "Amount",
+      "due": "Needed by",
+      "received": "Received",
+      "status": "Status",
+      "action": "Action"
+    },
+    "select": "Show document {{number}} in the side panel",
+    "open": "Open",
+    "openLabel": "Open the card of document {{number}}",
+    "more": "Show more",
+    "waiting": "For approval · {{label}}",
+    "status": {
+      "open": "For approval",
+      "approved": "Approved",
+      "returned": "Returned for rework",
+      "rejected": "Rejected"
+    },
+    "empty": {
+      "mine": {
+        "title": "Nothing on your step",
+        "text": "Memos and other documents with an approval route will appear here.",
+        "action": "Show all approvals"
+      },
+      "all": {
+        "title": "No approvals yet",
+        "text": "Documents you sent or approve will appear here.",
+        "action": "Refresh"
+      }
+    }
+  },
+  "card": {
+    "title": "{{number}}",
+    "readOnly": "View only",
+    "readOnlyHint": "The approver makes the decision. You see the document read-only.",
+    "agree": "Open approval",
+    "text": "Text",
+    "files": "Attachments",
+    "noFiles": "No attachments.",
+    "download": "Download file {{name}}",
+    "route": "Approval route",
+    "routeAuthor": "Author: {{name}}",
+    "routeStep": {
+      "pending": "{{label}}: not their turn yet",
+      "current": "{{label}}: awaiting decision",
+      "approved": "{{label}}: approved",
+      "returned": "{{label}}: returned for rework",
+      "rejected": "{{label}}: rejected",
+      "skipped": "{{label}}: skipped"
+    },
+    "decisions": "Decisions",
+    "decision": {
+      "approve": "Approved",
+      "return": "Returned for rework",
+      "reject": "Rejected"
+    },
+    "requisites": "Details",
+    "fields": {
+      "kind": "Type",
+      "from": "From",
+      "to": "To",
+      "date": "Date",
+      "amount": "Amount",
+      "due": "Needed by",
+      "deal": "Project"
+    },
+    "toDirector": "Director"
+  },
+  "panel": {
+    "sheetTitle": "Approval {{number}}",
+    "sheetLabel": "Document approval",
+    "sheetClose": "Close",
+    "briefOpen": "Open the document card",
+    "brief": {
+      "from": "From",
+      "amount": "Amount",
+      "due": "Needed by",
+      "text": "Text"
+    },
+    "readOnly": {
+      "title": "Document awaits approval",
+      "text": "The approver makes the decision. You see the document read-only.",
+      "notYourStep": "It is another approver's step now. You can decide when it is your turn."
+    },
+    "decided": {
+      "approved": {
+        "title": "Document approved",
+        "text": "The decision is made. The author was notified; the document stays in the registry with your visa and date."
+      },
+      "returned": {
+        "title": "Document returned for rework",
+        "text": "The author will fix it and send the document again."
+      },
+      "rejected": {
+        "title": "Document rejected",
+        "text": "The decision is made and closed. The author received the comment."
+      }
+    }
+  },
+  "form": {
+    "name": "Document approval",
+    "draft": "Comment restored from the draft.",
+    "comment": {
+      "label": "Comment",
+      "hint": "Required to return for rework or reject; optional for approval."
+    },
+    "consequence": {
+      "title": "What will happen",
+      "step1": "The document gets the status \"Approved\".",
+      "step2": "The author gets a notification with your comment.",
+      "step2Next": "Next the document goes to: {{label}}.",
+      "step3": "The document stays in the registry with your visa, date and comment."
+    },
+    "submit": "Approve",
+    "return": "Return for rework",
+    "reject": "Reject",
+    "disabled": "You can return or reject only with a comment: the buttons are inactive while it is empty.",
+    "done": {
+      "approve": "Document approved",
+      "return": "Document returned for rework",
+      "reject": "Document rejected"
+    },
+    "failed": {
+      "approve": "Not saved: {{reason}}",
+      "return": "Not saved: {{reason}}",
+      "reject": "Not saved: {{reason}}"
+    },
+    "reasons": {
+      "route_closed": "the document was already decided by another approver, the card is refreshed",
+      "checklist_not_green": "the approval conditions are not met, the card is refreshed",
+      "checklist_not_green_plain": "the approval conditions are not met, the card is refreshed",
+      "not_your_step": "it is not your step now",
+      "eds_not_granted": "you are not added to document flow",
+      "forbidden": "the action is not available to your role",
+      "unavailable": "the documents service is not responding, the comment stays in the form",
+      "validation": "check the comment",
+      "unknown": "something went wrong, the comment stays in the form"
+    }
+  }
+}

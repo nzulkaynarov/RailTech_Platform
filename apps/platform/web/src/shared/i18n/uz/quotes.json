@@ -1,0 +1,233 @@
+{
+  "state": {
+    "retry": "Qayta urinish",
+    "loadError": {
+      "title": "TT yuklanmadi",
+      "text": "Ma'lumotni olib bo'lmadi. Yana urinib ko'ring."
+    },
+    "unavailable": {
+      "title": "Hujjat aylanishi javob bermayapti",
+      "text": "Hujjatlar xizmati vaqtincha mavjud emas. Hech narsa yo'qolmadi — birozdan so'ng takrorlang."
+    },
+    "forbidden": {
+      "title": "Ruxsat yo'q",
+      "text": "«Tasdiqlash uchun TT» bo'limi rolingizga berilmagan."
+    },
+    "notGranted": {
+      "title": "Hujjat aylanishiga ruxsat yo'q",
+      "text": "Hisobingiz hujjat aylanishiga hali kiritilmagan. Administratorga yozing."
+    },
+    "notFound": {
+      "title": "TT topilmadi",
+      "text": "Bunday TT yo'q yoki rolingizga ko'rinmaydi.",
+      "action": "TT ro'yxatiga"
+    }
+  },
+  "list": {
+    "subtitle": "Direktor tasdig'ini kutayotgan TTlar. Qaror bo'lmaguncha mijozga hech narsa yuborilmaydi.",
+    "caption": "Tasdiqlash uchun TT",
+    "scroll": "Tasdiqlash uchun TT jadvali",
+    "scope": {
+      "label": "Qaysi TTlarni ko'rsatish",
+      "mine": "Mening bosqichimda",
+      "all": "Barcha TT"
+    },
+    "columns": {
+      "number": "TT",
+      "request": "Ariza",
+      "client": "Mijoz",
+      "total": "QQS bilan summa",
+      "due": "Hisob-kitob muddati",
+      "received": "Kelgan",
+      "status": "Holat",
+      "action": "Amal"
+    },
+    "select": "{{number}} TTni yon oynada ko'rsatish",
+    "open": "Ochish",
+    "openLabel": "{{number}} TT kartasini ochish",
+    "version": "{{version}}-versiya",
+    "more": "Yana ko'rsatish",
+    "empty": {
+      "mine": {
+        "title": "Bosqichingizda TT yo'q",
+        "text": "Ular hisob-kitob tayyor bo'lib, barcha vizalar yig'ilganda ERPdan keladi. Direktor tasdig'isiz mijozga yuborib bo'lmaydi.",
+        "action": "Barcha TTni ko'rsatish"
+      },
+      "all": {
+        "title": "Hozircha TT yo'q",
+        "text": "Hisob-kitob tayyor bo'lib, vizalar yig'ilganda TT shu yerda paydo bo'ladi.",
+        "action": "Yangilash"
+      }
+    }
+  },
+  "card": {
+    "title": "{{number}}",
+    "version": "{{version}}-versiya",
+    "draftTag": "Qoralama · yuborish bloklangan",
+    "lateTag": "Kechikish bilan tasdiqlangan",
+    "readOnly": "Faqat ko'rish",
+    "readOnlyHint": "Tasdiqlash direktorda. Siz TTni ichki maydonlarsiz ko'rasiz.",
+    "steps": "Ariza yo'li",
+    "approve": "TTni tasdiqlash",
+    "lines": "TT tarkibi",
+    "linesScroll": "TT qatorlari jadvali",
+    "noLines": "TT tarkibi ERPdan olinmadi. Jami summa va qaror mavjud, qatorlar yangilangandan so'ng paydo bo'ladi.",
+    "emptyLines": "TTda qatorlar yo'q.",
+    "optional": "ixtiyoriy",
+    "days": "{{count}} kun",
+    "columns": {
+      "position": "№",
+      "name": "Nomi",
+      "quantity": "Soni",
+      "price": "Narxi",
+      "amount": "Summa",
+      "term": "Muddat"
+    },
+    "totals": {
+      "subtotal": "QQSsiz jami",
+      "vat": "QQS",
+      "vatRate": "QQS {{rate}} %",
+      "total": "QQS bilan jami"
+    },
+    "internal": {
+      "title": "Ichki ma'lumotlar",
+      "cost": "Tannarx",
+      "margin": "Marja",
+      "minMargin": "Rezolyutsiyadagi marja chegarasi",
+      "paymentTerms": "To'lov shartlari",
+      "validUntil": "TT amal qiladi",
+      "supplierUntil": "Yetkazib beruvchi narxi amal qiladi",
+      "note": "Mijoz PDFni bu maydonlarsiz oladi."
+    },
+    "route": "Tasdiqlash marshruti",
+    "routeStep": {
+      "pending": "{{label}}: navbat hali kelmagan",
+      "current": "{{label}}: qaror kutmoqda",
+      "approved": "{{label}}: tasdiqlandi",
+      "returned": "{{label}}: qayta ishlashga qaytarildi",
+      "rejected": "{{label}}: rad etildi",
+      "skipped": "{{label}}: o'tkazib yuborildi"
+    },
+    "requisites": "Rekvizitlar",
+    "fields": {
+      "client": "Mijoz",
+      "request": "Ariza",
+      "letter": "Xat",
+      "calculatedBy": "Kim hisoblagan",
+      "date": "Hisob-kitob tayyor",
+      "due": "Hisob-kitob muddati",
+      "outgoing": "Chiquvchi raqam"
+    },
+    "zones": {
+      "goods": "tovarlar",
+      "services": "xizmatlar"
+    }
+  },
+  "panel": {
+    "sheetTitle": "{{number}} tasdiqlash",
+    "sheetLabel": "TTni tasdiqlash",
+    "sheetClose": "Yopish",
+    "briefOpen": "TT kartasini ochish",
+    "brief": {
+      "client": "Mijoz",
+      "request": "Ariza",
+      "total": "QQS bilan summa",
+      "due": "Hisob-kitob muddati"
+    },
+    "openReadOnly": {
+      "title": "TT direktor qarorini kutmoqda",
+      "text": "Tasdiqlash va qayta ishlashga qaytarish direktorda. Siz TTni tannarx va margasiz ko'rasiz."
+    },
+    "decided": {
+      "approved": {
+        "title": "TT tasdiqlandi",
+        "text": "Qaror qabul qilindi, ISH raqami berildi. Mijozga yuborishni ERP tanlangan kanallar orqali bajaradi."
+      },
+      "returned": {
+        "title": "TT qayta ishlashga qaytarildi",
+        "text": "Ijrochilar topshiriqni qayta oldi. Yangi versiya hisob-kitobdan so'ng tasdiqqa keladi."
+      },
+      "rejected": {
+        "title": "TT rad etildi",
+        "text": "TT bo'yicha qaror qabul qilingan va yopilgan."
+      }
+    }
+  },
+  "form": {
+    "name": "TTni tasdiqlash",
+    "draft": "Izoh qoralamadan tiklandi.",
+    "checklist": {
+      "legend": "Tasdiqlash chek-listi",
+      "visa_goods": "Ta'minotchi vizasi",
+      "visa_services": "Bosh muhandis vizasi",
+      "margin": "Marja rezolyutsiya chegarasidan past emas",
+      "due": "Mijoz muddati saqlangan",
+      "warning": "muddat o'tgan, bu ogohlantirish",
+      "lateNote": "TT hisob-kitob muddatidan ({{due}}) keyin tayyor bo'ldi. Tasdiqlash mumkin: jurnalda «kechikish bilan tasdiqlangan» belgisi paydo bo'ladi."
+    },
+    "blockedItem": {
+      "visa_goods": "ta'minotchi vizasi yo'q",
+      "visa_services": "bosh muhandis vizasi yo'q",
+      "margin": "marja rezolyutsiya chegarasidan past",
+      "due": "hisob-kitob muddati"
+    },
+    "blocked": {
+      "checklist": "Tasdiqlab bo'lmaydi: {{items}}.",
+      "generic": "Tasdiqlash hozir mavjud emas."
+    },
+    "channels": {
+      "legend": "Mijozga yuborish kanali",
+      "hint": "PDF ichki maydonlarsiz qayerga ketishini tanlang.",
+      "contact": "Mijoz kontakti: {{name}}.",
+      "unknown": "Mijoz kontakti ERPdan olinmadi: kanallar mavjudligini xizmat yuborishda tekshiradi.",
+      "telegram": {
+        "name": "Telegram-bot"
+      },
+      "cabinet": {
+        "name": "Kabinet"
+      },
+      "email": {
+        "name": "Pochta"
+      },
+      "unavailable": {
+        "noTelegram": "Mavjud emas: kontakt botga ulanmagan.",
+        "noCabinet": "Mavjud emas: mijoz kompaniyasida kabinet yo'q.",
+        "noEmail": "Mavjud emas: kontaktda e-mail ko'rsatilmagan."
+      }
+    },
+    "consequence": {
+      "title": "Nima bo'ladi",
+      "step1": "TT chiquvchi ISH raqamini oladi.",
+      "step2": "Mijozga tannarx va margasiz PDF yuboriladi: {{channels}}.",
+      "step2None": "Kanal tanlanmagan: TT tasdiqlanadi, mijozga uni ariza menejeri yuboradi.",
+      "step3": "Ariza «TT · Yuborildi» bosqichiga o'tadi; mijozga amal qilish muddati eslatiladi."
+    },
+    "other": {
+      "title": "Qayta ishlashga qaytarish",
+      "comment": "Izoh",
+      "commentHint": "TTni qaytarish uchun majburiy: ijrochilar uni topshiriqda ko'radi.",
+      "return": "Qayta ishlashga qaytarish",
+      "disabled": "Izoh bo'lmaguncha tugma faol emas."
+    },
+    "submit": "TTni tasdiqlash → mijozga yuborish",
+    "done": {
+      "approve": "{{number}} TT tasdiqlandi: {{outgoing}}",
+      "return": "{{number}} TT qayta ishlashga qaytarildi"
+    },
+    "failed": {
+      "approve": "Saqlanmadi: {{reason}}",
+      "return": "Saqlanmadi: {{reason}}"
+    },
+    "reasons": {
+      "route_closed": "TTni boshqa direktor hal qilgan yoki yangi versiya bilan almashtirilgan, karta yangilandi",
+      "checklist_not_green": "chek-list bajarilmagan ({{items}}), karta yangilandi",
+      "checklist_not_green_plain": "chek-list bajarilmagan, karta yangilandi",
+      "not_your_step": "hozir sizning bosqichingiz emas",
+      "eds_not_granted": "siz hujjat aylanishiga kiritilmagansiz",
+      "forbidden": "amal rolingizga berilmagan",
+      "unavailable": "hujjatlar xizmati javob bermayapti, kiritilgan matn shaklda qoldi",
+      "validation": "izohni tekshiring",
+      "unknown": "nimadir xato ketdi, kiritilgan matn shaklda qoldi"
+    }
+  }
+}
