@@ -143,6 +143,8 @@ export * from "./getAiSpendGroup";
 export * from "./getAiSpendParams";
 export * from "./getDashboardParams";
 export * from "./getSpendParams";
+export * from "./handoffFacts";
+export * from "./handoffNote";
 export * from "./healthResponse";
 export * from "./identityOut";
 export * from "./inboxParams";

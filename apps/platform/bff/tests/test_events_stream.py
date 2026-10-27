@@ -335,7 +335,10 @@ async def test_stream_opens_with_sse_headers_and_delivers_a_bus_event(
     await until(lambda: b"event: invalidate" in conn.body)
 
     data = conn.body.decode().split("data: ", 1)[1].split("\n", 1)[0]
-    assert json.loads(data) == {"topics": list(TOPICS), "reason": "uz.railtech.erp.quote.sent.v1"}
+    assert json.loads(data) == {
+        "topics": ["notifications", "counters", "queue", "activity"],
+        "reason": "uz.railtech.erp.quote.sent.v1",
+    }
     assert not any("feed:" in k and ":data:" in k for k in web.redis.values)
     await conn.disconnect()
     assert fast_app.state.hub.streams == 0

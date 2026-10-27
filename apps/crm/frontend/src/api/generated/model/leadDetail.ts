@@ -5,6 +5,7 @@
  * OpenAPI spec version: 0.10.0
  */
 import type { EscalationOut } from "./escalationOut";
+import type { HandoffNote } from "./handoffNote";
 import type { InvitationOut } from "./invitationOut";
 import type { LeadDetailClientHandoffStatus } from "./leadDetailClientHandoffStatus";
 import type { LeadDetailQualification } from "./leadDetailQualification";
@@ -31,6 +32,7 @@ export interface LeadDetail {
   escalation?: EscalationOut | null;
   first_response_due_at?: string | null;
   first_response_overdue?: boolean;
+  handoff_note?: HandoffNote | null;
   id: number;
   invitation?: InvitationOut | null;
   language: string;

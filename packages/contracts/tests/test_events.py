@@ -406,6 +406,18 @@ def test_platform_bff_subscription_b5() -> None:
     assert not {n for n in gets if n.startswith(("uz.railtech.crm.client.", "uz.railtech.crm.contact."))}
 
 
+def test_lead_message_added_goes_only_to_platform_bff_and_carries_no_text() -> None:
+    """D1-1: сигнал «новое сообщение в переписке лида» — только BFF Платформы (подсказка SSE);
+    ERP и EDS его не получают. Текста, вложений и контактов в событии нет: переписку подписчик
+    читает API CRM с правами сотрудника."""
+    name = "uz.railtech.crm.lead.message_added.v1"
+    receivers = {s["name"] for s in SUBSCRIPTIONS["subscribers"] if name in _gets(s)}
+    assert receivers == {"platform-bff"}
+    t = next(t for t in TYPES if t.name == name)
+    props = set(load_json(t.path)["properties"])
+    assert not props & {"text", "attachments", "phone", "email", "display_name", "lead"}
+
+
 # ─── сгенерированный пакет rt-contracts ────────────────────────────────────────────────────────
 
 

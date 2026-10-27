@@ -24,6 +24,7 @@ from app.api.v1 import (
     external_services,
     integrations,
     kb,
+    lead_attachments,
     lead_intake,
     leads,
     me,
@@ -96,6 +97,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         title="RailTech CRM API",
         # 0.10.0 (D1-9): приглашение в кабинет и подтверждение запроса в карточках лида и клиента;
         # 0.8.0 (W15-H6): профиль, фото, Telegram сам, замещение, «Забыли пароль?»; 0.6.0 — W15-H3.
+        # 0.9.0 (D1-1): записка передачи в /inbox, client_message_id ответа, reply_in_progress,
+        # delivery_unknown/unconfirmed, вложение сообщения.
         version="0.10.0",
         lifespan=lifespan,
         # operationId = имя функции роута → читаемые имена в клиенте orval.
@@ -125,6 +128,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         # Раньше `leads`: `/leads/web*` не должен перехватываться `/leads/{lead_id}`.
         lead_intake,
         leads,
+        lead_attachments,
         stream,
         kb,
         settings_api,

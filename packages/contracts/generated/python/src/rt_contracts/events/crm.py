@@ -23,6 +23,17 @@ class Actor(BaseModel):
     """
 
 
+class Author(StrEnum):
+    """
+    Кто автор сообщения (роль сообщения CRM)
+    """
+
+    lead = "lead"
+    bot = "bot"
+    manager = "manager"
+    system = "system"
+
+
 class ChangedField(RootModel[str]):
     root: Annotated[str, Field(pattern="^[a-z][a-z0-9_]*$")]
 
@@ -165,6 +176,15 @@ class ContactUpdatedV1(BaseModel):
     actor: Actor
 
 
+class Direction(StrEnum):
+    """
+    in — написал лид (клиент); out — ответ бота, менеджера или системное сообщение
+    """
+
+    in_ = "in"
+    out = "out"
+
+
 class Email(RootModel[EmailStr]):
     root: Annotated[EmailStr, Field(max_length=255)]
 
@@ -253,6 +273,54 @@ class LeadMergedV1(BaseModel):
     actor: Actor
 
 
+class LeadMessageAddedV1(BaseModel):
+    """
+    Тип uz.railtech.crm.lead.message_added.v1, источник rt://crm (D1-1, волна 16). Поле data конверта (envelope.v1.json). Сообщение записано в переписку лида (входящее от лида или исходящее от бота и менеджера) — в той же транзакции, что и строка сообщения. Это сигнал «перезапросите переписку», а не копия: текста, вложений и контактов в событии НЕТ — подписчик читает переписку API CRM с правами сотрудника. Подписчик сегодня один — BFF Платформы (подсказка SSE «messages»); ERP и EDS его не получают. Диалоги песочницы (тест бота) не публикуются. Заметки команды — не сообщения переписки и этим типом не публикуются.
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    crm_lead_id: int
+    crm_client_id: int | None
+    """
+    Клиент, к которому привязан лид; null — ещё не клиент
+    """
+    message_id: int
+    """
+    Идентификатор сообщения в CRM (растёт со временем): подписчик может не перезапрашивать уже показанное
+    """
+    direction: Direction
+    """
+    in — написал лид (клиент); out — ответ бота, менеджера или системное сообщение
+    """
+    author: Author
+    """
+    Кто автор сообщения (роль сообщения CRM)
+    """
+    channel: Annotated[str, Field(pattern="^[a-z][a-z_]{0,15}$")]
+    """
+    Канал переписки (telegram, …) — из диалога CRM
+    """
+    has_attachments: bool
+    """
+    У сообщения есть вложения (сами файлы — только через API CRM)
+    """
+    handoff: bool
+    """
+    Лид ждёт человека или уже у менеджера (owner_mode не bot): сообщение важно для «Ждут ответа» и счётчиков
+    """
+    crm_assigned_user_id: int | None
+    """
+    Ответственный менеджер лида на момент сообщения; null — нет (адресная доставка подсказок — хвост)
+    """
+    sent_at: AwareDatetime
+    """
+    Время записи сообщения в CRM
+    """
+    actor: Actor
+
+
 class LeadSource(StrEnum):
     telegram = "telegram"
     web = "web"
@@ -303,7 +371,7 @@ class LeadUpdatedV1(BaseModel):
     lead: Lead
     changed_fields: list[ChangedField] | None = None
     """
-    Необязательно: имена изменённых полей снимка (подсказка; подписчик всё равно применяет снимок целиком)
+    Необязательно: что изменилось — имена полей снимка или признак лида вне снимка: `handoff` — бот открыл новую передачу менеджеру (D1-1). Подсказка; подписчик всё равно применяет снимок целиком
     """
     actor: Actor
 

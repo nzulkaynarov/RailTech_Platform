@@ -23,6 +23,32 @@ class EscalationOut(BaseModel):
     created_at: datetime
 
 
+class HandoffFacts(BaseModel):
+    """Факты квалификации от бота (коды CRM: срок `<1m|<3m|<12m|>12m`, роль `decision_maker|…`)."""
+
+    interest: list[str] = Field(default_factory=list)  # названия продуктов из справочника
+    timeline: str | None = None
+    decision_role: str | None = None
+    budget_hint: str | None = None
+    company: str | None = None
+    company_size: str | None = None
+    region: str | None = None
+
+
+class HandoffNote(BaseModel):
+    """Записка передачи (CRM-06, D1-1): запрос, факты, причина, рекомендуемый шаг — как в
+    карточке канала команды, без сырых кодов продуктов. Причины — коды `reason_codes`
+    (подписи — у экрана)."""
+
+    request: str | None = None
+    facts: HandoffFacts = Field(default_factory=HandoffFacts)
+    reason_codes: list[str] = Field(default_factory=list)
+    reason_text: str | None = None
+    recommendation: str | None = None
+    # Последнее сообщение лида, до 200 символов (как в карточке канала).
+    last_lead_message: str | None = None
+
+
 class LeadOut(BaseModel):
     id: int
     display_name: str
@@ -42,6 +68,8 @@ class LeadOut(BaseModel):
     escalation: EscalationOut | None = None
     # Откуда пришёл лид (M3-CRM-05): telegram | web | phone | email | referral (| sandbox).
     source: str = "telegram"
+    # Записка передачи — только в `GET /inbox` (CRM-06); в остальных выдачах null.
+    handoff_note: HandoffNote | None = None
 
 
 class LeadDetail(LeadOut):
@@ -143,6 +171,8 @@ class NoteCreate(BaseModel):
 
 class Reply(BaseModel):
     text: str = Field(min_length=1, max_length=4000)
+    # Ключ повтора от экрана (D1-1): тот же ключ — тот же ответ, второго сообщения клиенту нет.
+    client_message_id: str | None = Field(default=None, pattern=r"^[A-Za-z0-9_-]{8,64}$")
 
 
 class AssistRequest(BaseModel):
