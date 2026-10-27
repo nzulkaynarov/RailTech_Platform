@@ -37,7 +37,8 @@ async def tokens(
 # (метод, путь, тело) → роли, которым разрешено. «Разрешено» = не 401/403.
 MATRIX = [
     ("GET", "/api/v1/leads", None, {"admin", "manager", "viewer"}),
-    ("GET", "/api/v1/inbox", None, {"admin", "manager"}),  # SPEC §10.1: не наблюдателю
+    # D1-1: «Ждут ответа» читают и наблюдатели (директор Платформы) — без «Забрать» и ответа
+    ("GET", "/api/v1/inbox", None, {"admin", "manager", "viewer"}),
     ("GET", "/api/v1/team", None, {"admin", "manager", "viewer"}),
     ("GET", "/api/v1/leads/{lead}", None, {"admin", "manager", "viewer"}),
     ("GET", "/api/v1/leads/{lead}/messages", None, {"admin", "manager", "viewer"}),

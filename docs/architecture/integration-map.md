@@ -47,7 +47,7 @@
 | Карточка лида в боковом окне | `GET /leads/{L-NNNN}` | `GET /leads/{id}`, `/messages`, `/notes`, `/decisions` | — | ✓ |
 | Забрать, Ответить, Вернуть боту, Отказ | `POST /leads/{no}/take` и т. п. | `POST /leads/{id}/actions/take|return_to_bot|close_lost`, `POST /leads/{id}/messages` | — | ✓ |
 | **Создать заявку** | `POST /leads/{no}/request {company{name,inn}, contact{…channels}, summary, letter_file?, urgency}` | `POST /leads/{id}/actions/make_customer` → передача в ERP (`POST /clients/handoff` шва) | handoff создаёт компанию, контакты, `Deal`; **плюс** письмо ВХ, чат проекта, `process = v3`, номер ЗВ | Δ CRM-03, Δ EDS-01, ERP-07, ERP-09, контракт шва |
-| Все сообщения (передачи от бота с запиской, SLA) | `GET /inbox` | `GET /inbox`, `GET /leads/{id}/decisions` | — | ✓ (записка handoff — Δ CRM-06) |
+| Все сообщения / «Ждут ответа» (передачи от бота с запиской, SLA, «Забрать», лента, ответ «От себя / Заметка команде», шаблоны, подсказка, вложения, живые обновления) | `GET /crm/messages`, `GET /crm/messages/{lead}`, `/thread`, `/attachments/{m}/{i}`, `POST /crm/messages/{lead}/take|reply|note|assist|return-to-bot`, `GET /crm/reply-templates`; подсказка SSE `messages` | `GET /inbox` (с `handoff_note`), `GET /leads/{id}`, `/messages`, `/notes`, `/team`, `/leads/{id}/messages/{m}/attachments/{i}`, `POST /leads/{id}/messages` (`client_message_id`), `/actions/take|note|return_to_bot`, `/assist`, `GET /reply-templates`; событие `lead.message_added` | — | ✓ (D1-1, BFF 0.22.0; CRM-06 закрыт) |
 | Все клиенты, карточка 360° | `GET /clients`, `GET /clients/{id}` | `GET /clients`, `/clients/{id}`, `/contacts`, `/erp-receivables`, `/documents` | шов: `GET /companies/{id}/summary`, `/companies/{id}/deals`, `/deals/{id}/documents` | ✓ |
 | Новая заявка для клиента | `POST /clients/{id}/request` | `POST /leads/{id}/actions/new_deal` | handoff с `create_request` | Δ CRM-03 |
 | Все заявки (ЗВ/ПР, 7 шагов) | `GET /requests` | — | `GET /crm/deals/` + документы | ✓, шаг — §2 |
@@ -94,7 +94,7 @@
 | Экран / действие | BFF | CRM | ERP | Статус |
 |---|---|---|---|---|
 | Чаты проектов и команды, сообщения | `GET /chats`, `GET/POST /chats/{id}/messages` | — | новое `chats` | Δ ERP-08 |
-| Внешний чат клиента (Telegram, почта) | `GET /chats/external`, `POST /chats/external/{lead}/messages {as: SELF|BOT|NOTE}` | `GET/POST /leads/{id}/messages`, `POST /leads/{id}/actions/note`, `POST /leads/{id}/assist` | — | ✓ (`as: BOT` — Δ CRM-07) |
+| Внешний чат клиента (Telegram, почта) | `GET /chats/external`, `POST /chats/external/{lead}/messages {as: SELF|BOT|NOTE}` | `GET/POST /leads/{id}/messages`, `POST /leads/{id}/actions/note`, `POST /leads/{id}/assist` | — | переписка с клиентом «От себя / Заметка команде» — в «Клиенты · Ждут ответа» (D1-1, `/crm/messages*`); экран Chats · «С клиентами» — позже, поверх тех же маршрутов; `as: BOT` — Δ CRM-07 |
 | Сделать служебку из сообщения | `POST /chats/{id}/messages/{msg}/memo` | — | сервис EDS + чаты | Δ EDS-02, ERP-08 |
 | Контакты | `GET /contacts` | `GET /team`, `GET /clients/{id}/contacts` | — | ✓ |
 | Журнал аудита, журнал роли (W13-A6) | `GET /admin/audit`, `GET /admin/roles/{id}/journal` | `GET /audit` (`audit:read`) | ✓ | — |
@@ -262,10 +262,10 @@
 | CRM-03 | действие «Создать заявку»: из любой активной стадии лида и из клиента, без требования e-mail, с полями письма и срочности; передача в ERP с `letter`, `process = v3`; приглашение в канал контакта (`invite.requested`, бывшая FIX-68) и кнопка «Открыть кабинет» в боте | P2 |
 | CRM-04 | уведомления сотрудникам из событий CRM (SLA лида, сбой интеграции, новое обращение) — хранение и API чтения | P3 |
 | CRM-05 | тикеты от команды | P4 |
-| CRM-06 | записка handoff (запрос, факты, причина, рекомендуемый шаг) в выдаче `GET /inbox` | P2 |
+| CRM-06 | записка handoff (запрос, факты, причина, рекомендуемый шаг) в выдаче `GET /inbox` | ✓ закрыт D1-1 (`LeadOut.handoff_note`) |
 | CRM-07 | ответ «как бот» из внешнего чата (сообщение уходит от имени бота, в журнале — сотрудник) | P3 |
 | CRM-01c | право читать сотрудников (`users:read`) по ролям Платформы: DIRECTOR — да, SUPPLY/ENGINEER — нет (базовая роль `viewer` его не даёт) | P1 (волна 8) |
-| CRM-08 | `GET /inbox` с фильтром «мои» (`taken_by`, отложенные) на стороне CRM, вместо фильтрации в BFF | P2 |
+| CRM-08 | `GET /inbox` с фильтром «мои» (`taken_by`, отложенные) на стороне CRM, вместо фильтрации в BFF | P2 (экран «Ждут ответа» берёт группы `escalations` / `mine` / `unassigned` как есть; «Моя очередь» по-прежнему отбирает чужие передачи в BFF) |
 | CRM-09 | итог провижининга в ERP в выдаче пользователя (`erp_sync`: ok/pending/error), повторная отправка приглашения без смены пароля | P2 |
 | CRM-10 | канал администратора для системных оповещений (никогда в канал команды), подавление «мигания» сервиса | по решению владельца |
 | CRM-11 | W13-A5: (1) удаление документа базы знаний (сейчас только выключение `is_active`); (2) `GET /kb/products` для `kb:read`, а не только `leads:read` (администратор без второй роли вводит ключ продукта руками); (3) подписи полей настроек и тексты ошибок формата на трёх языках приходят от экрана и CRM только по-русски там, где их пишет CRM (`description` схем) | по решению владельца |

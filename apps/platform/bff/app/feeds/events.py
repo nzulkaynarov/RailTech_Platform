@@ -5,7 +5,8 @@
 отсеиваются (`is_service_event`). Для остальных текст берётся так: код события из таблицы ниже ->
 человекочитаемая строка в словаре SPEC-v3 §2; кода в таблице нет, но ERP прислал готовую
 человеческую строку (`action`: «Сделка создана») — она; ничего понятного нет — нейтральное
-«Действие в ERP». Сырой код в ленте не показывается никогда.
+«Действие в ERP». Сырой код и английский глагол события («Справочник deleted: ZZ») в ленте не
+показываются никогда.
 
 Язык строк пока русский, как у остальных текстов BFF (docs/QUESTIONS.md, Q-PLT-14-5); uz и en —
 хвост P2 вместе с переносом формулировок в SPA.
@@ -107,9 +108,18 @@ EVENT_TEXTS: dict[str, str] = {
     "admin.user.created": "Сотрудник заведён",
     "admin.user.deactivated": "Сотрудник отключён",
     "admin.user.role_changed": "Роли сотрудника изменены",
+    "admin.user.activated": "Сотрудник включён",
+    "admin.email_template.created": "Шаблон письма добавлен",
     "admin.email_template.updated": "Шаблон письма изменён",
+    "admin.email_template.deleted": "Шаблон письма удалён",
+    "admin.lookup.created": "Справочник дополнен",
     "admin.lookup.updated": "Справочник изменён",
+    "admin.lookup.deleted": "Строка справочника удалена",
+    "admin.exchange_rate.manual": "Курс валюты введён вручную",
+    "admin.exchange_rate.auto_skipped": "Курс ЦБ не применён: действует ручной",
 }
+# Сырая фраза журнала ERP «Справочник deleted: ZZ»: английский глагол не показываем (W15-H8).
+_RAW_VERB = re.compile(r"\b(?:created|updated|deleted)\b")
 
 
 def _is_service(value: str) -> bool:
@@ -128,6 +138,6 @@ def event_text(event_code: str, action: str) -> str:
     if known:
         return known
     human = _MARKER.sub("", action).strip()
-    if human and not _CODE_LIKE.fullmatch(human):
+    if human and not _CODE_LIKE.fullmatch(human) and not _RAW_VERB.search(human):
         return human
     return ADMIN_TEXT if code.startswith("admin.") else NEUTRAL_TEXT

@@ -41,8 +41,20 @@ def test_subscription_row_matches_the_handlers() -> None:
 
 
 def test_every_subscribed_type_maps_to_known_topics() -> None:
-    assert topics_for("uz.railtech.erp.quote.sent.v1") == TOPICS
-    assert topics_for("uz.railtech.crm.lead.created.v1") == ("counters", "queue", "activity")
+    erp = ("notifications", "counters", "queue", "activity")
+    assert topics_for("uz.railtech.erp.quote.sent.v1") == erp
+    assert topics_for("uz.railtech.crm.lead.created.v1") == (
+        "counters",
+        "queue",
+        "activity",
+        "messages",
+    )
+    # D1-1: сообщение в переписке — «Ждут ответа», бейдж и «Моя очередь», не лента «Сегодня»
+    message = "uz.railtech.crm.lead.message_added.v1"
+    assert topics_for(message, {"handoff": True}) == ("counters", "queue", "messages")
+    # диалог с ботом: счётчики и «Моя очередь» не меняются — только переписка
+    assert topics_for(message, {"handoff": False}) == ("messages",)
+    assert set(TOPICS) == {*erp, "messages"}
     assert topics_for("uz.railtech.identity.user.updated.v1") == ("counters", "queue")
     assert topics_for("uz.railtech.crm.client.updated.v1") == ()
 
@@ -51,7 +63,12 @@ async def test_signed_erp_event_becomes_a_hint(web: Web) -> None:
     headers, raw = delivery(envelope("erp", "quote.sent"))
     status, body = await post(web, headers, raw)
     assert (status, body["status"]) == (200, "processed")
-    assert hints(web) == [{"topics": list(TOPICS), "reason": "uz.railtech.erp.quote.sent.v1"}]
+    assert hints(web) == [
+        {
+            "topics": ["notifications", "counters", "queue", "activity"],
+            "reason": "uz.railtech.erp.quote.sent.v1",
+        }
+    ]
 
 
 async def test_crm_lead_event_hints_counters_and_queue(web: Web) -> None:
@@ -60,7 +77,7 @@ async def test_crm_lead_event_hints_counters_and_queue(web: Web) -> None:
     assert status == 200
     assert hints(web) == [
         {
-            "topics": ["counters", "queue", "activity"],
+            "topics": ["counters", "queue", "activity", "messages"],
             "reason": "uz.railtech.crm.lead.created.v1",
         }
     ]
@@ -143,3 +160,15 @@ async def test_receiver_is_not_in_the_public_api_prefix(web: Web) -> None:
     headers, raw = delivery(envelope("erp", "quote.sent"))
     response = await web.client.post("/api/v1/bus/v1/events", content=raw, headers=headers)
     assert response.status_code == 404
+
+
+async def test_bot_dialog_message_hints_only_the_conversation(web: Web) -> None:
+    """D1-1: сообщение в диалоге с ботом (`handoff = false`) — только тема `messages`."""
+    body = envelope("crm", "lead.message_added")
+    body["data"] = {**body["data"], "handoff": False}
+    headers, raw = delivery(body, publisher="crm", secret=CRM_SECRET)
+    status, _ = await post(web, headers, raw)
+    assert status == 200
+    assert hints(web) == [
+        {"topics": ["messages"], "reason": "uz.railtech.crm.lead.message_added.v1"}
+    ]

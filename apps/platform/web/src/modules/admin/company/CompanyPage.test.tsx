@@ -445,6 +445,69 @@ describe("Шаблоны документов и писем", () => {
     expect(readCompanyMock().docTemplates.filter((t) => t.is_owned)).toHaveLength(3);
   });
 
+  it("у образца главная кнопка — «Просмотр» (только чтение, предпросмотр на каркасе вида), вторая — «Скопировать к себе»", async () => {
+    const previews: { kind?: string }[] = [];
+    server.use(
+      http.post("*/admin/company/document-templates/preview", async ({ request }) => {
+        previews.push((await request.json()) as { kind?: string });
+        return HttpResponse.json({ html: "<p>образец</p>" });
+      }),
+    );
+    await openTab("templates");
+    const view = await screen.findByRole("button", {
+      name: "Просмотр: Образец: договор поставки",
+    });
+    expect(view).toHaveClass("ant-btn-primary");
+    expect(
+      screen.getByRole("button", { name: "Скопировать к себе: Образец: договор поставки" }),
+    ).not.toHaveClass("ant-btn-primary");
+
+    fireEvent.click(view);
+    const dialog = await screen.findByRole("dialog", { name: "Образец платформы" });
+    expect(within(dialog).getByText(/Образец только для просмотра/)).toBeInTheDocument();
+    expect(within(dialog).getByLabelText(/^Текст шаблона/)).toBeDisabled();
+    expect(within(dialog).queryByRole("button", { name: "Сохранить" })).not.toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: "Закрыть" })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(previews.at(-1)?.kind).toBe("contract"); // каркас своего вида
+    });
+  });
+
+  it("новый шаблон: вид выбирается, текст подсказки — {{counterparty.name}}, образец вида подставляется", async () => {
+    updateCompanyMock((state) => {
+      state.docTemplates.push({
+        id: "4",
+        name: "Образец: акт",
+        kind: "act",
+        kind_name: "Акт",
+        body_html: "<p>Акт</p>{{doc.items_table}}{{doc.totals}}{{doc.signatures}}",
+        is_sample: true,
+        is_owned: false,
+        is_active: true,
+        placeholders_used: [],
+        updated_at: "2026-10-27T10:00:00Z",
+      });
+    });
+    await openTab("templates");
+    fireEvent.click(await screen.findByRole("button", { name: "Создать шаблон" }));
+    const dialog = await screen.findByRole("dialog", { name: "Новый шаблон документа" });
+    expect(within(dialog).getByText(/\{\{counterparty\.name\}\}/)).toBeInTheDocument();
+    expect(within(dialog).queryByText(/buyer_name/)).not.toBeInTheDocument();
+
+    fireEvent.change(within(dialog).getByLabelText("Название"), { target: { value: "Мой акт" } });
+    fireEvent.mouseDown(within(dialog).getByRole("combobox", { name: "Вид документа" }));
+    fireEvent.click(
+      await screen.findByText("Акт", { selector: ".ant-select-item-option-content" }),
+    );
+    expect(within(dialog).getByLabelText(/^Текст шаблона/)).toHaveValue(
+      "<p>Акт</p>{{doc.items_table}}{{doc.totals}}{{doc.signatures}}",
+    );
+    fireEvent.click(within(dialog).getByRole("button", { name: "Сохранить" }));
+    expect(await screen.findByText("Сохранено")).toBeInTheDocument();
+    const created = readCompanyMock().docTemplates.find((t) => t.name === "Мой акт");
+    expect(created?.kind).toBe("act");
+  });
+
   it("редактор документа: подстановки, образец в рамке и предупреждение об неизвестной подстановке", async () => {
     await openTab("templates");
     fireEvent.click(await screen.findByRole("button", { name: "Изменить: Акт приёмки" }));
@@ -578,6 +641,42 @@ describe("Справочники", () => {
       ),
     ).toBeInTheDocument();
     expect(readCompanyMock().reference.countries).toHaveLength(3);
+  });
+
+  it("250 стран не одной страницей: поиск по названию и коду, страницы по 20", async () => {
+    updateCompanyMock((state) => {
+      for (let n = 4; n <= 120; n += 1) {
+        const code = `X${String(n).padStart(3, "0")}`;
+        state.reference.countries.push({
+          id: String(n),
+          code,
+          name: `Страна ${code}`,
+          alpha2: null,
+          alpha3: null,
+          iso_numeric: null,
+          vat_rate: null,
+          sort_order: n,
+          is_active: true,
+          updated_at: "2026-10-27T10:00:00Z",
+        } as never);
+      }
+    });
+    await openTab("reference");
+    const region = await screen.findByRole("region", { name: "Страны" });
+    expect(await within(region).findByText("Узбекистан")).toBeInTheDocument();
+    expect(within(region).queryByText("Страна X120")).not.toBeInTheDocument();
+    expect(document.querySelector(".ant-pagination")).not.toBeNull();
+
+    fireEvent.change(screen.getByRole("searchbox", { name: "Поиск по коду и названию" }), {
+      target: { value: "x120" },
+    });
+    expect(await within(region).findByText("Страна X120")).toBeInTheDocument();
+    expect(within(region).queryByText("Узбекистан")).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByRole("searchbox", { name: "Поиск по коду и названию" }), {
+      target: { value: "нет такой" },
+    });
+    expect(await within(region).findByText("Ничего не найдено")).toBeInTheDocument();
   });
 
   it("сказано, каких справочников в Платформе пока нет", async () => {
@@ -820,6 +919,25 @@ describe("Курс USD → UZS: ручной ввод", () => {
     fireEvent.click(screen.getByRole("button", { name: "Сохранить курс" }));
     expect(await screen.findByText(/ERP не разрешила действие/)).toBeInTheDocument();
     expect(await screen.findByText(/1 USD = 12\s650,50 сум/)).toBeInTheDocument();
+  });
+
+  it("журнал недоступен без права ERP: курс виден, секции журнала нет (W15-H8)", async () => {
+    server.use(
+      http.get("*/admin/company/fx-rate", () =>
+        HttpResponse.json({
+          currency: "USD",
+          current: { rate_to_uzs: "12650.5", rate_date: "2026-10-27", source: "auto" },
+          max_age_days: 7,
+          journal: [],
+          journal_available: false,
+        }),
+      ),
+    );
+    await openTab("platform", "director@demo.example");
+    expect(await screen.findByText(/1 USD = 12\s650,50 сум/)).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Журнал курса" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Журнал курса" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Ручных вводов пока не было")).not.toBeInTheDocument();
   });
 
   it("нет свежего курса — предупреждение со сроком и приглашением ввести курс", async () => {

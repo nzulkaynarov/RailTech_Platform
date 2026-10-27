@@ -74,7 +74,36 @@
       "label": "Today's events",
       "loading": "Loading the feed…",
       "loadErrorTitle": "Could not load the feed",
-      "loadErrorText": "The server did not respond. Try again later."
+      "loadErrorText": "The server did not respond. Try again later.",
+      "events": {
+        "admin": {
+          "company": {
+            "own_created": "Own company created",
+            "archived": "Company archived",
+            "unarchived": "Company restored"
+          },
+          "user": {
+            "created": "Employee added",
+            "deactivated": "Employee disabled",
+            "activated": "Employee enabled",
+            "role_changed": "Employee roles changed"
+          },
+          "email_template": {
+            "created": "Email template added",
+            "updated": "Email template changed",
+            "deleted": "Email template deleted"
+          },
+          "lookup": {
+            "created": "Reference list extended",
+            "updated": "Reference list changed",
+            "deleted": "Reference list entry deleted"
+          },
+          "exchange_rate": {
+            "manual": "Exchange rate entered manually",
+            "auto_skipped": "Central bank rate not applied: a manual rate is in force"
+          }
+        }
+      }
     }
   },
   "crm": {

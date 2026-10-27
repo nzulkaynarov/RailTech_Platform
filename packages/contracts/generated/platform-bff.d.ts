@@ -2873,6 +2873,206 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/crm/messages": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Клиенты · Ждут ответа: передачи от бота, мои диалоги, лиды без менеджера
+     * @description CRM `GET /inbox` с запиской передачи (CRM-06). Раздел `crm.leads` от чтения: директор видит очередь без «Забрать» и ответа. Группы: `handoff` — открытые и отложенные передачи (срочные выше, затем по времени), `mine` — мои лиды в диалоге, `unassigned` — лиды на паузе без менеджера. Лид в одной группе (первая подходящая). Таймер SLA экран считает от `handoff.created_at` до `handoff.sla_due_at`. Живые обновления — подсказка `messages` потока `/events/stream`.
+     */
+    get: operations["listCrmMessages"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/messages/{lead}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Карточка лида для переписки: контакты, каналы, факты квалификации, кто ведёт
+     * @description CRM `GET /leads/{id}` (+ открытая передача). Раздел `crm.leads` от чтения. Номер лида — `L-NNNN`.
+     */
+    get: operations["getCrmConversation"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/messages/{lead}/thread": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Лента диалога: сообщения клиента, бота и менеджера, вложения, заметки команды
+     * @description CRM `GET /leads/{id}/messages` (страница, старые выше), `GET /leads/{id}/notes` (только первая страница — без `before`) и `GET /team` (имена менеджеров). Раздел `crm.leads` от чтения. Подгрузка истории — `before` = id самого старого показанного сообщения. Вложения — ссылками BFF (`attachments[].url`): адреса и ключи хранилища наружу не уходят.
+     */
+    get: operations["getCrmThread"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/messages/{lead}/attachments/{message}/{index}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Вложение сообщения клиента (файл)
+     * @description CRM `GET /leads/{id}/messages/{message}/attachments/{index}` потоком. Раздел `crm.leads` от чтения. Ответ — `Content-Disposition: attachment` и `X-Content-Type-Options: nosniff`: файл скачивается, браузер его не исполняет. Файл не сохранён (до согласия, больше 20 МБ) — 404; хранилище CRM недоступно — 502 `INTEGRATION_FAILED`.
+     */
+    get: operations["downloadCrmAttachment"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/messages/{lead}/take": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Забрать лида: бот замолкает, диалог ведёт сотрудник
+     * @description CRM `POST /leads/{id}/actions/take`. Раздел `crm.leads` полный. Лида уже забрал другой — 409 `CONFLICT` (`details.reason = lead_taken`, `details.assigned_user_name`).
+     */
+    post: operations["takeCrmLead"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/messages/{lead}/reply": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Ответить клиенту «От себя» (уходит в Telegram)
+     * @description CRM `POST /leads/{id}/messages`. Раздел `crm.leads` полный; отвечает тот, кто забрал лида (или администратор CRM). `client_message_id` — ключ повтора, который экран создаёт на черновик: «Повторить» с тем же ключом не отправит клиенту второе сообщение. Telegram отказал — 502 `INTEGRATION_FAILED` с `details.reason = delivery_failed`, сообщение не записано, текст остаётся у экрана; Telegram не ответил вовремя — 502 `INTEGRATION_FAILED` с `delivery_unknown` (итог неизвестен: «Повторить» тем же ключом не продублирует, пока отправка идёт — 409 `reply_in_progress`); итог прежней отправки с этим ключом так и не узнали — 409 `CONFLICT` `delivery_unconfirmed` (второе сообщение не уходит, «лид отвечен» не ставится). Лид не забран — 409 `CONFLICT` (`take_first`), нет согласия клиента — 409 (`no_consent`), лид у другого — 403 `FORBIDDEN` (`not_lead_owner`).
+     */
+    post: operations["replyCrmLead"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/messages/{lead}/note": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Заметка команде (клиенту не уходит)
+     * @description CRM `POST /leads/{id}/actions/note` (`visible_to_bot = false`). Раздел `crm.leads` полный.
+     */
+    post: operations["noteCrmLead"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/messages/{lead}/assist": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Подсказать ответ (ИИ через CRM): текст для поля, клиенту ничего не уходит
+     * @description CRM `POST /leads/{id}/assist` (ИИ — только CRM через LiteLLM). Раздел `crm.leads` полный. `draft` — черновик ответа на последнее сообщение клиента, `improve` — правка текста из поля. Отправляет человек. Таймаут — как у проб (30 с). Отказы — 409 `CONFLICT` с `details.reason`: `assist_disabled`, `assist_budget`, `assist_empty`, `assist_no_history`; модель не ответила — 502 `INTEGRATION_FAILED` (`assist_unavailable`).
+     */
+    post: operations["assistCrmReply"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/messages/{lead}/return-to-bot": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Вернуть лида боту (бот снова отвечает сам)
+     * @description CRM `POST /leads/{id}/actions/return_to_bot`. Раздел `crm.leads` полный. `note` — что знать боту дальше (видна боту).
+     */
+    post: operations["returnCrmLeadToBot"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/reply-templates": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Шаблоны ответов для поля ответа (только чтение)
+     * @description CRM `GET /reply-templates` (`reply_templates:read`). Раздел `crm.leads` полный — тем, кто отвечает клиентам; правит шаблоны администратор в Admin · Настройки бота.
+     */
+    get: operations["listCrmReplyTemplates"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -4119,10 +4319,10 @@ export interface components {
       active_role?: components["schemas"]["RoleId"] | null;
     };
     /**
-     * @description Что перезапросить: `notifications` — `listNotifications`; `counters` — `getMenuCounters`; `queue` — `getQueue` и `getQueueCards`; `activity` — `getActivityToday`.
+     * @description Что перезапросить: `notifications` — `listNotifications`; `counters` — `getMenuCounters`; `queue` — `getQueue` и `getQueueCards`; `activity` — `getActivityToday`; `messages` (0.22.0) — `listCrmMessages` и открытая лента `getCrmThread` / `getCrmConversation`.
      * @enum {string}
      */
-    InvalidationTopic: "notifications" | "counters" | "queue" | "activity";
+    InvalidationTopic: "notifications" | "counters" | "queue" | "activity" | "messages";
     /** @description Данные кадра `invalidate` потока `/events/stream` — подсказка, не данные события. */
     InvalidationHint: {
       topics: components["schemas"]["InvalidationTopic"][];
@@ -4315,6 +4515,8 @@ export interface components {
       actor: components["schemas"]["PersonRef"];
       /** @description Что сделал — «подтвердила оплату по ПР-2026-099» */
       text: string;
+      /** @description Код административного события ERP (`admin.*`), для которого SPA собирает фразу на языке сотрудника; иначе `null` */
+      code?: string | null;
       module: components["schemas"]["ModuleCode"];
       /** Format: date-time */
       at: string;
@@ -4858,9 +5060,23 @@ export interface components {
       sort_order?: number;
       is_active?: boolean;
     };
+    /**
+     * @description Вид шаблона документа
+     * @enum {string}
+     */
+    DocumentTemplateKind:
+      | "letter"
+      | "report"
+      | "custom"
+      | "contract"
+      | "invoice"
+      | "act"
+      | "receipt"
+      | "delivery_note";
     DocumentTemplate: {
       id: components["schemas"]["CompanyItemRef"];
       name: string;
+      kind: components["schemas"]["DocumentTemplateKind"];
       /** @description Вид документа словами */
       kind_name: string;
       body_html: string;
@@ -4878,6 +5094,7 @@ export interface components {
     };
     DocumentTemplateIn: {
       name: string;
+      kind?: components["schemas"]["DocumentTemplateKind"];
       body_html?: string;
       is_active?: boolean;
     };
@@ -4904,6 +5121,7 @@ export interface components {
     };
     DocumentTemplatePreviewIn: {
       body_html: string;
+      kind?: components["schemas"]["DocumentTemplateKind"];
     };
     EmailTemplate: {
       id: components["schemas"]["CompanyItemRef"];
@@ -5134,6 +5352,8 @@ export interface components {
       /** @description Допустимый возраст курса в днях (настройка компании в ERP) */
       max_age_days: number;
       journal: components["schemas"]["FxRateJournalEntry"][];
+      /** @description `false` — журнал недоступен без права `settings.edit` в ERP (имена и почта коллег); `journal` тогда пуст, SPA секцию журнала не показывает */
+      journal_available: boolean;
     };
     FxRateIn: {
       /**
@@ -5544,6 +5764,182 @@ export interface components {
        */
       directory: "ok" | "forbidden" | "unavailable";
     };
+    /**
+     * @description Кто ведёт диалог — `bot` (бот отвечает сам), `waiting` (бот передал и ждёт человека), `manager` (ведёт сотрудник)
+     * @enum {string}
+     */
+    LeadOwnerMode: "bot" | "waiting" | "manager";
+    /** @description Канал лида (`telegram`, `web`, `email`, `phone`, `referral`); подпись — у экрана */
+    MessageChannel: string;
+    /** @description Факты квалификации от бота; коды срока и роли подписывает экран */
+    HandoffFacts: {
+      /** @description Продукты по справочнику CRM (названия) */
+      interest: string[];
+      /** @enum {string|null} */
+      timeline: "<1m" | "<3m" | "<12m" | ">12m" | null;
+      /** @enum {string|null} */
+      decision_role: "decision_maker" | "influencer" | "researcher" | null;
+      budget_hint: string | null;
+      company: string | null;
+      company_size: string | null;
+      region: string | null;
+    };
+    /** @description Записка передачи (CRM-06) — что известно о запросе клиента */
+    HandoffNote: {
+      /** @description Суть запроса клиента (резюме бота) */
+      request: string | null;
+      facts: components["schemas"]["HandoffFacts"];
+      /** @description Последнее сообщение клиента (до 200 символов) */
+      last_message: string | null;
+    };
+    /** @description Открытая передача от бота */
+    HandoffInfo: {
+      /**
+       * @description `hot` — срочно, `warm` — важно, `info` — к сведению (без срока реакции)
+       * @enum {string}
+       */
+      priority: "hot" | "warm" | "info";
+      /** @enum {string} */
+      state: "open" | "taken" | "snoozed";
+      /** @description Коды причин передачи CRM (`human_requested`, `price_or_contract_asked`, …); подписи — у экрана */
+      reasons: string[];
+      /** @description Пояснение причины словами (служебные пометки CRM вида «dialog: …» BFF не отдаёт) */
+      reason_text: string | null;
+      /** @description Рекомендуемый шаг */
+      recommendation: string | null;
+      /**
+       * Format: date-time
+       * @description Когда бот передал диалог (начало таймера «ждёт»)
+       */
+      created_at: string;
+      /**
+       * Format: date-time
+       * @description Срок реакции; после него таймер красный. `null` — без срока (`info`)
+       */
+      sla_due_at: string | null;
+      /** Format: date-time */
+      snoozed_until: string | null;
+      taken_by: components["schemas"]["PersonRef"] | null;
+    };
+    MessageInboxItem: {
+      /** @description Номер лида */
+      lead: string;
+      name: string;
+      /** @enum {string} */
+      group: "handoff" | "mine" | "unassigned";
+      language: components["schemas"]["Language"];
+      channel: components["schemas"]["MessageChannel"];
+      /** @description Клиент написал после последнего ответа сотрудника */
+      unread: boolean;
+      /**
+       * Format: date-time
+       * @description Последнее сообщение клиента
+       */
+      last_message_at: string | null;
+      assigned: components["schemas"]["PersonRef"] | null;
+      handoff: components["schemas"]["HandoffInfo"] | null;
+      note: components["schemas"]["HandoffNote"];
+    };
+    MessageInbox: {
+      items: components["schemas"]["MessageInboxItem"][];
+    };
+    ConversationContacts: {
+      /** @description Имя пользователя Telegram без @ */
+      telegram: string | null;
+      /** @description E.164 */
+      phone: string | null;
+      email: string | null;
+      company: string | null;
+    };
+    ConversationCard: {
+      lead: string;
+      name: string;
+      language: components["schemas"]["Language"];
+      channel: components["schemas"]["MessageChannel"];
+      owner_mode: components["schemas"]["LeadOwnerMode"];
+      assigned: components["schemas"]["PersonRef"] | null;
+      /**
+       * Format: date-time
+       * @description Согласие на обработку данных; без него написать клиенту нельзя
+       */
+      consent_given_at: string | null;
+      contacts: components["schemas"]["ConversationContacts"];
+      facts: components["schemas"]["HandoffFacts"];
+      request: string | null;
+      handoff: components["schemas"]["HandoffInfo"] | null;
+      /** @description Лид уже стал клиентом (компания в ERP) */
+      client_in_erp: boolean;
+    };
+    ThreadAttachment: {
+      index: number;
+      name: string;
+      mime: string;
+      size: number | null;
+      /** @description Ссылка BFF на файл (`/api/v1/crm/messages/{lead}/attachments/…`); `null` — файл не сохранён */
+      url: string | null;
+    };
+    ThreadMessage: {
+      id: number;
+      /** @enum {string} */
+      author: "lead" | "bot" | "manager" | "system";
+      /** @description Имя сотрудника у ответа менеджера */
+      author_name: string | null;
+      text: string;
+      /** Format: date-time */
+      created_at: string;
+      attachments: components["schemas"]["ThreadAttachment"][];
+      /**
+       * @description Только у ответа менеджера с ключом повтора: `sending` — отправка идёт («Отправляется…»); `unconfirmed` — доставка не подтверждена (таймаут Telegram или сбой записи итога, отправка старше 2 минут — тот же срок, что у CRM): повтор этим ключом сообщение не шлёт, проверьте у клиента (B-013). `null` — доставлено или это не ответ менеджера
+       * @enum {string|null}
+       */
+      delivery: "sending" | "unconfirmed" | null;
+    };
+    TeamNote: {
+      id: number;
+      author_name: string | null;
+      text: string;
+      /** Format: date-time */
+      created_at: string;
+      /** @description Заметка при возврате боту — её видит и бот */
+      visible_to_bot: boolean;
+    };
+    ConversationThread: {
+      /** @description Сообщения, старые выше */
+      items: components["schemas"]["ThreadMessage"][];
+      /** @description Заметки команды (только на первой странице, без `before`), новые выше */
+      notes: components["schemas"]["TeamNote"][];
+      /** @description Есть сообщения старше — «Показать раньше» */
+      has_more: boolean;
+    };
+    ReplyIn: {
+      text: string;
+      /** @description Ключ повтора черновика — тот же при «Повторить» */
+      client_message_id: string;
+    };
+    SentMessage: {
+      /** @description Id сообщения в переписке */
+      id: number;
+    };
+    TeamNoteIn: {
+      text: string;
+    };
+    AssistIn: {
+      /** @enum {string} */
+      mode: "draft" | "improve";
+      /** @description Текст из поля для `improve` */
+      text?: string | null;
+    };
+    AssistSuggestion: {
+      text: string;
+      /**
+       * @description `numbers_removed` — из черновика убраны числа не из базы знаний; `new_numbers` — правка добавила числа, возвращён исходный текст
+       * @enum {string|null}
+       */
+      notice: "numbers_removed" | "new_numbers" | null;
+    };
+    ReturnToBotIn: {
+      note?: string | null;
+    };
   };
   responses: {
     /** @description `SESSION_EXPIRED` — сессии нет, истекла или сотрудник отключён */
@@ -5667,6 +6063,15 @@ export interface components {
         "application/json": components["schemas"]["Error"];
       };
     };
+    /** @description 409 `CONFLICT` — состояние лида не позволяет действие; код CRM — в `details.reason` (`lead_taken` с `details.assigned_user_name`, `take_first`, `no_consent`, `already_with_bot`, `delivery_unconfirmed`, `reply_in_progress` — ответ с этим `client_message_id` ещё отправляется, повтор безопасен, `assist_disabled`, `assist_budget`, `assist_empty`, `assist_no_history`) */
+    MessagesConflict: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["Error"];
+      };
+    };
     /** @description `BACKEND_UNAVAILABLE` — CRM не ответила за таймаут */
     BackendUnavailable: {
       headers: {
@@ -5687,6 +6092,8 @@ export interface components {
     };
   };
   parameters: {
+    /** @description Номер лида `L-NNNN` */
+    LeadNumber: string;
     /** @description `crm_user_id` — число без ведущих нулей (`07` и `007` — не адрес сотрудника) */
     EmployeeId: string;
     /** @description Id роли Платформы (CRM) */
@@ -11157,6 +11564,315 @@ export interface operations {
       401: components["responses"]["SessionExpired"];
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listCrmMessages: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Очередь «Ждут ответа» */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["MessageInbox"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getCrmConversation: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Номер лида `L-NNNN` */
+        lead: components["parameters"]["LeadNumber"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Карточка лида */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ConversationCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getCrmThread: {
+    parameters: {
+      query?: {
+        /** @description Сообщения старше этого id (подгрузка истории) */
+        before?: number;
+        limit?: number;
+      };
+      header?: never;
+      path: {
+        /** @description Номер лида `L-NNNN` */
+        lead: components["parameters"]["LeadNumber"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Страница переписки */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ConversationThread"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  downloadCrmAttachment: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Номер лида `L-NNNN` */
+        lead: components["parameters"]["LeadNumber"];
+        message: number;
+        index: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Файл */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/octet-stream": string;
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      502: components["responses"]["IntegrationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  takeCrmLead: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер лида `L-NNNN` */
+        lead: components["parameters"]["LeadNumber"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Лид у сотрудника */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ActionOk"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["MessagesConflict"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  replyCrmLead: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер лида `L-NNNN` */
+        lead: components["parameters"]["LeadNumber"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ReplyIn"];
+      };
+    };
+    responses: {
+      /** @description Отправлено клиенту */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SentMessage"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["MessagesConflict"];
+      422: components["responses"]["ValidationFailed"];
+      502: components["responses"]["IntegrationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  noteCrmLead: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер лида `L-NNNN` */
+        lead: components["parameters"]["LeadNumber"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["TeamNoteIn"];
+      };
+    };
+    responses: {
+      /** @description Заметка записана */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CreatedId"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  assistCrmReply: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер лида `L-NNNN` */
+        lead: components["parameters"]["LeadNumber"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AssistIn"];
+      };
+    };
+    responses: {
+      /** @description Предложение для поля ответа */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AssistSuggestion"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["MessagesConflict"];
+      422: components["responses"]["ValidationFailed"];
+      502: components["responses"]["IntegrationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  returnCrmLeadToBot: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер лида `L-NNNN` */
+        lead: components["parameters"]["LeadNumber"];
+      };
+      cookie?: never;
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["ReturnToBotIn"];
+      };
+    };
+    responses: {
+      /** @description Лид снова у бота */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ActionOk"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["MessagesConflict"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listCrmReplyTemplates: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Шаблоны по названию */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ReplyTemplateList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
       503: components["responses"]["BackendUnavailable"];
     };
   };

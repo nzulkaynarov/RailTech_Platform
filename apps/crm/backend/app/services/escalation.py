@@ -13,6 +13,7 @@ import structlog
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.bus import events as bus_events
 from app.domain.business_hours import add_business_minutes, is_business_time
 from app.domain.escalation import (
     EscalationPlan,
@@ -27,6 +28,7 @@ from app.models.leads import Lead
 from app.models.qualification import Escalation
 from app.repositories import events
 from app.schemas.settings import AppSettings
+from app.security.audit import Actor
 from app.services import stages
 
 logger = structlog.get_logger(__name__)
@@ -72,6 +74,7 @@ async def apply(
     if escalation_plan is None:
         return None
     codes = [c.value for c in escalation_plan.reason_codes]
+    opened = current is None
     if current is None:
         current = Escalation(
             lead_id=lead.id,
@@ -101,6 +104,9 @@ async def apply(
     if escalation_plan.lead_text is not None:
         lead.handoff_notice_sent_at = now
     await session.flush()
+    if opened:
+        # Новая передача — сигнал Платформе («Ждут ответа», счётчики), даже без смены стадии (D1-1).
+        await bus_events.lead_updated(session, lead, Actor(None, "bot"), ["handoff"])
     await events.publish(
         session,
         "escalation.updated",
