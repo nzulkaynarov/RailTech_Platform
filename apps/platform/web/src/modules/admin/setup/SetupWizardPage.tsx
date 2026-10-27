@@ -1,4 +1,4 @@
-import { useIsMutating } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { Alert, App, Button, Card, Skeleton } from "antd";
 import { type ReactNode, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
@@ -63,14 +63,16 @@ export function SetupWizardPage() {
   const stepParam = params.get("step");
   const step = editable && isStepKey(stepParam) ? stepParam : null;
 
-  // Форма шага сохранила (любая мутация в окне закончилась) — перечитать чек-лист: шаг мог стать «Готово».
-  const mutating = useIsMutating();
-  const wasMutating = useRef(mutating);
+  // Форма шага сохранила (мутация в окне завершилась успешно) — перечитать чек-лист: шаг мог стать «Готово». Событие кэша
+  // мутаций, а не счётчик `useIsMutating`: быстрый ответ проходит 1 → 0 между двумя отрисовками, и переход терялся.
+  const queryClient = useQueryClient();
   const { refetch } = checklist;
   useEffect(() => {
-    if (wasMutating.current > 0 && mutating === 0 && step) void refetch();
-    wasMutating.current = mutating;
-  }, [mutating, step, refetch]);
+    if (!step) return;
+    return queryClient.getMutationCache().subscribe((event) => {
+      if (event.type === "updated" && event.action.type === "success") void refetch();
+    });
+  }, [queryClient, step, refetch]);
 
   const goNext = (data: SetupChecklist, current: SetupStepKey) => {
     // ERP готова, а своей компании ещё нет: следующий шаг — форма компании прямо в мастере.
