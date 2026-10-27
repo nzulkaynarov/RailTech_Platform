@@ -2,26 +2,37 @@
 # (ORCHESTRATOR §3.11). Раннер — переменная репозитория CI_RUNNER (например, self-hosted),
 # по умолчанию ubuntu-latest (DECISIONS 2026-10-13: self-hosted или минуты GitHub — решает владелец).
 #
-# Порядок внутри приложения: lint → unit → integration (Postgres service) → build; CRM дополнительно e2e и аудит зависимостей.
+# Скорость (волна 14, W14-S2; docs/runbooks/wave14-speed.md): цель — ответ по PR ≤ 10 мин. Поэтому задания приложения не ждут
+# друг друга (lint, unit, integration, e2e, сборка идут параллельно сразу после `changes`), ERP разнесён на параллельные
+# задания, e2e Платформы — на сборке и в шардах. Контракты — по потребителям (фильтры ниже), не «весь packages/contracts».
 # Контракт: make contracts и чистый git diff в packages/contracts/generated.
 # Инфраструктура: docker compose config и caddy validate.
-# ci-ok — единственная обязательная проверка для защиты main: красный, если любой job упал.
+# ci-ok — единственная обязательная проверка для защиты main: красный, если любой job упал; он есть на ВСЕХ событиях
+# (PR, push в main, ночной прогон, ручной запуск) — на него опирается автодеплой (проверяет зелёный «CI ok» на sha).
+# Таблица «правка → какие задания» и политика событий — docs/systems/infra/ci.md.
 
 name: CI
 
 # PR — проверки по путям (черновики не гоняются, запуск — при «Ready for review»; DECISIONS 2026-10-14).
-# push в main и ручной запуск — полный прогон всех job'ов: защита main не требует «ветка актуальна», поэтому
-# мерж-коммит проверяется отдельно (FIX-00, аудит 2026-10-18; DECISIONS 2026-10-18).
+# push в main — только БЫСТРЫЕ задания по тому, что изменилось с прошлого коммита main (lint, unit, contracts, gitleaks,
+# миграции ERP, образы под qemu при правке Dockerfile/infra): мерж-коммит проверяется отдельно (FIX-00), но без повторного
+# часового прогона всего, что уже прошло на PR (W14-S2).
+# schedule (ночью, раз в сутки) и workflow_dispatch — ПОЛНЫЙ прогон всех job'ов: интеграция, e2e, сборки, аудит, тесты ERP.
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
   push:
     branches: [main]
+  schedule:
+    - cron: "17 1 * * *"  # 01:17 UTC (06:17 по Ташкенту); GitHub запускает расписание только на ветке по умолчанию
   workflow_dispatch:
 
+# Устаревший прогон PR отменяется новым. Прогон push в main — своя группа на каждый sha и не отменяется (иначе «CI ok»
+# пропадёт у коммита, который успели обогнать, а автодеплой ждёт зелёный «CI ok» именно на его sha; FIX-54, G-12).
+# Ночной (schedule) и ручной (dispatch) прогоны — каждый в своей группе и не отменяют ни друг друга, ни push: GitHub оставляет
+# в группе не больше одного ожидающего прогона, поэтому общая с push группа теряла бы ночной прогон при слиянии PR в это время.
 concurrency:
-  group: ci-${{ github.ref }}
-  # Отменяем только устаревшие прогоны PR; полный прогон push в main не отменяется следующим слиянием (FIX-54, G-12).
+  group: ci-${{ github.event_name }}-${{ github.event_name == 'push' && github.sha || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
@@ -40,66 +51,105 @@ jobs:
     if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 5
-    # Вне PR (push в main, workflow_dispatch) фильтр не применяется — гоняется всё.
+    # PR — файлы PR; push в main — файлы с прошлого коммита main (dorny/paths-filter берёт base = коммит до push);
+    # schedule и workflow_dispatch фильтр не применяют — гоняется всё. heavy=false только на push: тяжёлые задания
+    # (интеграция, e2e, сборки, аудит, pytest ERP) там не идут — они уже прошли на PR и проходят заново ночью.
     outputs:
-      crm: ${{ github.event_name != 'pull_request' || steps.filter.outputs.crm == 'true' }}
-      erp: ${{ github.event_name != 'pull_request' || steps.filter.outputs.erp == 'true' }}
-      cabinet: ${{ github.event_name != 'pull_request' || steps.filter.outputs.cabinet == 'true' }}
-      platform: ${{ github.event_name != 'pull_request' || steps.filter.outputs.platform == 'true' }}
-      eds: ${{ github.event_name != 'pull_request' || steps.filter.outputs.eds == 'true' }}
-      packages: ${{ github.event_name != 'pull_request' || steps.filter.outputs.packages == 'true' }}
-      rtbus: ${{ github.event_name != 'pull_request' || steps.filter.outputs.rtbus == 'true' }}
-      infra: ${{ github.event_name != 'pull_request' || steps.filter.outputs.infra == 'true' }}
-      cpu: ${{ github.event_name != 'pull_request' || steps.filter.outputs.cpu == 'true' }}
+      crm: ${{ contains(fromJSON('["schedule","workflow_dispatch"]'), github.event_name) || steps.filter.outputs.crm == 'true' }}
+      erp: ${{ contains(fromJSON('["schedule","workflow_dispatch"]'), github.event_name) || steps.filter.outputs.erp == 'true' }}
+      cabinet: ${{ contains(fromJSON('["schedule","workflow_dispatch"]'), github.event_name) || steps.filter.outputs.cabinet == 'true' }}
+      platform: ${{ contains(fromJSON('["schedule","workflow_dispatch"]'), github.event_name) || steps.filter.outputs.platform == 'true' }}
+      eds: ${{ contains(fromJSON('["schedule","workflow_dispatch"]'), github.event_name) || steps.filter.outputs.eds == 'true' }}
+      packages: ${{ contains(fromJSON('["schedule","workflow_dispatch"]'), github.event_name) || steps.filter.outputs.packages == 'true' }}
+      rtbus: ${{ contains(fromJSON('["schedule","workflow_dispatch"]'), github.event_name) || steps.filter.outputs.rtbus == 'true' }}
+      infra: ${{ contains(fromJSON('["schedule","workflow_dispatch"]'), github.event_name) || steps.filter.outputs.infra == 'true' }}
+      cpu: ${{ contains(fromJSON('["schedule","workflow_dispatch"]'), github.event_name) || steps.filter.outputs.cpu == 'true' }}
+      cpurules: ${{ contains(fromJSON('["schedule","workflow_dispatch"]'), github.event_name) || steps.filter.outputs.cpurules == 'true' }}
+      heavy: ${{ github.event_name != 'push' }}
     steps:
       - uses: actions/checkout@v7
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' || github.event_name == 'push'
+        with:
+          # push: фильтру нужен коммит до push (при необходимости он докачивает глубже сам); PR читает список файлов через API
+          fetch-depth: ${{ github.event_name == 'push' && 100 || 1 }}
       - uses: dorny/paths-filter@v3
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' || github.event_name == 'push'
         id: filter
         with:
+          # Карта «файл контракта → потребители» проверена по коду (grep читателей каждого файла packages/contracts:
+          # тесты-сторожа, генераторы клиентов, Dockerfile с контекстом contracts, compose); таблица — docs/systems/infra/ci.md.
           filters: |
+            # CRM: свой код; rt-bus и токены (вшиты в образ / интерфейс); контракты — только те, что читают код и тесты CRM:
+            # crm.yaml (экспорт OpenAPI и orval), erp-integration.yaml (клиент ERP), eds.yaml и platform-bff.yaml (тесты-сторожа
+            # прав и ролей), platform-rbac.yaml (генератор ролей), mcp-tools.json (инструменты агента), события, подписки,
+            # пример pairing (examples/pairing-bootstrap.json), модели rt_contracts (generated/python — path-зависимость pyproject).
             crm:
               - 'apps/crm/**'
-              - 'packages/contracts/**'
               - 'packages/rt-bus/**'
               - 'packages/ui-tokens/**'
-            erp:
-              - 'apps/erp/**'
-              - 'packages/contracts/**'
-              - 'packages/ui-tokens/**'
-              # Библиотека шины вшивается в образ ERP (B3, L14): её правки проверяются тестами ERP.
-              - 'packages/rt-bus/**'
-            cabinet:
-              - 'apps/cabinet/**'
-              - 'packages/contracts/**'
-              - 'packages/ui-tokens/**'
-              # Типы формы лида Cabinet генерируются из OpenAPI CRM (src/api/crm-form.d.ts) — packages/contracts/openapi/crm.yaml
-              # попадает под packages/contracts/** выше.
-            # Платформа: BFF строится по своему OpenAPI, роли и статусы читает из общих файлов контракта, токены — из ui-tokens.
-            platform:
-              - 'apps/platform/**'
-              - 'packages/contracts/openapi/platform-bff.yaml'
-              # Модели ответов CRM в BFF генерируются из OpenAPI CRM (app/clients/crm_models.py).
               - 'packages/contracts/openapi/crm.yaml'
+              - 'packages/contracts/openapi/erp-integration.yaml'
+              - 'packages/contracts/openapi/eds.yaml'
+              - 'packages/contracts/openapi/platform-bff.yaml'
               - 'packages/contracts/platform-rbac.yaml'
-              - 'packages/contracts/client-statuses.yaml'
-              - 'packages/ui-tokens/**'
-              # BFF — подписчик шины (B5): библиотека rt_bus, схемы событий и подписки читаются тестами и входят в образ.
-              - 'packages/rt-bus/**'
+              - 'packages/contracts/mcp-tools.json'
               - 'packages/contracts/events/**'
               - 'packages/contracts/bus/**'
-            # EDS (волна 12): сервис — подписчик и издатель шины, читает схемы событий и подписки; контракт eds.yaml сверяется тестом.
+              - 'packages/contracts/examples/pairing-bootstrap.json'
+              - 'packages/contracts/generated/python/**'
+              # справка формата базы знаний — источник правды docs/kb, её читают тесты CRM (бэкенд и фронтенд)
+              - 'docs/kb/**'
+            # ERP: свой код; rt-bus вшит в образ (B3, L14); сторож портала и интеграции читают erp-portal/-integration,
+            # выгрузка схемы пишет erp-internal.yaml; mcp-tools.json — MCP-сервер; события и подписки — в образе.
+            erp:
+              - 'apps/erp/**'
+              - 'packages/rt-bus/**'
+              - 'packages/ui-tokens/**'
+              - 'packages/contracts/openapi/erp-portal.yaml'
+              - 'packages/contracts/openapi/erp-integration.yaml'
+              - 'packages/contracts/openapi/erp-internal.yaml'
+              - 'packages/contracts/mcp-tools.json'
+              - 'packages/contracts/examples/pairing-bootstrap.json'
+              - 'packages/contracts/events/**'
+              - 'packages/contracts/bus/**'
+            # Cabinet: портальный API ERP (типы из erp-portal.yaml) и форма лида CRM (src/api/crm-form.d.ts из crm.yaml).
+            cabinet:
+              - 'apps/cabinet/**'
+              - 'packages/ui-tokens/**'
+              - 'packages/contracts/openapi/erp-portal.yaml'
+              - 'packages/contracts/openapi/crm.yaml'
+            # Платформа: BFF строится по своему OpenAPI, модели CRM — из crm.yaml (app/clients/crm_models.py), клиент EDS —
+            # по eds.yaml, роли — из platform-rbac.yaml (+ схема, генератор gen_rbac.py), токены — из ui-tokens. BFF — подписчик
+            # шины (B5): rt-bus, схемы событий и подписки читаются тестами и входят в образ. client-statuses.yaml Платформа
+            # не читает (по grep — никто, кроме задания contracts).
+            platform:
+              - 'apps/platform/**'
+              - 'packages/ui-tokens/**'
+              - 'packages/rt-bus/**'
+              - 'packages/contracts/openapi/platform-bff.yaml'
+              - 'packages/contracts/openapi/crm.yaml'
+              - 'packages/contracts/openapi/eds.yaml'
+              - 'packages/contracts/platform-rbac.yaml'
+              - 'packages/contracts/platform-rbac.schema.json'
+              - 'packages/contracts/events/**'
+              - 'packages/contracts/bus/**'
+              # справка формата базы знаний: docs/kb копируется в web (pnpm kb:sync), тест kbDocs сверяет копию с источником
+              - 'docs/kb/**'
+            # EDS (волна 12): сервис — подписчик и издатель шины; контракт eds.yaml сверяется тестом, события и подписки читает
+            # шина, модели rt_contracts — path-зависимость (generated/python).
             eds:
               - 'apps/eds/**'
-              - 'packages/contracts/**'
               - 'packages/rt-bus/**'
+              - 'packages/contracts/openapi/eds.yaml'
+              - 'packages/contracts/events/**'
+              - 'packages/contracts/bus/**'
+              - 'packages/contracts/generated/python/**'
+            # packages: проверка самого контракта и токенов — на любую правку packages/ (задание contracts).
             packages:
               - 'packages/**'
-            # Библиотека шины (B1): тесты адаптеров на PostgreSQL.
+            # Библиотека шины (B1): тесты адаптеров на PostgreSQL; схемы событий и подписки контракта — её тестовые данные.
             rtbus:
               - 'packages/rt-bus/**'
-              # тесты rt-bus идут на схемах и подписках контракта
               - 'packages/contracts/events/**'
               - 'packages/contracts/bus/**'
             infra:
@@ -108,7 +158,9 @@ jobs:
               - '.env.example'
               - 'Makefile'
               - '.github/workflows/**'
-            # Старт образов прода под CPU qemu64 (S0-7): Dockerfile, зависимости с нативным кодом, конфиги nginx, образы infra и правила проверки.
+            # Старт образов прода под CPU qemu64 (S0-7): ТОЛЬКО то, что меняет содержимое образа — Dockerfile, зависимости
+            # с нативным кодом, конфиги nginx, образы infra и сами правила проверки. Правка ci.yml/deploy.yml образы не меняет
+            # (W14-S2): для неё — лёгкая сверка таблицы правил (cpurules), без сборки 11 образов под qemu.
             cpu:
               - '**/Dockerfile*'
               - 'apps/crm/backend/pyproject.toml'
@@ -123,6 +175,10 @@ jobs:
               - 'infra/ai/litellm/**'
               - 'infra/db/**'
               - 'infra/compose/**'
+              - 'infra/deploy/cpu-baseline-*'
+              - 'infra/deploy/tests/cpu-baseline-test.sh'
+              - 'scripts/qemu_cpu_check.sh'
+            cpurules:
               - 'infra/deploy/cpu-baseline-*'
               - 'infra/deploy/tests/cpu-baseline-test.sh'
               - 'scripts/qemu_cpu_check.sh'
@@ -239,9 +295,13 @@ jobs:
         working-directory: apps/crm/frontend
         run: pnpm test
 
+  # integration, build и e2e CRM не ждут lint и unit (W14-S2): цель волны — время ответа по PR, а не экономия минут runner'а;
+  # ранний провал lint раньше отменял бы зря потраченные 7 минут, но стоил 3–5 минут к критическому пути каждого PR.
+  # На push в main эти задания не идут (heavy=false) — только ночью и вручную.
   crm-integration:
     name: CRM · integration
-    needs: [crm-lint, crm-unit]
+    needs: changes
+    if: needs.changes.outputs.crm == 'true' && needs.changes.outputs.heavy == 'true'
     runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 20
     services:
@@ -293,7 +353,8 @@ jobs:
 
   crm-build:
     name: CRM · build (${{ matrix.name }})
-    needs: [crm-lint, crm-unit]
+    needs: changes
+    if: needs.changes.outputs.crm == 'true' && needs.changes.outputs.heavy == 'true'
     runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 30
     strategy:
@@ -325,7 +386,8 @@ jobs:
 
   crm-e2e:
     name: CRM · e2e (Playwright)
-    needs: [crm-lint, crm-unit]
+    needs: changes
+    if: needs.changes.outputs.crm == 'true' && needs.changes.outputs.heavy == 'true'
     runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 25
     services:
@@ -407,7 +469,7 @@ jobs:
   crm-audit:
     name: CRM · dependency audit
     needs: changes
-    if: needs.changes.outputs.crm == 'true'
+    if: needs.changes.outputs.crm == 'true' && needs.changes.outputs.heavy == 'true'
     runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 10
     steps:
@@ -433,12 +495,15 @@ jobs:
 
   # ─── ERP и Cabinet: make check-<система> ──────────────────────────────────────────────────
 
-  erp:
-    name: ERP · check
+  # ERP — три параллельных задания вместо одного последовательного `make check-erp` (W14-S2): линтеры и vitest, pytest,
+  # миграции и дрейф схемы не ждут друг друга. Цели apps/erp/Makefile (lint, test-frontend, test-backend, openapi-check) —
+  # те же, что в `make check-erp`; на push в main идут только erp-lint и erp-schema (heavy=false), pytest — ночью и на PR.
+  erp-lint:
+    name: ERP · lint & vitest
     needs: changes
     if: needs.changes.outputs.erp == 'true'
     runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
-    timeout-minutes: 40
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v7
@@ -452,8 +517,43 @@ jobs:
           cache-dependency-path: apps/erp/frontend/package-lock.json
       - name: Install (линтеры бэкенда, npm ci)
         run: make -C apps/erp install
-      # lint + typecheck + i18n + vitest + pytest в контейнере на одноразовых Postgres 17 и Redis
-      - run: make check-erp
+      # flake8, black, isort, eslint, tsc, симметрия i18n
+      - run: make -C apps/erp lint
+      - run: make -C apps/erp test-frontend
+
+  erp-backend:
+    name: ERP · pytest
+    needs: changes
+    if: needs.changes.outputs.erp == 'true' && needs.changes.outputs.heavy == 'true'
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v7
+      # pytest в контейнере на одноразовых Postgres 17 и Redis (apps/erp/scripts/test_backend_local.sh)
+      - run: make -C apps/erp test-backend
+      - name: Контейнеры тестов удалены
+        if: always()
+        run: apps/erp/scripts/test_backend_local.sh --down
+
+  erp-schema:
+    name: ERP · миграции и схема
+    needs: changes
+    if: needs.changes.outputs.erp == 'true'
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: ${{ env.UV_VERSION }}
+          python-version: ${{ env.PYTHON_VERSION }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: apps/erp/frontend/package-lock.json
+      - name: Install (npm ci для генерации типов)
+        run: make -C apps/erp install
       - name: Миграции на чистой базе и отсутствие дрейфа моделей
         run: apps/erp/scripts/test_backend_local.sh --migration-check
       # schema.json, типы фронтенда и packages/contracts/openapi/erp-internal.yaml перегенерируются из кода; diff = падение (FIX-40)
@@ -551,11 +651,19 @@ jobs:
       # ruff check/format, mypy --strict, pytest (миграции Alembic, шина, проекция сотрудников, вход, права)
       - run: make check-eds
 
+  # E2E Платформы (MSW, BFF не нужен) не ждёт `platform` (W14-S2): сборка `vite build --mode mock` + `vite preview`, а не dev-сервер
+  # (antd приходит готовыми чанками), три шарда `--shard=i/3`, повторов нет (retries=0 в playwright.config.ts: «flaky» = красный).
+  # Проект mobile (390) гоняет только сценарии с тегом @mobile. На push в main не идёт (heavy=false).
   platform-e2e:
-    name: Platform · e2e (Playwright)
-    needs: platform
+    name: Platform · e2e (шард ${{ matrix.shard }}/3)
+    needs: changes
+    if: needs.changes.outputs.platform == 'true' && needs.changes.outputs.heavy == 'true'
     runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
-    timeout-minutes: 20
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -575,16 +683,16 @@ jobs:
         with:
           path: ~/.cache/ms-playwright
           key: platform-playwright-${{ runner.os }}-${{ hashFiles('apps/platform/web/pnpm-lock.yaml') }}
-      # BFF и стенд не нужны: vite --mode mock, API отвечает MSW (VITE_API_MOCKING задаёт playwright.config.ts)
+      # BFF и стенд не нужны: сборка в режиме mock, API отвечает MSW (VITE_API_MOCKING задаёт playwright.config.ts)
       - name: Playwright + axe
         working-directory: apps/platform/web
         run: |
           pnpm exec playwright install --with-deps chromium
-          pnpm e2e
+          pnpm exec playwright test --shard=${{ matrix.shard }}/3
       - uses: actions/upload-artifact@v7
         if: failure()
         with:
-          name: platform-playwright-report
+          name: platform-playwright-report-${{ matrix.shard }}
           path: apps/platform/web/playwright-report
           retention-days: 7
 
@@ -598,10 +706,20 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
-      # Совместимость схем событий (L8) и OpenAPI (oasdiff, ADR-0016) сравнивают с origin/main: нужен её коммит (дерево),
+      # Совместимость схем событий (L8) и OpenAPI (oasdiff, ADR-0016) сравнивают с базой: нужен её коммит (дерево),
       # история не нужна. oasdiff — закреплённый образ в одноразовом контейнере (scripts/openapi_compat.py).
-      - name: База для проверки совместимости (origin/main)
-        run: git fetch --no-tags --depth=1 origin +refs/heads/main:refs/remotes/origin/main
+      # PR, ночной и ручной прогоны — база origin/main; push в main — коммит main ДО push (иначе main сравнивался бы сам с собой).
+      - name: База для проверки совместимости
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          if [ "${{ github.event_name }}" = "push" ] && [ -n "$BEFORE" ] && [ "$BEFORE" != "0000000000000000000000000000000000000000" ]; then
+            git fetch --no-tags --depth=1 origin "$BEFORE"
+            echo "CONTRACTS_BASE_REF=$BEFORE" >> "$GITHUB_ENV"
+          else
+            git fetch --no-tags --depth=1 origin +refs/heads/main:refs/remotes/origin/main
+            echo "CONTRACTS_BASE_REF=origin/main" >> "$GITHUB_ENV"
+          fi
       - uses: astral-sh/setup-uv@v7
         with:
           version: ${{ env.UV_VERSION }}
@@ -618,8 +736,6 @@ jobs:
           cache-dependency-path: packages/contracts/pnpm-lock.yaml
       - name: make contracts
         run: make contracts
-        env:
-          CONTRACTS_BASE_REF: origin/main
       - name: Контракт и сгенерированное совпадают
         run: |
           git diff --exit-code -- packages/contracts/generated \
@@ -704,6 +820,20 @@ jobs:
   # Прод-VPS отдают «QEMU Virtual CPU 2.5+» — базовый x86-64 без v2 (docs/runbooks/servers.md). Образ, которому нужен v2, падает здесь,
   # а не на проде после деплоя. Механика и правила — scripts/qemu_cpu_check.sh, infra/deploy/cpu-baseline-rules.sh.
 
+  # Решение W14-S2: правка ci.yml/deploy.yml образы не меняет, а раньше запускала все 11 образов под qemu (десятки минут).
+  # Теперь для неё — только лёгкая сверка таблицы правил с этими файлами (bash, без Docker и qemu); сборка и старт образов —
+  # при правке Dockerfile, зависимостей с нативным кодом, infra и самих правил, а также ночью и вручную.
+  cpu-rules:
+    name: CPU qemu64 · таблица правил
+    needs: changes
+    if: needs.changes.outputs.cpu == 'true' || needs.changes.outputs.cpurules == 'true'
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - name: Таблица правил согласована с deploy.yml, ci.yml и deploy.sh
+        run: bash infra/deploy/tests/cpu-baseline-test.sh
+
   cpu-common:
     name: CPU qemu64 · механика и сторонние образы
     needs: changes
@@ -712,8 +842,6 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
-      - name: Таблица правил согласована с deploy.yml, ci.yml и deploy.sh
-        run: bash infra/deploy/tests/cpu-baseline-test.sh
       - name: Самопроверка механики (Wolfi и numpy 2.4+ обязаны падать, numpy<2.4 — проходить)
         run: scripts/qemu_cpu_check.sh selftest
       - name: Сторонние образы прода (caddy, redis, rustfs, rc)
@@ -772,7 +900,7 @@ jobs:
   ci-ok:
     name: CI ok
     if: always()
-    needs: [changes, gitleaks, crm-lint, crm-unit, crm-integration, crm-build, crm-e2e, crm-audit, erp, cabinet, platform, platform-e2e, eds, contracts, rt-bus, infra, cpu-common, cpu-image]
+    needs: [changes, gitleaks, crm-lint, crm-unit, crm-integration, crm-build, crm-e2e, crm-audit, erp-lint, erp-backend, erp-schema, cabinet, platform, platform-e2e, eds, contracts, rt-bus, infra, cpu-rules, cpu-common, cpu-image]
     runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 5
     steps:
