@@ -76,6 +76,7 @@ READS: tuple[tuple[str, str], ...] = (
     ("GET", "/admin/company/categories"),
     ("GET", "/admin/company/category-requests"),
     ("GET", "/admin/company/platform-settings"),
+    ("GET", "/admin/company/fx-rate"),
     ("POST", "/admin/company/brand/preview"),
     ("POST", "/admin/company/numbering/preview"),
     ("POST", "/admin/company/document-templates/preview"),
@@ -108,6 +109,7 @@ WRITES: tuple[tuple[str, str], ...] = (
     ("POST", "/admin/company/category-requests/5/approve"),
     ("POST", "/admin/company/category-requests/5/reject"),
     ("PATCH", "/admin/company/platform-settings"),
+    ("POST", "/admin/company/fx-rate"),
 )
 
 
@@ -1633,3 +1635,201 @@ async def test_platform_settings_erp_forbids_non_superuser(
     assert response.status_code == 403
     check(response, "/admin/company/platform-settings", "patch")
     assert response.json()["source"] == "erp"
+
+
+# --- курс USD→UZS: ручной ввод и журнал (W13C-F6) ----------------------------------------------
+
+FX_CURRENT = {
+    "currency": "USD",
+    "current": {
+        "currency": "USD",
+        "rate_to_uzs": "12650.5",
+        "rate_date": "2026-10-27",
+        "source": "CBU",
+    },
+    "max_age_days": 7,
+}
+FX_JOURNAL = [
+    {
+        "id": 41,
+        "kind": "manual",
+        "currency": "USD",
+        "rate_date": "2026-10-27",
+        "rate_to_uzs": "12650.5",
+        "previous_rate_to_uzs": "12600",
+        "previous_source": "CBU",
+        "entered_by_id": 7,
+        "entered_by_email": "anna@demo.example",
+        "entered_by_name": "Анна Иванова",
+        "entered_at": NOW,
+    },
+    {
+        "id": 40,
+        "kind": "auto_skipped",
+        "currency": "USD",
+        "rate_date": "2026-10-26",
+        "rate_to_uzs": "12610",
+        "previous_rate_to_uzs": "12600",
+        "previous_source": "MANUAL",
+        "entered_by_id": None,
+        "entered_by_email": "",
+        "entered_by_name": "",
+        "entered_at": NOW,
+    },
+]
+
+
+def fx_erp(erp: respx.MockRouter, current: dict[str, Any] | None = None) -> dict[str, respx.Route]:
+    return {
+        "current": erp.get(f"{API}/exchange-rates/current/").mock(
+            return_value=httpx.Response(200, json=current or FX_CURRENT)
+        ),
+        "journal": erp.get(f"{API}/exchange-rates/journal/").mock(
+            return_value=httpx.Response(200, json=FX_JOURNAL)
+        ),
+    }
+
+
+async def test_fx_rate_get_shows_current_rate_source_and_journal(
+    web: Web, erp: respx.MockRouter, check: ContractChecker
+) -> None:
+    await web.login(["ADMIN"])
+    routes = fx_erp(erp)
+
+    response = await web.client.get("/api/v1/admin/company/fx-rate")
+
+    assert response.status_code == 200
+    check(response, "/admin/company/fx-rate", "get")
+    body = response.json()
+    assert body["current"] == {"rate_to_uzs": "12650.5", "rate_date": "2026-10-27", "source": "auto"}
+    assert body["max_age_days"] == 7
+    manual, skipped = body["journal"]
+    assert (manual["id"], manual["kind"], manual["entered_by"]) == ("41", "manual", "Анна Иванова")
+    assert (manual["previous_rate_to_uzs"], manual["previous_source"]) == ("12600", "auto")
+    assert (skipped["kind"], skipped["entered_by"], skipped["previous_source"]) == (
+        "auto_skipped",
+        None,
+        "manual",
+    )
+    assert routes["journal"].calls.last.request.url.params["limit"] == "20"
+    assert routes["current"].calls.last.request.url.params["currency"] == "USD"
+
+
+async def test_fx_rate_without_a_rate_is_null_not_zero(
+    web: Web, erp: respx.MockRouter, check: ContractChecker
+) -> None:
+    await web.login(["ADMIN"])
+    fx_erp(erp, {"currency": "USD", "current": None, "max_age_days": 7})
+
+    response = await web.client.get("/api/v1/admin/company/fx-rate")
+
+    check(response, "/admin/company/fx-rate", "get")
+    assert response.json()["current"] is None
+
+
+async def test_fx_rate_reader_sees_but_cannot_enter(
+    web: Web, erp: respx.MockRouter, check: ContractChecker
+) -> None:
+    await web.login([custom(50, "Читатель настроек", {"company.settings": "read"})])
+    fx_erp(erp)
+
+    got = await web.client.get("/api/v1/admin/company/fx-rate")
+    posted = await web.send(
+        "POST", "/api/v1/admin/company/fx-rate", json={"rate_date": "2026-10-27", "rate_to_uzs": "12700"}
+    )
+
+    assert got.status_code == 200
+    assert posted.status_code == 403
+    assert posted.json()["details"] == {"resource": "company.settings", "need": "full"}
+    assert not [c for c in erp.calls if c.request.method == "POST" and "exchange-rates" in c.request.url.path]
+
+
+async def test_fx_rate_post_sends_usd_to_erp_and_returns_fresh_overview(
+    web: Web, erp: respx.MockRouter, check: ContractChecker
+) -> None:
+    await web.login(["ADMIN"])
+    fx_erp(erp)
+    route = erp.post(f"{API}/exchange-rates/manual/").mock(
+        return_value=httpx.Response(
+            201,
+            json={"currency": "USD", "rate_to_uzs": "12700", "rate_date": "2026-10-27", "source": "MANUAL"},
+        )
+    )
+
+    response = await web.send(
+        "POST", "/api/v1/admin/company/fx-rate", json={"rate_date": "2026-10-27", "rate_to_uzs": "12700"}
+    )
+
+    assert response.status_code == 201
+    check(response, "/admin/company/fx-rate", "post")
+    assert sent(route) == {"currency": "USD", "rate_date": "2026-10-27", "rate_to_uzs": "12700"}
+    assert route.calls.last.request.headers["authorization"].startswith("Bearer ")
+    assert response.json()["journal"][0]["id"] == "41"
+
+
+@pytest.mark.parametrize(
+    ("erp_code", "field"),
+    [
+        ("FX_RATE_INVALID", "rate_to_uzs"),
+        ("FX_RATE_DATE_INVALID", "rate_date"),
+        ("FX_RATE_DATE_IN_FUTURE", "rate_date"),
+        ("FX_RATE_DATE_TOO_OLD", "rate_date"),
+    ],
+)
+async def test_fx_rate_erp_refusal_points_at_the_field(
+    web: Web, erp: respx.MockRouter, check: ContractChecker, erp_code: str, field: str
+) -> None:
+    await web.login(["ADMIN"])
+    erp.post(f"{API}/exchange-rates/manual/").mock(
+        return_value=httpx.Response(400, json={"detail": erp_code})
+    )
+
+    response = await web.send(
+        "POST", "/api/v1/admin/company/fx-rate", json={"rate_date": "2026-10-27", "rate_to_uzs": "0"}
+    )
+
+    assert response.status_code == 422
+    check(response, "/admin/company/fx-rate", "post")
+    details = response.json()["details"]
+    assert response.json()["code"] == "VALIDATION_FAILED"
+    assert details["fields"] == [field]
+    assert details["reason"] == erp_code.lower()
+
+
+async def test_fx_rate_erp_forbids_member_without_settings_edit(
+    web: Web, erp: respx.MockRouter, check: ContractChecker
+) -> None:
+    await web.login(["DIRECTOR"])
+    erp.post(f"{API}/exchange-rates/manual/").mock(
+        return_value=httpx.Response(403, json={"detail": "ROLE_NOT_PERMITTED"})
+    )
+
+    response = await web.send(
+        "POST", "/api/v1/admin/company/fx-rate", json={"rate_date": "2026-10-27", "rate_to_uzs": "12700"}
+    )
+
+    assert response.status_code == 403
+    check(response, "/admin/company/fx-rate", "post")
+    assert response.json()["source"] == "erp"
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        {"rate_date": "27.10.2026", "rate_to_uzs": "12700"},
+        {"rate_date": "2026-10-27", "rate_to_uzs": "abc"},
+        {"rate_date": "2026-10-27"},
+        {"rate_to_uzs": "12700"},
+        {"rate_date": "2026-10-27", "rate_to_uzs": "12700", "currency": "EUR"},
+    ],
+)
+async def test_fx_rate_bad_body_is_422_and_erp_is_not_called(
+    web: Web, erp: respx.MockRouter, body: dict[str, str]
+) -> None:
+    await web.login(["ADMIN"])
+    route = erp.post(f"{API}/exchange-rates/manual/").mock(return_value=httpx.Response(201, json={}))
+
+    response = await web.send("POST", "/api/v1/admin/company/fx-rate", json=body)
+
+    assert response.status_code == 422
+    assert route.call_count == 0
