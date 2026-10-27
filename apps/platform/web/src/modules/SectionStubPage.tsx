@@ -1,24 +1,21 @@
-import { Card, Skeleton, theme } from "antd";
-import type { ReactNode } from "react";
+import { Card, theme } from "antd";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "react-router";
 
 import { canSee } from "../app/access";
 import { useAuth } from "../app/auth/useAuth";
 import { viewRoleNames } from "../entities/role/roles";
-import { useGetBridge, useGetQueue } from "../shared/api/generated/platform-bff";
+import { useGetQueue } from "../shared/api/generated/platform-bff";
 import type { ObjectKind, QueueItem } from "../shared/api/generated/model";
 import { todayLabel } from "../shared/lib/format";
 import { useDocumentTitle } from "../shared/lib/useDocumentTitle";
 import { useFormat } from "../shared/lib/useFormat";
 import { DefinitionList } from "../shared/ui/DefinitionList";
 import { EmptyState } from "../shared/ui/EmptyState";
-import { LinkButton } from "../shared/ui/LinkButton";
 import { PageHeader } from "../shared/ui/PageHeader";
-import { type BridgeEntry, bridgeEntry, legacyHref, objectIdOf, objectTitle } from "./bridge";
+import { type BridgeEntry, bridgeEntry, objectIdOf, objectTitle } from "./bridge";
 import { dueBadge } from "./dashboard/queue";
-import { matchSection } from "./registry";
-import { LegacyLink } from "./stub/LegacyLink";
+import { useBridgeView } from "./stub/useBridgeView";
 import type { ModuleConfig, SectionConfig } from "./types";
 
 /** Раздел без записи в мосте: честный запасной текст (тест `bridge.test.ts` не пускает такие разделы в сборку). */
@@ -63,8 +60,6 @@ export function SectionStubPage({
   });
   const item = objectId !== undefined ? queueItemFor(queue.data?.items, objectId) : undefined;
 
-  const bridge = useGetBridge();
-
   const kind: ObjectKind | undefined = item?.object.kind ?? entry.objectKind;
   const kindLabel = kind ? t(`shell:search.kind.${kind}`) : undefined;
   const title = objectId !== undefined ? objectTitle(kindLabel, objectId) : sectionLabel;
@@ -78,47 +73,7 @@ export function SectionStubPage({
       ? sectionLabel
       : t("shell:stub.subtitle");
 
-  const legacy = entry.legacy;
-  let intro: string;
-  let action: ReactNode = null;
-  let note: string | null = null;
-
-  if (legacy) {
-    const system = legacy.system;
-    intro = t("bridge:intro.legacy", {
-      system: t(`bridge:system.${system}.in`),
-      where: t(`bridge:where.${legacy.where}`),
-    });
-    if (bridge.isPending) {
-      action = <Skeleton.Button active aria-hidden="true" />;
-    } else {
-      const base = system === "crm" ? bridge.data?.crm_url : bridge.data?.erp_url;
-      const href = legacyHref(legacy, base, objectId);
-      if (href) {
-        const sso = system === "erp" && bridge.data?.erp_sso === true;
-        action = <LegacyLink system={system} href={href} sso={sso} />;
-        note =
-          system === "erp" && sso
-            ? t("bridge:login.erpSso", { where: t(`bridge:where.${legacy.where}`) })
-            : t(`bridge:login.${system}`);
-      } else {
-        note = t("bridge:noAddress", { name: t(`bridge:system.${system}.name`) });
-      }
-    }
-  } else if (entry.internal) {
-    const target = matchSection(entry.internal.to);
-    const name = t(`modules:${target?.module.code ?? "admin"}.sections.${entry.internal.section}`);
-    intro = t("bridge:intro.internal", { section: name });
-    if (target && canSee(me, target.section.access)) {
-      action = (
-        <LinkButton to={entry.internal.to}>
-          {t("bridge:internalOpen", { section: name })}
-        </LinkButton>
-      );
-    }
-  } else {
-    intro = t("bridge:intro.none", { who: t(`bridge:who.${entry.who ?? "unknown"}`) });
-  }
+  const view = useBridgeView(entry, objectId);
 
   const known = item
     ? [
@@ -154,16 +109,14 @@ export function SectionStubPage({
       <Card>
         <EmptyState
           title={t("bridge:title")}
-          text={intro}
+          text={view.intro}
           action={
             <>
-              {action}
-              {note ? (
-                <p style={{ margin: "8px 0 0", color: token.colorTextSecondary }}>{note}</p>
+              {view.action}
+              {view.note ? (
+                <p style={{ margin: "8px 0 0", color: token.colorTextSecondary }}>{view.note}</p>
               ) : null}
-              <p style={{ margin: "8px 0 0", color: token.colorTextSecondary }}>
-                {t("bridge:when", { when: t(`bridge:whenValue.${entry.when}`) })}
-              </p>
+              <p style={{ margin: "8px 0 0", color: token.colorTextSecondary }}>{view.when}</p>
             </>
           }
         />
