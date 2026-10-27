@@ -260,5 +260,5 @@ for s in "${STAGES[@]}"; do
 done
 echo
 printf '%s\n' "${RESULT[@]}"
-[ $failed -eq 0 ] && echo "Локальный CI зелёный — можно мержить." || echo "Есть сбои — смотрите логи выше."
+[ $failed -eq 0 ] && echo "Локальный CI зелёный — можно открывать PR." || echo "Есть сбои — смотрите логи выше."
 exit $failed
