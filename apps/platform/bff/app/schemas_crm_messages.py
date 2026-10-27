@@ -108,6 +108,8 @@ class ThreadMessage(BaseModel):
     text: str
     created_at: datetime
     attachments: list[ThreadAttachment]
+    delivery: Literal["sending", "unconfirmed"] | None = None
+    retry_key: str | None = None
 
 
 class TeamNote(BaseModel):

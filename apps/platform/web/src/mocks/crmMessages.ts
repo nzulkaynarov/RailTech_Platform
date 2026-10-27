@@ -60,6 +60,8 @@ export function mockClientWrites(lead: string, text: string): void {
     text,
     created_at: now,
     attachments: [],
+    delivery: null,
+    retry_key: null,
   });
   row.item.unread = true;
   row.item.last_message_at = now;
@@ -151,7 +153,15 @@ export const crmMessagesHandlers = [
     const body = (await request.json()) as ReplyIn;
     const { state, row } = found;
     const done = state.sent[body.client_message_id];
-    if (done !== undefined) return HttpResponse.json({ id: done });
+    if (done !== undefined) {
+      // Повтор тем же ключом: второго сообщения нет; «зависшая» отправка — «доставка не подтверждена» (как CRM)
+      const sent = row.messages.find((m) => m.id === done);
+      if (sent?.delivery === "sending") {
+        sent.delivery = "unconfirmed";
+        writeMessages(state);
+      }
+      return HttpResponse.json({ id: done });
+    }
     if (row.card.owner_mode !== "manager") {
       return failure(409, "CONFLICT", "Сначала заберите лида.", "crm", { reason: "take_first" });
     }
@@ -169,6 +179,8 @@ export const crmMessagesHandlers = [
       text: body.text,
       created_at: new Date().toISOString(),
       attachments: [],
+      delivery: null,
+      retry_key: null,
     });
     row.item.unread = false;
     state.sent[body.client_message_id] = state.nextId;

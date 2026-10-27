@@ -25,6 +25,9 @@ REPLY_TIMEOUT_S: Final = 20.0
 STALE_SENDING: Final = timedelta(minutes=2)
 SENDING: Final = "sending"
 SENT: Final = "sent"
+# Итог отправки так и не узнали (таймаут Telegram, сбой записи итога), повтор после `STALE_SENDING`
+# не шлёт второе сообщение: ответ помечается «доставка не подтверждена» (B-013).
+UNCONFIRMED: Final = "unconfirmed"
 
 
 class TextSender(Protocol):
@@ -89,7 +92,8 @@ class ReplyOnce:
        `STALE_SENDING` — её id.
     2. Отправка в Telegram с таймаутом `REPLY_TIMEOUT_S`. Отказ Telegram — строка удаляется
        (не доставлено, повтор отправит заново). Таймаут или сетевой сбой — итог неизвестен: строка
-       остаётся `sending`, повтор получает 409, после `STALE_SENDING` — считается отправленной.
+       остаётся `sending`, повтор получает 409, после `STALE_SENDING` — помечается `unconfirmed`
+       («доставка не подтверждена») и возвращается без второй отправки.
     3. `delivery = sent` и событие `lead.message_added` — одной транзакцией. Если запись итога
        упала, а Telegram принял — строка остаётся `sending` с текстом (см. п. 2), дубля нет.
     """
@@ -129,9 +133,10 @@ class ReplyOnce:
             await session.execute(select(func.pg_advisory_xact_lock(lock)))
             found = await crm_repo.reply_by_key(session, lead_id, key)
             if found is not None:
-                fresh = found.created_at > datetime.now(UTC) - STALE_SENDING
-                if (found.meta or {}).get("delivery") == SENDING and fresh:
-                    raise ConflictError("reply is being sent", reason=Reason.REPLY_IN_PROGRESS)
+                if (found.meta or {}).get("delivery") == SENDING:
+                    if found.created_at > datetime.now(UTC) - STALE_SENDING:
+                        raise ConflictError("reply is being sent", reason=Reason.REPLY_IN_PROGRESS)
+                    found.meta = {**(found.meta or {}), "delivery": UNCONFIRMED}
                 return found.id
             conversation = await repo.open_conversation(session, lead_id)
             if conversation is None or self._sender is None:

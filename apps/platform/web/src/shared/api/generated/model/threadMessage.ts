@@ -182,6 +182,7 @@
  */
 import type { ThreadAttachment } from "./threadAttachment";
 import type { ThreadMessageAuthor } from "./threadMessageAuthor";
+import type { ThreadMessageDelivery } from "./threadMessageDelivery";
 
 export interface ThreadMessage {
   id: number;
@@ -194,4 +195,14 @@ export interface ThreadMessage {
   text: string;
   created_at: string;
   attachments: ThreadAttachment[];
+  /**
+   * Только у ответа менеджера с ключом повтора: `sending` — отправка идёт (дольше пары минут — итог неизвестен, «доставка не подтверждена», «Повторить» тем же ключом не шлёт второе сообщение); `unconfirmed` — итог так и не узнали, повтор больше не отправляет (B-013). `null` — доставлено или это не ответ менеджера
+   * @nullable
+   */
+  delivery: ThreadMessageDelivery;
+  /**
+   * `client_message_id` ответа с `delivery` ≠ `null` — для «Повторить» тем же ключом
+   * @nullable
+   */
+  retry_key: string | null;
 }

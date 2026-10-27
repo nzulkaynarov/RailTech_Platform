@@ -159,13 +159,19 @@ async def test_thread_hides_the_storage_key_and_names_the_manager(
 ) -> None:
     await web.login(["MANAGER"])
     response = check(
-        await web.client.get(f"{BASE}/L-2041/thread?limit=3"), "/crm/messages/{lead}/thread", "get"
+        await web.client.get(f"{BASE}/L-2041/thread?limit=4"), "/crm/messages/{lead}/thread", "get"
     )
     body = response.json()
     assert [(m["id"], m["author"], m["author_name"]) for m in body["items"]] == [
         (90, "lead", None),
         (91, "bot", None),
         (92, "manager", "Дилшод Менеджеров"),
+        (94, "manager", "Дилшод Менеджеров"),
+    ]
+    # B-013: ответ без подтверждённой доставки — пометка и ключ для «Повторить»
+    assert [(m["delivery"], m["retry_key"]) for m in body["items"][2:]] == [
+        (None, None),
+        ("sending", "draft-2041-zz9"),
     ]
     assert body["items"][0]["attachments"] == [
         {
@@ -181,7 +187,7 @@ async def test_thread_hides_the_storage_key_and_names_the_manager(
     assert "tg/5001" not in response.text
     assert body["has_more"] is True
     assert [n["author_name"] for n in body["notes"]] == ["Дилшод Менеджеров"]
-    assert crm.last("GET", "leads/2041/messages").url.params["limit"] == "3"
+    assert crm.last("GET", "leads/2041/messages").url.params["limit"] == "4"
 
 
 async def test_older_page_asks_crm_before_id_and_skips_notes(

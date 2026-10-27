@@ -144,15 +144,30 @@ describe("Клиенты · Ждут ответа: менеджер", () => {
     window.localStorage.removeItem(MOCK_TELEGRAM_DOWN_KEY);
     fireEvent.click(within(alert).getByRole("button", { name: "Повторить" }));
     await waitFor(() => {
-      expect(Object.keys(readMessages().sent)).toHaveLength(1);
+      expect(Object.keys(readMessages().sent)).toHaveLength(2); // демо-ответ «не подтверждён» + этот
     });
     expect(
       await screen.findByText("Счёт пришлю до 17:00", { selector: ".pf-msg-bubble" }),
     ).toBeVisible();
     const state = readMessages();
     expect(state.leads.find((l) => l.item.lead === "L-2050")?.messages.length).toBe(before + 1);
-    expect(Object.keys(state.sent)).toHaveLength(1);
+    expect(Object.keys(state.sent)).toHaveLength(2);
     expect(field().value).toBe("");
+  });
+
+  it("ответ без подтверждённой доставки: пометка и «Повторить» тем же ключом — без второго сообщения (B-013)", async () => {
+    await open("manager@demo.example", "?lead=L-2050");
+    const mark = await screen.findByText(/Доставка не подтверждена: Telegram не ответил вовремя/);
+    const before = readMessages().leads.find((l) => l.item.lead === "L-2050")?.messages.length;
+    fireEvent.click(within(mark).getByRole("button", { name: "Повторить" }));
+    expect(
+      await screen.findByText(
+        "Доставка не подтверждена — проверьте у клиента, получил ли он ответ",
+      ),
+    ).toBeVisible();
+    expect(readMessages().leads.find((l) => l.item.lead === "L-2050")?.messages.length).toBe(
+      before,
+    );
   });
 
   it("шаблон и «Подсказать ответ» вставляют текст в поле, отправляет человек", async () => {
@@ -185,6 +200,8 @@ describe("Клиенты · Ждут ответа: менеджер", () => {
       text: "Новое сообщение клиента из бота",
       created_at: new Date().toISOString(),
       attachments: [],
+      delivery: null,
+      retry_key: null,
     });
     writeMessages(state);
     expect(screen.queryByText("Новое сообщение клиента из бота")).toBeNull();
@@ -224,6 +241,8 @@ describe("лента: склейка страниц и заметок", () => {
       text: String(id),
       created_at: at,
       attachments: [],
+      delivery: null,
+      retry_key: null,
     });
     const note = {
       id: 1,

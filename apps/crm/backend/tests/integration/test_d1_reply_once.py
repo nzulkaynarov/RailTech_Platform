@@ -19,7 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.bus import runtime
 from app.bus.runtime import build_bus
 from app.domain.errors import ConflictError
-from app.models.leads import Message
+from app.models.leads import Lead, Message
 from app.security.principal import Principal
 from app.services import lead_messenger
 from app.services.lead_messenger import LeadMessenger, ReplyOnce
@@ -93,6 +93,13 @@ async def keyed_rows(sessions: async_sessionmaker[AsyncSession]) -> list[Message
         return list(rows)
 
 
+async def answered_at(sessions: async_sessionmaker[AsyncSession], lead_id: int) -> Any:
+    async with sessions() as session:
+        lead = await session.get(Lead, lead_id)
+        assert lead is not None
+        return lead.last_human_msg_at
+
+
 async def events(sessions: async_sessionmaker[AsyncSession]) -> int:
     async with sessions() as session:
         value = await session.scalar(
@@ -159,16 +166,20 @@ async def test_a_telegram_refusal_frees_the_key_and_the_retry_sends_once(
     sender.release.set()
     sender.fail = True
     service, who, lead_id = await setup(sessions, sender, 7003)
+    before = await answered_at(sessions, lead_id)
 
     with pytest.raises(DeliveryError):
         await service.reply(who, lead_id, TEXT, client_message_id=KEY)
     assert await keyed_rows(sessions) == []
+    # отказ Telegram — лид по-прежнему «ждёт ответа» (B-013)
+    assert await answered_at(sessions, lead_id) == before
 
     sender.fail = False
     message_id = await service.reply(who, lead_id, TEXT, client_message_id=KEY)
     (row,) = await keyed_rows(sessions)
     assert row.id == message_id
     assert sender.calls == 2
+    assert await answered_at(sessions, lead_id) != before
 
 
 async def test_an_unknown_outcome_never_sends_a_second_copy(
@@ -189,6 +200,8 @@ async def test_an_unknown_outcome_never_sends_a_second_copy(
     (row,) = await keyed_rows(sessions)
     assert await service.reply(who, lead_id, TEXT, client_message_id=KEY) == row.id
     assert sender.calls == 1
+    (row,) = await keyed_rows(sessions)
+    assert row.meta["delivery"] == "unconfirmed"  # «доставка не подтверждена» в ленте (B-013)
 
 
 async def test_telegram_accepted_but_the_write_failed_keeps_one_message(

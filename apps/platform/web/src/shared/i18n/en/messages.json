@@ -126,7 +126,12 @@
       "title": "Choose a conversation",
       "text": "On the left are bot handoffs and your conversations. Open one to reply to the client."
     },
-    "olderFailed": "Could not load the history. Try again"
+    "olderFailed": "Could not load the history. Try again",
+    "delivery": {
+      "sending": "Sending…",
+      "unconfirmed": "Delivery not confirmed: Telegram did not respond in time",
+      "unconfirmedFinal": "Delivery not confirmed — check with the client whether the reply arrived"
+    }
   },
   "composer": {
     "mode": "Who we write to",

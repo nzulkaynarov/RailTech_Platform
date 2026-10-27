@@ -9544,7 +9544,7 @@ components:
     ThreadMessage:
       type: object
       additionalProperties: false
-      required: [id, author, author_name, text, created_at, attachments]
+      required: [id, author, author_name, text, created_at, attachments, delivery, retry_key]
       properties:
         id: {type: integer}
         author:
@@ -9558,6 +9558,16 @@ components:
         attachments:
           type: array
           items: {$ref: '#/components/schemas/ThreadAttachment'}
+        delivery:
+          type: [string, 'null']
+          enum: [sending, unconfirmed, null]
+          description: >-
+            Только у ответа менеджера с ключом повтора: `sending` — отправка идёт (дольше пары минут — итог неизвестен,
+            «доставка не подтверждена», «Повторить» тем же ключом не шлёт второе сообщение); `unconfirmed` — итог так и не
+            узнали, повтор больше не отправляет (B-013). `null` — доставлено или это не ответ менеджера
+        retry_key:
+          type: [string, 'null']
+          description: '`client_message_id` ответа с `delivery` ≠ `null` — для «Повторить» тем же ключом'
 
     TeamNote:
       type: object

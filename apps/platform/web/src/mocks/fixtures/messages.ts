@@ -62,6 +62,8 @@ function thread(base: number, lead: string, lines: [ThreadMessage["author"], str
     text,
     created_at: ago(base, lines.length - index + 10),
     attachments: [],
+    delivery: null,
+    retry_key: null,
   }));
 }
 
@@ -334,7 +336,22 @@ function initial(): MessagesMock {
     messages: thread(base, "L-2060", [["lead", "Hello, do you ship to Kazakhstan?"]]),
     notes: [],
   };
-  return { leads: [rails, overdue, mine, free], nextId: 900_000, sent: {} };
+  // B-013: ответ, доставку которого Telegram так и не подтвердил (таймаут), — пометка и «Повторить» в ленте.
+  mine.messages.push({
+    id: 2_050_900,
+    author: "manager",
+    author_name: MANAGER.name,
+    text: "Счёт пришлю до конца дня.",
+    created_at: ago(base, 4),
+    attachments: [],
+    delivery: "sending",
+    retry_key: "draft-demo-unconfirmed",
+  });
+  return {
+    leads: [rails, overdue, mine, free],
+    nextId: 900_000,
+    sent: { "draft-demo-unconfirmed": 2_050_900 },
+  };
 }
 
 let memory: MessagesMock | null = null;

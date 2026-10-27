@@ -4572,6 +4572,14 @@ export const getGetCrmThreadResponseMock = (
         ]),
       }),
     ),
+    delivery: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(["sending", "unconfirmed"] as const),
+      null,
+    ]),
+    retry_key: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
   })),
   notes: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
     id: faker.number.int(),

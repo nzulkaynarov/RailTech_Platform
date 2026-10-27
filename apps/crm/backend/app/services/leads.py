@@ -338,7 +338,6 @@ class LeadService:
             if lead.consent_given_at is None:
                 # Без согласия на обработку данных писать лиду нельзя (аудит P2).
                 raise ConflictError("lead has not given consent", reason=Reason.NO_CONSENT)
-            lead.last_human_msg_at = datetime.now(UTC)
             await audit.record(session, who.actor, "lead.reply", "lead", lead_id)
         if client_message_id is not None:
             message_id = await self._messenger.send_once(
@@ -350,6 +349,10 @@ class LeadService:
             )
         if message_id is None:
             raise DeliveryError("telegram delivery failed")
+        # «Лид отвечен» — только после доставки (B-013): при отказе Telegram он «ждёт ответа».
+        async with self._sessions() as session, session.begin():
+            lead = await _lead(session, lead_id)
+            lead.last_human_msg_at = datetime.now(UTC)
         return message_id
 
     async def _finish(

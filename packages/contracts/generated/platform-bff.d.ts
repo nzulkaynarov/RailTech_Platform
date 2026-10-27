@@ -5130,6 +5130,13 @@ export interface components {
       /** Format: date-time */
       created_at: string;
       attachments: components["schemas"]["ThreadAttachment"][];
+      /**
+       * @description Только у ответа менеджера с ключом повтора: `sending` — отправка идёт (дольше пары минут — итог неизвестен, «доставка не подтверждена», «Повторить» тем же ключом не шлёт второе сообщение); `unconfirmed` — итог так и не узнали, повтор больше не отправляет (B-013). `null` — доставлено или это не ответ менеджера
+       * @enum {string|null}
+       */
+      delivery: "sending" | "unconfirmed" | null;
+      /** @description `client_message_id` ответа с `delivery` ≠ `null` — для «Повторить» тем же ключом */
+      retry_key: string | null;
     };
     TeamNote: {
       id: number;

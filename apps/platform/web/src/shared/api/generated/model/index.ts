@@ -554,5 +554,6 @@ export * from "./telegramTokenIn";
 export * from "./threadAttachment";
 export * from "./threadMessage";
 export * from "./threadMessageAuthor";
+export * from "./threadMessageDelivery";
 export * from "./tooManyRequestsResponse";
 export * from "./validationFailedResponse";

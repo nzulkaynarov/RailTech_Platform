@@ -180,6 +180,11 @@ class CrmMessagesFake:
                 message(90, attachments=[STORED, NOT_STORED]),
                 message(91, "bot"),
                 message(92, "manager"),
+                message(
+                    94,
+                    "manager",
+                    meta={"client_message_id": "draft-2041-zz9", "delivery": "sending"},
+                ),
             ],
             ("GET", "leads/2041/notes"): [
                 {

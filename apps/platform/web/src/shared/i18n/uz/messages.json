@@ -126,7 +126,12 @@
       "title": "Suhbatni tanlang",
       "text": "Chapda — botdan o'tkazilganlar va sizning suhbatlaringiz. Mijozga javob berish uchun suhbatni oching."
     },
-    "olderFailed": "Tarixni yuklab bo'lmadi. Qayta urinib ko'ring"
+    "olderFailed": "Tarixni yuklab bo'lmadi. Qayta urinib ko'ring",
+    "delivery": {
+      "sending": "Yuborilmoqda…",
+      "unconfirmed": "Yetkazilgani tasdiqlanmadi: Telegram o'z vaqtida javob bermadi",
+      "unconfirmedFinal": "Yetkazilgani tasdiqlanmadi — mijoz javobni olganini tekshiring"
+    }
   },
   "composer": {
     "mode": "Kimga yozamiz",

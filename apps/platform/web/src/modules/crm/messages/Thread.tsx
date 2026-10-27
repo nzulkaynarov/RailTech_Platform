@@ -5,7 +5,9 @@ import { useTranslation } from "react-i18next";
 import type { ThreadAttachment, ThreadMessage } from "../../../shared/api/generated/model";
 import { getCrmThread, useGetCrmThread } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
+import { DeliveryMark } from "./DeliveryMark";
 import { type Entry, PAGE_SIZE, mergeThread } from "./logic";
+import { useNow } from "./sla";
 
 function Attachment({ file }: { file: ThreadAttachment }) {
   const { t } = useTranslation("messages");
@@ -27,7 +29,17 @@ function Attachment({ file }: { file: ThreadAttachment }) {
   );
 }
 
-function Bubble({ entry }: { entry: Entry }) {
+function Bubble({
+  entry,
+  lead,
+  canRetry,
+  now,
+}: {
+  entry: Entry;
+  lead: string;
+  canRetry: boolean;
+  now: number;
+}) {
   const { t } = useTranslation("messages");
   const fmt = useFormat();
   if (entry.kind === "note") {
@@ -52,6 +64,7 @@ function Bubble({ entry }: { entry: Entry }) {
         <time dateTime={message.created_at}>{fmt.activity(message.created_at)}</time>
       </div>
       {message.text ? <div className="pf-msg-bubble">{message.text}</div> : null}
+      <DeliveryMark lead={lead} message={message} canRetry={canRetry} now={now} />
       {message.attachments.length ? (
         <div className="pf-msg-files">
           {message.attachments.map((file) => (
@@ -67,7 +80,16 @@ function Bubble({ entry }: { entry: Entry }) {
  * Лента диалога: сообщения клиента, бота и менеджера с вложениями (скачивание — ссылкой BFF), заметки команды. Последняя
  * страница — запрос, который обновляет подсказка `messages` потока; более ранние страницы неизменны и хранятся здесь.
  */
-export function Thread({ lead, name }: { lead: string; name: string }) {
+export function Thread({
+  lead,
+  name,
+  canReply = false,
+}: {
+  lead: string;
+  name: string;
+  canReply?: boolean;
+}) {
+  const now = useNow();
   const { t } = useTranslation("messages");
   const latest = useGetCrmThread(lead, { limit: PAGE_SIZE });
   const [older, setOlder] = useState<ThreadMessage[]>([]);
@@ -141,6 +163,9 @@ export function Thread({ lead, name }: { lead: string; name: string }) {
                       : `n${String(entry.note.id)}`
                   }
                   entry={entry}
+                  lead={lead}
+                  canRetry={canReply}
+                  now={now}
                 />
               ))}
             </ol>
