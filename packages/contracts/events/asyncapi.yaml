@@ -96,6 +96,12 @@ channels:
     messages:
       uz.railtech.crm.lead.erased.v1:
         $ref: '#/components/messages/uz.railtech.crm.lead.erased.v1'
+  uz.railtech.crm.lead.message_added.v1:
+    address: uz.railtech.crm.lead.message_added.v1
+    title: В переписке лида новое сообщение
+    messages:
+      uz.railtech.crm.lead.message_added.v1:
+        $ref: '#/components/messages/uz.railtech.crm.lead.message_added.v1'
   uz.railtech.crm.lead.merged.v1:
     address: uz.railtech.crm.lead.merged.v1
     title: Лиды склеены
@@ -234,6 +240,12 @@ channels:
     messages:
       uz.railtech.erp.invite.sent.v1:
         $ref: '#/components/messages/uz.railtech.erp.invite.sent.v1'
+  uz.railtech.erp.invite.requested.v1:
+    address: uz.railtech.erp.invite.requested.v1
+    title: Запрошено приглашение в Cabinet через Telegram
+    messages:
+      uz.railtech.erp.invite.requested.v1:
+        $ref: '#/components/messages/uz.railtech.erp.invite.requested.v1'
   uz.railtech.erp.invoice.issued.v1:
     address: uz.railtech.erp.invoice.issued.v1
     title: Счёт выставлен
@@ -383,6 +395,15 @@ operations:
       $ref: '#/channels/uz.railtech.crm.lead.erased.v1'
     messages:
       - $ref: '#/channels/uz.railtech.crm.lead.erased.v1/messages/uz.railtech.crm.lead.erased.v1'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.crm.lead.message_added.v1:
+    action: send
+    summary: rt://crm публикует uz.railtech.crm.lead.message_added.v1
+    channel:
+      $ref: '#/channels/uz.railtech.crm.lead.message_added.v1'
+    messages:
+      - $ref: '#/channels/uz.railtech.crm.lead.message_added.v1/messages/uz.railtech.crm.lead.message_added.v1'
     bindings:
       $ref: '#/components/operationBindings/delivery'
   publish.uz.railtech.crm.lead.merged.v1:
@@ -590,6 +611,15 @@ operations:
       $ref: '#/channels/uz.railtech.erp.invite.sent.v1'
     messages:
       - $ref: '#/channels/uz.railtech.erp.invite.sent.v1/messages/uz.railtech.erp.invite.sent.v1'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.erp.invite.requested.v1:
+    action: send
+    summary: rt://erp публикует uz.railtech.erp.invite.requested.v1
+    channel:
+      $ref: '#/channels/uz.railtech.erp.invite.requested.v1'
+    messages:
+      - $ref: '#/channels/uz.railtech.erp.invite.requested.v1/messages/uz.railtech.erp.invite.requested.v1'
     bindings:
       $ref: '#/components/operationBindings/delivery'
   publish.uz.railtech.erp.invoice.issued.v1:
@@ -956,6 +986,31 @@ components:
                   const: rt://contracts/events/crm/lead.erased/v1
                 data:
                   $ref: './crm/lead.erased.v1.json'
+    uz.railtech.crm.lead.message_added.v1:
+      name: uz.railtech.crm.lead.message_added.v1
+      title: В переписке лида новое сообщение
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://crm
+                type:
+                  const: uz.railtech.crm.lead.message_added.v1
+                dataschema:
+                  const: rt://contracts/events/crm/lead.message_added/v1
+                data:
+                  $ref: './crm/lead.message_added.v1.json'
     uz.railtech.crm.lead.merged.v1:
       name: uz.railtech.crm.lead.merged.v1
       title: Лиды склеены
@@ -1531,6 +1586,31 @@ components:
                   const: rt://contracts/events/erp/invite.sent/v1
                 data:
                   $ref: './erp/invite.sent.v1.json'
+    uz.railtech.erp.invite.requested.v1:
+      name: uz.railtech.erp.invite.requested.v1
+      title: Запрошено приглашение в Cabinet через Telegram
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://erp
+                type:
+                  const: uz.railtech.erp.invite.requested.v1
+                dataschema:
+                  const: rt://contracts/events/erp/invite.requested/v1
+                data:
+                  $ref: './erp/invite.requested.v1.json'
     uz.railtech.erp.invoice.issued.v1:
       name: uz.railtech.erp.invoice.issued.v1
       title: Счёт выставлен

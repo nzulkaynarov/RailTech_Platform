@@ -6,6 +6,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
+from app.schemas.notices import InvitationOut, NoticeOut
+
 
 class EscalationOut(BaseModel):
     id: int
@@ -19,6 +21,32 @@ class EscalationOut(BaseModel):
     sla_due_at: datetime | None
     snoozed_until: datetime | None
     created_at: datetime
+
+
+class HandoffFacts(BaseModel):
+    """Факты квалификации от бота (коды CRM: срок `<1m|<3m|<12m|>12m`, роль `decision_maker|…`)."""
+
+    interest: list[str] = Field(default_factory=list)  # названия продуктов из справочника
+    timeline: str | None = None
+    decision_role: str | None = None
+    budget_hint: str | None = None
+    company: str | None = None
+    company_size: str | None = None
+    region: str | None = None
+
+
+class HandoffNote(BaseModel):
+    """Записка передачи (CRM-06, D1-1): запрос, факты, причина, рекомендуемый шаг — как в
+    карточке канала команды, без сырых кодов продуктов. Причины — коды `reason_codes`
+    (подписи — у экрана)."""
+
+    request: str | None = None
+    facts: HandoffFacts = Field(default_factory=HandoffFacts)
+    reason_codes: list[str] = Field(default_factory=list)
+    reason_text: str | None = None
+    recommendation: str | None = None
+    # Последнее сообщение лида, до 200 символов (как в карточке канала).
+    last_lead_message: str | None = None
 
 
 class LeadOut(BaseModel):
@@ -45,6 +73,9 @@ class LeadOut(BaseModel):
     platform_status: Literal["new", "dialog", "wants_quote", "no_answer", "client", "lost"] = (
         "dialog"
     )
+
+    # Записка передачи — только в `GET /inbox` (CRM-06); в остальных выдачах null.
+    handoff_note: HandoffNote | None = None
 
 
 class LeadDetail(LeadOut):
@@ -75,6 +106,15 @@ class LeadDetail(LeadOut):
     # Состояние передачи клиента лида в бэк-офис (FIX-31, `clients.erp_handoff_*`).
     client_handoff_status: Literal["pending", "done", "failed"] | None = None
     client_handoff_error: str | None = None
+    # Запрос с сайта (D1-9): срок первого ответа, пока лид без ответственного (иначе null), и
+    # просрочен ли он.
+    first_response_due_at: datetime | None = None
+    first_response_overdue: bool = False
+    # Подтверждение запроса клиенту: канал, итог, причина словами (null — не заводилось).
+    confirmation: NoticeOut | None = None
+    # Приглашение клиента лида в кабинет: итог, каналы контакта, «повторить другим каналом» (null —
+    # клиента нет).
+    invitation: InvitationOut | None = None
 
 
 class LeadPage(BaseModel):
@@ -137,6 +177,8 @@ class NoteCreate(BaseModel):
 
 class Reply(BaseModel):
     text: str = Field(min_length=1, max_length=4000)
+    # Ключ повтора от экрана (D1-1): тот же ключ — тот же ответ, второго сообщения клиенту нет.
+    client_message_id: str | None = Field(default=None, pattern=r"^[A-Za-z0-9_-]{8,64}$")
 
 
 class AssistRequest(BaseModel):

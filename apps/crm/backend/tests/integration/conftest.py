@@ -59,6 +59,7 @@ TABLES = (
     "telegram_chat_candidates",
     "llm_usage",
     "email_log",
+    "client_notices",
     "sso_replay_tokens",
     "erp_event_notices",
     "rt_bus_outbox",

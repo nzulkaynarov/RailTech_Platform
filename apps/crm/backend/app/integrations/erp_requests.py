@@ -1,4 +1,4 @@
-"""«Создать заявку» в ERP: `POST /api/integration/v1/clients/{crm_client_id}/requests` (шов 0.8.0,
+"""«Создать заявку» в ERP: `POST /api/integration/v1/clients/{crm_client_id}/requests` (шов 0.9.0,
 CRM-03, W16-D1-2).
 
 Клиент уже передан (`/clients/handoff`); ERP создаёт сделку процесса v3 с номером ЗВ и менеджером

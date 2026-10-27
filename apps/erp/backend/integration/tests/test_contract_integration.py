@@ -293,6 +293,7 @@ def test_guard_detects_broken_responses(client, world):
 WRITE_PATHS = {
     ("POST", "/clients/handoff"),
     ("POST", "/clients/{crm_client_id}/requests"),
+    ("POST", "/clients/{crm_client_id}/invite"),
     ("PUT", "/contacts/{crm_contact_id}"),
     ("POST", "/users/provision"),
     ("DELETE", "/users/{crm_user_id}/sessions"),
@@ -328,7 +329,7 @@ def handoff_body(crm_client_id, inn):
 
 
 def client_request_body(crm_request_id, *, contact=None):
-    """`ClientRequestIn` шва 0.8.0 (W16-D1-2): «Создать заявку» CRM для переданного клиента."""
+    """`ClientRequestIn` шва 0.9.0 (W16-D1-2): «Создать заявку» CRM для переданного клиента."""
     return {
         "crm_request_id": crm_request_id,
         "crm_lead_id": 501,
@@ -378,6 +379,7 @@ THROTTLE_CASES = {
     ("GET", "/health"): ("/health", None),
     ("POST", "/clients/handoff"): ("/clients/handoff", handoff_body(8301, "830100001")),
     ("POST", "/clients/{crm_client_id}/requests"): ("/clients/999999/requests", client_request_body(8399)),
+    ("POST", "/clients/{crm_client_id}/invite"): ("/clients/999999/invite", {"channel": "email"}),
     ("PUT", "/contacts/{crm_contact_id}"): ("/contacts/999999", handoff_body(8301, "830100001")["contacts"][0]),
     ("POST", "/users/provision"): ("/users/provision", provision_body(8901, "guard-8901@railtech.uz")),
     ("DELETE", "/users/{crm_user_id}/sessions"): ("/users/999999/sessions", None),
@@ -450,7 +452,7 @@ def exercise_all(client, world):
     hit("POST", "/clients/handoff", "/clients/handoff", 401, api=anonymous, body=handoff_body(8103, "810300001"))
     assert created["erp_company_id"]
 
-    # POST /clients/{id}/requests (0.8.0): 201 → 200 (повтор по crm_request_id) → 404 (клиент не передан) → 422 → 401
+    # POST /clients/{id}/requests (0.9.0): 201 → 200 (повтор по crm_request_id) → 404 (клиент не передан) → 422 → 401
     requests_path = "/clients/{crm_client_id}/requests"
     made = hit("POST", requests_path, "/clients/8101/requests", 201, body=client_request_body(8111))
     again = hit("POST", requests_path, "/clients/8101/requests", 200, body=client_request_body(8111))
@@ -464,6 +466,18 @@ def exercise_all(client, world):
         out.append(("POST", requests_path, expected, json.loads(response.content)))
     hit("POST", requests_path, "/clients/8101/requests", 422, body={"crm_request_id": 8113})
     hit("POST", requests_path, "/clients/8101/requests", 401, api=anonymous, body=client_request_body(8114))
+
+    # POST /clients/{id}/invite (0.8.0): 200 (Telegram — событие боту CRM; письмо — свой канал; причина в `error`) → 404 → 422 → 401
+    invite = "/clients/{crm_client_id}/invite"
+    sent = hit("POST", invite, "/clients/8101/invite", 200, body={"channel": "telegram"})
+    assert sent["sent_via"] == ["telegram"] and sent["error"] is None
+    unknown_contact = hit(
+        "POST", invite, "/clients/8101/invite", 200, body={"channel": "telegram", "crm_contact_id": 999999}
+    )
+    assert unknown_contact["error"] == "CONTACT_NOT_FOUND"
+    hit("POST", invite, "/clients/999999/invite", 404, body={"channel": "email"})
+    hit("POST", invite, "/clients/8101/invite", 422, body={"channel": "sms"})
+    hit("POST", invite, "/clients/8101/invite", 401, api=anonymous, body={"channel": "email"})
 
     # PUT /contacts/{id}: 200 (контакт из передачи) → 404 → 422 → 401
     contact = handoff_body(8101, "810100001")["contacts"][0]
@@ -591,7 +605,7 @@ def exercised(client, world, catalog_product, monkeypatch):
 
 def test_every_operation_has_a_throttle_case():
     assert set(THROTTLE_CASES) == set(contract_operations()), "каждой операции контракта нужен вызов на 429"
-    assert len(THROTTLE_CASES) == 16
+    assert len(THROTTLE_CASES) == 17
 
 
 @pytest.mark.parametrize(("method", "path"), sorted(THROTTLE_CASES), ids=lambda value: str(value))

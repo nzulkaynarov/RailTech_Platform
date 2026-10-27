@@ -34,8 +34,9 @@ Contract-first действует для `portal`, `integration`, событий
 
 | Метод и путь | Назначение | Тело / ответ (главное) |
 |---|---|---|
-| `POST /clients/handoff` | передача клиента из CRM | вход: `crm_client_id`, `crm_lead_id?`, `company{name, inn?, segment?, language}`, `contacts[{crm_contact_id, name, phone?, email?, telegram_user_id?, language, is_primary, preferred_channel}]`, `need{summary, product_interest[], attachments[]?}`, `owner{crm_user_id, name}`, `consent{given_at, version}`, `create_request: bool`, `invite{channels: [telegram, email]}`. Ответ: `erp_company_id`, `erp_request_id?`, `invite{sent_via[], cabinet_url}`. Идемпотентно по `crm_client_id` |
-| `POST /clients/{crm_client_id}/requests` | «Создать заявку» CRM для переданного клиента (шов 0.8.0, CRM-03, W16-D1-2) | вход: `crm_request_id` (строка `deals` CRM — ключ идемпотентности), `crm_lead_id?`, `contact?` (как в передаче; незнакомый ERP контакт создаётся и сопоставляется; e-mail не обязателен), `need{summary, product_interest[]?}`, `owner{crm_user_id, name}` (менеджер заявки — владелец сделки ERP, B-008), `urgency: normal\|urgent`, `letter_file_id?` (файл письма в EDS), `process: v3`. Ответ: `erp_company_id`, `erp_request_id`, `number` (`ЗВ-ГГГГ-NNN`). Клиент не передан — 404 `CLIENT_NOT_FOUND`; повтор `crm_request_id` — 200 с той же заявкой; тот же `Idempotency-Key` с другим телом — 409 `IDEMPOTENCY_CONFLICT` (ничего не создано; CRM: заявка `failed`, `erp_request_conflict`, без повтора) |
+| `POST /clients/handoff` | передача клиента из CRM | вход: `crm_client_id`, `crm_lead_id?`, `company{name, inn?, segment?, language}`, `contacts[{crm_contact_id, name, phone?, email?, telegram_user_id?, language, is_primary, preferred_channel}]`, `need{summary, product_interest[], attachments[]?}`, `owner{crm_user_id, name}`, `consent{given_at, version}`, `create_request: bool`, `invite{channels: [telegram, email]}`. Ответ: `erp_company_id`, `erp_request_id?`, `invite{sent_via[], cabinet_url, error?}`. Идемпотентно по `crm_client_id` |
+| `POST /clients/{crm_client_id}/invite` | повторное приглашение контакта другим каналом (0.8.0, D1-9) | вход: `channel: email|telegram|both`, `crm_contact_id?` (без него — основной контакт). Ответ всегда 200: `sent_via[]`, `cabinet_url`, `error?` — код причины, если не ушло ни одним каналом (`CONTACT_EMAIL_REQUIRED`, `CONTACT_TELEGRAM_REQUIRED`, `EMAIL_DELIVERY_FAILED`, `CONTACT_CHANNEL_REQUIRED`, `INVALID_CHANNEL`, `COMPANY_ARCHIVED`, `CONTACT_ARCHIVED`, `CONTACT_WITHOUT_COMPANY`, `CONTACT_NOT_FOUND`); 404 — клиент неизвестен |
+| `POST /clients/{crm_client_id}/requests` | «Создать заявку» CRM для переданного клиента (шов 0.9.0, CRM-03, W16-D1-2) | вход: `crm_request_id` (строка `deals` CRM — ключ идемпотентности), `crm_lead_id?`, `contact?` (как в передаче; незнакомый ERP контакт создаётся и сопоставляется; e-mail не обязателен), `need{summary, product_interest[]?}`, `owner{crm_user_id, name}` (менеджер заявки — владелец сделки ERP, B-008), `urgency: normal\|urgent`, `letter_file_id?` (файл письма в EDS), `process: v3`. Ответ: `erp_company_id`, `erp_request_id`, `number` (`ЗВ-ГГГГ-NNN`). Клиент не передан — 404 `CLIENT_NOT_FOUND`; повтор `crm_request_id` — 200 с той же заявкой; тот же `Idempotency-Key` с другим телом — 409 `IDEMPOTENCY_CONFLICT` (ничего не создано; CRM: заявка `failed`, `erp_request_conflict`, без повтора) |
 | `PUT /contacts/{crm_contact_id}` | обновление контакта / Telegram-привязки | те же поля контакта |
 | `GET /companies/{erp_company_id}/summary` | карточка клиента для CRM | открытые сделки, последний документ, дебиторка, ближайшая поставка |
 | `GET /companies/{erp_company_id}/deals` | список сделок | `[{erp_deal_id, number, title, stage, amount, currency, next_step, updated_at}]`; `amount` — сумма последнего КП, отправленного клиенту, `null` — КП ещё не отправлялось (черновик не утекает) |
@@ -127,6 +128,7 @@ inline и до БД не доходит (§9.2).
 | `deal.won` / `deal.lost` | `amount, lost_reason?` | зеркало сделки → `won/lost`; стадия лида не меняется (CRM ADR-0022) |
 | `document.created` | `erp_document_id, kind, number` | индекс документов клиента в CRM (без файла) |
 | `invite.sent` | `channels[]` | лента |
+| `invite.requested` | `channel: telegram, erp_contact_id, crm_contact_id, language?` | бот присылает контакту приглашение с кнопкой «Открыть кабинет» (Mini App; ссылок и токенов нет); итог доставки — в карточке клиента (D1-9, Q-FIX23-1). Inline-обработчик, как у кода акцепта |
 
 ## 4. Portal API (Cabinet → ERP)
 
@@ -346,6 +348,7 @@ enum, отсутствующее обязательное поле, наруше
 | `uz.railtech.crm.lead.created.v1` / `lead.updated.v1` / `lead.stage_changed.v1` | `rt://crm` → (Платформа, B5) | снимок `lead` без контактов и переписки: `crm_lead_id`, `crm_client_id?`, `display_name`, `company_name`, `stage`, `source`, `language`, `score`, `assigned_user`, `erp_request_id?`, `updated_at`; у `stage_changed` — `from`, `to`, `reason?` |
 | `uz.railtech.crm.lead.erased.v1` | `rt://crm` → (Платформа, B5) | только `crm_lead_id`, `crm_client_id`, `erased_at`, `actor`: лид обезличен по запросу, **подписчики обязаны стереть свои копии ПДн по лиду** |
 | `uz.railtech.crm.lead.merged.v1` | `rt://crm` → (Платформа, B5) | `lead` — снимок выжившего, `merged_lead_id` — поглощённый лид (в CRM его больше нет), `actor` |
+| `uz.railtech.crm.lead.message_added.v1` (D1-1) | `rt://crm` → platform-bff (только он; ERP и EDS — нет) | сигнал без текста: `crm_lead_id`, `crm_client_id?`, `message_id`, `direction` (`in`/`out`), `author` (`lead`/`bot`/`manager`/`system`), `channel`, `has_attachments`, `handoff` (лид не у бота), `crm_assigned_user_id?`, `sent_at`, `actor`; текста, вложений и контактов нет — переписку читают API CRM с правами сотрудника |
 | `uz.railtech.identity.user.created.v1` / `user.updated.v1` | `rt://crm` → platform-bff, eds | снимок `user`: `crm_user_id`, `email`, `full_name`, `position`, `language`, `is_active`, `platform_roles`, `systems`, `erp_role_codes?`, `permissions?` (`{eds: [код EDS]}`, код — строка по шаблону, не перечень; нет поля — доступа к EDS нет; волна 12 — §10.4), `updated_at` |
 | `uz.railtech.identity.user.deactivated.v1` | `rt://crm` → platform-bff, eds | `crm_user_id`, `reason?`, `actor` |
 | `uz.railtech.erp.quote.ready_for_approval.v1` | `rt://erp` → eds (platform-bff — подсказка) | КП готово к одобрению директором (EDS-03): `erp_company_id`, `crm_client_id` (может быть `null`), `deal`, `actor`, `payload` — снимок КП (`QuoteReadyForApproval`: номер, версия, сумма, валюта, себестоимость, маржа %, порог маржи резолюции, нужные и собранные визы — кто и когда, срок); **CRM не подписана** (себестоимость и маржа) |
@@ -474,7 +477,8 @@ subscribers:
 | `delivery.status_changed`, `delivery.eta_changed` | `ensure_fulfillment` (создание исполнения), `update_fulfillment_status` |
 | `delivery.line_accepted`, `delivery.line_disputed` | `accept_delivery_line`, `dispute_delivery_line` |
 | `document.created` | переход «не выпущен → выпущен» у КП, договора, счёта, акта, накладной, `GeneratedDocument` (правило `portal.services.documents.is_issued`) |
-| `invite.sent` | `invite_contact_to_portal` |
+| `invite.sent` | `invite_contact_to_portal` (за ушедшее письмо) |
+| `invite.requested` | `invite_contact_to_portal` (канал `telegram`: ERP в Telegram не пишет, событие уходит только контакту с `telegram_user_id` и сопоставлением с контактом CRM) |
 
 Компания без `CrmClientMapping` событий не порождает. `correlationid` по умолчанию — `X-Request-ID` входящего запроса
 (`RequestIDMiddleware` принимает только безопасную строку `A-Za-z0-9._-` до 128 знаков, иначе новый UUID), вне запроса
@@ -514,7 +518,8 @@ Telegram, язык, канал, признак основного); сегмен
 | `crm.contact.created.v1` / `updated.v1` / `deleted.v1` | `ClientContactService` (в т. ч. `updated` для контактов, потерявших признак основного); основной контакт, созданный передачей в бэк-офис (`ErpHandoffService`); `deleted_at` — время базы |
 | `crm.lead.created.v1` | лид из бота, формы сайта, «Новый лид» вручную |
 | `crm.lead.stage_changed.v1` | любой переход стадии (`stages.transition`: менеджер, квалификатор, таймеры, склейка лидов); `reason` — только код из справочника CRM (`app/bus/reasons.py`), свободный текст остаётся в CRM |
-| `crm.lead.updated.v1` | смена ответственного (в т. ч. массовая передача дел уходящего сотрудника — событие на каждый лид и клиента), привязка к клиенту, изменение `score`, заявка ERP (`erp_request_id`) |
+| `crm.lead.updated.v1` | смена ответственного (в т. ч. массовая передача дел уходящего сотрудника — событие на каждый лид и клиента), привязка к клиенту, изменение `score`, заявка ERP (`erp_request_id`); новая передача от бота (`escalation.apply`, `changed_fields = ["handoff"]`, D1-1) |
+| `crm.lead.message_added.v1` | каждое сообщение переписки — входящее от лида и исходящее от бота и менеджера (`app/services/message_log.py`, та же транзакция, что и строка `messages`; D1-1). Заметки команды — не сообщения переписки, не публикуются |
 | `crm.lead.erased.v1` | лид обезличен по `/delete` бота (без данных, только идентификаторы) |
 | `crm.lead.merged.v1` | склейка Telegram-лида и лида с тем же телефоном |
 | `identity.user.created.v1` / `updated.v1` / `deactivated.v1` | `UserService`: создание, смена имени, должности, языка, ролей Платформы и доступа, отключение; первый администратор; смена имени при входе по SSO (`SsoService`) |
@@ -529,6 +534,9 @@ Telegram, язык, канал, признак основного); сегмен
 `erp_event_notices` и уходят после коммита (задача после обработки, сборщик раз в минуту, не позже суток; ушедшим адресатам
 повторно не шлются). Клиента нет или `erp_company_id` не совпадает — ошибка обработки (повтор, затем `failed`).
 `quote.acceptance_code_requested` — inline-обработчик: код доставляется в Telegram контакту из памяти запроса, в inbox лежит маска.
+`invite.requested` — тоже inline (D1-9): бот присылает приглашение сразу, итог (отправлено или причина словами) пишется в `client_notices`
+и виден менеджеру в карточке клиента и лида; секретов в событии нет. «Заявка принята» (`request.created`, `source` `crm` или `cabinet`) идёт
+обычным путём через `erp_event_notices`: бот, а клиенту без Telegram — письмо; повторная доставка события второго сообщения не даёт.
 
 **Секрет пары `erp ↔ crm`** (L12): `RT_BUS_SECRET_ERP_CRM` / `RT_BUS_SECRET_CRM_ERP`, если заданы; иначе
 `hex(HMAC-SHA256(webhook_secret, "rt-bus/v1/<издатель>-><подписчик>"))` из каждого действующего секрета вебхуков сопряжения

@@ -120,8 +120,8 @@ describe("rbac.generated: каталог = контракт", () => {
         module.code,
       ).toEqual(Object.keys(items));
       for (const section of module.sections.filter((s) => !s.hidden)) {
-        const sections =
-          "resource" in section.access ? [section.access.resource] : [...section.access.anyOf];
+        const rule = section.menuAccess ?? section.access;
+        const sections = "resource" in rule ? [rule.resource] : [...rule.anyOf];
         const expected = (items as Record<string, readonly string[]>)[section.key] ?? [];
         expect([...sections].sort(), `${module.code}.${section.key}`).toEqual([...expected].sort());
       }
@@ -151,8 +151,9 @@ describe("rbac.generated: доступ по матрицам ролей", () => 
 
   it("модули — по видимым пунктам меню; виза расчёта без пункта модуль не открывает", () => {
     // W13-A5: «База знаний» CRM открывает и раздел `admin` — у администратора есть модуль CRM (только этот пункт)
-    expect(modulesOf(catalog.ADMIN.access)).toEqual(["dashboard", "crm", "eds", "chats", "admin"]);
-    expect(visibleMenuItems(catalog.ADMIN.access, "crm")).toEqual(["kb"]);
+    // W15-H4: базу знаний администратор открывает из Настроек · Telegram-бот — Клиентов в его рейле нет
+    expect(modulesOf(catalog.ADMIN.access)).toEqual(["dashboard", "eds", "chats", "admin"]);
+    expect(visibleMenuItems(catalog.ADMIN.access, "crm")).toEqual([]);
     expect(modulesOf(catalog.DIRECTOR.access)).toEqual<ModuleCode[]>([...MODULES]);
     expect(modulesOf({ "crm.leads": "full", "eds.payments": "full" })).toEqual(["crm", "eds"]);
     expect(modulesOf({ "erp.calc.goods": "full" })).toEqual([]);

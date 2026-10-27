@@ -1,9 +1,12 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { App, Button, Checkbox, Form, Input } from "antd";
+import { App, Button, Checkbox, Form, Input, Select } from "antd";
 import { useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-import type { DocumentTemplate } from "../../../../shared/api/generated/model";
+import type {
+  DocumentTemplate,
+  DocumentTemplateKind,
+} from "../../../../shared/api/generated/model";
 import {
   getListDocumentTemplatesQueryKey,
   useCopyDocumentTemplate,
@@ -17,14 +20,26 @@ import {
 import { StatusTag } from "../../../../shared/ui/StatusTag";
 import { ConfirmModal, FormModal, ListTable, PreviewFrame, QueryGate } from "../common";
 import { useReadOnly } from "../useReadOnly";
-import { changedFields, isEmptyObject } from "../diff";
+import { changedFields, isEmptyObject, omit } from "../diff";
 import { errorFields } from "../errors";
 
 interface Values {
   name: string;
+  kind: DocumentTemplateKind;
   body_html: string;
   is_active: boolean;
 }
+
+const KINDS: DocumentTemplateKind[] = [
+  "letter",
+  "report",
+  "custom",
+  "contract",
+  "invoice",
+  "act",
+  "receipt",
+  "delivery_note",
+];
 
 /** Шаблоны документов компании: свои и образцы платформы («скопировать к себе»), редактор с подстановками и образцом. */
 export function DocumentTemplates() {
@@ -108,16 +123,27 @@ export function DocumentTemplates() {
                       {t("templates.documents.open")}
                     </Button>
                   ) : row.is_sample ? (
-                    <Button
-                      type="link"
-                      size="small"
-                      aria-label={t("templates.documents.copyNamed", { name: row.name })}
-                      onClick={() => {
-                        setCopying(row);
-                      }}
-                    >
-                      {t("templates.documents.copy")}
-                    </Button>
+                    <span className="pf-co-actions">
+                      <Button
+                        type="primary"
+                        size="small"
+                        aria-label={t("templates.documents.previewNamed", { name: row.name })}
+                        onClick={() => {
+                          setEditing(row);
+                        }}
+                      >
+                        {t("templates.documents.preview")}
+                      </Button>
+                      <Button
+                        size="small"
+                        aria-label={t("templates.documents.copyNamed", { name: row.name })}
+                        onClick={() => {
+                          setCopying(row);
+                        }}
+                      >
+                        {t("templates.documents.copy")}
+                      </Button>
+                    </span>
                   ) : (
                     <span className="pf-co-actions">
                       <Button
@@ -150,6 +176,7 @@ export function DocumentTemplates() {
           {editing !== null ? (
             <DocumentEditor
               row={editing === "new" ? null : editing}
+              samples={items.filter((item) => item.is_sample)}
               readOnly={readOnly}
               onClose={() => {
                 setEditing(null);
@@ -200,11 +227,13 @@ export function DocumentTemplates() {
 
 function DocumentEditor({
   row,
+  samples,
   onClose,
   onSaved,
-  readOnly,
+  readOnly: noRight,
 }: {
   row: DocumentTemplate | null;
+  samples: readonly DocumentTemplate[];
   onClose: () => void;
   onSaved: () => void;
   readOnly: boolean;
@@ -212,14 +241,18 @@ function DocumentEditor({
   const { t } = useTranslation("company");
   const formId = useId();
   const [form] = Form.useForm<Values>();
+  // Образец платформы открывается только на просмотр (правит копия), как и всё — без права «полный» на раздел.
+  const readOnly = noRight || (row?.is_sample ?? false);
+  const [prefilled, setPrefilled] = useState<string | null>(null);
   const initial: Values = row
-    ? { name: row.name, body_html: row.body_html, is_active: row.is_active }
-    : { name: "", body_html: "", is_active: true };
+    ? { name: row.name, kind: row.kind, body_html: row.body_html, is_active: row.is_active }
+    : { name: "", kind: "custom", body_html: "", is_active: true };
   const create = useCreateDocumentTemplate({ mutation: { onSuccess: onSaved } });
   const update = useUpdateDocumentTemplate({ mutation: { onSuccess: onSaved } });
   const mutation = row ? update : create;
   const placeholders = useGetDocumentPlaceholders();
   const body = Form.useWatch("body_html", form) as string | undefined;
+  const kind = (Form.useWatch("kind", form) as DocumentTemplateKind | undefined) ?? initial.kind;
 
   // Образец на тестовых данных ERP: после паузы ввода, ничего не сохраняется.
   const preview = usePreviewDocumentTemplate();
@@ -229,12 +262,22 @@ function DocumentEditor({
   const unknown = preview.data?.warnings ?? [];
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      requestPreview({ data: { body_html: text } });
+      requestPreview({ data: { body_html: text, kind } });
     }, 400);
     return () => {
       window.clearTimeout(timer);
     };
-  }, [text, requestPreview]);
+  }, [text, kind, requestPreview]);
+
+  // Новый шаблон договора, счёта или акта не пустой: подставляется образец платформы этого вида, если текст ещё не трогали.
+  const chooseKind = (next: DocumentTemplateKind) => {
+    if (row) return;
+    const current = (form.getFieldValue("body_html") as string | undefined) ?? "";
+    if (current.trim() !== "" && current !== prefilled) return;
+    const sample = samples.find((item) => item.kind === next);
+    form.setFieldValue("body_html", sample ? sample.body_html : "");
+    setPrefilled(sample ? sample.body_html : null);
+  };
 
   const submit = (values: Values) => {
     const onError = (error: unknown) => {
@@ -248,7 +291,8 @@ function DocumentEditor({
       );
     };
     if (row) {
-      const changed = changedFields(initial, values);
+      // Вид после создания не меняется (поля в форме нет): сравниваем и отправляем без него.
+      const changed = changedFields(omit(initial, ["kind"]), omit(values, ["kind"]));
       if (isEmptyObject(changed)) {
         onClose();
         return;
@@ -265,7 +309,9 @@ function DocumentEditor({
       width={1040}
       title={
         readOnly
-          ? t("templates.documents.viewTitle")
+          ? row?.is_sample
+            ? t("templates.documents.viewSampleTitle")
+            : t("templates.documents.viewTitle")
           : row
             ? t("templates.documents.editTitle")
             : t("templates.documents.addTitle")
@@ -295,10 +341,40 @@ function DocumentEditor({
           >
             <Input maxLength={255} autoComplete="off" />
           </Form.Item>
+          {row?.is_sample ? (
+            <p className="pf-co-hint">{t("templates.documents.viewSampleHint")}</p>
+          ) : null}
+          {row ? (
+            // Вид задаётся при создании: у готового шаблона он показан словом, без отключённого поля (контраст).
+            <Form.Item
+              label={t("templates.documents.kindField")}
+              extra={t("templates.documents.kindFixed")}
+            >
+              <span>{t(`templates.documents.kinds.${row.kind}`)}</span>
+            </Form.Item>
+          ) : (
+            <Form.Item
+              name="kind"
+              label={t("templates.documents.kindField")}
+              extra={t("templates.documents.kindHint")}
+            >
+              <Select<DocumentTemplateKind>
+                onChange={chooseKind}
+                options={KINDS.map((value) => ({
+                  value,
+                  label: t(`templates.documents.kinds.${value}`),
+                }))}
+              />
+            </Form.Item>
+          )}
           <Form.Item
             name="body_html"
             label={t("templates.documents.body")}
-            extra={t("templates.documents.bodyHint", { example: "{{buyer_name}}" })}
+            extra={
+              prefilled !== null && prefilled === body
+                ? t("templates.documents.prefilled")
+                : t("templates.documents.bodyHint", { example: "{{counterparty.name}}" })
+            }
           >
             <Input.TextArea rows={12} className="pf-co-mono" spellCheck={false} />
           </Form.Item>

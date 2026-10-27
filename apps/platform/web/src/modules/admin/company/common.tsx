@@ -386,7 +386,7 @@ export function ConfirmModal({
 
 /**
  * Таблица настройки: прокручиваемая область доступна с клавиатуры (регион с именем), пусто — словами с действием
- * (SPEC-v3 §7), без пагинации — справочники компании невелики.
+ * (SPEC-v3 §7); страницы — только когда задан `pageSize` (справочник стран на 250 строк), иначе без пагинации.
  */
 export function ListTable<T extends object>({
   label,
@@ -395,6 +395,7 @@ export function ListTable<T extends object>({
   rowKey,
   loading,
   empty,
+  pageSize,
 }: {
   label: string;
   columns: TableColumnsType<T>;
@@ -402,12 +403,13 @@ export function ListTable<T extends object>({
   rowKey: (row: T) => string;
   loading?: boolean;
   empty: { title: string; text: string; action?: ReactNode };
+  pageSize?: number;
 }) {
   return (
     <div className="pf-co-table-wrap" tabIndex={0} role="region" aria-label={label}>
       <Table<T>
         size="middle"
-        pagination={false}
+        pagination={pageSize ? { pageSize, hideOnSinglePage: true, showSizeChanger: false } : false}
         scroll={{ x: "max-content" }}
         loading={loading}
         columns={columns}

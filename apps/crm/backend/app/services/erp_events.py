@@ -26,6 +26,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.bus import events as bus_events
 from app.bus.erp_event import ErpEvent, parse_erp_event, plain
 from app.bus.notices import ErpEventNotices
+from app.domain import client_texts
 from app.models.clients import Client
 from app.models.deals import Deal
 from app.models.leads import Lead, LeadNote
@@ -40,6 +41,7 @@ from app.services.erp_bot_messages import (
     staff_alert,
 )
 from app.services.erp_event_handlers import aware, dispatch
+from app.services.erp_invite_delivery import InviteDelivery
 from app.services.settings import SettingsService
 
 logger = structlog.get_logger(__name__)
@@ -84,10 +86,12 @@ class ErpEventsService:
         settings_service: SettingsService,
         notices: ErpEventNotices,
         acceptance_code: AcceptanceCodeDelivery,
+        invite: InviteDelivery | None = None,
     ) -> None:
         self._settings_service = settings_service
         self._notices = notices
         self._acceptance_code = acceptance_code
+        self._invite = invite
 
     async def deliver_code(self, event: Event) -> str:
         """Код акцепта контакту в Telegram — из памяти запроса приёмника, мимо БД и очереди."""
@@ -97,6 +101,16 @@ class ErpEventsService:
             # Текст ошибки pydantic несёт входные значения (в них код): наружу — только факт.
             raise ErpEventError("invalid acceptance code event") from None
         return await self._acceptance_code.deliver(event.id, parsed)
+
+    async def deliver_invite(self, event: Event) -> str:
+        """Приглашение в кабинет контакту в Telegram (D1-9) — inline, итог в `client_notices`."""
+        if self._invite is None:
+            raise ErpEventError("invite delivery is not configured")
+        try:
+            parsed = parse_erp_event(event)
+        except (ValidationError, ValueError):
+            raise ErpEventError("invalid invite event") from None
+        return await self._invite.deliver(event.id, parsed)
 
     async def apply(self, session: AsyncSession, event: Event) -> bool:
         """Применить событие ERP в транзакции `session`: зеркало, документы, лента; сообщения —
@@ -171,6 +185,7 @@ class ErpEventsService:
             texts=cfg.texts,
             language=pick_language(lead.language if lead else None),
             cabinet_url=cfg.company.cabinet_url,
+            deal_number=env_deal.number if env_deal else "",
         )
         if note_text is None:
             # Приёмка и замечания по строкам поставки: текст ленты — из настроек (FIX-37).
@@ -200,14 +215,24 @@ class ErpEventsService:
         # задваивать их. Они записываются в `erp_event_notices` и уходят после коммита.
         notices: list[dict[str, object]] = []
         if bot_msg and not (not fresh and env.event in STALE_SILENT_EVENTS):
-            notices.append(
-                {
-                    "kind": "client",
-                    "client_id": client.id,
-                    "text": bot_msg.text,
-                    "buttons": [list(button) for button in bot_msg.buttons],
-                }
-            )
+            item: dict[str, object] = {
+                "kind": "client",
+                "client_id": client.id,
+                "text": bot_msg.text,
+                "buttons": [list(button) for button in bot_msg.buttons],
+            }
+            if env.event == "request.created":
+                # «Заявка принята»: бот, а клиенту без Telegram — письмо (SPEC-v3 §8).
+                language = pick_language(lead.language if lead else None)
+                mail = client_texts.request_accepted_mail(
+                    language,
+                    lead.display_name if lead else client.name,
+                    env_deal.number if env_deal else "",
+                    cfg.company.cabinet_url,
+                )
+                item["track"] = "request_accepted"
+                item["email"] = {"subject": mail.subject, "body": mail.body, "lang": language}
+            notices.append(item)
         if staff_alert_text:
             target_user_id = _staff_target(deal, client, lead)
             if target_user_id:

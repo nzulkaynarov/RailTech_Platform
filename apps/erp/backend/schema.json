@@ -41,10 +41,34 @@
                 }
             }
         },
+        "/api/integration/v1/clients/{crm_client_id}/invite": {
+            "post": {
+                "operationId": "api_integration_v1_clients_invite_create",
+                "description": "POST /api/integration/v1/clients/{crm_client_id}/invite (0.8.0, D1-9): менеджер CRM приглашает контакт ещё раз.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "crm_client_id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
         "/api/integration/v1/clients/{crm_client_id}/requests": {
             "post": {
                 "operationId": "api_integration_v1_clients_requests_create",
-                "description": "POST /api/integration/v1/clients/{crm_client_id}/requests — «Создать заявку» CRM (шов 0.8.0, CRM-03).",
+                "description": "POST /api/integration/v1/clients/{crm_client_id}/requests — «Создать заявку» CRM (шов 0.9.0, CRM-03).",
                 "parameters": [
                     {
                         "in": "path",
@@ -13100,7 +13124,7 @@
                         "description": ""
                     },
                     "400": {
-                        "description": "NO_COMPANY / TEMPLATE_BODY_TOO_LARGE (error code)",
+                        "description": "NO_COMPANY / TEMPLATE_BODY_TOO_LARGE / TEMPLATE_KIND_INVALID (error code)",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -18228,7 +18252,7 @@
         "/api/v1/exchange-rates/journal/": {
             "get": {
                 "operationId": "exchange_rates_journal_list",
-                "description": "Newest first. `kind=manual` — entered by an operator; `kind=auto_skipped` — the CBU rate for the same date was not applied because a manual rate is kept.",
+                "description": "Needs `settings.edit` or administrator (the journal carries colleagues' names and emails). Newest first. `kind=manual` — entered by an operator; `kind=auto_skipped` — the CBU rate for the same date was not applied because a manual rate is kept.",
                 "summary": "Exchange rate manual-entry journal",
                 "parameters": [
                     {
@@ -26762,6 +26786,11 @@
                 "properties": {
                     "body_html": {
                         "type": "string"
+                    },
+                    "kind": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Код вида шаблона (CONTRACT, INVOICE, ACT — каркас вида и образцы блоков; иначе общий каркас)."
                     }
                 }
             },

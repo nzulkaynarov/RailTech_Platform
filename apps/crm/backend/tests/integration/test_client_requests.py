@@ -24,7 +24,7 @@ from app.domain.errors import (
     UpstreamUnavailableError,
     ValidationFailedError,
 )
-from app.integrations.erp import HandoffPayload, HandoffResult
+from app.integrations.erp import HandoffPayload, HandoffResult, InviteResult
 from app.integrations.erp_requests import ClientRequestPayload, ClientRequestResult
 from app.models.clients import Client, ClientContact
 from app.models.deals import Deal
@@ -62,6 +62,11 @@ class FakeHandoff:
     ) -> HandoffResult:
         self.calls.append(payload)
         return HandoffResult(self.company_id, None, ["telegram"], "https://cabinet.example.test")
+
+    async def invite_client(
+        self, crm_client_id: int, channel: str, crm_contact_id: int | None
+    ) -> InviteResult:
+        raise AssertionError("«Создать заявку» не приглашает повторно")
 
 
 class FakeRequests:

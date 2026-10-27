@@ -1,6 +1,6 @@
 """REST по лидам (SPEC §10.1): список, карточка, переписка, входящие, действия, решения."""
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
@@ -41,7 +41,9 @@ from app.schemas.leads import (
     Snooze,
     TeamMember,
 )
+from app.schemas.notices import NoticeOut
 from app.security.principal import Principal
+from app.services import handoff_notes, web_lead_sla
 
 router = APIRouter(prefix="/api/v1", tags=["leads"])
 
@@ -164,11 +166,12 @@ async def list_leads(
 
 @router.get("/inbox", response_model=InboxResponse)
 async def inbox(
-    who: Taker,
+    who: Reader,
     container: ContainerDep,
     on_behalf_of: Annotated[int | None, Query(gt=0)] = None,
 ) -> InboxResponse:
-    """Очередь работы — менеджеру и админу; наблюдатель смотрит «Лиды» (SPEC §10.1).
+    """Очередь работы с запиской передачи (CRM-06). Читает любой с `leads:read` (D1-1: директор
+    видит «Ждут ответа» только для просмотра); забрать и ответить — права `leads:take`/`reply`.
 
     `on_behalf_of` — очередь замещаемого коллеги (W15-H6): только пока сегодня идёт период, где
     вызывающий назначен заместителем (иначе 403 `not_a_deputy`). Ответ — «мои» лиды замещаемого и
@@ -183,9 +186,15 @@ async def inbox(
         ids = [lead.id for lead in (*escalated, *mine, *unassigned)]
         escalations = await crm.active_escalations(session, ids)
         names = await crm.user_names(session, [*escalated, *mine, *unassigned])
+        notes = await handoff_notes.notes(session, [*escalated, *mine, *unassigned], escalations)
 
     def out(rows: list[Lead]) -> list[LeadOut]:
-        return [lead_out(r, escalations.get(r.id), names) for r in rows]
+        return [
+            lead_out(r, escalations.get(r.id), names).model_copy(
+                update={"handoff_note": notes.get(r.id)}
+            )
+            for r in rows
+        ]
 
     ranked = sorted(
         escalated,
@@ -210,8 +219,18 @@ async def get_lead(lead_id: int, _: Reader, container: ContainerDep) -> LeadDeta
         request_id = await service_requests.open_request_id(session, lead)
         client = await session.get(Client, lead.client_id) if lead.client_id is not None else None
         erp_company_id = client.erp_company_id if client is not None else None
+        confirmation = await container.client_notice_service.latest(
+            session, lead_id, "web_confirmation"
+        )
+        invitation = (
+            await container.portal_invites.current(session, client.id)
+            if client is not None
+            else None
+        )
     base = lead_out(lead, escalation, names)
     mode = await container.backoffice_mode()
+    now = datetime.now(UTC)
+    waiting = web_lead_sla.awaiting(lead.first_response_due_at, lead.assigned_user_id)
     return LeadDetail(
         **base.model_dump(),
         qualification=dict(lead.qualification or {}),
@@ -232,6 +251,14 @@ async def get_lead(lead_id: int, _: Reader, container: ContainerDep) -> LeadDeta
         client_in_erp=erp_company_id is not None,
         client_handoff_status=client.erp_handoff_status if client is not None else None,
         client_handoff_error=client.erp_handoff_error if client is not None else None,
+        first_response_due_at=lead.first_response_due_at if waiting else None,
+        first_response_overdue=web_lead_sla.overdue(
+            lead.first_response_due_at, lead.assigned_user_id, now
+        ),
+        confirmation=NoticeOut.model_validate(confirmation, from_attributes=True)
+        if confirmation is not None
+        else None,
+        invitation=invitation,
     )
 
 
@@ -251,7 +278,10 @@ async def lead_messages(
 
 @router.post("/leads/{lead_id}/messages", response_model=ActionResult)
 async def reply(lead_id: int, body: Reply, who: Replier, container: ContainerDep) -> ActionResult:
-    return ActionResult(id=await container.lead_service.reply(who, lead_id, body.text))
+    message_id = await container.lead_service.reply(
+        who, lead_id, body.text, client_message_id=body.client_message_id
+    )
+    return ActionResult(id=message_id)
 
 
 @router.post("/leads/{lead_id}/assist", response_model=AssistOut)

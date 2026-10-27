@@ -57,6 +57,12 @@ class Reason(StrEnum):
     # Зеркальная сделка ERP: сумму, валюту, стадию, название и причину отказа ведёт бэк-офис (I-26).
     DEAL_OWNED_BY_ERP = "deal_owned_by_erp"
     NO_CONSENT = "no_consent"
+    # Ответ с этим ключом повтора ещё отправляется (D1-1): повтор не шлёт сообщение второй раз.
+    REPLY_IN_PROGRESS = "reply_in_progress"
+    # Итог отправки ответа неизвестен: Telegram не ответил вовремя (502) или так и не
+    # подтвердил доставку (409).
+    DELIVERY_UNKNOWN = "delivery_unknown"
+    DELIVERY_UNCONFIRMED = "delivery_unconfirmed"
     LITELLM_UNAVAILABLE = "litellm_unavailable"
     MODEL_KEY_REQUIRED = "model_key_required"
     MODEL_IN_CONFIG = "model_in_config"
@@ -68,6 +74,8 @@ class Reason(StrEnum):
     ERP_BAD_RESPONSE = "erp_bad_response"
     # Лимит сервисного токена ERP (429 `TOO_MANY_REQUESTS` + `Retry-After`, шов 0.3.0, FIX-60).
     ERP_RATE_LIMITED = "erp_rate_limited"
+    # Повторное приглашение в кабинет (D1-9): клиент ещё не передан в ERP — приглашать некуда.
+    CLIENT_NOT_IN_ERP = "client_not_in_erp"
     # Передача клиента (FIX-31): ИНН уже принадлежит другому клиенту CRM в ERP (409 INN_CONFLICT).
     ERP_INN_CONFLICT = "erp_inn_conflict"
     # Сопряжение с ERP по одноразовому коду (M3-CRM-10): код не принят, просрочен или уже

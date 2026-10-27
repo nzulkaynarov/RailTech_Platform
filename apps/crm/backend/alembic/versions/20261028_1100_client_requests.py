@@ -6,8 +6,8 @@
 `erp_request_error`, номер ЗВ/ПР из ERP — `erp_number` (обновляют события ERP). Старые сделки — без
 заявки (все поля пустые). Данных для переноса нет.
 
-Revision ID: 0044_client_requests
-Revises: 0043_messages_bot_created_idx
+Revision ID: 0045_client_requests
+Revises: 0044_client_notices
 Create Date: 2026-10-28 11:00:00+00:00
 """
 
@@ -16,8 +16,8 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "0044_client_requests"
-down_revision: str | None = "0043_messages_bot_created_idx"
+revision: str = "0045_client_requests"
+down_revision: str | None = "0044_client_notices"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

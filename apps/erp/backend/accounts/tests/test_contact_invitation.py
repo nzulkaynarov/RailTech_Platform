@@ -225,9 +225,11 @@ class TestContactInvitation:
         assert response.json()["detail"] == "CONTACT_EMAIL_REQUIRED"
 
     def test_invite_contact_via_telegram_is_refused_not_pretended(self, db, client_company, seller_user):
-        """FIX-23 (P-17): ERP в Telegram не пишет (бот у CRM) — канал telegram честно отвечает 400 INVALID_CHANNEL.
+        """FIX-23 (P-17), D1-9: ERP в Telegram не пишет — приглашение уходит событием боту CRM, но только контакту с Telegram.
 
-        Раньше отвечало 200 `channel: telegram` при том, что ни письма, ни сообщения не уходило.
+        У контакта без привязанного `telegram_user_id` и сопоставления с CRM канал telegram честно отвечает 400
+        CONTACT_TELEGRAM_REQUIRED (раньше отвечало 200 `channel: telegram`, хотя ни письма, ни сообщения не уходило).
+        Успешный путь — `integration/tests/test_invite_telegram.py`.
         """
         contact = Contact.objects.create(
             company=client_company,
@@ -249,7 +251,7 @@ class TestContactInvitation:
             format="json",
         )
         assert response.status_code == status.HTTP_400_BAD_REQUEST
-        assert response.json()["detail"] == "INVALID_CHANNEL"
+        assert response.json()["detail"] == "CONTACT_TELEGRAM_REQUIRED"
         assert mail.outbox == []
         assert not MagicLinkToken.objects.filter(contact=contact).exists()
         contact.refresh_from_db()

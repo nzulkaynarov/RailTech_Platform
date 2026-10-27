@@ -69,19 +69,23 @@ async function cardShot(page: Page, title: string, name: string): Promise<void> 
   await stepCard(page, title).screenshot({ path: `${dir}/w13c-f1-${name}-${String(width)}.png` });
 }
 
-/** Шаг «ERP» на чистой установке: «Подключить ERP» без кода сопряжения, затем возврат в мастер. */
+/**
+ * Шаг «ERP» на чистой установке (W15-H4): «Подключить ERP» открывает форму в боковом окне мастера — без перехода на
+ * «Подключения»; после сопряжения окно закрывается и мастер сразу предлагает следующий шаг — форму своей компании.
+ */
 async function connectErp(page: Page): Promise<void> {
   await stepCard(page, ERP_TITLE).getByRole("link", { name: "Подключить ERP" }).click();
-  await expect(page).toHaveURL(/\/admin\/integrations\?card=erp/);
+  await expect(page).toHaveURL(/\/admin\/setup\?step=erp/);
+  await expect(page.getByRole("heading", { level: 1, name: "Первый запуск" })).toBeVisible();
   const panel = page.locator(PANEL);
+  await expect(panel.getByRole("region", { name: "Шаг 1 из 5: ERP" })).toBeVisible();
   await expect(panel.getByText("Не подключена")).toBeVisible();
   await panel.getByRole("button", { name: "Подключить ERP" }).click();
   const pair = panel.getByRole("form", { name: "Подключить ERP" });
   await pair.getByLabel("Ваш пароль администратора").fill("demo-pass-1");
   await pair.getByRole("button", { name: "Подключить ERP" }).click();
-  await expect(panel.getByText("Сопряжение выполнено.")).toBeVisible();
-  await spaGoto(page, "/admin/setup");
-  await expect(page.getByRole("heading", { level: 2, name: COMPANY_TITLE })).toBeVisible();
+  await expect(page.getByLabel("Название компании")).toBeVisible();
+  await expect(page).toHaveURL(/\/admin\/setup\?panel=closed/);
 }
 
 /** Сообщение antd живёт несколько секунд: снимок ждёт, пока оно исчезнет, чтобы оно не закрывало шапку. */
@@ -158,13 +162,16 @@ test.describe("Первый запуск: полный путь", () => {
     await expect(page.getByText("Компания с таким ИНН уже есть.")).toBeVisible();
     await createCompany(page);
 
-    // Остальные четыре шага (ERP уже сделан); каждый ведёт на свой экран
+    // Остальные четыре шага (ERP уже сделан); форма каждого — в боковом окне мастера, без перехода (W15-H4)
     const steps = page.getByRole("list", { name: "Шаги настройки" });
     await expect(steps.getByRole("listitem")).toHaveCount(4);
     await expect(page.getByText("Готово 1 из 5")).toBeVisible();
     await steps.getByRole("link", { name: "Подключить бота" }).click();
-    await expect(page).toHaveURL(/\/admin\/integrations\?card=telegram/);
-    await expect(page.getByRole("heading", { level: 1, name: "Подключения" })).toBeVisible();
+    await expect(page).toHaveURL(/\/admin\/setup\?step=bot/);
+    await expect(page.getByRole("heading", { level: 1, name: "Первый запуск" })).toBeVisible();
+    await expect(
+      page.locator(PANEL).getByRole("region", { name: "Шаг 2 из 5: Telegram-бот" }),
+    ).toBeVisible();
 
     // Баннер на других экранах Платформы
     await spaGoto(page, "/admin/org");
@@ -236,9 +243,9 @@ test.describe("Первый запуск: полный путь", () => {
     await expect(company.getByRole("button", { name: "Создать компанию" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "Проверить снова" })).toHaveCount(0);
 
-    // ссылка ведёт на карточку ERP
+    // ссылка открывает шаг ERP в боковом окне мастера (W15-H4)
     await company.getByRole("link", { name: "Подключить ERP" }).click();
-    await expect(page).toHaveURL(/\/admin\/integrations\?card=erp&panel=open/);
+    await expect(page).toHaveURL(/\/admin\/setup\?step=erp&panel=open/);
     await expect(page.locator(PANEL).getByText("Не подключена")).toBeVisible();
   });
 
@@ -255,7 +262,7 @@ test.describe("Первый запуск: полный путь", () => {
     const banner = page.getByRole("region", { name: "Настройка Платформы" });
     await expect(banner).toBeVisible();
 
-    await banner.getByRole("button", { name: "Скрыть баннер настройки" }).click();
+    await banner.getByRole("button", { name: "Скрыть до завтра: баннер настройки" }).click();
     await expect(banner).toHaveCount(0);
     await page.reload();
     await expect(page.getByRole("heading", { level: 1, name: "Сотрудники" })).toBeVisible();
@@ -342,8 +349,7 @@ test.describe("Первый запуск: axe и скриншоты", () => {
       const pair = page.locator(PANEL).getByRole("form", { name: "Подключить ERP" });
       await pair.getByLabel("Ваш пароль администратора").fill("demo-pass-1");
       await pair.getByRole("button", { name: "Подключить ERP" }).click();
-      await expect(page.locator(PANEL).getByText("Сопряжение выполнено.")).toBeVisible();
-      await spaGoto(page, "/admin/setup");
+      // шаг сделан — окно мастера закрывается, следующий шаг — форма компании (W15-H4)
       await expect(page.getByLabel("Название компании")).toBeVisible();
       await expectNoViolations(page, `wizard after erp ${String(width)}`);
       await cardShot(page, COMPANY_TITLE, "wizard-company-after-erp");

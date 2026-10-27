@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform ERP — Integration API (CRM → ERP)
-  version: 0.8.0
+  version: 0.9.0
   summary: Пространство `/api/integration/v1/` — вызывает только CRM под сервисным токеном.
   description: |
     Контракт по `docs/architecture/CONTRACTS.md` §0 и §2. Версия 0 (M0-INF-02): форма запросов и ответов, по которой
@@ -33,7 +33,12 @@ info:
     одобрение КП директором ведёт маршрут EDS (EDS-03, решение архитектора волны 12 §4 п. 3), в ERP этого права больше нет.
     CRM (карта прав и каталог ролей Платформы) перестаёт его выдавать в том же PR.
 
-    0.8.0 (волна 16, W16-D1-2; аддитивно): `POST /clients/{crm_client_id}/requests` — «Создать заявку» из CRM для клиента,
+    0.8.0 (волна 16, D1-9; аддитивно): `HandoffResponse.invite.error` — причина, по которой приглашение не ушло (код ERP);
+    `POST /clients/{crm_client_id}/invite` — повторное приглашение контакта другим каналом из карточки клиента CRM;
+    канал `telegram` в приглашении доставляется ботом CRM по событию `uz.railtech.erp.invite.requested.v1` (ERP в Telegram не
+    пишет), поэтому `sent_via: [telegram]` значит «передано боту», а итог доставки CRM знает сама.
+
+    0.9.0 (волна 16, W16-D1-2; аддитивно): `POST /clients/{crm_client_id}/requests` — «Создать заявку» из CRM для клиента,
     уже переданного в ERP (CRM-03): срочность, файл письма директору (EDS), процесс `v3`, менеджер заявки = владелец сделки
     ERP (B-008); номер заявки `ЗВ-ГГГГ-NNN` выдаёт ERP (`Deal.number`, ERP-09) и возвращает в ответе; `number` у
     `DealListItem` — этот номер (у сделок, заведённых до ERP-09, тоже — номера выданы миграцией).
@@ -106,6 +111,46 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /clients/{crm_client_id}/invite:
+    post:
+      tags: [clients]
+      operationId: inviteClientContact
+      summary: Повторное приглашение контакта клиента в Cabinet выбранным каналом
+      description: |
+        Менеджер CRM нажимает «Отправить повторно другим каналом» в карточке клиента. `email` — ERP отправляет письмо сама
+        (`portal_invitation`); `telegram` — ERP публикует `uz.railtech.erp.invite.requested.v1`, доставляет бот CRM;
+        `both` — оба канала. Контакт — по `crm_contact_id`, без него — основной контакт компании. Ответ всегда 200:
+        `error` называет причину, по которой приглашение не ушло ни одним из каналов
+        (`CONTACT_EMAIL_REQUIRED`, `CONTACT_TELEGRAM_REQUIRED`, `EMAIL_DELIVERY_FAILED`, `INVALID_CHANNEL`,
+        `CONTACT_WITHOUT_COMPANY`, `COMPANY_ARCHIVED`, `CONTACT_ARCHIVED`, `CONTACT_NOT_FOUND` — в компании нет такого контакта
+        или он не сопоставлен с контактом CRM); CRM переводит её в слова для менеджера. 404 — неизвестен сам клиент.
+        Не идемпотентно по смыслу (каждое нажатие — новое приглашение), `Idempotency-Key` защищает только от
+        повтора одного запроса.
+      parameters:
+        - $ref: '#/components/parameters/CrmClientId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InviteRequest'
+      responses:
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '200':
+          description: Приглашение обработано (в `error` — почему не ушло)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InviteResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '422':
           $ref: '#/components/responses/ValidationError'
 
@@ -665,6 +710,13 @@ components:
       schema:
         type: string
         format: uuid
+    CrmClientId:
+      name: crm_client_id
+      in: path
+      required: true
+      schema:
+        type: integer
+        format: int64
     CrmContactId:
       name: crm_contact_id
       in: path
@@ -674,13 +726,6 @@ components:
         format: int64
     ErpCompanyId:
       name: erp_company_id
-      in: path
-      required: true
-      schema:
-        type: integer
-        format: int64
-    CrmClientId:
-      name: crm_client_id
       in: path
       required: true
       schema:
@@ -950,7 +995,45 @@ components:
             cabinet_url:
               type: string
               format: uri
+            error:
+              type: [string, 'null']
+              description: >-
+                Код причины, по которой приглашение не ушло ни одним каналом (0.8.0): `CONTACT_EMAIL_REQUIRED`,
+                `CONTACT_TELEGRAM_REQUIRED`, `EMAIL_DELIVERY_FAILED`, `INVALID_CHANNEL`, `CONTACT_WITHOUT_COMPANY`,
+                `COMPANY_ARCHIVED`, `CONTACT_ARCHIVED`, `CONTACT_CHANNEL_REQUIRED`, `CONTACT_NOT_FOUND`, `COMPANY_LINKED_BY_INN` (передача нашла компанию по ИНН — приглашение не отправлено до проверки контактов); `null` — ушло или приглашение не запрашивалось. Терпимый читатель:
+                незнакомый код CRM показывает как «причина не определена».
           additionalProperties: false
+      additionalProperties: false
+
+    InviteRequest:
+      type: object
+      required: [channel]
+      properties:
+        channel:
+          type: string
+          enum: [email, telegram, both]
+        crm_contact_id:
+          type: [integer, 'null']
+          format: int64
+          description: Контакт, которого приглашают; без него — основной контакт компании
+      additionalProperties: false
+
+    InviteResponse:
+      type: object
+      required: [sent_via, cabinet_url]
+      properties:
+        sent_via:
+          type: array
+          description: Каналы, по которым приглашение реально ушло (`telegram` — передано боту CRM)
+          items:
+            type: string
+            enum: [telegram, email]
+        cabinet_url:
+          type: string
+          format: uri
+        error:
+          type: [string, 'null']
+          description: Код причины, если приглашение не ушло ни одним каналом (перечень — в описании операции)
       additionalProperties: false
 
     DealStage:

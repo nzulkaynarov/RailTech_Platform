@@ -90,7 +90,7 @@ class ClientRequestNeedInSerializer(serializers.Serializer):
 
 
 class ClientRequestInSerializer(serializers.Serializer):
-    """`ClientRequestIn` шва 0.8.0: «Создать заявку» CRM для переданного клиента (CRM-03, W16-D1-2)."""
+    """`ClientRequestIn` шва 0.9.0: «Создать заявку» CRM для переданного клиента (CRM-03, W16-D1-2)."""
 
     crm_request_id = serializers.IntegerField(min_value=1)
     crm_lead_id = serializers.IntegerField(required=False, allow_null=True, default=None)
@@ -111,6 +111,20 @@ class ClientRequestOutSerializer(serializers.Serializer):
 class HandoffResponseInviteSerializer(serializers.Serializer):
     sent_via = serializers.ListField(child=serializers.ChoiceField(choices=["telegram", "email"]))
     cabinet_url = serializers.URLField()
+    error = serializers.CharField(allow_null=True, required=False)
+
+
+class InviteRequestSerializer(serializers.Serializer):
+    """`POST /clients/{crm_client_id}/invite`: повторное приглашение контакта выбранным каналом (0.8.0)."""
+
+    channel = serializers.ChoiceField(choices=["email", "telegram", "both"])
+    crm_contact_id = serializers.IntegerField(required=False, allow_null=True, default=None)
+
+
+class InviteResponseSerializer(serializers.Serializer):
+    sent_via = serializers.ListField(child=serializers.ChoiceField(choices=["telegram", "email"]))
+    cabinet_url = serializers.URLField()
+    error = serializers.CharField(allow_null=True, required=False)
 
 
 class HandoffResponseSerializer(serializers.Serializer):

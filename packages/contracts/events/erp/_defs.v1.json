@@ -584,6 +584,39 @@
       },
       "additionalProperties": false
     },
+    "InviteRequested": {
+      "type": "object",
+      "description": "Приглашение контакта в Cabinet через бот CRM (D1-9). Рабочей ссылки и токенов нет: контакт входит в Mini App по своему Telegram-аккаунту (initData), поэтому событие не секретно.",
+      "required": [
+        "channel",
+        "erp_contact_id",
+        "crm_contact_id"
+      ],
+      "properties": {
+        "channel": {
+          "type": "string",
+          "enum": [
+            "telegram"
+          ]
+        },
+        "erp_contact_id": {
+          "type": "integer"
+        },
+        "crm_contact_id": {
+          "type": "integer"
+        },
+        "language": {
+          "type": "string",
+          "enum": [
+            "ru",
+            "uz",
+            "en"
+          ],
+          "description": "Язык контакта в ERP; бот CRM берёт язык лида, если он известен"
+        }
+      },
+      "additionalProperties": false
+    },
     "CalcZone": {
       "type": "string",
       "enum": [

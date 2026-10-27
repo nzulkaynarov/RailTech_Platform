@@ -133,6 +133,22 @@
  * (директор читает), сброс пароля — `admin: full`; профиль доступен каждому вошедшему. Секреты из записей журнала BFF вырезает
  * (значения полей `password`, `secret`, `token`, `key`, `*_key`, `credentials`, `authorization`, `pin` и им подобных -> `***` целиком, любого типа).
  *
+ * **0.23.0 (W15-H8) — Admin · Компания: шаблоны документов и лента.** Добавляющее изменение. `DocumentTemplateIn.kind` — вид
+ * шаблона при создании (`letter`, `report`, `custom`, `contract`, `invoice`, `act`, `receipt`, `delivery_note`; без поля — `custom`,
+ * как раньше); `DocumentTemplate.kind` отдаёт вид кодом. `DocumentTemplatePreviewIn.kind` — предпросмотр договора, счёта и акта идёт
+ * на каркасе своего вида и с образцами блоков (остальные виды — общий каркас и подписанные заглушки). `ActivityItem.code` — код
+ * административного события ERP (`admin.*`), по которому SPA собирает фразу на языке сотрудника; для остальных событий `null`.
+ * Журнал ручных курсов в ERP виден только с правом `settings.edit` (имена и почта коллег): `GET /admin/company/fx-rate` без
+ * этого права отдаёт текущий курс и пустой журнал с `journal_available = false` (не ошибку; директор раздел смотрит).
+ *
+ * **0.22.0 (D1-1, волна 16) — Клиенты · Ждут ответа.** Добавляющее изменение (тег `messages`): очередь передач от бота с
+ * запиской (CRM-06) и SLA — `GET /crm/messages`; карточка лида, лента диалога с подгрузкой истории и вложениями через BFF —
+ * `GET /crm/messages/{lead}`, `/thread`, `/attachments/{message}/{index}`; действия — `take`, `reply` (ключ повтора
+ * `client_message_id`: «Повторить» не дублирует сообщение; Telegram не ответил — 502 `INTEGRATION_FAILED`, `delivery_failed`),
+ * `note` (заметка команде), `assist` (подсказка ответа через CRM/LiteLLM), `return-to-bot`; шаблоны — `GET /crm/reply-templates`
+ * (раздел `crm.leads` полный). Чтение — `crm.leads` от чтения (директор), действия — полный. Новая тема подсказки потока
+ * `InvalidationTopic.messages`: событие CRM `lead.message_added` (новое сообщение в переписке) и события лида — экран
+ * перезапрашивает очередь и открытую ленту.
  * **0.19.0 (W15-H1) — мост в старые экраны.** Добавляющее изменение (тег `bridge`). Пока раздел Платформы ещё заглушка, сотрудник
  * открывает ту же работу в старой CRM или старом ERP новой вкладкой. `GET /bridge` отдаёт публичные адреса старых фронтов
  * (`crm_url`, `erp_url`): настройки `PLATFORM_CRM_PUBLIC_URL` и `PLATFORM_ERP_PUBLIC_URL`, а если они пусты — адрес выводится из
@@ -207,7 +223,7 @@
  * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; «Забыли пароль?» — 5 запросов в час на IP и на адрес; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.21.0
+ * OpenAPI spec version: 0.23.0
  */
 import type { EdsDealOption } from "./edsDealOption";
 import type { Sources } from "./sources";

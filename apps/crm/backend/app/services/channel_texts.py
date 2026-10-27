@@ -92,6 +92,12 @@ DIGEST_MORE: Final = "…и ещё {count}"
 
 # Личные сообщения сотрудникам
 HANDOVER_DM: Final = "👤 Вам передан лид #{lead_id} {name} — {link}"
+NEW_WEB_LEAD_DM: Final = (
+    "🆕 Новый запрос с сайта #{lead_id}: {who} — {need}. Ответить нужно за {minutes} мин — {link}"
+)
+WEB_LEAD_OVERDUE_DM: Final = (
+    "⏰ Запрос с сайта #{lead_id} ({who}) ждёт ответа дольше {minutes} мин — никто не взял. {link}"
+)
 CRM_OPEN: Final = '<a href="{url}">открыть в CRM</a>'
 
 # Итоги дня (в канал; стоимость моделей — только админам в личку)

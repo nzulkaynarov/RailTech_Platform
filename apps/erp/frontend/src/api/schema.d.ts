@@ -38,6 +38,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/integration/v1/clients/{crm_client_id}/invite": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description POST /api/integration/v1/clients/{crm_client_id}/invite (0.8.0, D1-9): менеджер CRM приглашает контакт ещё раз. */
+        post: operations["api_integration_v1_clients_invite_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/integration/v1/clients/{crm_client_id}/requests": {
         parameters: {
             query?: never;
@@ -47,7 +64,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description POST /api/integration/v1/clients/{crm_client_id}/requests — «Создать заявку» CRM (шов 0.8.0, CRM-03). */
+        /** @description POST /api/integration/v1/clients/{crm_client_id}/requests — «Создать заявку» CRM (шов 0.9.0, CRM-03). */
         post: operations["api_integration_v1_clients_requests_create"];
         delete?: never;
         options?: never;
@@ -6103,7 +6120,7 @@ export interface paths {
         };
         /**
          * Exchange rate manual-entry journal
-         * @description Newest first. `kind=manual` — entered by an operator; `kind=auto_skipped` — the CBU rate for the same date was not applied because a manual rate is kept.
+         * @description Needs `settings.edit` or administrator (the journal carries colleagues' names and emails). Newest first. `kind=manual` — entered by an operator; `kind=auto_skipped` — the CBU rate for the same date was not applied because a manual rate is kept.
          */
         get: operations["exchange_rates_journal_list"];
         put?: never;
@@ -9411,6 +9428,8 @@ export interface components {
         };
         DocumentTemplatePreviewRequestRequest: {
             body_html?: string;
+            /** @description Код вида шаблона (CONTRACT, INVOICE, ACT — каркас вида и образцы блоков; иначе общий каркас). */
+            kind?: string;
         };
         /**
          * @description Тело `PUT/PATCH crm/document-templates/{id}/` — ровно то, что читает `DocumentTemplateViewSet.update`.
@@ -13930,6 +13949,26 @@ export interface operations {
             query?: never;
             header?: never;
             path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_integration_v1_clients_invite_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                crm_client_id: number;
+            };
             cookie?: never;
         };
         requestBody?: never;
@@ -21836,7 +21875,7 @@ export interface operations {
                     "application/json": components["schemas"]["DocumentTemplatePreview"];
                 };
             };
-            /** @description NO_COMPANY / TEMPLATE_BODY_TOO_LARGE (error code) */
+            /** @description NO_COMPANY / TEMPLATE_BODY_TOO_LARGE / TEMPLATE_KIND_INVALID (error code) */
             400: {
                 headers: {
                     [name: string]: unknown;

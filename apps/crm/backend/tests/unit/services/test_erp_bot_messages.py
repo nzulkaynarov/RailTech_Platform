@@ -377,3 +377,55 @@ def test_quote_sent_goes_to_telegram_only_when_chosen(
         "quote.sent", payload, deal_title="Оси", texts=TEXTS, language="ru", cabinet_url=CABINET
     )
     assert (message is not None) is sends
+
+
+# ── «Заявка принята, считаем» (D1-9, SPEC-v3 §3.1 шаг 2 и Приложение Б) ───────────────────────────
+
+
+def accepted(
+    source: str, language: Language = "ru", *, number: str = "ЗВ-2026-007", url: str = CABINET
+) -> BotMessage | None:
+    return client_message(
+        "request.created",
+        {"source": source, "erp_request_id": 7},
+        deal_title="Заявка: ООО Рельс",
+        texts=TEXTS,
+        language=language,
+        cabinet_url=url,
+        deal_number=number,
+    )
+
+
+@pytest.mark.parametrize("language", LANGUAGES)
+@pytest.mark.parametrize("source", ["crm", "cabinet"])
+def test_request_created_tells_the_client_with_number_and_cabinet_button(
+    source: str, language: Language
+) -> None:
+    message = accepted(source, language)
+    assert message is not None
+    assert "ЗВ-2026-007" in message.text
+    assert [url for _, url in message.buttons] == [CABINET]
+    assert message.buttons[0][0] in {"Открыть кабинет", "Kabinetni ochish", "Open account"}
+
+
+def test_request_created_by_staff_in_erp_is_not_announced_to_the_client() -> None:
+    assert accepted("erp") is None
+
+
+def test_request_created_without_cabinet_url_has_no_button() -> None:
+    message = accepted("crm", url="")
+    assert message is not None
+    assert message.buttons == ()
+
+
+def test_request_created_without_number_still_reads_well() -> None:
+    message = accepted("crm", number="")
+    assert message is not None
+    assert message.text.startswith("Заявка принята")
+
+
+def test_request_created_text_has_no_internal_terms() -> None:
+    message = accepted("crm")
+    assert message is not None
+    for word in ("лид", "сделк", "crm", "CRM"):
+        assert word not in message.text
