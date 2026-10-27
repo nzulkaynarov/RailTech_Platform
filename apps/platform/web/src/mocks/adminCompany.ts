@@ -16,6 +16,7 @@ import type {
   DocumentTemplateUpdate,
   EmailTemplateIn,
   EmailTemplateUpdate,
+  FxRateIn,
   NumberingPreviewIn,
   NumberingUpdate,
   PlatformSettingsUpdate,
@@ -27,6 +28,7 @@ import type {
 } from "../shared/api/generated/model";
 import { isSystemAdmin } from "../entities/role/roles";
 import { omit } from "../modules/admin/company/diff";
+import { companyDayKey } from "../shared/lib/dates";
 import {
   MOCK_LOGO,
   type CompanyMock,
@@ -67,6 +69,8 @@ interface Caller {
   margins: boolean;
   /** Администратор платформы в ERP (системная роль «Администратор») */
   platformAdmin: boolean;
+  /** Имя сотрудника — в журнале курса */
+  name: string;
 }
 
 /** Раздел `company.settings` как у BFF: нет сессии — 401, нет раздела — 403, запись — только `full`. */
@@ -85,6 +89,7 @@ function guard(need: "read" | "full"): Response | Caller {
     full: level === "full",
     margins: (me.restricted_fields ?? []).includes("cost_margin"),
     platformAdmin: me.roles.some(isSystemAdmin),
+    name: me.name,
   };
 }
 
@@ -191,6 +196,17 @@ const PLACEHOLDER_GROUPS = [
 ];
 
 const DECIMAL = /^-?\d+(\.\d+)?$/;
+
+/** Ответ `GET /admin/company/fx-rate`: курс и последние 20 записей журнала. */
+function fxOverview(state: CompanyMock) {
+  const { fx } = state;
+  return {
+    currency: "USD" as const,
+    current: fx.current,
+    max_age_days: 7,
+    journal: fx.journal.slice(0, 20),
+  };
+}
 
 /** Без права на группу `cost_margin` поля маржи в ответе отсутствуют (правило 6 CONVENTIONS). */
 function quoteFor(caller: Caller, quote: CompanyMock["quote"]) {
@@ -770,5 +786,39 @@ export const adminCompanyHandlers = [
       }
       return s.platform;
     }),
+  ),
+
+  // --- курс USD→UZS: ручной ввод и журнал (W13C-F6)
+  http.get("*/admin/company/fx-rate", () => read("read", (_c, s) => fxOverview(s))),
+  http.post("*/admin/company/fx-rate", ({ request }) =>
+    write<FxRateIn>(
+      request,
+      (body, s, caller) => {
+        const today = companyDayKey(new Date()) ?? "";
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(body.rate_date))
+          return validation(["rate_date"], "fx_rate_date_invalid");
+        if (body.rate_date > today) return validation(["rate_date"], "fx_rate_date_in_future");
+        if (!/^\d+(\.\d{1,6})?$/.test(body.rate_to_uzs) || Number(body.rate_to_uzs) <= 0)
+          return validation(["rate_to_uzs"], "fx_rate_invalid");
+        const { fx } = s;
+        const rate = String(Number(body.rate_to_uzs));
+        const previous = fx.current?.rate_date === body.rate_date ? fx.current : null;
+        fx.journal.unshift({
+          id: String(s.nextId++),
+          kind: "manual",
+          rate_date: body.rate_date,
+          rate_to_uzs: rate,
+          previous_rate_to_uzs: previous?.rate_to_uzs ?? null,
+          previous_source: previous?.source ?? null,
+          entered_by: caller.name,
+          entered_at: nowIso(),
+        });
+        if (!fx.current || body.rate_date >= fx.current.rate_date)
+          fx.current = { rate_to_uzs: rate, rate_date: body.rate_date, source: "manual" };
+        s.platform = { ...s.platform, exchange_rate_usd_uzs: rate };
+        return fxOverview(s);
+      },
+      201,
+    ),
   ),
 ];

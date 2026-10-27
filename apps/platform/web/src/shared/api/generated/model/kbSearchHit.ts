@@ -116,6 +116,14 @@
  * `admin`; в Admin новый пункт «Настройки бота». Нового кода ошибки нет: ошибки формата документа и пути невалидных полей настроек
  * — `VALIDATION_FAILED` с `details.reason`, `details.rule`, `details.messages`, `details.paths`.
  *
+ * **0.13.0 (W13C-F6) — Admin · Компания: ручной ввод курса USD→UZS.** Чисто добавляющее изменение: `GET /admin/company/fx-rate`
+ * (текущий курс на сегодня с датой и источником «авто»/«вручную», допустимый возраст курса и журнал последних записей: ручные
+ * вводы и случаи «автокурс ЦБ не применён») и `POST /admin/company/fx-rate` (курс на дату вручную, на случай, если автозагрузка
+ * `erp-beat` не сработала). Раздел `company.settings`: чтение — `GET`, ввод — полный (в ERP — право `settings.edit`). Курс на дату
+ * заменяет и курс ЦБ, и прежний ручной (прежнее значение остаётся в журнале); автозагрузка ручной курс на ту же дату не
+ * перетирает. Отказ проверки — 422 `VALIDATION_FAILED` с `details.reason` (`fx_rate_invalid`, `fx_rate_date_invalid`,
+ * `fx_rate_date_in_future`, `fx_rate_date_too_old`) и `details.fields` (`rate_to_uzs` или `rate_date`).
+ *
  * **0.12.0 (W13-A6) — Admin · Оргструктура, Журнал аудита, профиль.** Чисто добавляющее изменение: `POST /admin/users/{id}/reset-password/email`
  * (сброс пароля сотрудника с письмом; себе — 409 `CONFLICT` с `details.reason = self_reset`; почта не подключена — 409
  * `NOT_CONFIGURED`), `GET /admin/audit` (журнал аудита CRM «кто, что, когда» с фильтрами по автору, действию, объекту и периоду и
@@ -143,7 +151,7 @@
  * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.12.0
+ * OpenAPI spec version: 0.13.0
  */
 
 export interface KbSearchHit {
