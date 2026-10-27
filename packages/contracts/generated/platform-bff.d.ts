@@ -2784,7 +2784,7 @@ export interface paths {
     put?: never;
     /**
      * EDS · Утвердить резолюцию → задание в расчёт
-     * @description EDS `POST /letters/{id}/resolution` (право `letters.resolve`). Раздел `eds.inbox` — полный: роль только для чтения получает 403 в BFF до EDS. Письмо должно ждать резолюции, иначе 409 `CONFLICT` (`details.reason = invalid_state`). Срок расчёта в прошлом (по `Asia/Tashkent`) — 422 `VALIDATION_FAILED`, `details.fields = [due]`, `details.reason = due_in_past`; исполнитель не найден или отключён — `details.fields = [assignees]`, `details.reason = not_active_employee`; исполнитель дважды в одной зоне — `duplicate`; `min_margin_pct` у роли без группы `cost_margin` — 422 BFF, `details.reason = margin_forbidden`, в EDS запрос не уходит. Текст ошибки — `message` EDS на языке сотрудника. Ответ — обновлённая карточка. Решение, кого можно назначить, остаётся за EDS и ERP: BFF только передаёт сотрудников и зоны (`GET /eds/resolution/assignees` подсказывает, кого выбрать).
+     * @description EDS `POST /letters/{id}/resolution` (право `letters.resolve`). Раздел `eds.inbox` — полный: роль только для чтения получает 403 в BFF до EDS. Письмо должно ждать резолюции, иначе 409 `CONFLICT` (`details.reason = invalid_state`). Срок расчёта в прошлом (по `Asia/Tashkent`) — 422 `VALIDATION_FAILED`, `details.fields = [due]`, `details.reason = due_in_past`; исполнитель не найден или отключён — `details.fields = [assignees]`, `details.reason = not_active_employee`; исполнитель дважды в одной зоне — `duplicate`; `min_margin_pct` у роли без группы `cost_margin` — 422 BFF, `details.reason = margin_forbidden`, в EDS запрос не уходит. Текст ошибки — `message` EDS на языке сотрудника. Исполнитель без раздела своей зоны — 422, `details.fields = [assignees]`, `details.reason = assignee_zone_mismatch` (проверяет EDS, D1-8). Ответ — обновлённая карточка. Решение, кого можно назначить, остаётся за EDS и ERP: BFF только передаёт сотрудников и зоны (`GET /eds/resolution/assignees` подсказывает, кого выбрать).
      */
     post: operations["resolveLetter"];
     delete?: never;
@@ -2842,7 +2842,7 @@ export interface paths {
     };
     /**
      * EDS · Кого можно назначить исполнителем резолюции, по зонам
-     * @description Кандидаты по зонам резолюции: товары (склад и цены поставщиков), услуги (ТЗ, бригада), условия оплаты. Зона даёт сотрудникам **раздел каталога**, а не код роли: товары — `erp.calc.goods`, услуги — `erp.calc.services`, условия оплаты — `eds.payments` (все — уровень «полный»). BFF читает из CRM активных сотрудников и роли с их матрицами (`GET /users`, `GET /platform-roles`; нужен раздел `admin` не ниже чтения) и сводит матрицы ролей каждого. Если роли сотрудника не дают чтения справочника CRM — 200 с пустыми списками и `directory = forbidden`: выбор исполнителей недоступен до появления операции «сотрудники по разделу» в CRM (docs/QUESTIONS.md). Раздел `eds.inbox` — полный.
+     * @description Кандидаты по зонам резолюции: товары (склад и цены поставщиков), услуги (ТЗ, бригада), условия оплаты. Зона даёт сотрудникам **раздел каталога**, а не код роли: товары — `erp.calc.goods`, услуги — `erp.calc.services`, условия оплаты — `eds.payments` (все — уровень «полный»). Выбор делает CRM — `GET /team?section=&level=full` по вызову на зону (D1-8, B-007); BFF матрицы ролей не сводит. Операция CRM требует чтения сотрудников (раздел `admin` не ниже чтения): если роли сотрудника его не дают — 200 с пустыми списками и `directory = forbidden`. EDS при резолюции сверяет зону исполнителя сам (422 `assignee_zone_mismatch`). Автор резолюции в списках исключён. Раздел `eds.inbox` — полный.
      */
     get: operations["listResolutionAssignees"];
     put?: never;
@@ -5738,7 +5738,7 @@ export interface components {
       /** @description Всегда три зоны в порядке товары, услуги, условия оплаты */
       zones: components["schemas"]["ResolutionZone"][];
       /**
-       * @description `ok` — справочник сотрудников прочитан; `forbidden` — роли сотрудника не дают чтения справочника CRM (кандидатов нет); `unavailable` — CRM не ответила
+       * @description `ok` — сотрудники зон получены от CRM; `forbidden` — роли сотрудника не дают чтения сотрудников в CRM (кандидатов нет); `unavailable` — CRM не ответила
        * @enum {string}
        */
       directory: "ok" | "forbidden" | "unavailable";

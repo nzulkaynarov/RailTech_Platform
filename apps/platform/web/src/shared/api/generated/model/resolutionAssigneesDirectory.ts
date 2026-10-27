@@ -219,7 +219,7 @@
  */
 
 /**
- * `ok` — справочник сотрудников прочитан; `forbidden` — роли сотрудника не дают чтения справочника CRM (кандидатов нет); `unavailable` — CRM не ответила
+ * `ok` — сотрудники зон получены от CRM; `forbidden` — роли сотрудника не дают чтения сотрудников в CRM (кандидатов нет); `unavailable` — CRM не ответила
  */
 export type ResolutionAssigneesDirectory =
   (typeof ResolutionAssigneesDirectory)[keyof typeof ResolutionAssigneesDirectory];
