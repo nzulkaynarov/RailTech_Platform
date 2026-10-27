@@ -7,6 +7,7 @@ const REASONS = new Set([
   "lookup_in_use",
   "category_has_children",
   "template_in_use",
+  "template_missing_required_blocks",
   "doc_prefix_taken",
   "already_reviewed",
   "invalid_numbering_pattern",
@@ -42,6 +43,18 @@ export function companyErrorText(t: TFunction, error: unknown): string {
     return t(`${base}${error.code}`);
   }
   return t(`${base}DEFAULT`);
+}
+
+/** Обязательные блоки договора, счёта или акта, которых нет в тексте шаблона (`details.missing_blocks`, C2A-G-5). */
+export function missingBlocks(error: unknown): { code: string; label: string }[] {
+  if (!(error instanceof ApiError)) return [];
+  const blocks = error.details["missing_blocks"];
+  if (!Array.isArray(blocks)) return [];
+  return blocks.flatMap((b: unknown) => {
+    if (typeof b !== "object" || b === null) return [];
+    const { code, label } = b as Record<string, unknown>;
+    return typeof code === "string" && typeof label === "string" ? [{ code, label }] : [];
+  });
 }
 
 /** Поля формы, которые ERP назвала в 422 (`details.fields`). */

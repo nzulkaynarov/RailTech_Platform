@@ -154,6 +154,50 @@ def test_sample_can_be_copied_into_own_company(lookups):
     )
     resp = _api(user).post(f"/api/v1/crm/document-templates/{sample.id}/copy/")
     assert resp.status_code == 201, resp.content
-    copy = DocumentTemplate.objects.get(company=company, name="Доверенность")
+    # Без названия в запросе — «<образец> (копия)» (C2A-G-4).
+    copy = DocumentTemplate.objects.get(company=company, name="Доверенность (копия)")
     assert copy.is_sample is False
     assert copy.company_id == company.id
+
+
+def _sample_letter():
+    return DocumentTemplate.objects.create(
+        company=None,
+        name="Доверенность",
+        kind=DocumentTemplateKind.objects.get(code="LETTER"),
+        is_sample=True,
+        body_html="<p>{{company.name}}</p>",
+    )
+
+
+def test_copy_keeps_the_name_typed_by_the_admin(lookups):
+    """C2A-G-4: название из окна «Скопировать к себе» доезжает до копии."""
+    company = _company("Seller", "S1")
+    user = _member(company, "s@t.uz")
+    sample = _sample_letter()
+    resp = _api(user).post(
+        f"/api/v1/crm/document-templates/{sample.id}/copy/", {"name": "  Договор поставки (рельсы) "}, format="json"
+    )
+    assert resp.status_code == 201, resp.content
+    assert resp.json()["name"] == "Договор поставки (рельсы)"
+    assert DocumentTemplate.objects.filter(company=company, name="Договор поставки (рельсы)").count() == 1
+
+
+@pytest.mark.parametrize("name", ["", "   ", 5])
+def test_copy_rejects_an_empty_name_like_create(lookups, name):
+    company = _company("Seller", "S1")
+    user = _member(company, "s@t.uz")
+    sample = _sample_letter()
+    resp = _api(user).post(f"/api/v1/crm/document-templates/{sample.id}/copy/", {"name": name}, format="json")
+    assert resp.status_code == 400
+    assert resp.json()["detail"] == "TEMPLATE_NAME_REQUIRED"
+    assert not DocumentTemplate.objects.filter(company=company).exists()
+
+
+def test_copy_rejects_a_too_long_name(lookups):
+    company = _company("Seller", "S1")
+    user = _member(company, "s@t.uz")
+    sample = _sample_letter()
+    resp = _api(user).post(f"/api/v1/crm/document-templates/{sample.id}/copy/", {"name": "я" * 256}, format="json")
+    assert resp.status_code == 400
+    assert resp.json()["detail"] == "TEMPLATE_NAME_TOO_LONG"

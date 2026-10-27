@@ -71,10 +71,15 @@
     "VALIDATION_FAILED": "Maydonlarni tekshiring.",
     "CONFLICT": "Obyekt o'zgargan yoki ishlatilmoqda. Sahifani yangilab, qayta urinib ko'ring.",
     "BACKEND_UNAVAILABLE": "ERP javob bermayapti. Keyinroq qayta urinib ko'ring.",
+    "missingBlocks": {
+      "title": "Yetishmayotgan bloklar:",
+      "hint": "Ularni shablon matniga qo'ying yoki «Shablon amal qiladi» belgisini olib tashlang: qoralama bloklarsiz saqlanadi."
+    },
     "reason": {
       "lookup_in_use": "Qator hujjat va ma'lumotlarda ishlatilmoqda. O'chirish o'rniga uni o'chirib qo'ying.",
       "category_has_children": "Kategoriyada ichki kategoriyalar bor. Avval ularni ko'chiring yoki o'chiring.",
       "template_in_use": "Shablon bo'yicha hujjatlar rasmiylashtirilgan. O'chirish o'rniga uni o'chirib qo'ying.",
+      "template_missing_required_blocks": "Matnda hujjatning majburiy bloklari yetishmayapti.",
       "doc_prefix_taken": "Bunday raqamlash prefiksi boshqa kompaniyada band. Boshqasini tanlang.",
       "already_reviewed": "So'rov allaqachon ko'rib chiqilgan. Ro'yxatni yangilang.",
       "invalid_numbering_pattern": "Niqobda majburiy {seq} tokeni yo'q.",
@@ -299,6 +304,10 @@
       "bodyHint": "{{example}} ko'rinishidagi o'rinbosarlar hujjat ma'lumotlari bilan almashtiriladi.",
       "activeLabel": "Shablon amal qiladi",
       "placeholders": "Mavjud o'rinbosarlar",
+      "unknownWarning": "Noma'lum o'rinbosar {{token}}",
+      "placeholdersUnknown": "Noma'lum o'rinbosarlar: {{count}}",
+      "unknownTitle": "Ro'yxatda yo'q — hujjatga o'zgarishsiz tushadi",
+      "unknownMark": "ro'yxatda yo'q",
       "previewTitle": "Test ma'lumotlardagi namuna",
       "previewFrame": "Shablon bo'yicha hujjat namunasi",
       "copy": "O'zimizga nusxalash",

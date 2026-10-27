@@ -284,7 +284,9 @@ test.describe("Компания: статьи расхода, шаблоны, с
     await page.getByRole("button", { name: "Изменить: Договор поставки (рельсы)" }).click();
     const editor = page.getByRole("dialog", { name: "Изменить шаблон документа" });
     const body = editor.getByLabel(/^Текст шаблона/);
-    await body.fill("<p>{{buyer_name}} {{mystery}}</p>");
+    await body.fill(
+      "<p>{{buyer_name}} {{mystery}}</p>{{doc.spec_table}}{{doc.totals}}{{doc.requisites_and_signatures}}",
+    );
     await expect(editor.getByText("Неизвестная подстановка {{mystery}}")).toBeVisible();
     await expect(
       editor.frameLocator('iframe[title="Образец документа по шаблону"]').getByText("[buyer_name]"),

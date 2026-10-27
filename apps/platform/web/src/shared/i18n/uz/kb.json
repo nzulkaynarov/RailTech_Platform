@@ -311,8 +311,9 @@
       "file_empty": "Fayl bo‘sh.",
       "file_too_large": "Fayl 25 MB dan katta — uni mavzular bo‘yicha bir nechta hujjatga bo‘ling.",
       "multipart_required": "Fayl yuklash formasi orqali yuborilishi kerak.",
-      "document_indexing": "Hujjat aynan hozir indekslanmoqda. Bir daqiqa kutib, qayta urinib ko‘ring.",
+      "document_indexing": "Hujjat allaqachon indekslash navbatida yoki indekslanmoqda. Bir daqiqa kutib, qayta urinib ko‘ring.",
       "unknown_product": "Bunday mahsulot ro‘yxatda yo‘q.",
+      "model_key_required": "Qidiruv modeli mavjud emas: Admin · Tashqi integratsiyalar, «AI modellari» bo‘limida embedding kalitini qo‘shing va qayta urinib ko‘ring.",
       "litellm_unavailable": "Modellar shlyuzi javob bermayapti: bot javob shakllantira olmaydi. Keyinroq qayta urinib ko‘ring.",
       "storage_unavailable": "Fayllar ombori javob bermayapti. Keyinroq qayta urinib ko‘ring."
     }

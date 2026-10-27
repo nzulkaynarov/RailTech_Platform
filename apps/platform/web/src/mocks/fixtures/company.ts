@@ -185,7 +185,7 @@ function seed(): CompanyMock {
         name: "Образец: договор поставки",
         kind_name: "Договор",
         body_html:
-          "<h2>Договор поставки</h2><p>Покупатель: {{buyer_name}}</p><p>Сумма: {{total}}</p>",
+          "<h2>Договор поставки</h2><p>Покупатель: {{buyer_name}}</p><p>Сумма: {{total}}</p>{{doc.spec_table}}{{doc.totals}}{{doc.requisites_and_signatures}}",
         is_sample: true,
         is_owned: false,
         is_active: true,
@@ -197,7 +197,7 @@ function seed(): CompanyMock {
         name: "Договор поставки (наш)",
         kind_name: "Договор",
         body_html:
-          "<h2>Договор поставки</h2><p>Покупатель: {{buyer_name}}</p><p>Срок: {{delivery_term}}</p>",
+          "<h2>Договор поставки</h2><p>Покупатель: {{buyer_name}}</p><p>Срок: {{delivery_term}}</p>{{doc.spec_table}}{{doc.totals}}{{doc.requisites_and_signatures}}",
         is_sample: false,
         is_owned: true,
         is_active: true,

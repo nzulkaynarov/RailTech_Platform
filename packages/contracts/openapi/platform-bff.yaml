@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.13.0
+  version: 0.14.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -3115,7 +3115,10 @@ paths:
         - admin
       operationId: createDocumentTemplate
       summary: Создать шаблон документа
-      description: Раздел `company.settings` — полный.
+      description: >-
+        Раздел `company.settings` — полный. Активный шаблон договора, счёта или акта без обязательных блоков — 422
+        `VALIDATION_FAILED` с `details.reason = template_missing_required_blocks` и `details.missing_blocks` — список
+        `{code, label}` недостающих блоков (подстановки `{{doc.…}}`); черновик (`is_active = false`) сохраняется без блоков.
       parameters:
         - $ref: '#/components/parameters/CsrfToken'
       requestBody:
@@ -3189,7 +3192,10 @@ paths:
         - admin
       operationId: updateDocumentTemplate
       summary: Изменить шаблон документа
-      description: Образец платформы изменить нельзя — сначала копия. Раздел `company.settings` — полный.
+      description: >-
+        Образец платформы изменить нельзя — сначала копия. Раздел `company.settings` — полный. Итоговое состояние
+        (вид, текст, `is_active`) проверяется как при создании: нехватка обязательных блоков — 422 `VALIDATION_FAILED`
+        с `details.reason = template_missing_required_blocks` и `details.missing_blocks` (`{code, label}`).
       parameters:
         - $ref: '#/components/parameters/CsrfToken'
         - $ref: '#/components/parameters/CompanyItemId'
@@ -3245,7 +3251,9 @@ paths:
         - admin
       operationId: copyDocumentTemplate
       summary: Скопировать образец платформы к себе
-      description: Раздел `company.settings` — полный.
+      description: >-
+        Раздел `company.settings` — полный. Копия получает название из `name` (до 255 символов; пустое — 422
+        `VALIDATION_FAILED`).
       parameters:
         - $ref: '#/components/parameters/CsrfToken'
         - $ref: '#/components/parameters/CompanyItemId'
@@ -3972,8 +3980,8 @@ paths:
       operationId: reingestKbDocument
       summary: 'Переиндексировать документ'
       description: >-
-        CRM `POST /kb/documents/{id}/reingest`. Раздел `admin` — полный. Документ, который сейчас индексируется, — 409
-        `CONFLICT` с `details.reason = document_indexing`.
+        CRM `POST /kb/documents/{id}/reingest`. Раздел `admin` — полный. Документ, который сейчас индексируется или уже
+        стоит в очереди на индексацию, — 409 `CONFLICT` с `details.reason = document_indexing`.
       parameters:
         - $ref: '#/components/parameters/KbDocumentId'
         - $ref: '#/components/parameters/CsrfToken'
@@ -4006,7 +4014,9 @@ paths:
       summary: 'Что найдёт бот на этот вопрос'
       description: >-
         CRM `POST /kb/search`: тот же поиск и порог, что у диалогового агента; ничего не меняет и не пишет в расходы
-        (поиск по векторам и словам без вызова модели ответа).
+        (поиск по векторам и словам без вызова модели ответа). Шлюз моделей отказал (нет ключа эмбеддингов, модель
+        недоступна) — 422 `VALIDATION_FAILED` с `details.reason = model_key_required`; шлюз не отвечает по сети — 502
+        `INTEGRATION_FAILED` с `details.reason = litellm_unavailable`.
       parameters:
         - $ref: '#/components/parameters/CsrfToken'
       requestBody:

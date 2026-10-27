@@ -225,6 +225,8 @@ function DocumentEditor({
   const preview = usePreviewDocumentTemplate();
   const { mutate: requestPreview } = preview;
   const text = body ?? initial.body_html;
+  // Подстановки, которых нет в каталоге: ERP называет их в предупреждениях образца (C2A-G-5).
+  const unknown = preview.data?.warnings ?? [];
   useEffect(() => {
     const timer = window.setTimeout(() => {
       requestPreview({ data: { body_html: text } });
@@ -303,8 +305,28 @@ function DocumentEditor({
           <Form.Item name="is_active" valuePropName="checked" style={{ marginBottom: 12 }}>
             <Checkbox>{t("templates.documents.activeLabel")}</Checkbox>
           </Form.Item>
-          <details className="pf-co-details">
-            <summary>{t("templates.documents.placeholders")}</summary>
+          <details className="pf-co-details" open={unknown.length > 0 ? true : undefined}>
+            <summary>
+              {t("templates.documents.placeholders")}
+              {unknown.length > 0
+                ? ` · ${t("templates.documents.placeholdersUnknown", { count: unknown.length })}`
+                : ""}
+            </summary>
+            {unknown.length > 0 ? (
+              <div>
+                <p className="pf-co-hint">
+                  <b>{t("templates.documents.unknownTitle")}</b>
+                </p>
+                <ul className="pf-co-tree pf-co-tree-root">
+                  {unknown.map((code) => (
+                    <li key={code}>
+                      <code className="pf-co-mono">{`{{${code}}}`}</code> —{" "}
+                      {t("templates.documents.unknownMark")}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
             {(placeholders.data?.groups ?? []).map((group) => (
               <div key={group.key}>
                 <p className="pf-co-hint">
@@ -328,9 +350,9 @@ function DocumentEditor({
             title={t("templates.documents.previewFrame")}
             loading={preview.isPending}
           />
-          {(preview.data?.warnings ?? []).map((warning) => (
-            <p key={warning} className="pf-co-hint" role="status">
-              {warning}
+          {unknown.map((code) => (
+            <p key={code} className="pf-co-hint" role="status">
+              {t("templates.documents.unknownWarning", { token: `{{${code}}}` })}
             </p>
           ))}
         </div>

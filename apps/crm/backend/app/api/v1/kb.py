@@ -3,10 +3,16 @@
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, File, Form, Path, Query, UploadFile, status
+from openai import APIConnectionError, APIError
 from sqlalchemy import select
 
 from app.api.deps import ContainerDep, require
-from app.domain.errors import NotFoundError
+from app.domain.errors import (
+    NotFoundError,
+    Reason,
+    UpstreamUnavailableError,
+    ValidationFailedError,
+)
 from app.models.kb import KbDocument, KbGap, Product
 from app.schemas.kb_admin import (
     Created,
@@ -120,9 +126,21 @@ async def list_kb_chunks(document_id: int, _: Reader, container: ContainerDep) -
 async def kb_test_search(body: SearchRequest, _: Reader, container: ContainerDep) -> SearchResponse:
     """«Что найдёт бот на этот вопрос»: тот же поиск и порог, что у диалогового агента."""
     cfg = await container.settings_service.get()
-    result = await container.kb_search.search(
-        body.query, product_key=body.product_key, top_k=body.top_k, language=body.language
-    )
+    try:
+        result = await container.kb_search.search(
+            body.query, product_key=body.product_key, top_k=body.top_k, language=body.language
+        )
+    except APIConnectionError as exc:
+        # Шлюз моделей не отвечает по сети: это сбой сервиса за CRM (502), а не ошибка запроса.
+        raise UpstreamUnavailableError(
+            "embedding gateway is unreachable", reason=Reason.LITELLM_UNAVAILABLE
+        ) from exc
+    except APIError as exc:
+        # Шлюз ответил отказом: чаще всего у `embed-model` нет ключа провайдера. Администратор
+        # чинит это в «Модели ИИ» — 422 с подкодом, который экран превращает в подсказку (C2A-G-6).
+        raise ValidationFailedError(
+            "embedding model is unavailable", reason=Reason.MODEL_KEY_REQUIRED
+        ) from exc
     hits = [SearchHitOut.model_validate(h, from_attributes=True) for h in result.hits]
     return SearchResponse(
         hits=hits,

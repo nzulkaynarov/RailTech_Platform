@@ -69,6 +69,31 @@ def test_legal_template_cannot_be_created_without_required_blocks(lookups):
     )
     assert resp.status_code == 400
     assert resp.json()["detail"] == "TEMPLATE_MISSING_REQUIRED_BLOCKS"
+    # C2A-G-5: ответ называет недостающие блоки (код + подпись из каталога), а не только код ошибки.
+    assert resp.json()["missing_blocks"] == [
+        {"code": "doc.spec_table", "label": "Блок: спецификация (Приложение № 1)"},
+        {"code": "doc.totals", "label": "Блок: итоги и НДС"},
+        {"code": "doc.requisites_and_signatures", "label": "Блок: реквизиты и подписи Сторон"},
+    ]
+
+
+@pytest.mark.django_db
+def test_patch_names_only_the_blocks_still_missing(lookups):
+    company, user, client = _seller()
+    from crm.services.generated_documents import create_template
+
+    template = create_template(
+        company,
+        user,
+        name="Наш договор",
+        kind_code="CONTRACT",
+        body_html="{{doc.spec_table}}{{doc.totals}}{{doc.requisites_and_signatures}}",
+    )
+    resp = client.patch(
+        f"/api/v1/crm/document-templates/{template.id}/", {"body_html": "{{doc.totals}}"}, format="json"
+    )
+    assert resp.status_code == 400
+    assert [b["code"] for b in resp.json()["missing_blocks"]] == ["doc.spec_table", "doc.requisites_and_signatures"]
 
 
 @pytest.mark.django_db

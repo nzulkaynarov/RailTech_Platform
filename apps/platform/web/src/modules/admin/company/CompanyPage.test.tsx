@@ -467,6 +467,51 @@ describe("Шаблоны документов и писем", () => {
     );
   });
 
+  it("неизвестная подстановка отмечена в списке «Подстановки» (C2A-G-5)", async () => {
+    await openTab("templates");
+    fireEvent.click(await screen.findByRole("button", { name: "Изменить: Акт приёмки" }));
+    const dialog = await screen.findByRole("dialog", { name: "Изменить шаблон документа" });
+
+    fireEvent.change(within(dialog).getByLabelText(/^Текст шаблона/), {
+      target: { value: "<p>{{buyer_name}} {{mystery}}</p>" },
+    });
+
+    // jsdom не раскрывает <details> сам: видимость списка проверяет e2e
+    expect(
+      await within(dialog).findByText("Нет в списке — в документ попадут как есть"),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(/Доступные подстановки · Неизвестные подстановки: 1/),
+    ).toBeInTheDocument();
+    expect(within(dialog).getByText("{{mystery}}", { selector: "code" })).toBeInTheDocument();
+  });
+
+  it("договор без обязательных блоков: окно называет недостающие, а не «проверьте поля» (C2A-G-5)", async () => {
+    await openTab("templates");
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Изменить: Договор поставки (наш)" }),
+    );
+    const dialog = await screen.findByRole("dialog", { name: "Изменить шаблон документа" });
+
+    fireEvent.change(within(dialog).getByLabelText(/^Текст шаблона/), {
+      target: { value: "<p>{{buyer_name}}</p>" },
+    });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Сохранить" }));
+
+    const alert = await within(dialog).findByRole("alert");
+    expect(alert).toHaveTextContent("В тексте не хватает обязательных блоков документа.");
+    expect(alert).toHaveTextContent("Блок: спецификация (Приложение № 1) — {{doc.spec_table}}");
+    expect(alert).toHaveTextContent("Блок: итоги и НДС — {{doc.totals}}");
+    expect(alert).toHaveTextContent(
+      "Блок: реквизиты и подписи Сторон — {{doc.requisites_and_signatures}}",
+    );
+    expect(alert).toHaveTextContent("снимите «Шаблон действует»");
+    // черновик (шаблон выключен) сохраняется без блоков
+    fireEvent.click(within(dialog).getByLabelText("Шаблон действует"));
+    fireEvent.click(await within(dialog).findByRole("button", { name: /Сохранить/ }));
+    expect(await screen.findByText("Сохранено")).toBeInTheDocument();
+  });
+
   it("шаблон, по которому уже оформлены документы, удалить нельзя — слова, а не код", async () => {
     await openTab("templates");
     fireEvent.click(await screen.findByRole("button", { name: "Удалить: Договор поставки (наш)" }));
