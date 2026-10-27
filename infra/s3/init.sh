@@ -3,7 +3,7 @@
 # идемпотентен — запускается при каждом `up`/деплое и приводит хранилище к описанному здесь состоянию:
 #   1. создаёт бакеты (S3_BUCKETS);
 #   2. на каждый сервис заводит своего пользователя (ключ S3_<СЕРВИС>_ACCESS_KEY / _SECRET_KEY) и политику rt-<сервис>
-#      с доступом только к его бакетам; повторный запуск обновляет секрет и политику (так делается ротация ключа);
+#      с доступом только к его бакетам (запись, чтение или только список); повторный запуск обновляет секрет и политику (так делается ротация ключа);
 #   3. удаляет пользователей, которых здесь нет (сменили идентификатор ключа — старый перестаёт действовать);
 #   4. ставит правило жизненного цикла erp-temp: объекты старше 1 суток удаляются;
 #   5. проверяет матрицу доступа реальными запросами под ключом каждого сервиса и падает при расхождении.
@@ -30,7 +30,15 @@ rw_of() {
 }
 ro_of() {
   case "$1" in
-    crm) echo "backups wal" ;; # статус бэкапа и архива WAL в «Центре внешних сервисов»: только чтение (список, W15-H8b)
+    crm) echo "backups" ;; # статус бэкапа в «Центре внешних сервисов»: только чтение
+    *) echo "" ;;
+  esac
+}
+# Бакеты, где сервису нужен только СПИСОК объектов (имена и время), без чтения содержимого: возраст последнего сегмента WAL-архива
+# в «Состоянии системы» (W15-H8b). Сегменты WAL — сырая копия базы (зашифрована, но всё же): читать их CRM не должна.
+ls_of() {
+  case "$1" in
+    crm) echo "wal" ;;
     *) echo "" ;;
   esac
 }
@@ -40,10 +48,11 @@ key_of() { # <сервис> <ACCESS_KEY|SECRET_KEY>
 }
 
 # Политика: чтение/запись/удаление объектов в rw-бакетах, чтение — в ro-бакетах. Больше ничего (ни создания бакетов, ни IAM).
-policy_json() { # <rw-бакеты> <ro-бакеты>
-  jq -n --arg rw "$1" --arg ro "$2" '
+policy_json() { # <rw-бакеты> <ro-бакеты> [бакеты только со списком]
+  jq -n --arg rw "$1" --arg ro "$2" --arg ls "${3:-}" '
     ($rw | split(" ") | map(select(. != ""))) as $rw
     | ($ro | split(" ") | map(select(. != ""))) as $ro
+    | ($ls | split(" ") | map(select(. != ""))) as $ls
     | {Version: "2012-10-17", Statement: (
         (if ($rw | length) > 0 then [
           {Effect: "Allow", Action: ["s3:ListBucket", "s3:GetBucketLocation", "s3:ListBucketMultipartUploads"],
@@ -52,7 +61,9 @@ policy_json() { # <rw-бакеты> <ro-бакеты>
            Resource: ($rw | map("arn:aws:s3:::" + . + "/*"))}] else [] end)
         + (if ($ro | length) > 0 then [
           {Effect: "Allow", Action: ["s3:ListBucket", "s3:GetBucketLocation"], Resource: ($ro | map("arn:aws:s3:::" + .))},
-          {Effect: "Allow", Action: ["s3:GetObject"], Resource: ($ro | map("arn:aws:s3:::" + . + "/*"))}] else [] end))}'
+          {Effect: "Allow", Action: ["s3:GetObject"], Resource: ($ro | map("arn:aws:s3:::" + . + "/*"))}] else [] end)
+        + (if ($ls | length) > 0 then [
+          {Effect: "Allow", Action: ["s3:ListBucket", "s3:GetBucketLocation"], Resource: ($ls | map("arn:aws:s3:::" + .))}] else [] end))}'
 }
 
 contains() { case " $1 " in *" $2 "*) return 0 ;; esac; return 1; }
@@ -81,11 +92,11 @@ done
 # 2. Пользователи и политики.
 for svc in $SERVICES; do
   ak="$(key_of "$svc" ACCESS_KEY)"; sk="$(key_of "$svc" SECRET_KEY)"
-  policy_json "$(rw_of "$svc")" "$(ro_of "$svc")" >"$work/$svc.json"
+  policy_json "$(rw_of "$svc")" "$(ro_of "$svc")" "$(ls_of "$svc")" >"$work/$svc.json"
   rc admin policy create root "rt-$svc" "$work/$svc.json" >/dev/null
   rc admin user add root "$ak" "$sk" >/dev/null
   rc admin policy attach root "rt-$svc" --user "$ak" >/dev/null
-  log "ключ сервиса $svc: политика rt-$svc (запись: $(rw_of "$svc"); только чтение: $(ro_of "$svc"))"
+  log "ключ сервиса $svc: политика rt-$svc (запись: $(rw_of "$svc"); только чтение: $(ro_of "$svc"); только список: $(ls_of "$svc"))"
 done
 
 # 3. Чужие пользователи (старые ключи после смены идентификатора, заведённые вручную) удаляются. Корневой ключ не трогается никогда,
@@ -111,7 +122,7 @@ log "erp-temp: удаление объектов через 1 сутки"
 for svc in $SERVICES; do
   alias_name="u-$svc"
   rc alias set "$alias_name" "$S3_ENDPOINT" "$(key_of "$svc" ACCESS_KEY)" "$(key_of "$svc" SECRET_KEY)" >/dev/null
-  rw="$(rw_of "$svc")"; ro="$(ro_of "$svc")"
+  rw="$(rw_of "$svc")"; ro="$(ro_of "$svc")"; lo="$(ls_of "$svc")"
   for bucket in $S3_BUCKETS; do
     if contains "$rw" "$bucket"; then
       rc ls "$alias_name/$bucket" >/dev/null 2>&1 || die "$svc: нет чтения своего бакета $bucket"
@@ -123,6 +134,15 @@ for svc in $SERVICES; do
         rc rm "root/$bucket/.s3-init-probe" >/dev/null 2>&1 || true
         die "$svc: запись в бакет $bucket должна быть закрыта"
       fi
+    elif contains "$lo" "$bucket"; then
+      rc ls "$alias_name/$bucket" >/dev/null 2>&1 || die "$svc: нет списка бакета $bucket"
+      # Содержимое закрыто: читаем заведомо существующий объект корневым ключом и пробуем под ключом сервиса.
+      printf 'probe' | rc pipe "root/$bucket/.s3-init-probe" >/dev/null 2>&1 || die "$svc: не удалось создать пробный объект в $bucket"
+      if rc cat "$alias_name/$bucket/.s3-init-probe" >/dev/null 2>&1; then
+        rc rm "root/$bucket/.s3-init-probe" >/dev/null 2>&1 || true
+        die "$svc: чтение объектов бакета $bucket должно быть закрыто (только список)"
+      fi
+      rc rm "root/$bucket/.s3-init-probe" >/dev/null 2>&1 || true
     else
       if rc ls "$alias_name/$bucket" >/dev/null 2>&1; then die "$svc: чужой бакет $bucket доступен"; fi
     fi

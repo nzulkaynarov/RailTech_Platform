@@ -133,7 +133,7 @@ DLQ растёт после исправления причины, `company mism
 ## Поля журнала шины (W15-H8b, B-006)
 Записи `rt_bus*` в JSON-журнале CRM и EDS несут поля `extra` отдельными ключами, а не только имя события: `subscriber`, `event_id`,
 `event_type`, `attempt`, `status_code` (код ответа подписчика или отказа приёма), `reason` (причина отказа приёма, `rt_bus_receive_rejected`),
-`error`, `next_attempt_at`, `delivery_id`, `publisher`, `actor`. Причину повтора и отказа доставки видно в одной строке:
+`error`, `next_attempt_at`, `delivery_id`, `publisher`, `actor`. Текстовые поля `error` и `reason` усекаются до 200 символов; при отказе приёма по схеме (`invalid_data`, `invalid_envelope`) в `reason` пишется только код: сообщения схемы цитируют значения из тела события (персональные данные в логах недопустимы). Причину повтора и отказа доставки видно в одной строке:
 
 ```bash
 $C logs --no-log-prefix crm-worker | grep rt_bus_delivery_retry | jq '{event, subscriber, event_id, attempt, status_code, error}'

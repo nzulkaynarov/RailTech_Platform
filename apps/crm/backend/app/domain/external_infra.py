@@ -207,7 +207,8 @@ def redis(f: RedisFacts, now: datetime) -> CheckResult:
             f"{title} не проверен: адрес не задан в окружении CRM",
             hint=hosting_hint(
                 f"CRM не знает адрес {title.lower()} и не может проверить его",
-                "Задать REDIS_BROKER_URL и REDIS_CACHE_URL у сервисов CRM в .env сервера",
+                "Выложить текущий релиз: деплой сам создаёт REDIS_PROBE_PASSWORD "
+                "(пользователь пробы crm-probe) и адреса REDIS_BROKER_URL, REDIS_CACHE_URL",
             ),
             cause="server_down",
         )

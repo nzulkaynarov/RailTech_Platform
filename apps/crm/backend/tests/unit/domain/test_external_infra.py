@@ -135,7 +135,7 @@ def test_redis_down_is_a_hosting_failure_with_the_impact(key: str) -> None:
 def test_redis_not_configured_is_not_checked() -> None:
     result = redis(RedisFacts(REDIS_BROKER, configured=False), NOW)
     assert result.status == "unknown"
-    assert "REDIS_BROKER_URL" in (result.hint or "")
+    assert "REDIS_PROBE_PASSWORD" in (result.hint or "")
 
 
 @pytest.mark.parametrize(

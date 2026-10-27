@@ -372,7 +372,7 @@ class _Run:
             outcome = await self._eds_publish()
         except Exception as exc:  # noqa: BLE001 — любой сбой публикации — причина строки, не обвал
             error = type(exc).__name__
-            logger.warning("eds_rights_republish_failed", error=repr(exc), source="check")
+            logger.warning("eds_rights_republish_failed", error=type(exc).__name__, source="check")
         if outcome is not None and outcome.skipped_locked:
             error = "skipped_locked"
         if error is None:

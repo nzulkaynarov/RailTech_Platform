@@ -89,3 +89,13 @@ def test_extra_processor_ignores_other_loggers_and_keeps_existing_keys() -> None
     assert kept["reason"] == "explicit"
     # нативная запись structlog (без `_record`) проходит без изменений
     assert structlog_extra_processor(None, "info", {"event": "x"}) == {"event": "x"}
+
+
+def test_extra_processor_truncates_free_text_fields() -> None:
+    long = "x" * 500
+    event = structlog_extra_processor(
+        None, "warning", {"event": "e", "_record": _record("rt_bus", error=long, reason=long)}
+    )
+    assert len(event["error"]) == 200
+    assert len(event["reason"]) == 200
+    assert event["error"].endswith("…")

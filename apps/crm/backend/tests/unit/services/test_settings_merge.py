@@ -4,9 +4,10 @@ from types import SimpleNamespace
 from typing import Any
 
 import pytest
+from pydantic import ValidationError
 
 from app.domain.language import Language
-from app.schemas.settings import AppSettings, BusinessHoursSettings, KbSettings
+from app.schemas.settings import AppSettings, BusinessHoursSettings, CompanySettings, KbSettings
 from app.services.settings import SettingsService, _merge, _with_env_defaults
 
 
@@ -145,3 +146,20 @@ async def test_saving_company_form_does_not_persist_derived_address(
     assert payload["crm_base_url"] == "http://localhost"
     # Потребители по-прежнему получают адрес из окружения.
     assert (await service.get()).company.crm_base_url == ENV_CRM
+
+
+@pytest.mark.parametrize(
+    "value", ["javascript:alert(1)", "crm.example.com", "ftp://crm.example.com", "https://a b"]
+)
+def test_crm_base_url_must_be_http(value: str) -> None:
+    """Адрес CRM попадает в ссылки Telegram (B-009): схема не http(s) — отказ при сохранении."""
+    with pytest.raises(ValidationError):
+        CompanySettings(crm_base_url=value)
+
+
+def test_crm_base_url_accepts_http_and_empty() -> None:
+    assert (
+        CompanySettings(crm_base_url=" https://crm.example.com ").crm_base_url
+        == "https://crm.example.com"
+    )
+    assert CompanySettings(crm_base_url="").crm_base_url == ""

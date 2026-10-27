@@ -1,6 +1,7 @@
 """CRM и ERP на respx: состояние входа, ротация refresh-токенов, выход (контракты CRM и ERP)."""
 
 import base64
+import asyncio
 import json
 from typing import Any
 
@@ -63,6 +64,7 @@ class Backends:
         # None — успех: CRM отдаёт новую пару токенов этой сессии (прочие сессии она закрыла)
         self.change_password_response: tuple[int, dict[str, Any]] | None = None
         self.me_unauthorized_once = False
+        self.change_password_delay = 0.0  # CRM «думает» (хеширование пароля): окно для второй вкладки
         self.must_change = False
         self.crm_login = router.post(f"{CRM_URL}/api/v1/auth/login").mock(side_effect=self._login)
         self.crm_me = router.get(f"{CRM_URL}/api/v1/me").mock(side_effect=self._me)
@@ -178,8 +180,13 @@ class Backends:
             200, json={"token": "sso-token-1", "redirect_url": "http://erp.test/sso"}
         )
 
-    def _change_password(self, request: httpx.Request) -> httpx.Response:
+    async def _change_password(self, request: httpx.Request) -> httpx.Response:
         if self.change_password_response is None:
+            # CRM закрывает прежние токены сразу при смене (до ответа), этой сессии выдаёт новую пару.
+            self.crm_valid_access.clear()
+            self.crm_valid_refresh.clear()
+            if self.change_password_delay:
+                await asyncio.sleep(self.change_password_delay)
             return self._token_response()
         status, body = self.change_password_response
         return httpx.Response(status, json=body) if body else httpx.Response(status)

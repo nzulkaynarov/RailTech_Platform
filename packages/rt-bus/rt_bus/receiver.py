@@ -170,13 +170,18 @@ def decide(
     )
 
 
+#: Отказы, текст которых содержит значения из тела события (сообщения схемы цитируют их): в журнал уходит
+#: только код отказа — персональные данные в логах недопустимы (SPEC §11).
+_DETAIL_HAS_VALUES = frozenset({"invalid_data", "invalid_envelope"})
+
+
 def log_rejection(rejection: Rejection, headers: Mapping[str, str]) -> None:
     h = lower_headers(headers)
     logger.warning(
         "rt_bus_receive_rejected",
         extra={
             "status_code": rejection.status_code,
-            "reason": rejection.detail,
+            "reason": rejection.error if rejection.error in _DETAIL_HAS_VALUES else rejection.detail,
             "publisher": h.get(HEADER_PUBLISHER.lower()),
             "event_id": h.get(HEADER_EVENT_ID.lower()),
         },

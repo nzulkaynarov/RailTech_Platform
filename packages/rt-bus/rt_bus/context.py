@@ -144,6 +144,11 @@ LOG_EXTRA_FIELDS: frozenset[str] = frozenset(
 )
 
 
+#: Текстовые поля, которые могут нести чужой текст (ответ подписчика, причина отказа): усекаются до `LOG_TEXT_LIMIT`.
+LOG_TEXT_FIELDS: frozenset[str] = frozenset({"error", "reason"})
+LOG_TEXT_LIMIT = 200
+
+
 def structlog_extra_processor(
     _logger: Any, _method: str, event_dict: MutableMapping[str, Any]
 ) -> MutableMapping[str, Any]:
@@ -157,5 +162,8 @@ def structlog_extra_processor(
         return event_dict
     for key in LOG_EXTRA_FIELDS:
         if key in record.__dict__:
-            event_dict.setdefault(key, record.__dict__[key])
+            value = record.__dict__[key]
+            if key in LOG_TEXT_FIELDS and isinstance(value, str) and len(value) > LOG_TEXT_LIMIT:
+                value = value[: LOG_TEXT_LIMIT - 1] + "…"
+            event_dict.setdefault(key, value)
     return event_dict

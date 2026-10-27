@@ -13,6 +13,8 @@ tag="${1:?usage: deploy.sh <тег-образов>}"
 rel="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 [[ "$(basename "$rel")" == "$tag" ]] || log "внимание: каталог релиза ($(basename "$rel")) не совпадает с тегом образов ($tag)"
 
+# Автоматические секреты (REDIS_PROBE_PASSWORD, W15-H8b) создаются здесь, до проверки CHANGE_ME: руками их на сервере не вписывают.
+[[ ! -f "$RT_ENV_FILE" ]] || "$rel/infra/deploy/make-env-prod.sh" ensure-secrets "$RT_ENV_FILE"
 require_env_file
 # Домен Платформы (INF-P0-5): без него Caddy не получит сертификат, а compose упал бы на `:?` уже при разборе конфигурации.
 require_env_var PLATFORM_DOMAIN "добавьте строку PLATFORM_DOMAIN=platform.railtech.uz (см. infra/.env.prod.example; A-запись домена на VPS 1 должна уже быть) и запустите деплой снова"

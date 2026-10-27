@@ -1,5 +1,6 @@
 """Выход, CSRF, смена пароля и лимит попыток входа."""
 
+import asyncio
 from typing import Annotated
 
 import httpx
@@ -178,6 +179,31 @@ async def test_change_password_swaps_in_the_new_token_pair(web: Web) -> None:
     web.clock.advance(61)
     assert (await web.client.get("/api/v1/me")).status_code == 200
     assert web.be.crm_me.calls.last.request.headers["authorization"] == "Bearer crm-access-2"
+
+
+async def test_change_password_holds_the_session_lock_against_a_second_tab(web: Web) -> None:
+    """Вторая вкладка во время смены пароля: без блокировки она берёт из Redis прежнюю пару, которую CRM уже
+    закрыла, получает 401 и по закрытому refresh-токену убивает сессию. Под блокировкой она ждёт и идёт
+    уже на новой паре."""
+    await web.login()
+    web.be.change_password_delay = 0.3
+    web.clock.advance(61)  # профиль устарел: следующий /me идёт в CRM
+
+    change = asyncio.create_task(
+        web.send(
+            "POST",
+            "/api/v1/auth/change-password",
+            json={"current_password": PASSWORD, "new_password": "brand-new-pass"},
+        )
+    )
+    await asyncio.sleep(0.1)  # запрос смены уже в CRM, пара в Redis ещё прежняя
+    second_tab = await web.client.get("/api/v1/me")
+    changed = await change
+
+    assert changed.status_code == 204
+    assert second_tab.status_code == 200
+    assert web.be.crm_me.calls.last.request.headers["authorization"] == "Bearer crm-access-2"
+    assert len(web.redis.session_keys()) == 1  # сессия жива
 
 
 async def test_change_password_without_a_refresh_cookie_is_a_backend_failure(web: Web) -> None:

@@ -574,7 +574,7 @@ async def test_redis_rows_use_their_own_address_and_never_print_the_password() -
 async def test_redis_without_an_address_is_not_checked() -> None:
     found = await collect(deps(), ["redis_broker", "redis_cache"])
     assert {r.status for r in found.values()} == {"unknown"}
-    assert "REDIS_BROKER_URL" in (found["redis_broker"].hint or "")
+    assert "REDIS_PROBE_PASSWORD" in (found["redis_broker"].hint or "")
 
 
 async def test_bus_dlq_row_comes_from_the_bus_tables(monkeypatch: pytest.MonkeyPatch) -> None:

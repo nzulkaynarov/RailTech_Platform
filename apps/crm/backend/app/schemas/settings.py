@@ -41,6 +41,16 @@ class CompanySettings(StrictModel):
         description="Адрес кабинета клиента (https://…): кнопка «Кабинет» под сообщениями бота о событиях ERP; пусто — кнопки нет",
     )
 
+    @field_validator("crm_base_url")
+    @classmethod
+    def _crm_base_url_is_http(cls, value: str) -> str:
+        """Адрес попадает в ссылки Telegram: только http(s) (`javascript:` и мусор — нет). Пусто —
+        «не задан» (подставится адрес из окружения)."""
+        value = value.strip()
+        if value and not is_http_url(value):
+            raise ValueError("нужен адрес вида https://crm.example.com")
+        return value
+
     @field_validator("cabinet_url")
     @classmethod
     def _cabinet_url_is_http(cls, value: str) -> str:
