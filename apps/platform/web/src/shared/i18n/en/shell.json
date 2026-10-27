@@ -1,6 +1,7 @@
 {
   "docTitle": "{{page}} — RailTech Platform",
-  "soon": "Coming in phase P2",
+  "soon": "Coming in the next update",
+  "soonPilot": "Coming by the pilot",
   "skip": "Skip to content",
   "loading": "Loading…",
   "rail": {
@@ -66,7 +67,8 @@
       "decisions": "D",
       "clients": "C",
       "system": "!"
-    }
+    },
+    "where": "Where to look"
   },
   "panel": {
     "label": "Side panel",
@@ -83,15 +85,6 @@
     "logout": "Sign out",
     "rolesMany": "All roles",
     "selected": "Selected"
-  },
-  "profile": {
-    "title": "Profile",
-    "name": "Name",
-    "email": "Email",
-    "position": "Position",
-    "roles": "Roles",
-    "access": "Access",
-    "noPosition": "not set"
   },
   "languages": {
     "ru": "Русский",
@@ -194,7 +187,7 @@
     "write": "Write to the administrator",
     "titleActiveRole": "This section is not available for the selected role",
     "textActiveRole": "Choose “All roles” in the profile menu (the avatar) to get back all your sections. If you need this one for work, write to the administrator.",
-    "writeSoon": "Coming in phase P4"
+    "writeSoon": "Coming by the pilot. For now, message the administrator directly"
   },
   "notFound": {
     "heading": "Page not found",
@@ -203,8 +196,7 @@
     "back": "My tasks"
   },
   "stub": {
-    "subtitle": "This section will be filled in later phases: the shell and navigation are available now.",
-    "object": "Card {{id}}"
+    "subtitle": "The section is moving to the Platform"
   },
   "search": {
     "label": "Search results",
@@ -228,6 +220,16 @@
       "chat": "Chat",
       "ticket": "Staff request",
       "integration": "Integration"
-    }
+    },
+    "actions": {
+      "group": "Actions",
+      "tag": "Action",
+      "createRequest": "Create a request",
+      "createDocument": "Create a memo",
+      "inviteEmployee": "Invite an employee",
+      "legacyHint": "For now done in the old system — press to see where"
+    },
+    "where": "Where to look",
+    "whereClose": "Close the hint"
   }
 }

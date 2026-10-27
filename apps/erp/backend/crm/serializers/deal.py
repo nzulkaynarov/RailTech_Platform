@@ -84,7 +84,7 @@ class DealListSerializer(serializers.ModelSerializer):
     # Offline client (Deal.contact) — so the send composer can name the recipient the backend
     # will actually resolve (resolve_quote_recipient falls back to the contact's email).
     contact_name = serializers.CharField(source="contact.name", read_only=True, allow_null=True)
-    active_quote = QuoteSerializer(read_only=True)
+    active_quote = QuoteSerializer(read_only=True, allow_null=True)
     execution_complete = serializers.SerializerMethodField()
     # Deal owner in the back office (ADR-0006 Move 2): one per deal — the seller is the own company.
     assigned_to = serializers.SerializerMethodField()
@@ -147,7 +147,7 @@ class DealDetailSerializer(serializers.ModelSerializer):
     """MED-3: Full detail serializer with quotes."""
 
     quotes = QuoteSerializer(many=True, read_only=True)
-    active_quote = QuoteSerializer(read_only=True)
+    active_quote = QuoteSerializer(read_only=True, allow_null=True)
     stage_name = serializers.CharField(source="stage.name", read_only=True)
     stage_code = serializers.CharField(source="stage.code", read_only=True)
     company_name = serializers.CharField(source="company.name", read_only=True, allow_null=True)

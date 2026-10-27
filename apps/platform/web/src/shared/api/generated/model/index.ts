@@ -133,6 +133,17 @@
  * (директор читает), сброс пароля — `admin: full`; профиль доступен каждому вошедшему. Секреты из записей журнала BFF вырезает
  * (значения полей `password`, `secret`, `token`, `key`, `*_key`, `credentials`, `authorization`, `pin` и им подобных -> `***` целиком, любого типа).
  *
+ * **0.19.0 (W15-H1) — мост в старые экраны.** Добавляющее изменение (тег `bridge`). Пока раздел Платформы ещё заглушка, сотрудник
+ * открывает ту же работу в старой CRM или старом ERP новой вкладкой. `GET /bridge` отдаёт публичные адреса старых фронтов
+ * (`crm_url`, `erp_url`): настройки `PLATFORM_CRM_PUBLIC_URL` и `PLATFORM_ERP_PUBLIC_URL`, а если они пусты — адрес выводится из
+ * адреса, по которому открыта Платформа (`platform.<домен>` -> `crm.<домен>` и `erp.<домен>`, схема и порт те же); не задан и не
+ * выводится — `null`, SPA не показывает кнопку. `erp_sso` — у сотрудника есть доступ к ERP, и вход можно сделать без второго пароля.
+ * `POST /bridge/erp-sso` — тот же путь, каким старая CRM открывает ERP: BFF просит у CRM одноразовый SSO-токен (`POST
+ * /auth/sso/token`, живёт 60 секунд) токеном сотрудника и возвращает готовый адрес обмена `{ERP}/sso/exchange#token=…`; адрес
+ * ERP берёт сама CRM (`ERP_FRONTEND_URL`). Токен в журнал не пишется, ответ — `Cache-Control: no-store`. Права раздела не нужны:
+ * достаточно сессии и доступа к ERP (CRM не выдала токен — 403 `FORBIDDEN`, `details.reason`: `platform_access_denied` или
+ * `sso_disabled`).
+ *
  * **0.17.0 (D1-5) — EDS · Создать документ и «Мои документы».** Добавляющее изменение, тег `eds-documents`: `GET/POST /eds/documents`
  * (мои документы или реестр «Все документы»; создать и сразу отправить), `GET/PUT /eds/documents/{id}` (карточка с маршрутом и
  * решениями; сохранить черновик), `POST /eds/document-files` и `GET /eds/document-files/{file_id}` (вложения: загрузка потоком до 25 МБ,
@@ -148,6 +159,15 @@
  * (`erp_not_connected` — сначала подключите ERP, `erp_unavailable` — ERP не ответила). `POST /setup/company` без сопряжённой ERP —
  * 409 `ERP_NOT_CONNECTED` (новый код) с текстом и `details.link` на карточку ERP; недоступная ERP — прежний 503 `BACKEND_UNAVAILABLE`.
  *
+ * **0.17.0 (W15-H3) — здоровье интеграций: одна причина, одна строка, одно действие.** Добавляющее изменение. `GET
+ * /admin/integrations` и `GET /admin/integrations/services` отдают группы по причине (`ServiceGroup`: состояние `ServiceState`
+ * — «Сломано» только после 15 минут непрерывного сбоя, «Нестабильно» для дребезга, «Ожидаемо на стенде», «Не проверено»;
+ * «кто исправляет» `ServiceOwner`, действия `ServiceAction`, «с …», `flaps_24h`, готовый текст `message`, замаскированный
+ * `technical`), у сервисов — `state`, `cause_key`, `owner`, `action`, `since`, `flaps_24h`, `last_recovered_at`, у
+ * `AttentionItem` — `group` и `technical`, у компонентов состояния — `expected_on_stand`. Новый `PUT
+ * /admin/integrations/models/providers/{provider}/key` — ключ провайдера на все его роли одной операцией (один пароль, без
+ * частичного применения).
+ *
  * **0.16.0 (D1-3) — EDS · Входящие письма и резолюция директора.** Добавляющее изменение, тег `letters`: `GET /eds/letters`
  * (список со статусом словами интерфейса и фильтром по статусу), `GET /eds/letters/{ref}` (карточка письма по id или по
  * номеру `ВХ-104/26`: реквизиты, суть, вложения, связи, журнал, шаг пути заявки; данные заявки — из ERP по ссылке письма,
@@ -158,6 +178,16 @@
  * (менеджер, бухгалтер), полный — резолюция, возврат, отказ (директор). EDS — отдельный домен: вызовы идут с токеном доступа
  * EDS, полученным обменом токена сотрудника CRM `aud=eds` (`docs/architecture/platform-bff.md` §3); ошибки EDS переводятся в
  * формат `Error` (`source = eds`, `details.reason` и `details.fields` EDS сохраняются).
+ *
+ * **0.21.0 (W15-H6) — Профиль сотрудника.** Добавляющее изменение, тег `me`: `GET/PATCH /me/profile` (имя, телефон, язык, часовой
+ * пояс, подпись для писем; должность и роли только читаются, правит админ), `PUT/DELETE /me/avatar` и `GET /staff/{id}/avatar`
+ * (фото: клиент обрезает по кругу, CRM хранит в S3, BFF отдаёт без публичных ссылок; `Me.avatar_url` — вместо инициалов),
+ * `POST/DELETE /me/telegram-link` (сотрудник привязывает Telegram сам: ссылка `t.me/<бот>?start=staff_<одноразовый код>` на 10
+ * минут), `GET /me/deputy-candidates`, `PUT/DELETE /me/deputy` (замещение на период; заместитель видит очередь замещаемого:
+ * `QueueItem.on_behalf_of`, права на объекты — свои). Вход: `POST /auth/forgot-password` (ответ одинаков для любой учётной
+ * записи; ссылка уходит на почту или в Telegram, иначе тихо ничего) и `POST /auth/reset-password` (новый пароль по одноразовой
+ * ссылке; неверная или просроченная — 422 `VALIDATION_FAILED`, `details.reason = reset_token_invalid`). `Me.access` остаётся для
+ * совместимости, но экран «Доступ: CRM · ERP» убран: вместо него роли словами.
  *
  * 0.2.4: `423 ACCOUNT_LOCKED` объявлен и на `POST /auth/change-password` (CRM блокирует учётную запись после неверных
  * текущих паролей).
@@ -174,10 +204,10 @@
  * 0.2.1 (Q-P0-3): перечень `Error.code` дополнен `INTERNAL_ERROR` (500) и нейтральными кодами 4xx `BAD_REQUEST`,
  * `METHOD_NOT_ALLOWED`, `HTTP_<статус>` для ответов, которые не относятся ни к одному именованному коду.
  *
- * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; остальные запросы — 300 в минуту на сессию; превышение — 429
+ * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; «Забыли пароль?» — 5 запросов в час на IP и на адрес; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.17.0
+ * OpenAPI spec version: 0.21.0
  */
 
 export * from "./accessLevel";
@@ -208,6 +238,7 @@ export * from "./auditEntry";
 export * from "./auditEntryAfter";
 export * from "./auditEntryBefore";
 export * from "./auditPage";
+export * from "./avatarUpload";
 export * from "./backendUnavailableResponse";
 export * from "./backupDatabase";
 export * from "./backupItem";
@@ -229,6 +260,8 @@ export * from "./brandProfileLayoutPreset";
 export * from "./brandProfileUpdate";
 export * from "./brandProfileUpdateFontFamily";
 export * from "./brandProfileUpdateLayoutPreset";
+export * from "./bridge";
+export * from "./bridgeErpSso";
 export * from "./busCursorParameter";
 export * from "./busDelivery";
 export * from "./busDeliveryPage";
@@ -266,13 +299,17 @@ export * from "./chargeTemplateList";
 export * from "./chargeTemplateUpdate";
 export * from "./chargeType";
 export * from "./chargeTypeList";
+export * from "./colleague";
 export * from "./companyItemRef";
 export * from "./companyProfile";
 export * from "./companyProfileUpdate";
+export * from "./covering";
 export * from "./createdId";
 export * from "./csrfFailedResponse";
 export * from "./csrfTokenParameter";
 export * from "./decimalString";
+export * from "./deputyPeriod";
+export * from "./deputyUpdate";
 export * from "./documentKind";
 export * from "./documentPlaceholder";
 export * from "./documentPlaceholderGroup";
@@ -345,6 +382,8 @@ export * from "./externalServiceSource";
 export * from "./externalServiceStatus";
 export * from "./externalServiceSystem";
 export * from "./forbiddenResponse";
+export * from "./forgotPasswordAccepted";
+export * from "./forgotPasswordIn";
 export * from "./fxRate";
 export * from "./fxRateIn";
 export * from "./fxRateJournalEntry";
@@ -461,12 +500,17 @@ export * from "./passwordConfirm";
 export * from "./personRef";
 export * from "./platformSettings";
 export * from "./platformSettingsUpdate";
+export * from "./profile";
+export * from "./profileUpdate";
+export * from "./providerKeyIn";
+export * from "./providerKeyResult";
 export * from "./providerToday";
 export * from "./queue";
 export * from "./queueCard";
 export * from "./queueCards";
 export * from "./queueItem";
 export * from "./queueItemKind";
+export * from "./queueOwner";
 export * from "./quoteDefaults";
 export * from "./quoteDefaultsCatalogPriceVisibility";
 export * from "./quoteDefaultsUpdate";
@@ -479,6 +523,7 @@ export * from "./referenceKind";
 export * from "./replyTemplate";
 export * from "./replyTemplateIn";
 export * from "./replyTemplateList";
+export * from "./resetPasswordIn";
 export * from "./resolutionAssigneeIn";
 export * from "./resolutionAssignees";
 export * from "./resolutionAssigneesDirectory";
@@ -511,12 +556,16 @@ export * from "./searchHit";
 export * from "./searchParams";
 export * from "./searchResult";
 export * from "./sectionLevel";
+export * from "./serviceAction";
 export * from "./serviceCheck";
 export * from "./serviceCheckStatus";
 export * from "./serviceCheckTier";
 export * from "./serviceDay";
+export * from "./serviceGroup";
 export * from "./serviceIncident";
+export * from "./serviceOwner";
 export * from "./servicesSummary";
+export * from "./serviceState";
 export * from "./serviceSwitch";
 export * from "./serviceSwitchIn";
 export * from "./serviceSwitchKind";
@@ -550,6 +599,9 @@ export * from "./systemStatusStatus";
 export * from "./telegramChannel";
 export * from "./telegramChannelList";
 export * from "./telegramConnector";
+export * from "./telegramLink";
+export * from "./telegramState";
 export * from "./telegramTokenIn";
+export * from "./timezone";
 export * from "./tooManyRequestsResponse";
 export * from "./validationFailedResponse";

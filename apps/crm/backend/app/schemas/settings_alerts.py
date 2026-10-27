@@ -34,7 +34,10 @@ class ServiceAlertsSettings(StrictModel):
         default=60,
         ge=15,
         le=1440,
-        description="Не чаще одного оповещения о сбое сервиса за это число минут",
+        description=(
+            "Устарело и не используется: «Сломано» приходит одно после 15 минут непрерывного "
+            "сбоя, не больше одного в сутки на причину (ADR-0024, W15-H3)"
+        ),
     )
 
     @field_validator("extra_emails")

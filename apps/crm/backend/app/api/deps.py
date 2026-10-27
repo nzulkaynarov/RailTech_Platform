@@ -14,7 +14,7 @@ from app.repositories import platform_roles as platform_roles_repo
 from app.repositories import users as users_repo
 from app.security.principal import Principal
 from app.security.rbac import Rbac
-from app.security.tokens import TokenError, decode_access
+from app.security.tokens import TokenError, closed_by_password_reset, decode_access
 from app.services.event_broker import EventBroker
 
 _bearer = HTTPBearer(auto_error=False)
@@ -81,6 +81,8 @@ async def get_principal(
         user = await users_repo.get(session, claims.user_id)
         if user is None or not user.is_active:
             raise AuthError("user inactive")
+        if closed_by_password_reset(claims.issued_at, user.password_changed_at):
+            raise AuthError("session closed by a password reset")
         roles = await users_repo.roles_of(session, user.id)
         role_ids = await platform_roles_repo.rbac_identity(session, user.id)
     return Principal(

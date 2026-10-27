@@ -180,6 +180,7 @@ async def bot_lifespan(
                     container.session_factory,
                     link_key(container.settings.jwt_secret.get_secret_value().encode("utf-8")),
                 ),
+                staff_link=container.staff_telegram_link,
             )
 
         async def resolve() -> tuple[str, TokenSource]:

@@ -8,9 +8,9 @@
 
 Данных для переноса нет: у существующих лидов срок не заводится.
 
-Revision ID: 0041_client_notices
-Revises: 0040_identity_catalog_state
-Create Date: 2026-10-27 15:00:00+00:00
+Revision ID: 0044_client_notices
+Revises: 0043_messages_bot_created_idx
+Create Date: 2026-10-28 11:00:00+00:00
 """
 
 from collections.abc import Sequence
@@ -19,8 +19,8 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision: str = "0041_client_notices"
-down_revision: str | None = "0040_identity_catalog_state"
+revision: str = "0044_client_notices"
+down_revision: str | None = "0043_messages_bot_created_idx"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

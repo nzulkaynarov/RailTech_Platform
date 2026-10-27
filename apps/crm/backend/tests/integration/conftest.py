@@ -68,10 +68,13 @@ TABLES = (
     "rt_bus_subscriber_state",
     "external_service_checks",
     "external_service_incidents",
+    "external_cause_alerts",
     "external_service_switches",
     "procrastinate_jobs",
     "platform_roles",
     "identity_catalog_state",
+    "staff_telegram_links",
+    "password_reset_tokens",
 )
 FAKE_KEY = "x" * 40  # фиктивный ключ только для тестов
 

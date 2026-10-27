@@ -17,7 +17,9 @@ import { QueueList, type QueueItem as RowItem } from "../../shared/ui/QueueList"
 import { SourceBanner } from "../../shared/ui/SourceBanner";
 import { matchSection } from "../registry";
 import { viewRoleNames } from "../../entities/role/roles";
-import { dueBadge, pluralForm } from "./queue";
+import { isActionable } from "../bridge";
+import { WhereToDo } from "../stub/WhereToDo";
+import { dueBadge, isUrgent, pluralForm, queueEmptyKind } from "./queue";
 import "./dashboard.css";
 
 /** Плашка нужна, если хотя бы в одном из ответов источник не ответил. */
@@ -70,9 +72,35 @@ export function QueuePage() {
       (value) => format.date(value, "short"),
     ),
     title: item.title,
-    caption: item.subtitle,
+    // Строка замещаемого коллеги (W15-H6): «за Имя · …» — чья это работа.
+    caption: item.on_behalf_of
+      ? `${t("modules:dashboard.queue.onBehalf", { name: item.on_behalf_of.name })} · ${item.subtitle}`
+      : item.subtitle,
     to: item.object.path,
+    urgent: isUrgent(item),
+    // У цели нет экрана в Платформе — «Где сделать» вместо ссылки на заглушку (W15-H2).
+    ...(isActionable(item.object.path) ? {} : { where: <WhereToDo path={item.object.path} /> }),
   }));
+
+  const sources = mergeSources(queue.data?.sources, cards.data?.sources);
+  const partial =
+    sources?.crm === "unavailable" && sources.erp === "unavailable"
+      ? "both"
+      : sources?.crm === "unavailable"
+        ? "crm"
+        : sources?.erp === "unavailable"
+          ? "erp"
+          : null;
+  const names = {
+    crm: t("modules:crm.name"),
+    erp: t("modules:erp.name"),
+  };
+  const partialMessages = {
+    crm: t("modules:dashboard.queue.partial.crm", names),
+    erp: t("modules:dashboard.queue.partial.erp", names),
+    both: t("modules:dashboard.queue.partial.both", names),
+  };
+  const emptyKind = queueEmptyKind(me);
 
   const projects = matchSection("/dashboard/projects");
   const showLink = projects !== undefined && canSee(me, projects.section.access);
@@ -104,18 +132,26 @@ export function QueuePage() {
         title={t("modules:dashboard.queue.title")}
         items={rows}
         empty={
-          <EmptyState
-            level={3}
-            title={t("modules:dashboard.stub.queue.title")}
-            text={t("modules:dashboard.stub.queue.text")}
-            action={
-              showLink ? (
-                <LinkButton to="/dashboard/projects">
-                  {t("modules:dashboard.stub.queue.action")}
-                </LinkButton>
-              ) : undefined
-            }
-          />
+          partial ? (
+            <EmptyState
+              level={3}
+              title={t("modules:dashboard.queue.partialEmpty.title")}
+              text={t("modules:dashboard.queue.partialEmpty.text")}
+            />
+          ) : (
+            <EmptyState
+              level={3}
+              title={t(`modules:dashboard.queue.empty.${emptyKind}.title`)}
+              text={t(`modules:dashboard.queue.empty.${emptyKind}.text`)}
+              action={
+                emptyKind === "director" && showLink ? (
+                  <LinkButton to="/dashboard/projects">
+                    {t("modules:dashboard.queue.empty.director.action")}
+                  </LinkButton>
+                ) : undefined
+              }
+            />
+          )
         }
       />
     );
@@ -124,10 +160,7 @@ export function QueuePage() {
   return (
     <div className="pf-queue-page">
       <PageHeader title={title} subtitle={subtitle} />
-      <SourceBanner
-        sources={mergeSources(queue.data?.sources, cards.data?.sources)}
-        onRetry={retry}
-      />
+      <SourceBanner sources={sources} onRetry={retry} messages={partialMessages} />
       {cards.data && cards.data.cards.length > 0 ? (
         <section aria-label={t("modules:dashboard.queue.cardsLabel")}>
           <CounterGrid>

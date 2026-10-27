@@ -14,7 +14,7 @@ from __future__ import annotations
 import uuid
 from dataclasses import asdict
 
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import BasePermission, IsAuthenticated
@@ -309,7 +309,10 @@ class BusInboxRetryView(_BusWriteView):
         operation_id="busRetryInbox",
         summary="Журнал шины: повторить обработку принятого события",
         request=None,
-        responses={200: BusRetryResultSerializer},
+        responses={
+            200: BusRetryResultSerializer,
+            400: OpenApiResponse(description="`event_id` is not a UUID (field errors: {event_id: [...]})"),
+        },
         tags=TAGS,
     )
     def post(self, request, event_id: str):

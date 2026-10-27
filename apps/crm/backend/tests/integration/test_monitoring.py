@@ -99,16 +99,11 @@ async def test_alerts_fire_once_repeat_and_resolve(
         "1 за последний час\nЧто делать: откройте документ в «Базе знаний» и загрузите заново",
     ]
     assert await svc.check(now + timedelta(minutes=1)) == []  # дедупликация
-    third = await svc.check(now + timedelta(minutes=2))
-    assert third == ["⚠️ LiteLLM: шлюз моделей недоступен дольше 2 минут"]  # после 2 минут
-
-    litellm[0] = True
-    resolved = await svc.check(now + timedelta(minutes=3))
-    assert resolved == ["✅ LiteLLM: в норме"]
+    # шлюз моделей — строка центра внешних сервисов, у монитора своего «Сбоя сразу» нет
+    assert await svc.check(now + timedelta(minutes=2)) == []
+    assert await svc.check(now + timedelta(minutes=30)) == []
     async with sessions() as session:
-        row = await session.get(SystemAlert, "litellm_down")
-    assert row is not None
-    assert (row.active, row.resolved_at is not None) == (False, True)
+        assert await session.get(SystemAlert, "litellm_down") is None
     assert all(chat == CHANNEL for chat, _ in bot.sent)
 
 
@@ -149,7 +144,7 @@ async def test_sample_dialogs_masks_pii(sessions: async_sessionmaker[AsyncSessio
     assert item["label"]["golden"] is False
 
 
-async def test_model_without_credits_alerts_and_resolves_only_on_probe(
+async def test_model_without_credits_is_state_only_and_resolves_only_on_probe(
     sessions: async_sessionmaker[AsyncSession],
 ) -> None:
     await configure(sessions, daily_usd=0.0)
@@ -170,8 +165,22 @@ async def test_model_without_credits_alerts_and_resolves_only_on_probe(
     )
     hour = datetime.now(UTC).replace(minute=0, second=0, microsecond=0)
 
-    assert await svc.check(hour) == ["⚠️ Модель dialog-model: закончились кредиты"]
+    # Письмо о проблеме пробы — причина провайдера в центре сервисов; монитор хранит состояние
+    assert await svc.check(hour) == []
+    async with sessions() as session:
+        row = await session.get(SystemAlert, "model:dialog-model")
+    assert row is not None
+    assert row.active is True
     assert await svc.check(hour + timedelta(minutes=1)) == []  # не время пробы — без изменений
     problems["dialog-model"] = None
-    assert await svc.check(hour + timedelta(minutes=15)) == []  # «в норме» только после пробы
-    assert await svc.check(hour + timedelta(minutes=60)) == ["✅ Модель dialog-model: в норме"]
+    await svc.check(hour + timedelta(minutes=15))  # «в норме» только после пробы
+    async with sessions() as session:
+        row = await session.get(SystemAlert, "model:dialog-model")
+    assert row is not None
+    assert row.active is True
+    assert await svc.check(hour + timedelta(minutes=60)) == []
+    async with sessions() as session:
+        row = await session.get(SystemAlert, "model:dialog-model")
+    assert row is not None
+    assert row.active is False
+    assert bot.sent == []

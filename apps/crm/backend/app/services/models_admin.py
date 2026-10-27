@@ -5,9 +5,11 @@
 старые: запись с тем же алиасом в LiteLLM — вторая deployment группы, не замена (проверено).
 """
 
+import asyncio
 import re
 import secrets
 from collections.abc import Awaitable, Callable, Mapping
+from contextlib import suppress
 from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from functools import partial
@@ -138,6 +140,7 @@ class ModelsAdminService:
         lockout: reauth.LockoutPolicy | None = None,
         new_id: Callable[[str], str] | None = None,
         settings_service: SettingsService | None = None,
+        retry_pause_s: float = 0.5,
     ) -> None:
         self._sessions = sessions
         self._admin = admin
@@ -146,6 +149,7 @@ class ModelsAdminService:
         self._lockout = lockout or reauth.LockoutPolicy()
         self._new_id = new_id or (lambda alias: f"rt-{alias}-{secrets.token_hex(4)}")
         self._settings = settings_service
+        self._retry_pause_s = retry_pause_s
 
     async def change(
         self, who: Principal, alias: str, change: ModelChange, password: str
@@ -155,6 +159,90 @@ class ModelsAdminService:
         await self._reauth(who.user_id, password)
         params, info, source = build_params(alias, change, self._defaults)
         return await self._replace(who, alias, params, info, source, "model.update")
+
+    async def change_provider_key(
+        self, who: Principal, provider: str, api_key: str, password: str
+    ) -> list[ChangeOutcome]:
+        """Новый ключ провайдера на все его роли разом: один пароль и аудит, без частичного итога.
+
+        Модели ролей не меняются, меняется только ключ. Сначала создаются новые deployment всех
+        ролей, и только когда все созданы — удаляются прежние; сбой посередине откатывает
+        созданное (прежние остаются нетронутыми). Ключ уходит только в LiteLLM, в аудит и
+        настройки — последние 4 символа.
+        """
+        if provider not in PROVIDERS:
+            raise ValidationFailedError("unknown provider", field="provider")
+        if not 8 <= len(api_key) <= 512:
+            raise ValidationFailedError("api key is invalid", field="api_key")
+        await self._reauth(who.user_id, password)
+        found = await self._admin_call(self._admin.deployments)
+        roles: dict[str, list[Deployment]] = {}
+        for dep in found:
+            if dep.model and _split(dep.model)[0] == provider and dep.alias in self._defaults:
+                roles.setdefault(dep.alias, []).append(dep)
+        if not roles:
+            raise NotFoundError("provider has no roles")
+        if any(not d.in_db for deps in roles.values() for d in deps):
+            raise ConflictError("alias is defined in litellm config", reason=Reason.MODEL_IN_CONFIG)
+        prepared = {
+            alias: build_params(
+                alias,
+                ModelChange(provider, _split(str(deps[0].model))[1], api_key=api_key),
+                self._defaults,
+            )
+            for alias, deps in roles.items()
+        }
+        created: list[str] = []
+        try:
+            for alias, (params, info, _) in prepared.items():
+                new_id = self._new_id(alias)
+                await self._admin_call(
+                    partial(self._admin.create, new_id, alias, params, info), secret=api_key
+                )
+                created.append(new_id)
+        except UpstreamUnavailableError:
+            for model_id in created:  # откат: прежние deployment остаются как были
+                with suppress(UpstreamUnavailableError):
+                    await self._admin_call(partial(self._admin.delete, model_id))
+            raise
+        # Новые deployment уже действуют: аудит и маски — до удаления прежних, чтобы сбой удаления
+        # не оставил смену ключа без следа в журнале.
+        self._invalidate()
+        await self._audit_provider_key(who, provider, sorted(roles), api_key)
+        await self._remember_keys(who, sorted(roles), api_key)
+        leftover: list[str] = []
+        for deps in roles.values():
+            for dep in deps:
+                if not await self._delete_with_retry(dep.id):
+                    leftover.append(dep.id)  # остальные роли досчитываем, не обрываем на первой
+        if leftover:
+            # Ключ уже сменён (новые deployment действуют): успех с хвостом в журнале; прежние
+            # настройки снимет повторная смена ключа или ручная чистка в LiteLLM.
+            logger.warning("provider_key_old_deployments_left", provider=provider, ids=leftover)
+        logger.info("provider_key_changed", provider=provider, aliases=sorted(roles))
+        return [
+            ChangeOutcome(
+                alias=alias,
+                provider=provider,
+                model=_split(str(prepared[alias][0]["model"]))[1],
+                key_source="crm",
+                reindex_required=False,
+                quality_check_recommended=False,
+            )
+            for alias in sorted(roles)
+        ]
+
+    async def _delete_with_retry(self, model_id: str) -> bool:
+        """Прежний deployment удаляется с одним повтором после паузы; `False` — не удалось."""
+        for attempt in range(2):
+            try:
+                await self._admin_call(partial(self._admin.delete, model_id))
+            except UpstreamUnavailableError:
+                if attempt == 0 and self._retry_pause_s > 0:
+                    await asyncio.sleep(self._retry_pause_s)
+                continue
+            return True
+        return False
 
     async def reset(self, who: Principal, alias: str, password: str) -> ChangeOutcome:
         default = self._known(alias)
@@ -236,6 +324,31 @@ class ModelsAdminService:
         except Exception:  # noqa: BLE001 — любой сбой записи: модель уже сменена, ответ не ломаем
             # Маска — справка для экрана; сбой её записи не должен давать 500.
             logger.warning("model_key_mask_not_saved", alias=alias, key=source, exc_info=False)
+
+    async def _remember_keys(self, who: Principal, aliases: list[str], key: str) -> None:
+        """Маски ключей ролей одной записью: источник и последние 4 символа."""
+        if self._settings is None:
+            return
+        stamp = datetime.now(UTC).isoformat()
+        masks = {a: {"source": "crm", "last4": last4(key), "updated_at": stamp} for a in aliases}
+        try:
+            await self._settings.merge_map("integrations", "model_keys", masks, who.user_id)
+        except Exception:  # noqa: BLE001 — ключ уже применён, ответ не ломаем
+            logger.warning("model_key_mask_not_saved", aliases=aliases, exc_info=False)
+
+    async def _audit_provider_key(
+        self, who: Principal, provider: str, aliases: list[str], key: str
+    ) -> None:
+        async with self._sessions() as session, session.begin():
+            await audit.record(
+                session,
+                who.actor,
+                "model.provider_key",
+                "provider",
+                provider,
+                before=None,
+                after={"aliases": aliases, "key": f"…{last4(key)}"},
+            )
 
     async def _audit(
         self,

@@ -133,6 +133,17 @@
  * (директор читает), сброс пароля — `admin: full`; профиль доступен каждому вошедшему. Секреты из записей журнала BFF вырезает
  * (значения полей `password`, `secret`, `token`, `key`, `*_key`, `credentials`, `authorization`, `pin` и им подобных -> `***` целиком, любого типа).
  *
+ * **0.19.0 (W15-H1) — мост в старые экраны.** Добавляющее изменение (тег `bridge`). Пока раздел Платформы ещё заглушка, сотрудник
+ * открывает ту же работу в старой CRM или старом ERP новой вкладкой. `GET /bridge` отдаёт публичные адреса старых фронтов
+ * (`crm_url`, `erp_url`): настройки `PLATFORM_CRM_PUBLIC_URL` и `PLATFORM_ERP_PUBLIC_URL`, а если они пусты — адрес выводится из
+ * адреса, по которому открыта Платформа (`platform.<домен>` -> `crm.<домен>` и `erp.<домен>`, схема и порт те же); не задан и не
+ * выводится — `null`, SPA не показывает кнопку. `erp_sso` — у сотрудника есть доступ к ERP, и вход можно сделать без второго пароля.
+ * `POST /bridge/erp-sso` — тот же путь, каким старая CRM открывает ERP: BFF просит у CRM одноразовый SSO-токен (`POST
+ * /auth/sso/token`, живёт 60 секунд) токеном сотрудника и возвращает готовый адрес обмена `{ERP}/sso/exchange#token=…`; адрес
+ * ERP берёт сама CRM (`ERP_FRONTEND_URL`). Токен в журнал не пишется, ответ — `Cache-Control: no-store`. Права раздела не нужны:
+ * достаточно сессии и доступа к ERP (CRM не выдала токен — 403 `FORBIDDEN`, `details.reason`: `platform_access_denied` или
+ * `sso_disabled`).
+ *
  * **0.17.0 (D1-5) — EDS · Создать документ и «Мои документы».** Добавляющее изменение, тег `eds-documents`: `GET/POST /eds/documents`
  * (мои документы или реестр «Все документы»; создать и сразу отправить), `GET/PUT /eds/documents/{id}` (карточка с маршрутом и
  * решениями; сохранить черновик), `POST /eds/document-files` и `GET /eds/document-files/{file_id}` (вложения: загрузка потоком до 25 МБ,
@@ -148,6 +159,15 @@
  * (`erp_not_connected` — сначала подключите ERP, `erp_unavailable` — ERP не ответила). `POST /setup/company` без сопряжённой ERP —
  * 409 `ERP_NOT_CONNECTED` (новый код) с текстом и `details.link` на карточку ERP; недоступная ERP — прежний 503 `BACKEND_UNAVAILABLE`.
  *
+ * **0.17.0 (W15-H3) — здоровье интеграций: одна причина, одна строка, одно действие.** Добавляющее изменение. `GET
+ * /admin/integrations` и `GET /admin/integrations/services` отдают группы по причине (`ServiceGroup`: состояние `ServiceState`
+ * — «Сломано» только после 15 минут непрерывного сбоя, «Нестабильно» для дребезга, «Ожидаемо на стенде», «Не проверено»;
+ * «кто исправляет» `ServiceOwner`, действия `ServiceAction`, «с …», `flaps_24h`, готовый текст `message`, замаскированный
+ * `technical`), у сервисов — `state`, `cause_key`, `owner`, `action`, `since`, `flaps_24h`, `last_recovered_at`, у
+ * `AttentionItem` — `group` и `technical`, у компонентов состояния — `expected_on_stand`. Новый `PUT
+ * /admin/integrations/models/providers/{provider}/key` — ключ провайдера на все его роли одной операцией (один пароль, без
+ * частичного применения).
+ *
  * **0.16.0 (D1-3) — EDS · Входящие письма и резолюция директора.** Добавляющее изменение, тег `letters`: `GET /eds/letters`
  * (список со статусом словами интерфейса и фильтром по статусу), `GET /eds/letters/{ref}` (карточка письма по id или по
  * номеру `ВХ-104/26`: реквизиты, суть, вложения, связи, журнал, шаг пути заявки; данные заявки — из ERP по ссылке письма,
@@ -158,6 +178,16 @@
  * (менеджер, бухгалтер), полный — резолюция, возврат, отказ (директор). EDS — отдельный домен: вызовы идут с токеном доступа
  * EDS, полученным обменом токена сотрудника CRM `aud=eds` (`docs/architecture/platform-bff.md` §3); ошибки EDS переводятся в
  * формат `Error` (`source = eds`, `details.reason` и `details.fields` EDS сохраняются).
+ *
+ * **0.21.0 (W15-H6) — Профиль сотрудника.** Добавляющее изменение, тег `me`: `GET/PATCH /me/profile` (имя, телефон, язык, часовой
+ * пояс, подпись для писем; должность и роли только читаются, правит админ), `PUT/DELETE /me/avatar` и `GET /staff/{id}/avatar`
+ * (фото: клиент обрезает по кругу, CRM хранит в S3, BFF отдаёт без публичных ссылок; `Me.avatar_url` — вместо инициалов),
+ * `POST/DELETE /me/telegram-link` (сотрудник привязывает Telegram сам: ссылка `t.me/<бот>?start=staff_<одноразовый код>` на 10
+ * минут), `GET /me/deputy-candidates`, `PUT/DELETE /me/deputy` (замещение на период; заместитель видит очередь замещаемого:
+ * `QueueItem.on_behalf_of`, права на объекты — свои). Вход: `POST /auth/forgot-password` (ответ одинаков для любой учётной
+ * записи; ссылка уходит на почту или в Telegram, иначе тихо ничего) и `POST /auth/reset-password` (новый пароль по одноразовой
+ * ссылке; неверная или просроченная — 422 `VALIDATION_FAILED`, `details.reason = reset_token_invalid`). `Me.access` остаётся для
+ * совместимости, но экран «Доступ: CRM · ERP» убран: вместо него роли словами.
  *
  * 0.2.4: `423 ACCOUNT_LOCKED` объявлен и на `POST /auth/change-password` (CRM блокирует учётную запись после неверных
  * текущих паролей).
@@ -174,10 +204,10 @@
  * 0.2.1 (Q-P0-3): перечень `Error.code` дополнен `INTERNAL_ERROR` (500) и нейтральными кодами 4xx `BAD_REQUEST`,
  * `METHOD_NOT_ALLOWED`, `HTTP_<статус>` для ответов, которые не относятся ни к одному именованному коду.
  *
- * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; остальные запросы — 300 в минуту на сессию; превышение — 429
+ * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; «Забыли пароль?» — 5 запросов в час на IP и на адрес; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.17.0
+ * OpenAPI spec version: 0.21.0
  */
 import { useMutation, useQuery } from "@tanstack/react-query";
 import type {
@@ -205,6 +235,7 @@ import type {
   AiModelTest,
   AiSpendReport,
   AuditPage,
+  AvatarUpload,
   BackendUnavailableResponse,
   BackupsStatus,
   BotProfile,
@@ -213,6 +244,8 @@ import type {
   BrandPreviewIn,
   BrandProfile,
   BrandProfileUpdate,
+  Bridge,
+  BridgeErpSso,
   BusDeliveryPage,
   BusInboxPage,
   BusJournal,
@@ -232,10 +265,12 @@ import type {
   ChargeTemplateList,
   ChargeTemplateUpdate,
   ChargeTypeList,
+  Colleague,
   CompanyProfile,
   CompanyProfileUpdate,
   CreatedId,
   CsrfFailedResponse,
+  DeputyUpdate,
   DocumentPlaceholders,
   DocumentPreview,
   DocumentTemplate,
@@ -276,6 +311,8 @@ import type {
   ExternalServiceDetail,
   ExternalServiceList,
   ForbiddenResponse,
+  ForgotPasswordAccepted,
+  ForgotPasswordIn,
   FxRateIn,
   FxRateOverview,
   GetAiSpendReportParams,
@@ -334,6 +371,10 @@ import type {
   PasswordConfirm,
   PlatformSettings,
   PlatformSettingsUpdate,
+  Profile,
+  ProfileUpdate,
+  ProviderKeyIn,
+  ProviderKeyResult,
   Queue,
   QueueCards,
   QuoteDefaults,
@@ -344,6 +385,7 @@ import type {
   ReferenceItemUpdate,
   ReplyTemplateIn,
   ReplyTemplateList,
+  ResetPasswordIn,
   ResolutionAssignees,
   ResolutionIn,
   Role,
@@ -373,6 +415,7 @@ import type {
   SystemStatus,
   TelegramChannelList,
   TelegramConnector,
+  TelegramLink,
   TelegramTokenIn,
   TooManyRequestsResponse,
   ValidationFailedResponse,
@@ -501,6 +544,234 @@ export const useLogin = <TError = ErrorType<Error | TooManyRequestsResponse>, TC
   TContext
 > => {
   return useMutation(getLoginMutationOptions(options), queryClient);
+};
+
+export const getForgotPasswordUrl = () => {
+  return `/api/v1/auth/forgot-password`;
+};
+
+/**
+ * Без сессии. Ответ один и тот же для существующей и несуществующей учётной записи (перечислять сотрудников нельзя). Ссылка на Платформу уходит на почту (если подключён SMTP) или в Telegram (если привязан); нет ни того, ни другого — ничего не уходит, и экран заранее говорит «обратитесь к администратору». Ссылка одноразовая, живёт час; не больше трёх в час на учётную запись. Лимит BFF — 5 запросов в час на IP и на адрес, сверх него 429 `TOO_MANY_REQUESTS`.
+ * @summary Забыли пароль — запросить ссылку сброса
+ */
+export const forgotPassword = async (
+  forgotPasswordIn: ForgotPasswordIn,
+  options?: Parameters<typeof http>[1],
+): Promise<ForgotPasswordAccepted> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<ForgotPasswordAccepted>(getForgotPasswordUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(forgotPasswordIn),
+  });
+};
+
+export const getForgotPasswordMutationKey = () => ["forgotPassword"] as const;
+
+export const getForgotPasswordMutationOptions = <
+  TError = ErrorType<
+    ValidationFailedResponse | TooManyRequestsResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof forgotPassword>>,
+    TError,
+    ForgotPasswordMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof forgotPassword>>,
+  TError,
+  ForgotPasswordMutationVariables,
+  TContext
+> => {
+  const mutationKey = getForgotPasswordMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof forgotPassword>>,
+    ForgotPasswordMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return forgotPassword(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ForgotPasswordMutationResult = NonNullable<Awaited<ReturnType<typeof forgotPassword>>>;
+export type ForgotPasswordMutationBody = ForgotPasswordIn;
+export type ForgotPasswordMutationError = ErrorType<
+  ValidationFailedResponse | TooManyRequestsResponse | BackendUnavailableResponse
+>;
+export type ForgotPasswordMutationVariables = { data: ForgotPasswordIn };
+
+/**
+ * @summary Забыли пароль — запросить ссылку сброса
+ */
+export const useForgotPassword = <
+  TError = ErrorType<
+    ValidationFailedResponse | TooManyRequestsResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof forgotPassword>>,
+      TError,
+      ForgotPasswordMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof forgotPassword>>,
+  TError,
+  ForgotPasswordMutationVariables,
+  TContext
+> => {
+  return useMutation(getForgotPasswordMutationOptions(options), queryClient);
+};
+
+export const getResetPasswordUrl = () => {
+  return `/api/v1/auth/reset-password`;
+};
+
+/**
+ * Без сессии. Токен из ссылки одноразовый; после успеха все открытые сессии сотрудника закрываются и вход идёт с новым паролем. Неверная, использованная или просроченная ссылка — 422 `VALIDATION_FAILED` с `details.reason = reset_token_invalid` (`details.fields = [token]`); слабый пароль — `weak_password` (`new_password`), ссылка остаётся действующей.
+ * @summary Задать новый пароль по ссылке сброса
+ */
+export const resetPassword = async (
+  resetPasswordIn: ResetPasswordIn,
+  options?: Parameters<typeof http>[1],
+): Promise<void> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<void>(getResetPasswordUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(resetPasswordIn),
+  });
+};
+
+export const getResetPasswordMutationKey = () => ["resetPassword"] as const;
+
+export const getResetPasswordMutationOptions = <
+  TError = ErrorType<
+    ValidationFailedResponse | TooManyRequestsResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof resetPassword>>,
+    TError,
+    ResetPasswordMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof resetPassword>>,
+  TError,
+  ResetPasswordMutationVariables,
+  TContext
+> => {
+  const mutationKey = getResetPasswordMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof resetPassword>>,
+    ResetPasswordMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return resetPassword(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ResetPasswordMutationResult = NonNullable<Awaited<ReturnType<typeof resetPassword>>>;
+export type ResetPasswordMutationBody = ResetPasswordIn;
+export type ResetPasswordMutationError = ErrorType<
+  ValidationFailedResponse | TooManyRequestsResponse | BackendUnavailableResponse
+>;
+export type ResetPasswordMutationVariables = { data: ResetPasswordIn };
+
+/**
+ * @summary Задать новый пароль по ссылке сброса
+ */
+export const useResetPassword = <
+  TError = ErrorType<
+    ValidationFailedResponse | TooManyRequestsResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof resetPassword>>,
+      TError,
+      ResetPasswordMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof resetPassword>>,
+  TError,
+  ResetPasswordMutationVariables,
+  TContext
+> => {
+  return useMutation(getResetPasswordMutationOptions(options), queryClient);
 };
 
 export const getLogoutUrl = () => {
@@ -1249,6 +1520,192 @@ export const useCreateOwnCompany = <
   return useMutation(getCreateOwnCompanyMutationOptions(options), queryClient);
 };
 
+export const getGetBridgeUrl = () => {
+  return `/api/v1/bridge`;
+};
+
+/**
+ * Адреса задают `PLATFORM_CRM_PUBLIC_URL` и `PLATFORM_ERP_PUBLIC_URL`; пусто — выводятся из адреса Платформы (`platform.X` -> `crm.X`, `erp.X`). Не задан и не выводится — `null`: SPA не показывает кнопку и честно пишет, где работа делается. Адреса не секрет; ответ `no-store` (смена настройки подхватывается при следующей загрузке). Права раздела не нужны, но нужна сессия и хотя бы один раздел каталога: пока не сменён временный пароль — 403 `FORBIDDEN` с `details.reason = password_change_required`, у ролей нет ни одного раздела — 403 `FORBIDDEN` с `details.reason = no_sections`.
+ * @summary Публичные адреса старых CRM и ERP для кнопок «Открыть в старой CRM / ERP»
+ */
+export const getBridge = async (options?: Parameters<typeof http>[1]): Promise<Bridge> => {
+  return http<Bridge>(getGetBridgeUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetBridgeQueryKey = () => {
+  return [`/api/v1/bridge`] as const;
+};
+
+export const getGetBridgeQueryOptions = <
+  TData = Awaited<ReturnType<typeof getBridge>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getBridge>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetBridgeQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getBridge>>> = ({ signal }) =>
+    getBridge({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getBridge>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetBridgeQueryResult = NonNullable<Awaited<ReturnType<typeof getBridge>>>;
+export type GetBridgeQueryError = ErrorType<SessionExpiredResponse | ForbiddenResponse>;
+
+export function useGetBridge<
+  TData = Awaited<ReturnType<typeof getBridge>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getBridge>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getBridge>>,
+          TError,
+          Awaited<ReturnType<typeof getBridge>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetBridge<
+  TData = Awaited<ReturnType<typeof getBridge>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getBridge>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getBridge>>,
+          TError,
+          Awaited<ReturnType<typeof getBridge>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetBridge<
+  TData = Awaited<ReturnType<typeof getBridge>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getBridge>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Публичные адреса старых CRM и ERP для кнопок «Открыть в старой CRM / ERP»
+ */
+
+export function useGetBridge<
+  TData = Awaited<ReturnType<typeof getBridge>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getBridge>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetBridgeQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getCreateBridgeErpSsoUrl = () => {
+  return `/api/v1/bridge/erp-sso`;
+};
+
+/**
+ * Тот же SSO CRM -> ERP, что у кнопки «Перейти в ERP» старой CRM (`docs/architecture/sso-token.md`): CRM выдаёт токен на 60 секунд, `url` — `{ERP}/sso/exchange#token=…`. Старый ERP после обмена открывает свою главную страницу. Токен в журнал BFF не попадает. Нужна сессия и хотя бы один раздел каталога (иначе 403 `FORBIDDEN`, `details.reason`: `password_change_required` или `no_sections`); нет доступа к ERP — 403 `FORBIDDEN` с `details.reason = platform_access_denied`; CRM отказала (переход по SSO выключен) — 403 `FORBIDDEN` с `details.reason = sso_disabled`.
+ * @summary Адрес входа в старый ERP без второго пароля
+ */
+export const createBridgeErpSso = async (
+  options?: Parameters<typeof http>[1],
+): Promise<BridgeErpSso> => {
+  return http<BridgeErpSso>(getCreateBridgeErpSsoUrl(), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getCreateBridgeErpSsoMutationKey = () => ["createBridgeErpSso"] as const;
+
+export const getCreateBridgeErpSsoMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createBridgeErpSso>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<Awaited<ReturnType<typeof createBridgeErpSso>>, TError, void, TContext> => {
+  const mutationKey = getCreateBridgeErpSsoMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof createBridgeErpSso>>, void> = () => {
+    return createBridgeErpSso(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateBridgeErpSsoMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createBridgeErpSso>>
+>;
+
+export type CreateBridgeErpSsoMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse
+>;
+
+/**
+ * @summary Адрес входа в старый ERP без второго пароля
+ */
+export const useCreateBridgeErpSso = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createBridgeErpSso>>,
+      TError,
+      void,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<Awaited<ReturnType<typeof createBridgeErpSso>>, TError, void, TContext> => {
+  return useMutation(getCreateBridgeErpSsoMutationOptions(options), queryClient);
+};
+
 export const getGetMeUrl = () => {
   return `/api/v1/me`;
 };
@@ -1791,6 +2248,996 @@ export const useSendTestNotification = <
   queryClient?: QueryClient,
 ): UseMutationResult<Awaited<ReturnType<typeof sendTestNotification>>, TError, void, TContext> => {
   return useMutation(getSendTestNotificationMutationOptions(options), queryClient);
+};
+
+export const getGetProfileUrl = () => {
+  return `/api/v1/me/profile`;
+};
+
+/**
+ * Данные сотрудника из CRM (`GET /me`): имя, почта, должность, телефон, язык, часовой пояс, подпись для писем, фото, привязка Telegram и замещение. Доступно каждому вошедшему; чужой профиль этим путём не читается.
+ * @summary Мой профиль для страницы /me
+ */
+export const getProfile = async (options?: Parameters<typeof http>[1]): Promise<Profile> => {
+  return http<Profile>(getGetProfileUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetProfileQueryKey = () => {
+  return [`/api/v1/me/profile`] as const;
+};
+
+export const getGetProfileQueryOptions = <
+  TData = Awaited<ReturnType<typeof getProfile>>,
+  TError = ErrorType<SessionExpiredResponse | BackendUnavailableResponse>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getProfile>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetProfileQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getProfile>>> = ({ signal }) =>
+    getProfile({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getProfile>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetProfileQueryResult = NonNullable<Awaited<ReturnType<typeof getProfile>>>;
+export type GetProfileQueryError = ErrorType<SessionExpiredResponse | BackendUnavailableResponse>;
+
+export function useGetProfile<
+  TData = Awaited<ReturnType<typeof getProfile>>,
+  TError = ErrorType<SessionExpiredResponse | BackendUnavailableResponse>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getProfile>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getProfile>>,
+          TError,
+          Awaited<ReturnType<typeof getProfile>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetProfile<
+  TData = Awaited<ReturnType<typeof getProfile>>,
+  TError = ErrorType<SessionExpiredResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getProfile>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getProfile>>,
+          TError,
+          Awaited<ReturnType<typeof getProfile>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetProfile<
+  TData = Awaited<ReturnType<typeof getProfile>>,
+  TError = ErrorType<SessionExpiredResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getProfile>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Мой профиль для страницы /me
+ */
+
+export function useGetProfile<
+  TData = Awaited<ReturnType<typeof getProfile>>,
+  TError = ErrorType<SessionExpiredResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getProfile>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetProfileQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getUpdateProfileUrl = () => {
+  return `/api/v1/me/profile`;
+};
+
+/**
+ * Не присланное поле не меняется; пустая строка в `phone` и `email_signature` очищает поле. Должность и роли сюда не приходят (задаёт админ). Ошибка значения — 422 `VALIDATION_FAILED` с `details.fields` и `details.reason` (`phone_invalid`, `timezone_unknown`, `signature_invalid`).
+ * @summary Сохранить свой профиль
+ */
+export const updateProfile = async (
+  profileUpdate: ProfileUpdate,
+  options?: Parameters<typeof http>[1],
+): Promise<Profile> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<Profile>(getUpdateProfileUrl(), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(profileUpdate),
+  });
+};
+
+export const getUpdateProfileMutationKey = () => ["updateProfile"] as const;
+
+export const getUpdateProfileMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | CsrfFailedResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateProfile>>,
+    TError,
+    UpdateProfileMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateProfile>>,
+  TError,
+  UpdateProfileMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateProfileMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateProfile>>,
+    UpdateProfileMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return updateProfile(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateProfileMutationResult = NonNullable<Awaited<ReturnType<typeof updateProfile>>>;
+export type UpdateProfileMutationBody = ProfileUpdate;
+export type UpdateProfileMutationError = ErrorType<
+  | SessionExpiredResponse
+  | CsrfFailedResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type UpdateProfileMutationVariables = { data: ProfileUpdate };
+
+/**
+ * @summary Сохранить свой профиль
+ */
+export const useUpdateProfile = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | CsrfFailedResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateProfile>>,
+      TError,
+      UpdateProfileMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateProfile>>,
+  TError,
+  UpdateProfileMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateProfileMutationOptions(options), queryClient);
+};
+
+export const getUploadAvatarUrl = () => {
+  return `/api/v1/me/avatar`;
+};
+
+/**
+ * `multipart/form-data`, поле `avatar`: уже обрезанная по кругу картинка (клиент режет её до 256x256), PNG, JPEG или WebP не больше 1 МБ. Тип проверяется по содержимому. Иначе 422 `VALIDATION_FAILED` с `details.reason`: `avatar_unsupported_type`, `avatar_type_mismatch`, `avatar_empty`; тело больше предела (1 МБ и запас на multipart) читается потоком и обрывается — 413 `PAYLOAD_TOO_LARGE` (`details.reason = avatar_too_large`). Ответ — обновлённый `Me` (`avatar_url` с новой версией).
+ * @summary Загрузить фото профиля
+ */
+export const uploadAvatar = async (
+  avatarUpload: AvatarUpload,
+  options?: Parameters<typeof http>[1],
+): Promise<Me> => {
+  const formData = new FormData();
+  formData.append(`avatar`, avatarUpload.avatar);
+
+  return http<Me>(getUploadAvatarUrl(), {
+    ...options,
+    method: "PUT",
+    body: formData,
+  });
+};
+
+export const getUploadAvatarMutationKey = () => ["uploadAvatar"] as const;
+
+export const getUploadAvatarMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | CsrfFailedResponse
+    | Error
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof uploadAvatar>>,
+    TError,
+    UploadAvatarMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof uploadAvatar>>,
+  TError,
+  UploadAvatarMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUploadAvatarMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof uploadAvatar>>,
+    UploadAvatarMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return uploadAvatar(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UploadAvatarMutationResult = NonNullable<Awaited<ReturnType<typeof uploadAvatar>>>;
+export type UploadAvatarMutationBody = AvatarUpload;
+export type UploadAvatarMutationError = ErrorType<
+  | SessionExpiredResponse
+  | CsrfFailedResponse
+  | Error
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type UploadAvatarMutationVariables = { data: AvatarUpload };
+
+/**
+ * @summary Загрузить фото профиля
+ */
+export const useUploadAvatar = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | CsrfFailedResponse
+    | Error
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof uploadAvatar>>,
+      TError,
+      UploadAvatarMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof uploadAvatar>>,
+  TError,
+  UploadAvatarMutationVariables,
+  TContext
+> => {
+  return useMutation(getUploadAvatarMutationOptions(options), queryClient);
+};
+
+export const getDeleteAvatarUrl = () => {
+  return `/api/v1/me/avatar`;
+};
+
+/**
+ * @summary Удалить фото профиля
+ */
+export const deleteAvatar = async (options?: Parameters<typeof http>[1]): Promise<Me> => {
+  return http<Me>(getDeleteAvatarUrl(), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteAvatarMutationKey = () => ["deleteAvatar"] as const;
+
+export const getDeleteAvatarMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | CsrfFailedResponse | BackendUnavailableResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<Awaited<ReturnType<typeof deleteAvatar>>, TError, void, TContext>;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<Awaited<ReturnType<typeof deleteAvatar>>, TError, void, TContext> => {
+  const mutationKey = getDeleteAvatarMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteAvatar>>, void> = () => {
+    return deleteAvatar(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteAvatarMutationResult = NonNullable<Awaited<ReturnType<typeof deleteAvatar>>>;
+
+export type DeleteAvatarMutationError = ErrorType<
+  SessionExpiredResponse | CsrfFailedResponse | BackendUnavailableResponse
+>;
+
+/**
+ * @summary Удалить фото профиля
+ */
+export const useDeleteAvatar = <
+  TError = ErrorType<SessionExpiredResponse | CsrfFailedResponse | BackendUnavailableResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof deleteAvatar>>, TError, void, TContext>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<Awaited<ReturnType<typeof deleteAvatar>>, TError, void, TContext> => {
+  return useMutation(getDeleteAvatarMutationOptions(options), queryClient);
+};
+
+export const getGetStaffAvatarUrl = (id: string) => {
+  return `/api/v1/staff/${id}/avatar`;
+};
+
+/**
+ * Файл фото коллеги как есть (PNG, JPEG или WebP) с `X-Content-Type-Options: nosniff` и `Cache-Control: private`. Публичных ссылок на хранилище нет: картинку отдаёт только BFF вошедшему сотруднику. Нет фото или сотрудник отключён — 404 `NOT_FOUND` (рисуются инициалы).
+ * @summary Фото сотрудника
+ */
+export const getStaffAvatar = async (
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<Blob> => {
+  return http<Blob>(getGetStaffAvatarUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetStaffAvatarQueryKey = (id: string) => {
+  return [`/api/v1/staff/${id}/avatar`] as const;
+};
+
+export const getGetStaffAvatarQueryOptions = <
+  TData = Awaited<ReturnType<typeof getStaffAvatar>>,
+  TError = ErrorType<SessionExpiredResponse | NotFoundResponse | BackendUnavailableResponse>,
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getStaffAvatar>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetStaffAvatarQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getStaffAvatar>>> = ({ signal }) =>
+    getStaffAvatar(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: id !== null && id !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getStaffAvatar>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetStaffAvatarQueryResult = NonNullable<Awaited<ReturnType<typeof getStaffAvatar>>>;
+export type GetStaffAvatarQueryError = ErrorType<
+  SessionExpiredResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useGetStaffAvatar<
+  TData = Awaited<ReturnType<typeof getStaffAvatar>>,
+  TError = ErrorType<SessionExpiredResponse | NotFoundResponse | BackendUnavailableResponse>,
+>(
+  id: string,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getStaffAvatar>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getStaffAvatar>>,
+          TError,
+          Awaited<ReturnType<typeof getStaffAvatar>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetStaffAvatar<
+  TData = Awaited<ReturnType<typeof getStaffAvatar>>,
+  TError = ErrorType<SessionExpiredResponse | NotFoundResponse | BackendUnavailableResponse>,
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getStaffAvatar>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getStaffAvatar>>,
+          TError,
+          Awaited<ReturnType<typeof getStaffAvatar>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetStaffAvatar<
+  TData = Awaited<ReturnType<typeof getStaffAvatar>>,
+  TError = ErrorType<SessionExpiredResponse | NotFoundResponse | BackendUnavailableResponse>,
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getStaffAvatar>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Фото сотрудника
+ */
+
+export function useGetStaffAvatar<
+  TData = Awaited<ReturnType<typeof getStaffAvatar>>,
+  TError = ErrorType<SessionExpiredResponse | NotFoundResponse | BackendUnavailableResponse>,
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getStaffAvatar>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetStaffAvatarQueryOptions(id, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getCreateTelegramLinkUrl = () => {
+  return `/api/v1/me/telegram-link`;
+};
+
+/**
+ * Выпускает одноразовую ссылку `https://t.me/<бот>?start=staff_<код>` на 10 минут; прежняя ссылка перестаёт работать. SPA показывает её кнопкой и QR. Бот по `/start staff_<код>` привязывает Telegram и отвечает подтверждением; клиентский путь бота от этого не меняется. Бот не подключён — 409 `NOT_CONFIGURED`; бот не запущен — 409 `CONFLICT`.
+ * @summary Привязать Telegram для уведомлений
+ */
+export const createTelegramLink = async (
+  options?: Parameters<typeof http>[1],
+): Promise<TelegramLink> => {
+  return http<TelegramLink>(getCreateTelegramLinkUrl(), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getCreateTelegramLinkMutationKey = () => ["createTelegramLink"] as const;
+
+export const getCreateTelegramLinkMutationOptions = <
+  TError = ErrorType<
+    SessionExpiredResponse | CsrfFailedResponse | Error | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createTelegramLink>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<Awaited<ReturnType<typeof createTelegramLink>>, TError, void, TContext> => {
+  const mutationKey = getCreateTelegramLinkMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof createTelegramLink>>, void> = () => {
+    return createTelegramLink(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateTelegramLinkMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createTelegramLink>>
+>;
+
+export type CreateTelegramLinkMutationError = ErrorType<
+  SessionExpiredResponse | CsrfFailedResponse | Error | BackendUnavailableResponse
+>;
+
+/**
+ * @summary Привязать Telegram для уведомлений
+ */
+export const useCreateTelegramLink = <
+  TError = ErrorType<
+    SessionExpiredResponse | CsrfFailedResponse | Error | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createTelegramLink>>,
+      TError,
+      void,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<Awaited<ReturnType<typeof createTelegramLink>>, TError, void, TContext> => {
+  return useMutation(getCreateTelegramLinkMutationOptions(options), queryClient);
+};
+
+export const getDeleteTelegramLinkUrl = () => {
+  return `/api/v1/me/telegram-link`;
+};
+
+/**
+ * Снимает привязку и гасит неиспользованные ссылки. Без привязки — не ошибка.
+ * @summary Отвязать Telegram
+ */
+export const deleteTelegramLink = async (
+  options?: Parameters<typeof http>[1],
+): Promise<Profile> => {
+  return http<Profile>(getDeleteTelegramLinkUrl(), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteTelegramLinkMutationKey = () => ["deleteTelegramLink"] as const;
+
+export const getDeleteTelegramLinkMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | CsrfFailedResponse | BackendUnavailableResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteTelegramLink>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<Awaited<ReturnType<typeof deleteTelegramLink>>, TError, void, TContext> => {
+  const mutationKey = getDeleteTelegramLinkMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteTelegramLink>>, void> = () => {
+    return deleteTelegramLink(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteTelegramLinkMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteTelegramLink>>
+>;
+
+export type DeleteTelegramLinkMutationError = ErrorType<
+  SessionExpiredResponse | CsrfFailedResponse | BackendUnavailableResponse
+>;
+
+/**
+ * @summary Отвязать Telegram
+ */
+export const useDeleteTelegramLink = <
+  TError = ErrorType<SessionExpiredResponse | CsrfFailedResponse | BackendUnavailableResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteTelegramLink>>,
+      TError,
+      void,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<Awaited<ReturnType<typeof deleteTelegramLink>>, TError, void, TContext> => {
+  return useMutation(getDeleteTelegramLinkMutationOptions(options), queryClient);
+};
+
+export const getListDeputyCandidatesUrl = () => {
+  return `/api/v1/me/deputy-candidates`;
+};
+
+/**
+ * Активные коллеги с рабочей ролью CRM (менеджер или администратор), кроме самого сотрудника.
+ * @summary Кого можно назначить заместителем
+ */
+export const listDeputyCandidates = async (
+  options?: Parameters<typeof http>[1],
+): Promise<Colleague[]> => {
+  return http<Colleague[]>(getListDeputyCandidatesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListDeputyCandidatesQueryKey = () => {
+  return [`/api/v1/me/deputy-candidates`] as const;
+};
+
+export const getListDeputyCandidatesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listDeputyCandidates>>,
+  TError = ErrorType<SessionExpiredResponse | BackendUnavailableResponse>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listDeputyCandidates>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListDeputyCandidatesQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listDeputyCandidates>>> = ({ signal }) =>
+    listDeputyCandidates({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listDeputyCandidates>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListDeputyCandidatesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listDeputyCandidates>>
+>;
+export type ListDeputyCandidatesQueryError = ErrorType<
+  SessionExpiredResponse | BackendUnavailableResponse
+>;
+
+export function useListDeputyCandidates<
+  TData = Awaited<ReturnType<typeof listDeputyCandidates>>,
+  TError = ErrorType<SessionExpiredResponse | BackendUnavailableResponse>,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listDeputyCandidates>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listDeputyCandidates>>,
+          TError,
+          Awaited<ReturnType<typeof listDeputyCandidates>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListDeputyCandidates<
+  TData = Awaited<ReturnType<typeof listDeputyCandidates>>,
+  TError = ErrorType<SessionExpiredResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listDeputyCandidates>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listDeputyCandidates>>,
+          TError,
+          Awaited<ReturnType<typeof listDeputyCandidates>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListDeputyCandidates<
+  TData = Awaited<ReturnType<typeof listDeputyCandidates>>,
+  TError = ErrorType<SessionExpiredResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listDeputyCandidates>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Кого можно назначить заместителем
+ */
+
+export function useListDeputyCandidates<
+  TData = Awaited<ReturnType<typeof listDeputyCandidates>>,
+  TError = ErrorType<SessionExpiredResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listDeputyCandidates>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListDeputyCandidatesQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getSetDeputyUrl = () => {
+  return `/api/v1/me/deputy`;
+};
+
+/**
+ * «На время отсутствия мои задачи видит {сотрудник} с {дата} по {дата}»: обе даты включительно, считаются по календарю замещаемого, период не в прошлом и не длиннее года. Заместитель видит очередь замещаемого строками с пометкой «за {имя}», права на объекты у него свои. 422 `VALIDATION_FAILED` с `details.reason`: `deputy_is_self`, `deputy_period_reversed`, `deputy_period_past`, `deputy_period_too_long`, `deputy_not_colleague`.
+ * @summary Назначить заместителя на период
+ */
+export const setDeputy = async (
+  deputyUpdate: DeputyUpdate,
+  options?: Parameters<typeof http>[1],
+): Promise<Profile> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<Profile>(getSetDeputyUrl(), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(deputyUpdate),
+  });
+};
+
+export const getSetDeputyMutationKey = () => ["setDeputy"] as const;
+
+export const getSetDeputyMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | CsrfFailedResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof setDeputy>>,
+    TError,
+    SetDeputyMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof setDeputy>>,
+  TError,
+  SetDeputyMutationVariables,
+  TContext
+> => {
+  const mutationKey = getSetDeputyMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof setDeputy>>,
+    SetDeputyMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return setDeputy(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SetDeputyMutationResult = NonNullable<Awaited<ReturnType<typeof setDeputy>>>;
+export type SetDeputyMutationBody = DeputyUpdate;
+export type SetDeputyMutationError = ErrorType<
+  | SessionExpiredResponse
+  | CsrfFailedResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type SetDeputyMutationVariables = { data: DeputyUpdate };
+
+/**
+ * @summary Назначить заместителя на период
+ */
+export const useSetDeputy = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | CsrfFailedResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof setDeputy>>,
+      TError,
+      SetDeputyMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof setDeputy>>,
+  TError,
+  SetDeputyMutationVariables,
+  TContext
+> => {
+  return useMutation(getSetDeputyMutationOptions(options), queryClient);
+};
+
+export const getClearDeputyUrl = () => {
+  return `/api/v1/me/deputy`;
+};
+
+/**
+ * @summary Снять замещение
+ */
+export const clearDeputy = async (options?: Parameters<typeof http>[1]): Promise<Profile> => {
+  return http<Profile>(getClearDeputyUrl(), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getClearDeputyMutationKey = () => ["clearDeputy"] as const;
+
+export const getClearDeputyMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | CsrfFailedResponse | BackendUnavailableResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<Awaited<ReturnType<typeof clearDeputy>>, TError, void, TContext>;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<Awaited<ReturnType<typeof clearDeputy>>, TError, void, TContext> => {
+  const mutationKey = getClearDeputyMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof clearDeputy>>, void> = () => {
+    return clearDeputy(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ClearDeputyMutationResult = NonNullable<Awaited<ReturnType<typeof clearDeputy>>>;
+
+export type ClearDeputyMutationError = ErrorType<
+  SessionExpiredResponse | CsrfFailedResponse | BackendUnavailableResponse
+>;
+
+/**
+ * @summary Снять замещение
+ */
+export const useClearDeputy = <
+  TError = ErrorType<SessionExpiredResponse | CsrfFailedResponse | BackendUnavailableResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof clearDeputy>>, TError, void, TContext>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<Awaited<ReturnType<typeof clearDeputy>>, TError, void, TContext> => {
+  return useMutation(getClearDeputyMutationOptions(options), queryClient);
 };
 
 export const getGetHealthUrl = () => {
@@ -6822,6 +8269,150 @@ export const useChangeAiModel = <
   TContext
 > => {
   return useMutation(getChangeAiModelMutationOptions(options), queryClient);
+};
+
+export const getChangeProviderKeyUrl = (provider: "anthropic" | "gemini" | "openai") => {
+  return `/api/v1/admin/integrations/models/providers/${provider}/key`;
+};
+
+/**
+ * CRM `PUT /models/providers/{provider}/key` (W15-H3): один пароль администратора, один аудит. Новые deployment всех ролей провайдера создаются первыми, прежние удаляются, когда все созданы; сбой посередине откатывает созданное — частичного применения нет. Модели ролей не меняются. После смены провайдер сразу проверяется. Ключ и пароль уходят только в CRM, в ответ не попадают.
+ * @summary Новый ключ провайдера для всех его ролей разом
+ */
+export const changeProviderKey = async (
+  provider: "anthropic" | "gemini" | "openai",
+  providerKeyIn: ProviderKeyIn,
+  options?: Parameters<typeof http>[1],
+): Promise<ProviderKeyResult> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<ProviderKeyResult>(getChangeProviderKeyUrl(provider), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(providerKeyIn),
+  });
+};
+
+export const getChangeProviderKeyMutationKey = () => ["changeProviderKey"] as const;
+
+export const getChangeProviderKeyMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | IntegrationConflictResponse
+    | IntegrationInvalidResponse
+    | AccountLockedResponse
+    | TooManyRequestsResponse
+    | IntegrationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof changeProviderKey>>,
+    TError,
+    ChangeProviderKeyMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof changeProviderKey>>,
+  TError,
+  ChangeProviderKeyMutationVariables,
+  TContext
+> => {
+  const mutationKey = getChangeProviderKeyMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof changeProviderKey>>,
+    ChangeProviderKeyMutationVariables
+  > = (props) => {
+    const { provider, data } = props ?? {};
+
+    return changeProviderKey(provider, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ChangeProviderKeyMutationResult = NonNullable<
+  Awaited<ReturnType<typeof changeProviderKey>>
+>;
+export type ChangeProviderKeyMutationBody = ProviderKeyIn;
+export type ChangeProviderKeyMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | IntegrationConflictResponse
+  | IntegrationInvalidResponse
+  | AccountLockedResponse
+  | TooManyRequestsResponse
+  | IntegrationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type ChangeProviderKeyMutationVariables = {
+  provider: "anthropic" | "gemini" | "openai";
+  data: ProviderKeyIn;
+};
+
+/**
+ * @summary Новый ключ провайдера для всех его ролей разом
+ */
+export const useChangeProviderKey = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | IntegrationConflictResponse
+    | IntegrationInvalidResponse
+    | AccountLockedResponse
+    | TooManyRequestsResponse
+    | IntegrationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof changeProviderKey>>,
+      TError,
+      ChangeProviderKeyMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof changeProviderKey>>,
+  TError,
+  ChangeProviderKeyMutationVariables,
+  TContext
+> => {
+  return useMutation(getChangeProviderKeyMutationOptions(options), queryClient);
 };
 
 export const getResetAiModelUrl = (alias: string) => {

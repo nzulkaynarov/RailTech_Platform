@@ -11,7 +11,8 @@ import logging
 from typing import Any
 
 from django.conf import settings
-from rest_framework import permissions, status, views
+from drf_spectacular.utils import OpenApiResponse, extend_schema, inline_serializer
+from rest_framework import permissions, serializers, status, views
 from rest_framework.response import Response
 from rest_framework.throttling import BaseThrottle
 
@@ -39,11 +40,39 @@ def _get_client_ip(request: Any) -> str:
     return BaseThrottle().get_ident(request) or ""
 
 
+_SSO_STAFF_USER = inline_serializer(
+    "SsoStaffUser",
+    fields={
+        "erp_user_id": serializers.IntegerField(),
+        "crm_user_id": serializers.IntegerField(),
+        "email": serializers.CharField(),
+        "name": serializers.CharField(),
+        "roles": serializers.ListField(child=serializers.DictField(child=serializers.CharField())),
+        "permissions": serializers.ListField(child=serializers.CharField()),
+        "platform_access": serializers.ListField(child=serializers.CharField()),
+    },
+)
+
+
 class SsoIssueTokenView(views.APIView):
     """POST /api/v1/auth/sso/token — выдать токен для перехода в CRM."""
 
     permission_classes = [permissions.IsAuthenticated]
 
+    @extend_schema(
+        summary="Issue an SSO token for the jump to CRM",
+        request=None,
+        responses={
+            200: inline_serializer(
+                "SsoIssuedToken",
+                fields={"token": serializers.CharField(), "redirect_url": serializers.CharField()},
+            ),
+            403: OpenApiResponse(description="SSO_DISABLED / FORBIDDEN"),
+            503: OpenApiResponse(description="SSO_NOT_CONFIGURED"),
+            500: OpenApiResponse(description="SSO_ISSUE_FAILED"),
+        },
+        tags=["Auth"],
+    )
     def post(self, request, *args, **kwargs):
         try:
             token, redirect_url = issue_sso_token(request.user)
@@ -72,6 +101,30 @@ class SsoExchangeView(views.APIView):
 
     permission_classes = [permissions.AllowAny]
 
+    @extend_schema(
+        summary="Exchange a CRM SSO token for an ERP session",
+        description=(
+            "The access token rides the body; the refresh token is set as the HttpOnly cookie `refresh_token` "
+            "(name from REFRESH_COOKIE_NAME). 401 carries `TOKEN_REQUIRED` / `INVALID_SSO_TOKEN` / "
+            "`SSO_EXCHANGE_FAILED`, 403 — `SSO_DISABLED` / `FORBIDDEN`, 503 — `SSO_NOT_CONFIGURED` or "
+            "`SSO_TEMPORARILY_UNAVAILABLE` (the latter with a human `message`)."
+        ),
+        request=inline_serializer("SsoExchangeRequest", fields={"token": serializers.CharField()}),
+        responses={
+            200: inline_serializer(
+                "SsoExchangeResult",
+                fields={
+                    "access_token": serializers.CharField(),
+                    "expires_in": serializers.IntegerField(),
+                    "user": _SSO_STAFF_USER,
+                },
+            ),
+            401: OpenApiResponse(description="TOKEN_REQUIRED / INVALID_SSO_TOKEN / SSO_EXCHANGE_FAILED"),
+            403: OpenApiResponse(description="SSO_DISABLED / FORBIDDEN"),
+            503: OpenApiResponse(description="SSO_NOT_CONFIGURED / SSO_TEMPORARILY_UNAVAILABLE (with `message`)"),
+        },
+        tags=["Auth"],
+    )
     def post(self, request, *args, **kwargs):
         token = request.data.get("token")
         if not token:

@@ -4,6 +4,7 @@ HTTP — respx (Telegram, LiteLLM, docling, S3, Langfuse), SMTP — подста
 записанные строки, TLS — подставная проба. Платных вызовов и сети нет.
 """
 
+import re
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -142,6 +143,7 @@ def deps(**overrides: Any) -> Deps:
         "catalog": FakeCatalog(),
         "erp_url": erp_url,
         "tls_probe": tls,
+        "retry_delay_s": 0.0,
     }
     base.update(overrides)
     return Deps(**base)
@@ -152,7 +154,11 @@ def _mail_log(monkeypatch: pytest.MonkeyPatch) -> None:
     async def stats(session: object, since: datetime) -> MailLogStats:
         return MailLogStats(4, 0, 0, None, None, None, NOW - timedelta(hours=1))
 
+    async def no_probes(session: object) -> dict[str, str]:
+        return {}
+
     monkeypatch.setattr(repo, "mail_stats", stats)
+    monkeypatch.setattr(repo, "model_probe_problems", no_probes)
 
 
 async def collect(
@@ -194,6 +200,40 @@ async def test_cheap_pass_over_http_services() -> None:
     assert found["docling"].status == "fail"
     assert found["langfuse"].status == "off"
     assert found["erp.sentry"].status == "unknown"
+
+
+@respx.mock
+async def test_one_slow_answer_does_not_fail_the_check() -> None:
+    """Каждый 5–6-й запрос медленный: повтор внутри проверки до признания fail."""
+    route = respx.get("http://docling.invalid:5001/health").mock(
+        side_effect=[httpx.ConnectTimeout("slow"), httpx.Response(200, json={"status": "ok"})]
+    )
+    found = await collect(deps(), ["docling"])
+    assert found["docling"].status == "ok"
+    assert route.call_count == 2
+
+
+@respx.mock
+async def test_two_failed_attempts_are_a_fail_and_a_wrong_token_is_not_retried() -> None:
+    route = respx.get("http://docling.invalid:5001/health").mock(
+        side_effect=httpx.ConnectTimeout("slow")
+    )
+    assert (await collect(deps(), ["docling"]))["docling"].status == "fail"
+    assert route.call_count == 2
+    me = respx.get(re.compile(r".*/getMe")).mock(return_value=httpx.Response(401, json={}))
+    respx.get(re.compile(r".*/getWebhookInfo")).mock(return_value=httpx.Response(200, json={}))
+    found = await collect(deps(), ["telegram"])
+    assert found["telegram"].cause == "token_rejected"
+    assert me.call_count == 1  # причина не транзиентная — повтора нет
+
+
+def test_probe_timeouts_are_not_short() -> None:
+    from app.integrations import external_probes
+    from app.services.external_services import collector
+
+    assert collector.HTTP_TIMEOUT_S >= 10
+    assert external_probes.TLS_TIMEOUT_S >= 10
+    assert collector.PROBE_TIMEOUT_S >= 2 * collector.HTTP_TIMEOUT_S
 
 
 async def test_docling_without_url_is_off_not_a_failure() -> None:
@@ -379,6 +419,39 @@ async def test_vendor_from_gateway_log_and_budget_without_model_calls() -> None:
     assert heavy.metrics["p95_ms_24h"] == 800
     assert logs.windows[-1][1] - logs.windows[-1][0] == timedelta(hours=24)
     assert not any("chat/completions" in str(c.request.url) for c in respx.calls)
+
+
+@respx.mock
+async def test_hourly_probe_problem_of_a_role_fails_its_provider_with_one_cause(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Проба моделей раз в час — источник причины «Ключ <провайдер> отклонён», не письмо по роли."""
+
+    async def problems(session: object) -> dict[str, str]:
+        text = "провайдер отклонил ключ — проверьте ключ API; бот не отвечает"
+        return {"dialog-model": text, "qualifier-model": text, "fallback-model": "x"}
+
+    monkeypatch.setattr(repo, "model_probe_problems", problems)
+    respx.get(f"{LITELLM}/provider/budgets").mock(return_value=httpx.Response(200, json={}))
+    found = await collect(deps(spend_logs=FakeLogs()), ["vendor.anthropic", "vendor.gemini"])
+    assert (found["vendor.anthropic"].status, found["vendor.anthropic"].cause) == (
+        "fail",
+        "key_rejected",
+    )
+    assert found["vendor.gemini"].status != "fail" or found["vendor.gemini"].cause != "key_rejected"
+
+
+async def test_ai_replies_row_reads_bot_answers(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.domain.external_ai_replies import AiFacts
+
+    async def stats(session: object, window_since: datetime, day_since: datetime) -> AiFacts:
+        assert NOW - window_since == timedelta(minutes=5)
+        assert NOW - day_since == timedelta(hours=24)
+        return AiFacts(failed=2, last_failed_at=NOW)
+
+    monkeypatch.setattr(repo, "ai_reply_stats", stats)
+    found = await collect(deps(), ["ai_replies"])
+    assert (found["ai_replies"].status, found["ai_replies"].cause) == ("fail", "ai_unavailable")
 
 
 @respx.mock

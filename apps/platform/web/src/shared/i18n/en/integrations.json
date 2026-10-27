@@ -173,14 +173,18 @@
   },
   "telegram": {
     "bot": "Bot",
-    "running": "Running",
+    "running": "Bot state",
     "runningValue": {
-      "yes": "yes",
-      "no": "no — the bot process is not running",
-      "none": "token not set"
+      "yes": "working",
+      "no": "not working — the bot process is not running",
+      "none": "not working — the token is not set"
     },
     "updated": "Token updated",
     "lastError": "Last error",
+    "lastErrorCode": {
+      "bot_process_never_started": "The bot process has never started on the server.",
+      "bot_process_down": "The bot process on the server is not responding."
+    },
     "token": {
       "current": "Token",
       "set": "Set token",
@@ -534,5 +538,88 @@
       "backup_unavailable": "An off-schedule backup cannot be started from here.",
       "wrong_password": "The password is incorrect."
     }
+  },
+  "health": {
+    "copyFailed": "Could not copy: select the text and copy it by hand.",
+    "state": {
+      "ok": "Working",
+      "broken": "Broken",
+      "unstable": "Unstable",
+      "degraded": "Working with interruptions",
+      "not_configured": "Not set up",
+      "disabled": "Switched off on purpose",
+      "expected": "Expected on the test stand",
+      "not_checked": "Not checked"
+    },
+    "notChecked": "Not checked — press “Check”",
+    "since": "since {{date}}",
+    "recoveredAt": "Recovered at {{date}}",
+    "flaps": "Failures in 24 hours: {{count}}",
+    "ownerLabel": "Who fixes it",
+    "owner": {
+      "ownerKey": "You (administrator) enter the key; the key and payment are with the company owner",
+      "admin": "You (administrator)",
+      "owner": "Company owner — provider key and payment",
+      "hosting": "Hosting — the server",
+      "provider": "Provider — an outage on their side, waiting"
+    },
+    "affected": {
+      "broken": "not working: {{list}}",
+      "degraded": "affected: {{list}}",
+      "other": "affected: {{list}}"
+    },
+    "expectedNote": "Test stand: this is expected here, no alerts are sent.",
+    "action": {
+      "enter_key": "Enter a new key",
+      "enter_token": "Enter a new token",
+      "recheck": "Check again",
+      "reconnect": "Reconnect",
+      "open_settings": "Open settings",
+      "write_owner": "Write to the owner",
+      "write_hosting": "Send to hosting",
+      "disable_provider": "Switch the provider off"
+    },
+    "actionAria": "{{action}}: {{subject}}",
+    "recheck": {
+      "fixed": "Recovered: {{subject}}",
+      "still": "Still not working. The check repeats by itself: in a minute, then less often.",
+      "error": "Could not check: {{subject}}"
+    },
+    "write": {
+      "title": "Ready text: {{who}}",
+      "who": {
+        "owner": "company owner",
+        "hosting": "hosting"
+      },
+      "label": "Message text",
+      "copy": "Copy",
+      "copied": "Text copied",
+      "mail": "Open in mail",
+      "telegram": "Open in Telegram",
+      "mailSubject": "Platform: {{headline}}",
+      "note": "The Platform sends nothing: copy the text or open your own app — you send the message yourself."
+    },
+    "technical": {
+      "summary": "Technical details",
+      "copy": "Copy for support",
+      "copied": "Copied for support",
+      "support": "Service: {{services}}\nState: {{state}}\nSince: {{since}}\nDetails:\n{{details}}"
+    },
+    "key": {
+      "title": "New {{vendor}} key",
+      "label": "New key",
+      "hint": "The key is applied to every role of this provider: {{roles}}. It is not shown after saving.",
+      "submit": "Apply key",
+      "step1": "The key is stored encrypted and never shown again.",
+      "step2": "The model gateway applies it without a restart; then the provider is checked right away.",
+      "step3": "The action is logged without the key.",
+      "done": "Key accepted for roles: {{roles}}. Checking the provider.",
+      "noRoles": "This provider has no roles to apply a key to.",
+      "failed": "Could not apply the key for the “{{alias}}” role."
+    },
+    "model": {
+      "problem": "The “{{alias}}” role does not respond: check the key and balance with the provider."
+    },
+    "setupUnchecked": "Not checked — press “Check”"
   }
 }

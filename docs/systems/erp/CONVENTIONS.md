@@ -144,6 +144,7 @@ Makefile · .env.example · docs/ (ADR и runbooks ERP в docs/runbooks/erp/ —
 - Обязательные классы тестов: матрица прав ролей на каждом эндпоинте мутации (M1-ERP-05); параметризованные таблицы переходов FSM и расчётов; негативные тесты portal (чужая компания 404, подделанный `initData` 401, просроченный magic-link 410), integration (без токена 401, повторный handoff без дубля), MCP (без контекста 401, чужой клиент — пусто); тест на отсутствие N+1 в карточке сделки.
 - Frontend: Vitest + Testing Library + jsdom, рендер через провайдеры с настоящим `ru.json`.
 - Контрактные тесты по OpenAPI из `packages/contracts`; расхождение схемы и сгенерированного — красный CI.
+- **Каждая операция `/api/v1` — с явной схемой запроса и ответа, выгрузка без предупреждений drf-spectacular (D2-0, B-011).** Вьюха, которая читает `request.data` сама или собирает ответ словарём, объявляет `extend_schema(request=…, responses=…)` (сериализатор только для описания допустим: поведение он не меняет); отказы `{"detail": КОД}` описываются ответом 4xx с кодами в `description` — тело `ErrorDetail`/`BadRequest` подставляет `core/openapi.py`, особую форму (`missing_blocks`) задаёт сама операция. `manage.py openapi_v1_check` (шаг `make -C apps/erp openapi` и `openapi-check`) и тест `core/tests/test_openapi_v1_clean.py` падают на любом предупреждении по `/api/v1/`; живые ответы операций, которые зовёт BFF Платформы, сверяет с выгрузкой `core/tests/test_openapi_*_conformance.py` (схема из кода, `core/tests/openapi_internal.py`). Новая операция ERP для BFF — тест сверки в том же PR.
 
 ### Каталог в два слоя (M1-ERP-07 — сделано)
 
@@ -247,7 +248,7 @@ Makefile · .env.example · docs/ (ADR и runbooks ERP в docs/runbooks/erp/ —
 |---|---|---|
 | `make check-erp` (из корня) | делегирует в `make -C apps/erp check`: flake8/black/isort, eslint, tsc, i18n, vitest, pytest в контейнере на одноразовых Postgres 17 + Redis | есть (M1-ERP-01) |
 | `make -C apps/erp check \| test \| lint \| migrate \| openapi` | проверки, pytest, линтеры, миграции на стенде, экспорт `backend/schema.json` + `packages/contracts/openapi/erp-internal.yaml` (срез `/api/v1/`, `backend/scripts/export_internal_contract.py`) + типы фронтенда | есть (M1-ERP-01); срез в contracts — FIX-40 |
-| `make -C apps/erp openapi-check` | перегенерирует три файла выше и падает с diff, если они отличаются от рабочего дерева (дрейф схемы); входит в `make ci-local erp` и в шаг CI «ERP · check» | FIX-40 |
+| `make -C apps/erp openapi-check` | перегенерирует три файла выше и падает с diff, если они отличаются от рабочего дерева (дрейф схемы), и с предупреждением drf-spectacular по `/api/v1/` (`manage.py openapi_v1_check`); входит в `make ci-local erp` и в шаг CI «ERP · check» | FIX-40, D2-0 |
 | `make contracts` (из корня) | валидация контракта, генерация типов для ERP/Cabinet и клиента CRM | есть (M0-INF-02) |
 | `make up` (из корня) | весь ансамбль: `erp.localhost` через Caddy → `erp-backend`/`erp-web`, Postgres с базой `erp`, `redis-broker` (БД 1 Celery, 2 Channels) и `redis-cache` (БД 0 кэш), LiteLLM, Langfuse, RustFS (бакет `erp`) | есть (M1-ERP-01) |
 | `make logs s=<сервис>` / `make ps` | логи и статус стенда | есть (M0-INF-03) |

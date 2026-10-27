@@ -151,6 +151,13 @@ http://platform.localhost {
 		Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
 		-Server
 	}
+	handle /api/v1/me/avatar {
+		# Фото профиля (W15-H6): тело больше 1 МБ с запасом на multipart отсекается до BFF
+		request_body {
+			max_size 1200KB
+		}
+		reverse_proxy platform-bff:8000
+	}
 	handle /api/* {
 		reverse_proxy platform-bff:8000 {
 			# SSE (/api/v1/events/stream): без буферизации ответа

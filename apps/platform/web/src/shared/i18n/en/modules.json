@@ -7,23 +7,6 @@
       "projects": "Projects",
       "summary": "Company summary"
     },
-    "stub": {
-      "queue": {
-        "title": "No decisions are needed from you yet",
-        "text": "New letters come from CRM, draft quotes from ERP, memos from colleagues.",
-        "action": "Projects"
-      },
-      "projects": {
-        "title": "No projects yet",
-        "text": "A project appears once the client accepts the quote. The full list is in Documents · Projects: contracts & acts.",
-        "action": "My tasks"
-      },
-      "summary": {
-        "title": "The summary is empty for now",
-        "text": "The message-to-payment funnel, stuck projects, receivables and rejection reasons for the period will appear here.",
-        "action": "My tasks"
-      }
-    },
     "queue": {
       "title": "What to do now",
       "cardsLabel": "Queue counters",
@@ -44,7 +27,48 @@
       "loading": "Loading the queue…",
       "loadErrorTitle": "Could not load the queue",
       "loadErrorText": "The server did not respond. Check the connection and try again.",
-      "retry": "Retry"
+      "retry": "Retry",
+      "empty": {
+        "director": {
+          "title": "No decisions needed from you yet",
+          "text": "New letters come from CRM, draft quotes from ERP, memos from employees.",
+          "action": "Projects"
+        },
+        "manager": {
+          "title": "No clients are waiting for you right now",
+          "text": "New client messages from Telegram and email will appear here and in the bell."
+        },
+        "supply": {
+          "title": "No costing tasks",
+          "text": "They arrive after the director’s resolution — we will tell you in the bell and in Telegram."
+        },
+        "engineer": {
+          "title": "No service tasks",
+          "text": "They arrive after the director’s resolution — we will tell you in the bell and in Telegram."
+        },
+        "accountant": {
+          "title": "No payments to confirm and no invoices to issue",
+          "text": "New ones appear when a client taps “I paid”."
+        },
+        "admin": {
+          "title": "No tasks for you",
+          "text": "Staff requests and integration problems will appear here and in the bell."
+        },
+        "default": {
+          "title": "No tasks for you",
+          "text": "New tasks will appear here and in the bell."
+        }
+      },
+      "partial": {
+        "crm": "Leads and client replies did not load: the “{{crm}}” section did not respond. The rest is shown.",
+        "erp": "Quotes to approve and costings did not load: the “{{erp}}” section did not respond. The rest is shown.",
+        "both": "Leads, quotes to approve and costings did not load: the “{{crm}}” and “{{erp}}” sections did not respond. The rest is shown."
+      },
+      "partialEmpty": {
+        "title": "The queue loaded only in part",
+        "text": "Some tasks are hidden because a source did not respond. Try again in a moment."
+      },
+      "onBehalf": "for {{name}}"
     },
     "activity": {
       "label": "Today's events",
@@ -64,38 +88,6 @@
       "channels": "Channels",
       "kb": "Bot knowledge base"
     },
-    "stub": {
-      "messages": {
-        "title": "No messages yet",
-        "text": "Hand-overs from the bot arrive here with a note, a reply timer and a Take button. The bot stays silent while a manager is in the dialog.",
-        "action": "Leads"
-      },
-      "leads": {
-        "title": "No leads yet",
-        "text": "They come from the Telegram bot, the web form and email — or register an enquiry by hand.",
-        "action": "Register an enquiry"
-      },
-      "clients": {
-        "title": "No clients yet",
-        "text": "Companies and contacts appear when a lead becomes a client. The card shows requests, projects, documents and correspondence.",
-        "action": "Leads"
-      },
-      "requests": {
-        "title": "No requests yet",
-        "text": "They come from CRM and the cabinet — or create one by hand.",
-        "action": "New request"
-      },
-      "channels": {
-        "title": "No channels connected yet",
-        "text": "The Telegram bot, email, web form and phone will be listed here with their state and greeting texts. Services are connected in Settings · Connections.",
-        "action": "Set up texts"
-      },
-      "kb": {
-        "title": "No articles yet",
-        "text": "Quick replies and bot rules by category: prices come only from the published catalog, otherwise the bot says it will ask a manager.",
-        "action": "Add an article"
-      }
-    },
     "action": "New request"
   },
   "eds": {
@@ -111,48 +103,6 @@
       "payments": "Invoices & payments",
       "new": "New document"
     },
-    "stub": {
-      "documents": {
-        "title": "No documents yet",
-        "text": "Letters, quotes, contracts, invoices, acts and memos are collected in one registry with filters by type and status.",
-        "action": "Create document"
-      },
-      "inbox": {
-        "title": "No incoming letters yet",
-        "text": "Client letters arrive from CRM after a request is created. The director adds the resolution here.",
-        "action": "All documents"
-      },
-      "outbox": {
-        "title": "No outgoing documents yet",
-        "text": "Approved quotes and letters to clients with an outgoing number, sending channels and the client-side status.",
-        "action": "All documents"
-      },
-      "projects": {
-        "title": "No projects yet",
-        "text": "A project appears when the client accepts the quote: contract, invoices, act and fulfilment in one card.",
-        "action": "All documents"
-      },
-      "drafts": {
-        "title": "No quotes to approve",
-        "text": "They arrive from ERP when the calculation is ready and all sign-offs are collected. Nothing is sent to the client without the director's approval.",
-        "action": "All documents"
-      },
-      "approvals": {
-        "title": "Nothing is awaiting approval",
-        "text": "Memos and other documents with an approval route will appear here.",
-        "action": "Create document"
-      },
-      "payments": {
-        "title": "No invoices or payments yet",
-        "text": "Here the accountant confirms payments, requests the payment order and sees overdue invoices.",
-        "action": "Projects: contracts & acts"
-      },
-      "new": {
-        "title": "The document form is coming later",
-        "text": "A memo, statement, report or letter is created here or straight from a chat message.",
-        "action": "All documents"
-      }
-    },
     "action": "New document"
   },
   "erp": {
@@ -165,33 +115,6 @@
       "catalog": "Items & suppliers",
       "docs": "Technical files"
     },
-    "stub": {
-      "requests": {
-        "title": "No requests in costing yet",
-        "text": "Requests in ERP with their stage, calculation deadline and sign-offs from stock, supply and the chief engineer.",
-        "action": "New request"
-      },
-      "calc": {
-        "title": "No calculation tasks",
-        "text": "They arrive after the director's resolution.",
-        "action": "Requests in costing"
-      },
-      "stock": {
-        "title": "The stock is empty for now",
-        "text": "Balances and reservations, supplier orders, receiving and shipments by project.",
-        "action": "Items & suppliers"
-      },
-      "catalog": {
-        "title": "No items or suppliers yet",
-        "text": "Items, suppliers with quotas and price validity, crews and service providers, counterparties.",
-        "action": "Stock"
-      },
-      "docs": {
-        "title": "No technical files yet",
-        "text": "Specifications, drawings, certificates and procedures linked to items and projects.",
-        "action": "Items & suppliers"
-      }
-    },
     "action": "New request"
   },
   "chats": {
@@ -202,28 +125,6 @@
       "internal": "Team",
       "external": "With clients",
       "contacts": "Contacts"
-    },
-    "stub": {
-      "all": {
-        "title": "No chats yet",
-        "text": "A project chat is created together with the request. Team and personal chats are created on demand; client conversations run through the Telegram bot and email.",
-        "action": "Create chat"
-      },
-      "internal": {
-        "title": "No team chats yet",
-        "text": "Project and team chats. Any message can become a memo.",
-        "action": "Create chat"
-      },
-      "external": {
-        "title": "No client conversations yet",
-        "text": "Client messages from the Telegram bot and email. The bot stays silent while a manager is in the dialog.",
-        "action": "Team"
-      },
-      "contacts": {
-        "title": "No contacts yet",
-        "text": "Employees with roles and presence, and client contacts with their channels.",
-        "action": "Create chat"
-      }
     },
     "action": "Create chat"
   },
@@ -240,53 +141,6 @@
       "setup": "First-time setup",
       "bot": "Telegram bot",
       "audit": "Activity log"
-    },
-    "stub": {
-      "roles": {
-        "title": "Roles & permissions will open here",
-        "text": "The company role matrix: system roles and roles the administrator creates.",
-        "action": "Employees"
-      },
-      "org": {
-        "title": "No employees yet",
-        "text": "The single place to grant roles: name, position, roles, CRM and ERP access, Telegram for notifications, status.",
-        "action": "Invite employee"
-      },
-      "integrations": {
-        "title": "No services connected yet",
-        "text": "The Telegram bot, email, file storage, backups and AI models: status, last activity, check and reconnect.",
-        "action": "Staff requests"
-      },
-      "bus": {
-        "title": "System exchange will open here",
-        "text": "Event bus of CRM, ERP and EDS: subscribers, deliveries, undelivered and inbox with errors.",
-        "action": "Connections"
-      },
-      "tickets": {
-        "title": "No staff requests yet",
-        "text": "Requests from staff to the administrator: an error, access, a suggestion.",
-        "action": "Employees"
-      },
-      "company": {
-        "title": "Company details will open here",
-        "text": "Company details, document templates, numbering and payment terms. The screen arrives when ERP settings move into the Platform.",
-        "action": "Employees"
-      },
-      "setup": {
-        "title": "First-run wizard",
-        "text": "The administrator, your own company and five connection steps: bot, ERP, mail, AI models and the first employee.",
-        "action": "Employees"
-      },
-      "bot": {
-        "title": "Telegram bot settings will open here",
-        "text": "Telegram bot texts, behaviour and handoff rules, reply templates and CSV exports.",
-        "action": "Employees"
-      },
-      "audit": {
-        "title": "No entries yet",
-        "text": "Every change will appear here: who granted a role, reset a password or changed settings, with date and time.",
-        "action": "Employees"
-      }
     },
     "action": "Invite employee",
     "setup": {

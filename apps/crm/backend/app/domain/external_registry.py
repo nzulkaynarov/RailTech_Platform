@@ -34,6 +34,18 @@ ALIAS_TITLES: Final = {
     "draft-model": "ERP: черновик КП",
     "enrich-model": "ERP: обогащение карточки",
 }
+#: Что перестаёт работать, когда сломана роль модели (для строки «не работают: …» в «Подключениях»).
+ALIAS_FUNCTIONS: Final = {
+    "dialog-model": "диалог с клиентом",
+    "qualifier-model": "оценка лидов",
+    "fallback-model": "запасная модель",
+    "embed-model": "поиск по базе знаний",
+    "judge-model": "проверка качества ответов",
+    "intake-model": "ERP: разбор запросов",
+    "match-model": "ERP: сопоставление с каталогом",
+    "draft-model": "ERP: черновики КП",
+    "enrich-model": "ERP: обогащение карточек",
+}
 VENDOR_TITLES: Final = {
     "anthropic": "Anthropic (Claude)",
     "gemini": "Google Gemini",
@@ -82,6 +94,16 @@ _LITELLM = ServiceSpec(
     fix_path="/models",
 )
 _AFTER_VENDORS: Final = (
+    ServiceSpec(
+        key="ai_replies",
+        title="Ответы ИИ клиентам",
+        purpose="Ответы бота клиентам: диалог, crm-mcp, LangGraph; при сбое клиента ведёт менеджер",
+        system="crm",
+        source="crm",
+        check="ответы бота за 5 минут: сбои агента и успешные ответы (без вызова моделей)",
+        tiers=("cheap",),
+        fix_path="/models",
+    ),
     ServiceSpec(
         key="langfuse",
         title="Langfuse (журнал работы ИИ)",

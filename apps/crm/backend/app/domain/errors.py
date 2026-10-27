@@ -122,6 +122,23 @@ class Reason(StrEnum):
     HANDOFF_NO_CONSENT = "handoff_no_consent"
     # «Согласие получено» (FIX-57, D-8): лид из Telegram соглашается в боте, сотрудник не отмечает.
     CONSENT_VIA_BOT = "consent_via_bot"
+    # Профиль сотрудника (W15-H6): значения полей, фото и замещение (`domain/staff_profile.py`).
+    NAME_REQUIRED = "name_required"
+    PHONE_INVALID = "phone_invalid"
+    TIMEZONE_UNKNOWN = "timezone_unknown"
+    SIGNATURE_INVALID = "signature_invalid"
+    AVATAR_EMPTY = "avatar_empty"
+    AVATAR_TOO_LARGE = "avatar_too_large"
+    AVATAR_UNSUPPORTED_TYPE = "avatar_unsupported_type"
+    AVATAR_TYPE_MISMATCH = "avatar_type_mismatch"
+    DEPUTY_IS_SELF = "deputy_is_self"
+    DEPUTY_PERIOD_REVERSED = "deputy_period_reversed"
+    DEPUTY_PERIOD_PAST = "deputy_period_past"
+    DEPUTY_PERIOD_TOO_LONG = "deputy_period_too_long"
+    DEPUTY_NOT_COLLEAGUE = "deputy_not_colleague"
+    NOT_A_DEPUTY = "not_a_deputy"
+    # Сброс пароля по ссылке: токен неверный, использован или просрочен (один код на все случаи).
+    RESET_TOKEN_INVALID = "reset_token_invalid"  # noqa: S105 — подкод ошибки, не секрет
 
 
 class DomainError(Exception):
@@ -248,6 +265,12 @@ class MailTemplateMissingError(DomainError):
 
     def __init__(self) -> None:
         super().__init__("email template is not found; contact the administrator of the deployment")
+
+
+class PayloadTooLargeError(DomainError):
+    """Тело запроса больше допустимого (413): тело не читается дальше предела."""
+
+    code = "payload_too_large"
 
 
 class RateLimitedError(DomainError):

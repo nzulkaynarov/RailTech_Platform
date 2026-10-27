@@ -127,6 +127,12 @@ class Message(TimestampMixin, Base):
     __table_args__ = (
         CheckConstraint("role IN ('lead', 'bot', 'manager', 'system')", name="role"),
         Index("ix_messages_conversation_id_id", "conversation_id", "id"),
+        # Строка «Ответы ИИ клиентам» (W15-H3c): ответы бота за окно, раз в минуту.
+        Index(
+            "ix_messages_bot_created_at",
+            "created_at",
+            postgresql_where=sql("role = 'bot'"),
+        ),
     )
 
     id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)

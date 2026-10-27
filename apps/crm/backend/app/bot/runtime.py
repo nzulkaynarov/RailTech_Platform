@@ -21,6 +21,7 @@ from app.bot.errors import ErrorReplier
 from app.bot.maintenance import MaintenanceMiddleware, Paused
 from app.bot.middlewares import IdempotencyMiddleware, RateLimitMiddleware
 from app.bot.profile import ProfilePublish, publish_profile
+from app.bot.staff_link import router as staff_link_router
 from app.bot.status import ClientStatusMiddleware
 from app.config import Settings
 from app.domain.telegram_webhook import webhook_url_problem
@@ -32,6 +33,7 @@ from app.services.client_bot import ClientBotService
 from app.services.conversation import ConversationService
 from app.services.leads import LeadService
 from app.services.settings import SettingsService
+from app.services.staff_telegram_link import StaffTelegramLinkService
 from app.services.start_links import StartLinkService
 
 logger = structlog.get_logger(__name__)
@@ -48,6 +50,7 @@ def build_dispatcher(
     client_bot: ClientBotService | None = None,
     telegram_paused: Paused | None = None,
     start_links: StartLinkService | None = None,
+    staff_link: StaffTelegramLinkService | None = None,
 ) -> Dispatcher:
     dispatcher = Dispatcher(
         conversation=conversation,
@@ -59,6 +62,7 @@ def build_dispatcher(
         rbac=rbac,
         client_bot=client_bot or ClientBotService(sessions, settings),
         start_links=start_links,
+        staff_link=staff_link,
     )
     dispatcher.update.outer_middleware(IdempotencyMiddleware(sessions))
     dispatcher.message.outer_middleware(RateLimitMiddleware(settings.get))
@@ -72,6 +76,8 @@ def build_dispatcher(
     dispatcher.callback_query.outer_middleware(status)
     if leads is not None and rbac is not None:
         dispatcher.include_router(channel.router)
+    # Привязка Telegram сотрудником (W15-H6) — раньше клиентских: свой префикс аргумента `/start`.
+    dispatcher.include_router(staff_link_router)
     dispatcher.include_router(client_handlers.router)
     dispatcher.include_router(chat_member.router)
     dispatcher.include_router(handlers.router)

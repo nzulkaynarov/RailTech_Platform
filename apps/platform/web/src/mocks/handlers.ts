@@ -11,12 +11,14 @@ import { adminIntegrationsHandlers } from "./adminIntegrations";
 import { adminCompanyHandlers } from "./adminCompany";
 import { adminRolesHandlers } from "./adminRoles";
 import { botKbHandlers } from "./botKb";
+import { bridgeHandlers } from "./bridgeHandlers";
 import { edsLettersHandlers } from "./edsLetters";
 import { adminUsersHandlers } from "./adminUsers";
 import { edsDocumentsHandlers } from "./edsDocuments";
 import { eventStreamHandlers } from "./eventStream";
 import { isEmployeeDisabled } from "./fixtures/employees";
 import { feedHandlers } from "./feedHandlers";
+import { profileHandlers } from "./profileHandlers";
 import { setupHandlers } from "./setupHandlers";
 import {
   DEMO_WRONG_CURRENT_PASSWORD,
@@ -137,6 +139,7 @@ export const handlers = [
     return me ? HttpResponse.json(me) : sessionExpired();
   }),
 
+  ...profileHandlers,
   ...adminUsersHandlers,
   ...adminAuditHandlers,
   ...adminRolesHandlers,
@@ -145,6 +148,7 @@ export const handlers = [
   ...adminBusHandlers,
   ...setupHandlers,
   ...botKbHandlers,
+  ...bridgeHandlers,
   ...edsDocumentsHandlers,
   ...edsLettersHandlers,
 

@@ -88,22 +88,26 @@ test.describe("Мои задачи", () => {
     await settledScreenshot(page, "dashboard-admin-today");
   });
 
-  test("«Открыть» ведёт на объект и открывает нужную вкладку бокового окна", async ({ page }) => {
+  test("«Открыть» у строки с родным экраном ведёт на объект; у строки без экрана — «Где сделать»", async ({
+    page,
+  }) => {
     await loginAndWait(page, "director@demo.example");
 
-    await page.getByRole("link", { name: /Открыть: Одобрить КП-2026\/118/ }).click();
+    await page
+      .getByRole("link", { name: /Открыть: Наложить резолюцию на письмо ВХ-104\/26/ })
+      .click();
 
-    await expect(page).toHaveURL(/\/eds\/drafts\/%D0%9A%D0%9F-2026%2F118\?panel=open&tab=approve$/);
-    await expect(page.getByRole("tab", { name: "Одобрение", selected: true })).toBeVisible();
+    await expect(page).toHaveURL(/\/eds\/inbox\/%D0%92%D0%A5-104%2F26\?panel=open&tab=resolution$/);
+    await expect(page.getByRole("heading", { level: 1, name: "Письмо ВХ-104/26" })).toBeVisible();
   });
 
   test("пустая очередь: слова SPEC-v3 §7.1", async ({ page }) => {
     await loginAndWait(page, "supply@demo.example");
 
-    await expect(page.getByText("Решений от вас пока не требуется")).toBeVisible();
+    await expect(page.getByText("Заданий на расчёт нет")).toBeVisible();
     await expect(
       page.getByText(
-        "Новые письма приходят из CRM, черновики КП — из ERP, служебки — от сотрудников.",
+        "Они приходят после резолюции директора — мы сообщим в колокольчике и в Telegram.",
       ),
     ).toBeVisible();
     await expect(page.getByRole("main").getByText(/0 решений/)).toBeVisible();
@@ -120,7 +124,7 @@ test.describe("Мои задачи", () => {
 
     await expect(page.getByRole("main").getByText("Взять в работу лида L-2041")).toBeVisible();
     await expect(page.getByRole("main").getByRole("status")).toContainText(
-      "ERP не отвечает, данные неполные",
+      "Не загрузились КП на одобрение и расчёты: раздел «Расчёт» не ответил. Остальное показано.",
     );
     await expect(page.getByText("Наложить резолюцию на письмо ВХ-104/26")).toHaveCount(0);
     await settledScreenshot(page, "dashboard-erp-down");
@@ -174,15 +178,17 @@ test.describe("Центр уведомлений", () => {
     await settledScreenshot(page, "dashboard-notifications");
     await expectNoViolations(page, "notifications popover");
 
-    await center.getByRole("link", { name: /КП-2026\/118 ждёт вашего согласования/ }).click();
-
-    await expect(page).toHaveURL(/\/eds\/drafts\/%D0%9A%D0%9F-2026%2F118\?panel=open&tab=approve$/);
-    await expect(
-      page.getByRole("heading", { level: 1, name: "Карточка КП-2026/118" }),
-    ).toBeVisible();
-    await expect(page.getByRole("tab", { name: "Одобрение", selected: true })).toBeVisible();
+    // КП: раздела с экраном ещё нет — вместо заглушки «Где посмотреть» с мостом, окно остаётся открытым
+    await center.getByRole("button", { name: /Где посмотреть: .*КП-2026\/118 ждёт/ }).click();
+    const where = center.getByRole("region", { name: "Где посмотреть" });
+    await expect(where.getByRole("link", { name: /Открыть в старом ERP/ })).toHaveAttribute(
+      "href",
+      "http://erp.localhost:8088/#crm-quotes",
+    );
+    await expect(page).toHaveURL(/\/dashboard\/queue/);
     await expect(page.getByRole("button", { name: "Центр уведомлений, 2 новых" })).toBeVisible();
-    await expect(center).toHaveCount(0);
+    await settledScreenshot(page, "notification-where");
+    await expectNoViolations(page, "notification where");
   });
 
   test("с клавиатуры: Enter на колокольчике → фокус в диалоге → Tab внутри → Escape возвращает на колокольчик", async ({
@@ -263,9 +269,8 @@ test(
     await settledScreenshot(page, "dashboard-notifications");
     await expectNoViolations(page, "notifications popover 390");
 
-    await center.getByRole("link", { name: /КП-2026\/118 ждёт вашего согласования/ }).click();
-    await expect(page).toHaveURL(/\/eds\/drafts\/%D0%9A%D0%9F-2026%2F118\?panel=open&tab=approve$/);
-    await expect(page.getByRole("tab", { name: "Одобрение", selected: true })).toBeVisible();
+    await center.getByRole("button", { name: /Где посмотреть: .*КП-2026\/118 ждёт/ }).click();
+    await expect(center.getByRole("region", { name: "Где посмотреть" })).toBeVisible();
   },
 );
 
@@ -288,12 +293,14 @@ test.describe("Поиск ⌘K", () => {
       await settledScreenshot(page, "dashboard-search");
       await expectNoViolations(page, "search results");
 
+      // раздела «Заявки» с экраном ещё нет: не заглушка, а «Где посмотреть» с мостом
       await search.press("ArrowDown");
       await search.press("Enter");
-      await expect(page).toHaveURL(
-        /\/crm\/requests\?request=%D0%97%D0%92-2026-104&panel=open&tab=card$/,
-      );
-      await expect(page.getByRole("heading", { level: 1, name: "Заявки" })).toBeVisible();
+      const where = page.getByRole("region", { name: "Где посмотреть" });
+      await expect(where.getByRole("link", { name: /Открыть в старом ERP/ })).toBeVisible();
+      await expect(page).toHaveURL(/\/dashboard\/queue/);
+      await settledScreenshot(page, "search-where");
+      await expectNoViolations(page, "search where");
     },
   );
 

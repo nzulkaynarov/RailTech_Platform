@@ -93,3 +93,27 @@
     max-width: none;
   }
 }
+/* «Где посмотреть» (W15-H2): подсказка под списком, когда у найденного объекта ещё нет экрана в Платформе */
+.pf-gsearch-where {
+  margin: 4px 8px 4px;
+  padding: 12px;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  background: #fafafa;
+}
+.pf-gsearch-where-title {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 22px;
+}
+.pf-gsearch-where-close {
+  margin-top: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #0958d9;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+}
