@@ -45,8 +45,13 @@ from app.services.settings import SettingsService
 
 logger = structlog.get_logger(__name__)
 Run = Literal["cheap", "heavy", "manual"]
-PROBE_TIMEOUT_S = 20.0
-HTTP_TIMEOUT_S = 8.0
+# Запрос к внешнему сервису с сервера бывает медленнее 3–5 с (каждый 5–6-й к api.telegram.org или
+# api.anthropic.com): короткий таймаут давал ложный `fail` и серию «Сбой/Восстановлено».
+HTTP_TIMEOUT_S = 12.0
+PROBE_TIMEOUT_S = 30.0
+# До признания `fail` проверка с транзиентной причиной (сеть, сервис не ответил) идёт ещё раз.
+RETRY_CAUSES = frozenset({"network", "server_down", "gateway_db", "cert", "probe_crashed"})
+RETRY_DELAY_S = 1.0
 WINDOW = timedelta(minutes=15)
 DAY = timedelta(hours=24)
 _DAY_KEYS = (
@@ -81,6 +86,8 @@ class Deps:
     erp_configured: Callable[[], Awaitable[bool]] | None = None
     # Последний ответ ERP на `GET /health` (кэш коннектора 30 с): из него — сервисы ERP (M3-ERP-06).
     erp_facts: Callable[[], Awaitable[ErpFacts]] | None = None
+    # Пауза перед повтором проверки, давшей транзиентный `fail`; в тестах — 0.
+    retry_delay_s: float = RETRY_DELAY_S
 
 
 class Collector:
@@ -122,6 +129,15 @@ class _Run:
         self._vendor_data: asyncio.Task[_VendorData] | None = None
 
     async def safe(self, key: str) -> CheckResult:
+        """Одна проверка; транзиентный `fail` (и сбой самой пробы) перепроверяется один раз."""
+        result = await self._once(key)
+        if result.status in ("fail", "unknown") and result.cause in RETRY_CAUSES:
+            if self.d.retry_delay_s > 0:
+                await asyncio.sleep(self.d.retry_delay_s)
+            return await self._once(key)
+        return result
+
+    async def _once(self, key: str) -> CheckResult:
         try:
             return await asyncio.wait_for(self.check(key), PROBE_TIMEOUT_S)
         except Exception as exc:  # noqa: BLE001 — сбой пробы не должен ронять проход
@@ -131,6 +147,7 @@ class _Run:
                 "unknown",
                 "Проверка не выполнена — повторится автоматически",
                 error=type(exc).__name__,
+                cause="probe_crashed",
             )
 
     async def check(self, key: str) -> CheckResult:

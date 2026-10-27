@@ -81,6 +81,22 @@ def test_statuses_health_from_monitor() -> None:
     assert (rows["embed-model"].health, rows["embed-model"].provider) == ("unknown", None)
 
 
+def test_health_detail_from_monitor_is_masked() -> None:
+    """Сырой текст провайдера в «Требует внимания» идёт только замаскированным (W15-H3)."""
+    now = datetime(2026, 10, 12, tzinfo=UTC)
+    raw = "401: Error code: 401 - Authorization: Bearer sk-ant-abcdef0123456789 rejected"
+    alerts = {
+        "model:dialog-model": SystemAlert(
+            key="model:dialog-model", active=True, detail=raw, updated_at=now
+        )
+    }
+    entries = {"dialog-model": ModelEntry("dialog-model", "anthropic", "anthropic/x")}
+    row = next(r for r in models_status.statuses(entries, alerts, {}) if r.alias == "dialog-model")
+    assert row.health_detail is not None
+    assert "sk-ant-abcdef" not in row.health_detail
+    assert "401" in row.health_detail
+
+
 class Raw:
     def __init__(self, parsed: Any) -> None:
         self._parsed = parsed

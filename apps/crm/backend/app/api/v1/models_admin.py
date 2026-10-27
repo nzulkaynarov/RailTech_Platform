@@ -5,13 +5,20 @@
 """
 
 from dataclasses import asdict
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Path, Request
 
 from app.api.deps import ContainerDep, require
 from app.integrations.litellm_admin import LiteLLMAdmin, load_defaults
-from app.schemas.spend import ModelChangeIn, ModelChangeResult, ModelResetIn
+from app.schemas.spend import (
+    ModelChangeIn,
+    ModelChangeResult,
+    ModelResetIn,
+    ProviderKeyIn,
+    ProviderKeyResult,
+)
 from app.security.principal import Principal
 from app.security.reauth import LockoutPolicy
 from app.services.models_admin import ModelChange, ModelsAdminService
@@ -63,3 +70,32 @@ async def reset_model(
     """Вернуть роль к значению по умолчанию (`infra/litellm.models.yaml`, ключ из env сервера)."""
     outcome = await service.reset(who, alias, body.password.get_secret_value())
     return ModelChangeResult(**asdict(outcome))
+
+
+@router.put("/providers/{provider}/key", response_model=ProviderKeyResult)
+async def change_provider_key(
+    provider: Annotated[str, Path(max_length=32)],
+    body: ProviderKeyIn,
+    who: Writer,
+    service: ServiceDep,
+    container: ContainerDep,
+) -> ProviderKeyResult:
+    """Новый ключ провайдера для всех его ролей разом (W15-H3): один пароль, один аудит.
+
+    Сначала создаются новые deployment всех ролей, потом удаляются прежние; сбой посередине
+    откатывает созданное. После смены провайдер сразу проверяется (журнал шлюза, без платных
+    вызовов моделей). Ключ уходит только в LiteLLM, в ответах и аудите — только последние 4 символа.
+    """
+    outcomes = await service.change_provider_key(
+        who, provider, body.api_key.get_secret_value().strip(), body.password.get_secret_value()
+    )
+    checked = True
+    try:
+        await container.external_checks.run(
+            "manual", datetime.now(UTC), keys=[f"vendor.{provider}"]
+        )
+    except Exception:  # noqa: BLE001 — ключ уже применён; проверка повторится по расписанию
+        checked = False
+    return ProviderKeyResult(
+        provider=provider, roles=[ModelChangeResult(**asdict(o)) for o in outcomes], checked=checked
+    )

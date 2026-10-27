@@ -11,7 +11,13 @@ from typing import Final, Literal
 from urllib.parse import urlsplit
 
 from app.domain.external_registry import Status
-from app.domain.system_status import BackupFacts, Component, backup_hint
+from app.domain.system_status import (
+    HOSTING_WHO,
+    BackupFacts,
+    Component,
+    backup_hint,
+    hosting_hint,
+)
 from app.domain.telegram_webhook import PROBLEM_TEXT, webhook_url_problem
 
 Metric = float | int | str | None
@@ -22,7 +28,8 @@ WEBHOOK_ERROR_FRESH: Final = timedelta(minutes=15)
 TLS_FAIL_DAYS: Final = 7
 TLS_WARN_DAYS: Final = 21
 MAIL_STUCK_AFTER: Final = timedelta(minutes=10)
-SERVER_HINT: Final = "Обратитесь к администратору сервера: сервис запускается вместе с ансамблем"
+# Код причины хранится в метриках проверки (служебный ключ с «_» наружу не отдаётся).
+CAUSE_METRIC: Final = "_cause"
 
 
 @dataclass(frozen=True, slots=True)
@@ -34,6 +41,8 @@ class CheckResult:
     hint: str | None = None
     latency_ms: int | None = None
     metrics: Mapping[str, Metric] = field(default_factory=dict)
+    # Машинный код причины (W15-H3): по нему `external_cause` решает, кто исправляет и что делать.
+    cause: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -66,13 +75,19 @@ class TelegramFacts:
 def telegram(f: TelegramFacts, now: datetime) -> CheckResult:
     key = "telegram"
     if f.mode == "disabled":
-        return CheckResult(key, "off", "Бот выключен настройкой сервера (TELEGRAM_MODE=disabled)")
+        return CheckResult(
+            key,
+            "off",
+            "Бот выключен настройкой сервера (TELEGRAM_MODE=disabled)",
+            cause="intentional",
+        )
     if not f.configured:
         return CheckResult(
             key,
             "fail",
             "Токен бота не задан — бот не отвечает клиентам",
             hint="Введите токен в «Подключениях» → «Telegram-бот»",
+            cause="no_token",
         )
     metrics: dict[str, Metric] = {
         "pending_updates": f.pending_updates,
@@ -85,13 +100,24 @@ def telegram(f: TelegramFacts, now: datetime) -> CheckResult:
     if config is not None:
         # `_no_fix`: адрес вебхука не правится в «Подключениях» — кнопка «Исправить» не нужна.
         metrics["_no_fix"] = 1
-        return CheckResult(key, "fail", *config, latency_ms=f.latency_ms, metrics=metrics)
+        return CheckResult(
+            key, "fail", *config, latency_ms=f.latency_ms, metrics=metrics, cause="webhook_config"
+        )
     if f.error is not None:
         return _telegram_error(f)
     problem = _webhook_problem(f, now)
     if problem is not None:
-        status, summary, hint = problem
-        return CheckResult(key, status, summary, f.last_error_message, hint, f.latency_ms, metrics)
+        status, summary, hint, cause = problem
+        return CheckResult(
+            key,
+            status,
+            summary,
+            f.last_error_message,
+            hint,
+            f.latency_ms,
+            metrics,
+            cause=cause,
+        )
     summary = f"Бот @{f.username} отвечает" if f.username else "Бот отвечает"
     return CheckResult(key, "ok", summary, latency_ms=f.latency_ms, metrics=metrics)
 
@@ -106,8 +132,12 @@ def _webhook_config_problem(f: TelegramFacts) -> tuple[str, str, str] | None:
     return (
         "Вебхук Telegram не настроен — бот не запущен и не получает сообщения",
         PROBLEM_TEXT[problem],
-        "Задайте CRM_DOMAIN в .env сервера (адрес берётся из него: https://<CRM_DOMAIN>/telegram/"
-        "webhook) или TELEGRAM_WEBHOOK_URL с https-адресом и перезапустите CRM",
+        hosting_hint(
+            "Публичный адрес CRM для бота на сервере не задан",
+            "Задать CRM_DOMAIN в .env сервера (адрес вебхука берётся из него: "
+            "https://<CRM_DOMAIN>/telegram/webhook) или TELEGRAM_WEBHOOK_URL с https-адресом "
+            "и перезапустить CRM",
+        ),
     )
 
 
@@ -120,18 +150,23 @@ def _telegram_error(f: TelegramFacts) -> CheckResult:
             error=f.detail,
             hint="Выпустите новый токен у @BotFather и введите в «Подключениях» → «Telegram-бот»",
             latency_ms=f.latency_ms,
+            cause="token_rejected",
         )
     return CheckResult(
         "telegram",
         "fail",
         "Нет связи с Telegram — сообщения клиентов не доходят",
         error=f.detail or f.error,
-        hint="Проверьте интернет и DNS на сервере; бот переподключится сам",
+        hint=hosting_hint(
+            "Сервер не достаёт до Telegram; бот переподключится сам, когда связь появится",
+            "Проверить выход сервера в интернет и DNS (api.telegram.org)",
+        ),
         latency_ms=f.latency_ms,
+        cause="network",
     )
 
 
-def _webhook_problem(f: TelegramFacts, now: datetime) -> tuple[Status, str, str] | None:
+def _webhook_problem(f: TelegramFacts, now: datetime) -> tuple[Status, str, str, str] | None:
     """Бот не получает сообщения (`fail`) или получает с задержкой/ошибками (`warn`)."""
     if f.mode == "webhook" and f.webhook_error:
         return (
@@ -139,31 +174,39 @@ def _webhook_problem(f: TelegramFacts, now: datetime) -> tuple[Status, str, str]
             "Не удалось узнать состояние вебхука — Telegram не отдал getWebhookInfo",
             "Проверка повторится сама; если не проходит — откройте «Состояние системы» и "
             "проверьте связь сервера с api.telegram.org",
+            "webhook_info",
         )
     if f.mode == "webhook" and not f.webhook_url:
         return (
             "fail",
             "Вебхук бота не установлен — Telegram не присылает сообщения",
             "Перезапустите бота: «Подключения» → «Telegram-бот» → сохраните токен ещё раз",
+            "webhook_state",
         )
     if f.mode == "polling" and f.webhook_url:
         return (
             "fail",
             "У бота установлен вебхук другого сервера — этот сервер сообщений не получает",
             "Остановите второй стенд с этим токеном или смените токен в «Подключениях»",
+            "webhook_state",
         )
     fresh = f.last_error_at is not None and now - f.last_error_at <= WEBHOOK_ERROR_FRESH
     if f.mode == "webhook" and fresh:
         return (
             "warn",
             "Telegram не может доставить сообщения на сервер",
-            "Проверьте, что адрес вебхука открывается из интернета и сертификат действителен",
+            hosting_hint(
+                "Telegram не достаёт до сервера по адресу вебхука",
+                "Открыть адрес вебхука бота из интернета и проверить, что сертификат действителен",
+            ),
+            "webhook_delivery",
         )
     if (f.pending_updates or 0) > TELEGRAM_PENDING_WARN:
         return (
             "warn",
             f"{f.pending_updates} сообщений ждут обработки — бот не успевает или остановлен",
             "Откройте «Состояние системы»: если бот остановлен — перезапустите сервер CRM",
+            "backlog",
         )
     return None
 
@@ -182,8 +225,12 @@ def litellm(f: GatewayFacts) -> CheckResult:
             "fail",
             "Шлюз моделей недоступен — бот не отвечает клиентам, ERP без ИИ",
             error=f.live.detail or f.live.error,
-            hint=SERVER_HINT,
+            hint=hosting_hint(
+                "Шлюз моделей не запущен на сервере",
+                "Запустить шлюз моделей (litellm) вместе с ансамблем",
+            ),
             latency_ms=f.live.latency_ms,
+            cause="server_down",
         )
     if f.ready_db not in (None, "connected"):
         return CheckResult(
@@ -191,8 +238,12 @@ def litellm(f: GatewayFacts) -> CheckResult:
             "warn",
             "Шлюз работает без своей базы — смена моделей и журнал расходов недоступны",
             error=f"db: {f.ready_db}",
-            hint=SERVER_HINT,
+            hint=hosting_hint(
+                "Шлюз моделей не видит свою базу данных",
+                "Проверить базу шлюза моделей (litellm) и её подключение",
+            ),
             latency_ms=f.live.latency_ms,
+            cause="gateway_db",
         )
     return CheckResult(key, "ok", "Шлюз отвечает", latency_ms=f.live.latency_ms)
 
@@ -207,7 +258,12 @@ class LangfuseFacts:
 def langfuse(f: LangfuseFacts) -> CheckResult:
     key = "langfuse"
     if not f.configured:
-        return CheckResult(key, "off", "Не подключён — трейсы ИИ не пишутся (ключи на сервере)")
+        return CheckResult(
+            key,
+            "off",
+            "Не подключён — трейсы ИИ не пишутся (ключи на сервере)",
+            cause="intentional",  # необязательный сервис: не «Требует внимания»
+        )
     health = f.health or HttpFacts("unavailable")
     if health.error is not None:
         return CheckResult(
@@ -215,16 +271,24 @@ def langfuse(f: LangfuseFacts) -> CheckResult:
             "fail",
             "Langfuse недоступен — трейсы ИИ теряются, бот работает",
             error=health.detail or health.error,
-            hint=SERVER_HINT,
+            hint=hosting_hint(
+                "Сервис журнала работы ИИ (Langfuse) не запущен или не отвечает",
+                "Запустить langfuse вместе с ансамблем",
+            ),
             latency_ms=health.latency_ms,
+            cause="server_down",
         )
     if f.keys_ok is False:
         return CheckResult(
             key,
             "fail",
             "Langfuse не принимает ключи проекта — трейсы не записываются",
-            hint="Обновите LANGFUSE_PUBLIC_KEY и LANGFUSE_SECRET_KEY на сервере",
+            hint=hosting_hint(
+                "Ключи проекта Langfuse на сервере устарели",
+                "Обновить LANGFUSE_PUBLIC_KEY и LANGFUSE_SECRET_KEY в .env сервера",
+            ),
             latency_ms=health.latency_ms,
+            cause="langfuse_keys",
         )
     return CheckResult(key, "ok", "Трейсы записываются", latency_ms=health.latency_ms)
 
@@ -268,6 +332,7 @@ def mail(f: MailFacts, now: datetime) -> CheckResult:
             "Не подключена — письма сотрудникам не уходят, пароли передаются вручную",
             hint="Подключите почту в «Подключениях» → «Почта»",
             metrics=metrics,
+            cause="not_configured",
         )
     if f.probe_error is not None:
         return CheckResult(
@@ -278,6 +343,7 @@ def mail(f: MailFacts, now: datetime) -> CheckResult:
             hint=_SMTP_HINTS.get(f.probe_error, _SMTP_HINTS["unavailable"]),
             latency_ms=f.probe_latency_ms,
             metrics=metrics,
+            cause=f"smtp_{f.probe_error}" if f.probe_error in _SMTP_HINTS else "smtp_unavailable",
         )
     stuck = f.oldest_queued_at is not None and now - f.oldest_queued_at > MAIL_STUCK_AFTER
     if stuck and not f.paused:
@@ -285,8 +351,12 @@ def mail(f: MailFacts, now: datetime) -> CheckResult:
             key,
             "warn",
             f"{f.queued} писем ждут отправки дольше 10 минут",
-            hint="Проверьте «Состояние системы» → «Очередь задач»: воркер должен быть запущен",
+            hint=hosting_hint(
+                "Письма стоят в очереди: фоновый обработчик (воркер CRM) не запущен",
+                "Запустить crm-worker вместе с ансамблем",
+            ),
             metrics=metrics,
+            cause="queue_stuck",
         )
     if _last_failed(f):
         return CheckResult(
@@ -297,6 +367,7 @@ def mail(f: MailFacts, now: datetime) -> CheckResult:
             hint="Откройте журнал писем в «Подключениях» → «Почта» и нажмите «Проверить связь»",
             latency_ms=f.probe_latency_ms,
             metrics=metrics,
+            cause="last_failed",
         )
     return CheckResult(key, "ok", "Письма уходят", latency_ms=f.probe_latency_ms, metrics=metrics)
 
@@ -315,9 +386,13 @@ def s3(health: HttpFacts, usage: Mapping[str, Metric] | None = None) -> CheckRes
             "fail",
             "Хранилище файлов недоступно — документы и вложения не сохраняются",
             error=health.detail or health.error,
-            hint=SERVER_HINT,
+            hint=hosting_hint(
+                "Хранилище файлов не запущено или не отвечает на сервере",
+                "Запустить хранилище файлов (rustfs) вместе с ансамблем и проверить доступы",
+            ),
             latency_ms=health.latency_ms,
             metrics=metrics,
+            cause="server_down",
         )
     return CheckResult(
         "s3", "ok", "Хранилище отвечает", latency_ms=health.latency_ms, metrics=metrics
@@ -332,6 +407,7 @@ def docling(health: HttpFacts | None) -> CheckResult:
             "off",
             "Не используется на этом сервере — база знаний принимает только Markdown, "
             "документы клиентов не распознаются",
+            cause="intentional",
         )
     if health.error is not None:
         return CheckResult(
@@ -339,8 +415,12 @@ def docling(health: HttpFacts | None) -> CheckResult:
             "fail",
             "Распознавание документов недоступно — новые файлы базы знаний не индексируются",
             error=health.detail or health.error,
-            hint=SERVER_HINT,
+            hint=hosting_hint(
+                "Сервис распознавания документов не запущен на сервере",
+                "Запустить docling вместе с ансамблем",
+            ),
             latency_ms=health.latency_ms,
+            cause="server_down",
         )
     return CheckResult("docling", "ok", "Сервис отвечает", latency_ms=health.latency_ms)
 
@@ -371,10 +451,37 @@ def backup(
     if facts is not None and facts.source == "rustfs":
         hint = backup_hint(facts)
         return CheckResult(
-            "backup", component.status, component.reason, facts.error_detail, hint, metrics=metrics
+            "backup",
+            component.status,
+            component.reason,
+            facts.error_detail,
+            hint,
+            metrics=metrics,
+            cause="backup_admin",
         )
-    hint = "Откройте «Резервные копии»" if "«Резервн" in component.reason else SERVER_HINT
-    return CheckResult("backup", component.status, component.reason, hint=hint, metrics=metrics)
+    if "«Резервн" in component.reason:
+        return CheckResult(
+            "backup",
+            component.status,
+            component.reason,
+            hint="Откройте «Резервные копии»",
+            metrics=metrics,
+            cause="backup_admin",
+        )
+    hint = None
+    if HOSTING_WHO not in component.reason:
+        hint = hosting_hint(
+            "Резервное копирование на сервере не работает",
+            "Запустить сервис резервных копий (backup) и проверить, что копии пишутся",
+        )
+    return CheckResult(
+        "backup",
+        component.status,
+        component.reason,
+        hint=hint,
+        metrics=metrics,
+        cause="server_down",
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -391,7 +498,7 @@ class TlsFacts:
 def tls(f: TlsFacts) -> CheckResult:
     key = f"tls.{f.name}"
     if f.not_applicable is not None:
-        return CheckResult(key, "off", f"Не применимо: {f.not_applicable}")
+        return CheckResult(key, "off", f"Не применимо: {f.not_applicable}", cause="intentional")
     metrics: dict[str, Metric] = {
         "host": f.host,
         "days_left": f.days_left,
@@ -404,8 +511,12 @@ def tls(f: TlsFacts) -> CheckResult:
             "fail",
             f"Сертификат {f.host} недействителен" if invalid else f"{f.host} не отвечает по HTTPS",
             error=f.detail or f.error,
-            hint="Проверьте DNS домена и журнал Caddy на сервере: сертификат выпускается сам",
+            hint=hosting_hint(
+                f"Сертификат {f.host} не выпускается или не отвечает",
+                f"Проверить DNS домена {f.host} и журнал Caddy на сервере",
+            ),
             metrics=metrics,
+            cause="cert",
         )
     days = f.days_left if f.days_left is not None else 0
     if days <= TLS_WARN_DAYS:
@@ -414,8 +525,12 @@ def tls(f: TlsFacts) -> CheckResult:
             key,
             status,
             f"Сертификат {f.host} истекает через {days} дн. — автопродление не сработало",
-            hint="Проверьте журнал Caddy и что порт 80/443 открыт из интернета",
+            hint=hosting_hint(
+                f"Сертификат {f.host} скоро истечёт: автопродление не сработало",
+                "Проверить журнал Caddy и что порты 80 и 443 открыты из интернета",
+            ),
             metrics=metrics,
+            cause="cert_expiring",
         )
     return CheckResult(key, "ok", f"Действует ещё {days} дн.", metrics=metrics)
 
@@ -444,9 +559,17 @@ STALE_CHEAP: Final = timedelta(minutes=5)
 STALE_HEAVY: Final = timedelta(minutes=45)
 
 
-def stale(checked_at: datetime, tiers: tuple[str, ...], now: datetime) -> bool:
+# Сломанное перепроверяется с затуханием (до раза в 15 мин) — пауза между проверками не «устарело».
+STALE_BACKING_OFF: Final = timedelta(minutes=20)
+
+
+def stale(
+    checked_at: datetime, tiers: tuple[str, ...], now: datetime, *, backing_off: bool = False
+) -> bool:
     """Последняя проверка слишком старая: фоновые проверки не идут (воркер остановлен)."""
     limit = STALE_CHEAP if "cheap" in tiers else STALE_HEAVY
+    if backing_off:
+        limit = max(limit, STALE_BACKING_OFF)
     return now - checked_at > limit
 
 
@@ -454,10 +577,13 @@ def stale_summary(checked_at: datetime, now: datetime) -> tuple[str, str]:
     minutes = int((now - checked_at).total_seconds() // 60)
     return (
         f"Последняя проверка {minutes} мин назад — фоновые проверки не идут",
-        "Откройте «Состояние системы» → «Очередь задач»: воркер CRM должен быть запущен",
+        hosting_hint(
+            "Фоновые проверки остановились: воркер CRM не запущен",
+            "Запустить crm-worker вместе с ансамблем",
+        ),
     )
 
 
 def never_checked(tiers: tuple[str, ...]) -> str:
     period = "раз в минуту" if "cheap" in tiers else "раз в 15 минут"
-    return f"Ещё не проверялся — фоновая проверка {period}"
+    return f"Не проверено — нажмите «Проверить» (фоновая проверка {period})"

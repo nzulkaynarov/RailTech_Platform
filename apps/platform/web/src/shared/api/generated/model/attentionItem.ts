@@ -148,6 +148,15 @@
  * (`erp_not_connected` — сначала подключите ERP, `erp_unavailable` — ERP не ответила). `POST /setup/company` без сопряжённой ERP —
  * 409 `ERP_NOT_CONNECTED` (новый код) с текстом и `details.link` на карточку ERP; недоступная ERP — прежний 503 `BACKEND_UNAVAILABLE`.
  *
+ * **0.17.0 (W15-H3) — здоровье интеграций: одна причина, одна строка, одно действие.** Добавляющее изменение. `GET
+ * /admin/integrations` и `GET /admin/integrations/services` отдают группы по причине (`ServiceGroup`: состояние `ServiceState`
+ * — «Сломано» только после 15 минут непрерывного сбоя, «Нестабильно» для дребезга, «Ожидаемо на стенде», «Не проверено»;
+ * «кто исправляет» `ServiceOwner`, действия `ServiceAction`, «с …», `flaps_24h`, готовый текст `message`, замаскированный
+ * `technical`), у сервисов — `state`, `cause_key`, `owner`, `action`, `since`, `flaps_24h`, `last_recovered_at`, у
+ * `AttentionItem` — `group` и `technical`, у компонентов состояния — `expected_on_stand`. Новый `PUT
+ * /admin/integrations/models/providers/{provider}/key` — ключ провайдера на все его роли одной операцией (один пароль, без
+ * частичного применения).
+ *
  * **0.16.0 (D1-3) — EDS · Входящие письма и резолюция директора.** Добавляющее изменение, тег `letters`: `GET /eds/letters`
  * (список со статусом словами интерфейса и фильтром по статусу), `GET /eds/letters/{ref}` (карточка письма по id или по
  * номеру `ВХ-104/26`: реквизиты, суть, вложения, связи, журнал, шаг пути заявки; данные заявки — из ERP по ссылке письма,
@@ -177,14 +186,15 @@
  * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.17.0
+ * OpenAPI spec version: 0.18.0
  */
 import type { AttentionItemSeverity } from "./attentionItemSeverity";
 import type { AttentionKind } from "./attentionKind";
 import type { IntegrationCardKey } from "./integrationCardKey";
+import type { ServiceGroup } from "./serviceGroup";
 
 export interface AttentionItem {
-  /** Стабильный ключ строки (`service:telegram`, `model:dialog-model`, `setup:erp`) */
+  /** Стабильный ключ строки (`group:docling:server_down`, `model:dialog-model`, `setup:erp`) */
   id: string;
   card: IntegrationCardKey;
   /** `fail` сбой, `warn` внимание, `setup` ещё не подключено */
@@ -200,4 +210,11 @@ export interface AttentionItem {
    * @nullable
    */
   detail: string | null;
+  /** Для `kind: service` — группа по причине (состояние, кто исправляет, действие, «с …»); для остальных `null`. «Ожидаемо на стенде» в `attention` не попадает. */
+  group: ServiceGroup | null;
+  /**
+   * Сырой ответ провайдера (секреты замаскированы) — интерфейс показывает его только свёрнутым, под «Технические подробности»
+   * @nullable
+   */
+  technical: string | null;
 }
