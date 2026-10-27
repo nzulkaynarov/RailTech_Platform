@@ -359,7 +359,7 @@ s3_vps2_after="$(env_get S3_WAL_SECRET_KEY || true)/$(env_get S3_BACKUP_SECRET_K
 [[ "$s3_vps2_before" == "$s3_vps2_after" ]] || rs_set s3_vps2 1
 log "0. проверки до разрушения (конфигурация, pull образов, CPU-база образов)"
 compose "$rel" config -q
-compose "$rel" pull
+retry "pull образов" compose "$rel" pull
 "$rel/infra/deploy/cpu-baseline-check.sh" "$rel" "$tag"
 
 if [[ -n "$(rs_get data_reset)" ]]; then

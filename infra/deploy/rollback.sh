@@ -30,7 +30,7 @@ fi
 # EDS (волна 12) тоже есть не в каждом релизе; домена у него нет (маршрута наружу нет), здоровье — по healthcheck контейнера.
 have_eds=0
 if grep -qx eds-api <<<"$services"; then pull_services+=(eds-api); have_eds=1; fi
-compose "$rel" pull "${pull_services[@]}" || log "pull не удался — используются локальные образы"
+retry "pull образов" compose "$rel" pull "${pull_services[@]}" || log "pull не удался — используются локальные образы"
 up_stack "$rel"
 
 state_set previous_tag "$cur"

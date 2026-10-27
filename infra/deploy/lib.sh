@@ -13,6 +13,31 @@ RT_STATE="${RT_STATE:-$RT_ROOT/state}"
 log() { printf '▸ %s\n' "$*"; }
 die() { printf '✘ %s\n' "$*" >&2; exit 1; }
 
+# Повтор сетевой команды при плавающих сбоях (ghcr.io: «TLS handshake timeout» при docker login / compose pull).
+# retry <метка> <команда...>: до RT_RETRY_MAX (5) попыток с паузами RT_RETRY_DELAY (5) с, затем вдвое больше: 5, 10, 20, 40 с.
+# Повтор — при любом коде выхода ≠ 0; после последней неудачной попытки возвращается её код (вызывающий решает, что дальше —
+# прежнее поведение). В журнал — метка, номер попытки и код; аргументы команды не печатаются (в них могут быть секреты).
+# stdin команде не пробрасывается повторно: для login передавайте источник внутри самой команды (функция с printf | ssh).
+retry() {
+  local label="$1"; shift
+  local max="${RT_RETRY_MAX:-5}" delay="${RT_RETRY_DELAY:-5}" n=1 rc=0
+  while true; do
+    if "$@"; then
+      (( n == 1 )) || log "$label: удалось с попытки $n из $max"
+      return 0
+    else
+      rc=$?
+    fi
+    if (( n >= max )); then
+      log "$label: попытка $n из $max не удалась (код $rc), повторов больше нет" >&2
+      return "$rc"
+    fi
+    log "$label: попытка $n из $max не удалась (код $rc), повтор через $delay с" >&2
+    sleep "$delay"
+    delay=$((delay * 2)); n=$((n + 1))
+  done
+}
+
 # Значение переменной из env-файла (без source: в значениях могут быть спецсимволы).
 env_get() { grep -E "^$1=" "$RT_ENV_FILE" | tail -1 | cut -d= -f2-; }
 
