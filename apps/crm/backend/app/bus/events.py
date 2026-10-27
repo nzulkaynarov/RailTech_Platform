@@ -8,9 +8,12 @@
 почта нормализованы до публикации.
 
 Типы: `uz.railtech.crm.{client,contact,lead}.*.v1`, `uz.railtech.identity.user.*.v1`.
+Сообщение переписки (`lead.message_added`, D1-1) — сигнал без текста: подписчик (BFF
+Платформы) перезапрашивает переписку API CRM.
 """
 
 from collections.abc import Iterable
+from datetime import datetime
 from typing import Any
 
 from rt_bus.errors import NotInTransactionError
@@ -21,7 +24,7 @@ from app.bus.reasons import reason_code
 from app.bus.runtime import get_bus
 from app.models.auth import User
 from app.models.clients import Client, ClientContact
-from app.models.leads import Lead
+from app.models.leads import Lead, Message
 from app.security.audit import Actor
 
 CLIENT_CREATED = "uz.railtech.crm.client.created.v1"
@@ -33,6 +36,7 @@ LEAD_CREATED = "uz.railtech.crm.lead.created.v1"
 LEAD_UPDATED = "uz.railtech.crm.lead.updated.v1"
 LEAD_ERASED = "uz.railtech.crm.lead.erased.v1"
 LEAD_MERGED = "uz.railtech.crm.lead.merged.v1"
+LEAD_MESSAGE_ADDED = "uz.railtech.crm.lead.message_added.v1"
 LEAD_STAGE_CHANGED = "uz.railtech.crm.lead.stage_changed.v1"
 USER_CREATED = "uz.railtech.identity.user.created.v1"
 USER_UPDATED = "uz.railtech.identity.user.updated.v1"
@@ -202,6 +206,36 @@ async def lead_merged(
         "actor": snapshots.actor_of(actor),
     }
     await _publish(session, LEAD_MERGED, data, f"lead/{survivor.id}")
+
+
+async def lead_message_added(
+    session: AsyncSession,
+    lead: Lead,
+    message: Message,
+    *,
+    channel: str,
+    sent_at: datetime,
+    actor: Actor,
+) -> None:
+    """В переписке лида новое сообщение (входящее или исходящее). Только идентификаторы и
+    признаки: текста, вложений и контактов в событии нет (D1-1, подсказка SSE «messages»)."""
+    _require_transaction(session)
+    if _internal(lead):
+        return
+    data = {
+        "crm_lead_id": lead.id,
+        "crm_client_id": lead.client_id,
+        "message_id": message.id,
+        "direction": "in" if message.role == "lead" else "out",
+        "author": message.role,
+        "channel": channel,
+        "has_attachments": bool(message.attachments),
+        "handoff": lead.owner_mode != "bot",
+        "crm_assigned_user_id": lead.assigned_user_id,
+        "sent_at": snapshots.utc(sent_at),
+        "actor": snapshots.actor_of(actor),
+    }
+    await _publish(session, LEAD_MESSAGE_ADDED, data, f"lead/{lead.id}")
 
 
 async def user_created(session: AsyncSession, user: User, actor: Actor) -> None:

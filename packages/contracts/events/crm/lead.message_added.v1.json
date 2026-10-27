@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://railtech.uz/contracts/events/crm/lead.message_added.v1.json",
+  "title": "В переписке лида новое сообщение",
+  "description": "Тип uz.railtech.crm.lead.message_added.v1, источник rt://crm (D1-1, волна 16). Поле data конверта (envelope.v1.json). Сообщение записано в переписку лида (входящее от лида или исходящее от бота и менеджера) — в той же транзакции, что и строка сообщения. Это сигнал «перезапросите переписку», а не копия: текста, вложений и контактов в событии НЕТ — подписчик читает переписку API CRM с правами сотрудника. Подписчик сегодня один — BFF Платформы (подсказка SSE «messages»); ERP и EDS его не получают. Диалоги песочницы (тест бота) не публикуются. Заметки команды — не сообщения переписки и этим типом не публикуются.",
+  "type": "object",
+  "required": [
+    "crm_lead_id",
+    "crm_client_id",
+    "message_id",
+    "direction",
+    "author",
+    "channel",
+    "has_attachments",
+    "handoff",
+    "crm_assigned_user_id",
+    "sent_at",
+    "actor"
+  ],
+  "properties": {
+    "crm_lead_id": {
+      "type": "integer"
+    },
+    "crm_client_id": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "description": "Клиент, к которому привязан лид; null — ещё не клиент"
+    },
+    "message_id": {
+      "type": "integer",
+      "description": "Идентификатор сообщения в CRM (растёт со временем): подписчик может не перезапрашивать уже показанное"
+    },
+    "direction": {
+      "type": "string",
+      "enum": [
+        "in",
+        "out"
+      ],
+      "description": "in — написал лид (клиент); out — ответ бота, менеджера или системное сообщение"
+    },
+    "author": {
+      "type": "string",
+      "enum": [
+        "lead",
+        "bot",
+        "manager",
+        "system"
+      ],
+      "description": "Кто автор сообщения (роль сообщения CRM)"
+    },
+    "channel": {
+      "type": "string",
+      "pattern": "^[a-z][a-z_]{0,15}$",
+      "description": "Канал переписки (telegram, …) — из диалога CRM"
+    },
+    "has_attachments": {
+      "type": "boolean",
+      "description": "У сообщения есть вложения (сами файлы — только через API CRM)"
+    },
+    "handoff": {
+      "type": "boolean",
+      "description": "Лид ждёт человека или уже у менеджера (owner_mode не bot): сообщение важно для «Ждут ответа» и счётчиков"
+    },
+    "crm_assigned_user_id": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "description": "Ответственный менеджер лида на момент сообщения; null — нет (адресная доставка подсказок — хвост)"
+    },
+    "sent_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Время записи сообщения в CRM"
+    },
+    "actor": {
+      "$ref": "_defs.v1.json#/$defs/Actor"
+    }
+  },
+  "additionalProperties": false
+}

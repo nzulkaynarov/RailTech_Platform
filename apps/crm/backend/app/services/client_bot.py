@@ -24,7 +24,7 @@ from app.models.qualification import Escalation
 from app.repositories import documents as docs_repo
 from app.repositories import leads as repo
 from app.schemas.settings import Language
-from app.services import escalation
+from app.services import escalation, message_log
 from app.services.conversation_support import current_lead, lang_of, verified_client
 from app.services.conversation_types import EscalationHook, Outgoing
 from app.services.documents import LINK_TTL_S
@@ -261,12 +261,8 @@ class ClientBotService:
             await session.flush()
             text = cfg.texts.request_created.get(lang_of(lead), number=str(row.id))
             if conversation is not None:
-                await repo.add_message(
-                    session, conversation_id=conversation.id, role="lead", text=summary
-                )
-                await repo.add_message(
-                    session, conversation_id=conversation.id, role="bot", text=text
-                )
+                await message_log.add(session, conversation, role="lead", text=summary)
+                await message_log.add(session, conversation, role="bot", text=text)
             signals = TriggerSignals(customer_mode=True, intent="service")
             hits = evaluate(signals, cfg.escalation.triggers())
             applied = await escalation.apply(session, lead, hits, cfg, datetime.now(UTC))
