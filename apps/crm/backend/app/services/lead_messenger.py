@@ -6,6 +6,7 @@ import structlog
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.repositories import leads as repo
+from app.services import message_log
 
 logger = structlog.get_logger(__name__)
 
@@ -42,9 +43,9 @@ class LeadMessenger:
             logger.exception("lead_message_failed", lead_id=lead_id)
             return None
         async with self._sessions() as session, session.begin():
-            message = await repo.add_message(
+            message = await message_log.add(
                 session,
-                conversation_id=conversation.id,
+                conversation,
                 role=role,
                 text=text,
                 meta=meta or {},

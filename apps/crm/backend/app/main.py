@@ -24,6 +24,7 @@ from app.api.v1 import (
     external_services,
     integrations,
     kb,
+    lead_attachments,
     lead_intake,
     leads,
     me,
@@ -121,6 +122,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         # Раньше `leads`: `/leads/web*` не должен перехватываться `/leads/{lead_id}`.
         lead_intake,
         leads,
+        lead_attachments,
         stream,
         kb,
         settings_api,

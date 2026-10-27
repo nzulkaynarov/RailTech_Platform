@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.domain.sandbox import SANDBOX_SOURCE
 from app.models.auth import User
 from app.models.clients import ClientContact
+from app.models.kb import Product
 from app.models.leads import Conversation, Lead, LeadNote, Message, TelegramIdentity
 from app.models.qualification import Escalation
 
@@ -149,6 +150,60 @@ async def messages(
         stmt = stmt.where(Message.id < before_id)
     rows = (await session.scalars(stmt.order_by(Message.id.desc()).limit(limit))).all()
     return list(reversed(rows))
+
+
+async def lead_message(session: AsyncSession, lead_id: int, message_id: int) -> Message | None:
+    """Сообщение переписки именно этого лида (чужой id — None, как несуществующий)."""
+    stmt = (
+        select(Message)
+        .join(Conversation, Conversation.id == Message.conversation_id)
+        .where(Conversation.lead_id == lead_id, Message.id == message_id)
+    )
+    found: Message | None = (await session.scalars(stmt.limit(1))).first()
+    return found
+
+
+async def message_by_client_id(
+    session: AsyncSession, lead_id: int, client_message_id: str
+) -> int | None:
+    """Ответ менеджера с этим ключом повтора уже записан (D1-1: «Повторить» не дублирует)."""
+    stmt = (
+        select(Message.id)
+        .join(Conversation, Conversation.id == Message.conversation_id)
+        .where(
+            Conversation.lead_id == lead_id,
+            Message.role == "manager",
+            Message.meta["client_message_id"].astext == client_message_id,
+        )
+        .limit(1)
+    )
+    value: int | None = await session.scalar(stmt)
+    return value
+
+
+async def last_lead_texts(session: AsyncSession, lead_ids: Sequence[int]) -> dict[int, str]:
+    """Последнее непустое сообщение лида — по одному на лида, одним запросом (записка передачи)."""
+    if not lead_ids:
+        return {}
+    latest = (
+        select(func.max(Message.id))
+        .join(Conversation, Conversation.id == Message.conversation_id)
+        .where(Conversation.lead_id.in_(lead_ids), Message.role == "lead", Message.text != "")
+        .group_by(Conversation.lead_id)
+    )
+    stmt = (
+        select(Conversation.lead_id, Message.text)
+        .join(Conversation, Conversation.id == Message.conversation_id)
+        .where(Message.id.in_(latest))
+    )
+    return {row.lead_id: row.text for row in (await session.execute(stmt)).all()}
+
+
+async def product_names(session: AsyncSession, keys: Sequence[str]) -> dict[str, str]:
+    if not keys:
+        return {}
+    stmt = select(Product.key, Product.name).where(Product.key.in_(set(keys)))
+    return {row.key: row.name for row in (await session.execute(stmt)).all()}
 
 
 async def notes(session: AsyncSession, lead_id: int) -> Sequence[LeadNote]:

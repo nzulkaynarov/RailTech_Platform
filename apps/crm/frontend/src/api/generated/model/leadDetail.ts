@@ -5,6 +5,7 @@
  * OpenAPI spec version: 0.5.0
  */
 import type { EscalationOut } from "./escalationOut";
+import type { HandoffNote } from "./handoffNote";
 import type { LeadDetailClientHandoffStatus } from "./leadDetailClientHandoffStatus";
 import type { LeadDetailQualification } from "./leadDetailQualification";
 
@@ -26,6 +27,7 @@ export interface LeadDetail {
   erp_company_id?: number | null;
   erp_deal_id?: number | null;
   escalation?: EscalationOut | null;
+  handoff_note?: HandoffNote | null;
   id: number;
   language: string;
   last_lead_msg_at: string | null;

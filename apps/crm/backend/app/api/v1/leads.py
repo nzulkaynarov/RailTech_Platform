@@ -41,6 +41,7 @@ from app.schemas.leads import (
     TeamMember,
 )
 from app.security.principal import Principal
+from app.services import handoff_notes
 
 router = APIRouter(prefix="/api/v1", tags=["leads"])
 
@@ -144,16 +145,23 @@ async def list_leads(
 
 
 @router.get("/inbox", response_model=InboxResponse)
-async def inbox(who: Taker, container: ContainerDep) -> InboxResponse:
-    """Очередь работы — менеджеру и админу; наблюдатель смотрит «Лиды» (SPEC §10.1)."""
+async def inbox(who: Reader, container: ContainerDep) -> InboxResponse:
+    """Очередь работы с запиской передачи (CRM-06). Читает любой с `leads:read` (D1-1: директор
+    видит «Ждут ответа» только для просмотра); забрать и ответить — права `leads:take`/`reply`."""
     async with container.session_factory() as session:
         escalated, mine, unassigned = await crm.inbox(session, who.user_id)
         ids = [lead.id for lead in (*escalated, *mine, *unassigned)]
         escalations = await crm.active_escalations(session, ids)
         names = await crm.user_names(session, [*escalated, *mine, *unassigned])
+        notes = await handoff_notes.notes(session, [*escalated, *mine, *unassigned], escalations)
 
     def out(rows: list[Lead]) -> list[LeadOut]:
-        return [lead_out(r, escalations.get(r.id), names) for r in rows]
+        return [
+            lead_out(r, escalations.get(r.id), names).model_copy(
+                update={"handoff_note": notes.get(r.id)}
+            )
+            for r in rows
+        ]
 
     ranked = sorted(
         escalated,
@@ -219,7 +227,10 @@ async def lead_messages(
 
 @router.post("/leads/{lead_id}/messages", response_model=ActionResult)
 async def reply(lead_id: int, body: Reply, who: Replier, container: ContainerDep) -> ActionResult:
-    return ActionResult(id=await container.lead_service.reply(who, lead_id, body.text))
+    message_id = await container.lead_service.reply(
+        who, lead_id, body.text, client_message_id=body.client_message_id
+    )
+    return ActionResult(id=message_id)
 
 
 @router.post("/leads/{lead_id}/assist", response_model=AssistOut)

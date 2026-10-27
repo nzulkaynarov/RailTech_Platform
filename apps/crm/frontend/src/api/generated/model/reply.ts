@@ -6,6 +6,7 @@
  */
 
 export interface Reply {
+  client_message_id?: string | null;
   /**
    * @minLength 1
    * @maxLength 4000
