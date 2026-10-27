@@ -2771,8 +2771,68 @@ export interface components {
       | "rotation_pending"
       | "paused"
       | "bot_not_running";
+    /**
+     * @description Состояние словом (W15-H3, решает CRM): `broken` Сломано, `degraded` Работает с перебоями, `not_configured` Не настроено, `disabled` Выключено намеренно, `expected` Ожидаемо на стенде (серым, без оповещений и без «Требует внимания»), `not_checked` Не проверено — нажмите «Проверить», `ok` Работает.
+     * @enum {string}
+     */
+    ServiceState:
+      | "ok"
+      | "broken"
+      | "degraded"
+      | "not_configured"
+      | "disabled"
+      | "expected"
+      | "not_checked";
+    /**
+     * @description Кто исправляет: `admin` Вы (администратор); `owner` Владелец компании — ключ и оплата провайдера; `hosting` Хостинг — сервер (тот, кто разворачивал Платформу); `provider` Провайдер — сбой на их стороне, ждём.
+     * @enum {string}
+     */
+    ServiceOwner: "admin" | "owner" | "hosting" | "provider";
+    /**
+     * @description Действие по смыслу: `enter_key` Ввести новый ключ (форма в карточке «Модели ИИ»), `enter_token` Ввести новый токен (карточка Telegram), `recheck` Проверить снова, `reconnect` Переподключить, `open_settings` Открыть настройки, `write_owner` Написать владельцу и `write_hosting` Передать хостингу (готовый текст `message` — копируется, ничего не отправляется), `disable_provider` Выключить провайдера (пароль администратора).
+     * @enum {string}
+     */
+    ServiceAction:
+      | "enter_key"
+      | "enter_token"
+      | "recheck"
+      | "reconnect"
+      | "open_settings"
+      | "write_owner"
+      | "write_hosting"
+      | "disable_provider";
+    /** @description Одна причина — одна строка «Требует внимания» (W15-H3): сервисы реестра CRM с общим корнем свёрнуты вместе («Ключ Anthropic отклонён — не работают: диалог с клиентом, запасная модель, поиск по базе знаний»). Правило группировки, «кто исправляет» и действие решает CRM (`external_cause`); BFF их не оценивает. */
+    ServiceGroup: {
+      /** @description Корень причины (`vendor.anthropic:key_rejected`) — стабильный ключ строки */
+      id: string;
+      state: components["schemas"]["ServiceState"];
+      owner: components["schemas"]["ServiceOwner"] | null;
+      /** @description Главное действие (одно); `null` — исправлять нечего */
+      action: components["schemas"]["ServiceAction"] | null;
+      /** @description Запасные действия */
+      more_actions: components["schemas"]["ServiceAction"][];
+      /** @description Что случилось одной фразой на русском (текст CRM), без сырых ответов провайдера */
+      headline: string;
+      /** @description Что сделать и кому передать (текст CRM) */
+      detail: string | null;
+      /** @description Что перестало работать — функции списком (текст CRM) */
+      affected: string[];
+      service_keys: string[];
+      titles: string[];
+      /**
+       * Format: date-time
+       * @description Когда впервые обнаружено («с …»)
+       */
+      since: string | null;
+      /** @description Сырой текст проверки для «Технических подробностей» (свёрнуто, «Скопировать для поддержки»); секреты замаскированы CRM. */
+      technical: string[];
+      /** @description Готовый текст владельцу или хостингу; пользователь копирует его сам, Платформа ничего не отправляет */
+      message: string | null;
+      /** @description Карточка экрана, где действие выполняется; `null` — действие не требует карточки */
+      fix_card: components["schemas"]["IntegrationCardKey"] | null;
+    };
     AttentionItem: {
-      /** @description Стабильный ключ строки (`service:telegram`, `model:dialog-model`, `setup:erp`) */
+      /** @description Стабильный ключ строки (`group:docling:server_down`, `model:dialog-model`, `setup:erp`) */
       id: string;
       card: components["schemas"]["IntegrationCardKey"];
       /**
@@ -2785,6 +2845,10 @@ export interface components {
       subject: string | null;
       /** @description Итог проверки и подсказка «что сделать» от CRM (текст CRM, на русском) */
       detail: string | null;
+      /** @description Для `kind: service` — группа по причине (состояние, кто исправляет, действие, «с …»); для остальных `null`. «Ожидаемо на стенде» в `attention` не попадает. */
+      group: components["schemas"]["ServiceGroup"] | null;
+      /** @description Сырой ответ провайдера (секреты замаскированы) — интерфейс показывает его только свёрнутым, под «Технические подробности» */
+      technical: string | null;
     };
     IntegrationsOverview: {
       /** Format: date-time */
@@ -2874,6 +2938,10 @@ export interface components {
     ExternalServiceList: {
       /** Format: date-time */
       checked_at: string | null;
+      /** @description Тестовый стенд (не прод): часть причин «ожидаема на стенде» */
+      stand: boolean;
+      /** @description Не-`ok` сервисы, свёрнутые по причине; порядок: сломано, перебои, не настроено, не проверено, ожидаемо, выключено */
+      groups: components["schemas"]["ServiceGroup"][];
       summary: components["schemas"]["ServicesSummary"];
       items: components["schemas"]["ExternalService"][];
     };
@@ -3059,6 +3127,22 @@ export interface components {
       uptime_7d: number | null;
       /** @description Карточка экрана, где это исправляется (`IntegrationCardKey`); `null` — настроить негде */
       fix_card: components["schemas"]["IntegrationCardKey"] | null;
+      state: components["schemas"]["ServiceState"];
+      /** @description Корень причины; у сервисов с общей причиной он общий */
+      cause_key: string;
+      owner: components["schemas"]["ServiceOwner"] | null;
+      action: components["schemas"]["ServiceAction"] | null;
+      more_actions: components["schemas"]["ServiceAction"][];
+      /**
+       * Format: date-time
+       * @description Когда впервые обнаружено (не в порядке с …)
+       */
+      since: string | null;
+      /**
+       * Format: date-time
+       * @description Когда восстановился после последнего сбоя за 30 дней — «восстановлено в …» из журнала инцидентов
+       */
+      last_recovered_at: string | null;
     };
     /** @description Сервис, его проверки за 24 часа, сводка по дням за 7 дней и инциденты за 30 дней. */
     ExternalServiceDetail: {
@@ -3302,6 +3386,8 @@ export interface components {
       /** @enum {string} */
       status: "ok" | "warn" | "fail" | "unknown";
       title: string;
+      /** @description Тестовый стенд: здесь это ожидаемо — в «Требует внимания» не попадает */
+      expected_on_stand: boolean;
     };
     /** @enum {string} */
     ModuleCode: "dashboard" | "crm" | "eds" | "erp" | "chats" | "admin";
