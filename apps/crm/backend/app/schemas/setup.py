@@ -14,6 +14,9 @@ ChecklistKey = Literal[
     "kb",
     "team",
     "test_dialog",
+    "erp",
+    "mail",
+    "first_employee",
 ]
 
 

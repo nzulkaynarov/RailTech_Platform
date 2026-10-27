@@ -93,7 +93,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app = FastAPI(
         title="RailTech CRM API",
-        version="0.4.0",  # 0.4.0 (E4): тело `aud` у sso/token и подкод `eds_access_denied`
+        version="0.5.0",  # 0.5.0 (W13C-F1): ключи erp, mail, first_employee в чек-листе
         lifespan=lifespan,
         # operationId = имя функции роута → читаемые имена в клиенте orval.
         generate_unique_id_function=lambda route: route.name,

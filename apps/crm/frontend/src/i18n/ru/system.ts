@@ -42,6 +42,9 @@ export const system = {
       kb: "В базе знаний есть проиндексированный документ",
       team: "Есть коллега с привязанным Telegram",
       test_dialog: "Пробный диалог с ботом проведён",
+      erp: "ERP подключена",
+      mail: "Почта (SMTP) настроена",
+      first_employee: "Есть первый сотрудник",
     } as Record<string, string>,
   },
   backups: {

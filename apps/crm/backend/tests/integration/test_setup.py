@@ -59,6 +59,32 @@ async def test_first_run_creates_admin_once(
     assert count == 1
 
 
+async def test_checklist_has_platform_steps(client: TestClient) -> None:
+    """W13C-F1 (Q-W13-A4-2): шаги `erp`, `mail`, `first_employee` приходят из CRM, не из BFF."""
+    ok = client.post("/api/v1/setup/admin", json={**BODY, "code": _code(client)})
+    assert ok.status_code == 200, ok.text
+    headers = {"Authorization": f"Bearer {ok.json()['access_token']}"}
+
+    first = client.get("/api/v1/setup/checklist", headers=headers).json()
+    done = {i["key"]: i["done"] for i in first["items"]}
+    assert {"erp", "mail", "first_employee"} <= set(done)
+    assert first["total"] == len(first["items"])
+    assert done["first_employee"] is False  # кроме администратора сотрудников нет
+    links = {i["key"]: i["link"] for i in first["items"]}
+    assert links["erp"] == "/integrations"
+    assert links["first_employee"] == "/users"
+
+    created = client.post(
+        "/api/v1/users",
+        headers=headers,
+        json={"email": "colleague@railtech.uz", "full_name": "Коллега", "roles": ["viewer"]},
+    )
+    assert created.status_code == 201, created.text
+    second = client.get("/api/v1/setup/checklist", headers=headers).json()
+    assert {i["key"]: i["done"] for i in second["items"]}["first_employee"] is True
+    assert second["done"] == first["done"] + 1
+
+
 async def test_parallel_first_admins_only_one_wins(
     sessions: async_sessionmaker[AsyncSession],
 ) -> None:

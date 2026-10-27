@@ -62,10 +62,14 @@ async def get_setup_checklist(
     """Чек-лист настройки для админа: что сделано и куда идти. Без платных вызовов моделей.
 
     Бот и модели — из тех же проверок, что «Состояние системы» (бот = принимает сообщения).
+    Ключи `erp`, `mail`, `first_employee` (W13C-F1) — шаги чек-листа Платформы: коннектор ERP
+    задан, задан SMTP, есть ещё один активный сотрудник.
     """
     cfg = await container.settings_service.get()
     components = await collect_components(container, readiness, datetime.now(UTC))
     models_ok, bot_running = checks.health_facts(components)
+    erp_connected = (await container.erp_connector.resolution()).connection is not None
+    mail_configured = (await container.smtp_connector.resolution()).connection is not None
     async with container.session_factory() as session:
         saved = await checks.saved_settings(session)
         facts = checks.SetupFacts(
@@ -77,6 +81,9 @@ async def get_setup_checklist(
             kb_indexed=await checks.kb_indexed(session),
             teammate_with_telegram=await checks.teammate_with_telegram(session, principal.user_id),
             lead_message_exists=await checks.lead_message_exists(session),
+            erp_connected=erp_connected,
+            mail_configured=mail_configured,
+            colleague_exists=await checks.colleague_exists(session, principal.user_id),
         )
     items = [
         ChecklistItem(key=cast(ChecklistKey, key), done=done, link=checks.LINKS[key])

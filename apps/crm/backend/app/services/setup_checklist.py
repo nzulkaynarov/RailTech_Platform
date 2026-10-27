@@ -2,6 +2,8 @@
 
 Бот и модели — из тех же проверок, что и «Состояние системы» (`SystemStatusService`):
 бот готов, только если принимает сообщения; модели — по состоянию монитора `model:*`.
+Шаги Платформы (W13C-F1, хвост Q-W13-A4-2): `erp` — коннектор ERP задан (сопряжение выполнено),
+`mail` — задан SMTP-коннектор, `first_employee` — есть ещё один активный сотрудник.
 Платных вызовов здесь нет.
 """
 
@@ -25,6 +27,9 @@ LINKS: dict[str, str] = {
     "kb": "/kb",
     "team": "/users",
     "test_dialog": "/leads",
+    "erp": "/integrations",
+    "mail": "/integrations",
+    "first_employee": "/users",
 }
 
 
@@ -38,6 +43,9 @@ class SetupFacts:
     kb_indexed: bool
     teammate_with_telegram: bool
     lead_message_exists: bool
+    erp_connected: bool
+    mail_configured: bool
+    colleague_exists: bool
 
 
 def checklist(facts: SetupFacts) -> list[tuple[str, bool]]:
@@ -51,6 +59,9 @@ def checklist(facts: SetupFacts) -> list[tuple[str, bool]]:
         ("kb", facts.kb_indexed),
         ("team", facts.teammate_with_telegram),
         ("test_dialog", facts.lead_message_exists),
+        ("erp", facts.erp_connected),
+        ("mail", facts.mail_configured),
+        ("first_employee", facts.colleague_exists),
     ]
 
 
@@ -85,6 +96,13 @@ async def teammate_with_telegram(session: AsyncSession, me: int) -> bool:
         exists().where(User.id != me, User.is_active.is_(True), User.tg_user_id.is_not(None))
     )
     return bool(await session.scalar(stmt))
+
+
+async def colleague_exists(session: AsyncSession, me: int) -> bool:
+    """Есть ли активный сотрудник кроме администратора (приглашать можно и без Telegram)."""
+    return bool(
+        await session.scalar(select(exists().where(User.id != me, User.is_active.is_(True))))
+    )
 
 
 async def lead_message_exists(session: AsyncSession) -> bool:
