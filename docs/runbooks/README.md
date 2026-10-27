@@ -16,7 +16,7 @@
 - **ERP**: [`erp/`](erp/README.md) — dev-стенд, миграции, Celery/AI-воркеры, бэкап и восстановление базы и медиа.
 
 **Волны агентов** (промпт лида, раунды, задачи с «готово, когда»; преамбула исполнителя — `docs/ORCHESTRATOR.md` §4.2)
-- действующие: [`wave9-roles.md`](wave9-roles.md) (роли как данные), [`wave10-stage0.md`](wave10-stage0.md) (этап 0), [`wave11-bus-v1.md`](wave11-bus-v1.md) (шина v1), [`wave11b-tails.md`](wave11b-tails.md) (хвосты и гейт этапа B), [`wave12-eds-c1.md`](wave12-eds-c1.md) (сервис EDS), [`wave11c-bus-fixes.md`](wave11c-bus-fixes.md) (дефекты шины после гейта B), [`wave13-c2-admin.md`](wave13-c2-admin.md) (паритет Admin), [`wave13b-remove-fronts.md`](wave13b-remove-fronts.md) (удаление старых фронтов);
+- действующие: [`wave9-roles.md`](wave9-roles.md) (роли как данные), [`wave10-stage0.md`](wave10-stage0.md) (этап 0), [`wave11-bus-v1.md`](wave11-bus-v1.md) (шина v1), [`wave11b-tails.md`](wave11b-tails.md) (хвосты и гейт этапа B), [`wave12-eds-c1.md`](wave12-eds-c1.md) (сервис EDS), [`wave11c-bus-fixes.md`](wave11c-bus-fixes.md) (дефекты шины после гейта B), [`wave13-c2-admin.md`](wave13-c2-admin.md) (паритет Admin), [`wave13b-remove-fronts.md`](wave13b-remove-fronts.md) (удаление старых фронтов), [`wave14-speed.md`](wave14-speed.md) (скорость тестов, CI и деплоя);
 - закрытые волны 1–8 — [`../history/runbooks/`](../history/runbooks/).
 
 **Отчёты прогонов глазами** — [`m1_qa_02_report.md`](m1_qa_02_report.md), [`m2_qa_01_report.md`](m2_qa_01_report.md),
