@@ -90,11 +90,11 @@ def build_deal_ref(deal: Any) -> Dict[str, Any]:
             "currency": str(deal.get("currency", "UZS")).upper(),
         }
 
-    # Django Deal Model
+    # Django Deal Model: номер ЗВ/ПР выдаёт ERP (ERP-09); сделка без номера (не сохранена) — прежний `D-<id>`.
     erp_deal_id = deal.id
     return {
         "erp_deal_id": erp_deal_id,
-        "number": f"D-{erp_deal_id}",
+        "number": getattr(deal, "number", "") or f"D-{erp_deal_id}",
         "title": deal.title or f"Сделка #{erp_deal_id}",
         "stage": stages.deal_stage(deal),
         "amount": _format_amount(stages.deal_amount(deal)),

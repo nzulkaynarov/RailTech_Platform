@@ -193,6 +193,13 @@ class QuoteSerializer(serializers.ModelSerializer):
         read_only=True,
         help_text="Каналы отправки клиенту, выбранные директором при одобрении (telegram, cabinet, email)",
     )
+    send_report = serializers.JSONField(
+        read_only=True,
+        help_text=(
+            "Итог автоотправки после одобрения директором (ERP-11): requested, sent_via, skipped [{channel, reason}], "
+            "error; пусто — автоотправки не было"
+        ),
+    )
 
     @extend_schema_field(QuoteFxRateSerializer(many=True))
     def get_fx_rates(self, obj) -> list:
@@ -312,6 +319,7 @@ class QuoteSerializer(serializers.ModelSerializer):
             "director_decision",
             "director_comment",
             "send_channels",
+            "send_report",
             "items",
             "charges",
             "economics",
@@ -351,6 +359,7 @@ class QuoteSerializer(serializers.ModelSerializer):
             "director_decision",
             "director_comment",
             "send_channels",
+            "send_report",
             "created_at",
             # prepared_by anchors the КП-owning (seller) company and the whole
             # approval chain — the server sets it to the seller building the КП,
@@ -394,7 +403,7 @@ class QuoteSerializer(serializers.ModelSerializer):
 
     # Внутренняя кухня одобрения КП директором (C1-G-5): решение, комментарий и каналы — сотрудникам своей компании,
     # не покупателю. ИСХ-номер не скрываем: он печатается на КП, которое уходит клиенту.
-    _STAFF_ONLY_FIELDS = ("director_decision", "director_comment", "send_channels")
+    _STAFF_ONLY_FIELDS = ("director_decision", "director_comment", "send_channels", "send_report")
 
     def _is_staff(self) -> bool:
         cached = getattr(self, "_staff_cache", None)

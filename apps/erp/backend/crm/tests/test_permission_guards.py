@@ -185,15 +185,42 @@ def _issued_invoice(deal, contract):
 
 @pytest.mark.django_db
 def test_quote_send_with_explicit_perm_passes(lookups, seller_company, deal):
-    """Member WITH quote.send CompanyRole permission can send the КП."""
+    """Member WITH quote.send CompanyRole permission can send the КП of HIS request (B-008: deal.manager)."""
     seller = _make_user("send_with@seller.test")
     _make_member(seller, seller_company, is_primary=True)
+    deal.manager = seller
+    deal.save(update_fields=["manager"])
     quote = _ready_to_send_quote(deal, prepared_by=seller)
     # Grant the permission via CompanyRole.
     crole = CompanyRole.objects.create(company=seller_company, name="Sender", permissions=["quote.send"])
     seller.memberships.get(company=seller_company).company_roles.add(crole)
 
     assert can_send_quote_to_client(seller, quote) is True
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("permissions", "is_manager", "allowed"),
+    [
+        (["quote.send"], True, True),  # менеджер своей заявки
+        (["quote.send"], False, False),  # чужая заявка — 403 (B-008)
+        (["quote.send", "quote.review"], False, True),  # директор / «КП на одобрение» full
+        (["quote.review"], False, False),  # без quote.send — нельзя никому
+        (["quote.review"], True, False),
+    ],
+)
+def test_quote_send_is_checked_per_request_manager(lookups, seller_company, deal, permissions, is_manager, allowed):
+    """B-008 (W16-D1-2): `quote.send` даёт отправку КП своей заявки; чужой — только с `quote.review`."""
+    seller = _make_user("send_object@seller.test")
+    crole = CompanyRole.objects.create(company=seller_company, name="ObjectSender", permissions=permissions)
+    _make_member(seller, seller_company, roles=[crole], can_sell=False, is_primary=True)
+    author = _make_user("author_object@seller.test")
+    _make_member(author, seller_company, can_sell=False, is_primary=True)
+    deal.manager = seller if is_manager else author
+    deal.save(update_fields=["manager"])
+    quote = _ready_to_send_quote(deal, prepared_by=author)
+
+    assert can_send_quote_to_client(seller, quote) is allowed
 
 
 @pytest.mark.django_db
@@ -235,6 +262,8 @@ def test_quote_send_perm_without_legacy_ws_role_passes(lookups, seller_company, 
     crole = CompanyRole.objects.create(company=seller_company, name="QuoteSender", permissions=["quote.send"])
     # Use MEMBER workspace role — no legacy SALES_MANAGER — but has the CompanyRole perm.
     _make_member(seller, seller_company, roles=[crole], can_sell=False, is_primary=True)
+    deal.manager = seller
+    deal.save(update_fields=["manager"])
     quote = _ready_to_send_quote(deal, prepared_by=seller)
 
     assert can_send_quote_to_client(seller, quote) is True

@@ -175,9 +175,13 @@ def _create_contacts(
 def _create_request(company: Company, contact: Optional[Contact], data: Dict[str, Any], crm_client_id: int) -> Deal:
     """Заявка из передачи: стадия FSM `DRAFT`, `request.created(source=crm)` — на шину в транзакции передачи."""
     summary = data["need"]["summary"]
+    from .client_requests import manager_for
+
     deal = Deal(
         company=company,
         contact=contact,
+        # Менеджер заявки CRM — владелец сделки ERP: отправляет одобренное КП (`quote.send`, B-008).
+        manager=manager_for((data.get("owner") or {}).get("crm_user_id")),
         stage=stages.initial_fsm_stage(),
         title=f"Заявка: {company.name}",
         notes=summary,

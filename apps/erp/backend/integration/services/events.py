@@ -88,11 +88,15 @@ def publish_request_created(
     actor: Optional[Dict[str, Any]] = None,
     crm_client_id: Optional[int] = None,
     manager_crm_user_id: Optional[int] = None,
+    letter_file_id: Optional[str] = None,
+    crm_request_id: Optional[int] = None,
 ) -> Optional[Event]:
     """Событие `request.created`: заявка (сделка) создана. Источник решает создатель: портал — `cabinet`, передача из CRM — `crm`.
 
     Отправитель и менеджер (C1-G-7) — `request_parties`: EDS заполняет ими письмо по заявке. `manager_crm_user_id` —
     менеджер, известный вызывающему (ответственный передачи из CRM); иначе — ответственный сделки ERP.
+    «Создать заявку» (W16-D1-2): номер `request_number` (ERP-09) — у каждой сделки с номером ЗВ; заявка процесса `v3`
+    несёт `process` и `urgency`; файл письма `letter_file_id` и заявка CRM `crm_request_id` — если их дал вызывающий.
     """
     if source not in REQUEST_SOURCES:
         source = "erp"
@@ -106,6 +110,11 @@ def publish_request_created(
         payload["summary"] = summary
     if not isinstance(deal, dict):
         payload.update(request_parties(deal, manager_crm_user_id))
+        payload.update(_request_details(deal))
+    if letter_file_id:
+        payload["letter_file_id"] = str(letter_file_id)
+    if crm_request_id:
+        payload["crm_request_id"] = int(crm_request_id)
 
     return publish_event(
         "request.created",
@@ -115,6 +124,18 @@ def publish_request_created(
         actor=actor,
         crm_client_id=crm_client_id,
     )
+
+
+def _request_details(deal: Any) -> Dict[str, Any]:
+    """Номер ЗВ, процесс и срочность заявки для `request.created` (W16-D1-2)."""
+    details: Dict[str, Any] = {}
+    number = getattr(deal, "number", "") or ""
+    if number.startswith("ЗВ-"):
+        details["request_number"] = number
+    if getattr(deal, "process", "") == "v3":
+        details["process"] = "v3"
+        details["urgency"] = getattr(deal, "urgency", "") or "normal"
+    return details
 
 
 def publish_deal_stage_changed(
@@ -172,9 +193,13 @@ def publish_deal_outcome(
 
 
 def publish_quote_sent(
-    quote: Any, public_url: Optional[str] = None, actor: Optional[Dict[str, Any]] = None
+    quote: Any,
+    public_url: Optional[str] = None,
+    actor: Optional[Dict[str, Any]] = None,
+    channels: Optional[list[str]] = None,
 ) -> Optional[Event]:
-    """Событие `quote.sent`."""
+    """Событие `quote.sent`. `channels` — каналы автоотправки после одобрения директором (ERP-11): CRM пишет клиенту в
+    Telegram, только если там есть `telegram`; нет списка — отправка менеджером, все каналы клиента (как прежде)."""
     deal = quote.deal
     company_id = deal.company_id
 
@@ -200,6 +225,8 @@ def publish_quote_sent(
         "total": total_amount,
         "currency": currency.upper(),
     }
+    if channels is not None:
+        payload["channels"] = list(dict.fromkeys(channels))
 
     return publish_event("quote.sent", erp_company_id=company_id, payload=payload, deal=deal, actor=actor)
 
