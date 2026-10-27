@@ -9,6 +9,7 @@ import { adminBusHandlers } from "./adminBus";
 import { adminIntegrationsHandlers } from "./adminIntegrations";
 import { adminCompanyHandlers } from "./adminCompany";
 import { adminRolesHandlers } from "./adminRoles";
+import { botKbHandlers } from "./botKb";
 import { adminUsersHandlers } from "./adminUsers";
 import { eventStreamHandlers } from "./eventStream";
 import { isEmployeeDisabled } from "./fixtures/employees";
@@ -139,6 +140,7 @@ export const handlers = [
   ...adminCompanyHandlers,
   ...adminBusHandlers,
   ...setupHandlers,
+  ...botKbHandlers,
 
   getGetHealthMockHandler({
     status: "ok",

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.10.0
+  version: 0.11.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -106,6 +106,18 @@ info:
     кодов), `OWN_COMPANY_ALREADY_EXISTS` (409). Право: чек-лист и мастер компании видит и выполняет только `admin: full` — CRM
     `/setup/checklist` требует право записи настроек; директору баннер не показывается.
 
+    **0.11.0 (W13-A5) — добавляющее.** CRM · База знаний и Admin · Настройки бота (теги `kb` и `bot`). **База знаний** (`/crm/kb/*`,
+    `/crm/sandbox/*`): документы (список, загрузка файла `.md` multipart, ручной ввод, включение и выключение, переиндексация,
+    фрагменты), поиск «Что найдёт бот», пробелы (закрыть привязкой к документу, игнорировать, вернуть), справочник продуктов,
+    песочница бота (сообщение, «начать заново»). Читают роли с `crm.leads` или `admin`; правят, переиндексируют и пользуются
+    песочницей — `admin: full`. **Настройки бота** (`/admin/bot/*`): разделы CRM `/settings` значениями и JSON Schema (форма строится
+    по схеме CRM), сохранение раздела, пробный прогон правил передачи, шаблоны быстрых ответов, выгрузки CSV лидов, клиентов и
+    сделок — потоком, с правом на выгружаемые данные (`crm.leads` для лидов, `crm.clients` для клиентов и сделок). Чтение настроек
+    — `admin` от `read`, правка — `admin: full`. Каталог ролей: директор (`admin: read`) читает настройки бота, шаблоны ответов и
+    базу знаний (права CRM `settings:read`, `reply_templates:read`, `kb:read`); пункт меню CRM «База знаний» открывает и раздел
+    `admin`; в Admin новый пункт «Настройки бота». Нового кода ошибки нет: ошибки формата документа и пути невалидных полей настроек
+    — `VALIDATION_FAILED` с `details.reason`, `details.rule`, `details.messages`, `details.paths`.
+
     0.2.4: `423 ACCOUNT_LOCKED` объявлен и на `POST /auth/change-password` (CRM блокирует учётную запись после неверных
     текущих паролей).
 
@@ -148,6 +160,10 @@ tags:
     description: Admin · Внешние интеграции — ERP, Telegram, почта, реестр внешних сервисов, модели ИИ и расходы, бэкапы, состояние системы (прокси к CRM; раздел `admin`)
   - name: bus
     description: Admin · Журнал интеграций — шина rt_bus CRM, ERP и EDS (подписчики, доставки и DLQ, inbox с ошибками, повторы; раздел `admin` full)
+  - name: kb
+    description: CRM · База знаний — документы, поиск, пробелы, песочница бота (прокси к CRM; разделы `crm.leads` и `admin`)
+  - name: bot
+    description: Admin · Настройки бота — разделы настроек CRM, шаблоны ответов, выгрузки CSV (прокси к CRM; раздел `admin`)
 
 paths:
   /auth/login:
@@ -3467,6 +3483,720 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationFailed'
 
+  /crm/kb/documents:
+    get:
+      tags: [kb]
+      operationId: listKbDocuments
+      summary: 'CRM · База знаний: документы'
+      description: >-
+        CRM `GET /kb/documents`. Читают роли с разделом `crm.leads` или `admin` (любой уровень): у них есть право CRM
+        `kb:read`. Администратор без `crm.leads` видит базу знаний тоже — пункт меню `kb` открывает и раздел `admin`.
+      parameters:
+        - name: active
+          in: query
+          required: false
+          description: Только включённые (`true`) или только выключенные (`false`) документы
+          schema: {type: boolean}
+      responses:
+        '200':
+          description: Документы, новые выше
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KbDocumentList'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+    post:
+      tags: [kb]
+      operationId: uploadKbDocument
+      summary: 'Загрузить файл Markdown в базу знаний'
+      description: >-
+        CRM `POST /kb/documents` (multipart). Раздел `admin` — полный (право CRM `kb:write`). Принимается один файл `.md` по
+        формату базы знаний (`docs/kb/FORMAT.md`), не больше 25 МБ: BFF читает файл ограниченно и передаёт CRM, весь файл в
+        память не накапливается сверх лимита. Индексация идёт в фоне — документ появляется в списке со статусом «В очереди».
+        Нарушение формата — 422 `VALIDATION_FAILED` с `details.reason = kb_format`, `details.rule` и текстами
+        `details.messages {ru, uz, en}` «что исправить»; не `.md` — `kb_markdown_only`; пустой файл — `file_empty`; больше
+        25 МБ — `file_too_large` (`details.max_bytes`); неизвестный продукт — поле `product_key` в `details.fields`.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/KbDocumentUpload'
+      responses:
+        '201':
+          description: Документ принят, индексация поставлена в очередь
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreatedId'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '502':
+          $ref: '#/components/responses/IntegrationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /crm/kb/documents/manual:
+    post:
+      tags: [kb]
+      operationId: createManualKbDocument
+      summary: 'Добавить документ базы знаний вручную (Markdown)'
+      description: >-
+        CRM `POST /kb/documents/manual`. Раздел `admin` — полный. Текст без заголовка получает заголовок из названия; формат
+        front matter ручной ввод не проверяет. `gap_id` закрывает пробел базы знаний созданным документом.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KbManualDocumentIn'
+      responses:
+        '201':
+          description: Документ создан, индексация поставлена в очередь
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreatedId'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '502':
+          $ref: '#/components/responses/IntegrationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /crm/kb/documents/{id}:
+    get:
+      tags: [kb]
+      operationId: getKbDocument
+      summary: 'Документ базы знаний'
+      parameters:
+        - $ref: '#/components/parameters/KbDocumentId'
+      responses:
+        '200':
+          description: Документ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KbDocument'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+    patch:
+      tags: [kb]
+      operationId: updateKbDocument
+      summary: 'Включить или выключить документ, сменить продукт или название'
+      description: >-
+        CRM `PATCH /kb/documents/{id}`. Раздел `admin` — полный. Удаления документов в CRM нет: «Выключить» убирает документ из
+        поиска бота, «Включить» возвращает (разрыв в `docs/QUESTIONS.md`).
+      parameters:
+        - $ref: '#/components/parameters/KbDocumentId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KbDocumentPatch'
+      responses:
+        '200':
+          description: Сохранено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionOk'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /crm/kb/documents/{id}/chunks:
+    get:
+      tags: [kb]
+      operationId: listKbChunks
+      summary: 'Фрагменты документа — как их видит поиск бота'
+      parameters:
+        - $ref: '#/components/parameters/KbDocumentId'
+      responses:
+        '200':
+          description: Фрагменты по порядку
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KbChunkList'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /crm/kb/documents/{id}/reingest:
+    post:
+      tags: [kb]
+      operationId: reingestKbDocument
+      summary: 'Переиндексировать документ'
+      description: >-
+        CRM `POST /kb/documents/{id}/reingest`. Раздел `admin` — полный. Документ, который сейчас индексируется, — 409
+        `CONFLICT` с `details.reason = document_indexing`.
+      parameters:
+        - $ref: '#/components/parameters/KbDocumentId'
+        - $ref: '#/components/parameters/CsrfToken'
+      responses:
+        '200':
+          description: Поставлен в очередь
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionOk'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: '`CONFLICT` — `details.reason = document_indexing`'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /crm/kb/search:
+    post:
+      tags: [kb]
+      operationId: searchKb
+      summary: 'Что найдёт бот на этот вопрос'
+      description: >-
+        CRM `POST /kb/search`: тот же поиск и порог, что у диалогового агента; ничего не меняет и не пишет в расходы
+        (поиск по векторам и словам без вызова модели ответа).
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KbSearchIn'
+      responses:
+        '200':
+          description: Найденные фрагменты и уверенность
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KbSearchResult'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '502':
+          $ref: '#/components/responses/IntegrationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /crm/kb/gaps:
+    get:
+      tags: [kb]
+      operationId: listKbGaps
+      summary: 'Пробелы базы знаний: вопросы, на которые бот не нашёл ответа'
+      description: CRM `GET /kb/gaps`. По умолчанию — открытые, чаще повторяющиеся не выше, страницами.
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema: {$ref: '#/components/schemas/KbGapStatus'}
+        - name: language
+          in: query
+          required: false
+          schema: {$ref: '#/components/schemas/Language'}
+        - name: limit
+          in: query
+          required: false
+          schema: {type: integer, minimum: 1, maximum: 200, default: 50}
+        - name: offset
+          in: query
+          required: false
+          schema: {type: integer, minimum: 0, default: 0}
+      responses:
+        '200':
+          description: Страница пробелов
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KbGapPage'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /crm/kb/gaps/{id}/resolve:
+    post:
+      tags: [kb]
+      operationId: resolveKbGap
+      summary: 'Закрыть пробел: ответ есть в документе'
+      description: CRM `POST /kb/gaps/{id}/resolve`. Раздел `admin` — полный. Привязывает пробел к документу и закрывает его.
+      parameters:
+        - $ref: '#/components/parameters/KbGapId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KbGapResolveIn'
+      responses:
+        '200':
+          description: Пробел закрыт
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionOk'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /crm/kb/gaps/{id}/ignore:
+    post:
+      tags: [kb]
+      operationId: ignoreKbGap
+      summary: 'Игнорировать пробел'
+      description: CRM `POST /kb/gaps/{id}/ignore`. Раздел `admin` — полный. Вопрос уходит из открытых; вернуть его можно.
+      parameters:
+        - $ref: '#/components/parameters/KbGapId'
+        - $ref: '#/components/parameters/CsrfToken'
+      responses:
+        '200':
+          description: Пробел скрыт
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionOk'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /crm/kb/gaps/{id}/reopen:
+    post:
+      tags: [kb]
+      operationId: reopenKbGap
+      summary: 'Вернуть пробел в открытые'
+      description: CRM `POST /kb/gaps/{id}/reopen`. Раздел `admin` — полный.
+      parameters:
+        - $ref: '#/components/parameters/KbGapId'
+        - $ref: '#/components/parameters/CsrfToken'
+      responses:
+        '200':
+          description: Пробел снова открыт
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionOk'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /crm/kb/products:
+    get:
+      tags: [kb]
+      operationId: listKbProducts
+      summary: 'Справочник продуктов (ключ → название)'
+      description: >-
+        CRM `GET /kb/products` требует право `leads:read`. У администратора без второй роли его нет: CRM отвечает 403, BFF
+        передаёт его как есть, а экран подставляет ключ продукта вручную (разрыв в `docs/QUESTIONS.md`).
+      responses:
+        '200':
+          description: Продукты
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KbProductList'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /crm/sandbox/messages:
+    post:
+      tags: [kb]
+      operationId: sendSandboxMessage
+      summary: 'Песочница: сообщение боту от имени тестового клиента'
+      description: >-
+        CRM `POST /sandbox/messages`. Раздел `admin` — полный (право CRM `sandbox:use`). Тот же ход, что в Telegram: база знаний,
+        тексты, правила передачи; **платно** — вызовы моделей пишутся в «Расходы» с пометкой «тест». Передача менеджеру только
+        показывается в `why` и в CRM не создаётся. Таймаут ответа — как у проб (30 с).
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SandboxMessageIn'
+      responses:
+        '200':
+          description: Ответ бота и разбор «почему так»
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SandboxTurn'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '502':
+          $ref: '#/components/responses/IntegrationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /crm/sandbox/reset:
+    post:
+      tags: [kb]
+      operationId: resetSandbox
+      summary: 'Песочница: начать заново'
+      description: CRM `POST /sandbox/reset`. Раздел `admin` — полный. Тестовый диалог сотрудника удаляется целиком.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      responses:
+        '204':
+          description: Диалог очищен
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /admin/bot/settings:
+    get:
+      tags: [bot]
+      operationId: getBotSettings
+      summary: 'Настройки бота: значения и схемы разделов'
+      description: >-
+        CRM `GET /settings`. Раздел `admin` — от чтения (директор видит без правки): компания, рабочие часы, тексты бота, поведение
+        бота, поиск по базе знаний, стоп-слова, конкуренты, правила передачи, квалификация, канал команды, бюджет моделей, сделки,
+        форма «Запрос», оповещения о сбоях. Ключ раздела и его схема приходят из CRM как есть (JSON Schema Pydantic CRM): экран
+        строит форму по схеме, поэтому новый параметр в CRM появляется в Платформе без правки BFF. Профиль бота и коннекторы правятся
+        в «Внешних интеграциях» и сюда не входят.
+      responses:
+        '200':
+          description: Значения и схемы
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BotSettings'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /admin/bot/settings/{key}:
+    put:
+      tags: [bot]
+      operationId: saveBotSetting
+      summary: 'Сохранить раздел настроек бота'
+      description: >-
+        CRM `PUT /settings/{key}`. Раздел `admin` — полный (право CRM `settings:write`). Тело — значения раздела целиком (по схеме из
+        `getBotSettings`). CRM проверяет значения своей моделью: ошибка — 422 `VALIDATION_FAILED`, `details.fields = [key]`,
+        `details.paths` — пути невалидных полей («greeting.uz»). Неизвестный раздел — 404.
+      parameters:
+        - name: key
+          in: path
+          required: true
+          description: Ключ раздела (`company`, `business_hours`, `texts`, …)
+          schema: {type: string, pattern: '^[a-z_]{1,32}$'}
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Сохранено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionOk'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /admin/bot/settings/escalation/dry-run:
+    post:
+      tags: [bot]
+      operationId: dryRunEscalation
+      summary: 'Пробный прогон правил передачи на последних диалогах'
+      description: >-
+        CRM `POST /settings/escalation/dry-run`. Раздел `admin` — полный. Считает, сколько передач менеджеру было бы на последних
+        50 диалогах при новых значениях, и какие лиды изменились. Ничего не сохраняет и не меняет.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EscalationSettingsIn'
+      responses:
+        '200':
+          description: Сравнение «сейчас» и «с новыми правилами»
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EscalationDryRun'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '502':
+          $ref: '#/components/responses/IntegrationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /admin/bot/reply-templates:
+    get:
+      tags: [bot]
+      operationId: listReplyTemplates
+      summary: 'Шаблоны быстрых ответов'
+      description: >-
+        CRM `GET /reply-templates`. Читают `admin` от чтения и `crm.leads` полный (менеджеру шаблоны нужны в карточке лида);
+        правит `admin` полный.
+      responses:
+        '200':
+          description: Шаблоны по названию; текст на ru, uz, en с подстановками `{name}`, `{manager}`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReplyTemplateList'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+    post:
+      tags: [bot]
+      operationId: createReplyTemplate
+      summary: 'Новый шаблон ответа'
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReplyTemplateIn'
+      responses:
+        '201':
+          description: Шаблон создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreatedId'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /admin/bot/reply-templates/{id}:
+    put:
+      tags: [bot]
+      operationId: updateReplyTemplate
+      summary: 'Изменить шаблон ответа'
+      parameters:
+        - $ref: '#/components/parameters/ReplyTemplateId'
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReplyTemplateIn'
+      responses:
+        '200':
+          description: Сохранено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionOk'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+    delete:
+      tags: [bot]
+      operationId: deleteReplyTemplate
+      summary: 'Удалить шаблон ответа'
+      description: Раздел `admin` — полный. Шаблон удаляется без возможности вернуть; в карточках лидов он больше не предлагается.
+      parameters:
+        - $ref: '#/components/parameters/ReplyTemplateId'
+        - $ref: '#/components/parameters/CsrfToken'
+      responses:
+        '200':
+          description: Удалён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionOk'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /admin/bot/exports/{entity}:
+    get:
+      tags: [bot]
+      operationId: downloadCsvExport
+      summary: 'Выгрузка CSV: лиды, клиенты или сделки'
+      description: >-
+        CRM `GET /export/{leads|clients|deals}.csv`. Нужен `admin: full` (право CRM `export:read`) **и** чтение выгружаемых данных:
+        лиды — `crm.leads`, клиенты и сделки — `crm.clients` (системная «Администратор» без второй роли бизнес-данные не
+        выгружает, R3-D-2). BFF проверяет оба раздела и отдаёт файл потоком, не накапливая его в памяти: CSV для Excel (UTF-8 с BOM,
+        разделитель `;`), до 10 000 строк, имя файла с датой в `Content-Disposition` (`leads-20261026-1530.csv`). Каждая выгрузка
+        пишется в журнал аудита CRM. Фильтры — как на экранах списков; недопустимый — 422.
+      parameters:
+        - name: entity
+          in: path
+          required: true
+          schema: {type: string, enum: [leads, clients, deals]}
+        - name: q
+          in: query
+          required: false
+          description: 'Поиск (лиды, клиенты), до 100 символов'
+          schema: {type: string, maxLength: 100}
+        - name: stage
+          in: query
+          required: false
+          description: 'Стадия: у сделок `open`, `won`, `lost`; у лидов — код стадии CRM'
+          schema: {type: string, maxLength: 32}
+        - name: language
+          in: query
+          required: false
+          description: Лиды — язык
+          schema: {$ref: '#/components/schemas/Language'}
+        - name: created_from
+          in: query
+          required: false
+          description: Лиды — созданы не раньше (дата-время)
+          schema: {type: string, format: date-time}
+        - name: created_to
+          in: query
+          required: false
+          description: Лиды — созданы не позже (дата-время)
+          schema: {type: string, format: date-time}
+        - name: closed_from
+          in: query
+          required: false
+          description: Сделки — закрыты не раньше
+          schema: {type: string, format: date}
+        - name: closed_to
+          in: query
+          required: false
+          description: Сделки — закрыты не позже
+          schema: {type: string, format: date}
+      responses:
+        '200':
+          description: Файл CSV
+          headers:
+            Content-Disposition:
+              description: '`attachment; filename="leads-20261026-1530.csv"`'
+              schema:
+                type: string
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
 components:
   securitySchemes:
     platformSession:
@@ -3541,6 +4271,30 @@ components:
       schema:
         type: string
         minLength: 16
+    KbDocumentId:
+      name: id
+      in: path
+      required: true
+      description: Id документа базы знаний (CRM)
+      schema:
+        type: integer
+        minimum: 1
+    KbGapId:
+      name: id
+      in: path
+      required: true
+      description: Id пробела базы знаний (CRM)
+      schema:
+        type: integer
+        minimum: 1
+    ReplyTemplateId:
+      name: id
+      in: path
+      required: true
+      description: Id шаблона ответа (CRM)
+      schema:
+        type: integer
+        minimum: 1
 
     CompanyItemId:
       name: id
@@ -6732,3 +7486,346 @@ components:
         vat_rate:
           $ref: '#/components/schemas/DecimalString'
           description: Ставка НДС платформы, %
+    CreatedId:
+      type: object
+      additionalProperties: false
+      required: [id]
+      description: Объект создан в CRM.
+      properties:
+        id: {type: integer}
+
+    KbDocument:
+      type: object
+      additionalProperties: false
+      description: Документ базы знаний (CRM `KbDocumentOut`).
+      required: [id, title, product_key, language, source_type, mime, version, is_active, ingest_status, ingest_error, chunk_count, created_at, updated_at]
+      properties:
+        id: {type: integer}
+        title: {type: string}
+        product_key:
+          type: [string, 'null']
+          description: Ключ продукта справочника; пусто — документ про компанию в целом
+        language: {$ref: '#/components/schemas/Language'}
+        source_type:
+          type: string
+          enum: [file, url, manual]
+          description: '`file` — загруженный файл, `manual` — введён вручную, `url` — из ссылки (в CRM пока не создаётся)'
+        mime: {type: [string, 'null']}
+        version: {type: integer, minimum: 1, description: 'Версия документа'}
+        is_active: {type: boolean, description: 'Выключенный документ в поиске бота не участвует'}
+        ingest_status:
+          type: string
+          enum: [pending, processing, done, failed]
+          description: 'В очереди, обрабатывается, готов, ошибка'
+        ingest_error: {type: [string, 'null'], description: 'Причина, если индексация не удалась'}
+        chunk_count: {type: integer, minimum: 0}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+
+    KbDocumentList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/KbDocument'}
+
+    KbDocumentUpload:
+      type: object
+      additionalProperties: false
+      required: [file, title, language]
+      properties:
+        file:
+          type: string
+          format: binary
+          description: Один файл `.md` по формату базы знаний, не больше 25 МБ
+        title: {type: string, minLength: 1, maxLength: 500}
+        language: {$ref: '#/components/schemas/Language'}
+        product_key:
+          type: string
+          description: Ключ продукта; не передавать, если документ не про один продукт
+        gap_id:
+          type: integer
+          description: Пробел базы знаний, который закрывает этот документ
+
+    KbManualDocumentIn:
+      type: object
+      additionalProperties: false
+      required: [title, markdown, language]
+      properties:
+        title: {type: string, minLength: 1, maxLength: 500}
+        markdown: {type: string, minLength: 1, maxLength: 200000}
+        language: {$ref: '#/components/schemas/Language'}
+        product_key: {type: [string, 'null']}
+        gap_id: {type: [integer, 'null']}
+
+    KbDocumentPatch:
+      type: object
+      additionalProperties: false
+      description: Поля, которые нужно изменить; отсутствующие не трогаются.
+      properties:
+        title: {type: string, minLength: 1, maxLength: 500}
+        is_active: {type: boolean}
+        product_key: {type: string}
+        clear_product: {type: boolean, description: 'Снять продукт (документ про компанию в целом)'}
+
+    KbChunk:
+      type: object
+      additionalProperties: false
+      required: [id, position, heading_path, content, token_count]
+      properties:
+        id: {type: integer}
+        position: {type: integer, minimum: 0}
+        heading_path: {type: [string, 'null'], description: 'Путь заголовков: «Доставка > Сроки»'}
+        content: {type: string}
+        token_count: {type: integer, minimum: 0}
+
+    KbChunkList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/KbChunk'}
+
+    KbSearchIn:
+      type: object
+      additionalProperties: false
+      required: [query]
+      properties:
+        query: {type: string, minLength: 1, maxLength: 2000}
+        language:
+          oneOf:
+            - {$ref: '#/components/schemas/Language'}
+            - {type: 'null'}
+        product_key: {type: [string, 'null']}
+        top_k: {type: integer, minimum: 1, maximum: 10, default: 6}
+
+    KbSearchHit:
+      type: object
+      additionalProperties: false
+      required: [chunk_id, document_id, document_title, heading_path, content, similarity, rrf_score]
+      properties:
+        chunk_id: {type: integer}
+        document_id: {type: integer}
+        document_title: {type: string}
+        heading_path: {type: [string, 'null']}
+        content: {type: string}
+        similarity: {type: [number, 'null'], description: 'Сходство 0–1; пусто — найден только по словам'}
+        rrf_score: {type: number}
+
+    KbSearchResult:
+      type: object
+      additionalProperties: false
+      required: [hits, best_score, min_score, confident, language]
+      properties:
+        hits:
+          type: array
+          items: {$ref: '#/components/schemas/KbSearchHit'}
+        best_score: {type: [number, 'null']}
+        min_score: {type: number, description: 'Порог настроек «Поиск по базе знаний»: ниже бот говорит «не знаю»'}
+        confident: {type: boolean, description: 'Хватит ли найденного, чтобы бот ответил'}
+        language: {$ref: '#/components/schemas/Language'}
+
+    KbGapStatus:
+      type: string
+      enum: [open, resolved, ignored]
+
+    KbGap:
+      type: object
+      additionalProperties: false
+      required: [id, lead_id, question, language, best_score, occurrences, status, resolved_document_id, created_at, updated_at]
+      properties:
+        id: {type: integer}
+        lead_id: {type: [integer, 'null'], description: 'Лид, чей вопрос остался без ответа (номер L-NNNN — id лида)'}
+        question: {type: string}
+        language: {$ref: '#/components/schemas/Language'}
+        best_score: {type: [number, 'null']}
+        occurrences: {type: integer, minimum: 1, description: 'Сколько раз спросили'}
+        status: {$ref: '#/components/schemas/KbGapStatus'}
+        resolved_document_id: {type: [integer, 'null']}
+        created_at: {type: string, format: date-time}
+        updated_at: {type: string, format: date-time}
+
+    KbGapPage:
+      type: object
+      additionalProperties: false
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/KbGap'}
+        total: {type: integer, minimum: 0}
+
+    KbGapResolveIn:
+      type: object
+      additionalProperties: false
+      required: [document_id]
+      properties:
+        document_id: {type: integer, minimum: 1}
+
+    KbProduct:
+      type: object
+      additionalProperties: false
+      required: [key, name, description, is_active]
+      properties:
+        key: {type: string, pattern: '^[a-z0-9][a-z0-9-]{0,63}$'}
+        name: {type: string}
+        description: {type: [string, 'null']}
+        is_active: {type: boolean}
+
+    KbProductList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/KbProduct'}
+
+    SandboxMessageIn:
+      type: object
+      additionalProperties: false
+      required: [text]
+      properties:
+        text: {type: string, minLength: 1, maxLength: 4000}
+        language: {allOf: [{$ref: '#/components/schemas/Language'}], default: ru}
+
+    SandboxReply:
+      type: object
+      additionalProperties: false
+      required: [text, buttons]
+      properties:
+        text: {type: string}
+        buttons:
+          type: array
+          items: {type: string}
+
+    SandboxWhy:
+      type: object
+      additionalProperties: false
+      description: Почему бот ответил так.
+      required: [decision, reason, best_score, documents, triggers, priority]
+      properties:
+        decision:
+          type: string
+          description: 'answer, fallback, handoff, deliver_document, choose_document, silent, system; новые значения экран показывает как есть'
+        reason: {type: [string, 'null']}
+        best_score: {type: [number, 'null']}
+        documents:
+          type: array
+          items: {type: string}
+        triggers:
+          type: array
+          items: {type: string}
+          description: Коды сработавших правил передачи (`human_requested`, `price_or_contract_asked`, …)
+        priority: {type: [string, 'null']}
+
+    SandboxTurn:
+      type: object
+      additionalProperties: false
+      required: [replies, why]
+      properties:
+        replies:
+          type: array
+          items: {$ref: '#/components/schemas/SandboxReply'}
+        why: {$ref: '#/components/schemas/SandboxWhy'}
+
+    BotSettings:
+      type: object
+      additionalProperties: false
+      description: >-
+        Настройки бота постранично: `values[ключ]` — текущие значения, `schemas[ключ]` — JSON Schema формы (Pydantic CRM).
+        Структура значений — модель раздела в CRM (`apps/crm/backend/app/schemas/settings*.py`).
+      required: [values, schemas]
+      properties:
+        values:
+          type: object
+          additionalProperties: {type: object, additionalProperties: true}
+        schemas:
+          type: object
+          additionalProperties: {type: object, additionalProperties: true}
+
+    EscalationSettingsIn:
+      type: object
+      additionalProperties: false
+      description: Правила передачи менеджеру (раздел `escalation`); пропущенное поле — значение по умолчанию CRM.
+      properties:
+        high_score_threshold: {type: integer, minimum: 0, maximum: 100}
+        no_progress_turns: {type: integer, minimum: 1}
+        kb_gap_streak: {type: integer, minimum: 1}
+        qualifier_min_confidence: {type: number, minimum: 0, maximum: 1}
+        sla_minutes: {type: integer, minimum: 1}
+        reminder_minutes: {type: integer, minimum: 1}
+        disabled_triggers:
+          type: array
+          items: {type: string}
+        price_always_to_manager: {type: boolean}
+        require_phone_for_human_request: {type: boolean}
+        human_request_terms:
+          type: array
+          items: {type: string}
+
+    EscalationDryRunRow:
+      type: object
+      additionalProperties: false
+      required: [run_id, lead_id, at, current, candidate]
+      properties:
+        run_id: {type: integer}
+        lead_id: {type: integer}
+        at: {type: string, format: date-time}
+        current:
+          type: array
+          items: {type: string}
+          description: Причины передачи сейчас
+        candidate:
+          type: array
+          items: {type: string}
+          description: Причины передачи с новыми правилами
+
+    EscalationDryRun:
+      type: object
+      additionalProperties: false
+      required: [dialogs, escalated_current, escalated_candidate, by_code_current, by_code_candidate, changed]
+      properties:
+        dialogs: {type: integer, minimum: 0}
+        escalated_current: {type: integer, minimum: 0}
+        escalated_candidate: {type: integer, minimum: 0}
+        by_code_current:
+          type: object
+          additionalProperties: {type: integer}
+        by_code_candidate:
+          type: object
+          additionalProperties: {type: integer}
+        changed:
+          type: array
+          items: {$ref: '#/components/schemas/EscalationDryRunRow'}
+
+    ReplyTemplate:
+      type: object
+      additionalProperties: false
+      required: [id, title, text, updated_at]
+      properties:
+        id: {type: integer}
+        title: {type: string, description: 'Видно менеджеру в списке, клиенту не отправляется'}
+        text: {$ref: '#/components/schemas/LocalizedText'}
+        updated_at: {type: string, format: date-time}
+
+    ReplyTemplateList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/ReplyTemplate'}
+
+    ReplyTemplateIn:
+      type: object
+      additionalProperties: false
+      required: [title, text]
+      properties:
+        title: {type: string, minLength: 1, maxLength: 120}
+        text: {$ref: '#/components/schemas/LocalizedText'}

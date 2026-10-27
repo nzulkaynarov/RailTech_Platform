@@ -1,0 +1,320 @@
+{
+  "subtitle": "Bot mijozlarga javob berish uchun foydalanadigan hujjatlar: «Bot nimani topadi» qidiruvi, bo‘shliqlar — javobsiz savollar — va botni tekshirish uchun sinov maydoni.",
+  "readOnlySubtitle": "Faqat ko‘rish: hujjatlar, bo‘shliqlar va sinov maydonini administrator o‘zgartiradi.",
+  "viewOnly": "Faqat ko‘rish",
+  "common": {
+    "retry": "Qayta urinish",
+    "readOnly": "Faqat ko‘rish: o‘zgartirishlarni administrator kiritadi."
+  },
+  "views": {
+    "label": "Bilimlar bazasi bo‘limi",
+    "docs": "Hujjatlar",
+    "gaps": "Bo‘shliqlar",
+    "sandbox": "Bot sinov maydoni"
+  },
+  "languages": { "ru": "Ruscha", "uz": "O‘zbekcha", "en": "Inglizcha" },
+  "ingest": {
+    "pending": "Navbatda",
+    "processing": "Qayta ishlanmoqda",
+    "done": "Tayyor",
+    "failed": "Xato"
+  },
+  "source": { "file": "Fayl", "manual": "Qo‘lda kiritilgan", "url": "Havola" },
+  "state": {
+    "loadError": {
+      "title": "Ma’lumotlarni yuklab bo‘lmadi",
+      "text": "Qayta urinib ko‘ring: ma’lumotlar yo‘qolmagan."
+    },
+    "unavailable": {
+      "title": "CRM javob bermayapti",
+      "text": "Bir daqiqa kutib, qayta urinib ko‘ring: ma’lumotlar yo‘qolmagan."
+    },
+    "forbidden": {
+      "title": "Rolingizga ochiq emas",
+      "text": "Bu ma’lumotlar «Barcha lidlar» bo‘limi bor rollarga yoki administratorga ochiq."
+    }
+  },
+  "fields": {
+    "title": "Nomi",
+    "language": "Hujjat tili",
+    "product": "Mahsulot",
+    "productHint": "Hujjat kompaniya haqida umuman bo‘lsa, mahsulot tanlamang.",
+    "productKeyHint": "Mahsulotlar ro‘yxati sizga ochiq emas: kalitni qo‘lda kiriting (lotin harflari, raqamlar, defis) yoki bo‘sh qoldiring.",
+    "noProduct": "Mahsulotsiz",
+    "text": "Hujjat matni (Markdown)"
+  },
+  "search": {
+    "title": "Bot nimani topadi",
+    "hint": "Mijoz savoliga bot qaysi parchalarni topishini va javob berishini tekshiring. Qidiruv hech narsani o‘zgartirmaydi.",
+    "query": "Mijoz savoli",
+    "language": "Savol tili",
+    "anyLanguage": "Istalgan til",
+    "submit": "Topish",
+    "confident": "Bot bilimlar bazasi bo‘yicha javob beradi",
+    "notConfident": "Bot «bilmayman» deydi va menejerni taklif qiladi",
+    "score": "Eng yaxshi moslik: {{score}}, chegara: {{min}}",
+    "noScore": "yo‘q",
+    "noHits": "Hech narsa topilmadi.",
+    "hitsLabel": "Topilgan parchalar",
+    "similarity": "O‘xshashlik {{value}}"
+  },
+  "documents": {
+    "title": "Hujjatlar",
+    "upload": "Fayl yuklash",
+    "manual": "Qo‘lda qo‘shish",
+    "caption": "Bilimlar bazasi hujjatlari",
+    "tableScroll": "Bilimlar bazasi hujjatlari: jadvalni aylantirish mumkin",
+    "open": "Hujjatni ochish: {{title}}",
+    "disabled": "O‘chirilgan",
+    "noProduct": "Mahsulotsiz",
+    "columns": {
+      "title": "Nomi",
+      "language": "Til",
+      "product": "Mahsulot",
+      "status": "Indekslash",
+      "chunks": "Parchalar",
+      "updated": "Yangilangan"
+    },
+    "empty": {
+      "title": "Hujjatlar hali yo‘q",
+      "text": "Bot mijozlarga faqat bilimlar bazasi hujjatlari bo‘yicha javob beradi. Birinchi Markdown faylni yuklang yoki matnni qo‘lda qo‘shing."
+    }
+  },
+  "panel": {
+    "actions": "Amallar",
+    "active": "Bot qidiruvida ishtirok etadi",
+    "ingestError": "Indekslash bajarilmadi: {{error}}",
+    "fields": {
+      "language": "Til",
+      "product": "Mahsulot",
+      "source": "Manba",
+      "version": "Versiya",
+      "chunks": "Parchalar",
+      "created": "Yaratilgan",
+      "updated": "Yangilangan"
+    },
+    "toggle": {
+      "off": "Hujjatni o‘chirish",
+      "on": "Hujjatni yoqish",
+      "offStep1": "Hujjat bot qidiruvida ishtirok etmaydi: u bo‘yicha savollarga bot «bilmayman» deydi yoki boshqa hujjatni oladi.",
+      "offStep2": "Fayl va parchalar o‘chirilmaydi — hujjatni qayta yoqish mumkin.",
+      "onStep1": "Hujjat yana bot qidiruvida ishtirok etadi.",
+      "onStep2": "Parchalar tayyor, qayta indekslash shart emas.",
+      "step3": "O‘zgarish CRM audit jurnaliga tushadi: kim va qachon.",
+      "submitOff": "Hujjatni o‘chirish",
+      "submitOn": "Hujjatni yoqish",
+      "doneOff": "Hujjat o‘chirildi",
+      "doneOn": "Hujjat yoqildi"
+    },
+    "reingest": {
+      "button": "Qayta indekslash",
+      "submit": "Hujjatni qayta indekslash",
+      "step1": "Hujjat indekslash navbatiga qo‘yiladi — holati «Navbatda».",
+      "step2": "Parchalar saqlangan fayldan qaytadan yig‘iladi; bunga bir daqiqagacha vaqt ketadi.",
+      "step3": "Hujjat aynan hozir indekslanayotgan bo‘lsa, CRM rad etadi: kutib, qayta urinib ko‘ring.",
+      "done": "Hujjat qayta indekslashga qo‘yildi"
+    },
+    "chunks": {
+      "title": "Parchalar",
+      "hint": "Bot qidiruvi hujjatni shunday ko‘radi: bot shu matn bo‘laklari bo‘yicha javob beradi.",
+      "empty": "Parchalar hali yo‘q: hujjat hali indekslanmagan.",
+      "number": "{{number}}-parcha",
+      "tokens": "{{count}} token"
+    }
+  },
+  "create": {
+    "upload": {
+      "title": "Markdown fayl yuklash",
+      "file": ".md fayl",
+      "fileHint": "Bilimlar bazasi formatidagi bitta .md fayl, 25 MB dan oshmasin.",
+      "submit": "Hujjatni yuklash"
+    },
+    "manual": {
+      "title": "Hujjatni qo‘lda qo‘shish",
+      "textHint": "Birinchi darajali sarlavhani yozmasa ham bo‘ladi: u nomdan olinadi.",
+      "submit": "Hujjat qo‘shish"
+    },
+    "step1": "Hujjat indekslash navbatiga tushadi — holati «Navbatda».",
+    "step1Gap": "Hujjat indekslash navbatiga tushadi, u yaratilgan bo‘shliq esa yopiladi.",
+    "step2": "Bir daqiqadan so‘ng bot yangi hujjat bo‘yicha javob bera boshlaydi; buni «Bot nimani topadi» orqali tekshirish mumkin.",
+    "step3": "Yuklash CRM audit jurnaliga tushadi: kim va qachon.",
+    "done": "Hujjat qo‘shildi — indekslash bir daqiqagacha davom etadi",
+    "doneGap": "Hujjat qo‘shildi, bo‘shliq yopildi — indekslash bir daqiqagacha davom etadi",
+    "errors": {
+      "notMarkdown": "Faqat Markdown (.md) fayllar qabul qilinadi.",
+      "empty": "Fayl bo‘sh.",
+      "tooLarge": "Fayl 25 MB dan katta."
+    }
+  },
+  "format": {
+    "title": "Faylni qanday tayyorlash kerak",
+    "intro": "Faylni inson yoki tizimdan tashqaridagi AI yordamchi tayyorlaydi; bu yerda u faqat tekshiriladi va parchalarga bo‘linadi.",
+    "rules": [
+      "Boshida --- qatorlari orasida front matter bloki: title, language (ru, uz yoki en), source (hujjat manbasi), updated (YYYY-MM-DD); ixtiyoriy tags va audience.",
+      "Bitta hujjat — bitta mavzu. Bitta «# …» sarlavha, keyin «##» va «###» bo‘limlar: bot matnni shular bo‘yicha parchalarga bo‘ladi.",
+      "Jadvallar GFM formatida, to‘liq. Rasmlar va fayllarga havolalarsiz: rasm ma’nosini so‘z bilan yozing.",
+      "Mijozlarning shaxsiy ma’lumotlari va ichki tannarxsiz. 100 KB dan oshmasin, UTF-8 kodlash."
+    ],
+    "spec": "To‘liq spetsifikatsiya",
+    "specTitle": "Bilimlar bazasi hujjati formati",
+    "prompt": "AI uchun promptni nusxalash",
+    "promptCopied": "Prompt nusxalandi",
+    "promptCopyFailed": "Promptni nusxalab bo‘lmadi",
+    "example": "Namunani yuklab olish",
+    "close": "Yopish"
+  },
+  "gaps": {
+    "title": "Bilimlar bazasi bo‘shliqlari",
+    "hint": "Bot javob topa olmagan mijoz savollari. Ko‘p so‘ralganlari yuqorida.",
+    "status": "Bo‘shliqlar holati",
+    "caption": "Bilimlar bazasi bo‘shliqlari",
+    "tableScroll": "Bilimlar bazasi bo‘shliqlari: jadvalni aylantirish mumkin",
+    "open": "Bo‘shliqni ochish: {{question}}",
+    "noLead": "—",
+    "total": "Jami: {{count}}",
+    "statuses": { "open": "Ochiq", "resolved": "Yopilgan", "ignored": "E’tiborsiz" },
+    "columns": {
+      "question": "Savol",
+      "occurrences": "So‘ralgan",
+      "language": "Til",
+      "score": "Moslik",
+      "lead": "Lid"
+    },
+    "empty": {
+      "open": {
+        "title": "Ochiq bo‘shliqlar yo‘q",
+        "text": "Bot javob topa olmagan savollar shu yerda paydo bo‘ladi — ularni yangi hujjat bilan yopish mumkin."
+      },
+      "resolved": {
+        "title": "Yopilgan bo‘shliqlar yo‘q",
+        "text": "Bo‘shliq hujjat bilan yopiladi: uni savoldan yarating yoki tayyor hujjatga bog‘lang."
+      },
+      "ignored": {
+        "title": "E’tiborsiz bo‘shliqlar yo‘q",
+        "text": "Bu yerga javob berish shart bo‘lmagan savollar, masalan hazillar tushadi."
+      }
+    }
+  },
+  "gapPanel": {
+    "notFound": "Bo‘shliq bu ro‘yxatda topilmadi: ehtimol, u allaqachon yopilgan.",
+    "stepAudit": "O‘zgarish CRM audit jurnaliga tushadi: kim va qachon.",
+    "fields": {
+      "occurrences": "So‘ralgan",
+      "language": "Til",
+      "score": "Eng yaxshi moslik",
+      "lead": "Lid",
+      "created": "Birinchi marta",
+      "updated": "Oxirgi marta"
+    },
+    "create": { "button": "Savoldan hujjat yaratish" },
+    "link": {
+      "button": "Hujjatga bog‘lash",
+      "document": "Javobi bor hujjat",
+      "placeholder": "Hujjatni tanlang",
+      "step1": "Bo‘shliq yopiladi: savolga javob tanlangan hujjatda allaqachon bor.",
+      "step2": "Hujjatning o‘zi o‘zgarmaydi — unda javob bo‘lmasa, yopishdan oldin qo‘shing.",
+      "step3": "Yopilgan bo‘shliqni ochiq holatga qaytarish mumkin.",
+      "submit": "Bog‘lash va bo‘shliqni yopish",
+      "done": "Bo‘shliq yopildi"
+    },
+    "ignore": {
+      "button": "E’tiborsiz qoldirish",
+      "step1": "Savol ochiq bo‘shliqlardan chiqadi.",
+      "step2": "Bot unga avvalgidek javob beradi; savolni «E’tiborsiz» yorlig‘ida qaytarish mumkin.",
+      "submit": "Bo‘shliqni e’tiborsiz qoldirish",
+      "done": "Bo‘shliq yashirildi"
+    },
+    "reopen": {
+      "button": "Ochiq holatga qaytarish",
+      "step1": "Savol yana ochiq bo‘shliqlar orasida paydo bo‘ladi.",
+      "step2": "Bo‘shliq hujjat bilan yopilgan bo‘lsa, unga bog‘lanish olib tashlanadi.",
+      "submit": "Bo‘shliqni qaytarish",
+      "done": "Bo‘shliq ochiq holatga qaytarildi"
+    }
+  },
+  "sandbox": {
+    "title": "Bot sinov maydoni",
+    "intro": "Botga mijoz sifatida yozing: javob Telegramdagi yo‘ldan o‘tadi — bilimlar bazasi, matnlar, uzatish qoidalari. Mijozlar va menejerlar bu suhbatni ko‘rmaydi.",
+    "paid": "Pullik: javoblar «Xarajatlar»da test sifatida hisoblanadi.",
+    "handoffNote": "Menejerga uzatish faqat quyida ko‘rsatiladi: jamoa kanaliga va CRMga yuborilmaydi.",
+    "language": "Mijoz tili",
+    "log": "Bot bilan suhbat",
+    "placeholder": "Mijoz savoli",
+    "send": "Botga yuborish",
+    "you": "Siz (mijoz sifatida)",
+    "bot": "Bot",
+    "empty": "Mijozlar tez-tez so‘raydigan savolni bering — masalan, yetkazib berish muddati yoki kafolat haqida.",
+    "thinking": "Bot javob bermoqda…",
+    "noReply": "Bot jim qoldi",
+    "buttons": "Xabar ostidagi tugmalar",
+    "step1": "Xabar botga sinov mijozi nomidan boradi: bot bilimlar bazasi, matnlar va uzatish qoidalari bo‘yicha javob beradi.",
+    "step2": "Javob pullik: model chaqiruvlari «Xarajatlar»ga «test» belgisi bilan tushadi.",
+    "step3": "Menejerga uzatish faqat quyida ko‘rsatiladi, CRMda yaratilmaydi.",
+    "reset": {
+      "button": "Boshidan boshlash",
+      "submit": "Suhbatni tozalash",
+      "step1": "Sinov suhbati butunlay o‘chiriladi — mijozlar va menejerlarda u yo‘q.",
+      "step2": "Ekrandagi lenta tozalanadi, bot suhbatni toza varaqdan boshlaydi.",
+      "step3": "Amal CRM audit jurnaliga tushadi: kim va qachon."
+    },
+    "why": {
+      "title": "Bot nega bunday javob berdi",
+      "decision": "Qaror",
+      "reason": "Sabab",
+      "score": "Bilimlar bazasiga moslik",
+      "documents": "Bilimlar bazasi hujjatlari",
+      "none": "topilmadi",
+      "triggers": "Uzatish qoidalari ishladi",
+      "priority": "Ustuvorlik"
+    },
+    "decisions": {
+      "answer": "bilimlar bazasi bo‘yicha javob",
+      "fallback": "bilimlar bazasida javob yo‘q",
+      "handoff": "menejerga uzatish",
+      "deliver_document": "hujjat yuborish",
+      "choose_document": "hujjatni tugmalar bilan tanlash",
+      "silent": "javobsiz",
+      "system": "xizmat javobi"
+    }
+  },
+  "triggers": {
+    "human_requested": "Odam so‘ramoqda",
+    "callback_requested": "Qo‘ng‘iroq so‘ramoqda",
+    "price_or_contract_asked": "Narx yoki shartlar — bazada yo‘q",
+    "negative_sentiment": "Salbiy kayfiyat",
+    "complaint": "Shikoyat",
+    "kb_gap_streak": "Bot javob topa olmadi",
+    "no_progress": "Siljish yo‘q",
+    "competitor_mentioned": "Raqobatchi",
+    "high_score": "Yuqori baho",
+    "qualifier_recommend": "Kvalifikator tavsiyasi",
+    "document_not_found": "Hujjat topilmadi",
+    "service_request": "Xizmat so‘rovi",
+    "attachment_received": "Fayl yubordi",
+    "agent_unavailable": "AI yordamchi nosozligi",
+    "delivery_failed": "Faylni yuborib bo‘lmadi"
+  },
+  "errors": {
+    "DEFAULT": "Amal bajarilmadi. Keyinroq qayta urinib ko‘ring yoki administratorga murojaat qiling.",
+    "FORBIDDEN": "Bu amal rolingizga ruxsat etilmagan.",
+    "NOT_FOUND": "Obyekt topilmadi: ehtimol, u o‘zgartirilgan. Sahifani yangilang.",
+    "BACKEND_UNAVAILABLE": "CRM javob bermayapti. Bir daqiqa kutib, qayta urinib ko‘ring.",
+    "INTEGRATION_FAILED": "Javob uchun kerakli xizmat javob bermadi. Keyinroq qayta urinib ko‘ring.",
+    "TOO_MANY_REQUESTS": "So‘rovlar juda ko‘p. Bir daqiqadan so‘ng qayta urinib ko‘ring.",
+    "VALIDATION_FAILED": "Maydonlarning to‘ldirilishini tekshiring.",
+    "CONFLICT": "Obyekt o‘zgargan. Sahifani yangilab, qayta urinib ko‘ring.",
+    "SESSION_EXPIRED": "Sessiya tugadi. Qayta kiring.",
+    "kb_format": "Fayl bilimlar bazasi formatiga mos emas: {{message}}",
+    "reasons": {
+      "kb_markdown_only": "Bilimlar bazasi formatidagi faqat Markdown (.md) fayllar qabul qilinadi.",
+      "kb_format": "Fayl bilimlar bazasi formatiga mos emas: «Faylni qanday tayyorlash kerak» bo‘limiga qarang.",
+      "file_empty": "Fayl bo‘sh.",
+      "file_too_large": "Fayl 25 MB dan katta — uni mavzular bo‘yicha bir nechta hujjatga bo‘ling.",
+      "multipart_required": "Fayl yuklash formasi orqali yuborilishi kerak.",
+      "document_indexing": "Hujjat aynan hozir indekslanmoqda. Bir daqiqa kutib, qayta urinib ko‘ring.",
+      "unknown_product": "Bunday mahsulot ro‘yxatda yo‘q.",
+      "litellm_unavailable": "Modellar shlyuzi javob bermayapti: bot javob shakllantira olmaydi. Keyinroq qayta urinib ko‘ring.",
+      "storage_unavailable": "Fayllar ombori javob bermayapti. Keyinroq qayta urinib ko‘ring."
+    }
+  }
+}

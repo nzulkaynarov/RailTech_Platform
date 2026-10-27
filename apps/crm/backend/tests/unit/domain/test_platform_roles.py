@@ -171,6 +171,10 @@ ADMIN_READ = {
     "external_services:read",
     "backups:read",
     "audit:read",
+    # W13-A5: директор читает настройки бота, шаблоны ответов и базу знаний (правка — admin: full).
+    "settings:read",
+    "reply_templates:read",
+    "kb:read",
 }
 ADMIN_FULL = ADMIN_READ | {
     "users:write",

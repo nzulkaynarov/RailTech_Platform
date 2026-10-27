@@ -1,0 +1,62 @@
+/* Общие части экранов с формами и состояниями запроса (W13-A5): поле с подписью, ошибка, таблица с прокруткой.
+   Значения — макет v3: рамка #f0f0f0, второстепенный текст #595959; без теней и градиентов. */
+.pf-fp-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.pf-fp-field > label,
+.pf-fp-field > .pf-fp-label {
+  font-size: 14px;
+  line-height: 22px;
+  color: #1f1f1f;
+}
+.pf-fp-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.pf-fp-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.pf-fp-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.pf-fp-block {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid #f0f0f0;
+}
+.pf-fp-block > h4 {
+  margin: 0;
+  font-size: 14px;
+  line-height: 22px;
+  font-weight: 600;
+}
+.pf-fp-title {
+  margin: 0;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.pf-fp-sub {
+  margin: 0;
+  color: #595959;
+  font-size: 13px;
+  line-height: 20px;
+  overflow-wrap: anywhere;
+}
+.pf-fp-scroll {
+  overflow-x: auto;
+}
+.pf-fp-scroll:focus-visible {
+  outline: 2px solid #1668dc;
+  outline-offset: 2px;
+}

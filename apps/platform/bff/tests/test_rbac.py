@@ -183,8 +183,12 @@ def test_queue_item_belongs_to_the_first_view_role_that_gives_the_kind() -> None
 
 @pytest.mark.parametrize("code", ROLES)
 def test_modules_follow_visible_sections(code: str) -> None:
+    # Модуль виден, если виден хотя бы один его пункт меню. Пункт «База знаний» CRM открывает
+    # и раздел `admin` (W13-A5): у администратора нет `crm.leads`, но базу знаний ведёт он.
     expected = [
-        m for m in MODULES if any(level(code, k) != "hidden" for k in MATRIX if MODULE_OF[k] == m)
+        m
+        for m in MODULES
+        if any(level(code, s) != "hidden" for sections in MENU[m].values() for s in sections)
     ]
 
     assert rbac.modules_for(rbac.merge(roles(code))) == expected
@@ -225,7 +229,16 @@ def test_menu_examples() -> None:
         "bus",
         "tickets",
         "company",
+        "bot",
     ]
+    # W13-A5: у администратора из CRM открыта только «База знаний» (раздел `admin`)
+    assert rbac.menu_for(admin)["crm"] == ["kb"]
+    director = rbac.menu_for(rbac.merge(roles("DIRECTOR")))
+    assert director["admin"] == ["roles", "org", "integrations", "bus", "tickets", "company", "bot"]
+    assert "kb" in director["crm"]
+    assert "bot" not in rbac.menu_for(rbac.merge(roles("MANAGER")))["admin"]
+    assert "kb" in rbac.menu_for(rbac.merge(roles("MANAGER")))["crm"]
+    assert "kb" not in rbac.menu_for(rbac.merge(roles("SUPPLY")))["crm"]
     assert "summary" in rbac.menu_for(rbac.merge(roles("ACCOUNTANT")))["dashboard"]
     assert "summary" not in rbac.menu_for(rbac.merge(roles("MANAGER", "SUPPLY")))["dashboard"]
     assert rbac.menu_for(rbac.merge(roles("SUPPLY")))["chats"] == ["all", "internal", "contacts"]

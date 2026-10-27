@@ -71,6 +71,11 @@ rbac: ## packages/contracts/platform-rbac.yaml → bff/app/rbac_generated.py и 
 rbac-check: ## Сгенерированные файлы RBAC совпадают с контрактом
 	cd $(BFF) && uv run python ../scripts/gen_rbac.py --check
 
+# Справка формата базы знаний: docs/kb — источник правды, копия лежит в web (контекст Docker-сборки web — apps/platform/web).
+.PHONY: kb-sync
+kb-sync: ## docs/kb → web/src/generated/kb-docs (формат БЗ, промпт, пример для экрана «База знаний»)
+	cd $(WEB) && pnpm kb:sync
+
 # --- Качество (без Docker) ---------------------------------------------------------
 
 .PHONY: lint

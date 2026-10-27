@@ -225,7 +225,8 @@
       "bus": "Integratsiyalar jurnali",
       "tickets": "Jamoa tiketlari",
       "company": "Kompaniya",
-      "setup": "Birinchi ishga tushirish"
+      "setup": "Birinchi ishga tushirish",
+      "bot": "Bot sozlamalari"
     },
     "stub": {
       "roles": {
@@ -262,6 +263,11 @@
         "title": "Birinchi ishga tushirish ustozi",
         "text": "Administrator, o'z kompaniyasi va ulanishning besh qadami: bot, ERP, pochta, AI modellari va birinchi xodim.",
         "action": "Tashkiliy tuzilma"
+      },
+      "bot": {
+        "title": "Bot sozlamalari shu yerda ochiladi",
+        "text": "Telegram-botning matnlari, xulq-atvori va uzatish qoidalari, javob shablonlari va CSV yuklamalar.",
+        "action": "Tuzilma"
       }
     },
     "action": "Xodimni taklif qilish",

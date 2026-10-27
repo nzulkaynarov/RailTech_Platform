@@ -1,0 +1,733 @@
+{
+  "subtitle": "Telegram-botning matnlari, xulq-atvori va uzatish qoidalari, tezkor javob shablonlari va CSV yuklamalar. O‘zgarishlar darhol kuchga kiradi.",
+  "readOnlySubtitle": "Faqat ko‘rish: bot sozlamalarini administrator o‘zgartiradi.",
+  "viewOnly": "Faqat ko‘rish",
+  "common": {
+    "retry": "Qayta urinish"
+  },
+  "state": {
+    "loadError": {
+      "title": "Sozlamalarni yuklab bo‘lmadi",
+      "text": "Qayta urinib ko‘ring: ma’lumotlar yo‘qolmagan."
+    },
+    "unavailable": {
+      "title": "CRM javob bermayapti",
+      "text": "Bir daqiqa kutib, qayta urinib ko‘ring: ma’lumotlar yo‘qolmagan."
+    },
+    "forbidden": {
+      "title": "Rolingizga ochiq emas",
+      "text": "Bot sozlamalari administratorga va direktorga (faqat ko‘rish) ochiq."
+    }
+  },
+  "nav": {
+    "sections": "Bot sozlamalari bo‘limlari",
+    "section": "Bo‘lim",
+    "templates": "Javob shablonlari",
+    "exports": "CSV yuklamalar"
+  },
+  "groups": {
+    "company": "Kompaniya va soatlar",
+    "bot": "Bot",
+    "handoff": "Uzatishlar va kvalifikatsiya",
+    "team": "Jamoa",
+    "spend": "Xarajatlar",
+    "other": "Boshqa",
+    "extra": "Qo‘shimcha"
+  },
+  "keys": {
+    "company": "Kompaniya",
+    "business_hours": "Ish soatlari",
+    "texts": "Bot matnlari",
+    "bot": "Bot xulq-atvori",
+    "kb": "Bilimlar bazasidan qidiruv",
+    "stop_words": "Stop-so‘zlar",
+    "competitors": "Raqobatchilar",
+    "escalation": "Uzatish qoidalari",
+    "qualification": "Kvalifikatsiya",
+    "notifications": "Jamoa kanali",
+    "budget": "Modellar byudjeti",
+    "deals": "Bitimlar",
+    "web_form": "Saytdan «So‘rov» formasi",
+    "service_alerts": "Xizmat nosozliklari haqida ogohlantirishlar"
+  },
+  "sectionHints": {
+    "web_form": "Cabinet kirish sahifasidagi «So‘rov» formasining spamga qarshi himoyasi (tashqi xizmatlarsiz): yashirin maydon, imzolangan forma tokeni va IP bo‘yicha limit. Saytdan kelgan lid «Kiruvchilar»ga «Mas’ulsiz» sifatida tushadi.",
+    "business_hours": "SLA, eslatmalar va botning ish vaqtidan tashqari matni ish soatlariga bog‘liq.",
+    "texts": "Bot mijozlarga nima yozadi. Har bir matn uch tilda.",
+    "stop_words": "Stop-so‘zli xabar darhol menejerga uzatiladi. «so‘z*» — istalgan tugallanma.",
+    "competitors": "Raqobatchi tilga olinishi — menejerga uzatish sababi.",
+    "escalation": "Bot suhbatni jamoaga qachon uzatadi va jamoa qanchalik tez javob berishi kerak.",
+    "notifications": "Uzatish kartochkalari qayerga keladi va eslatmalarda kimni tilga olish kerak.",
+    "budget": "AI modellar xarajatlarining kunlik limiti.",
+    "service_alerts": "Tashqi xizmat (Telegram, AI modellar, pochta…) ishdan chiqqanda va tiklanganda kimga yozish kerak. Nosozlik haqida bitta xabar va tiklanish haqida bitta xabar.",
+    "deals": "Bitimni yopish uchun rad etish sabablari va yangi bitimlar valyutasi."
+  },
+  "form": {
+    "unsaved": "Saqlanmagan o‘zgarishlar bor",
+    "allSaved": "O‘zgarishlar yo‘q",
+    "discard": "O‘zgarishlarni bekor qilish",
+    "save": "Saqlash",
+    "saved": "«{{section}}» sozlamalari saqlandi",
+    "invalidField": "Qiymatni tekshiring",
+    "step1": "«{{section}}» bo‘limi qiymatlari CRMda to‘liq saqlanadi.",
+    "step2": "Bot va xodimlar yangi qiymatlar bo‘yicha darhol, qayta ishga tushirmasdan ishlay boshlaydi.",
+    "step3": "O‘zgarish CRM audit jurnaliga tushadi: kim va qachon, eski va yangi qiymat."
+  },
+  "guard": {
+    "title": "Saqlamasdan chiqasizmi?",
+    "text": "Formada saqlanmagan o‘zgarishlar bor — ular yo‘qoladi.",
+    "leave": "Saqlamasdan chiqish",
+    "stay": "Qolish"
+  },
+  "qualificationHint": "Lid barcha majburiy faktlar ma’lum bo‘lganda va qo‘shimcha faktlar belgilangan sondan kam bo‘lmaganda «Kvalifikatsiyalangan» bo‘ladi. Faktlarni AI ajratadi, qarorni tizim qabul qiladi.",
+  "channelMoved": "Jamoa kanali «Tashqi integratsiyalar» → Telegramda tanlanadi; bu yerda — kimni tilga olish va menejerga qanchalik tez-tez yozish.",
+  "openIntegrations": "Telegramni ochish",
+  "weekdays": {
+    "mon": "Du",
+    "tue": "Se",
+    "wed": "Ch",
+    "thu": "Pa",
+    "fri": "Ju",
+    "sat": "Sh",
+    "sun": "Ya"
+  },
+  "widgets": {
+    "inactiveUser": "faol emas",
+    "usersPlaceholder": "Xodimlarni tanlang"
+  },
+  "dryRun": {
+    "title": "Uzatish qoidalarini sinab ko‘rish",
+    "hint": "Formadagi qiymatlarda menejerga nechta uzatish bo‘lishini ko‘rsatadi. Hech narsani o‘zgartirmaydi.",
+    "step1": "Qoidalar botning oxirgi 50 ta suhbatida hozir formada turgan qiymatlar bo‘yicha, saqlanmagan bo‘lsa ham, hisoblanadi.",
+    "step2": "Menejerga hozir nechta uzatish bo‘lgani va nechta bo‘lishi hamda qaysi lidlarga tegishli ekanini ko‘rasiz.",
+    "step3": "Hech narsa saqlanmaydi va o‘zgarmaydi: na sozlamalar, na suhbatlar, na lidlar.",
+    "button": "Oxirgi 50 ta suhbatda tekshirish",
+    "result": "Sinov natijasi",
+    "dialogs": "Suhbatlar",
+    "now": "Hozirgi uzatishlar",
+    "new": "Yangi qoidalar bilan uzatishlar",
+    "nothingChanges": "O‘zgaradi: 0 — bu suhbatlarda natija o‘zgarmaydi.",
+    "changed": "Lidlarda o‘zgaradi: {{count}}",
+    "becomes": "bo‘ladi",
+    "noReasons": "uzatishsiz"
+  },
+  "templates": {
+    "title": "Javob shablonlari",
+    "intro": "Menejer lid kartochkasidagi javob maydoniga qo‘yadigan va yuborishdan oldin tahrirlaydigan tayyor javoblar. O‘rinbosarlar: {name} — lid ismi, {manager} — menejer ismi.",
+    "new": "Yangi shablon",
+    "edit": "Shablonni o‘zgartirish",
+    "create": "Shablon yaratish",
+    "save": "Shablonni saqlash",
+    "created": "Shablon yaratildi",
+    "saved": "Shablon saqlandi",
+    "removed": "Shablon o‘chirildi",
+    "empty": {
+      "title": "Shablonlar hali yo‘q",
+      "text": "Birinchisini yarating — masalan, «TTni bugun yuboraman». Menejerlar uni lid kartochkasida ko‘radi."
+    },
+    "tableScroll": "Javob shablonlari: jadvalni aylantirish mumkin",
+    "caption": "Tezkor javob shablonlari",
+    "open": "Shablonni ochish: {{title}}",
+    "columns": {
+      "title": "Nomi",
+      "text": "Matn (ruscha)",
+      "updated": "O‘zgartirilgan"
+    },
+    "fieldTitle": "Nomi",
+    "titleHint": "Menejerga shablonlar ro‘yxatida ko‘rinadi, mijozga yuborilmaydi.",
+    "text": "Matn — {{language}}",
+    "placeholders": "O‘rinbosarlar: {name} — lid ismi, {manager} — menejer ismi. Ruscha matn majburiy.",
+    "fallbackHint": "Bo‘sh bo‘lsa — ruscha matn qo‘yiladi.",
+    "step1": "Shablon CRMda saqlanadi va menejerlarda lid kartochkasidagi tezkor javoblar ro‘yxatida paydo bo‘ladi.",
+    "step2": "Menejer matnni javob maydoniga qo‘yadi va yuborishdan oldin tahrirlaydi: mijozga menejer tasdiqlagan narsa ketadi.",
+    "step3": "O‘zgarish CRM audit jurnaliga tushadi: kim va qachon.",
+    "dangerTitle": "O‘chirish",
+    "remove": "Shablonni o‘chirish",
+    "removeSubmit": "Shablonni o‘chirish",
+    "removeStep1": "Shablon lid kartochkalaridagi tezkor javoblar ro‘yxatidan yo‘qoladi.",
+    "removeStep2": "Uni qaytarib bo‘lmaydi: matn hali kerak bo‘lsa, alohida saqlab qo‘ying.",
+    "removeStep3": "O‘chirish shablon matni bilan birga CRM audit jurnaliga tushadi."
+  },
+  "exports": {
+    "title": "CSV yuklamalar",
+    "intro": "CRM ro‘yxatlarida ko‘rinadigan narsalar bilan Excel uchun fayl: lidlar, mijozlar, bitimlar. Filtrlar — ro‘yxat ekranlaridagi kabi.",
+    "step1": "CSV fayl (UTF-8, ajratgich «;») qurilmangizga yuklab olinadi; unda 10 000 qatordan oshmaydi. Uni CRM tayyorlaydi va oqim bilan beradi.",
+    "step2": "Yuklama CRM audit jurnaliga tushadi: kim, nima va nechta qator.",
+    "step3": "Faylda mijozlarning shaxsiy ma’lumotlari bor: uni faqat ish qurilmasida saqlang va messenjerlarda yubormang.",
+    "readOnly": "Faqat ko‘rish: ma’lumotlarni administrator yuklaydi.",
+    "done": "«{{name}}» fayli yuklab olindi",
+    "formLabel": "Yuklama: {{title}}",
+    "download": "Yuklab olish: {{title}}",
+    "needSection": "Yuklama ma’lumotlarga kirishni talab qiladi: «{{section}}» bo‘limi kerak — administratorga ikkinchi rol bering.",
+    "entities": {
+      "leads": {
+        "title": "Lidlar",
+        "purpose": "Ism, til, bosqich, baho, mas’ul, ehtiyoj, oxirgi xabar."
+      },
+      "clients": {
+        "title": "Mijozlar",
+        "purpose": "Nomi, STIR, segment, mas’ul, ochiq bitimlar, oxirgi faollik."
+      },
+      "deals": {
+        "title": "Bitimlar",
+        "purpose": "Nomi, mijoz, mahsulot, summa, bosqich, muddatlar, rad etish sababi, mas’ul."
+      }
+    },
+    "filters": {
+      "q": "Qidiruv (ism, nom)",
+      "stage": "Bosqich",
+      "anyStage": "Istalgan bosqich",
+      "language": "Til",
+      "anyLanguage": "Istalgan til",
+      "from": {
+        "leads": "Yaratilgan (dan)",
+        "deals": "Yopilgan (dan)"
+      },
+      "to": {
+        "leads": "Yaratilgan (gacha)",
+        "deals": "Yopilgan (gacha)"
+      }
+    },
+    "dealStages": {
+      "open": "Ochiq",
+      "won": "Yutilgan",
+      "lost": "Yutqazilgan"
+    },
+    "sections": {
+      "crm": {
+        "leads": "CRM · Barcha lidlar",
+        "clients": "CRM · Barcha mijozlar"
+      }
+    }
+  },
+  "errors": {
+    "DEFAULT": "Amal bajarilmadi. Keyinroq qayta urinib ko‘ring yoki administratorga murojaat qiling.",
+    "FORBIDDEN": "Bu amal rolingizga ruxsat etilmagan.",
+    "NOT_FOUND": "Obyekt topilmadi: ehtimol, u allaqachon o‘zgartirilgan. Sahifani yangilang.",
+    "BACKEND_UNAVAILABLE": "CRM javob bermayapti. Bir daqiqa kutib, qayta urinib ko‘ring.",
+    "INTEGRATION_FAILED": "Amal uchun kerakli xizmat javob bermadi. Keyinroq qayta urinib ko‘ring.",
+    "TOO_MANY_REQUESTS": "So‘rovlar juda ko‘p. Bir daqiqadan so‘ng qayta urinib ko‘ring.",
+    "VALIDATION_FAILED": "CRM qiymatlarni qabul qilmadi: belgilangan maydonlarni tekshiring.",
+    "CONFLICT": "Obyekt o‘zgargan. Sahifani yangilab, qayta urinib ko‘ring.",
+    "SESSION_EXPIRED": "Sessiya tugadi. Qayta kiring.",
+    "reasons": {
+      "litellm_unavailable": "Modellar shlyuzi javob bermayapti: sinov hozir mavjud emas. Keyinroq qayta urinib ko‘ring."
+    }
+  },
+  "texts": {
+    "preview": "Oldindan ko‘rish",
+    "emptyTranslation": "Tarjima yo‘q",
+    "empty": "bo‘sh",
+    "invalid": "xato",
+    "edit": "O‘zgartirish",
+    "view": "Ochish",
+    "name": "Nomi",
+    "actions": "Amallar",
+    "tableScroll": "Bot matnlari: jadvalni aylantirish mumkin",
+    "caption": "Ushbu guruhdagi bot matnlari",
+    "search": "Matnni nomi yoki vaziyati bo‘yicha topish",
+    "notFound": "Hech narsa topilmadi: so‘rovni o‘zgartiring.",
+    "step1": "Tuzatish bo‘lim formasida paydo bo‘ladi; CRMga matn bo‘lim sarlavhasidagi «Saqlash» tugmasidan keyin tushadi.",
+    "step2": "{name} va {manager} kabi o‘rinbosarlar yuborishda almashtiriladi; ortiqcha figurali qavslarni CRM rad etadi.",
+    "step3": "Saqlangandan so‘ng mijozlar yangi matnni botning keyingi xabaridan boshlab oladi.",
+    "save": "Bo‘limni saqlash",
+    "close": "Yopish",
+    "groups": {
+      "welcome": "Salomlashish va rozilik",
+      "handoff": "Menejerga uzatish",
+      "fallback": "Javob yo‘q va nosozliklar",
+      "clients": "Mijozlar va hujjatlar",
+      "menu": "Buyruqlar menyusi",
+      "phone": "Telefon raqami",
+      "erp": "Orqa ofis hodisalari (ERP)",
+      "erase": "Yozishmani o‘chirish",
+      "other": "Boshqa matnlar",
+      "advanced": "Qo‘shimcha"
+    },
+    "samples": {
+      "manager": "Anna",
+      "title": "12-sonli shartnoma",
+      "summary": "sentabr uchun solishtirma dalolatnoma",
+      "resolution": "dalolatnoma pochtaga yuborildi",
+      "number": "17",
+      "date": "12.10.2026",
+      "next": "ertaga 9:00 dan",
+      "sla": "Odatda ish vaqtida 15 daqiqa ichida javob beramiz",
+      "minutes": "15",
+      "deal": "O‘qlar yetkazib berish",
+      "amount": "1500000.00",
+      "currency": "UZS",
+      "due": "30.10.2026",
+      "status": "Yo‘lda",
+      "eta": "05.11.2026",
+      "client": "«Alfa» MChJ",
+      "quote": "42",
+      "reason": "muhr yo‘q",
+      "contact": "Azamat Karimov",
+      "line": "2",
+      "remark": "Quvurlarning bir qismida yoriqlar bor",
+      "company": "RailTech",
+      "hours": "du–ju 9:00 dan 18:00 gacha Toshkent vaqti bilan"
+    },
+    "items": {
+      "greeting": {
+        "label": "Salomlashish",
+        "when": "/start dan keyin mijozga birinchi xabar."
+      },
+      "consent": {
+        "label": "Rozilik so‘rovi",
+        "when": "Salomlashishdan keyin darhol, bot har qanday javobidan oldin."
+      },
+      "consent_button": {
+        "label": "«Roziman» tugmasi",
+        "when": "Rozilik so‘rovi ostidagi tugma."
+      },
+      "consent_decline_button": {
+        "label": "«Rozi emasman» tugmasi",
+        "when": "Rozilik so‘rovi ostidagi tugma."
+      },
+      "consent_accepted": {
+        "label": "Rozilik olindi",
+        "when": "«Roziman» dan keyin, agar mijoz hali hech narsa so‘ramagan bo‘lsa."
+      },
+      "consent_accepted_pending": {
+        "label": "Rozilik olindi, savol allaqachon berilgan",
+        "when": "«Roziman» dan keyin, savol allaqachon bo‘lsa — bot darhol unga javob beradi."
+      },
+      "consent_declined": {
+        "label": "Roziligidan voz kechish",
+        "when": "Mijoz «Rozi emasman» tugmasini bosgan bo‘lsa."
+      },
+      "consent_required": {
+        "label": "Rozilik haqida eslatma",
+        "when": "Mijoz rozilikni tasdiqlamay yozsa."
+      },
+      "language_prompt": {
+        "label": "Til tanlash",
+        "when": "/lang buyrug‘i bilan, til tugmalari ustida."
+      },
+      "language_set": {
+        "label": "Til tanlandi",
+        "when": "Til tanlangandan keyin."
+      },
+      "smalltalk_ack": {
+        "label": "«Rahmat» va «tushunarli» ga javob",
+        "when": "Mijoz minnatdorchilik bildirsa yoki rozi bo‘lsa — bot bu matn bilan AIsiz javob beradi."
+      },
+      "help": {
+        "label": "Yordam",
+        "when": "/help buyrug‘i bilan."
+      },
+      "handoff": {
+        "label": "Menejerga uzatish (ish vaqti)",
+        "when": "Suhbat ish vaqtida jamoaga uzatilganda. {sla} — «Javob muddati va’dasi» matni."
+      },
+      "off_hours": {
+        "label": "Menejerga uzatish (ish vaqtidan tashqari)",
+        "when": "Ish soatlaridan tashqari. {next} — bayramlarni hisobga olgan eng yaqin ish vaqti, {hours} — jadval."
+      },
+      "waiting_for_manager": {
+        "label": "Menejerni kutish",
+        "when": "Mijoz menejerni kutayotganda yozsa."
+      },
+      "manager_joined": {
+        "label": "Menejer ulandi",
+        "when": "Menejer suhbatni olganda. {manager} — menejer ismi."
+      },
+      "returned_to_bot": {
+        "label": "Suhbat botga qaytarildi",
+        "when": "Menejer suhbatni botga qaytarganda."
+      },
+      "handoff_offer_yes": {
+        "label": "«Menejerga uzatish» tugmasi",
+        "when": "«Bilimlar bazasida yo‘q» javobi ostida."
+      },
+      "handoff_offer_no": {
+        "label": "«Kerak emas» tugmasi",
+        "when": "«Bilimlar bazasida yo‘q» javobi ostida."
+      },
+      "attachment_received": {
+        "label": "Fayl qabul qilindi",
+        "when": "Mijoz fayl yuborganda — fayl jamoaga ketadi."
+      },
+      "attachment_too_large": {
+        "label": "Fayl 20 MB dan katta",
+        "when": "Mijoz 20 MB dan katta fayl yuborganda — bot havola so‘raydi, fayl saqlanmaydi."
+      },
+      "fallback": {
+        "label": "Bilimlar bazasida javob yo‘q",
+        "when": "Bot javob topmaganda; ostida — «Menejerga uzatish» va «Kerak emas» tugmalari."
+      },
+      "service_unavailable": {
+        "label": "AI yordamchi nosozligi",
+        "when": "AI model mavjud bo‘lmasa. Mijoz xabari jamoa uchun saqlanadi."
+      },
+      "maintenance": {
+        "label": "Texnik ishlar",
+        "when": "Telegram «Tashqi xizmatlar»da qo‘lda o‘chirilganda: har qanday xabarga javob, chatga 10 daqiqada bir martadan ko‘p emas."
+      },
+      "rate_limited": {
+        "label": "Xabarlar juda tez-tez",
+        "when": "Mijoz daqiqadagi xabar limitidan oshganda («Bot xulq-atvori» bo‘limi)."
+      },
+      "unsupported_message": {
+        "label": "Qo‘llab-quvvatlanmaydigan xabar",
+        "when": "Stikerlar, video va bot tushunmaydigan boshqa xabarlarga."
+      },
+      "document_sent": {
+        "label": "Hujjat yuborish",
+        "when": "Hujjat faylidan oldin mijozga. {title} — hujjat nomi."
+      },
+      "document_failed": {
+        "label": "Hujjat yuborilmadi",
+        "when": "Telegram faylni qabul qilmasa."
+      },
+      "service_request_closed": {
+        "label": "Xizmat so‘rovi javobi",
+        "when": "Menejer so‘rovni yopganda. {number} — raqam, {summary} — mohiyat, {resolution} — javob."
+      },
+      "erase_confirm": {
+        "label": "O‘chirishni tasdiqlash",
+        "when": "/delete buyrug‘i bilan, yozishmani o‘chirishdan oldin."
+      },
+      "erase_button": {
+        "label": "«O‘chirish» tugmasi",
+        "when": "O‘chirishni tasdiqlash ostida."
+      },
+      "cancel_button": {
+        "label": "«Bekor qilish» tugmasi",
+        "when": "O‘chirishni tasdiqlash ostida."
+      },
+      "erase_cancelled": {
+        "label": "O‘chirish bekor qilindi",
+        "when": "Mijoz «Bekor qilish» ni bosganda."
+      },
+      "erased": {
+        "label": "Yozishma o‘chirildi",
+        "when": "Yozishma o‘chirilgandan keyin."
+      },
+      "menu_start": {
+        "label": "Menyu: /start",
+        "when": "Telegram «Menyu» tugmasidagi buyruq yorlig‘i — potensial mijozlarda."
+      },
+      "menu_human": {
+        "label": "Menyu: /human",
+        "when": "Telegram «Menyu» tugmasidagi buyruq yorlig‘i — mijozlarda va lidni menejer yuritmaguncha potensial mijozlarda."
+      },
+      "menu_lang": {
+        "label": "Menyu: /lang",
+        "when": "Telegram «Menyu» tugmasidagi buyruq yorlig‘i — hammada."
+      },
+      "menu_help": {
+        "label": "Menyu: /help",
+        "when": "Telegram «Menyu» tugmasidagi buyruq yorlig‘i — hammada."
+      },
+      "menu_delete": {
+        "label": "Menyu: /delete",
+        "when": "Telegram «Menyu» tugmasidagi buyruq yorlig‘i — hammada."
+      },
+      "menu_docs": {
+        "label": "Menyu: /docs",
+        "when": "Telegram «Menyu» tugmasidagi buyruq yorlig‘i — mijozlarda."
+      },
+      "menu_request": {
+        "label": "Menyu: /request",
+        "when": "Telegram «Menyu» tugmasidagi buyruq yorlig‘i — mijozlarda."
+      },
+      "menu_status": {
+        "label": "Menyu: /status",
+        "when": "Telegram «Menyu» tugmasidagi buyruq yorlig‘i — mijozlarda."
+      },
+      "client_only": {
+        "label": "Buyruq faqat mijozlar uchun",
+        "when": "Potensial mijoz /docs, /request yoki /status ni chaqirganda."
+      },
+      "docs_list": {
+        "label": "Hujjatlar ro‘yxati",
+        "when": "/docs buyrug‘i bilan hujjat tugmalari ustida."
+      },
+      "docs_choose": {
+        "label": "Bir nechta hujjatdan tanlash",
+        "when": "Mijoz hujjat so‘radi, bir nechtasi topildi — hujjat tugmalari ustida."
+      },
+      "docs_empty": {
+        "label": "Hujjatlar yo‘q",
+        "when": "Mijoz /docs ni chaqirdi, lekin uning hujjatlari yo‘q."
+      },
+      "request_prompt": {
+        "label": "So‘rovni tasvirlashni iltimos qilish",
+        "when": "Mijoz /request ni chaqirdi — bot tavsifni bitta xabarda kutadi."
+      },
+      "request_created": {
+        "label": "So‘rov yaratildi",
+        "when": "So‘rov tavsifi olindi, so‘rov menejerga uzatildi. {number} — so‘rov raqami."
+      },
+      "request_status_open": {
+        "label": "Holat: so‘rov ishlanmoqda",
+        "when": "Mijoz /status ni chaqirdi, ochiq so‘rov bor. {number}, {date}, {summary} — so‘rovdan."
+      },
+      "request_status_none": {
+        "label": "Holat: ochiq so‘rovlar yo‘q",
+        "when": "Mijoz /status ni chaqirdi, ochiq so‘rovlar yo‘q."
+      },
+      "phone_request": {
+        "label": "Raqamni ulashishni so‘rash",
+        "when": "Bir marta: lid kvalifikatsiyalanganda yoki menejerni so‘raganda (Bot xulq-atvori → «Raqamni so‘rash»)."
+      },
+      "phone_share_button": {
+        "label": "«Raqamni ulashish» tugmasi",
+        "when": "Raqamni ulashish so‘rovi ostida; mijozning o‘z raqamini yuboradi."
+      },
+      "phone_skip_button": {
+        "label": "«Hozir emas» tugmasi",
+        "when": "Raqamni ulashish so‘rovi ostida."
+      },
+      "phone_saved": {
+        "label": "Raqam saqlandi",
+        "when": "Mijoz raqamini tugma orqali ulashganda."
+      },
+      "phone_skipped": {
+        "label": "Raqam berilmadi",
+        "when": "Mijoz «Hozir emas» ni bosdi. Boshqa so‘ramaymiz."
+      },
+      "phone_not_own": {
+        "label": "Begona kontakt",
+        "when": "Mijoz begona kontakt yubordi — faqat uning o‘z raqami saqlanadi."
+      },
+      "phone_before_manager": {
+        "label": "Menejerga uzatishdan oldin raqam",
+        "when": "Raqamsiz lid menejerni so‘raydi (Uzatishlar → «Menejerni chaqirish so‘rovi — faqat raqamdan keyin»). Raqamdan so‘ng darhol uzatamiz."
+      },
+      "phone_declined_manager": {
+        "label": "Raqam berilmadi — menejerni chaqirmaymiz",
+        "when": "Lid uzatishdan oldin raqam so‘rovida «Hozir emas» ni bosdi. Bot javob berishda davom etadi; yangi so‘rovda yana so‘raydi."
+      },
+      "help_with_manager": {
+        "label": "/help yordami (menejer yuritadi)",
+        "when": "Suhbatni menejer yuritayotganda /help bo‘yicha. Shu menyu buyruqlarini sanaydi."
+      },
+      "help_client": {
+        "label": "/help yordami (mijoz)",
+        "when": "Shartnomadan keyin mijozda /help bo‘yicha. Mijoz menyusi buyruqlarini sanaydi."
+      },
+      "client_access_granted": {
+        "label": "Mijozga kirish ochildi",
+        "when": "Bir marta, menejer lidni mijozga aylantirganda: /docs va /request mavjud."
+      },
+      "request_text_only": {
+        "label": "So‘rov — faqat matn bilan",
+        "when": "Mijoz /request ni chaqirdi va tavsif o‘rniga fayl yoki ovozli xabar yubordi."
+      },
+      "language_first": {
+        "label": "Birinchi xabar: til tanlash",
+        "when": "Yangi suhbatdoshga birinchi xabar — darhol uch tilda, ostida til tugmalari."
+      },
+      "handoff_offer_declined": {
+        "label": "«Kerak emas» ga javob",
+        "when": "Mijoz «Bilimlar bazasida yo‘q» javobi ostidagi «Kerak emas» ni bosdi."
+      },
+      "contacts": {
+        "label": "Kompaniya kontaktlari: sarlavha",
+        "when": "«Telefon/manzil/sayt bering» ga — «Kompaniya» bo‘limidagi qiymatlar ustida."
+      },
+      "contact_labels": {
+        "label": "Kompaniya kontaktlari: yorliqlar",
+        "when": "Telefon, sayt va manzil yorliqlari «|» orqali — shu tartibda."
+      },
+      "contacts_missing": {
+        "label": "Kontaktlar kiritilmagan",
+        "when": "Telefon/manzil/sayt so‘raldi, «Kompaniya»da esa ular bo‘sh; matn ostida — menejer tugmalari."
+      },
+      "sla_promise": {
+        "label": "Javob muddati va’dasi",
+        "when": "«Menejerga uzatish»ga {sla} sifatida qo‘yiladi. {minutes} — «Uzatishlar» bo‘limidagi SLA."
+      },
+      "erp_quote_sent": {
+        "label": "TT mijozga yuborildi",
+        "when": "ERP hodisasi «TT yuborildi». {deal} — bitim. Matn ostida «TTni ochish» va «Kabinet» tugmalari."
+      },
+      "erp_quote_acceptance_code": {
+        "label": "TTni tasdiqlash kodi",
+        "when": "Mijoz kabinetda TTni qabul qilish uchun «Kod olish» ni bosdi: bot kodni kontaktga Telegramda yuboradi. {deal} — bitim, {code} — kod, {minutes} — amal qilish daqiqalari. Kod hech qayerda saqlanmaydi."
+      },
+      "erp_invoice_issued": {
+        "label": "Hisob chiqarildi",
+        "when": "ERP hodisasi «hisob chiqarildi». {number} — raqam, {amount} {currency} — summa, {due} — to‘lov muddati."
+      },
+      "erp_invoice_paid": {
+        "label": "Hisob to‘landi",
+        "when": "ERP hodisasi «to‘lov olindi». {number} — hisob raqami, {amount} {currency} — summa."
+      },
+      "erp_delivery_status": {
+        "label": "Yetkazib berish holati",
+        "when": "ERP hodisasi «yetkazib berish holati o‘zgardi». {deal} — bitim, {summary} — tarkib, {status} — holat so‘z bilan."
+      },
+      "erp_delivery_statuses": {
+        "label": "Yetkazib berish holatlari nomlari",
+        "when": "«|» bilan tartib bo‘yicha beshta nom: yig‘ilmoqda, yo‘lda, jo‘natishga tayyor, jo‘natildi, yetkazildi."
+      },
+      "erp_delivery_eta_changed": {
+        "label": "Yetkazib berish muddati o‘zgardi",
+        "when": "ERP hodisasi «yetkazib berish muddati o‘zgardi». {deal} — bitim, {summary} — tarkib, {eta} — yangi sana."
+      },
+      "erp_act_issued": {
+        "label": "Dalolatnoma shakllantirildi",
+        "when": "ERP hodisasi «dalolatnoma shakllantirildi». {number} — dalolatnoma raqami."
+      },
+      "erp_btn_quote": {
+        "label": "«TTni ochish» tugmasi",
+        "when": "TT haqidagi xabar ostida, TT sahifasiga olib boradi."
+      },
+      "erp_btn_invoice": {
+        "label": "«Hisobni ochish» tugmasi",
+        "when": "Hisob haqidagi xabar ostida, ERP havola yuborgan bo‘lsa."
+      },
+      "erp_btn_cabinet": {
+        "label": "«Kabinet» tugmasi",
+        "when": "ERP hodisalari haqidagi xabarlar ostida, «Kompaniya»da kabinet manzili kiritilgan bo‘lsa."
+      },
+      "erp_staff_quote_accepted": {
+        "label": "Xodimga: TT qabul qilindi",
+        "when": "Mas’ulga shaxsiy xabar. Rus tilida ketadi. {client} — mijoz, {quote} — TT raqami, {deal} — bitim."
+      },
+      "erp_staff_act_returned": {
+        "label": "Xodimga: dalolatnoma qaytarildi",
+        "when": "Mas’ulga shaxsiy xabar. Rus tilida ketadi. {number} — dalolatnoma raqami, {deal} — bitim, {reason} — izohlar."
+      },
+      "erp_note_delivery_line_accepted": {
+        "label": "Lenta: mijoz yetkazib berish qatorini qabul qildi",
+        "when": "Lid lentasidagi yozuv. Rus tilida yoziladi. {contact} — mijoz kontakti, {line} — qator raqami, {title} — nomi, {deal} — bitim."
+      },
+      "erp_note_delivery_line_disputed": {
+        "label": "Lenta: mijoz yetkazib berish qatorini e’tiroz qildi",
+        "when": "Lid lentasidagi yozuv. Rus tilida yoziladi. {contact} — mijoz kontakti, {line} — qator raqami, {title} — nomi, {deal} — bitim, {remark} — izoh."
+      },
+      "erp_staff_delivery_line_disputed": {
+        "label": "Xodimga: yetkazib berish qatoriga e’tiroz",
+        "when": "Mas’ulga shaxsiy xabar. Rus tilida ketadi. {client} — mijoz, {line} — qator raqami, {title} — nomi, {deal} — bitim, {remark} — mijoz izohi."
+      }
+    }
+  },
+  "fields": {
+    "name": "Kompaniya nomi",
+    "crm_base_url": "CRM manzili (kanaldagi havolalar uchun)",
+    "cabinet_url": "Mijoz kabineti manzili",
+    "phone": "Kompaniya telefoni (bot mijoz so‘rovi bo‘yicha aytadi)",
+    "site": "Kompaniya sayti",
+    "address": "Kompaniya manzili",
+    "lost_reasons": "Rad etish sabablari",
+    "currency": "Standart valyuta (ISO kodi, masalan UZS)",
+    "timezone": "Vaqt mintaqasi",
+    "start": "Ish kuni boshlanishi",
+    "end": "Ish kuni tugashi",
+    "weekdays": "Ish kunlari",
+    "holidays": "Bayram kunlari",
+    "consent_version": "Rozilik matni versiyasi",
+    "high_score_threshold": "Uzatish uchun lid bahosi",
+    "no_progress_turns": "Uzatishdan oldin siljishsiz xabarlar",
+    "kb_gap_streak": "Uzatishdan oldin ketma-ket «topilmadi» javoblari",
+    "qualifier_min_confidence": "Kvalifikator qanchalik ishonchli bo‘lishi kerak (0–1)",
+    "sla_minutes": "Javob vaqti (SLA)",
+    "reminder_minutes": "Takroriy eslatma",
+    "disabled_triggers": "O‘chirilgan uzatish sabablari",
+    "human_request_terms": "«Odamni chaqiring» so‘zlari",
+    "min_score": "Bot javob berishi uchun minimal o‘xshashlik (0–1)",
+    "top_k": "Bot javobdan oldin bilimlar bazasining nechta parchasini o‘qiydi",
+    "search_timeout_s": "Bilimlar bazasi qidiruvini necha soniya kutish",
+    "persona": "Yordamchi xarakteri",
+    "max_words": "Javobdagi so‘zlarning maksimal soni",
+    "history_messages": "Kontekstdagi tarix xabarlari soni",
+    "rate_limit_per_minute": "Mijozdan daqiqasiga xabarlar soni",
+    "unresponsive_days": "«Javob bermaydi» holatigacha jimlik kunlari",
+    "ask_phone": "Telefon raqamini bir marta so‘rash (kvalifikatsiyalangan yoki menejerni so‘ragan)",
+    "assist_enabled": "Javob berishda menejerga AI yordami («Qoralama», «Yaxshilash»)",
+    "assist_max_input_chars": "«Yaxshilash» uchun matnning maksimal belgilar soni",
+    "terms": "So‘zlar",
+    "channel_id": "Yopiq kanal ID si",
+    "duty_user_ids": "Navbatchilar",
+    "manager_dm_throttle_minutes": "Menejerga shaxsiy bildirishnomalar orasidagi tanaffus",
+    "daily_usd": "Kunlik byudjet",
+    "erp_daily_usd": "ERP kunlik byudjeti",
+    "fallback_model_enabled": "Zaxira modelga o‘tish",
+    "providers": "Provayder bo‘yicha kunlik limit",
+    "anthropic": "Anthropic (suhbat, kvalifikator, sifat tekshiruvi)",
+    "gemini": "Google Gemini (zaxira model, qidiruv)",
+    "price_always_to_manager": "Narx haqidagi har qanday savol — menejerga (bot narxni prays-listdan aytgan bo‘lsa ham)",
+    "require_phone_for_human_request": "Menejerni chaqirish so‘rovi — faqat telefon raqamidan keyin",
+    "required_facts": "Majburiy faktlar",
+    "any_of_facts": "Qo‘shimcha faktlar",
+    "min_any_of": "Nechta qo‘shimcha fakt kerak",
+    "timeline_max": "Muddat hisobga olinadi, agar u",
+    "decision_roles": "Qarordagi qaysi rollar hisobga olinadi",
+    "min_fill_seconds": "Formani to‘ldirishning minimal vaqti",
+    "token_ttl_minutes": "Ochiq forma amal qilish muddati",
+    "rate_limit_per_hour": "Bitta manzildan soatiga so‘rovlar",
+    "max_text_chars": "«Nima kerak» maydonidagi maksimal belgilar soni",
+    "telegram_admins": "Administratorlarga Telegramda shaxsiy xabar",
+    "telegram_channel": "Jamoa kanaliga xabar",
+    "email_admins": "Administratorlarga pochta xati",
+    "extra_emails": "Xatlar uchun qo‘shimcha manzillar",
+    "repeat_minutes": "Xizmat nosozligi haqida ogohlantirish bir martadan tez-tez emas"
+  },
+  "hints": {
+    "cabinet_url": "Mijoz kabineti manzili (https://…): ERP hodisalari haqidagi bot xabarlari ostidagi «Kabinet» tugmasi; bo‘sh bo‘lsa — tugma yo‘q.",
+    "max_text_chars": "«Nima kerak» maydonidagi belgilarning maksimal soni.",
+    "consent_version": "Versiyani o‘zgartiring — barcha mijozlar rozilikni qaytadan tasdiqlaydi.",
+    "high_score_threshold": "Shu yoki undan yuqori baholi lid menejerga uzatiladi.",
+    "qualifier_min_confidence": "Yuqori — qattiqroq: kvalifikator tavsiyasi bo‘yicha uzatishlar kamroq.",
+    "min_score": "Yuqori — qattiqroq: bot ko‘proq «bilmayman» deydi va menejerni taklif qiladi.",
+    "sla_minutes": "Kanalga eslatmagacha ish daqiqalari.",
+    "reminder_minutes": "Takroriy eslatmalar orasidagi ish daqiqalari.",
+    "human_request_terms": "So‘z yoki ibora; Enter — qo‘shish.",
+    "require_phone_for_human_request": "Raqamsiz lid menejerni so‘raydi — bot avval «Raqamni ulashish» ni so‘raydi (spamdan himoya) va raqamdan keyin darhol uzatadi. Mijozlarga va bot signallari bo‘yicha uzatishlarga tegmaydi.",
+    "terms": "So‘z yoki so‘z boshi * bilan (shikoyat* — shikoyat, shikoyati…); Enter — qo‘shish.",
+    "channel_id": "Minus ishorali son, masalan -100…; bot kanal administratori bo‘lishi kerak.",
+    "duty_user_ids": "Muddati o‘tgan uzatishlar haqidagi eslatmalarda @eslatma oladilar.",
+    "manager_dm_throttle_minutes": "Lid ketma-ket bir nechta xabar yozadi — menejer shu vaqt ichida Telegramda bitta bildirishnoma oladi.",
+    "holidays": "Bu kunlarda SLA hisoblanmaydi, bot ish vaqtidan tashqari matn bilan javob beradi.",
+    "daily_usd": "AQSH dollarida. Yuqorisi — suhbat zaxira modelga o‘tadi.",
+    "erp_daily_usd": "Sutkasiga AQSH dollarida (Toshkent vaqti bilan), 0 — limitsiz. ERP xarajatlari umumiy model shlyuzi orqali; oshib ketsa «Xarajatlar» va «Tizim holati»da ajratiladi.",
+    "anthropic": "Sutkasiga USD (Toshkent vaqti bilan), 0 — limitsiz. Yuqorisi — suhbat zaxira modelda.",
+    "gemini": "Sutkasiga USD (Toshkent vaqti bilan), 0 — limitsiz. Yuqorisi — bot suhbatlarni menejerga uzatadi.",
+    "min_fill_seconds": "Tezroq yuborilgan forma rad etiladi: shunday qilib robotlar saralanadi.",
+    "token_ttl_minutes": "Shundan keyin forma sahifasini yangilash kerak.",
+    "rate_limit_per_hour": "Limitdan oshgan so‘rovlar shu IP dan soat oxirigacha rad etiladi.",
+    "telegram_admins": "Profilida Telegram ulangan va tizim bildirishnomalari yoqilgan administratorlarga.",
+    "telegram_channel": "«Shaxsiyga hech kimga yetkazilmasa» — kanal lidlar haqida qoladi, nosozliklarni jamoa faqat zaxira yo‘l sifatida ko‘radi.",
+    "email_admins": "Pochtasi bor faol administratorlarga; «Pochta» konnektori ulangan bo‘lishi kerak.",
+    "extra_emails": "Masalan, navbatchi muhandis; Enter — qo‘shish.",
+    "repeat_minutes": "Xizmat «miltillasa», shu muddatdan oldingi yangi nosozlik xabarsiz hodisalar jurnaliga yoziladi."
+  },
+  "units": {
+    "repeat_minutes": "daq",
+    "min_fill_seconds": "s",
+    "token_ttl_minutes": "daq",
+    "manager_dm_throttle_minutes": "daq",
+    "sla_minutes": "daq",
+    "reminder_minutes": "daq",
+    "unresponsive_days": "kun",
+    "high_score_threshold": "100 dan",
+    "daily_usd": "$",
+    "erp_daily_usd": "$",
+    "anthropic": "$",
+    "gemini": "$"
+  },
+  "options": {
+    "need": "Ehtiyoj",
+    "product": "Mahsulot",
+    "timeline": "Muddat",
+    "decision_role": "Qarordagi roli",
+    "budget": "Byudjet",
+    "company": "Kompaniya",
+    "<1m": "1 oygacha",
+    "<3m": "3 oygacha",
+    "<12m": "bir yilgacha",
+    ">12m": "har qanday ma’lum",
+    "decision_maker": "Qaror qabul qiladi",
+    "influencer": "Qarorga ta’sir qiladi",
+    "researcher": "Ma’lumot yig‘adi",
+    "fallback": "Shaxsiyga hech kimga yetkazilmasa",
+    "always": "Doim",
+    "never": "Hech qachon"
+  }
+}

@@ -1,16 +1,15 @@
-// Копирует docs/kb/{FORMAT,PROMPT,example}.md в src/generated/kb-docs (M5-CRM-02).
-// Источник правды — docs/kb в корне репозитория; контекст Docker-сборки фронтенда — только
-// apps/crm/frontend, поэтому копия лежит в репозитории, а тест kbDocs.test.ts следит за равенством.
+// Справка формата базы знаний (docs/kb) с W13-A5 живёт в Платформе: копия — apps/platform/web/src/generated/kb-docs,
+// команда — `pnpm kb:sync` там же. Старый фронт CRM заморожен и удаляется в волне 13b; его копия src/generated/kb-docs
+// остаётся как есть (тест kbDocs.test.ts сверяет её с docs/kb, пока docs/kb не менялся). Этот скрипт перенаправлен.
 // Запуск: pnpm kb:sync
-import { copyFileSync, mkdirSync } from "node:fs";
+import { spawnSync } from "node:child_process";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const source = join(here, "../../../../docs/kb");
-const target = join(here, "../src/generated/kb-docs");
-mkdirSync(target, { recursive: true });
-for (const name of ["FORMAT.md", "PROMPT.md", "example.md"]) {
-  copyFileSync(join(source, name), join(target, name));
-}
-console.log(`kb-docs: скопировано в ${target}`);
+const platform = join(here, "../../../platform/web/scripts/sync-kb-docs.mjs");
+console.log(
+  "kb-docs: синхронизация переведена в Платформу (apps/platform/web) — запускаю её скрипт",
+);
+const result = spawnSync(process.execPath, [platform], { stdio: "inherit" });
+process.exit(result.status ?? 1);

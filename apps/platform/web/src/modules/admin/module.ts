@@ -60,5 +60,13 @@ export const admin: ModuleConfig = {
       defaults: { panelOpen: false },
       actionTo: "/admin/org",
     },
+    {
+      key: "bot",
+      path: "/admin/bot",
+      access: { resource: "admin" },
+      tabs: [{ key: "card" }],
+      defaults: { panelOpen: false },
+      actionTo: "/admin/org",
+    },
   ],
 };

@@ -102,6 +102,7 @@ class Authed:
         probe: bool = False,
         content: bytes | None = None,
         content_type: str | None = None,
+        stream: bool = False,
     ) -> httpx.Response:
         return await self.service.call(
             self.sid,
@@ -113,6 +114,7 @@ class Authed:
             probe=probe,
             content=content,
             content_type=content_type,
+            stream=stream,
         )
 
 
@@ -162,6 +164,67 @@ def require(resource: str, need: Need = "read") -> Callable[[Authed], Awaitable[
                 status_code=403,
                 details={"resource": resource, "need": need},
             )
+        return authed
+
+    return dependency
+
+
+Rule = tuple[str, Need]
+
+
+def _check_rules(rules: tuple[Rule, ...]) -> None:
+    for resource, _ in rules:
+        if resource not in RESOURCE_MODULE:
+            raise KeyError(f"нет раздела каталога: {resource}")
+
+
+async def _gate(authed: Authed) -> None:
+    """Общая часть проверок раздела: профиль CRM свеж, временный пароль сменён."""
+    authed.data = await authed.service.sync_profile(authed.sid, authed.data)
+    if authed.data.must_change_password:
+        raise PlatformError(
+            "FORBIDDEN",
+            "Сначала смените временный пароль.",
+            status_code=403,
+            details={"reason": "password_change_required"},
+        )
+
+
+def _forbidden(rules: tuple[Rule, ...]) -> PlatformError:
+    return PlatformError(
+        "FORBIDDEN",
+        "Раздел или действие не положены вашей роли.",
+        status_code=403,
+        details={"resource": rules[0][0], "need": rules[0][1]},
+    )
+
+
+def require_any(*rules: Rule) -> Callable[[Authed], Awaitable[Authed]]:
+    """Зависимость маршрута: достаточно любого из правил «раздел не ниже уровня».
+
+    Для операций, которые разные роли получают из разных разделов (чтение базы знаний — `crm.leads`
+    или `admin`). Решающее слово остаётся за бэкендом: каталог только отсекает заведомо лишних.
+    """
+    _check_rules(rules)
+
+    async def dependency(authed: AuthedDep) -> Authed:
+        await _gate(authed)
+        if not any(allows(authed.access, resource, need) for resource, need in rules):
+            raise _forbidden(rules)
+        return authed
+
+    return dependency
+
+
+def require_all(*rules: Rule) -> Callable[[Authed], Awaitable[Authed]]:
+    """Зависимость маршрута: нужны все правила сразу (выгрузка — `admin: full` и чтение данных)."""
+    _check_rules(rules)
+
+    async def dependency(authed: AuthedDep) -> Authed:
+        await _gate(authed)
+        for resource, need in rules:
+            if not allows(authed.access, resource, need):
+                raise _forbidden(((resource, need),))
         return authed
 
     return dependency

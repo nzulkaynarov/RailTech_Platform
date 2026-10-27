@@ -20,7 +20,11 @@ ROOT = subprocess.run(["git", "rev-parse", "--show-toplevel"], capture_output=Tr
                       check=True).stdout.strip()
 os.chdir(ROOT)
 
-SKIP_PREFIX = ("apps/crm/frontend/src/generated/kb-docs/", "docs/screens/")
+SKIP_PREFIX = (
+    "apps/crm/frontend/src/generated/kb-docs/",
+    "apps/platform/web/src/generated/kb-docs/",
+    "docs/screens/",
+)
 TEXT_EXT = (".md", ".py", ".ts", ".tsx", ".js", ".mjs", ".cjs", ".sh", ".yml", ".yaml", ".toml", ".json",
             ".css", ".ini", ".cfg", ".example", ".html", ".txt", "Makefile", "Dockerfile", "Caddyfile")
 # История и исследования цитируют пути того времени — в них проверяются только ссылки Markdown.

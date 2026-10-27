@@ -104,6 +104,18 @@
  * кодов), `OWN_COMPANY_ALREADY_EXISTS` (409). Право: чек-лист и мастер компании видит и выполняет только `admin: full` — CRM
  * `/setup/checklist` требует право записи настроек; директору баннер не показывается.
  *
+ * **0.11.0 (W13-A5) — добавляющее.** CRM · База знаний и Admin · Настройки бота (теги `kb` и `bot`). **База знаний** (`/crm/kb/*`,
+ * `/crm/sandbox/*`): документы (список, загрузка файла `.md` multipart, ручной ввод, включение и выключение, переиндексация,
+ * фрагменты), поиск «Что найдёт бот», пробелы (закрыть привязкой к документу, игнорировать, вернуть), справочник продуктов,
+ * песочница бота (сообщение, «начать заново»). Читают роли с `crm.leads` или `admin`; правят, переиндексируют и пользуются
+ * песочницей — `admin: full`. **Настройки бота** (`/admin/bot/*`): разделы CRM `/settings` значениями и JSON Schema (форма строится
+ * по схеме CRM), сохранение раздела, пробный прогон правил передачи, шаблоны быстрых ответов, выгрузки CSV лидов, клиентов и
+ * сделок — потоком, с правом на выгружаемые данные (`crm.leads` для лидов, `crm.clients` для клиентов и сделок). Чтение настроек
+ * — `admin` от `read`, правка — `admin: full`. Каталог ролей: директор (`admin: read`) читает настройки бота, шаблоны ответов и
+ * базу знаний (права CRM `settings:read`, `reply_templates:read`, `kb:read`); пункт меню CRM «База знаний» открывает и раздел
+ * `admin`; в Admin новый пункт «Настройки бота». Нового кода ошибки нет: ошибки формата документа и пути невалидных полей настроек
+ * — `VALIDATION_FAILED` с `details.reason`, `details.rule`, `details.messages`, `details.paths`.
+ *
  * 0.2.4: `423 ACCOUNT_LOCKED` объявлен и на `POST /auth/change-password` (CRM блокирует учётную запись после неверных
  * текущих паролей).
  *
@@ -122,7 +134,7 @@
  * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.10.0
+ * OpenAPI spec version: 0.11.0
  */
 
 export * from "./accessLevel";
@@ -158,6 +170,9 @@ export * from "./botProfile";
 export * from "./botProfilePublish";
 export * from "./botProfilePublishError";
 export * from "./botProfileState";
+export * from "./botSettings";
+export * from "./botSettingsSchemas";
+export * from "./botSettingsValues";
 export * from "./brandPreviewIn";
 export * from "./brandProfile";
 export * from "./brandProfileFontFamily";
@@ -206,6 +221,7 @@ export * from "./chargeTypeList";
 export * from "./companyItemRef";
 export * from "./companyProfile";
 export * from "./companyProfileUpdate";
+export * from "./createdId";
 export * from "./csrfFailedResponse";
 export * from "./csrfTokenParameter";
 export * from "./decimalString";
@@ -220,6 +236,7 @@ export * from "./documentTemplateIn";
 export * from "./documentTemplateList";
 export * from "./documentTemplatePreviewIn";
 export * from "./documentTemplateUpdate";
+export * from "./downloadCsvExportParams";
 export * from "./dueLabel";
 export * from "./emailTemplate";
 export * from "./emailTemplateIn";
@@ -243,6 +260,11 @@ export * from "./erpSyncState";
 export * from "./error";
 export * from "./errorDetails";
 export * from "./errorSource";
+export * from "./escalationDryRun";
+export * from "./escalationDryRunByCodeCandidate";
+export * from "./escalationDryRunByCodeCurrent";
+export * from "./escalationDryRunRow";
+export * from "./escalationSettingsIn";
 export * from "./externalService";
 export * from "./externalServiceDetail";
 export * from "./externalServiceFrequency";
@@ -273,11 +295,31 @@ export * from "./integrationsOverview";
 export * from "./integrationStatus";
 export * from "./invalidationHint";
 export * from "./invalidationTopic";
+export * from "./kbChunk";
+export * from "./kbChunkList";
+export * from "./kbDocument";
+export * from "./kbDocumentIngestStatus";
+export * from "./kbDocumentList";
+export * from "./kbDocumentPatch";
+export * from "./kbDocumentSourceType";
+export * from "./kbDocumentUpload";
+export * from "./kbGap";
+export * from "./kbGapPage";
+export * from "./kbGapResolveIn";
+export * from "./kbGapStatus";
+export * from "./kbManualDocumentIn";
+export * from "./kbProduct";
+export * from "./kbProductList";
+export * from "./kbSearchHit";
+export * from "./kbSearchIn";
+export * from "./kbSearchResult";
 export * from "./language";
 export * from "./listBusDeliveriesParams";
 export * from "./listBusInboxParams";
 export * from "./listCategoryRequestsParams";
 export * from "./listEmployeesParams";
+export * from "./listKbDocumentsParams";
+export * from "./listKbGapsParams";
 export * from "./listMailLogParams";
 export * from "./listMailLogStatus";
 export * from "./listNotificationsParams";
@@ -328,6 +370,9 @@ export * from "./referenceItemIn";
 export * from "./referenceItemList";
 export * from "./referenceItemUpdate";
 export * from "./referenceKind";
+export * from "./replyTemplate";
+export * from "./replyTemplateIn";
+export * from "./replyTemplateList";
 export * from "./resourceAccess";
 export * from "./restrictedField";
 export * from "./role";
@@ -340,6 +385,11 @@ export * from "./rolePreviewIn";
 export * from "./roleQueryParameter";
 export * from "./roleRef";
 export * from "./roleUpdate";
+export * from "./sandboxMessageIn";
+export * from "./sandboxReply";
+export * from "./sandboxTurn";
+export * from "./sandboxWhy";
+export * from "./saveBotSettingBody";
 export * from "./searchGroup";
 export * from "./searchHit";
 export * from "./searchParams";

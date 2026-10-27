@@ -1,0 +1,316 @@
+{
+  "company": {
+    "additionalProperties": false,
+    "properties": {
+      "name": { "type": "string" },
+      "crm_base_url": { "type": "string" },
+      "phone": { "maxLength": 100, "type": "string" },
+      "site": { "maxLength": 200, "type": "string" },
+      "address": { "maxLength": 300, "type": "string" },
+      "cabinet_url": {
+        "description": "Адрес кабинета клиента (https://…): кнопка «Кабинет» под сообщениями бота о событиях ERP; пусто — кнопки нет",
+        "maxLength": 500,
+        "type": "string"
+      }
+    },
+    "type": "object"
+  },
+  "business_hours": {
+    "additionalProperties": false,
+    "properties": {
+      "timezone": { "type": "string" },
+      "start": { "format": "time", "type": "string" },
+      "end": { "format": "time", "type": "string" },
+      "weekdays": { "items": { "type": "integer" }, "type": "array" },
+      "holidays": { "items": { "format": "date", "type": "string" }, "type": "array" }
+    },
+    "type": "object"
+  },
+  "texts": {
+    "$defs": {
+      "LocalizedText": {
+        "additionalProperties": false,
+        "properties": {
+          "ru": { "type": "string" },
+          "uz": { "type": "string" },
+          "en": { "type": "string" }
+        },
+        "required": ["ru", "uz", "en"],
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "description": "Тексты бота; меню клиента и запрос номера — в `ClientBotTexts`.",
+    "properties": {
+      "maintenance": { "$ref": "#/$defs/LocalizedText" },
+      "menu_start": { "$ref": "#/$defs/LocalizedText" },
+      "menu_human": { "$ref": "#/$defs/LocalizedText" },
+      "menu_lang": { "$ref": "#/$defs/LocalizedText" },
+      "menu_help": { "$ref": "#/$defs/LocalizedText" },
+      "menu_delete": { "$ref": "#/$defs/LocalizedText" },
+      "menu_docs": { "$ref": "#/$defs/LocalizedText" },
+      "menu_request": { "$ref": "#/$defs/LocalizedText" },
+      "menu_status": { "$ref": "#/$defs/LocalizedText" },
+      "client_only": { "$ref": "#/$defs/LocalizedText" },
+      "help_with_manager": { "$ref": "#/$defs/LocalizedText" },
+      "help_client": { "$ref": "#/$defs/LocalizedText" },
+      "client_access_granted": { "$ref": "#/$defs/LocalizedText" },
+      "request_text_only": { "$ref": "#/$defs/LocalizedText" },
+      "language_first": { "$ref": "#/$defs/LocalizedText" },
+      "handoff_offer_declined": { "$ref": "#/$defs/LocalizedText" },
+      "contacts": { "$ref": "#/$defs/LocalizedText" },
+      "contact_labels": { "$ref": "#/$defs/LocalizedText" },
+      "contacts_missing": { "$ref": "#/$defs/LocalizedText" },
+      "sla_promise": { "$ref": "#/$defs/LocalizedText" },
+      "docs_list": { "$ref": "#/$defs/LocalizedText" },
+      "docs_choose": { "$ref": "#/$defs/LocalizedText" },
+      "docs_empty": { "$ref": "#/$defs/LocalizedText" },
+      "request_prompt": { "$ref": "#/$defs/LocalizedText" },
+      "request_created": { "$ref": "#/$defs/LocalizedText" },
+      "request_status_open": { "$ref": "#/$defs/LocalizedText" },
+      "request_status_none": { "$ref": "#/$defs/LocalizedText" },
+      "phone_request": { "$ref": "#/$defs/LocalizedText" },
+      "phone_share_button": { "$ref": "#/$defs/LocalizedText" },
+      "phone_skip_button": { "$ref": "#/$defs/LocalizedText" },
+      "phone_saved": { "$ref": "#/$defs/LocalizedText" },
+      "phone_skipped": { "$ref": "#/$defs/LocalizedText" },
+      "phone_before_manager": { "$ref": "#/$defs/LocalizedText" },
+      "phone_declined_manager": { "$ref": "#/$defs/LocalizedText" },
+      "phone_not_own": { "$ref": "#/$defs/LocalizedText" },
+      "erp_quote_sent": { "$ref": "#/$defs/LocalizedText" },
+      "erp_quote_acceptance_code": { "$ref": "#/$defs/LocalizedText" },
+      "erp_invoice_issued": { "$ref": "#/$defs/LocalizedText" },
+      "erp_invoice_paid": { "$ref": "#/$defs/LocalizedText" },
+      "erp_delivery_status": { "$ref": "#/$defs/LocalizedText" },
+      "erp_delivery_statuses": { "$ref": "#/$defs/LocalizedText" },
+      "erp_delivery_eta_changed": { "$ref": "#/$defs/LocalizedText" },
+      "erp_act_issued": { "$ref": "#/$defs/LocalizedText" },
+      "erp_btn_quote": { "$ref": "#/$defs/LocalizedText" },
+      "erp_btn_invoice": { "$ref": "#/$defs/LocalizedText" },
+      "erp_btn_cabinet": { "$ref": "#/$defs/LocalizedText" },
+      "erp_staff_quote_accepted": { "$ref": "#/$defs/LocalizedText" },
+      "erp_staff_act_returned": { "$ref": "#/$defs/LocalizedText" },
+      "erp_note_delivery_line_accepted": { "$ref": "#/$defs/LocalizedText" },
+      "erp_note_delivery_line_disputed": { "$ref": "#/$defs/LocalizedText" },
+      "erp_staff_delivery_line_disputed": { "$ref": "#/$defs/LocalizedText" },
+      "consent_version": { "type": "string" },
+      "greeting": { "$ref": "#/$defs/LocalizedText" },
+      "consent": { "$ref": "#/$defs/LocalizedText" },
+      "consent_button": { "$ref": "#/$defs/LocalizedText" },
+      "consent_accepted": { "$ref": "#/$defs/LocalizedText" },
+      "consent_accepted_pending": { "$ref": "#/$defs/LocalizedText" },
+      "consent_decline_button": { "$ref": "#/$defs/LocalizedText" },
+      "consent_declined": { "$ref": "#/$defs/LocalizedText" },
+      "consent_required": { "$ref": "#/$defs/LocalizedText" },
+      "handoff": { "$ref": "#/$defs/LocalizedText" },
+      "off_hours": { "$ref": "#/$defs/LocalizedText" },
+      "waiting_for_manager": { "$ref": "#/$defs/LocalizedText" },
+      "fallback": { "$ref": "#/$defs/LocalizedText" },
+      "handoff_offer_yes": { "$ref": "#/$defs/LocalizedText" },
+      "handoff_offer_no": { "$ref": "#/$defs/LocalizedText" },
+      "help": { "$ref": "#/$defs/LocalizedText" },
+      "rate_limited": { "$ref": "#/$defs/LocalizedText" },
+      "erase_confirm": { "$ref": "#/$defs/LocalizedText" },
+      "erase_button": { "$ref": "#/$defs/LocalizedText" },
+      "cancel_button": { "$ref": "#/$defs/LocalizedText" },
+      "erase_cancelled": { "$ref": "#/$defs/LocalizedText" },
+      "erased": { "$ref": "#/$defs/LocalizedText" },
+      "document_sent": { "$ref": "#/$defs/LocalizedText" },
+      "document_failed": { "$ref": "#/$defs/LocalizedText" },
+      "manager_joined": { "$ref": "#/$defs/LocalizedText" },
+      "service_request_closed": { "$ref": "#/$defs/LocalizedText" },
+      "returned_to_bot": { "$ref": "#/$defs/LocalizedText" },
+      "attachment_received": { "$ref": "#/$defs/LocalizedText" },
+      "attachment_too_large": { "$ref": "#/$defs/LocalizedText" },
+      "unsupported_message": { "$ref": "#/$defs/LocalizedText" },
+      "service_unavailable": { "$ref": "#/$defs/LocalizedText" },
+      "language_prompt": { "$ref": "#/$defs/LocalizedText" },
+      "language_set": { "$ref": "#/$defs/LocalizedText" },
+      "smalltalk_ack": { "$ref": "#/$defs/LocalizedText" }
+    },
+    "type": "object"
+  },
+  "escalation": {
+    "additionalProperties": false,
+    "properties": {
+      "high_score_threshold": { "maximum": 100, "minimum": 0, "type": "integer" },
+      "no_progress_turns": { "minimum": 1, "type": "integer" },
+      "kb_gap_streak": { "minimum": 1, "type": "integer" },
+      "qualifier_min_confidence": { "maximum": 1, "minimum": 0, "type": "number" },
+      "sla_minutes": { "minimum": 1, "type": "integer" },
+      "reminder_minutes": { "minimum": 1, "type": "integer" },
+      "disabled_triggers": { "items": { "type": "string" }, "type": "array" },
+      "price_always_to_manager": { "type": "boolean" },
+      "require_phone_for_human_request": {
+        "description": "Просьба лида позвать менеджера — только после номера телефона из Telegram",
+        "type": "boolean"
+      },
+      "human_request_terms": { "items": { "type": "string" }, "type": "array" }
+    },
+    "type": "object"
+  },
+  "qualification": {
+    "additionalProperties": false,
+    "description": "Когда лид «Квалифицирован» (ADR-0016). По умолчанию — BUSINESS §5.",
+    "properties": {
+      "required_facts": {
+        "items": {
+          "enum": ["need", "product", "timeline", "decision_role", "budget", "company"],
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "any_of_facts": {
+        "items": {
+          "enum": ["need", "product", "timeline", "decision_role", "budget", "company"],
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "min_any_of": { "maximum": 6, "minimum": 0, "type": "integer" },
+      "timeline_max": { "enum": ["<1m", "<3m", "<12m", ">12m"], "type": "string" },
+      "decision_roles": {
+        "items": { "enum": ["decision_maker", "influencer", "researcher"], "type": "string" },
+        "type": "array"
+      }
+    },
+    "type": "object"
+  },
+  "kb": {
+    "additionalProperties": false,
+    "properties": {
+      "min_score": { "maximum": 1, "minimum": 0, "type": "number" },
+      "top_k": { "maximum": 10, "minimum": 1, "type": "integer" },
+      "search_timeout_s": { "maximum": 30, "minimum": 1, "type": "number" }
+    },
+    "type": "object"
+  },
+  "bot": {
+    "additionalProperties": false,
+    "properties": {
+      "persona": { "type": "string" },
+      "max_words": { "maximum": 400, "minimum": 20, "type": "integer" },
+      "history_messages": { "maximum": 50, "minimum": 2, "type": "integer" },
+      "rate_limit_per_minute": { "minimum": 1, "type": "integer" },
+      "unresponsive_days": { "maximum": 90, "minimum": 1, "type": "integer" },
+      "ask_phone": { "type": "boolean" },
+      "assist_enabled": { "type": "boolean" },
+      "assist_max_input_chars": { "maximum": 4000, "minimum": 200, "type": "integer" }
+    },
+    "type": "object"
+  },
+  "competitors": {
+    "additionalProperties": false,
+    "properties": { "terms": { "items": { "type": "string" }, "type": "array" } },
+    "type": "object"
+  },
+  "stop_words": {
+    "additionalProperties": false,
+    "properties": { "terms": { "items": { "type": "string" }, "type": "array" } },
+    "type": "object"
+  },
+  "notifications": {
+    "additionalProperties": false,
+    "properties": {
+      "channel_id": { "anyOf": [{ "type": "integer" }, { "type": "null" }] },
+      "duty_user_ids": { "items": { "type": "integer" }, "type": "array" },
+      "manager_dm_throttle_minutes": {
+        "description": "Не чаще одного личного сообщения менеджеру по лиду за это число минут",
+        "maximum": 1440,
+        "minimum": 1,
+        "type": "integer"
+      }
+    },
+    "type": "object"
+  },
+  "budget": {
+    "$defs": {
+      "ProviderLimitsSettings": {
+        "additionalProperties": false,
+        "description": "Дневной лимит по провайдеру (USD, сутки по Ташкенту, 0 — без лимита), Q-008.\n\nКлюч — провайдер LiteLLM (префикс модели `anthropic/…`, `gemini/…`). Проверяет наш код перед\nвызовом; потолок `provider_budget_config` в infra/litellm.config.yaml — аварийный, выше.",
+        "properties": {
+          "anthropic": { "minimum": 0, "type": "number" },
+          "gemini": { "minimum": 0, "type": "number" }
+        },
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "daily_usd": { "minimum": 0, "type": "number" },
+      "erp_daily_usd": { "minimum": 0, "type": "number" },
+      "fallback_model_enabled": { "type": "boolean" },
+      "providers": { "$ref": "#/$defs/ProviderLimitsSettings" }
+    },
+    "type": "object"
+  },
+  "deals": {
+    "additionalProperties": false,
+    "description": "Справочник причин отказа и валюта новых сделок (Q-013, ADR-0019).",
+    "properties": {
+      "lost_reasons": { "items": { "type": "string" }, "minItems": 1, "type": "array" },
+      "currency": { "pattern": "^[A-Z]{3}$", "type": "string" }
+    },
+    "type": "object"
+  },
+  "web_form": {
+    "additionalProperties": false,
+    "description": "Антиспам публичной формы «Запрос» с сайта (M3-CRM-05, `domain/web_form.py`).\n\nБез внешних сервисов: honeypot, подписанный токен формы (минимальное время заполнения и срок\nжизни) и окно запросов по IP.",
+    "properties": {
+      "min_fill_seconds": {
+        "description": "Минимум секунд между выдачей формы и отправкой",
+        "maximum": 300,
+        "minimum": 0,
+        "type": "integer"
+      },
+      "token_ttl_minutes": {
+        "description": "Сколько минут действует токен формы",
+        "maximum": 1440,
+        "minimum": 1,
+        "type": "integer"
+      },
+      "rate_limit_per_hour": {
+        "description": "Не больше запросов с одного IP в час",
+        "maximum": 1000,
+        "minimum": 1,
+        "type": "integer"
+      },
+      "max_text_chars": {
+        "description": "Максимум символов в поле «Что нужно»",
+        "maximum": 10000,
+        "minimum": 100,
+        "type": "integer"
+      }
+    },
+    "type": "object"
+  },
+  "service_alerts": {
+    "additionalProperties": false,
+    "description": "Кому оповещения центра внешних сервисов о сбое и восстановлении (M3-CRM-12, ADR-0024).\n\nОдно оповещение о сбое на инцидент и одно о восстановлении; повтор по сервису — не чаще\n`repeat_minutes`. Сбой Telegram оповещается почтой, сбой почты — в Telegram.",
+    "properties": {
+      "telegram_admins": {
+        "description": "Личные сообщения админам с подпиской на системные уведомления",
+        "type": "boolean"
+      },
+      "telegram_channel": {
+        "description": "Пост в канал команды",
+        "enum": ["fallback", "always", "never"],
+        "type": "string"
+      },
+      "email_admins": { "description": "Письмо активным админам с e-mail", "type": "boolean" },
+      "extra_emails": {
+        "description": "Дополнительные адреса для писем",
+        "items": { "type": "string" },
+        "maxItems": 10,
+        "type": "array"
+      },
+      "repeat_minutes": {
+        "description": "Не чаще одного оповещения о сбое сервиса за это число минут",
+        "maximum": 1440,
+        "minimum": 15,
+        "type": "integer"
+      }
+    },
+    "type": "object"
+  }
+}

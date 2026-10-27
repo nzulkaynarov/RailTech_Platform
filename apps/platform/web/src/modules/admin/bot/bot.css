@@ -1,0 +1,218 @@
+/* Admin · Настройки бота (W13-A5): навигация по разделам, формы по схемам CRM, таблицы текстов и шаблонов, выгрузки.
+   Значения — макет v3 и docs/architecture/platform-frontend.md §5: рамка #f0f0f0, радиус 8, без теней и градиентов;
+   второстепенный текст #595959 и #6e6e6e (контраст ≥ 4.5:1 на белом). */
+.pf-bot {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.pf-bot-layout {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+@media (max-width: 767px) {
+  .pf-bot-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.pf-bot-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.pf-bot-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  background: #fff;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+}
+.pf-bot-nav-title {
+  margin: 0 0 4px;
+  color: #595959;
+  font-size: 12px;
+  line-height: 20px;
+  font-weight: 600;
+}
+.pf-bot-nav ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pf-bot-nav-link {
+  display: block;
+  padding: 6px 8px;
+  border-radius: 6px;
+  color: #1f1f1f;
+  line-height: 22px;
+}
+.pf-bot-nav-link[aria-current="page"] {
+  background: #e6f4ff;
+  color: #0958d9;
+  font-weight: 500;
+}
+.pf-bot-section-title {
+  margin: 0;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
+}
+.pf-bot-subtitle {
+  margin: 0;
+  font-size: 14px;
+  line-height: 22px;
+  font-weight: 600;
+}
+.pf-bot-lead {
+  margin: 0;
+  padding: 12px 24px 0;
+}
+.pf-bot-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.pf-bot-form-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+.pf-bot-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.pf-bot-alert {
+  margin-bottom: 16px;
+}
+.pf-bot-group {
+  margin: 0 0 16px;
+  padding: 12px 16px 0;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+}
+.pf-bot-group legend {
+  padding: 0 4px;
+  font-weight: 600;
+}
+.pf-bot-search {
+  margin-bottom: 16px;
+}
+.pf-bot-preview {
+  margin-top: -8px;
+}
+.pf-bot-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.pf-bot-table th,
+.pf-bot-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #f0f0f0;
+  text-align: left;
+  vertical-align: top;
+}
+.pf-bot-table th {
+  background: #fafafa;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.pf-bot-table tr[data-selected="true"] td {
+  background: #e6f4ff;
+}
+.pf-bot-table--texts {
+  table-layout: fixed;
+  min-width: 720px;
+}
+.pf-bot-table--texts th:first-child {
+  width: 28%;
+}
+.pf-bot-table--texts th:last-child {
+  width: 96px;
+}
+.pf-bot-text-cell {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pf-bot-link {
+  color: #0958d9;
+  overflow-wrap: anywhere;
+}
+.pf-bot-excerpt {
+  max-width: 360px;
+  overflow-wrap: anywhere;
+}
+.pf-bot-dryrun-box {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  background: #fff;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+}
+.pf-bot-dryrun {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.pf-bot-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+.pf-bot-tiles > div {
+  padding: 8px 12px;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+}
+.pf-bot-tiles dt {
+  font-size: 12px;
+  line-height: 20px;
+  color: #595959;
+}
+.pf-bot-tiles dd {
+  margin: 0;
+  font-size: 20px;
+  line-height: 28px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.pf-bot-changed {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pf-bot-changed > li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  padding: 8px 0;
+  border-top: 1px solid #f0f0f0;
+}
+.pf-bot-exports {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+.pf-bot-export {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+}

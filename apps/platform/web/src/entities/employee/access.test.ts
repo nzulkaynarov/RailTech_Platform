@@ -36,7 +36,13 @@ describe("accessOfRoleIds — по матрицам ролей (ADR-0012)", () =
   });
 
   it("системная роль «Администратор» — полный администратор; без ролей — ничего", () => {
-    expect(accessOfRoleIds(roles, ["1"]).modules).toEqual(["dashboard", "eds", "chats", "admin"]);
+    expect(accessOfRoleIds(roles, ["1"]).modules).toEqual([
+      "dashboard",
+      "crm",
+      "eds",
+      "chats",
+      "admin",
+    ]);
     expect(accessOfRoleIds(roles, []).modules).toEqual([]);
     expect(accessOfRoleIds(roles, ["999"]).modules).toEqual([]);
   });

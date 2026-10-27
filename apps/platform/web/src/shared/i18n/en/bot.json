@@ -1,0 +1,733 @@
+{
+  "subtitle": "Texts, behaviour and handoff rules of the Telegram bot, quick reply templates and CSV exports. Changes take effect immediately.",
+  "readOnlySubtitle": "View only: the bot settings are changed by the administrator.",
+  "viewOnly": "View only",
+  "common": {
+    "retry": "Retry"
+  },
+  "state": {
+    "loadError": {
+      "title": "Could not load the settings",
+      "text": "Try again: nothing has been lost."
+    },
+    "unavailable": {
+      "title": "CRM is not responding",
+      "text": "Wait a minute and try again: nothing has been lost."
+    },
+    "forbidden": {
+      "title": "Not available to your role",
+      "text": "The bot settings are available to the administrator and the director (view only)."
+    }
+  },
+  "nav": {
+    "sections": "Bot settings sections",
+    "section": "Section",
+    "templates": "Reply templates",
+    "exports": "CSV exports"
+  },
+  "groups": {
+    "company": "Company and hours",
+    "bot": "Bot",
+    "handoff": "Handoffs and qualification",
+    "team": "Team",
+    "spend": "Spend",
+    "other": "Other",
+    "extra": "More"
+  },
+  "keys": {
+    "company": "Company",
+    "business_hours": "Working hours",
+    "texts": "Bot texts",
+    "bot": "Bot behaviour",
+    "kb": "Knowledge base search",
+    "stop_words": "Stop words",
+    "competitors": "Competitors",
+    "escalation": "Handoff rules",
+    "qualification": "Qualification",
+    "notifications": "Team channel",
+    "budget": "Model budget",
+    "deals": "Deals",
+    "web_form": "Website \"Request\" form",
+    "service_alerts": "Service failure alerts"
+  },
+  "sectionHints": {
+    "web_form": "Anti-spam for the \"Request\" form on the Cabinet sign-in page (no external services): a hidden field, a signed form token and a per-IP limit. A lead from the website lands in \"Inbox\" as \"Unassigned\".",
+    "business_hours": "SLA, reminders and the bot's off-hours text depend on working hours.",
+    "texts": "What the bot writes to customers. Each text is in three languages.",
+    "stop_words": "A message with a stop word is handed to a manager at once. \"word*\" — any ending.",
+    "competitors": "Mentioning a competitor is a reason to hand off to a manager.",
+    "escalation": "When the bot hands the dialog to the team and how fast the team must reply.",
+    "notifications": "Where handoff cards go and whom to mention in reminders.",
+    "budget": "The daily limit of AI model spend.",
+    "service_alerts": "Whom to write to when an external service (Telegram, AI models, mail…) breaks and when it recovers. One message about the failure and one about the recovery.",
+    "deals": "Rejection reasons for closing a deal and the currency of new deals."
+  },
+  "form": {
+    "unsaved": "There are unsaved changes",
+    "allSaved": "No changes",
+    "discard": "Discard changes",
+    "save": "Save",
+    "saved": "Settings \"{{section}}\" saved",
+    "invalidField": "Check the value",
+    "step1": "The values of \"{{section}}\" are saved to CRM as a whole.",
+    "step2": "The bot and staff start working by the new values at once, without a restart.",
+    "step3": "The change goes to the CRM audit log: who and when, the old and the new value."
+  },
+  "guard": {
+    "title": "Leave without saving?",
+    "text": "The form has unsaved changes — they will be lost.",
+    "leave": "Leave without saving",
+    "stay": "Stay"
+  },
+  "qualificationHint": "A lead becomes \"Qualified\" when all required facts are known and at least the set number of additional ones. The AI extracts the facts, the system decides.",
+  "channelMoved": "The team channel is chosen in \"External integrations\" → Telegram; here — whom to mention and how often to write to a manager.",
+  "openIntegrations": "Open Telegram",
+  "weekdays": {
+    "mon": "Mon",
+    "tue": "Tue",
+    "wed": "Wed",
+    "thu": "Thu",
+    "fri": "Fri",
+    "sat": "Sat",
+    "sun": "Sun"
+  },
+  "widgets": {
+    "inactiveUser": "inactive",
+    "usersPlaceholder": "Choose employees"
+  },
+  "dryRun": {
+    "title": "Dry run of handoff rules",
+    "hint": "Shows how many handoffs to a manager there would be with the values in the form. Changes nothing.",
+    "step1": "The rules are counted on the bot's last 50 dialogs with the values currently in the form, even unsaved ones.",
+    "step2": "You will see how many handoffs to a manager there are now and how many there would be, and which leads it concerns.",
+    "step3": "Nothing is saved or changed: neither settings, nor dialogs, nor leads.",
+    "button": "Check on the last 50 dialogs",
+    "result": "Dry run result",
+    "dialogs": "Dialogs",
+    "now": "Handoffs now",
+    "new": "Handoffs with the new rules",
+    "nothingChanges": "Changes: 0 — the result on these dialogs does not change.",
+    "changed": "Changes for leads: {{count}}",
+    "becomes": "becomes",
+    "noReasons": "no handoff"
+  },
+  "templates": {
+    "title": "Reply templates",
+    "intro": "Ready replies a manager inserts into the reply field in the lead card and edits before sending. Placeholders: {name} — the lead's name, {manager} — the manager's name.",
+    "new": "New template",
+    "edit": "Edit template",
+    "create": "Create template",
+    "save": "Save template",
+    "created": "Template created",
+    "saved": "Template saved",
+    "removed": "Template deleted",
+    "empty": {
+      "title": "No templates yet",
+      "text": "Create the first one — for example, \"I will send the quote today\". Managers will see it in the lead card."
+    },
+    "tableScroll": "Reply templates: the table can be scrolled",
+    "caption": "Quick reply templates",
+    "open": "Open template: {{title}}",
+    "columns": {
+      "title": "Title",
+      "text": "Text (Russian)",
+      "updated": "Changed"
+    },
+    "fieldTitle": "Title",
+    "titleHint": "Visible to the manager in the template list, not sent to the customer.",
+    "text": "Text — {{language}}",
+    "placeholders": "Placeholders: {name} — the lead's name, {manager} — the manager's name. The Russian text is required.",
+    "fallbackHint": "Empty — the Russian text is used.",
+    "step1": "The template is saved to CRM and appears for managers in the quick replies list in the lead card.",
+    "step2": "The manager inserts the text into the reply field and edits it before sending: the customer gets what the manager confirmed.",
+    "step3": "The change goes to the CRM audit log: who and when.",
+    "dangerTitle": "Deletion",
+    "remove": "Delete the template",
+    "removeSubmit": "Delete template",
+    "removeStep1": "The template disappears from the quick replies list in lead cards.",
+    "removeStep2": "It cannot be restored: save the text separately if it is still needed.",
+    "removeStep3": "The deletion goes to the CRM audit log together with the template text."
+  },
+  "exports": {
+    "title": "CSV exports",
+    "intro": "An Excel file with what is visible in CRM lists: leads, customers, deals. Filters are the same as on the list screens.",
+    "step1": "A CSV file (UTF-8, \";\" separator) is downloaded to your device; it has at most 10,000 rows. CRM prepares it and streams it.",
+    "step2": "The export goes to the CRM audit log: who, what and how many rows.",
+    "step3": "The file contains customers' personal data: keep it only on a work device and do not forward it in messengers.",
+    "readOnly": "View only: the data is exported by the administrator.",
+    "done": "File \"{{name}}\" downloaded",
+    "formLabel": "Export: {{title}}",
+    "download": "Download: {{title}}",
+    "needSection": "The export needs access to the data: the \"{{section}}\" section is required — give the administrator a second role.",
+    "entities": {
+      "leads": {
+        "title": "Leads",
+        "purpose": "Name, language, stage, score, owner, need, last message."
+      },
+      "clients": {
+        "title": "Customers",
+        "purpose": "Name, tax ID, segment, owner, open deals, last activity."
+      },
+      "deals": {
+        "title": "Deals",
+        "purpose": "Title, customer, product, amount, stage, dates, rejection reason, owner."
+      }
+    },
+    "filters": {
+      "q": "Search (name, title)",
+      "stage": "Stage",
+      "anyStage": "Any stage",
+      "language": "Language",
+      "anyLanguage": "Any language",
+      "from": {
+        "leads": "Created from",
+        "deals": "Closed from"
+      },
+      "to": {
+        "leads": "Created to",
+        "deals": "Closed to"
+      }
+    },
+    "dealStages": {
+      "open": "Open",
+      "won": "Won",
+      "lost": "Lost"
+    },
+    "sections": {
+      "crm": {
+        "leads": "CRM · All leads",
+        "clients": "CRM · All customers"
+      }
+    }
+  },
+  "errors": {
+    "DEFAULT": "The action was not completed. Try again later or contact the administrator.",
+    "FORBIDDEN": "This action is not available to your role.",
+    "NOT_FOUND": "The object was not found: it may have been changed already. Refresh the page.",
+    "BACKEND_UNAVAILABLE": "CRM is not responding. Wait a minute and try again.",
+    "INTEGRATION_FAILED": "A service needed for the action did not respond. Try again later.",
+    "TOO_MANY_REQUESTS": "Too many requests. Try again in a minute.",
+    "VALIDATION_FAILED": "CRM did not accept the values: check the marked fields.",
+    "CONFLICT": "The object has changed. Refresh the page and try again.",
+    "SESSION_EXPIRED": "The session has expired. Sign in again.",
+    "reasons": {
+      "litellm_unavailable": "The model gateway is not responding: the dry run is unavailable now. Try again later."
+    }
+  },
+  "texts": {
+    "preview": "Preview",
+    "emptyTranslation": "No translation",
+    "empty": "empty",
+    "invalid": "error",
+    "edit": "Edit",
+    "view": "Open",
+    "name": "Name",
+    "actions": "Actions",
+    "tableScroll": "Bot texts: the table can be scrolled",
+    "caption": "Bot texts of this group",
+    "search": "Find a text by name or situation",
+    "notFound": "Nothing found: change the query.",
+    "step1": "The edit appears in the section form; it reaches CRM after \"Save\" in the section header.",
+    "step2": "Placeholders such as {name} and {manager} are replaced when sending; CRM rejects stray curly braces.",
+    "step3": "After saving, customers get the new text from the bot's next message.",
+    "save": "Save the section",
+    "close": "Close",
+    "groups": {
+      "welcome": "Greeting and consent",
+      "handoff": "Handoff to a manager",
+      "fallback": "No answer and failures",
+      "clients": "Customers and documents",
+      "menu": "Command menu",
+      "phone": "Phone number",
+      "erp": "Back-office events (ERP)",
+      "erase": "Deleting the conversation",
+      "other": "Other texts",
+      "advanced": "More"
+    },
+    "samples": {
+      "manager": "Anna",
+      "title": "Contract no. 12",
+      "summary": "reconciliation act for September",
+      "resolution": "the act was sent by email",
+      "number": "17",
+      "date": "12.10.2026",
+      "next": "tomorrow from 9:00",
+      "sla": "We usually reply within 15 minutes during working hours",
+      "minutes": "15",
+      "deal": "Axle delivery",
+      "amount": "1500000.00",
+      "currency": "UZS",
+      "due": "30.10.2026",
+      "status": "On the way",
+      "eta": "05.11.2026",
+      "client": "Alpha LLC",
+      "quote": "42",
+      "reason": "no stamp",
+      "contact": "Azamat Karimov",
+      "line": "2",
+      "remark": "Some of the pipes have cracks",
+      "company": "RailTech",
+      "hours": "Mon–Fri 9:00 to 18:00 Tashkent time"
+    },
+    "items": {
+      "greeting": {
+        "label": "Greeting",
+        "when": "The first message to a customer after /start."
+      },
+      "consent": {
+        "label": "Consent request",
+        "when": "Right after the greeting, before any bot reply."
+      },
+      "consent_button": {
+        "label": "\"I agree\" button",
+        "when": "A button under the consent request."
+      },
+      "consent_decline_button": {
+        "label": "\"I do not agree\" button",
+        "when": "A button under the consent request."
+      },
+      "consent_accepted": {
+        "label": "Consent received",
+        "when": "After \"I agree\", if the customer has not asked anything yet."
+      },
+      "consent_accepted_pending": {
+        "label": "Consent received, question already asked",
+        "when": "After \"I agree\", if there is already a question — the bot answers it right away."
+      },
+      "consent_declined": {
+        "label": "Consent declined",
+        "when": "If the customer pressed \"I do not agree\"."
+      },
+      "consent_required": {
+        "label": "Consent reminder",
+        "when": "If the customer writes without confirming consent."
+      },
+      "language_prompt": {
+        "label": "Language choice",
+        "when": "On the /lang command, above the language buttons."
+      },
+      "language_set": {
+        "label": "Language chosen",
+        "when": "After a language is chosen."
+      },
+      "smalltalk_ack": {
+        "label": "Reply to \"thanks\" and \"got it\"",
+        "when": "When a customer thanks or agrees — the bot replies with this text without AI."
+      },
+      "help": {
+        "label": "Help",
+        "when": "On the /help command."
+      },
+      "handoff": {
+        "label": "Handoff to a manager (working hours)",
+        "when": "When the dialog is handed to the team during working hours. {sla} — the \"Response time promise\" text."
+      },
+      "off_hours": {
+        "label": "Handoff to a manager (off hours)",
+        "when": "Outside working hours. {next} — the nearest working time with holidays, {hours} — the schedule."
+      },
+      "waiting_for_manager": {
+        "label": "Waiting for a manager",
+        "when": "If the customer writes while waiting for a manager."
+      },
+      "manager_joined": {
+        "label": "Manager joined",
+        "when": "When a manager takes the dialog. {manager} — the manager's name."
+      },
+      "returned_to_bot": {
+        "label": "Dialog returned to the bot",
+        "when": "When a manager returns the dialog to the bot."
+      },
+      "handoff_offer_yes": {
+        "label": "\"Hand off to a manager\" button",
+        "when": "Under the \"not in the knowledge base\" reply."
+      },
+      "handoff_offer_no": {
+        "label": "\"No need\" button",
+        "when": "Under the \"not in the knowledge base\" reply."
+      },
+      "attachment_received": {
+        "label": "File received",
+        "when": "When a customer sends a file — the file goes to the team."
+      },
+      "attachment_too_large": {
+        "label": "File larger than 20 MB",
+        "when": "When a customer sends a file over 20 MB — the bot asks for a link, the file is not saved."
+      },
+      "fallback": {
+        "label": "No answer in the knowledge base",
+        "when": "When the bot found no answer; below it — the \"Hand off to a manager\" and \"No need\" buttons."
+      },
+      "service_unavailable": {
+        "label": "AI assistant failure",
+        "when": "If the AI model is unavailable. The customer's message is saved for the team."
+      },
+      "maintenance": {
+        "label": "Maintenance",
+        "when": "While Telegram is switched off manually in \"External services\": a reply to any message, no more than once in 10 minutes per chat."
+      },
+      "rate_limited": {
+        "label": "Messages too frequent",
+        "when": "When a customer exceeds the messages-per-minute limit (the \"Bot behaviour\" section)."
+      },
+      "unsupported_message": {
+        "label": "Unsupported message",
+        "when": "For stickers, video and other messages the bot does not understand."
+      },
+      "document_sent": {
+        "label": "Sending a document",
+        "when": "Before the document file to a customer. {title} — the document title."
+      },
+      "document_failed": {
+        "label": "Document not sent",
+        "when": "If Telegram did not accept the file."
+      },
+      "service_request_closed": {
+        "label": "Reply to a service request",
+        "when": "When a manager closed the request. {number} — number, {summary} — essence, {resolution} — answer."
+      },
+      "erase_confirm": {
+        "label": "Deletion confirmation",
+        "when": "On the /delete command, before the conversation is deleted."
+      },
+      "erase_button": {
+        "label": "\"Delete\" button",
+        "when": "Under the deletion confirmation."
+      },
+      "cancel_button": {
+        "label": "\"Cancel\" button",
+        "when": "Under the deletion confirmation."
+      },
+      "erase_cancelled": {
+        "label": "Deletion cancelled",
+        "when": "If the customer pressed \"Cancel\"."
+      },
+      "erased": {
+        "label": "Conversation deleted",
+        "when": "After the conversation is deleted."
+      },
+      "menu_start": {
+        "label": "Menu: /start",
+        "when": "The command label in the Telegram \"Menu\" button — for prospective customers."
+      },
+      "menu_human": {
+        "label": "Menu: /human",
+        "when": "The command label in the Telegram \"Menu\" button — for customers and for prospects while no manager handles the lead."
+      },
+      "menu_lang": {
+        "label": "Menu: /lang",
+        "when": "The command label in the Telegram \"Menu\" button — for everyone."
+      },
+      "menu_help": {
+        "label": "Menu: /help",
+        "when": "The command label in the Telegram \"Menu\" button — for everyone."
+      },
+      "menu_delete": {
+        "label": "Menu: /delete",
+        "when": "The command label in the Telegram \"Menu\" button — for everyone."
+      },
+      "menu_docs": {
+        "label": "Menu: /docs",
+        "when": "The command label in the Telegram \"Menu\" button — for customers."
+      },
+      "menu_request": {
+        "label": "Menu: /request",
+        "when": "The command label in the Telegram \"Menu\" button — for customers."
+      },
+      "menu_status": {
+        "label": "Menu: /status",
+        "when": "The command label in the Telegram \"Menu\" button — for customers."
+      },
+      "client_only": {
+        "label": "Command for customers only",
+        "when": "A prospective customer called /docs, /request or /status."
+      },
+      "docs_list": {
+        "label": "Document list",
+        "when": "Above the document buttons on the /docs command."
+      },
+      "docs_choose": {
+        "label": "Choosing from several documents",
+        "when": "A customer asked for a document and several were found — above the document buttons."
+      },
+      "docs_empty": {
+        "label": "No documents",
+        "when": "A customer called /docs but has no documents."
+      },
+      "request_prompt": {
+        "label": "Asking to describe a request",
+        "when": "A customer called /request — the bot waits for a description in one message."
+      },
+      "request_created": {
+        "label": "Request created",
+        "when": "The request description is received and the request is handed to a manager. {number} — the request number."
+      },
+      "request_status_open": {
+        "label": "Status: request in progress",
+        "when": "A customer called /status and has an open request. {number}, {date}, {summary} — from the request."
+      },
+      "request_status_none": {
+        "label": "Status: no open requests",
+        "when": "A customer called /status and has no open requests."
+      },
+      "phone_request": {
+        "label": "Asking to share a number",
+        "when": "Once: when a lead is qualified or asked for a manager (Bot behaviour → \"Ask for a number\")."
+      },
+      "phone_share_button": {
+        "label": "\"Share the number\" button",
+        "when": "Under the request to share a number; sends the customer's own number."
+      },
+      "phone_skip_button": {
+        "label": "\"Not now\" button",
+        "when": "Under the request to share a number."
+      },
+      "phone_saved": {
+        "label": "Number saved",
+        "when": "The customer shared their number with the button."
+      },
+      "phone_skipped": {
+        "label": "Number not given",
+        "when": "The customer pressed \"Not now\". We will not ask again."
+      },
+      "phone_not_own": {
+        "label": "Someone else's contact",
+        "when": "The customer sent someone else's contact — only their own number is saved."
+      },
+      "phone_before_manager": {
+        "label": "Number before handing off to a manager",
+        "when": "A lead without a number asks for a manager (Handoffs → \"A request to call a manager — only after a number\"). We hand off right after the number."
+      },
+      "phone_declined_manager": {
+        "label": "Number not given — we do not call a manager",
+        "when": "A lead pressed \"Not now\" on the number request before a handoff. The bot keeps answering; it asks again on a new request."
+      },
+      "help_with_manager": {
+        "label": "/help help (a manager handles)",
+        "when": "On /help while a manager handles the dialog. Lists this menu's commands."
+      },
+      "help_client": {
+        "label": "/help help (customer)",
+        "when": "On /help for a customer after the contract. Lists the customer menu commands."
+      },
+      "client_access_granted": {
+        "label": "Access opened to the customer",
+        "when": "Once, when a manager made the lead a customer: /docs and /request are available."
+      },
+      "request_text_only": {
+        "label": "Request — text only",
+        "when": "A customer called /request and sent a file or a voice message instead of a description."
+      },
+      "language_first": {
+        "label": "First message: language choice",
+        "when": "The first message to a new contact — in three languages at once, with language buttons below."
+      },
+      "handoff_offer_declined": {
+        "label": "Reply to \"No need\"",
+        "when": "A customer pressed \"No need\" under the \"not in the knowledge base\" reply."
+      },
+      "contacts": {
+        "label": "Company contacts: heading",
+        "when": "On \"give me the phone/address/site\" — above the values from the \"Company\" section."
+      },
+      "contact_labels": {
+        "label": "Company contacts: labels",
+        "when": "Labels of the phone, site and address separated by \"|\" — in this order."
+      },
+      "contacts_missing": {
+        "label": "Contacts not set",
+        "when": "Asked for a phone/address/site but they are empty in \"Company\"; the manager buttons are under the text."
+      },
+      "sla_promise": {
+        "label": "Response time promise",
+        "when": "Inserted into \"Handoff to a manager\" as {sla}. {minutes} — the SLA from the \"Handoffs\" section."
+      },
+      "erp_quote_sent": {
+        "label": "Quote sent to the customer",
+        "when": "ERP event \"quote sent\". {deal} — the deal. Under the text — the \"Open the quote\" and \"Cabinet\" buttons."
+      },
+      "erp_quote_acceptance_code": {
+        "label": "Quote confirmation code",
+        "when": "A customer pressed \"Get a code\" in the cabinet to accept a quote: the bot sends the code to the contact in Telegram. {deal} — deal, {code} — code, {minutes} — minutes it is valid. The code is stored nowhere."
+      },
+      "erp_invoice_issued": {
+        "label": "Invoice issued",
+        "when": "ERP event \"invoice issued\". {number} — number, {amount} {currency} — amount, {due} — due date."
+      },
+      "erp_invoice_paid": {
+        "label": "Invoice paid",
+        "when": "ERP event \"payment received\". {number} — invoice number, {amount} {currency} — amount."
+      },
+      "erp_delivery_status": {
+        "label": "Delivery status",
+        "when": "ERP event \"delivery status changed\". {deal} — deal, {summary} — contents, {status} — status in words."
+      },
+      "erp_delivery_statuses": {
+        "label": "Delivery status names",
+        "when": "Five names separated by \"|\" in order: being packed, on the way, ready to ship, shipped, delivered."
+      },
+      "erp_delivery_eta_changed": {
+        "label": "Delivery date changed",
+        "when": "ERP event \"delivery date changed\". {deal} — deal, {summary} — contents, {eta} — the new date."
+      },
+      "erp_act_issued": {
+        "label": "Act generated",
+        "when": "ERP event \"act generated\". {number} — the act number."
+      },
+      "erp_btn_quote": {
+        "label": "\"Open the quote\" button",
+        "when": "Under the quote message, leads to the quote page."
+      },
+      "erp_btn_invoice": {
+        "label": "\"Open the invoice\" button",
+        "when": "Under the invoice message, if ERP sent a link."
+      },
+      "erp_btn_cabinet": {
+        "label": "\"Cabinet\" button",
+        "when": "Under ERP event messages, if the cabinet address is set in \"Company\"."
+      },
+      "erp_staff_quote_accepted": {
+        "label": "To staff: quote accepted",
+        "when": "A personal message to the person in charge. Sent in Russian. {client} — customer, {quote} — quote number, {deal} — deal."
+      },
+      "erp_staff_act_returned": {
+        "label": "To staff: act returned",
+        "when": "A personal message to the person in charge. Sent in Russian. {number} — act number, {deal} — deal, {reason} — remarks."
+      },
+      "erp_note_delivery_line_accepted": {
+        "label": "Feed: the customer accepted a delivery line",
+        "when": "An entry in the lead's feed. Written in Russian. {contact} — customer contact, {line} — line number, {title} — title, {deal} — deal."
+      },
+      "erp_note_delivery_line_disputed": {
+        "label": "Feed: the customer disputed a delivery line",
+        "when": "An entry in the lead's feed. Written in Russian. {contact} — customer contact, {line} — line number, {title} — title, {deal} — deal, {remark} — remark."
+      },
+      "erp_staff_delivery_line_disputed": {
+        "label": "To staff: a delivery line disputed",
+        "when": "A personal message to the person in charge. Sent in Russian. {client} — customer, {line} — line number, {title} — title, {deal} — deal, {remark} — customer's remark."
+      }
+    }
+  },
+  "fields": {
+    "name": "Company name",
+    "crm_base_url": "CRM address (for links in the channel)",
+    "cabinet_url": "Customer cabinet address",
+    "phone": "Company phone (the bot gives it when a customer asks)",
+    "site": "Company website",
+    "address": "Company address",
+    "lost_reasons": "Rejection reasons",
+    "currency": "Default currency (ISO code, e.g. UZS)",
+    "timezone": "Time zone",
+    "start": "Working day start",
+    "end": "Working day end",
+    "weekdays": "Working days",
+    "holidays": "Holidays",
+    "consent_version": "Consent text version",
+    "high_score_threshold": "Lead score for handoff",
+    "no_progress_turns": "Messages without progress before handoff",
+    "kb_gap_streak": "\"Not found\" answers in a row before handoff",
+    "qualifier_min_confidence": "How confident the qualifier must be (0–1)",
+    "sla_minutes": "Response time (SLA)",
+    "reminder_minutes": "Repeat reminder after",
+    "disabled_triggers": "Disabled handoff reasons",
+    "human_request_terms": "\"Call a person\" words",
+    "min_score": "Minimum similarity for the bot to answer (0–1)",
+    "top_k": "How many knowledge base fragments the bot reads before answering",
+    "search_timeout_s": "How many seconds to wait for the knowledge base search",
+    "persona": "Assistant's character",
+    "max_words": "Maximum words in a reply",
+    "history_messages": "History messages in the context",
+    "rate_limit_per_minute": "Messages per minute from a customer",
+    "unresponsive_days": "Days of silence before \"Not responding\"",
+    "ask_phone": "Ask for a phone number once (qualified or asks for a manager)",
+    "assist_enabled": "AI help for the manager when replying (\"Draft\", \"Improve\")",
+    "assist_max_input_chars": "Maximum text characters for \"Improve\"",
+    "terms": "Words",
+    "channel_id": "Private channel ID",
+    "duty_user_ids": "On duty",
+    "manager_dm_throttle_minutes": "Pause between personal notifications to a manager",
+    "daily_usd": "Daily budget",
+    "erp_daily_usd": "ERP daily budget",
+    "fallback_model_enabled": "Switch to the fallback model",
+    "providers": "Daily limit per provider",
+    "anthropic": "Anthropic (dialog, qualifier, quality check)",
+    "gemini": "Google Gemini (fallback model, search)",
+    "price_always_to_manager": "Any price question goes to a manager (even if the bot quoted a price from the price list)",
+    "require_phone_for_human_request": "A request to call a manager — only after a phone number",
+    "required_facts": "Required facts",
+    "any_of_facts": "Additional facts",
+    "min_any_of": "How many additional facts are needed",
+    "timeline_max": "The timeline counts if it is",
+    "decision_roles": "Which roles in the decision count",
+    "min_fill_seconds": "Minimum form fill time",
+    "token_ttl_minutes": "Open form lifetime",
+    "rate_limit_per_hour": "Requests per hour from one address",
+    "max_text_chars": "Maximum characters in the \"What do you need\" field",
+    "telegram_admins": "Personal Telegram message to administrators",
+    "telegram_channel": "Message to the team channel",
+    "email_admins": "Email to administrators",
+    "extra_emails": "Additional email addresses",
+    "repeat_minutes": "At most one service failure alert per"
+  },
+  "hints": {
+    "cabinet_url": "Customer cabinet address (https://…): the \"Cabinet\" button under bot messages about ERP events; empty — no button.",
+    "max_text_chars": "Maximum characters in the \"What do you need\" field.",
+    "consent_version": "Change the version — all customers confirm consent again.",
+    "high_score_threshold": "A lead with this score or higher is handed off to a manager.",
+    "qualifier_min_confidence": "Higher is stricter: fewer handoffs on the qualifier's recommendation.",
+    "min_score": "Higher is stricter: the bot says \"I don't know\" and offers a manager more often.",
+    "sla_minutes": "Working minutes until a reminder in the channel.",
+    "reminder_minutes": "Working minutes between repeat reminders.",
+    "human_request_terms": "A word or phrase; Enter — add.",
+    "require_phone_for_human_request": "A lead without a number asks for a manager — the bot first asks to \"Share the number\" (spam protection) and hands off right after the number. Does not affect customers or handoffs on bot signals.",
+    "terms": "A word or the start of a word with * (complain* — complaint, complaints…); Enter — add.",
+    "channel_id": "A number with a minus sign, e.g. -100…; the bot must be an admin of the channel.",
+    "duty_user_ids": "They get an @mention in reminders about overdue handoffs.",
+    "manager_dm_throttle_minutes": "A lead writes several messages in a row — the manager gets one Telegram notification in this time.",
+    "holidays": "On these days SLA is not counted and the bot replies with the off-hours text.",
+    "daily_usd": "In US dollars. Above it — the dialog switches to the fallback model.",
+    "erp_daily_usd": "In US dollars per day (Tashkent time), 0 — no limit. ERP spend goes through the shared model gateway; exceeding is highlighted in \"Spend\" and \"System status\".",
+    "anthropic": "USD per day (Tashkent time), 0 — no limit. Above it — the dialog runs on the fallback model.",
+    "gemini": "USD per day (Tashkent time), 0 — no limit. Above it — the bot hands dialogs off to a manager.",
+    "min_fill_seconds": "A form sent faster is rejected: this filters out robots.",
+    "token_ttl_minutes": "After this time the form page must be refreshed.",
+    "rate_limit_per_hour": "Requests above the limit from this IP are rejected until the end of the hour.",
+    "telegram_admins": "To administrators who have Telegram linked in their profile and system notifications on.",
+    "telegram_channel": "\"If not delivered to anyone personally\" — the channel stays about leads, the team sees failures there only as a fallback.",
+    "email_admins": "To active administrators with an email; the \"Mail\" connector must be connected.",
+    "extra_emails": "For example, the engineer on duty; Enter — add.",
+    "repeat_minutes": "If a service \"flickers\", a new failure sooner than this is written to the incident log without a message."
+  },
+  "units": {
+    "repeat_minutes": "min",
+    "min_fill_seconds": "s",
+    "token_ttl_minutes": "min",
+    "manager_dm_throttle_minutes": "min",
+    "sla_minutes": "min",
+    "reminder_minutes": "min",
+    "unresponsive_days": "days",
+    "high_score_threshold": "of 100",
+    "daily_usd": "$",
+    "erp_daily_usd": "$",
+    "anthropic": "$",
+    "gemini": "$"
+  },
+  "options": {
+    "need": "Need",
+    "product": "Product",
+    "timeline": "Timeline",
+    "decision_role": "Role in the decision",
+    "budget": "Budget",
+    "company": "Company",
+    "<1m": "under 1 month",
+    "<3m": "under 3 months",
+    "<12m": "under a year",
+    ">12m": "any known",
+    "decision_maker": "Makes the decision",
+    "influencer": "Influences the decision",
+    "researcher": "Collects information",
+    "fallback": "If not delivered to anyone personally",
+    "always": "Always",
+    "never": "Never"
+  }
+}

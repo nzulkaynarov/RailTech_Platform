@@ -225,7 +225,8 @@
       "bus": "Integration log",
       "tickets": "Team tickets",
       "company": "Company",
-      "setup": "First run"
+      "setup": "First run",
+      "bot": "Bot settings"
     },
     "stub": {
       "roles": {
@@ -262,6 +263,11 @@
         "title": "First-run wizard",
         "text": "The administrator, your own company and five connection steps: bot, ERP, mail, AI models and the first employee.",
         "action": "Org structure"
+      },
+      "bot": {
+        "title": "Bot settings will open here",
+        "text": "Telegram bot texts, behaviour and handoff rules, reply templates and CSV exports.",
+        "action": "Org chart"
       }
     },
     "action": "Invite employee",

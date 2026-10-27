@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import date
 from enum import StrEnum
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 
@@ -204,6 +204,27 @@ class ComponentStatusOut(BaseModel):
     reason: Annotated[str, Field(title="Reason")]
     status: Annotated[Status, Field(title="Status")]
     title: Annotated[str, Field(title="Title")]
+
+
+class Created(BaseModel):
+    id: Annotated[int, Field(title="Id")]
+
+
+class DryRunResponse(BaseModel):
+    by_code_candidate: Annotated[dict[str, int], Field(title="By Code Candidate")]
+    by_code_current: Annotated[dict[str, int], Field(title="By Code Current")]
+    changed: Annotated[list[DryRunRowOut], Field(title="Changed")]
+    dialogs: Annotated[int, Field(title="Dialogs")]
+    escalated_candidate: Annotated[int, Field(title="Escalated Candidate")]
+    escalated_current: Annotated[int, Field(title="Escalated Current")]
+
+
+class DryRunRowOut(BaseModel):
+    at: Annotated[AwareDatetime, Field(title="At")]
+    candidate: Annotated[list[str], Field(title="Candidate")]
+    current: Annotated[list[str], Field(title="Current")]
+    lead_id: Annotated[int, Field(title="Lead Id")]
+    run_id: Annotated[int, Field(title="Run Id")]
 
 
 class EmailLogItem(BaseModel):
@@ -427,6 +448,48 @@ class IncidentOut(BaseModel):
     summary: Annotated[str, Field(title="Summary")]
 
 
+class KbChunkOut(BaseModel):
+    content: Annotated[str, Field(title="Content")]
+    heading_path: Annotated[str | None, Field(title="Heading Path")]
+    id: Annotated[int, Field(title="Id")]
+    position: Annotated[int, Field(title="Position")]
+    token_count: Annotated[int, Field(title="Token Count")]
+
+
+class KbDocumentOut(BaseModel):
+    chunk_count: Annotated[int, Field(title="Chunk Count")]
+    created_at: Annotated[AwareDatetime, Field(title="Created At")]
+    id: Annotated[int, Field(title="Id")]
+    ingest_error: Annotated[str | None, Field(title="Ingest Error")]
+    ingest_status: Annotated[str, Field(title="Ingest Status")]
+    is_active: Annotated[bool, Field(title="Is Active")]
+    language: Annotated[str, Field(title="Language")]
+    mime: Annotated[str | None, Field(title="Mime")]
+    product_key: Annotated[str | None, Field(title="Product Key")]
+    source_type: Annotated[str, Field(title="Source Type")]
+    title: Annotated[str, Field(title="Title")]
+    updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
+    version: Annotated[int, Field(title="Version")]
+
+
+class KbGapOut(BaseModel):
+    best_score: Annotated[float | None, Field(title="Best Score")]
+    created_at: Annotated[AwareDatetime, Field(title="Created At")]
+    id: Annotated[int, Field(title="Id")]
+    language: Annotated[str, Field(title="Language")]
+    lead_id: Annotated[int | None, Field(title="Lead Id")]
+    occurrences: Annotated[int, Field(title="Occurrences")]
+    question: Annotated[str, Field(title="Question")]
+    resolved_document_id: Annotated[int | None, Field(title="Resolved Document Id")]
+    status: Annotated[str, Field(title="Status")]
+    updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
+
+
+class KbGapPage(BaseModel):
+    items: Annotated[list[KbGapOut], Field(title="Items")]
+    total: Annotated[int, Field(title="Total")]
+
+
 class Key(StrEnum):
     company = "company"
     business_hours = "business_hours"
@@ -511,6 +574,13 @@ class PasswordSource(StrEnum):
     none = "none"
 
 
+class ProductOut(BaseModel):
+    description: Annotated[str | None, Field(title="Description")]
+    is_active: Annotated[bool, Field(title="Is Active")]
+    key: Annotated[str, Field(title="Key")]
+    name: Annotated[str, Field(title="Name")]
+
+
 class ProfilePublishOut(BaseModel):
     """
     Итог последней публикации профиля в Telegram; `error` — код, текст — на фронте.
@@ -527,6 +597,57 @@ class ProviderToday(BaseModel):
     limit_usd: Annotated[float, Field(title="Limit Usd")]
     provider: Annotated[str, Field(title="Provider")]
     spent_usd: Annotated[float, Field(title="Spent Usd")]
+
+
+class ReplyTemplateOut(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+    )
+    id: Annotated[int, Field(title="Id")]
+    text: LocalizedText
+    title: Annotated[str, Field(max_length=120, min_length=1, title="Title")]
+    updated_at: Annotated[AwareDatetime, Field(title="Updated At")]
+
+
+class SandboxReply(BaseModel):
+    buttons: Annotated[list[str], Field(title="Buttons")]
+    text: Annotated[str, Field(title="Text")]
+
+
+class SandboxTurnOut(BaseModel):
+    replies: Annotated[list[SandboxReply], Field(title="Replies")]
+    why: SandboxWhy
+
+
+class SandboxWhy(BaseModel):
+    """
+    Почему бот так ответил: решение, причина, документы базы знаний, сработавшие триггеры.
+    """
+
+    best_score: Annotated[float | None, Field(title="Best Score")]
+    decision: Annotated[str, Field(title="Decision")]
+    documents: Annotated[list[str], Field(title="Documents")]
+    priority: Annotated[str | None, Field(title="Priority")]
+    reason: Annotated[str | None, Field(title="Reason")]
+    triggers: Annotated[list[str], Field(title="Triggers")]
+
+
+class SearchHitOut(BaseModel):
+    chunk_id: Annotated[int, Field(title="Chunk Id")]
+    content: Annotated[str, Field(title="Content")]
+    document_id: Annotated[int, Field(title="Document Id")]
+    document_title: Annotated[str, Field(title="Document Title")]
+    heading_path: Annotated[str | None, Field(title="Heading Path")]
+    rrf_score: Annotated[float, Field(title="Rrf Score")]
+    similarity: Annotated[float | None, Field(title="Similarity")]
+
+
+class SearchResponse(BaseModel):
+    best_score: Annotated[float | None, Field(title="Best Score")]
+    confident: Annotated[bool, Field(title="Confident")]
+    hits: Annotated[list[SearchHitOut], Field(title="Hits")]
+    language: Annotated[str, Field(title="Language")]
+    min_score: Annotated[float, Field(title="Min Score")]
 
 
 class Security(StrEnum):
@@ -566,6 +687,11 @@ class ServiceSwitchOut(BaseModel):
     kind: Annotated[Kind, Field(title="Kind")]
     problem: Annotated[str | None, Field(title="Problem")]
     reason: Annotated[str | None, Field(title="Reason")]
+
+
+class SettingsResponse(BaseModel):
+    schemas: Annotated[dict[str, dict[str, Any]], Field(title="Schemas")]
+    values: Annotated[dict[str, dict[str, Any]], Field(title="Values")]
 
 
 class SettingsSource(StrEnum):
