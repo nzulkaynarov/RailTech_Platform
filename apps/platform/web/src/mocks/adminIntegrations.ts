@@ -52,6 +52,18 @@ function invalid(field: string, reason: string) {
   });
 }
 
+const MOCK_PROVIDERS = ["anthropic", "gemini", "openai"];
+
+/** Как CRM (`models_admin.normalize_model`): префикс выбранного провайдера снимается, чужой префикс и мусор — 422 по полю. */
+function normalizeModel(provider: string, raw: string): string | null {
+  let name = raw.trim();
+  const head = name.split("/")[0] ?? "";
+  if (name.includes("/") && head.toLowerCase() === provider) name = name.slice(head.length + 1);
+  const next = name.split("/")[0] ?? "";
+  if (name.includes("/") && MOCK_PROVIDERS.includes(next.toLowerCase())) return null;
+  return /^[A-Za-z0-9][A-Za-z0-9._:@/-]{0,127}$/.test(name) ? name : null;
+}
+
 function probeFailed(reason: string) {
   return failure(502, "INTEGRATION_FAILED", "Проверка не прошла.", "crm", { reason });
 }
@@ -694,12 +706,18 @@ export const adminIntegrationsHandlers = [
     const wrong = wrongPassword(body.password);
     if (wrong) return wrong;
     const alias = String(params["alias"]);
+    const name = normalizeModel(body.provider, body.model);
+    if (name === null) {
+      return failure(422, "VALIDATION_FAILED", "Проверьте заполнение полей.", "crm", {
+        fields: ["model"],
+      });
+    }
     let changed: AiModel | undefined;
     update((s) => {
       const model = s.models.find((m) => m.alias === alias);
       if (!model) return;
       model.provider = body.provider;
-      model.model = body.model;
+      model.model = `${body.provider}/${name}`;
       model.health = "ok";
       model.health_detail = null;
       model.checked_at = MOCK_NOW;
@@ -720,7 +738,7 @@ export const adminIntegrationsHandlers = [
     return HttpResponse.json({
       alias,
       provider: body.provider,
-      model: body.model,
+      model: name,
       key_source: body.api_key ? "crm" : "env",
       reindex_required: alias === "embed-model",
       quality_check_recommended: true,
