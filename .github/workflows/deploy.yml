@@ -223,29 +223,6 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
-      - uses: docker/setup-buildx-action@v3
-
-      - uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Образ rt-cabinet
-        # VITE_BOT_USERNAME и VITE_CRM_URL зашиваются в образ и берутся из variables environment production, поэтому образ
-        # собирается здесь, а не в job build (без environment этих значений нет).
-        uses: docker/build-push-action@v6
-        with:
-          context: apps/cabinet
-          build-args: |
-            VITE_API_URL=
-            VITE_BOT_USERNAME=${{ vars.TELEGRAM_BOT_USERNAME }}
-            VITE_CRM_URL=https://${{ vars.CRM_DOMAIN }}
-          push: true
-          tags: ghcr.io/${{ needs.prepare.outputs.owner }}/rt-cabinet:${{ needs.prepare.outputs.sha }}
-          cache-from: type=gha,scope=cabinet
-          cache-to: type=gha,mode=max,scope=cabinet
-
       - name: SSH к VPS 1
         env:
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
@@ -267,7 +244,54 @@ jobs:
             echo "  StrictHostKeyChecking yes"
           } > ~/.ssh/config
 
+      - name: Проверка - этот sha уже выложен?
+        id: already
+        env:
+          TAG: ${{ needs.prepare.outputs.sha }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          # Повторный автозапуск на тот же sha (два workflow_run подряд; concurrency их лишь выстраивает в очередь) не должен
+          # выкладывать то же самое второй раз. Пропуск только для workflow_run: ручной deploy (workflow_dispatch) выкладывает
+          # всегда — так владелец повторяет выкладку, у которой упал smoke (current_tag выставляется до smoke).
+          if [ "$EVENT_NAME" = workflow_run ]; then
+            # shellcheck disable=SC2029
+            cur="$(ssh app "cat /opt/rt/state/current_tag 2>/dev/null || true")" || cur=""   # нет связи - не пропускаем, выкладываем
+            if [ "$cur" = "$TAG" ]; then
+              echo "sha $TAG уже current_tag на VPS 1 - повторная выкладка пропущена"
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+
+      - if: steps.already.outputs.skip != 'true'
+        uses: docker/setup-buildx-action@v3
+
+      - if: steps.already.outputs.skip != 'true'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Образ rt-cabinet
+        if: steps.already.outputs.skip != 'true'
+        # VITE_BOT_USERNAME и VITE_CRM_URL зашиваются в образ и берутся из variables environment production, поэтому образ
+        # собирается здесь, а не в job build (без environment этих значений нет).
+        uses: docker/build-push-action@v6
+        with:
+          context: apps/cabinet
+          build-args: |
+            VITE_API_URL=
+            VITE_BOT_USERNAME=${{ vars.TELEGRAM_BOT_USERNAME }}
+            VITE_CRM_URL=https://${{ vars.CRM_DOMAIN }}
+          push: true
+          tags: ghcr.io/${{ needs.prepare.outputs.owner }}/rt-cabinet:${{ needs.prepare.outputs.sha }}
+          cache-from: type=gha,scope=cabinet
+          cache-to: type=gha,mode=max,scope=cabinet
+
       - name: Загрузка релиза на VPS 1
+        if: steps.already.outputs.skip != 'true'
         env:
           TAG: ${{ needs.prepare.outputs.sha }}
         run: |
@@ -279,6 +303,7 @@ jobs:
           ssh app "tar -xzf - -C /opt/rt/releases/$TAG" < release.tgz
 
       - name: Деплой на VPS 1 (pg_dump-гейт, миграции, up)
+        if: steps.already.outputs.skip != 'true'
         env:
           TAG: ${{ needs.prepare.outputs.sha }}
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -286,12 +311,20 @@ jobs:
         run: |
           # Токен прогона (живёт до конца job) — только для pull; передаётся через stdin, не в командной строке.
           # TAG/GHCR_USER — sha и логин GitHub; подстановка на клиенте намеренная.
-          # shellcheck disable=SC2029
-          printf '%s' "$GHCR_TOKEN" | ssh app "docker login ghcr.io -u '$GHCR_USER' --password-stdin"
+          # Сеть к ghcr.io плавает («TLS handshake timeout»): login — до пяти попыток с паузами 5/10/20/40 с (retry из lib.sh;
+          # токен каждый раз подаётся заново через stdin, в журнал он не попадает). Сам pull с повторами делает deploy.sh.
+          # shellcheck source=infra/deploy/lib.sh
+          source infra/deploy/lib.sh
+          ghcr_login() {
+            # shellcheck disable=SC2029
+            printf '%s' "$GHCR_TOKEN" | ssh app "docker login ghcr.io -u '$GHCR_USER' --password-stdin"
+          }
+          retry "docker login ghcr.io" ghcr_login
           # shellcheck disable=SC2029
           ssh app "bash /opt/rt/releases/$TAG/infra/deploy/deploy.sh $TAG"
 
       - name: Smoke четырёх доменов (с раннера)
+        if: steps.already.outputs.skip != 'true'
         run: |
           bash infra/deploy/smoke.sh --domains "$CRM_DOMAIN" "$ERP_DOMAIN" "$CABINET_DOMAIN" "$PLATFORM_DOMAIN" --retries 12
 
