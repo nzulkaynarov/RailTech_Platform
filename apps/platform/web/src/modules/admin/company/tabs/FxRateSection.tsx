@@ -186,7 +186,11 @@ function FxForm() {
             </Button>
           </div>
           <Consequence
-            items={[t("platform.fx.consequence.replace"), t("platform.fx.consequence.quotes")]}
+            items={[
+              t("platform.fx.consequence.replace"),
+              t("platform.fx.consequence.quotes"),
+              t("platform.fx.consequence.older"),
+            ]}
           />
         </div>
       </Form>

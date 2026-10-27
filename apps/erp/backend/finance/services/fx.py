@@ -147,6 +147,34 @@ def convert_to_base(amount, rate) -> Decimal:
     return (Decimal(str(amount)) * Decimal(str(rate))).quantize(MONEY_QUANT, rounding=ROUND_HALF_UP)
 
 
+def _apply_cbu_rate(currency, rate_date: datetime.date, rate: Decimal) -> bool:
+    """Записать курс ЦБ на дату, не трогая ручной. `True` — курс записан.
+
+    Проверка «стоит MANUAL» и запись — под одной блокировкой строки (`select_for_update`): ручной ввод,
+    попавший между ними, не перетрётся. Новую строку создаёт `get_or_create` (при гонке за уникальный ключ
+    он возвращает чужую строку, а не перезаписывает её): сначала создание, и только потом — обновление
+    существующей строки под блокировкой.
+    """
+    from django.db import transaction
+
+    from core.models import ExchangeRate
+
+    row, created = ExchangeRate.objects.get_or_create(
+        currency=currency, rate_date=rate_date, defaults={"rate_to_uzs": rate, "source": RateSource.CBU}
+    )
+    if created:
+        return True
+    with transaction.atomic():
+        row = ExchangeRate.objects.select_for_update().select_related("currency").get(pk=row.pk)
+        if (row.source or "").upper() == RateSource.MANUAL:
+            _note_auto_skipped(row, rate)
+            return False
+        row.rate_to_uzs = rate
+        row.source = RateSource.CBU
+        row.save(update_fields=["rate_to_uzs", "source"])
+    return True
+
+
 def fetch_cbu_rates(timeout: int = 15) -> int:
     """Забрать текущие курсы ЦБ РУз и обновить `ExchangeRate` (источник CBU). Возвращает число строк.
 
@@ -155,7 +183,7 @@ def fetch_cbu_rates(timeout: int = 15) -> int:
     """
     import httpx
 
-    from core.models import Currency, ExchangeRate
+    from core.models import Currency
 
     response = httpx.get(CBU_URL, timeout=timeout)
     response.raise_for_status()
@@ -176,14 +204,8 @@ def fetch_cbu_rates(timeout: int = 15) -> int:
         currency = Currency.objects.filter(code=code).first()
         if not currency:
             continue
-        pinned = ExchangeRate.objects.filter(currency=currency, rate_date=rate_date, source=RateSource.MANUAL).first()
-        if pinned is not None:
-            _note_auto_skipped(pinned, rate)
-            continue
-        ExchangeRate.objects.update_or_create(
-            currency=currency, rate_date=rate_date, defaults={"rate_to_uzs": rate, "source": RateSource.CBU}
-        )
-        upserted += 1
+        if _apply_cbu_rate(currency, rate_date, rate):
+            upserted += 1
     return upserted
 
 

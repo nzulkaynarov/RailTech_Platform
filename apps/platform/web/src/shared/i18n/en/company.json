@@ -503,7 +503,8 @@
       "saved": "Rate saved",
       "consequence": {
         "replace": "The rate for the chosen date replaces the previous one (automatic or entered earlier); the previous value stays in the journal.",
-        "quotes": "New calculations use the rate by date; rates in quotes already created do not change."
+        "quotes": "New calculations use the rate by date; rates in quotes already created do not change.",
+        "older": "A rate for a date earlier than the newest rate on record does not change the current rate — it stays in the journal and is used for calculations on that date."
       },
       "journal": {
         "title": "Rate journal",

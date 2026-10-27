@@ -503,7 +503,8 @@
       "saved": "Kurs saqlandi",
       "consequence": {
         "replace": "Tanlangan sanadagi kurs oldingisini (avtomatik yoki avval kiritilgan) almashtiradi; oldingi qiymat jurnalda qoladi.",
-        "quotes": "Yangi hisob-kitoblar kursni sana bo‘yicha oladi; yaratilgan tijorat takliflaridagi kurslar o‘zgarmaydi."
+        "quotes": "Yangi hisob-kitoblar kursni sana bo‘yicha oladi; yaratilgan tijorat takliflaridagi kurslar o‘zgarmaydi.",
+        "older": "Eng yangi yozuvdan oldingi sana uchun kiritilgan kurs joriy kursni o‘zgartirmaydi — u jurnalda qoladi va shu sana uchun hisob-kitoblarda ishlatiladi."
       },
       "journal": {
         "title": "Kurs jurnali",

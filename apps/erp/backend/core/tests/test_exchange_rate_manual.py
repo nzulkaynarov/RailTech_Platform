@@ -344,3 +344,22 @@ def test_manual_entry_replaces_a_cbu_row_for_the_same_date():
 
     row = ExchangeRate.objects.get()
     assert (row.rate_to_uzs, row.source) == (Decimal("12800"), "MANUAL")
+
+
+def test_manual_rate_that_appears_just_before_the_write_is_not_overwritten(monkeypatch):
+    """Гонка: ручной ввод лёг между «строки нет» и записью курса ЦБ — ручной остаётся."""
+    usd = currency("USD")
+    _cbu(monkeypatch, "12700")
+    real = ExchangeRate.objects.get_or_create
+
+    def racing_get_or_create(**kwargs):
+        ExchangeRate.objects.create(currency=usd, rate_date=_today(), rate_to_uzs=Decimal("12800"), source="MANUAL")
+        return real(**kwargs)
+
+    monkeypatch.setattr(ExchangeRate.objects, "get_or_create", racing_get_or_create)
+
+    assert fx.fetch_cbu_rates() == 0
+
+    row = ExchangeRate.objects.get()
+    assert (row.rate_to_uzs, row.source) == (Decimal("12800"), "MANUAL")
+    assert ActivityLog.objects.filter(event_code="admin.exchange_rate.auto_skipped").count() == 1
