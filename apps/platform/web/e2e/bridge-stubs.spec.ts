@@ -38,16 +38,12 @@ async function shoot(page: Page, name: string): Promise<void> {
 test.describe("Заглушки и мост", () => {
   test.skip(({ isMobile }) => isMobile, "ширины задаёт сам сценарий");
 
-  test("менеджер: из очереди — карточка лида с кнопкой «Открыть в старой CRM» и тем, что знает очередь", async ({
+  test("менеджер: по прямой ссылке — карточка лида с кнопкой «Открыть в старой CRM» и тем, что знает очередь", async ({
     page,
   }) => {
     await loginAndWait(page, "manager@demo.example");
-    const row = page
-      .getByRole("region", { name: "Что сделать сейчас" })
-      .getByRole("listitem")
-      .filter({ hasText: "Взять в работу лида L-2041" });
-    await row.getByRole("link", { name: /Открыть/ }).click();
-
+    // из очереди эта строка теперь «Где сделать»; карточка по прямой ссылке (поиск, письмо, закладка) остаётся честной
+    await spaGoto(page, "/crm/leads?lead=L-2041&panel=open&tab=card");
     await expect(page.getByRole("heading", { level: 1, name: "Лид L-2041" })).toBeVisible();
     const main = page.getByRole("main");
     await expect(main.getByText("Взять в работу лида L-2041")).toBeVisible();
@@ -61,16 +57,11 @@ test.describe("Заглушки и мост", () => {
     await shoot(page, "object-from-queue-lead");
   });
 
-  test("директор: служебка из очереди — «Служебка СЗ-2026/031», кто делает вне интерфейса, кнопки в старый экран нет", async ({
+  test("директор: служебка по прямой ссылке — «Служебка СЗ-2026/031», кто делает вне интерфейса, кнопки в старый экран нет", async ({
     page,
   }) => {
     await loginAndWait(page, "director@demo.example");
-    const row = page
-      .getByRole("region", { name: "Что сделать сейчас" })
-      .getByRole("listitem")
-      .filter({ hasText: "Согласовать СЗ-2026/031" });
-    await row.getByRole("link", { name: /Открыть/ }).click();
-
+    await spaGoto(page, "/eds/approvals/%D0%A1%D0%97-2026%2F031?panel=open&tab=agree");
     await expect(
       page.getByRole("heading", { level: 1, name: "Служебка СЗ-2026/031" }),
     ).toBeVisible();

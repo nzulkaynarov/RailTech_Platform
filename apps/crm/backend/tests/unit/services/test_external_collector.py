@@ -444,8 +444,9 @@ async def test_hourly_probe_problem_of_a_role_fails_its_provider_with_one_cause(
 async def test_ai_replies_row_reads_bot_answers(monkeypatch: pytest.MonkeyPatch) -> None:
     from app.domain.external_ai_replies import AiFacts
 
-    async def stats(session: object, since: datetime) -> AiFacts:
-        assert NOW - since == timedelta(minutes=5)
+    async def stats(session: object, window_since: datetime, day_since: datetime) -> AiFacts:
+        assert NOW - window_since == timedelta(minutes=5)
+        assert NOW - day_since == timedelta(hours=24)
         return AiFacts(failed=2, last_failed_at=NOW)
 
     monkeypatch.setattr(repo, "ai_reply_stats", stats)

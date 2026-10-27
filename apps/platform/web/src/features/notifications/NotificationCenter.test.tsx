@@ -45,13 +45,10 @@ describe("Центр уведомлений", () => {
     expect(tabs).toHaveLength(4);
     const list = await within(center).findByRole("list", { name: "Уведомления" });
     expect(within(list).getAllByRole("listitem")).toHaveLength(5);
-    // непрочитанное помечено словом, не только цветом
-    const first = within(list).getAllByRole("link")[0] as HTMLElement;
+    // непрочитанное помечено словом, не только цветом; КП (раздел без экрана) — кнопка «Где посмотреть», а не ссылка
+    const first = within(list).getAllByRole("button", { name: /Где посмотреть/ })[0] as HTMLElement;
     expect(first).toHaveTextContent("Новое: КП-2026/118 ждёт вашего согласования");
-    expect(first).toHaveAttribute(
-      "href",
-      "/eds/drafts/%D0%9A%D0%9F-2026%2F118?panel=open&tab=approve",
-    );
+    expect(first).toHaveAttribute("aria-expanded", "false");
   });
 
   it("вкладка «Клиенты» оставляет только свои уведомления", async () => {
@@ -66,7 +63,30 @@ describe("Центр уведомлений", () => {
     expect(within(list).queryByText(/КП-2026\/118 ждёт/)).toBeNull();
   });
 
-  it("клик по уведомлению отмечает его прочитанным, открывает объект и нужную вкладку бокового окна", async () => {
+  it("клик по уведомлению об объекте с экраном: отмечает прочитанным и открывает объект с боковым окном", async () => {
+    server.use(
+      http.get("*/notifications", () =>
+        HttpResponse.json({
+          items: [
+            {
+              id: "eds:letter:1",
+              tab: "decisions",
+              title: "Письмо ВХ-104/26 ждёт резолюции",
+              created_at: new Date().toISOString(),
+              read: false,
+              object: {
+                kind: "letter",
+                number: "ВХ-104/26",
+                path: "/eds/inbox/%D0%92%D0%A5-104%2F26?panel=open&tab=resolution",
+              },
+            },
+          ],
+          next_cursor: null,
+          unread_count: 1,
+          sources: { crm: "ok", erp: "ok" },
+        }),
+      ),
+    );
     signInAs("director@demo.example");
     const { router } = renderApp("/dashboard/queue");
     const center = await openBell();
@@ -75,21 +95,45 @@ describe("Центр уведомлений", () => {
       if (request.method === "POST") requests.push(new URL(request.url).pathname);
     });
 
-    fireEvent.click(await within(center).findByRole("link", { name: /КП-2026\/118 ждёт/ }));
+    fireEvent.click(await within(center).findByRole("link", { name: /Письмо ВХ-104\/26 ждёт/ }));
 
     await waitFor(() => {
-      expect(router.state.location.pathname).toBe("/eds/drafts/%D0%9A%D0%9F-2026%2F118");
+      expect(router.state.location.pathname).toBe("/eds/inbox/%D0%92%D0%A5-104%2F26");
     });
-    expect(router.state.location.search).toBe("?panel=open&tab=approve");
+    expect(router.state.location.search).toBe("?panel=open&tab=resolution");
+    await waitFor(() => {
+      expect(requests).toContain("/api/v1/notifications/eds:letter:1/read");
+    });
+    server.events.removeAllListeners();
+  });
+
+  it("уведомление об объекте без экрана: не заглушка, а «Где посмотреть» с мостом; окно остаётся открытым, прочитано", async () => {
+    signInAs("director@demo.example");
+    const { router } = renderApp("/dashboard/queue");
+    const center = await openBell();
+    const requests: string[] = [];
+    server.events.on("request:start", ({ request }) => {
+      if (request.method === "POST") requests.push(new URL(request.url).pathname);
+    });
+
+    const item = await within(center).findByRole("button", {
+      name: /Где посмотреть.*КП-2026\/118 ждёт/,
+    });
+    fireEvent.click(item);
+
+    expect(item).toHaveAttribute("aria-expanded", "true");
+    const where = within(center).getByRole("region", { name: "Где посмотреть" });
+    expect(within(where).getByText(/Сейчас — в старом ERP/)).toBeInTheDocument();
     expect(
-      await screen.findByRole("tab", { name: "Одобрение", selected: true }),
-    ).toBeInTheDocument();
-    expect(
-      await screen.findByRole("button", { name: "Центр уведомлений, 2 новых" }),
-    ).toBeInTheDocument();
+      await within(where).findByRole("link", { name: /Открыть в старом ERP/ }),
+    ).toHaveAttribute("href", "http://erp.localhost:8088/#crm-quotes");
+    expect(router.state.location.pathname).toBe("/dashboard/queue");
+    expect(center).toBeInTheDocument();
     await waitFor(() => {
       expect(requests).toContain("/api/v1/notifications/erp:1/read");
     });
+    fireEvent.click(item);
+    expect(item).toHaveAttribute("aria-expanded", "false");
     server.events.removeAllListeners();
   });
 
