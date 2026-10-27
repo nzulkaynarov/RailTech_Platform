@@ -41,22 +41,31 @@ class SettingsService:
         self._ttl = ttl_s
         self._clock = clock
         self._cached: AppSettings | None = None
+        self._stored: AppSettings | None = None
         self._loaded_at = 0.0
 
     async def get(self) -> AppSettings:
-        if self._cached is not None and self._clock() - self._loaded_at < self._ttl:
-            return self._cached
+        return (await self._snapshot())[1]
+
+    async def _snapshot(self) -> tuple[AppSettings, AppSettings]:
+        """(сохранённые значения, эффективные с подменой из окружения), кэш по TTL."""
+        fresh = self._clock() - self._loaded_at < self._ttl
+        if fresh and self._cached is not None and self._stored is not None:
+            return self._stored, self._cached
         async with self._sessions() as session:
             rows = (await session.scalars(select(Setting))).all()
-        self._cached = _with_env_defaults(
-            _merge({row.key: row.value for row in rows}), self._crm_base_url_default
-        )
+        self._stored = _merge({row.key: row.value for row in rows})
+        self._cached = _with_env_defaults(self._stored, self._crm_base_url_default)
         self._loaded_at = self._clock()
-        return self._cached
+        return self._stored, self._cached
 
     async def raw(self) -> dict[str, dict[str, Any]]:
-        """Текущие эффективные значения всех ключей (для API настроек)."""
-        current = await self.get()
+        """Сохранённые значения всех ключей (для API и формы «Настройки»), без подмены из окружения.
+
+        Адрес CRM из окружения подставляет только `get()` (потребители); форма его не видит, поэтому
+        сохранение секции «Компания» не фиксирует выведенный адрес в БД.
+        """
+        current, _ = await self._snapshot()
         return {key: getattr(current, key).model_dump(mode="json") for key in SETTINGS_MODELS}
 
     async def update(

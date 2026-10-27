@@ -27,9 +27,10 @@ logger = structlog.get_logger(__name__)
 INVITE: Final = "invite"
 PASSWORD_RESET: Final = "password_reset"  # noqa: S105 — имя шаблона письма, не секрет
 PLATFORM_URL_MISSING: Final = (
-    "Адрес Платформы не задан, поэтому письмо со ссылкой для входа не отправлено, "
-    "а пароль не менялся. Адрес задаётся при развёртывании (PLATFORM_DOMAIN в .env сервера)."
+    "Приглашение не отправлено: не задан адрес Платформы для ссылки входа. "
+    "Его задаёт тот, кто разворачивал Платформу (хостинг)."
 )
+PLATFORM_URL_HINT: Final = "Задайте PLATFORM_DOMAIN (или PLATFORM_PUBLIC_URL) в .env сервера"
 _AUDIT: Final = {INVITE: "user.invite", PASSWORD_RESET: "user.reset_password_email"}
 
 
@@ -58,7 +59,8 @@ class UserInviteService:
         await self._mail.ensure_configured()
         platform_url = self._platform_url
         if not platform_url:
-            raise ConflictError(PLATFORM_URL_MISSING)
+            logger.warning("platform_url_missing", hint=PLATFORM_URL_HINT)
+            raise ConflictError(PLATFORM_URL_MISSING, hint=PLATFORM_URL_HINT)
         password = temporary_password()
         async with self._sessions() as session, session.begin():
             user = await repo.get(session, user_id, for_update=True)

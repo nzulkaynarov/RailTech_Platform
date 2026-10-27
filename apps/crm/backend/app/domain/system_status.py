@@ -247,17 +247,17 @@ class PlatformUrlFacts:
     prod: bool
 
 
-_PLATFORM_HOSTING: Final = "задаётся при развёртывании (хостинг: PLATFORM_DOMAIN в .env сервера)"
+_PLATFORM_HOSTING: Final = "Это настраивает хостинг: PLATFORM_DOMAIN в .env сервера"
 
 
 def platform_url_problem(facts: PlatformUrlFacts) -> str | None:
     """Почему ссылка «Вход» в письмах сотрудникам не откроется; None — адрес годится."""
     if not facts.url:
-        return f"Адрес Платформы не задан — приглашения по почте не уходят; {_PLATFORM_HOSTING}"
+        return f"Адрес Платформы не задан — приглашения по почте не уходят. {_PLATFORM_HOSTING}"
     if facts.prod and is_local_url(facts.url):
         return (
             "Адрес Платформы указывает на localhost — ссылка «Вход» в письмах сотрудникам "
-            f"не откроется; {_PLATFORM_HOSTING}"
+            f"не откроется. {_PLATFORM_HOSTING}"
         )
     return None
 

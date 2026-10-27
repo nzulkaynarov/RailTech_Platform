@@ -1,3 +1,5 @@
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from types import SimpleNamespace
 from typing import Any
 
@@ -108,12 +110,38 @@ class _Session:
     async def scalars(self, _stmt: object) -> _Rows:
         return _Rows(self._rows)
 
+    @asynccontextmanager
+    async def begin(self) -> AsyncIterator[None]:
+        yield
+
 
 async def test_service_get_applies_env_default_and_keeps_admin_value() -> None:
     fresh = SettingsService(lambda: _Session([]), crm_base_url_default=ENV_CRM)  # type: ignore[arg-type]
     assert (await fresh.get()).company.crm_base_url == ENV_CRM
-    assert (await fresh.raw())["company"]["crm_base_url"] == ENV_CRM
+    # Форма «Настройки» видит сохранённое (заводское) значение, а не выведенное из окружения.
+    assert (await fresh.raw())["company"]["crm_base_url"] == "http://localhost"
 
     row = SimpleNamespace(key="company", value={"crm_base_url": "https://crm.owner.example"})
     chosen = SettingsService(lambda: _Session([row]), crm_base_url_default=ENV_CRM)  # type: ignore[arg-type]
     assert (await chosen.get()).company.crm_base_url == "https://crm.owner.example"
+
+
+async def test_saving_company_form_does_not_persist_derived_address(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Форма «Компания» читает raw() и сохраняет другое поле: выведенный адрес в БД не попадает."""
+    written: list[dict[str, Any]] = []
+
+    async def upsert(_session: Any, _key: str, payload: dict[str, Any], _user: Any) -> None:
+        written.append(payload)
+
+    monkeypatch.setattr(SettingsService, "_upsert", staticmethod(upsert))
+    service = SettingsService(lambda: _Session([]), crm_base_url_default=ENV_CRM)  # type: ignore[arg-type]
+    form = (await service.raw())["company"]
+    await service.update("company", {**form, "phone": "+998 71 000 00 00"}, user_id=1)
+    (payload,) = written
+    assert payload["phone"] == "+998 71 000 00 00"
+    assert ENV_CRM not in payload["crm_base_url"]
+    assert payload["crm_base_url"] == "http://localhost"
+    # Потребители по-прежнему получают адрес из окружения.
+    assert (await service.get()).company.crm_base_url == ENV_CRM

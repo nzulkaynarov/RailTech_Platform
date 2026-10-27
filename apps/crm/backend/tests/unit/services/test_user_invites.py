@@ -152,7 +152,9 @@ async def test_without_platform_url_nothing_is_sent_and_password_is_untouched(
     service = make_service(mail, platform_url)
     with pytest.raises(ConflictError) as info:
         await getattr(service, method)(ACTOR, 7)
-    assert "PLATFORM_DOMAIN" in info.value.message
+    assert "PLATFORM_DOMAIN" not in info.value.message  # админу — человеческий текст
+    assert "хостинг" in info.value.message
+    assert "PLATFORM_DOMAIN" in str(info.value.details["hint"])
     assert mail.sent == []
     assert verify_password(user.password_hash, OLD_PASSWORD)
     assert (user.audits, user.revoked) == ([], [])
