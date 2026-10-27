@@ -30,37 +30,3 @@ exceptions:
     operation: POST
     reason: "B4: вебхук ERP → CRM заменён шиной rt_bus (POST /bus/v1/events), вызывающая сторона ERP переведена в B3; потребителей нет"
     until: 2026-12-31
-  # D2-0 (волна 17, B-011): erp-internal.yaml теперь описывает то, что отдаёт и принимает код ERP. Поведение API меняется только в четырёх
-  # местах Q-D20-1 (аддитивно), остальное — ОПИСАНИЕ: оно меняется там, где оно было неверным (схема `Category` вместо запроса на категорию, поля, которых код не
-  # отдаёт, тела запросов, которых не было в схеме, refresh-токен в теле вместо cookie). Потребители: BFF Платформы читает
-  # ответы ERP по ключам (apps/platform/bff/app/clients/erp*.py) и от типов не зависит; старый SPA ERP заморожен, его
-  # typecheck зелёный на новой схеме (make -C apps/erp typecheck). Нужны только этому PR: после слияния база уже новая, записи
-  # удаляет лид волны 17 после слияния D2-0 (проверка напечатает предупреждение, что запись ничему не соответствует).
-  - file: erp-internal.yaml
-    id: response-property-became-optional
-    reason: "D2-0: поля-проекции через пустую связь (role_code, status_name, product_sku, type_name, updated_by_email …) код при пустой связи не отдаёт (DRF SkipField) — схема больше не обещает ключ; ответы кода не менялись"
-    until: 2026-11-07
-  - file: erp-internal.yaml
-    id: response-required-property-removed
-    reason: "D2-0: описание убрало поля, которых код не отдаёт: `refresh` (он в HttpOnly cookie) и `name` в запросах на категорию (там была схема Category вместо CategoryProposal); ответы кода не менялись"
-    until: 2026-11-07
-  - file: erp-internal.yaml
-    id: response-body-wrapped-in-one-of
-    reason: "D2-0: POST /auth/token/ возвращает либо {access}, либо {2fa_required, temp_token} — так отвечает код; схема simplejwt обещала пару access/refresh"
-    until: 2026-11-07
-  - file: erp-internal.yaml
-    id: response-success-status-removed
-    reason: "D2-0: POST /crm/document-templates/{id}/copy/ отвечает 201 (код не менялся), описание обещало 200"
-    until: 2026-11-07
-  - file: erp-internal.yaml
-    id: request-body-added-required
-    reason: "D2-0: тела запросов sso/exchange ({token}), public/quotes/*/accept ({code}) и reject ({reason}) читаются кодом и обязательны, но в схеме их не было; сами запросы клиентов не менялись"
-    until: 2026-11-07
-  - file: erp-internal.yaml
-    id: request-parameter-type-changed
-    reason: "D2-0: путь `{id}` запросов на категорию — целое (pk модели); тип `string` был потерян из-за ошибки генератора, код не менялся"
-    until: 2026-11-07
-  - file: erp-internal.yaml
-    id: request-property-max-length-set
-    reason: "D2-0: body_html шаблона документа ограничен 100000 символов сервисом (TEMPLATE_BODY_TOO_LARGE); теперь это сказано в схеме запроса, код не менялся"
-    until: 2026-11-07
