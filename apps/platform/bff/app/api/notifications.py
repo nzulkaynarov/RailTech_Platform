@@ -46,7 +46,7 @@ def _not_found() -> PlatformError:
 async def _mark_all(
     feed: Feed, source: Literal["crm", "erp"], method: str, path: str
 ) -> PlatformError | None:
-    """Отметка одной ленты: `None` — отмечена, иначе ошибка источника (сбой не обрывает вторую ленту)."""
+    """Отметка одной ленты: `None` — отмечена, иначе ошибка источника (вторую ленту не обрывает)."""
     try:
         status = await feed.send(source, method, path)
     except PlatformError as exc:
