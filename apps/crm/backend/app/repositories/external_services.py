@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any
 
-from sqlalchemy import ColumnElement, String, bindparam, delete, func, select, text
+from sqlalchemy import ColumnElement, String, bindparam, delete, func, literal_column, select, text
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -458,14 +458,16 @@ async def ai_reply_stats(
 ) -> AiFacts:
     """Ответы бота клиентам: счётчики за окно и последние сбой и успешный ответ за сутки.
 
-    Запросы идут по частичному индексу `ix_messages_bot_created_at` (`role = 'bot'`).
+    Запросы идут по частичному индексу `ix_messages_bot_created_at` (`role = 'bot'`); роль — литерал
+    в SQL, а не параметр: с параметром общий план подготовленного запроса индекс не берёт.
     """
+    bot = Message.role == literal_column("'bot'")
     failed = Message.meta["error"].astext == "agent_unavailable"
     answered = Message.meta.has_key("action")
     row = (
         await session.execute(
             select(func.count().filter(failed), func.count().filter(answered)).where(
-                Message.role == "bot", Message.created_at >= window_since
+                bot, Message.created_at >= window_since
             )
         )
     ).one()
@@ -473,7 +475,7 @@ async def ai_reply_stats(
     async def last(condition: ColumnElement[bool]) -> datetime | None:
         stmt = (
             select(Message.created_at)
-            .where(Message.role == "bot", Message.created_at >= day_since, condition)
+            .where(bot, Message.created_at >= day_since, condition)
             .order_by(Message.created_at.desc())
             .limit(1)
         )

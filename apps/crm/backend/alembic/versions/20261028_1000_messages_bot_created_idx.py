@@ -27,13 +27,25 @@ _INDEX = "ix_messages_bot_created_at"
 
 def upgrade() -> None:
     with op.get_context().autocommit_block():
+        # Оборванный `CREATE INDEX CONCURRENTLY` оставляет невалидный индекс с тем же именем: он
+        # занимает имя, но запросы его не берут. Перед созданием такой остаток убираем.
+        broken = op.get_bind().execute(
+            sa.text(
+                "SELECT 1 FROM pg_index i JOIN pg_class c ON c.oid = i.indexrelid "
+                "WHERE c.relname = :name AND NOT i.indisvalid"
+            ),
+            {"name": _INDEX},
+        )
+        if broken.first() is not None:
+            op.drop_index(
+                _INDEX, table_name="messages", postgresql_concurrently=True, if_exists=True
+            )
         op.create_index(
             _INDEX,
             "messages",
             ["created_at"],
             postgresql_where=sa.text("role = 'bot'"),
             postgresql_concurrently=True,
-            if_not_exists=True,
         )
 
 

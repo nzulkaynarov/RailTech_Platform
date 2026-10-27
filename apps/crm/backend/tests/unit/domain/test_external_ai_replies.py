@@ -62,3 +62,12 @@ def test_registry_has_the_row_and_the_diagnosis_follows_the_policy() -> None:
     assert sustained.cause_key == "ai_replies:ai_unavailable"
     quiet = cause.diagnose(spec, rules.ai_replies(AiFacts(), NOW), cause.Context())
     assert quiet.state == "not_checked"  # нет обращений — запись причины не закрывается
+
+
+def test_failure_exactly_five_minutes_old_is_fail_and_one_second_older_is_unknown() -> None:
+    edge = rules.ai_replies(AiFacts(failed=1, last_failed_at=_ago(5)), NOW)
+    assert edge.status == "fail"
+    past = rules.ai_replies(
+        AiFacts(failed=0, last_failed_at=NOW - timedelta(minutes=5, seconds=1)), NOW
+    )
+    assert past.status == "unknown"
