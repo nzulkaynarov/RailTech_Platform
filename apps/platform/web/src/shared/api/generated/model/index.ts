@@ -141,6 +141,16 @@
  * (раздел `crm.leads` полный). Чтение — `crm.leads` от чтения (директор), действия — полный. Новая тема подсказки потока
  * `InvalidationTopic.messages`: событие CRM `lead.message_added` (новое сообщение в переписке) и события лида — экран
  * перезапрашивает очередь и открытую ленту.
+ * **0.19.0 (W15-H1) — мост в старые экраны.** Добавляющее изменение (тег `bridge`). Пока раздел Платформы ещё заглушка, сотрудник
+ * открывает ту же работу в старой CRM или старом ERP новой вкладкой. `GET /bridge` отдаёт публичные адреса старых фронтов
+ * (`crm_url`, `erp_url`): настройки `PLATFORM_CRM_PUBLIC_URL` и `PLATFORM_ERP_PUBLIC_URL`, а если они пусты — адрес выводится из
+ * адреса, по которому открыта Платформа (`platform.<домен>` -> `crm.<домен>` и `erp.<домен>`, схема и порт те же); не задан и не
+ * выводится — `null`, SPA не показывает кнопку. `erp_sso` — у сотрудника есть доступ к ERP, и вход можно сделать без второго пароля.
+ * `POST /bridge/erp-sso` — тот же путь, каким старая CRM открывает ERP: BFF просит у CRM одноразовый SSO-токен (`POST
+ * /auth/sso/token`, живёт 60 секунд) токеном сотрудника и возвращает готовый адрес обмена `{ERP}/sso/exchange#token=…`; адрес
+ * ERP берёт сама CRM (`ERP_FRONTEND_URL`). Токен в журнал не пишется, ответ — `Cache-Control: no-store`. Права раздела не нужны:
+ * достаточно сессии и доступа к ERP (CRM не выдала токен — 403 `FORBIDDEN`, `details.reason`: `platform_access_denied` или
+ * `sso_disabled`).
  *
  * **0.17.0 (D1-5) — EDS · Создать документ и «Мои документы».** Добавляющее изменение, тег `eds-documents`: `GET/POST /eds/documents`
  * (мои документы или реестр «Все документы»; создать и сразу отправить), `GET/PUT /eds/documents/{id}` (карточка с маршрутом и
@@ -251,6 +261,8 @@ export * from "./brandProfileLayoutPreset";
 export * from "./brandProfileUpdate";
 export * from "./brandProfileUpdateFontFamily";
 export * from "./brandProfileUpdateLayoutPreset";
+export * from "./bridge";
+export * from "./bridgeErpSso";
 export * from "./busCursorParameter";
 export * from "./busDelivery";
 export * from "./busDeliveryPage";

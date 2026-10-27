@@ -141,6 +141,16 @@
  * (раздел `crm.leads` полный). Чтение — `crm.leads` от чтения (директор), действия — полный. Новая тема подсказки потока
  * `InvalidationTopic.messages`: событие CRM `lead.message_added` (новое сообщение в переписке) и события лида — экран
  * перезапрашивает очередь и открытую ленту.
+ * **0.19.0 (W15-H1) — мост в старые экраны.** Добавляющее изменение (тег `bridge`). Пока раздел Платформы ещё заглушка, сотрудник
+ * открывает ту же работу в старой CRM или старом ERP новой вкладкой. `GET /bridge` отдаёт публичные адреса старых фронтов
+ * (`crm_url`, `erp_url`): настройки `PLATFORM_CRM_PUBLIC_URL` и `PLATFORM_ERP_PUBLIC_URL`, а если они пусты — адрес выводится из
+ * адреса, по которому открыта Платформа (`platform.<домен>` -> `crm.<домен>` и `erp.<домен>`, схема и порт те же); не задан и не
+ * выводится — `null`, SPA не показывает кнопку. `erp_sso` — у сотрудника есть доступ к ERP, и вход можно сделать без второго пароля.
+ * `POST /bridge/erp-sso` — тот же путь, каким старая CRM открывает ERP: BFF просит у CRM одноразовый SSO-токен (`POST
+ * /auth/sso/token`, живёт 60 секунд) токеном сотрудника и возвращает готовый адрес обмена `{ERP}/sso/exchange#token=…`; адрес
+ * ERP берёт сама CRM (`ERP_FRONTEND_URL`). Токен в журнал не пишется, ответ — `Cache-Control: no-store`. Права раздела не нужны:
+ * достаточно сессии и доступа к ERP (CRM не выдала токен — 403 `FORBIDDEN`, `details.reason`: `platform_access_denied` или
+ * `sso_disabled`).
  *
  * **0.17.0 (D1-5) — EDS · Создать документ и «Мои документы».** Добавляющее изменение, тег `eds-documents`: `GET/POST /eds/documents`
  * (мои документы или реестр «Все документы»; создать и сразу отправить), `GET/PUT /eds/documents/{id}` (карточка с маршрутом и
@@ -233,6 +243,8 @@ import type {
   BrandPreviewIn,
   BrandProfile,
   BrandProfileUpdate,
+  Bridge,
+  BridgeErpSso,
   BusDeliveryPage,
   BusInboxPage,
   BusJournal,
@@ -1278,6 +1290,192 @@ export const useCreateOwnCompany = <
   TContext
 > => {
   return useMutation(getCreateOwnCompanyMutationOptions(options), queryClient);
+};
+
+export const getGetBridgeUrl = () => {
+  return `/api/v1/bridge`;
+};
+
+/**
+ * Адреса задают `PLATFORM_CRM_PUBLIC_URL` и `PLATFORM_ERP_PUBLIC_URL`; пусто — выводятся из адреса Платформы (`platform.X` -> `crm.X`, `erp.X`). Не задан и не выводится — `null`: SPA не показывает кнопку и честно пишет, где работа делается. Адреса не секрет; ответ `no-store` (смена настройки подхватывается при следующей загрузке). Права раздела не нужны, но нужна сессия и хотя бы один раздел каталога: пока не сменён временный пароль — 403 `FORBIDDEN` с `details.reason = password_change_required`, у ролей нет ни одного раздела — 403 `FORBIDDEN` с `details.reason = no_sections`.
+ * @summary Публичные адреса старых CRM и ERP для кнопок «Открыть в старой CRM / ERP»
+ */
+export const getBridge = async (options?: Parameters<typeof http>[1]): Promise<Bridge> => {
+  return http<Bridge>(getGetBridgeUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetBridgeQueryKey = () => {
+  return [`/api/v1/bridge`] as const;
+};
+
+export const getGetBridgeQueryOptions = <
+  TData = Awaited<ReturnType<typeof getBridge>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getBridge>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetBridgeQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getBridge>>> = ({ signal }) =>
+    getBridge({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getBridge>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetBridgeQueryResult = NonNullable<Awaited<ReturnType<typeof getBridge>>>;
+export type GetBridgeQueryError = ErrorType<SessionExpiredResponse | ForbiddenResponse>;
+
+export function useGetBridge<
+  TData = Awaited<ReturnType<typeof getBridge>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getBridge>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getBridge>>,
+          TError,
+          Awaited<ReturnType<typeof getBridge>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetBridge<
+  TData = Awaited<ReturnType<typeof getBridge>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getBridge>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getBridge>>,
+          TError,
+          Awaited<ReturnType<typeof getBridge>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetBridge<
+  TData = Awaited<ReturnType<typeof getBridge>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getBridge>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Публичные адреса старых CRM и ERP для кнопок «Открыть в старой CRM / ERP»
+ */
+
+export function useGetBridge<
+  TData = Awaited<ReturnType<typeof getBridge>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getBridge>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetBridgeQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getCreateBridgeErpSsoUrl = () => {
+  return `/api/v1/bridge/erp-sso`;
+};
+
+/**
+ * Тот же SSO CRM -> ERP, что у кнопки «Перейти в ERP» старой CRM (`docs/architecture/sso-token.md`): CRM выдаёт токен на 60 секунд, `url` — `{ERP}/sso/exchange#token=…`. Старый ERP после обмена открывает свою главную страницу. Токен в журнал BFF не попадает. Нужна сессия и хотя бы один раздел каталога (иначе 403 `FORBIDDEN`, `details.reason`: `password_change_required` или `no_sections`); нет доступа к ERP — 403 `FORBIDDEN` с `details.reason = platform_access_denied`; CRM отказала (переход по SSO выключен) — 403 `FORBIDDEN` с `details.reason = sso_disabled`.
+ * @summary Адрес входа в старый ERP без второго пароля
+ */
+export const createBridgeErpSso = async (
+  options?: Parameters<typeof http>[1],
+): Promise<BridgeErpSso> => {
+  return http<BridgeErpSso>(getCreateBridgeErpSsoUrl(), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getCreateBridgeErpSsoMutationKey = () => ["createBridgeErpSso"] as const;
+
+export const getCreateBridgeErpSsoMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createBridgeErpSso>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<Awaited<ReturnType<typeof createBridgeErpSso>>, TError, void, TContext> => {
+  const mutationKey = getCreateBridgeErpSsoMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof createBridgeErpSso>>, void> = () => {
+    return createBridgeErpSso(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateBridgeErpSsoMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createBridgeErpSso>>
+>;
+
+export type CreateBridgeErpSsoMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse
+>;
+
+/**
+ * @summary Адрес входа в старый ERP без второго пароля
+ */
+export const useCreateBridgeErpSso = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createBridgeErpSso>>,
+      TError,
+      void,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<Awaited<ReturnType<typeof createBridgeErpSso>>, TError, void, TContext> => {
+  return useMutation(getCreateBridgeErpSsoMutationOptions(options), queryClient);
 };
 
 export const getGetMeUrl = () => {

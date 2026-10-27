@@ -9,6 +9,8 @@ export interface MenuBadge {
   count: number;
   /** true — красный бейдж «требует действия», false — серый счётчик */
   attention: boolean;
+  /** Подсказка вместо «требует действия»: у раздела-заглушки число считает старая система («ещё в старой системе: 1») */
+  hint?: string;
 }
 
 export interface MenuItem {
@@ -90,14 +92,17 @@ export function ModuleMenuContent({
                 <>
                   <span
                     className={item.badge.attention ? "pf-badge" : "pf-badge pf-badge--quiet"}
+                    title={item.badge.hint}
                     aria-hidden="true"
                   >
                     {item.badge.count}
                   </span>
                   <span className="pf-sr-only">
-                    {item.badge.attention
-                      ? `${String(item.badge.count)}, ${labels.needsAction}`
-                      : String(item.badge.count)}
+                    {item.badge.hint
+                      ? `${String(item.badge.count)}, ${item.badge.hint}`
+                      : item.badge.attention
+                        ? `${String(item.badge.count)}, ${labels.needsAction}`
+                        : String(item.badge.count)}
                   </span>
                 </>
               ) : null}

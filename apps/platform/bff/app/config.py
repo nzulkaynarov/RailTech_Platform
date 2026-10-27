@@ -6,6 +6,7 @@ from typing import Literal
 from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from app.bridge_url import valid_public_url
 from app.client_ip import DEFAULT_TRUSTED_PROXIES, Network, parse_networks
 from app.clients.base import CRM_TIMEOUT_SECONDS
 
@@ -59,9 +60,25 @@ class Settings(BaseSettings):
     events_heartbeat_seconds: float = Field(
         default=20.0, gt=0, validation_alias=AliasChoices("PLATFORM_EVENTS_HEARTBEAT_SECONDS")
     )
+    # Публичные адреса старых фронтов для моста «Открыть в старой CRM / ERP» (W15-H1). Пусто — адрес
+    # выводится из адреса Платформы (`platform.X` -> `crm.X`, `erp.X`); см. `app/bridge_url.py`.
+    crm_public_url: str = Field(
+        default="", validation_alias=AliasChoices("PLATFORM_CRM_PUBLIC_URL")
+    )
+    erp_public_url: str = Field(
+        default="", validation_alias=AliasChoices("PLATFORM_ERP_PUBLIC_URL")
+    )
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = Field(
         default="INFO", validation_alias=AliasChoices("LOG_LEVEL")
     )
+
+    @field_validator("crm_public_url", "erp_public_url")
+    @classmethod
+    def _check_public_url(cls, value: str) -> str:
+        cleaned = value.strip().rstrip("/")
+        if cleaned and not valid_public_url(cleaned):
+            raise ValueError("публичный адрес — http(s)://хост[:порт] без пути")
+        return cleaned
 
     @field_validator("trusted_proxies")
     @classmethod
