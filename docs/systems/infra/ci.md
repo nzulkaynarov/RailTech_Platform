@@ -96,3 +96,4 @@ compose). Задание `packages · contracts` идёт на любую пра
 - **Матрица по путям** до волны 14 была грубее (`packages/contracts/**` во всех приложениях, `ci.yml` запускал qemu-образы); история решений —
   `docs/runbooks/wave14-speed.md`.
 - Актуально: GitHub Actions работают (прежняя блокировка биллингом, Q-10, снята); `make ci-local` остаётся локальным аналогом workflow.
+- **CI → деплой** (W14-S4): `.github/workflows/deploy.yml` стартует по `workflow_run` после успешного workflow «CI» на push в `main` (schedule, ручной запуск CI, красный CI и запуски из форков не деплоят), на том же sha ещё раз проверяет зелёную проверку «CI ok» (`checks: read`) и входит ли sha в `main`, собирает образы параллельно и ждёт одобрения владельца в environment `production`. Порядок и режимы (в том числе `build` — сборка без выкладки) — `docs/runbooks/deploy.md` §2.
