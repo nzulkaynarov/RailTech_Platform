@@ -61,7 +61,7 @@ info:
     роли, скрытая с R-1b), `GET/PATCH /me/notification-settings` и `POST /me/test-notification` (личные уведомления от бота: Telegram
     привязан ли, подписки, последняя неудача доставки, пробное сообщение). Журнал и журнал роли — раздел `admin` от чтения
     (директор читает), сброс пароля — `admin: full`; профиль доступен каждому вошедшему. Секреты из записей журнала BFF вырезает
-    (значения полей `*password*`, `*secret*`, `*token*`, `*api_key*` -> `***`).
+    (значения полей `password`, `secret`, `token`, `key`, `*_key`, `credentials`, `authorization`, `pin` и им подобных -> `***` целиком, любого типа).
 
     **0.8.0 (W13-A3) — Admin · Компания.** Чисто добавляющее изменение: `GET/PATCH /admin/company` (реквизиты), `/admin/company/logo`
     (загрузка `multipart/form-data` и удаление), `/admin/company/brand` (+ `/logo`, `/preview`) — бланк и бренд документов,
@@ -1961,7 +1961,8 @@ paths:
       description: >-
         Записи аудита CRM `platform_role.create|update|delete` этой роли (`/audit?entity_type=platform_role&entity_id=<id>`), новые
         первыми. В каждой — автор, время и содержимое роли до и после (название, описание, матрица разделов, поля с
-        ограничением); сравнение «что изменилось» делает экран. Раздел `admin` — от чтения (директор читает).
+        ограничением); сравнение «что изменилось» делает экран. Роли нет — 404 `NOT_FOUND`. Раздел `admin` — от чтения (директор
+        читает).
       parameters:
         - $ref: '#/components/parameters/RoleIdPath'
         - $ref: '#/components/parameters/PageLimit'
@@ -1977,6 +1978,10 @@ paths:
           $ref: '#/components/responses/SessionExpired'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
         '503':
           description: '`BACKEND_UNAVAILABLE` — CRM не ответила'
           content:
@@ -1994,7 +1999,7 @@ paths:
         действие (`action` — код или префикс, например `user` — все действия над сотрудниками), объект (`entity_type` и
         `entity_id`) и период (`from` включительно, `to` не включая). Входы в систему по умолчанию скрыты (`include_logins`).
         Раздел `admin` — от чтения: журнал читает администратор и директор; изменить записи нельзя никому. Значения секретных
-        полей в `before` и `after` BFF заменяет на `***`.
+        полей в `before` и `after` (пароль, токен, ключ, `*_key`, учётные данные, `authorization`, `pin`) BFF заменяет на `***` целиком, любого типа.
       parameters:
         - name: actor_id
           in: query
@@ -3274,10 +3279,10 @@ components:
       name: id
       in: path
       required: true
-      description: '`crm_user_id`'
+      description: '`crm_user_id` — число без ведущих нулей (`07` и `007` — не адрес сотрудника)'
       schema:
         type: string
-        pattern: '^[0-9]+$'
+        pattern: '^[1-9][0-9]*$'
     RoleIdPath:
       name: id
       in: path

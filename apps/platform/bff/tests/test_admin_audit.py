@@ -11,7 +11,7 @@ from typing import Any
 import httpx
 import pytest
 
-from app.schemas_audit import redact
+from app.schemas_audit import is_secret_key, redact
 from tests.backends import Backends
 from tests.conftest import ContractChecker, Web
 from tests.consts import CRM_URL
@@ -47,6 +47,17 @@ class CrmAudit:
         self.status = 200
         self.down = False
         self.route = be.router.get(AUDIT).mock(side_effect=self._list)
+        # Роли, которые есть в CRM (`GET /platform-roles/{id}`); остальные — 404.
+        self.roles = {"3", "9", "10"}
+        self.role_route = be.router.get(url__regex=rf"{CRM_URL}/api/v1/platform-roles/\d+$").mock(
+            side_effect=self._role
+        )
+
+    def _role(self, request: httpx.Request) -> httpx.Response:
+        role_id = request.url.path.rsplit("/", 1)[-1]
+        if role_id not in self.roles:
+            return httpx.Response(404, json={"code": "not_found", "message": "role", "details": {}})
+        return httpx.Response(200, json={"id": int(role_id), "name": "Роль"})
 
     def _list(self, request: httpx.Request) -> httpx.Response:
         if self.down:
@@ -245,12 +256,105 @@ async def test_audit_secrets_are_redacted(
     }
 
 
-def test_redact_keeps_non_strings_and_masks() -> None:
-    assert redact({"must_change_password": True, "token_set": True, "x": 1}) == {
-        "must_change_password": True,
-        "token_set": True,
-        "x": 1,
+@pytest.mark.parametrize(
+    "name",
+    [
+        "password",
+        "Password",
+        "passwd",
+        "pwd",
+        "secret",
+        "client_secret",
+        "token",
+        "access_token",
+        "refreshToken",
+        "key",
+        "api_key",
+        "apiKey",
+        "API-KEY",
+        "api key",
+        "apikey",
+        "litellm_api_key",
+        "private_key",
+        "privateKey",
+        "ssh_key",
+        "encryption_key",
+        "keys",
+        "authorization",
+        "Authorization",
+        "credentials",
+        "credential",
+        "pin",
+        "pin_code",
+        "smtp.password",
+    ],
+)
+@pytest.mark.parametrize(
+    "value",
+    ["swordfish", 123456, True, ["a", "b"], {"inner": "x", "n": 1}, 0, False, 3.14],
+    ids=["str", "int", "bool", "list", "dict", "zero", "false", "float"],
+)
+def test_redact_masks_the_whole_value_of_a_secret_key(name: str, value: object) -> None:
+    assert is_secret_key(name)
+    assert redact({name: value}) == {name: "***"}
+
+
+@pytest.mark.parametrize("name", ["host", "email", "name", "description", "position", "stage"])
+def test_ordinary_names_are_not_secret(name: str) -> None:
+    assert not is_secret_key(name)
+    assert redact({name: "значение"}) == {name: "значение"}
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "password_last4",
+        "api_key_last4",
+        "token_set",
+        "key_configured",
+        "api_key_present",
+        "keys_rotated",
+        "secrets_key_missing",
+        "secrets_key_changed",
+        "service_key",
+        "product_key",
+        "settings_key",
+        "setting_key",
+        "section_key",
+        "agent_context_key",
+        "Settings-Key",
+        "settingsKey",
+    ],
+)
+def test_explicit_safe_names_are_kept(name: str) -> None:
+    assert not is_secret_key(name)
+    assert redact({name: "значение"}) == {name: "значение"}
+
+
+def test_empty_secret_values_stay_empty() -> None:
+    assert redact({"token": "", "password": None, "api_key": ""}) == {
+        "token": "",
+        "password": None,
+        "api_key": "",
     }
+
+
+def test_redact_goes_through_lists_and_nested_dicts() -> None:
+    value = {"a": [{"b": {"private_key": "-----BEGIN-----"}}, "text"], "pin": 1234}
+
+    assert redact(value) == {"a": [{"b": {"private_key": "***"}}, "text"], "pin": "***"}
+
+
+async def test_secrets_in_role_snapshots_are_not_leaked_either(web: Web, audit: CrmAudit) -> None:
+    audit.rows = [
+        entry(1, "settings.update", "settings", None, before={"api_key": ["k1"]}, after={"key": 7})
+    ]
+    await web.login(["DIRECTOR"])
+
+    body = (await web.client.get("/api/v1/admin/audit")).json()["items"][0]
+
+    assert body["before"] == {"api_key": "***"}
+    assert body["after"] == {"key": "***"}
 
 
 async def test_audit_unknown_actor_type_is_system(web: Web, audit: CrmAudit) -> None:
@@ -431,3 +535,25 @@ async def test_role_journal_paginates_and_validates_id(web: Web, audit: CrmAudit
     assert page.status_code == 200
     assert (audit.last_params()["limit"], audit.last_params()["offset"]) == ("5", "10")
     assert bad.status_code == 422
+
+
+async def test_role_journal_of_unknown_role_is_404(
+    web: Web, audit: CrmAudit, check: ContractChecker
+) -> None:
+    await web.login(["ADMIN"])
+
+    response = await web.client.get("/api/v1/admin/roles/999/journal")
+
+    assert response.status_code == 404
+    check(response, "/admin/roles/{id}/journal", "get")
+    assert response.json()["code"] == "NOT_FOUND"
+    assert response.json()["source"] == "crm"
+    assert audit.route.call_count == 0
+
+
+async def test_director_gets_404_for_unknown_role_too(web: Web, audit: CrmAudit) -> None:
+    await web.login(["DIRECTOR"])
+
+    response = await web.client.get("/api/v1/admin/roles/999/journal")
+
+    assert response.status_code == 404

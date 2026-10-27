@@ -11,6 +11,7 @@ import pytest
 from tests.backends import Backends
 from tests.conftest import ContractChecker, Web
 from tests.consts import CRM_URL
+from tests.roles import rid
 from tests.test_admin_users import ADMIN_ID, CrmUsers, crm, login_as  # noqa: F401
 
 QUEUED = {"email_log_id": 41, "to_email": "анна11@demo.example", "status": "queued"}
@@ -154,3 +155,54 @@ async def test_employee_id_must_be_numeric(web: Web, reset: CrmReset) -> None:
 
     assert response.status_code == 422
     assert reset.route.call_count == 0
+
+
+@pytest.mark.parametrize("own_id", ["07", "007", "0007", "+7", "7 ", "7.0"])
+async def test_own_id_in_other_spellings_cannot_bypass_the_self_check(
+    web: Web,
+    reset: CrmReset,
+    crm: CrmUsers,  # noqa: F811
+    own_id: str,
+) -> None:
+    """Номер администратора — 7: «07», «007» и прочие записи в CRM не уходят."""
+    await login_as(web, "ADMIN")
+
+    response = await web.send("POST", f"/api/v1/admin/users/{own_id}/reset-password/email")
+
+    assert response.status_code == 422
+    assert response.json()["code"] == "VALIDATION_FAILED"
+    assert reset.route.call_count == 0
+
+
+@pytest.mark.parametrize("own_id", ["07", "007"])
+async def test_update_with_leading_zeros_is_rejected_before_crm(
+    web: Web,
+    crm: CrmUsers,  # noqa: F811
+    own_id: str,
+) -> None:
+    await login_as(web, "ADMIN")
+
+    response = await web.send(
+        "PATCH", f"/api/v1/admin/users/{own_id}", json={"role_ids": [rid("MANAGER")]}
+    )
+    card = await web.client.get(f"/api/v1/admin/users/{own_id}")
+    resend = await web.send("POST", f"/api/v1/admin/users/{own_id}/invite")
+
+    assert response.status_code == card.status_code == resend.status_code == 422
+    assert crm.patch_route.call_count == 0
+    assert crm.get_route.call_count == 0
+    assert crm.invite_route.call_count == 0
+
+
+async def test_self_check_compares_numbers_not_strings(web: Web, reset: CrmReset) -> None:
+    """Страховка к шаблону адреса: даже если шаблон ослабят, «это я» сравнивается числом."""
+    from types import SimpleNamespace
+
+    from app.api.admin_users import _is_self
+
+    authed = SimpleNamespace(data=SimpleNamespace(user_id=ADMIN_ID))
+
+    assert _is_self(str(ADMIN_ID), authed)  # type: ignore[arg-type]
+    assert _is_self("07", authed)  # type: ignore[arg-type]
+    assert _is_self("007", authed)  # type: ignore[arg-type]
+    assert not _is_self("8", authed)  # type: ignore[arg-type]

@@ -23,20 +23,65 @@ _ACTOR_TYPES: frozenset[str] = frozenset({"user", "system", "bot"})
 _ROLE_ACTIONS: frozenset[str] = frozenset({"create", "update", "delete"})
 _LEVELS: frozenset[str] = frozenset({"full", "read"})
 _FIELDS: frozenset[str] = frozenset({"cost_margin", "supplier_prices", "totals_only"})
-_SECRET_KEY = re.compile(r"(password|secret|token|api_?key)", re.IGNORECASE)
-# Маски и признаки («последние 4 символа», «задан») — не секреты.
-_SAFE_SUFFIXES = ("_last4", "_set", "_configured", "_present")
 MASK = "***"
+
+# Имя поля нормализуется (регистр, `-`, пробел, `.`, camelCase -> `snake_case`) и режется на слова.
+# Секретно поле, в имени которого есть слово: password, passwd, pwd, secret, token, credential(s),
+# authorization, pin, key (в том числе `*_key`: api_key, private_key, litellm_api_key); склейки
+# `apikey`, `privatekey`, `secretkey`, `accesskey` и множественное число (`keys`, `tokens`) тоже.
+# Значение под таким полем маскируется целиком, каким бы оно ни было: строка, число, флаг, список,
+# словарь. Пустое значение (`null`, `""`) остаётся: оно говорит «не задано» и ничего не раскрывает.
+_WORD = re.compile(r"^(?:password|passwd|pwd|secret|token|credentials?|authorization|pin|key)s?$")
+_GLUED = ("apikey", "privatekey", "secretkey", "accesskey")
+# Безопасные исключения — явно и только по причине:
+# 1) имена-идентификаторы, где «key» значит «код», а не ключ доступа (CRM пишет их в аудит сервисов,
+#    продуктов и настроек): `service_key`, `product_key`, `settings_key`, `setting_key`,
+#    `section_key`, `agent_context_key`;
+# 2) признаки и маски: `*_last4` (последние 4 символа), `*_set`, `*_configured`, `*_present`
+#    («задан»), `*_rotated`, `*_missing`, `*_changed` (итог операции над ключами): секрета нет.
+_SAFE_NAMES = frozenset(
+    {
+        "service_key",
+        "product_key",
+        "settings_key",
+        "setting_key",
+        "section_key",
+        "agent_context_key",
+    }
+)
+_SAFE_SUFFIXES = (
+    "_last4",
+    "_set",
+    "_configured",
+    "_present",
+    "_rotated",
+    "_missing",
+    "_changed",
+)
+_CAMEL = re.compile(r"(?<=[a-z0-9])(?=[A-Z])")
+_SEPARATORS = re.compile(r"[^a-z0-9]+")
+
+
+def normalize_key(name: str) -> str:
+    """`apiKey`, `API-Key`, `api key` -> `api_key`."""
+    return _SEPARATORS.sub("_", _CAMEL.sub("_", name).lower()).strip("_")
+
+
+def is_secret_key(name: str) -> bool:
+    key = normalize_key(name)
+    if key in _SAFE_NAMES or key.endswith(_SAFE_SUFFIXES):
+        return False
+    return any(_WORD.match(part) for part in key.split("_")) or any(g in key for g in _GLUED)
 
 
 def redact(value: Any) -> Any:
-    """Значения секретных полей (строки) -> `***`; остальное как есть, вложенность обходится."""
+    """Значения секретных полей -> `***` целиком (любой тип); остальное как есть, вглубь тоже."""
     if isinstance(value, dict):
         out: dict[str, Any] = {}
         for key, item in value.items():
             name = str(key)
-            secret = _SECRET_KEY.search(name) and not name.lower().endswith(_SAFE_SUFFIXES)
-            out[name] = MASK if secret and isinstance(item, str) and item else redact(item)
+            hidden = is_secret_key(name) and item is not None and item != ""
+            out[name] = MASK if hidden else redact(item)
         return out
     if isinstance(value, list):
         return [redact(item) for item in value]

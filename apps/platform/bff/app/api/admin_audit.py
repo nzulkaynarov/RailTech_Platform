@@ -12,6 +12,7 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Path, Query
 
+from app.clients.crm_users import CrmRoles
 from app.deps import Authed, require
 from app.errors import PlatformError, from_backend
 from app.schemas_audit import (
@@ -90,7 +91,11 @@ async def list_audit(
 async def get_role_journal(
     id: RoleIdPath, authed: Reader, limit: Limit = 50, offset: Offset = 0
 ) -> RoleJournal:
-    """Изменения роли: записи аудита CRM `platform_role.*` с этим `entity_id`, новые первыми."""
+    """Изменения роли: записи аудита CRM `platform_role.*` с этим `entity_id`, новые первыми.
+
+    Несуществующая роль — 404 (CRM `GET /platform-roles/{id}`), а не пустой журнал: иначе опечатка
+    в адресе выглядела бы как роль без изменений."""
+    await CrmRoles(authed.call).get(id)
     body = await _audit(
         authed,
         {"entity_type": "platform_role", "entity_id": id, "limit": limit, "offset": offset},

@@ -59,7 +59,7 @@
  * роли, скрытая с R-1b), `GET/PATCH /me/notification-settings` и `POST /me/test-notification` (личные уведомления от бота: Telegram
  * привязан ли, подписки, последняя неудача доставки, пробное сообщение). Журнал и журнал роли — раздел `admin` от чтения
  * (директор читает), сброс пароля — `admin: full`; профиль доступен каждому вошедшему. Секреты из записей журнала BFF вырезает
- * (значения полей `*password*`, `*secret*`, `*token*`, `*api_key*` -> `***`).
+ * (значения полей `password`, `secret`, `token`, `key`, `*_key`, `credentials`, `authorization`, `pin` и им подобных -> `***` целиком, любого типа).
  *
  * **0.8.0 (W13-A3) — Admin · Компания.** Чисто добавляющее изменение: `GET/PATCH /admin/company` (реквизиты), `/admin/company/logo`
  * (загрузка `multipart/form-data` и удаление), `/admin/company/brand` (+ `/logo`, `/preview`) — бланк и бренд документов,
@@ -7463,7 +7463,7 @@ export const getGetRoleJournalUrl = (id: string, params?: GetRoleJournalParams) 
 };
 
 /**
- * Записи аудита CRM `platform_role.create|update|delete` этой роли (`/audit?entity_type=platform_role&entity_id=<id>`), новые первыми. В каждой — автор, время и содержимое роли до и после (название, описание, матрица разделов, поля с ограничением); сравнение «что изменилось» делает экран. Раздел `admin` — от чтения (директор читает).
+ * Записи аудита CRM `platform_role.create|update|delete` этой роли (`/audit?entity_type=platform_role&entity_id=<id>`), новые первыми. В каждой — автор, время и содержимое роли до и после (название, описание, матрица разделов, поля с ограничением); сравнение «что изменилось» делает экран. Роли нет — 404 `NOT_FOUND`. Раздел `admin` — от чтения (директор читает).
  * @summary Журнал изменений роли — кто, когда и что (вкладка «Журнал» бокового окна роли)
  */
 export const getRoleJournal = async (
@@ -7483,7 +7483,9 @@ export const getGetRoleJournalQueryKey = (id: string, params?: GetRoleJournalPar
 
 export const getGetRoleJournalQueryOptions = <
   TData = Awaited<ReturnType<typeof getRoleJournal>>,
-  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | Error>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | ValidationFailedResponse | Error
+  >,
 >(
   id: string,
   params?: GetRoleJournalParams,
@@ -7511,12 +7513,14 @@ export const getGetRoleJournalQueryOptions = <
 
 export type GetRoleJournalQueryResult = NonNullable<Awaited<ReturnType<typeof getRoleJournal>>>;
 export type GetRoleJournalQueryError = ErrorType<
-  SessionExpiredResponse | ForbiddenResponse | Error
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | ValidationFailedResponse | Error
 >;
 
 export function useGetRoleJournal<
   TData = Awaited<ReturnType<typeof getRoleJournal>>,
-  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | Error>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | ValidationFailedResponse | Error
+  >,
 >(
   id: string,
   params: undefined | GetRoleJournalParams,
@@ -7536,7 +7540,9 @@ export function useGetRoleJournal<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetRoleJournal<
   TData = Awaited<ReturnType<typeof getRoleJournal>>,
-  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | Error>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | ValidationFailedResponse | Error
+  >,
 >(
   id: string,
   params?: GetRoleJournalParams,
@@ -7556,7 +7562,9 @@ export function useGetRoleJournal<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetRoleJournal<
   TData = Awaited<ReturnType<typeof getRoleJournal>>,
-  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | Error>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | ValidationFailedResponse | Error
+  >,
 >(
   id: string,
   params?: GetRoleJournalParams,
@@ -7572,7 +7580,9 @@ export function useGetRoleJournal<
 
 export function useGetRoleJournal<
   TData = Awaited<ReturnType<typeof getRoleJournal>>,
-  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | Error>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | ValidationFailedResponse | Error
+  >,
 >(
   id: string,
   params?: GetRoleJournalParams,
@@ -7608,7 +7618,7 @@ export const getListAuditUrl = (params?: ListAuditParams) => {
 };
 
 /**
- * Журнал аудита CRM (`/audit`, право `audit:read`): новые записи первыми, постранично. Фильтры: автор (`actor_id`), действие (`action` — код или префикс, например `user` — все действия над сотрудниками), объект (`entity_type` и `entity_id`) и период (`from` включительно, `to` не включая). Входы в систему по умолчанию скрыты (`include_logins`). Раздел `admin` — от чтения: журнал читает администратор и директор; изменить записи нельзя никому. Значения секретных полей в `before` и `after` BFF заменяет на `***`.
+ * Журнал аудита CRM (`/audit`, право `audit:read`): новые записи первыми, постранично. Фильтры: автор (`actor_id`), действие (`action` — код или префикс, например `user` — все действия над сотрудниками), объект (`entity_type` и `entity_id`) и период (`from` включительно, `to` не включая). Входы в систему по умолчанию скрыты (`include_logins`). Раздел `admin` — от чтения: журнал читает администратор и директор; изменить записи нельзя никому. Значения секретных полей в `before` и `after` (пароль, токен, ключ, `*_key`, учётные данные, `authorization`, `pin`) BFF заменяет на `***` целиком, любого типа.
  * @summary Журнал аудита — кто, что и когда изменил
  */
 export const listAudit = async (

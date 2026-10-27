@@ -59,7 +59,7 @@
  * роли, скрытая с R-1b), `GET/PATCH /me/notification-settings` и `POST /me/test-notification` (личные уведомления от бота: Telegram
  * привязан ли, подписки, последняя неудача доставки, пробное сообщение). Журнал и журнал роли — раздел `admin` от чтения
  * (директор читает), сброс пароля — `admin: full`; профиль доступен каждому вошедшему. Секреты из записей журнала BFF вырезает
- * (значения полей `*password*`, `*secret*`, `*token*`, `*api_key*` -> `***`).
+ * (значения полей `password`, `secret`, `token`, `key`, `*_key`, `credentials`, `authorization`, `pin` и им подобных -> `***` целиком, любого типа).
  *
  * **0.8.0 (W13-A3) — Admin · Компания.** Чисто добавляющее изменение: `GET/PATCH /admin/company` (реквизиты), `/admin/company/logo`
  * (загрузка `multipart/form-data` и удаление), `/admin/company/brand` (+ `/logo`, `/preview`) — бланк и бренд документов,

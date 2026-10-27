@@ -1086,7 +1086,7 @@ export interface paths {
     };
     /**
      * Журнал изменений роли — кто, когда и что (вкладка «Журнал» бокового окна роли)
-     * @description Записи аудита CRM `platform_role.create|update|delete` этой роли (`/audit?entity_type=platform_role&entity_id=<id>`), новые первыми. В каждой — автор, время и содержимое роли до и после (название, описание, матрица разделов, поля с ограничением); сравнение «что изменилось» делает экран. Раздел `admin` — от чтения (директор читает).
+     * @description Записи аудита CRM `platform_role.create|update|delete` этой роли (`/audit?entity_type=platform_role&entity_id=<id>`), новые первыми. В каждой — автор, время и содержимое роли до и после (название, описание, матрица разделов, поля с ограничением); сравнение «что изменилось» делает экран. Роли нет — 404 `NOT_FOUND`. Раздел `admin` — от чтения (директор читает).
      */
     get: operations["getRoleJournal"];
     put?: never;
@@ -1106,7 +1106,7 @@ export interface paths {
     };
     /**
      * Журнал аудита — кто, что и когда изменил
-     * @description Журнал аудита CRM (`/audit`, право `audit:read`): новые записи первыми, постранично. Фильтры: автор (`actor_id`), действие (`action` — код или префикс, например `user` — все действия над сотрудниками), объект (`entity_type` и `entity_id`) и период (`from` включительно, `to` не включая). Входы в систему по умолчанию скрыты (`include_logins`). Раздел `admin` — от чтения: журнал читает администратор и директор; изменить записи нельзя никому. Значения секретных полей в `before` и `after` BFF заменяет на `***`.
+     * @description Журнал аудита CRM (`/audit`, право `audit:read`): новые записи первыми, постранично. Фильтры: автор (`actor_id`), действие (`action` — код или префикс, например `user` — все действия над сотрудниками), объект (`entity_type` и `entity_id`) и период (`from` включительно, `to` не включая). Входы в систему по умолчанию скрыты (`include_logins`). Раздел `admin` — от чтения: журнал читает администратор и директор; изменить записи нельзя никому. Значения секретных полей в `before` и `after` (пароль, токен, ключ, `*_key`, учётные данные, `authorization`, `pin`) BFF заменяет на `***` целиком, любого типа.
      */
     get: operations["listAudit"];
     put?: never;
@@ -3499,7 +3499,7 @@ export interface components {
     };
   };
   parameters: {
-    /** @description `crm_user_id` */
+    /** @description `crm_user_id` — число без ведущих нулей (`07` и `007` — не адрес сотрудника) */
     EmployeeId: string;
     /** @description Id роли Платформы (CRM) */
     RoleIdPath: components["schemas"]["RoleId"];
@@ -5049,7 +5049,7 @@ export interface operations {
         "X-CSRF-Token": components["parameters"]["CsrfToken"];
       };
       path: {
-        /** @description `crm_user_id` */
+        /** @description `crm_user_id` — число без ведущих нулей (`07` и `007` — не адрес сотрудника) */
         id: components["parameters"]["EmployeeId"];
       };
       cookie?: never;
@@ -5093,7 +5093,7 @@ export interface operations {
       query?: never;
       header?: never;
       path: {
-        /** @description `crm_user_id` */
+        /** @description `crm_user_id` — число без ведущих нулей (`07` и `007` — не адрес сотрудника) */
         id: components["parameters"]["EmployeeId"];
       };
       cookie?: never;
@@ -5122,7 +5122,7 @@ export interface operations {
         "X-CSRF-Token": components["parameters"]["CsrfToken"];
       };
       path: {
-        /** @description `crm_user_id` */
+        /** @description `crm_user_id` — число без ведущих нулей (`07` и `007` — не адрес сотрудника) */
         id: components["parameters"]["EmployeeId"];
       };
       cookie?: never;
@@ -5173,7 +5173,7 @@ export interface operations {
         "X-CSRF-Token": components["parameters"]["CsrfToken"];
       };
       path: {
-        /** @description `crm_user_id` */
+        /** @description `crm_user_id` — число без ведущих нулей (`07` и `007` — не адрес сотрудника) */
         id: components["parameters"]["EmployeeId"];
       };
       cookie?: never;
@@ -5446,6 +5446,8 @@ export interface operations {
       };
       401: components["responses"]["SessionExpired"];
       403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      422: components["responses"]["ValidationFailed"];
       /** @description `BACKEND_UNAVAILABLE` — CRM не ответила */
       503: {
         headers: {
