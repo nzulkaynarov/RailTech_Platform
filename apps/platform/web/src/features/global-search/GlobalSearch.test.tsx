@@ -145,6 +145,74 @@ describe("Глобальный поиск", () => {
     });
   });
 
+  it("«Где посмотреть»: появляется в области aria-live, Escape внутри закрывает её и возвращает фокус в поле", async () => {
+    signInAs("manager@demo.example");
+    renderApp("/dashboard/queue");
+    const box = await searchBox();
+
+    type(box, "L-2041");
+    fireEvent.click(await screen.findByRole("option", { name: /L-2041/ }));
+
+    const where = await screen.findByRole("region", { name: "Где посмотреть" });
+    expect(where.parentElement).toHaveAttribute("aria-live", "polite");
+    fireEvent.keyDown(where, { key: "Escape" });
+    expect(screen.queryByRole("region", { name: "Где посмотреть" })).toBeNull();
+    expect(box).toHaveFocus();
+  });
+
+  it("действия — после найденных объектов; Enter при одном объекте открывает объект, а не действие", async () => {
+    server.use(
+      http.get("*/search", () =>
+        HttpResponse.json({
+          groups: [
+            {
+              module: "eds",
+              items: [
+                {
+                  title: "Письмо ВХ-104/26",
+                  object: {
+                    kind: "letter",
+                    number: "ВХ-104/26",
+                    path: "/eds/inbox/%D0%92%D0%A5-104%2F26?panel=open&tab=resolution",
+                  },
+                },
+              ],
+            },
+          ],
+          sources: { crm: "ok", erp: "ok" },
+        }),
+      ),
+    );
+    signInAs("manager@demo.example");
+    const { router } = renderApp("/dashboard/queue");
+    const box = await searchBox();
+
+    type(box, "создать заявку");
+    await screen.findByRole("option", { name: /Письмо ВХ-104\/26/ });
+    const groups = screen.getAllByRole("group").map((g) => g.textContent);
+    expect(groups.findIndex((g) => g.includes("Письмо"))).toBeLessThan(
+      groups.findIndex((g) => g.includes("Создать заявку")),
+    );
+
+    fireEvent.keyDown(box, { key: "Enter" });
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/eds/inbox/%D0%92%D0%A5-104%2F26");
+    });
+    expect(screen.queryByRole("region", { name: /Где посмотреть/ })).toBeNull();
+  });
+
+  it("действие без экрана подписано честно: «Пока делается в старой системе»", async () => {
+    signInAs("manager@demo.example");
+    renderApp("/dashboard/queue");
+    const box = await searchBox();
+
+    type(box, "создать заявку");
+    const action = await screen.findByRole("option", { name: /Создать заявку/ });
+    expect(action).toHaveTextContent("Пока делается в старой системе");
+    expect(action).not.toHaveTextContent(/фаз/i);
+  });
+
   it("администратор: «пригласить» — действие, которое ведёт в Оргструктуру с приглашением", async () => {
     signInAs("admin@demo.example");
     const { router } = renderApp("/dashboard/queue");

@@ -1,5 +1,5 @@
-import { Button, Popover } from "antd";
-import { type ReactNode, useId } from "react";
+import { Button } from "antd";
+import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { StatusTone } from "../lib/statuses";
@@ -45,6 +45,14 @@ export function QueueList({ items, title, headingLevel = 2, empty }: QueueListPr
   const { t } = useTranslation("ui");
   const headingId = useId();
   const Heading = headingLevel === 2 ? "h2" : "h3";
+  // «Где сделать» — встроенная секция сразу после кнопки (не плавающий поповер): фокус входит в неё при открытии, Tab доходит
+  // до «Открыть в …», Escape закрывает и возвращает фокус на кнопку (WCAG 2.1.1, 2.4.3).
+  const [openId, setOpenId] = useState<string | null>(null);
+  const buttons = useRef(new Map<string, HTMLElement>());
+  const panels = useRef(new Map<string, HTMLElement>());
+  useEffect(() => {
+    if (openId) panels.current.get(openId)?.focus();
+  }, [openId]);
   return (
     <section className="pf-card pf-queue" aria-labelledby={headingId}>
       <div className="pf-card-head">
@@ -72,17 +80,39 @@ export function QueueList({ items, title, headingLevel = 2, empty }: QueueListPr
                   {t("open")}
                 </LinkButton>
               ) : (
-                <Popover
-                  trigger="click"
-                  placement="bottomRight"
-                  title={t("whereToDo")}
-                  content={item.where}
+                <Button
+                  ref={(node) => {
+                    if (node) buttons.current.set(item.id, node);
+                  }}
+                  aria-expanded={openId === item.id}
+                  aria-controls={`${headingId}-where-${item.id}`}
+                  aria-label={t("whereToDoItem", { title: item.title })}
+                  onClick={() => {
+                    setOpenId(openId === item.id ? null : item.id);
+                  }}
                 >
-                  <Button aria-label={t("whereToDoItem", { title: item.title })}>
-                    {t("whereToDo")}
-                  </Button>
-                </Popover>
+                  {t("whereToDo")}
+                </Button>
               )}
+              {item.where !== undefined && openId === item.id ? (
+                <section
+                  id={`${headingId}-where-${item.id}`}
+                  ref={(node) => {
+                    if (node) panels.current.set(item.id, node);
+                  }}
+                  className="pf-queue-where"
+                  tabIndex={-1}
+                  aria-label={t("whereToDo")}
+                  onKeyDown={(event) => {
+                    if (event.key !== "Escape") return;
+                    event.stopPropagation();
+                    setOpenId(null);
+                    buttons.current.get(item.id)?.focus();
+                  }}
+                >
+                  {item.where}
+                </section>
+              ) : null}
             </li>
           ))}
         </ul>

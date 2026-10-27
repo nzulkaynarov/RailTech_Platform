@@ -8,7 +8,13 @@
 """
 
 from django.db.models import Q
-from drf_spectacular.utils import extend_schema, extend_schema_view
+from drf_spectacular.utils import (
+    OpenApiParameter,
+    OpenApiResponse,
+    extend_schema,
+    extend_schema_serializer,
+    extend_schema_view,
+)
 from rest_framework import mixins, permissions, serializers, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -19,6 +25,9 @@ from ..category_requests import approve_category_request, reject_category_reques
 from ..models import Category, CategoryRequest
 
 
+# Имя компонента OpenAPI не `CategoryRequest`: так drf-spectacular называет тело запроса к `Category` (разделение
+# запроса и ответа), и описание ответов обращений подменялось схемой категории (B-011, D2-0).
+@extend_schema_serializer(component_name="CategoryProposal")
 class CategoryRequestSerializer(serializers.ModelSerializer):
     """Чтение — вложенные имена, запись — плоские id (конвенция проекта)."""
 
@@ -67,6 +76,10 @@ class CategoryRequestReviewSerializer(serializers.Serializer):
     reason = serializers.CharField(required=False, allow_blank=True)
 
 
+_FORBIDDEN = OpenApiResponse(description="ROLE_NOT_PERMITTED (no required permission)")
+_NOT_FOUND = OpenApiResponse(description="Not found (or another company's request)")
+
+
 @extend_schema_view(
     list=extend_schema(
         summary="List category requests",
@@ -74,6 +87,15 @@ class CategoryRequestReviewSerializer(serializers.Serializer):
             "Seller: own company's requests. Platform operator: every request, "
             "filterable by `?status=PENDING|APPROVED|REJECTED`."
         ),
+        parameters=[
+            OpenApiParameter(
+                "status",
+                str,
+                OpenApiParameter.QUERY,
+                enum=["PENDING", "APPROVED", "REJECTED"],
+                description="Filter by request status (upper-case codes)",
+            )
+        ],
         tags=["Catalog"],
     ),
     create=extend_schema(
@@ -83,9 +105,19 @@ class CategoryRequestReviewSerializer(serializers.Serializer):
             "the seller asks for a category instead of creating one. Never a gate — the "
             "product card lives on without it."
         ),
+        responses={
+            201: CategoryRequestSerializer,
+            400: OpenApiResponse(
+                description="CATEGORY_REQUEST_NAME_REQUIRED / COMPANY_REQUIRED / CATEGORY_REQUEST_ALREADY_PENDING, "
+                "or serializer field errors"
+            ),
+            403: OpenApiResponse(description="ADMIN_VIEWER_CANNOT_ACT / ROLE_NOT_PERMITTED"),
+        },
         tags=["Catalog"],
     ),
-    retrieve=extend_schema(summary="Get category request", tags=["Catalog"]),
+    retrieve=extend_schema(
+        summary="Get category request", responses={200: CategoryRequestSerializer, 404: _NOT_FOUND}, tags=["Catalog"]
+    ),
 )
 class CategoryRequestViewSet(
     RoleGatedViewMixin,
@@ -108,6 +140,8 @@ class CategoryRequestViewSet(
         return [permissions.IsAuthenticated()]
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return CategoryRequest.objects.none()
         user = self.request.user
         queryset = CategoryRequest.objects.select_related(
             "company", "parent", "domain_type", "resulting_category", "requested_by"
@@ -140,6 +174,14 @@ class CategoryRequestViewSet(
         summary="Approve a category request",
         description="Links the request to the category the operator actually created. Needs `settings.edit` or administrator.",
         request=CategoryRequestReviewSerializer,
+        responses={
+            200: CategoryRequestSerializer,
+            400: OpenApiResponse(
+                description="CATEGORY_REQUEST_ALREADY_REVIEWED / CATEGORY_REQUIRED, or serializer field errors"
+            ),
+            403: _FORBIDDEN,
+            404: _NOT_FOUND,
+        },
         tags=["Catalog"],
     )
     @action(detail=True, methods=["post"])
@@ -159,6 +201,14 @@ class CategoryRequestViewSet(
         summary="Reject a category request",
         description="Requires a reason — a refusal without grounds is not reviewable. Needs `settings.edit` or administrator.",
         request=CategoryRequestReviewSerializer,
+        responses={
+            200: CategoryRequestSerializer,
+            400: OpenApiResponse(
+                description="CATEGORY_REQUEST_ALREADY_REVIEWED / REASON_REQUIRED, or serializer field errors"
+            ),
+            403: _FORBIDDEN,
+            404: _NOT_FOUND,
+        },
         tags=["Catalog"],
     )
     @action(detail=True, methods=["post"])

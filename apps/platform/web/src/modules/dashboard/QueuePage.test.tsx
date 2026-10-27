@@ -235,7 +235,7 @@ describe("Dashboard · Моя очередь", () => {
 
     expect(await within(page).findByText("Взять в работу лида L-0001")).toBeVisible();
     expect(within(page).getByRole("status")).toHaveTextContent(
-      "Очередь загружена не полностью: разделы «Документы» и «Расчёт» не ответили. Остальное показано.",
+      "Не загрузились КП на одобрение и расчёты: раздел «Расчёт» не ответил. Остальное показано.",
     );
   });
 
@@ -268,7 +268,7 @@ describe("Dashboard · Моя очередь", () => {
 
     expect(await within(page).findByText("Одобрить КП-2026/118 (черновик)")).toBeVisible();
     expect(within(page).getByRole("status")).toHaveTextContent(
-      "Очередь загружена не полностью: раздел «Клиенты» не ответил. Остальное показано.",
+      "Не загрузились лиды и ответы клиентам: раздел «Клиенты» не ответил. Остальное показано.",
     );
   });
 
@@ -287,7 +287,7 @@ describe("Dashboard · Моя очередь", () => {
     // «Повторить» — в плашке над списком, второй кнопки в пустом состоянии нет
     expect(within(page).getAllByRole("button", { name: "Повторить" })).toHaveLength(1);
     expect(within(page).getAllByRole("status")[0]).toHaveTextContent(
-      "разделы «Клиенты», «Документы» и «Расчёт» не ответили",
+      "разделы «Клиенты» и «Расчёт» не ответили",
     );
   });
 

@@ -51,7 +51,7 @@ test.describe("Мои задачи: «Открыть» или «Где сдел�
     await expect(queue.getByRole("link", { name: /^Открыть:/ })).toHaveCount(0);
 
     await queue.getByRole("button", { name: "Где сделать: Взять в работу лида L-2041" }).click();
-    const pop = page.getByRole("tooltip");
+    const pop = page.getByRole("region", { name: "Где сделать" });
     await expect(pop.getByText(/Сейчас — в старой CRM: раздел «Лиды»/)).toBeVisible();
     const open = pop.getByRole("link", { name: /Открыть в старой CRM/ });
     await expect(open).toHaveAttribute("href", "http://crm.localhost:8088/leads/2041");
@@ -59,6 +59,26 @@ test.describe("Мои задачи: «Открыть» или «Где сдел�
     expect(await open.getAttribute("rel")).toContain("noopener");
     await expect(pop.getByText("Когда появится: в ближайшем обновлении.")).toBeVisible();
     await shoot(page, "queue-where");
+  });
+
+  test("с клавиатуры: Enter на «Где сделать» → фокус в секции → Tab доходит до «Открыть в …» → Escape возвращает на кнопку", async ({
+    page,
+  }) => {
+    await loginAndWait(page, "manager@demo.example");
+    const button = page.getByRole("button", { name: "Где сделать: Взять в работу лида L-2041" });
+    await button.focus();
+    await page.keyboard.press("Enter");
+
+    const panel = page.getByRole("region", { name: "Где сделать" });
+    await expect(panel).toBeFocused();
+    const link = panel.getByRole("link", { name: /Открыть в старой CRM/ });
+    await expect(link).toBeVisible(); // адрес старой CRM приходит из BFF — Tab после его появления
+    await page.keyboard.press("Tab");
+    await expect(link).toBeFocused();
+    await page.keyboard.press("Escape");
+    await expect(panel).toHaveCount(0);
+    await expect(button).toBeFocused();
+    await expect(button).toHaveAttribute("aria-expanded", "false");
   });
 
   test("директор: письмо (родной экран) — «Открыть» открывает объект с боковым окном; КП и служебка — «Где сделать»; primary у всех срочных", async ({
@@ -88,7 +108,7 @@ test.describe("Мои задачи: «Открыть» или «Где сдел�
   }) => {
     await loginAndWait(page, "director@demo.example");
     await page.getByRole("button", { name: /Где сделать: Согласовать СЗ-2026\/031/ }).click();
-    const pop = page.getByRole("tooltip");
+    const pop = page.getByRole("region", { name: "Где сделать" });
     await expect(pop.getByText(/Сейчас этой работы в интерфейсе нет/)).toBeVisible();
     await expect(pop.getByRole("link")).toHaveCount(0);
   });
@@ -118,7 +138,7 @@ test.describe("Мои задачи: пустые состояния и част�
     await page.reload();
     await expect(page.getByRole("main").getByText("Взять в работу лида L-2041")).toBeVisible();
     await expect(page.getByRole("main").getByRole("status")).toContainText(
-      "Очередь загружена не полностью: разделы «Документы» и «Расчёт» не ответили. Остальное показано.",
+      "Не загрузились КП на одобрение и расчёты: раздел «Расчёт» не ответил. Остальное показано.",
     );
     await shoot(page, "queue-partial-erp");
   });
@@ -129,7 +149,7 @@ test.describe("Мои задачи: пустые состояния и част�
     await page.reload();
     await expect(page.getByRole("main").getByText("Одобрить КП-2026/118 (черновик)")).toBeVisible();
     await expect(page.getByRole("main").getByRole("status").first()).toContainText(
-      "Очередь загружена не полностью: раздел «Клиенты» не ответил. Остальное показано.",
+      "Не загрузились лиды и ответы клиентам: раздел «Клиенты» не ответил. Остальное показано.",
     );
     await expectNoViolations(page, "crm down");
   });
@@ -152,6 +172,11 @@ test.describe("Поиск: объект, «Где посмотреть», дей
     );
     await expect(page).toHaveURL(/\/dashboard\/queue/);
     await shoot(page, "search-where");
+    // Escape внутри подсказки закрывает её и возвращает фокус в поле поиска
+    await where.getByRole("link", { name: /Открыть в старой CRM/ }).focus();
+    await page.keyboard.press("Escape");
+    await expect(where).toHaveCount(0);
+    await expect(search).toBeFocused();
   });
 
   test("менеджер: «создать заявку» — действие в результатах; «пригласить» ему недоступно", async ({

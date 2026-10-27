@@ -278,6 +278,7 @@ class UserViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
 
     @extend_schema(
         summary="Upload avatar for a user (admin or self)",
+        operation_id="accounts_users_upload_avatar_for_user_create",
         description="Platform admin may set avatar on behalf of any user; users may set their own.",
         request={
             "multipart/form-data": {
@@ -324,6 +325,7 @@ class UserViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
 
     @extend_schema(
         summary="Delete avatar for a user (admin or self)",
+        operation_id="accounts_users_delete_avatar_for_user_destroy",
         responses={204: None},
         tags=["Accounts"],
     )

@@ -93,7 +93,6 @@ export function QueuePage() {
           : null;
   const names = {
     crm: t("modules:crm.name"),
-    eds: t("modules:eds.name"),
     erp: t("modules:erp.name"),
   };
   const partialMessages = {

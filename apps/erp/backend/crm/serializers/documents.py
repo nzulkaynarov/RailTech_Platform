@@ -47,6 +47,59 @@ class DocumentTemplateSerializer(serializers.ModelSerializer):
         return bool(obj.company_id and obj.company_id == owner_company_id)
 
 
+class DocumentTemplateWriteSerializer(serializers.Serializer):
+    """Тело `PUT/PATCH crm/document-templates/{id}/` — ровно то, что читает `DocumentTemplateViewSet.update`.
+
+    Только для описания контракта (D2-0, B-011): вьюха не гоняет тело через сериализатор, а берёт поля из
+    `request.data` и отдаёт сервису `update_template`. Модельный `DocumentTemplateSerializer` тут не годится:
+    `kind` у него только для чтения (в запросе его не было бы), а `kind`, `name`, `body_html`, `is_active` вьюха
+    принимает. Не присланное поле не меняется.
+    """
+
+    name = serializers.CharField(required=False, max_length=255)
+    kind = serializers.CharField(required=False, help_text="Код вида шаблона (CUSTOM, CONTRACT, …)")
+    body_html = serializers.CharField(required=False, allow_blank=True, max_length=100_000)
+    is_active = serializers.BooleanField(required=False)
+
+
+class DocumentTemplateCreateSerializer(serializers.Serializer):
+    """Тело `POST crm/document-templates/`; без `is_active` шаблон активен, `false` — черновик (блоки не проверяются)."""
+
+    name = serializers.CharField(max_length=255)
+    kind = serializers.CharField(required=False, default="CUSTOM", help_text="Код вида шаблона; по умолчанию CUSTOM")
+    body_html = serializers.CharField(required=False, allow_blank=True, max_length=100_000)
+    is_active = serializers.BooleanField(required=False, default=True)
+
+
+class DocumentTemplateCopySerializer(serializers.Serializer):
+    """Тело `POST crm/document-templates/{id}/copy/`; без `name` — «<образец> (копия)»."""
+
+    name = serializers.CharField(required=False, max_length=255)
+
+
+class MissingBlockSerializer(serializers.Serializer):
+    code = serializers.CharField(help_text="Код структурного блока документа")
+    label = serializers.CharField(help_text="Название блока для человека")
+
+
+class DocumentTemplateErrorSerializer(serializers.Serializer):
+    """Отказ записи шаблона: `{detail: CODE}`; у `TEMPLATE_MISSING_REQUIRED_BLOCKS` ещё `missing_blocks`.
+
+    Недостающие блоки названы по именам (`label`), чтобы редактор показал их, а не «проверьте заполнение»
+    (C2A-G-5). Читает BFF: `apps/platform/bff/app/clients/erp_company.py` (`_missing_blocks`).
+    """
+
+    detail = serializers.CharField(
+        help_text="Код: TEMPLATE_NAME_REQUIRED, TEMPLATE_NAME_TOO_LONG, TEMPLATE_BODY_TOO_LARGE, "
+        "TEMPLATE_MISSING_REQUIRED_BLOCKS, …"
+    )
+    missing_blocks = MissingBlockSerializer(
+        many=True,
+        required=False,
+        help_text="Только при TEMPLATE_MISSING_REQUIRED_BLOCKS: недостающие блоки с названиями",
+    )
+
+
 class GeneratedDocumentSerializer(serializers.ModelSerializer):
     """A rendered document. Snapshot fields (`values`, `rendered_html`) are read-only
     here — DRAFT edits go through the dedicated update-values action."""

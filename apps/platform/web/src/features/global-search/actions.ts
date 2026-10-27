@@ -62,15 +62,22 @@ export const SEARCH_ACTIONS: readonly SearchAction[] = [
   },
 ];
 
-/** Короче трёх символов запрос слишком общий: «за» подошло бы ко всему. */
-const MIN_ACTION_QUERY = 3;
+/** Короче четырёх символов запрос слишком общий: «заяв» уже действие, «за» подошло бы ко всему. */
+const MIN_ACTION_QUERY = 4;
+
+/** Запрос — начало слова или фразы действия («заявк» → «заявку»), либо в запросе есть вся фраза («создать заявку на ремонт»). */
+function matches(query: string, keyword: string): boolean {
+  return (
+    keyword.startsWith(query) ||
+    keyword.split(" ").some((word) => word.startsWith(query)) ||
+    query.includes(keyword)
+  );
+}
 
 export function matchActions(me: Me, query: string): SearchAction[] {
   const q = query.trim().toLocaleLowerCase();
   if (q.length < MIN_ACTION_QUERY) return [];
   return SEARCH_ACTIONS.filter(
-    (action) =>
-      canEdit(me, action.resource) &&
-      action.keywords.some((word) => word.includes(q) || q.includes(word)),
+    (action) => canEdit(me, action.resource) && action.keywords.some((word) => matches(q, word)),
   );
 }

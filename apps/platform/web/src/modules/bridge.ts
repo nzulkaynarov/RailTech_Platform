@@ -1,4 +1,5 @@
 import type { ModuleCode, ObjectKind } from "../shared/api/generated/model";
+// Односторонняя зависимость: `registry` (карта разделов) про мост не знает, поэтому цикла `bridge` ↔ `registry` нет.
 import { matchSection } from "./registry";
 
 /**

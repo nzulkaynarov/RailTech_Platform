@@ -60,9 +60,9 @@
         }
       },
       "partial": {
-        "crm": "Navbat to‘liq yuklanmadi: «{{crm}}» bo‘limi javob bermadi. Qolgani ko‘rsatilgan.",
-        "erp": "Navbat to‘liq yuklanmadi: «{{eds}}» va «{{erp}}» bo‘limlari javob bermadi. Qolgani ko‘rsatilgan.",
-        "both": "Navbat to‘liq yuklanmadi: «{{crm}}», «{{eds}}» va «{{erp}}» bo‘limlari javob bermadi. Qolgani ko‘rsatilgan."
+        "crm": "Lidlar va mijozlarga javoblar yuklanmadi: «{{crm}}» bo‘limi javob bermadi. Qolgani ko‘rsatilgan.",
+        "erp": "Tasdiqlash uchun TT va hisob-kitoblar yuklanmadi: «{{erp}}» bo‘limi javob bermadi. Qolgani ko‘rsatilgan.",
+        "both": "Lidlar, tasdiqlash uchun TT va hisob-kitoblar yuklanmadi: «{{crm}}» va «{{erp}}» bo‘limlari javob bermadi. Qolgani ko‘rsatilgan."
       },
       "partialEmpty": {
         "title": "Navbat to‘liq yuklanmadi",

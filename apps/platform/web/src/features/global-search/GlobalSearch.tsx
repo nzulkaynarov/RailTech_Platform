@@ -45,6 +45,8 @@ interface Option {
   /** Подпись справа: тип объекта или «Действие» */
   tag: string;
   path: string;
+  /** Действие («создать заявку») — при Enter не перебивает найденный объект */
+  action?: boolean;
 }
 
 interface Group {
@@ -86,19 +88,6 @@ export function GlobalSearch({ inputRef, shortcut, mobile }: GlobalSearchProps) 
   const view = useMemo(() => {
     let next = 0;
     const out: Group[] = [];
-    if (actions.length > 0) {
-      out.push({
-        key: "actions",
-        name: t("search.actions.group"),
-        options: actions.map((action, i) => ({
-          id: `${listId}-a-${String(i)}`,
-          index: next++,
-          title: t(`search.actions.${action.key}`),
-          tag: t("search.actions.tag"),
-          path: action.to,
-        })),
-      });
-    }
     groups.forEach((group, g) => {
       out.push({
         key: group.module,
@@ -113,6 +102,22 @@ export function GlobalSearch({ inputRef, shortcut, mobile }: GlobalSearchProps) 
         })),
       });
     });
+    if (actions.length > 0) {
+      out.push({
+        key: "actions",
+        name: t("search.actions.group"),
+        options: actions.map((action, i) => ({
+          id: `${listId}-a-${String(i)}`,
+          index: next++,
+          title: t(`search.actions.${action.key}`),
+          // Раздел действия ещё без экрана (до D1-2): честно, где это делается сейчас, без «фазы Pn»
+          subtitle: isActionable(action.to) ? undefined : t("search.actions.legacyHint"),
+          tag: t("search.actions.tag"),
+          path: action.to,
+          action: true,
+        })),
+      });
+    }
     return out;
   }, [actions, groups, listId, t]);
   const options = useMemo(() => view.flatMap((group) => group.options), [view]);
@@ -156,7 +161,11 @@ export function GlobalSearch({ inputRef, shortcut, mobile }: GlobalSearchProps) 
       const step = event.key === "ArrowDown" ? 1 : -1;
       setActive((prev) => (prev + step + options.length) % options.length);
     } else if (event.key === "Enter") {
-      const target = options[active] ?? (options.length === 1 ? options[0] : undefined);
+      // Единственный вариант выбирается сам, но объект важнее действия: «создать» не уводит от найденного документа.
+      const objects = options.filter((option) => option.action !== true);
+      const target =
+        options[active] ??
+        (objects.length === 1 ? objects[0] : objects.length === 0 ? options[0] : undefined);
       if (target) {
         event.preventDefault();
         go(target);
@@ -278,23 +287,37 @@ export function GlobalSearch({ inputRef, shortcut, mobile }: GlobalSearchProps) 
             );
           })}
         </div>
-        {open && where ? (
-          <section className="pf-gsearch-where" aria-label={t("search.where")}>
-            <h2 className="pf-gsearch-where-title">
-              {t("search.where")}: {where.title}
-            </h2>
-            <WhereToDo path={where.path} />
-            <button
-              type="button"
-              className="pf-gsearch-where-close pf-focusable"
-              onClick={() => {
+        <div aria-live="polite">
+          {open && where ? (
+            <section
+              className="pf-gsearch-where"
+              aria-label={t("search.where")}
+              onKeyDown={(event) => {
+                if (event.key !== "Escape") return;
+                // Escape внутри подсказки закрывает её и возвращает фокус в поле поиска
+                event.preventDefault();
+                event.stopPropagation();
                 setWhere(null);
+                root.current?.querySelector("input")?.focus();
               }}
             >
-              {t("search.whereClose")}
-            </button>
-          </section>
-        ) : null}
+              <h2 className="pf-gsearch-where-title">
+                {t("search.where")}: {where.title}
+              </h2>
+              <WhereToDo path={where.path} />
+              <button
+                type="button"
+                className="pf-gsearch-where-close pf-focusable"
+                onClick={() => {
+                  setWhere(null);
+                  root.current?.querySelector("input")?.focus();
+                }}
+              >
+                {t("search.whereClose")}
+              </button>
+            </section>
+          ) : null}
+        </div>
       </div>
       <div role="status" className="pf-sr-only">
         {open && ready && !waiting && options.length > 0

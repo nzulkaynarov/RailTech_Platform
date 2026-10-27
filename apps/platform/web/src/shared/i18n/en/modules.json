@@ -60,9 +60,9 @@
         }
       },
       "partial": {
-        "crm": "The queue loaded only in part: the “{{crm}}” section did not respond. The rest is shown.",
-        "erp": "The queue loaded only in part: the “{{eds}}” and “{{erp}}” sections did not respond. The rest is shown.",
-        "both": "The queue loaded only in part: the “{{crm}}”, “{{eds}}” and “{{erp}}” sections did not respond. The rest is shown."
+        "crm": "Leads and client replies did not load: the “{{crm}}” section did not respond. The rest is shown.",
+        "erp": "Quotes to approve and costings did not load: the “{{erp}}” section did not respond. The rest is shown.",
+        "both": "Leads, quotes to approve and costings did not load: the “{{crm}}” and “{{erp}}” sections did not respond. The rest is shown."
       },
       "partialEmpty": {
         "title": "The queue loaded only in part",

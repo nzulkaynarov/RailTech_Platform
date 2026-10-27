@@ -124,7 +124,7 @@ test.describe("Мои задачи", () => {
 
     await expect(page.getByRole("main").getByText("Взять в работу лида L-2041")).toBeVisible();
     await expect(page.getByRole("main").getByRole("status")).toContainText(
-      "Очередь загружена не полностью: разделы «Документы» и «Расчёт» не ответили. Остальное показано.",
+      "Не загрузились КП на одобрение и расчёты: раздел «Расчёт» не ответил. Остальное показано.",
     );
     await expect(page.getByText("Наложить резолюцию на письмо ВХ-104/26")).toHaveCount(0);
     await settledScreenshot(page, "dashboard-erp-down");
