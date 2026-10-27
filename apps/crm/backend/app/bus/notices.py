@@ -9,6 +9,11 @@
 * каждый адресат получает сообщение один раз даже при частичном сбое: ушедшие записываются в `sent`.
 Постоянные отказы Telegram (бот заблокирован, чат не найден) повторов не вызывают; сетевые сбои,
 лимиты и 5xx — повторяются сборщиком.
+
+Сообщение клиенту «Заявка принята» (D1-9, SPEC-v3 §8) — бот, а если у клиента нет Telegram — письмо:
+элемент с `email` уходит письмом тому, у кого не нашлось чата. Письмо ставит в очередь `MailService`
+(повторы и итог — в `email_log`); ключ `"<номер>:mail"` в `sent` не даёт отправить его дважды. Итог
+элементов с `track` записывается в `client_notices` для карточки клиента.
 """
 
 import uuid
@@ -29,10 +34,12 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.bus import notice_mail
 from app.config import Settings
 from app.models.auth import User
 from app.models.integrations import ErpEventNotice
-from app.models.leads import TelegramIdentity
+from app.services.mail import MailService
+from app.services.mail_templates import RenderedEmail
 
 logger = structlog.get_logger(__name__)
 
@@ -56,6 +63,30 @@ class _Send:
     chat_id: int
     text: str
     markup: InlineKeyboardMarkup | None
+    track: str | None = None
+    client_id: int = 0
+
+
+@dataclass(frozen=True, slots=True)
+class _Mail:
+    key: str
+    to: str
+    template: str
+    content: RenderedEmail
+    client_id: int
+    track: str | None
+
+
+# (track, канал, статус, код ошибки, клиент) — итог для `client_notices`.
+_Result = tuple[str, str, str, str | None, int]
+
+
+@dataclass(frozen=True, slots=True)
+class _Plan:
+    sends: list[_Send]
+    mails: list[_Mail]
+    # Telegram сейчас недоступен (бота нет, выключен, dry-run): отправки отложены до сборщика.
+    deferred: bool = False
 
 
 def _lease_for(sends: int) -> timedelta:
@@ -84,10 +115,12 @@ class ErpEventNotices:
         sessions: async_sessionmaker[AsyncSession],
         bot_provider: BotProvider,
         config: Settings,
+        mail: MailService | None = None,
     ) -> None:
         self._sessions = sessions
         self._bot_provider = bot_provider
         self._config = config
+        self._mail = mail
 
     @staticmethod
     def add(session: AsyncSession, event_id: str, items: list[dict[str, Any]]) -> None:
@@ -101,14 +134,35 @@ class ErpEventNotices:
     async def deliver(self, event_id: str) -> int:
         """Отправить сообщения события после коммита; возвращает число отправленных."""
         key = uuid.UUID(event_id)
-        sends = await self._claim(key)
-        if not sends:
-            return 0
-        bot = await self._bot_provider()
-        if bot is None:
-            await self._release(key, [], retry=True)
+        plan = await self._claim(key)
+        if not plan.sends and not plan.mails:
             return 0
         done: list[str] = []
+        results: list[_Result] = []
+        retry = await self._telegram(event_id, plan.sends, done, results) or plan.deferred
+        for mail in plan.mails:
+            outcome = await notice_mail.send(self._mail, mail.template, mail.to, mail.content)
+            if outcome == "error":
+                retry = True
+                continue
+            done.append(mail.key)
+            if mail.track:
+                skipped = outcome == "skipped"
+                status = "skipped" if skipped else "queued"
+                error = "smtp_not_configured" if skipped else None
+                results.append((mail.track, "email", status, error, mail.client_id))
+        await self._release(key, done, retry=retry, results=results)
+        return len(done)
+
+    async def _telegram(
+        self, event_id: str, sends: list[_Send], done: list[str], results: list[_Result]
+    ) -> bool:
+        """Отправки в Telegram; True — что-то стоит повторить (сеть, лимит, бота нет)."""
+        if not sends:
+            return False
+        bot = await self._bot_provider()
+        if bot is None:
+            return True
         retry = False
         for send in sends:
             try:
@@ -129,9 +183,14 @@ class ErpEventNotices:
                 if _transient(exc):
                     retry = True
                     continue
+                if send.track:
+                    failed = (send.track, "telegram", "failed", "telegram_failed", send.client_id)
+                    results.append(failed)
+            else:
+                if send.track:
+                    results.append((send.track, "telegram", "sent", None, send.client_id))
             done.append(send.key)
-        await self._release(key, done, retry=retry)
-        return len(done)
+        return retry
 
     async def sweep(self, limit: int = SWEEP_LIMIT) -> int:
         """Досылает сообщения, которые не ушли (воркер упал, бота не было, сеть); раз в минуту.
@@ -166,26 +225,37 @@ class ErpEventNotices:
             logger.warning("erp_event_notices_swept", notified=sent)
         return sent
 
-    async def _claim(self, key: uuid.UUID) -> list[_Send]:
+    async def _claim(self, key: uuid.UUID) -> _Plan:
         """Взять строку в аренду и посчитать, что ещё не отправлено. Пусто — слать нечего."""
         now = datetime.now(UTC)
         async with self._sessions() as session, session.begin():
             row = await session.get(ErpEventNotice, key, with_for_update=True)
             if row is None or row.notified_at is not None:
-                return []
+                return _Plan([], [])
             if row.lease_until is not None and row.lease_until > now:
-                return []  # сообщение шлёт параллельный воркер
+                return _Plan([], [])  # сообщение шлёт параллельный воркер
+            plan = await self._targets(session, row)
             if self._config.telegram_dry_run or await self._bot_provider() is None:
-                return []  # бота нет или он выключен: сообщение дождётся сборщика (до суток)
-            sends = await self._targets(session, row)
-            if not sends:
+                # Бота нет или он выключен: Telegram дождётся сборщика (до суток), письма уходят
+                # сразу.
+                if plan.sends and not plan.mails:
+                    return _Plan([], [])
+                plan = _Plan([], plan.mails, deferred=bool(plan.sends))
+            if not plan.sends and not plan.mails:
                 row.notified_at = now
-                return []
+                return plan
             # Аренда: все отправки по таймауту каждой + запас; сборщик не пошлёт то же дважды.
-            row.lease_until = now + _lease_for(len(sends))
-            return sends
+            row.lease_until = now + _lease_for(len(plan.sends) + len(plan.mails))
+            return plan
 
-    async def _release(self, key: uuid.UUID, done: list[str], *, retry: bool) -> None:
+    async def _release(
+        self,
+        key: uuid.UUID,
+        done: list[str],
+        *,
+        retry: bool,
+        results: list[_Result] | None = None,
+    ) -> None:
         async with self._sessions() as session, session.begin():
             row = await session.get(ErpEventNotice, key, with_for_update=True)
             if row is None:
@@ -194,26 +264,31 @@ class ErpEventNotices:
             row.lease_until = None
             if not retry:
                 row.notified_at = datetime.now(UTC)
+            for track, channel, status, error, client_id in results or []:
+                await notice_mail.record(
+                    session,
+                    kind=track,
+                    client_id=client_id,
+                    channel=channel,
+                    status=status,
+                    error=error,
+                    dedupe_key=f"{track}:{key}:{channel}:{client_id}",
+                )
 
-    async def _targets(self, session: AsyncSession, row: ErpEventNotice) -> list[_Send]:
+    async def _targets(self, session: AsyncSession, row: ErpEventNotice) -> _Plan:
         already = set(row.sent)
         sends: list[_Send] = []
+        mails: list[_Mail] = []
         for index, item in enumerate(row.items):
             chats: list[int] = []
             markup: InlineKeyboardMarkup | None = None
-            if item.get("kind") == "client":
+            kind = item.get("kind")
+            if kind == "client":
                 markup = _markup(item.get("buttons") or [])
-                chats = list(
-                    (
-                        await session.scalars(
-                            select(TelegramIdentity.tg_user_id).where(
-                                TelegramIdentity.client_id == item["client_id"],
-                                TelegramIdentity.is_blocked.is_(False),
-                            )
-                        )
-                    ).all()
+                chats = await notice_mail.client_chats(
+                    session, item["client_id"], with_leads=bool(item.get("track"))
                 )
-            elif item.get("kind") == "staff":
+            elif kind == "staff":
                 tg_user_id = await session.scalar(
                     select(User.tg_user_id).where(
                         User.id == item["user_id"], User.is_active.is_(True)
@@ -223,5 +298,38 @@ class ErpEventNotices:
             for chat_id in chats:
                 key = f"{index}:{chat_id}"
                 if key not in already:
-                    sends.append(_Send(key, chat_id, item["text"], markup))
-        return sends
+                    sends.append(
+                        _Send(
+                            key,
+                            chat_id,
+                            item["text"],
+                            markup,
+                            item.get("track"),
+                            item.get("client_id", 0),
+                        )
+                    )
+            if kind == "client" and item.get("email") and not chats:
+                mail = await self._mail_for(session, index, item, already)
+                if mail is not None:
+                    mails.append(mail)
+        return _Plan(sends, mails)
+
+    @staticmethod
+    async def _mail_for(
+        session: AsyncSession, index: int, item: dict[str, Any], already: set[str]
+    ) -> _Mail | None:
+        """Письмо вместо бота: клиенту без Telegram, если есть куда писать и оно ещё не ушло."""
+        key = f"{index}:mail"
+        if key in already:
+            return None
+        to = await notice_mail.client_email(session, item["client_id"])
+        if to is None:
+            return None
+        return _Mail(
+            key,
+            to,
+            item.get("track") or "erp_event",
+            notice_mail.rendered(item),
+            item["client_id"],
+            item.get("track"),
+        )

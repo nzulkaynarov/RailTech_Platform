@@ -120,6 +120,28 @@ async def merge_by_phone(
     other = await leads_repo.get_lead(session, other.id, for_update=True)
     if other is None or other.erased_at is not None:
         return None
+    return await merge_leads(session, mine, other)
+
+
+async def merge_with_lead(
+    session: AsyncSession, identity: TelegramIdentity, other_lead_id: int
+) -> MergeOutcome | None:
+    """Лид идентичности и указанный лид (подписанная ссылка из письма, D1-9) → одна карточка.
+
+    None — склеивать нечего: лид идентичности не найден, `other` — тот же лид, обезличен или уже
+    ведёт Telegram.
+    """
+    if identity.lead_id is None or identity.lead_id == other_lead_id:
+        return None
+    mine = await leads_repo.get_lead(session, identity.lead_id, for_update=True)
+    other = await leads_repo.get_lead(session, other_lead_id, for_update=True)
+    if mine is None or other is None or mine.erased_at is not None or other.erased_at is not None:
+        return None
+    return await merge_leads(session, mine, other)
+
+
+async def merge_leads(session: AsyncSession, mine: Lead, other: Lead) -> MergeOutcome:
+    """Склейка двух заблокированных карточек по `merge_plan`: выживший, перенос истории, аудит."""
     plan = merge_plan(await _facts(session, mine), await _facts(session, other))
     survivor, absorbed = (mine, other) if plan.survivor_id == mine.id else (other, mine)
     before = {"survivor": _snapshot(survivor), "absorbed": _snapshot(absorbed)}
@@ -131,6 +153,10 @@ async def merge_by_phone(
             .values(status="closed", resolved_at=now, outcome="merged")
         )
     _apply(survivor, plan)
+    # Срок первого ответа на запрос с сайта (D1-9) не теряется, если выжила другая карточка.
+    for field in ("first_response_due_at", "first_response_notified_at"):
+        if getattr(survivor, field) is None:
+            setattr(survivor, field, getattr(absorbed, field))
     if plan.stage_changed:
         survivor.stage = plan.stage.value
         session.add(

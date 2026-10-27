@@ -13,6 +13,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "test:e2e:public": "E2E_SCREENS_DIR=../../../../docs/screens/w16-d1-9 playwright test -c playwright.public.config.ts",
     "gen:api-types": "openapi-typescript ../../packages/contracts/openapi/erp-portal.yaml -o src/api/portal.d.ts && node scripts/gen-crm-form-types.mjs > src/api/crm-form.d.ts"
   },
   "dependencies": {

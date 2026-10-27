@@ -139,6 +139,11 @@ class AssistOut(BaseModel):
     text: Annotated[str, Field(title="Text")]
 
 
+class AvailableChannel(StrEnum):
+    email = "email"
+    telegram = "telegram"
+
+
 class BackupDatabase(BaseModel):
     last_success_at: Annotated[AwareDatetime | None, Field(title="Last Success At")]
     """
@@ -221,6 +226,13 @@ class BotProfileSettings(BaseModel):
     """
     Краткое описание в профиле бота и при пересылке, до 120 символов
     """
+
+
+class Channel(StrEnum):
+    telegram = "telegram"
+    email = "email"
+    both = "both"
+    none = "none"
 
 
 class ChatCandidateOut(BaseModel):
@@ -589,6 +601,30 @@ class IncidentOut(BaseModel):
     summary: Annotated[str, Field(title="Summary")]
 
 
+class InvitationOut(BaseModel):
+    """
+    Приглашение клиента в кабинет: последняя попытка и что можно сделать дальше.
+    """
+
+    available_channels: Annotated[
+        list[AvailableChannel] | None, Field(title="Available Channels")
+    ] = None
+    can_resend: Annotated[bool | None, Field(title="Can Resend")] = False
+    channel: Annotated[Channel, Field(title="Channel")]
+    contact_id: Annotated[int | None, Field(title="Contact Id")] = None
+    contact_name: Annotated[str | None, Field(title="Contact Name")] = None
+    created_at: Annotated[AwareDatetime, Field(title="Created At")]
+    error: Annotated[str | None, Field(title="Error")] = None
+    error_text: Annotated[str | None, Field(title="Error Text")] = None
+    id: Annotated[int, Field(title="Id")]
+    sent_at: Annotated[AwareDatetime | None, Field(title="Sent At")] = None
+    sent_via: Annotated[list[SentViaEnum] | None, Field(title="Sent Via")] = None
+    status: Annotated[Status5, Field(title="Status")]
+    suggested_channel: Annotated[
+        SuggestedChannel | None, Field(title="Suggested Channel")
+    ] = None
+
+
 class KbChunkOut(BaseModel):
     content: Annotated[str, Field(title="Content")]
     heading_path: Annotated[str | None, Field(title="Heading Path")]
@@ -672,6 +708,7 @@ class LeadDetail(BaseModel):
     client_in_erp: Annotated[bool | None, Field(title="Client In Erp")] = False
     client_phone_e164: Annotated[str | None, Field(title="Client Phone E164")] = None
     company_name: Annotated[str | None, Field(title="Company Name")] = None
+    confirmation: NoticeOut | None = None
     consent_given_at: Annotated[AwareDatetime | None, Field(title="Consent Given At")]
     consent_method: Annotated[str | None, Field(title="Consent Method")] = None
     created_at: Annotated[AwareDatetime, Field(title="Created At")]
@@ -680,8 +717,15 @@ class LeadDetail(BaseModel):
     erp_company_id: Annotated[int | None, Field(title="Erp Company Id")] = None
     erp_deal_id: Annotated[int | None, Field(title="Erp Deal Id")] = None
     escalation: EscalationOut | None = None
+    first_response_due_at: Annotated[
+        AwareDatetime | None, Field(title="First Response Due At")
+    ] = None
+    first_response_overdue: Annotated[
+        bool | None, Field(title="First Response Overdue")
+    ] = False
     handoff_note: HandoffNote | None = None
     id: Annotated[int, Field(title="Id")]
+    invitation: InvitationOut | None = None
     language: Annotated[str, Field(title="Language")]
     last_lead_msg_at: Annotated[AwareDatetime | None, Field(title="Last Lead Msg At")]
     need_summary: Annotated[str | None, Field(title="Need Summary")]
@@ -805,6 +849,16 @@ class Notice(StrEnum):
     new_numbers = "new_numbers"
 
 
+class NoticeOut(BaseModel):
+    channel: Annotated[Channel, Field(title="Channel")]
+    created_at: Annotated[AwareDatetime, Field(title="Created At")]
+    error: Annotated[str | None, Field(title="Error")] = None
+    error_text: Annotated[str | None, Field(title="Error Text")] = None
+    id: Annotated[int, Field(title="Id")]
+    sent_at: Annotated[AwareDatetime | None, Field(title="Sent At")] = None
+    status: Annotated[Status5, Field(title="Status")]
+
+
 class Owner(StrEnum):
     """
     Кто исправляет; нет — исправлять нечего
@@ -924,11 +978,16 @@ class Security(StrEnum):
     none = "none"
 
 
+class SentViaEnum(StrEnum):
+    email = "email"
+    telegram = "telegram"
+
+
 class ServiceCheckOut(BaseModel):
     checked_at: Annotated[AwareDatetime, Field(title="Checked At")]
     error: Annotated[str | None, Field(title="Error")]
     latency_ms: Annotated[int | None, Field(title="Latency Ms")]
-    status: Annotated[Status4, Field(title="Status")]
+    status: Annotated[Status7, Field(title="Status")]
     summary: Annotated[str, Field(title="Summary")]
     tier: Annotated[Tier, Field(title="Tier")]
 
@@ -1162,11 +1221,32 @@ class Status4(StrEnum):
     off = "off"
 
 
-class Status6(StrEnum):
+class Status5(StrEnum):
+    queued = "queued"
+    sent = "sent"
+    failed = "failed"
+    skipped = "skipped"
+
+
+class Status7(StrEnum):
     ok = "ok"
     warn = "warn"
     fail = "fail"
     unknown = "unknown"
+    off = "off"
+
+
+class Status8(StrEnum):
+    ok = "ok"
+    warn = "warn"
+    fail = "fail"
+    unknown = "unknown"
+
+
+class SuggestedChannel(StrEnum):
+    email = "email"
+    telegram = "telegram"
+    both = "both"
 
 
 class System(StrEnum):
@@ -1178,7 +1258,7 @@ class System(StrEnum):
 class SystemStatusOut(BaseModel):
     checked_at: Annotated[AwareDatetime, Field(title="Checked At")]
     components: Annotated[list[ComponentStatusOut], Field(title="Components")]
-    status: Annotated[Status6, Field(title="Status")]
+    status: Annotated[Status8, Field(title="Status")]
 
 
 class TeamMember(BaseModel):

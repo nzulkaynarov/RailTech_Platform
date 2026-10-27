@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://railtech.uz/contracts/events/erp/invite.requested.v1.json",
+  "title": "Запрошено приглашение в Cabinet через Telegram",
+  "description": "Тип uz.railtech.erp.invite.requested.v1, источник rt://erp. Поле data конверта (envelope.v1.json). ERP в Telegram не пишет (бот принадлежит CRM): сотрудник или передача из CRM пригласили контакта в канал telegram — ERP публикует событие, бот CRM присылает контакту сообщение с кнопкой «Открыть кабинет» (Mini App; вход по Telegram-аккаунту контакта, секретов в событии нет). Что делает CRM: доставка ботом; итог (отправлено или причина отказа словами) виден менеджеру в карточке клиента. ERP публикует событие только контакту с crm_contact_id и привязанным telegram_user_id (D1-9).",
+  "type": "object",
+  "required": [
+    "erp_company_id",
+    "crm_client_id",
+    "actor",
+    "payload"
+  ],
+  "properties": {
+    "erp_company_id": {
+      "type": "integer",
+      "description": "Компания клиента в ERP"
+    },
+    "crm_client_id": {
+      "type": "integer",
+      "description": "Клиент в CRM"
+    },
+    "actor": {
+      "$ref": "_defs.v1.json#/$defs/Actor"
+    },
+    "payload": {
+      "$ref": "_defs.v1.json#/$defs/InviteRequested"
+    }
+  },
+  "additionalProperties": false
+}
