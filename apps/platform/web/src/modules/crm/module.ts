@@ -31,6 +31,9 @@ export const crm: ModuleConfig = {
       key: "kb",
       path: "/crm/kb",
       access: { anyOf: ["crm.leads", "admin"] },
+      // В подменю Клиентов — менеджеру; администратор входит из Настроек · Telegram-бот (W15-H4)
+      menuAccess: { resource: "crm.leads" },
+      menuHome: { module: "admin", section: "bot" },
       defaults: { panelOpen: false },
     },
   ],

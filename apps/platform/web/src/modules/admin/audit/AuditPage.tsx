@@ -15,6 +15,7 @@ import { AuditEntryCard } from "./AuditEntryCard";
 import { AuditFilters } from "./AuditFilters";
 import { type AuditFilterValues, NO_FILTERS, hasFilters } from "./filters";
 import { AuditList } from "./AuditList";
+import { JournalFilter } from "../journal/JournalFilter";
 import { companyDayStart } from "./describe";
 
 import "./audit.css";
@@ -35,7 +36,8 @@ export function AuditPage() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const { wide } = useViewport();
-  const title = t("audit:page.title");
+  // Один «Журнал» (W15-H4): заголовок — общий, фильтр «Действия людей / Обмен между системами» — под ним.
+  const title = t("modules:admin.sections.audit");
   useDocumentTitle(title);
 
   const blockRef = useRef<HTMLDivElement>(null);
@@ -157,6 +159,7 @@ export function AuditPage() {
   return (
     <>
       <PageHeader title={title} subtitle={t("audit:page.subtitle")} />
+      <JournalFilter current="people" />
       <div ref={blockRef}>
         <Card styles={{ body: { padding: 0 } }}>
           <AuditFilters

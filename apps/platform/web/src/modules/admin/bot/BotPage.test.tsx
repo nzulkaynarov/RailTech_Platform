@@ -5,12 +5,21 @@ import { panelEl, renderAt, setupBotTests, signIn } from "../../../test/botKit";
 
 setupBotTests();
 
-async function openBot(email: string, search = "") {
+/** Без адреса раздела — вкладка «Поведение и передача» (W15-H4: у бота вкладки; первая — «Подключение»). */
+async function openBot(email: string, search = "?part=behavior") {
   signIn(email);
   const view = renderAt(`/admin/bot${search}`);
   expect(await screen.findByRole("heading", { level: 1, name: "Telegram-бот" })).toBeVisible();
-  await screen.findByRole("navigation", { name: "Разделы настроек бота" });
+  await screen.findByRole("tablist", { name: "Разделы Telegram-бота" });
   return view;
+}
+
+function tab(name: string) {
+  fireEvent.click(
+    within(screen.getByRole("tablist", { name: "Разделы Telegram-бота" })).getByRole("tab", {
+      name,
+    }),
+  );
 }
 
 function nav() {
@@ -23,7 +32,38 @@ async function section(name: string) {
 }
 
 describe("Admin · Настройки бота: разделы", () => {
-  it("администратор: четырнадцать разделов по группам, шаблоны и выгрузки; открывается «Компания» со значениями CRM", async () => {
+  it("бот в одном месте (W15-H4): вкладки «Подключение · Тексты · Поведение и передача · База знаний · Шаблоны ответов · Выгрузки»", async () => {
+    await openBot("admin@demo.example", "");
+    const tabs = screen.getByRole("tablist", { name: "Разделы Telegram-бота" });
+    expect(
+      within(tabs)
+        .getAllByRole("tab")
+        .map((t) => t.textContent),
+    ).toEqual([
+      "Подключение",
+      "Тексты",
+      "Поведение и передача",
+      "База знаний",
+      "Шаблоны ответов",
+      "Выгрузки",
+    ]);
+    // по умолчанию — «Подключение»: токен, канал команды и профиль, раньше бывшие в «Подключениях»
+    expect(within(tabs).getByRole("tab", { name: "Подключение" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(await screen.findByText("@demo_railtech_bot")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Сменить токен" })).toBeVisible();
+
+    tab("База знаний");
+    expect(await screen.findByRole("link", { name: "Открыть базу знаний" })).toHaveAttribute(
+      "href",
+      "/crm/kb",
+    );
+    expect(await screen.findByText("Минимальное сходство, чтобы бот отвечал (0–1)")).toBeVisible();
+  });
+
+  it("администратор: разделы «Поведения и передачи» по группам; открывается «Компания» со значениями CRM", async () => {
     await openBot("admin@demo.example");
 
     expect(await screen.findByRole("heading", { level: 2, name: "Компания" })).toBeVisible();
@@ -33,9 +73,7 @@ describe("Admin · Настройки бота: разделы", () => {
     expect(links).toEqual([
       "Компания",
       "Рабочие часы",
-      "Тексты бота",
       "Поведение бота",
-      "Поиск по базе знаний",
       "Стоп-слова",
       "Конкуренты",
       "Правила передачи",
@@ -45,8 +83,6 @@ describe("Admin · Настройки бота: разделы", () => {
       "Оповещения о сбоях сервисов",
       "Сделки",
       "Бюджет моделей",
-      "Шаблоны ответов",
-      "Выгрузки CSV",
     ]);
     expect(screen.getByLabelText("Название компании")).toHaveValue("RailTech (демо)");
     expect(
@@ -125,7 +161,6 @@ describe("Admin · Настройки бота: разделы", () => {
     await openBot("admin@demo.example");
     const expectations: Record<string, string> = {
       "Поведение бота": "Максимум слов в ответе",
-      "Поиск по базе знаний": "Минимальное сходство, чтобы бот отвечал (0–1)",
       "Стоп-слова": "Слова",
       Конкуренты: "Слова",
       Квалификация: "Обязательные факты",
@@ -141,9 +176,9 @@ describe("Admin · Настройки бота: разделы", () => {
     }
     await section("Канал команды");
     expect(screen.queryByLabelText("ID приватного канала")).toBeNull();
-    expect(screen.getByRole("link", { name: "Открыть Telegram" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Открыть «Подключение»" })).toHaveAttribute(
       "href",
-      "/admin/integrations?card=telegram&panel=open",
+      "/admin/bot?part=connection",
     );
   });
 
@@ -395,7 +430,7 @@ describe("Admin · Настройки бота: права", () => {
     expect(screen.getByLabelText("Название компании")).toBeDisabled();
     await section("Правила передачи");
     expect(screen.queryByRole("button", { name: /Проверить на последних 50 диалогах/ })).toBeNull();
-    await section("Шаблоны ответов");
+    tab("Шаблоны ответов");
     expect(screen.queryByRole("link", { name: "Новый шаблон" })).toBeNull();
     expect(
       await screen.findByRole("link", { name: "Открыть шаблон: Пришлю КП сегодня" }),
@@ -408,6 +443,6 @@ describe("Admin · Настройки бота: права", () => {
 
     expect(await screen.findByRole("heading", { level: 1, name: "Нет доступа" })).toBeVisible();
     expect(screen.queryByRole("link", { name: "Telegram-бот" })).toBeNull();
-    expect(screen.queryByRole("navigation", { name: "Разделы настроек бота" })).toBeNull();
+    expect(screen.queryByRole("tablist", { name: "Разделы Telegram-бота" })).toBeNull();
   });
 });

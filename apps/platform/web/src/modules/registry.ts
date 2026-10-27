@@ -88,5 +88,6 @@ export function matchSection(pathname: string, search = ""): SectionMatch | unde
 
 /** Пункт подменю активен: тот же путь и те же query-параметры, что задаёт пункт; карточка объекта подсвечивает свой список. */
 export function isSectionActive(section: SectionConfig, match: SectionMatch | undefined): boolean {
+  if (match?.section.parent === section.key) return true;
   return match?.section.key === section.key && match.section.path === section.path;
 }

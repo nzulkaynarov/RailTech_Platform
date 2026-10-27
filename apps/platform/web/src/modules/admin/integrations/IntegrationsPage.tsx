@@ -19,6 +19,7 @@ import {
   listExternalServices,
   useGetIntegrationsOverview,
 } from "../../../shared/api/generated/platform-bff";
+import { WIZARD_PATH } from "../../../entities/setup/steps";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { EmptyState } from "../../../shared/ui/EmptyState";
@@ -348,7 +349,8 @@ function CardPanel({ card, editable }: { card: IntegrationCardKey; editable: boo
     case "erp":
       return <ErpPanel editable={editable} />;
     case "telegram":
-      return <TelegramPanel editable={editable} />;
+      // Бот настраивается в одном месте — Настройки · Telegram-бот (W15-H4); здесь — состояние и переход туда.
+      return <TelegramPanel editable={editable} summary />;
     case "mail":
       return <MailPanel editable={editable} />;
     case "services":
@@ -439,7 +441,10 @@ export function IntegrationsPage() {
         title={title}
         subtitle={t(editable ? "integrations:subtitle" : "integrations:readOnlySubtitle")}
         extra={
-          editable ? null : (
+          editable ? (
+            // Мастер первого запуска остаётся доступным и после завершения шагов (W15-H4): «Настройка Платформы».
+            <LinkButton to={WIZARD_PATH}>{t("integrations:setupLink")}</LinkButton>
+          ) : (
             <StatusTag tone="default">
               <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
                 <LockIcon size={12} />

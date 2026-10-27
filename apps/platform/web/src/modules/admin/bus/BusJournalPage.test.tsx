@@ -30,9 +30,13 @@ describe("Admin · Журнал интеграций: подписчики", () 
     signIn("admin@demo.example");
     renderAt("/admin/bus");
 
+    // один «Журнал» (W15-H4): обмен между системами — его фильтр
+    expect(await screen.findByRole("heading", { level: 1, name: "Журнал" })).toBeVisible();
     expect(
-      await screen.findByRole("heading", { level: 1, name: "Обмен между системами" }),
-    ).toBeVisible();
+      within(screen.getByRole("navigation", { name: "Что показать в журнале" })).getByRole("link", {
+        name: "Обмен между системами",
+      }),
+    ).toHaveAttribute("aria-current", "page");
     await screen.findByRole("heading", { level: 3, name: "CRM отправляет" });
 
     const crm = card("CRM");
@@ -200,13 +204,18 @@ describe("Admin · Журнал интеграций: права", () => {
       renderAt("/admin/bus");
       expect(await screen.findByRole("heading", { level: 1 })).toBeVisible();
       expect(screen.queryByRole("link", { name: "Обмен между системами" })).toBeNull();
-      expect(screen.queryByRole("heading", { level: 1, name: "Обмен между системами" })).toBeNull();
+      expect(screen.queryByRole("heading", { level: 1, name: "Журнал" })).toBeNull();
     },
   );
 
-  it("администратор видит пункт «Журнал интеграций» в подменю Admin", async () => {
+  it("администратор: отдельного пункта нет — «Журнал» подсвечен, обмен между системами — фильтр (W15-H4)", async () => {
     signIn("admin@demo.example");
-    renderAt("/admin/org");
-    expect(await screen.findByRole("link", { name: "Обмен между системами" })).toBeVisible();
+    renderAt("/admin/bus");
+    const menu = await screen.findByRole("navigation", { name: "Разделы модуля" });
+    expect(await within(menu).findByRole("link", { name: "Журнал" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(within(menu).queryByRole("link", { name: "Обмен между системами" })).toBeNull();
   });
 });

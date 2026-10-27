@@ -219,7 +219,7 @@ export const MENU = {
     clients: ["crm.clients"],
     requests: ["crm.clients"],
     channels: ["crm.leads"],
-    kb: ["crm.leads", "admin"],
+    kb: ["crm.leads"],
   },
   eds: {
     documents: [
@@ -254,11 +254,11 @@ export const MENU = {
     roles: ["admin"],
     org: ["admin"],
     integrations: ["admin"],
-    bus: ["admin"],
     tickets: ["admin"],
     company: ["company.settings"],
     bot: ["admin"],
     audit: ["admin"],
+    setup: ["admin"],
   },
 } as const satisfies Record<ModuleCode, Record<string, readonly ResourceKey[]>>;
 

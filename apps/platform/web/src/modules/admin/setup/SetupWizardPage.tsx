@@ -1,10 +1,16 @@
-import { Button, Card, Skeleton } from "antd";
-import type { ReactNode } from "react";
+import { useIsMutating } from "@tanstack/react-query";
+import { Alert, App, Button, Card, Skeleton } from "antd";
+import { type ReactNode, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate, useSearchParams } from "react-router";
 
 import { canEdit } from "../../../app/access";
 import { useAuth } from "../../../app/auth/useAuth";
+import { resetBannerHidden, useBannerHidden } from "../../../features/first-run/hidden";
 import { useSetupChecklist } from "../../../features/first-run/useSetupChecklist";
+import { PanelPortal } from "../../../app/shell/PanelSlot";
+import { STEP_TARGET, WIZARD_PATH, isStepKey, stepAfter } from "../../../entities/setup/steps";
+import type { SetupChecklist, SetupStepKey } from "../../../shared/api/generated/model";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { EmptyState } from "../../../shared/ui/EmptyState";
 import { PageHeader } from "../../../shared/ui/PageHeader";
@@ -12,6 +18,7 @@ import { StatusTag } from "../../../shared/ui/StatusTag";
 import { CompanyStep } from "./CompanyStep";
 import { ConnectionsStep } from "./ConnectionsStep";
 import { ErpStep } from "./ErpStep";
+import { StepPanel } from "./StepPanel";
 
 import "../../../features/first-run/first-run.css";
 
@@ -38,16 +45,68 @@ function StepCard({
 /**
  * Admin · «Первый запуск» (`/admin/setup`, SPEC-v3 §7.6, W13-A4, порядок — W13C-F1): администратор (уже создан на
  * экране до входа) -> подключение ERP -> своя компания (создаётся в ERP) -> остальные подключения (бот, почта, модели,
- * первый сотрудник). Состояние приносит BFF; сделать шаг можно позже,
- * страница остаётся и после «Скрыть» на баннере. Только администратор: директору чек-лист не отдаётся (BFF — 403).
+ * первый сотрудник). Состояние приносит BFF; сделать шаг можно позже. W15-H4: форма шага открывается в боковом окне
+ * мастера (`?step=`), после сохранения — следующий шаг; баннер, скрытый до завтра, возвращается кнопкой здесь.
+ * Только администратор: директору чек-лист не отдаётся (BFF — 403).
  */
 export function SetupWizardPage() {
   const { t } = useTranslation("modules");
+  const { message } = App.useApp();
   const { me } = useAuth();
+  const navigate = useNavigate();
+  const [params] = useSearchParams();
   const editable = canEdit(me, "admin");
   const title = t("admin.setup.title");
   useDocumentTitle(title);
   const checklist = useSetupChecklist(editable, { fresh: true });
+  const bannerHidden = useBannerHidden(me.id);
+  const stepParam = params.get("step");
+  const step = editable && isStepKey(stepParam) ? stepParam : null;
+
+  // Форма шага сохранила (любая мутация в окне закончилась) — перечитать чек-лист: шаг мог стать «Готово».
+  const mutating = useIsMutating();
+  const wasMutating = useRef(mutating);
+  const { refetch } = checklist;
+  useEffect(() => {
+    if (wasMutating.current > 0 && mutating === 0 && step) void refetch();
+    wasMutating.current = mutating;
+  }, [mutating, step, refetch]);
+
+  const goNext = (data: SetupChecklist, current: SetupStepKey) => {
+    // ERP готова, а своей компании ещё нет: следующий шаг — форма компании прямо в мастере.
+    if (current === "erp" && data.company?.required) {
+      void navigate(`${WIZARD_PATH}?panel=closed`, { replace: true });
+      return;
+    }
+    const after = stepAfter(data, current);
+    if (after) void navigate(STEP_TARGET[after.key], { replace: true });
+    else void navigate(`${WIZARD_PATH}?panel=closed`, { replace: true });
+  };
+
+  // После «Сохранить» — сразу следующий шаг (UX-оценка §5 P1-6): шаг стал «Готово», пока его окно открыто. Первого
+  // сотрудника не переключаем сами: временный пароль показывается один раз, его надо успеть переписать.
+  const openedAs = useRef<{ step: SetupStepKey; done: boolean } | null>(null);
+  const data = checklist.data;
+  useEffect(() => {
+    if (!step || !data) {
+      openedAs.current = null;
+      return;
+    }
+    const done = data.steps.find((s) => s.key === step)?.state === "done";
+    if (openedAs.current?.step !== step) {
+      openedAs.current = { step, done };
+      return;
+    }
+    if (!openedAs.current.done && done && step !== "first_employee") {
+      openedAs.current = { step, done };
+      void message.success(
+        t("admin.setup.stepSaved", { step: t(`admin.setup.steps.${step}.title`) }),
+      );
+      goNext(data, step);
+    }
+    // goNext и message стабильны по смыслу; перезапуск — только при смене шага или состояния
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, data]);
 
   let body: ReactNode;
   if (!editable) {
@@ -148,10 +207,52 @@ export function SetupWizardPage() {
     );
   }
 
+  const stepState = step ? data?.steps.find((s) => s.key === step)?.state : undefined;
+  const after = step && data ? stepAfter(data, step) : undefined;
+  const closePanel = () => {
+    void navigate(`${WIZARD_PATH}?panel=closed`, { replace: true });
+  };
+
   return (
     <>
       <PageHeader title={title} subtitle={t("admin.setup.subtitle")} />
+      {editable && bannerHidden ? (
+        <Alert
+          type="info"
+          showIcon
+          message={t("admin.setup.bannerHidden")}
+          action={
+            <Button
+              size="small"
+              onClick={() => {
+                resetBannerHidden(me.id);
+              }}
+            >
+              {t("admin.setup.bannerReturn")}
+            </Button>
+          }
+        />
+      ) : null}
       {body}
+      {step && data && stepState ? (
+        <PanelPortal tab="step">
+          <StepPanel
+            key={step}
+            step={step}
+            state={stepState}
+            next={after ? t(`admin.setup.steps.${after.key}.title`) : null}
+            onNext={() => {
+              goNext(data, step);
+            }}
+            onClose={closePanel}
+            onInvited={() => {
+              void refetch().then((result) => {
+                if (result.data) goNext(result.data, step);
+              });
+            }}
+          />
+        </PanelPortal>
+      ) : null}
     </>
   );
 }

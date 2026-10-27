@@ -14,7 +14,7 @@ import {
   startFreshSetup,
 } from "../../mocks/setupState";
 import i18n from "../../shared/i18n";
-import { resetBannerHidden } from "./hidden";
+import { hideBanner, resetBannerHidden, startOfTomorrow } from "./hidden";
 import { renderApp, signInAs } from "../../test/renderApp";
 import { server } from "../../test/server";
 import { setViewportWidth } from "../../test/viewport";
@@ -184,17 +184,23 @@ describe("Баннер настройки и мастер", () => {
     );
   });
 
-  it("«Скрыть» убирает баннер и запоминает выбор в браузере", async () => {
+  it("«Скрыть до завтра» убирает баннер до начала следующих суток и запоминает выбор в браузере", async () => {
     signInAs("admin@demo.example");
     renderApp("/admin/org");
     const banner = await screen.findByRole("region", { name: "Настройка Платформы" });
 
-    fireEvent.click(within(banner).getByRole("button", { name: "Скрыть баннер настройки" }));
+    expect(
+      within(banner).getByRole("button", { name: "Скрыть до завтра: баннер настройки" }),
+    ).toHaveTextContent("Скрыть до завтра");
+    fireEvent.click(
+      within(banner).getByRole("button", { name: "Скрыть до завтра: баннер настройки" }),
+    );
 
     await waitFor(() => {
       expect(screen.queryByRole("region", { name: "Настройка Платформы" })).toBeNull();
     });
-    expect(window.localStorage.getItem("rt-pf-setup-banner-hidden:u-demo-admin")).toBe("1");
+    const until = Number(window.localStorage.getItem("rt-pf-setup-banner-hidden:u-demo-admin"));
+    expect(until).toBe(startOfTomorrow());
     // новая загрузка страницы: баннера всё ещё нет
     cleanup();
     renderApp("/admin/org");
@@ -276,16 +282,17 @@ describe("Баннер настройки и мастер", () => {
     ]);
     expect(screen.queryByRole("region", { name: "Настройка Платформы" })).toBeNull();
     // ERP — отдельный шаг с главной кнопкой «Подключить ERP» (на новой установке без кода сопряжения)
+    // W15-H4: каждый шаг открывается внутри мастера — в его боковом окне, без перехода на другие экраны
     for (const link of screen.getAllByRole("link", { name: "Подключить ERP" })) {
-      expect(link).toHaveAttribute("href", "/admin/integrations?card=erp&panel=open");
+      expect(link).toHaveAttribute("href", "/admin/setup?step=erp&panel=open");
     }
     const list = screen.getByRole("list", { name: "Шаги настройки" });
     const links = within(list).getAllByRole("link");
     expect(links.map((a) => a.getAttribute("href"))).toEqual([
-      "/admin/integrations?card=telegram&panel=open",
-      "/admin/integrations?card=mail&panel=open",
-      "/admin/integrations?card=models&panel=open",
-      "/admin/org?invite=open&panel=open",
+      "/admin/setup?step=bot&panel=open",
+      "/admin/setup?step=mail&panel=open",
+      "/admin/setup?step=models&panel=open",
+      "/admin/setup?step=first_employee&panel=open",
     ]);
     for (const row of within(list).getAllByRole("listitem")) {
       expect(within(row).getByText("Не сделано")).toBeVisible();
@@ -309,7 +316,7 @@ describe("Баннер настройки и мастер", () => {
     expect(company).not.toBeNull();
     expect(
       within(company as HTMLElement).getByRole("link", { name: "Подключить ERP" }),
-    ).toHaveAttribute("href", "/admin/integrations?card=erp&panel=open");
+    ).toHaveAttribute("href", "/admin/setup?step=erp&panel=open");
   });
 
   it("после подключения ERP форма компании появляется", async () => {
@@ -320,7 +327,9 @@ describe("Баннер настройки и мастер", () => {
     expect(await screen.findByLabelText("Название компании")).toBeVisible();
     expect(screen.queryByText("Сначала подключите ERP")).toBeNull();
     expect(
-      screen.getByText("ERP подключена. Связь можно проверить на карточке интеграции."),
+      screen.getByText(
+        "ERP подключена. Связь можно проверить в форме шага или в Настройках · Подключениях.",
+      ),
     ).toBeVisible();
   });
 
@@ -503,6 +512,82 @@ describe("Баннер настройки и мастер", () => {
     await waitFor(() => {
       expect(checklistCalls).toBeGreaterThan(0);
     });
+  });
+
+  it("баннер, скрытый до завтра, возвращается кнопкой в мастере; прежнее «навсегда» уже не скрывает", async () => {
+    window.localStorage.setItem("rt-pf-setup-banner-hidden:u-demo-admin", "1");
+    signInAs("admin@demo.example");
+    renderApp("/admin/org");
+    expect(await screen.findByRole("region", { name: "Настройка Платформы" })).toBeVisible();
+    cleanup();
+
+    hideBanner("u-demo-admin");
+    renderApp("/admin/setup");
+    expect(await screen.findByText("Баннер настройки скрыт до завтра.")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Вернуть баннер" }));
+    await waitFor(() => {
+      expect(screen.queryByText("Баннер настройки скрыт до завтра.")).toBeNull();
+    });
+    expect(window.localStorage.getItem("rt-pf-setup-banner-hidden:u-demo-admin")).toBeNull();
+    cleanup();
+    renderApp("/admin/org");
+    expect(await screen.findByRole("region", { name: "Настройка Платформы" })).toBeVisible();
+  });
+
+  it("пункт «Первый запуск» в меню Настроек — пока шаги не завершены", async () => {
+    signInAs("admin@demo.example");
+    renderApp("/admin/org");
+    const menu = await screen.findByRole("navigation", { name: "Разделы модуля" });
+    expect(await within(menu).findByRole("link", { name: "Первый запуск" })).toHaveAttribute(
+      "href",
+      "/admin/setup",
+    );
+    cleanup();
+
+    const state = readSetup();
+    window.localStorage.setItem(
+      "rt-pf-mock-setup",
+      JSON.stringify({
+        ...state,
+        companyCreated: true,
+        done: { bot: true, erp: true, mail: true, models: true, first_employee: true },
+      }),
+    );
+    renderApp("/admin/org");
+    const after = await screen.findByRole("navigation", { name: "Разделы модуля" });
+    expect(within(after).getByRole("link", { name: "Сотрудники" })).toBeVisible();
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 150));
+    });
+    expect(within(after).queryByRole("link", { name: "Первый запуск" })).toBeNull();
+  });
+
+  it("шаг открывается в боковом окне мастера, без перехода; после сохранения — сразу следующий шаг", async () => {
+    markStepDone("erp");
+    signInAs("admin@demo.example");
+    renderApp("/admin/setup?step=bot&panel=open");
+
+    const side = await screen.findByRole("complementary", { name: "Боковое окно" });
+    expect(await within(side).findByText("Шаг 2 из 5")).toBeVisible();
+    expect(within(side).getByRole("region", { name: "Шаг 2 из 5: Telegram-бот" })).toBeVisible();
+    // главный экран — по-прежнему мастер
+    expect(screen.getByRole("heading", { level: 1, name: "Первый запуск" })).toBeVisible();
+
+    fireEvent.click(await within(side).findByRole("button", { name: "Сменить токен" }));
+    const form = within(side).getByRole("form", { name: "Токен бота" });
+    fireEvent.change(within(form).getByLabelText("Токен бота"), {
+      target: { value: "12345:abcdefghijklmnopqrstZk9m" },
+    });
+    fireEvent.change(within(form).getByLabelText("Ваш пароль администратора"), {
+      target: { value: "demo-pass-1" },
+    });
+    fireEvent.click(within(form).getByRole("button", { name: /Сохранить токен$/ }));
+
+    // шаг «Telegram-бот» готов — окно само переходит к следующему несделанному: «Почта»
+    expect(
+      await within(side).findByRole("region", { name: "Шаг 3 из 5: Почта" }, { timeout: 5_000 }),
+    ).toBeVisible();
+    expect(screen.getByRole("heading", { level: 1, name: "Первый запуск" })).toBeVisible();
   });
 
   it("сбой чек-листа: «Повторить»", async () => {
