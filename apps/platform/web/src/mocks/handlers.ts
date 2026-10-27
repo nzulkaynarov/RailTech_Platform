@@ -13,6 +13,7 @@ import { adminRolesHandlers } from "./adminRoles";
 import { botKbHandlers } from "./botKb";
 import { bridgeHandlers } from "./bridgeHandlers";
 import { edsLettersHandlers } from "./edsLetters";
+import { erpCalcHandlers } from "./erpCalc";
 import { adminUsersHandlers } from "./adminUsers";
 import { edsDocumentsHandlers } from "./edsDocuments";
 import { eventStreamHandlers } from "./eventStream";
@@ -151,6 +152,7 @@ export const handlers = [
   ...bridgeHandlers,
   ...edsDocumentsHandlers,
   ...edsLettersHandlers,
+  ...erpCalcHandlers,
 
   getGetHealthMockHandler({
     status: "ok",

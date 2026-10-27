@@ -64,7 +64,7 @@ describe("SectionStubPage · раздел с мостом", () => {
       "/crm/clients",
       "/eds/approvals",
       "/eds/payments",
-      "/erp/calc",
+      "/erp/stock",
       "/chats",
       "/admin/tickets",
     ]) {

@@ -30,6 +30,7 @@ describe("i18n", () => {
     "bot",
     "documents",
     "letters",
+    "calc",
     "profile",
   ] as const)("пространство %s: uz и en — те же ключи, что ru", (ns) => {
     for (const lng of ["uz", "en"] as const) {
@@ -54,6 +55,7 @@ describe("i18n", () => {
         "bot",
         "documents",
         "letters",
+        "calc",
         "profile",
       ] as const) {
         for (const key of keys(resources[lng][ns])) {

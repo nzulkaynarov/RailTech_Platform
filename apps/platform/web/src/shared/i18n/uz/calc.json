@@ -1,0 +1,256 @@
+{
+  "list": {
+    "subtitle": "Direktor rezolyutsiyasidan keyingi hisob-kitob topshiriqlari: muddat, qatorlar vizalari va mas’ul",
+    "subtitleMine": "Siz direktor rezolyutsiyasi ijrochisi bo‘lgan arizalar",
+    "caption": "Hisob-kitobdagi arizalar",
+    "scroll": "Hisob-kitobdagi arizalar jadvali",
+    "columns": {
+      "number": "Ariza raqami",
+      "client": "Mijoz",
+      "stage": "Bosqich",
+      "due": "Hisob-kitob muddati",
+      "visas": "Vizalar",
+      "responsible": "Mas’ul",
+      "action": "Amal"
+    },
+    "open": "Hisob-kitobni ochish",
+    "openLabel": "{{number}} ariza bo‘yicha hisob-kitobni ochish",
+    "select": "{{number}} ariza topshirig‘ini yon oynada ko‘rsatish",
+    "overdue": "Muddati o‘tgan",
+    "empty": {
+      "title": "Hisob-kitob topshiriqlari yo‘q",
+      "text": "Hisob-kitob topshiriqlari yo‘q. Ular direktor rezolyutsiyasidan keyin keladi — qo‘ng‘iroqchada xabar beramiz.",
+      "action": "Yangilash",
+      "mineTitle": "Sizda hisob-kitob topshiriqlari yo‘q",
+      "mineText": "Hisob-kitob topshiriqlari yo‘q. Ular direktor rezolyutsiyasidan keyin keladi: direktor sizni ijrochi qilib tayinlaganda topshiriq shu yerda paydo bo‘ladi.",
+      "mineAction": "Hisob-kitobdagi barcha arizalar"
+    }
+  },
+  "state": {
+    "not_started": "Boshlanmagan",
+    "in_progress": "Jarayonda",
+    "returned": "Qayta ishlashga qaytarilgan",
+    "at_director": "TK qoralamasi direktorda",
+    "rejected": "TK rad etilgan",
+    "approved": "TK ma’qullangan"
+  },
+  "groups": {
+    "stock": "Ombor",
+    "supply": "Ta’minot",
+    "engineer": "Bosh muhandis"
+  },
+  "visaState": {
+    "done": "{{group}} ✓",
+    "waiting": "{{group}} · kutmoqda",
+    "none": "{{group}} · kerak emas",
+    "doneLabel": "{{group}}: vizalar yig‘ilgan",
+    "waitingLabel": "{{group}}: viza kutmoqda",
+    "noneLabel": "{{group}}: qatorlar yo‘q, viza kerak emas"
+  },
+  "sheet": {
+    "title": "{{number}} ariza bo‘yicha hisob-kitob",
+    "subtitle": "{{client}} · xat {{letter}} · hisob-kitob muddati {{due}}",
+    "margin": "marja kamida {{value}} %",
+    "steps": "Ariza yo‘li",
+    "openTask": "Topshiriq va vizalar",
+    "atDirector": "{{number}} TK qoralamasi direktorda ma’qullashda. Direktor qaror qilguncha qatorlar o‘zgartirilmaydi.",
+    "returned": "Direktor TKni qayta ishlashga qaytardi: «{{comment}}». Qatorlarni tuzating va qayta tasdiqlang.",
+    "rejected": "Direktor TKni rad etdi. Hisob-kitob yopildi.",
+    "approved": "Direktor TKni ma’qulladi. Hisob-kitob o‘zgartirish uchun yopiq.",
+    "readOnly": "Faqat o‘qish: qatorlarni ta’minotchi (tovarlar) yoki bosh muhandis (xizmatlar) o‘zgartiradi va tasdiqlaydi.",
+    "notStarted": {
+      "title": "Hisob-kitob hali boshlanmagan",
+      "textLines": "Arizada {{count}} ta qator bor. Ularni hisob-kitobga o‘tkazing, keyin qatorlarni qo‘shing va katalog bilan solishtiring.",
+      "textEmpty": "Arizada qatorlar yo‘q, faqat matn. Hisob-kitobni boshlang va ariza matnini qatorlarga ajrating yoki ularni qo‘lda qo‘shing.",
+      "action": "Hisob-kitobni boshlash",
+      "noRights": "Hisob-kitobni «Hisob-kitob» bo‘limiga to‘liq ruxsati bor xodim boshlaydi.",
+      "consequence": [
+        "Ariza qatorlari hisob-kitob TK qoralamasiga o‘tadi (artikul va GOST aniq mos kelsa — darhol katalog kartasi bilan).",
+        "Xarid narxi o‘z taklifidan qo‘yiladi, agar u bo‘lsa; qolganini siz to‘ldirasiz.",
+        "Mijoz hech narsa olmaydi: u «Ishga qabul qilindi, hisoblayapmiz» ni ko‘radi."
+      ]
+    },
+    "request": "Ariza matni",
+    "requestEmpty": "Ariza matni yo‘q."
+  },
+  "lines": {
+    "title": "Hisob-kitob qatorlari",
+    "caption": "{{number}} ariza bo‘yicha hisob-kitob qatorlari",
+    "scroll": "Hisob-kitob qatorlari jadvali",
+    "columns": {
+      "position": "Pozitsiya",
+      "quantity": "Soni",
+      "stock": "Ombor",
+      "supplier": "Yetkazib beruvchi · muddat",
+      "purchase": "Xarid, so‘m",
+      "client": "Mijozga, so‘m",
+      "markup": "Ustama, %",
+      "visa": "Viza",
+      "action": "Amal"
+    },
+    "kind": {
+      "goods": "Tovar",
+      "goods_to_order": "Buyurtma bo‘yicha tovar",
+      "service": "Xizmat"
+    },
+    "inStock": "Omborda · {{count}}",
+    "noStock": "Yo‘q · 0",
+    "noStockData": "Katalogda yo‘q",
+    "stockMore": "Yacheyka va zaxira — «Ombor» ekranida",
+    "days": "{{count}} kun",
+    "supplierHint": "kvota {{qty}} dan · narx {{date}} gacha",
+    "supplierHintNoDate": "kvota {{qty}} dan · narx muddati ko‘rsatilmagan",
+    "offerPrice": "Yetkazib beruvchi narxi: {{price}}",
+    "noSupplier": "Yetkazib beruvchi tanlanmagan",
+    "service": "Brigada",
+    "crewRate": "Brigada stavkasi, so‘m/kun",
+    "crewDays": "Kun",
+    "crewLabel": "«{{name}}» uchun brigada stavkasi",
+    "daysLabel": "«{{name}}» uchun brigada ish kunlari",
+    "purchaseLabel": "«{{name}}» uchun birlik xarid narxi",
+    "clientLabel": "«{{name}}» uchun QQSsiz mijoz narxi (birlik)",
+    "quantityLabel": "«{{name}}» uchun soni",
+    "hidden": "—",
+    "costHidden": "Xarid narxini tannarxga ruxsati bor xodim ko‘radi",
+    "match": "Katalog bilan solishtirish",
+    "matchLabel": "«{{name}}» ni katalog bilan solishtirish",
+    "remove": "«{{name}}» qatorini o‘chirish",
+    "removeConfirm": "«{{name}}» qatori hisob-kitobdan o‘chirilsinmi?",
+    "removeOk": "O‘chirish",
+    "cancel": "Bekor qilish",
+    "confirm": "Tasdiqlash",
+    "confirmLabel": "«{{name}}» qatorini tasdiqlash",
+    "signed": "{{group}} ✓ {{name}}",
+    "signedGroup": "{{group}} ✓",
+    "waits": "{{group}} · kutmoqda",
+    "empty": "Hozircha qatorlar yo‘q. Qator qo‘shing yoki ariza matnini ajrating.",
+    "totals": "Jami",
+    "noVat": "QQSsiz",
+    "saved": "Saqlandi",
+    "mobileCost": "Tannarx {{value}} · ustama {{markup}} %"
+  },
+  "add": {
+    "button": "Qator qo‘shish",
+    "title": "Yangi hisob-kitob qatori",
+    "name": "Nomi",
+    "nameRequired": "Nomini yozing.",
+    "quantity": "Soni",
+    "unit": "Birlik",
+    "kind": "Turi",
+    "kindGoods": "Tovar",
+    "kindService": "Xizmat",
+    "kindHint": "Tovarni ta’minotchi, xizmatni bosh muhandis tasdiqlaydi.",
+    "submit": "Qo‘shish",
+    "cancel": "Bekor qilish"
+  },
+  "parse": {
+    "button": "Ariza matnini ajratish",
+    "title": "Ariza matnini sun’iy intellekt bilan ajratish",
+    "intro": "SI ariza matni bo‘yicha qatorlarni taklif qiladi. Qatorlarni belgilab «Tanlanganlarni qo‘shish» ni bosmaguningizcha hech narsa yozilmaydi.",
+    "text": "Ajratish uchun matn",
+    "textHint": "Tuzatish yoki o‘z matningizni qo‘yish mumkin.",
+    "start": "Ajratish",
+    "pending": "Matnni ajratyapmiz… Odatda bir daqiqagacha davom etadi.",
+    "proposal": "SI taklifi: qo‘shiladigan qatorlarni belgilang",
+    "nothing": "SI bu matnda qatorlar topmadi. Qatorlarni qo‘lda qo‘shing.",
+    "addSelected": "Tanlanganlarni qo‘shish ({{count}})",
+    "cancel": "Yopish",
+    "failed": "Ajratish muvaffaqiyatsiz: {{reason}}. Qatorlarni qo‘lda qo‘shing yoki qayta urinib ko‘ring.",
+    "reasons": {
+      "ai_disabled": "SI bilan ajratish model sozlamalarida o‘chirilgan",
+      "request_text_empty": "arizada matn yo‘q",
+      "ai_extract_failed": "model javob bermadi",
+      "ai_budget_exceeded": "SI kunlik byudjeti tugadi",
+      "other": "xizmat xatosi"
+    },
+    "truncated": "{{count}} tadan birinchi 50 ta qator ko‘rsatilgan."
+  },
+  "match": {
+    "title": "Katalog bilan solishtirish",
+    "search": "Katalog bo‘yicha qidiruv",
+    "searchHint": "Nomi, artikul, ishlab chiqaruvchi kodi yoki GOST",
+    "find": "Topish",
+    "nothing": "Katalogda hech narsa topilmadi. Boshqa so‘zlarni sinab ko‘ring.",
+    "choose": "Tanlash",
+    "chooseLabel": "Qator uchun «{{name}}» ni tanlash",
+    "stock": "omborda {{count}}",
+    "supplier": "{{name}}, {{days}} kun",
+    "cancel": "Yopish"
+  },
+  "ready": {
+    "button": "Hisob-kitob tayyor → TK qoralamasi direktorga",
+    "hint": {
+      "visas_missing": "Barcha qatorlar tasdiqlanganda tugma faollashadi: vizasiz {{count}} ta.",
+      "no_lines": "Kamida bitta qator qo‘shing.",
+      "not_started": "Avval hisob-kitobni boshlang.",
+      "not_draft": "Hisob-kitob allaqachon direktorga topshirilgan."
+    },
+    "missingGroups": "Viza kutmoqda: {{groups}}.",
+    "consequence": [
+      "TK raqam oladi va direktorga ma’qullash uchun ketadi (Hujjatlar · TK qoralamasi).",
+      "Direktor tannarx, marja, qatorlar vizalari va rezolyutsiyadagi marja chegarasini ko‘radi.",
+      "Direktor qaror qilguncha qatorlar yopiladi; qayta ishlashga qaytarsa — tuzatib, qayta tasdiqlaysiz."
+    ],
+    "done": "TK qoralamasi direktorda"
+  },
+  "task": {
+    "resolution": "Direktor rezolyutsiyasi",
+    "decided": "{{name}} · {{date}}",
+    "letter": "{{number}} xat",
+    "due": "Hisob-kitob muddati",
+    "margin": "Marja kamida",
+    "visas": "Ariza bo‘yicha vizalar",
+    "assigned": "rezolyutsiya bilan tayinlangan: {{names}}",
+    "nobodyAssigned": "rezolyutsiya bilan hech kim tayinlanmagan",
+    "notInErp": "xodim hali tizimga kirmagan",
+    "signedBy": "tasdiqlagan: {{names}}",
+    "counts": "{{total}} tadan {{signed}}",
+    "state": {
+      "done": "Tayyor",
+      "waiting": "Kutmoqda",
+      "none": "Kerak emas"
+    },
+    "chat": "Loyiha chati",
+    "chatText": "Loyiha chati «Chatlar» bo‘limi bilan birga paydo bo‘ladi (pilotgacha). Hozir jamoa o‘z ish chatida kelishadi.",
+    "memo": "TKdan tashqari xarid — direktorga xizmat xati bilan.",
+    "memoAction": "Xizmat xati yozish",
+    "open": "Hisob-kitobni ochish",
+    "empty": {
+      "title": "Ariza tanlanmagan",
+      "text": "Jadvaldagi qatorni tanlang — topshiriq va vizalar shu yerda ochiladi."
+    }
+  },
+  "errors": {
+    "visas_missing": "Barcha qatorlar tasdiqlanmagan.",
+    "quote_not_draft": "Hisob-kitob allaqachon direktorda — qatorlar o‘zgartirilmaydi.",
+    "line_incomplete": "Avval xarid va mijoz narxini to‘ldiring.",
+    "purchase_required": "Avval xarid narxini kiriting: ustama undan hisoblanadi.",
+    "client_price_below_cost": "Mijoz narxi xarid narxidan past.",
+    "markup_out_of_range": "Ustama 0–500 % chegarasidan tashqarida.",
+    "zone_not_permitted": "Bu qatorni boshqa mutaxassis o‘zgartiradi: tovarlar — ta’minotchi, xizmatlar — bosh muhandis.",
+    "cost_forbidden": "Xarid narxini tannarxga ruxsati bor xodim o‘zgartiradi.",
+    "forbidden": "Bu amal rolingizga ruxsat etilmagan.",
+    "unavailable": "ERP javob bermadi. Bir daqiqadan keyin qayta urinib ko‘ring.",
+    "other": "Saqlanmadi: {{message}}"
+  },
+  "load": {
+    "retry": "Qayta urinish",
+    "loadError": {
+      "title": "Hisob-kitob yuklanmadi",
+      "text": "Sahifani yangilang yoki bir daqiqadan keyin qayta urinib ko‘ring."
+    },
+    "unavailable": {
+      "title": "ERP javob bermayapti",
+      "text": "Hisob-kitob ma’lumotlari vaqtincha mavjud emas. Bir daqiqadan keyin qayta urinib ko‘ring."
+    },
+    "forbidden": {
+      "title": "Bo‘lim rolingizga tegishli emas",
+      "text": "Hisob-kitobni ta’minotchi, bosh muhandis, direktor va buxgalter ko‘radi. Ruxsat kerak bo‘lsa — administratorga yozing."
+    },
+    "notFound": {
+      "title": "Ariza hisob-kitob topshiriqlari orasida yo‘q",
+      "text": "Topshiriq direktor rezolyutsiyasidan keyin paydo bo‘ladi. Raqamni tekshiring yoki ro‘yxatni oching.",
+      "action": "Hisob-kitobdagi arizalar"
+    }
+  }
+}
