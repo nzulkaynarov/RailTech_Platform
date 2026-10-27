@@ -40,6 +40,11 @@ class LeadOut(BaseModel):
     escalation: EscalationOut | None = None
     # Откуда пришёл лид (M3-CRM-05): telegram | web | phone | email | referral (| sandbox).
     source: str = "telegram"
+    # Статус лида для Платформы (CRM-02, W16-D1-2): вкладки «Лиды» —
+    # docs/architecture/integration-map.md §3.1.
+    platform_status: Literal["new", "dialog", "wants_quote", "no_answer", "client", "lost"] = (
+        "dialog"
+    )
 
 
 class LeadDetail(LeadOut):

@@ -13,6 +13,7 @@ from app.models.auth import User
 from app.models.clients import ClientContact
 from app.models.leads import Conversation, Lead, LeadNote, Message, TelegramIdentity
 from app.models.qualification import Escalation
+from app.repositories import lead_status
 
 ACTIVE = ("open", "snoozed", "taken")
 _waits_for_reply = func.coalesce(
@@ -30,6 +31,10 @@ class LeadFilter:
     q: str | None = None
     created_from: datetime | None = None
     created_to: datetime | None = None
+    # CRM-02 (W16-D1-2): статус лида для Платформы (через запятую) и «просроченные» (истёк SLA
+    # передачи).
+    platform_status: str | None = None
+    overdue: bool | None = None
 
 
 def _filtered(f: LeadFilter, me: int) -> Select[Lead]:
@@ -53,6 +58,10 @@ def _filtered(f: LeadFilter, me: int) -> Select[Lead]:
         stmt = stmt.where(Lead.created_at >= f.created_from)
     if f.created_to:
         stmt = stmt.where(Lead.created_at < f.created_to)
+    if f.platform_status:
+        stmt = stmt.where(lead_status.status_in(f.platform_status.split(",")))
+    if f.overdue is not None:
+        stmt = stmt.where(lead_status.overdue() if f.overdue else ~lead_status.overdue())
     return stmt
 
 

@@ -233,4 +233,7 @@ def test_reason_values_are_a_stable_contract() -> None:
         "won_decided_by_erp",
         "handoff_no_consent",
         "consent_via_bot",
+        # «Создать заявку» (W16-D1-2, CRM-03)
+        "contact_channel_required",
+        "request_not_allowed",
     }

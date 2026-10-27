@@ -78,6 +78,13 @@ def acceptance_code_message(
     return BotMessage(text)
 
 
+def _telegram_chosen(payload: Mapping[str, Any]) -> bool:
+    """`quote.sent.channels` (ERP-11): нет списка — отправка менеджером, все каналы клиента; есть —
+    только выбранные."""
+    channels = payload.get("channels")
+    return channels is None or "telegram" in channels
+
+
 def client_message(
     event: str,
     payload: Mapping[str, Any],
@@ -89,6 +96,8 @@ def client_message(
 ) -> BotMessage | None:
     """Сообщение клиенту по событию ERP или `None`, если по этому событию бот молчит."""
     p = payload
+    if event == "quote.sent" and not _telegram_chosen(p):
+        return None  # ERP-11: директор выбрал каналы без Telegram — клиенту в бот КП не шлём
     doc_button: tuple[str, str] | None = None
     if event == "quote.sent":
         text = _text(texts, "erp_quote_sent", language, deal=deal_title)

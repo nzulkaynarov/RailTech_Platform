@@ -120,6 +120,10 @@ class Reason(StrEnum):
     HANDOFF_NO_CONSENT = "handoff_no_consent"
     # «Согласие получено» (FIX-57, D-8): лид из Telegram соглашается в боте, сотрудник не отмечает.
     CONSENT_VIA_BOT = "consent_via_bot"
+    # «Создать заявку» (W16-D1-2, CRM-03): у контакта нет ни одного канала связи; лид в отказе или
+    # обезличен.
+    CONTACT_CHANNEL_REQUIRED = "contact_channel_required"
+    REQUEST_NOT_ALLOWED = "request_not_allowed"
 
 
 class DomainError(Exception):

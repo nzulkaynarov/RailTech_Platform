@@ -18,6 +18,7 @@ from app.api.v1 import (
     auth,
     bus,
     client_contacts,
+    client_requests,
     clients,
     deals,
     export,
@@ -93,8 +94,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app = FastAPI(
         title="RailTech CRM API",
-        # 0.6.0 (W15-H3): состояние, причина и «кто исправляет» у внешних сервисов; 0.5.0 — W13C-F1.
-        version="0.6.0",
+        # 0.10.0 (W16-D1-2): «Создать заявку» из лида и клиента, `platform_status` и фильтры лидов
+        # (CRM-02, CRM-03); 0.6.0 (W15-H3): состояние, причина и «кто исправляет» у внешних
+        # сервисов; 0.5.0 — W13C-F1.
+        version="0.10.0",
         lifespan=lifespan,
         # operationId = имя функции роута → читаемые имена в клиенте orval.
         generate_unique_id_function=lambda route: route.name,
@@ -128,6 +131,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         admin,
         clients,
         client_contacts,
+        client_requests,
         deals,
         setup,
         system,

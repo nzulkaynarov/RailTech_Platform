@@ -1,5 +1,6 @@
 """DTO сделок (Q-013, ADR-0019)."""
 
+import uuid
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Literal
@@ -27,6 +28,14 @@ class DealOut(BaseModel):
     created_at: datetime
     erp_deal_id: int | None = None
     external_stage: str | None = None
+    # «Создать заявку» (W16-D1-2, CRM-03): заявка CRM и её передача в ERP; номер ЗВ/ПР — из ERP.
+    erp_number: str | None = None
+    request_summary: str | None = None
+    request_urgency: Literal["normal", "urgent"] | None = None
+    request_contact_id: int | None = None
+    request_letter_file_id: uuid.UUID | None = None
+    erp_request_status: Literal["pending", "done", "failed"] | None = None
+    erp_request_error: str | None = None
 
 
 class DealCreate(BaseModel):

@@ -38,6 +38,7 @@ if TYPE_CHECKING:
     from app.services.backups import BackupReader
     from app.services.budget import BudgetGuard
     from app.services.client_contacts import ClientContactService
+    from app.services.client_requests import ClientRequestService
     from app.services.clients import ClientService
     from app.services.documents import DocumentService
     from app.services.erp_access import ErpAccessService
@@ -46,6 +47,7 @@ if TYPE_CHECKING:
     from app.services.erp_events import ErpEventsService
     from app.services.erp_handoff import ErpHandoffService
     from app.services.erp_pairing import ErpPairingService
+    from app.services.erp_requests import ErpRequestService
     from app.services.external_services.checks import ExternalChecks
     from app.services.external_services.switches import SwitchService
     from app.services.external_services.view import ExternalServicesView
@@ -384,6 +386,29 @@ class Container:
         return ErpHandoffService(self.session_factory, self.erp_client)
 
     @cached_property
+    def client_request_service(self) -> "ClientRequestService":
+        """«Создать заявку» из лида и клиента (CRM-03, W16-D1-2)."""
+        from app.services.client_requests import ClientRequestService
+
+        return ClientRequestService(
+            self.session_factory,
+            backoffice_mode=self.backoffice_mode,
+            enqueue=_enqueue_erp_request,
+            on_chats_changed=_chats_changed,
+        )
+
+    @cached_property
+    def erp_request_service(self) -> "ErpRequestService":
+        """Заявка CRM → ERP задачей после коммита (шов 0.8.0)."""
+        from app.integrations.erp_requests import HttpxErpRequestClient
+        from app.services.erp_requests import ErpRequestService
+
+        client = HttpxErpRequestClient(
+            self.secrets_store, self.settings, self.settings_service, http=self.erp_http
+        )
+        return ErpRequestService(self.session_factory, client, self.erp_handoff_service)
+
+    @cached_property
     def erp_client(self) -> "ErpClient":
         """Клиент интеграции ERP (M3-CRM-03): передача клиента (handoff)."""
         from app.integrations.erp import HttpxErpClient
@@ -642,6 +667,12 @@ async def _enqueue_erp_sync(action: str, user_id: int) -> int:
     from app.tasks.erp_users import enqueue_erp_sync
 
     return await enqueue_erp_sync(action, user_id)
+
+
+async def _enqueue_erp_request(deal_id: int, client_id: int, user_id: int) -> object:
+    from app.tasks.erp_requests import enqueue_erp_request
+
+    return await enqueue_erp_request(deal_id, client_id, user_id)
 
 
 async def _enqueue_erp_handoff(client_id: int, lead_id: int, user_id: int) -> object:

@@ -37,6 +37,12 @@ ALLOWED = [
     (S.IN_PROGRESS, S.CUSTOMER, Src.USER),
     (S.CUSTOMER, S.WON, Src.USER),
     (S.CUSTOMER, S.ENGAGED, Src.USER),
+    # «Создать заявку» (CRM-03, W16-D1-2): клиент — из любой активной стадии действием менеджера.
+    (S.NEW, S.CUSTOMER, Src.USER),
+    (S.ENGAGED, S.CUSTOMER, Src.USER),
+    (S.QUALIFIED, S.CUSTOMER, Src.USER),
+    (S.HANDOFF, S.CUSTOMER, Src.USER),
+    (S.UNRESPONSIVE, S.CUSTOMER, Src.USER),
 ]
 
 REJECTED = [
@@ -67,6 +73,10 @@ REJECTED = [
     (S.HANDOFF, S.UNRESPONSIVE, Src.TIMER),
     (S.CUSTOMER, S.IN_PROGRESS, Src.TRIGGER),
     (S.LOST, S.CUSTOMER, Src.USER),
+    # клиентом лида делает только менеджер («Создать заявку»), не бот и не таймер
+    (S.ENGAGED, S.CUSTOMER, Src.QUALIFIER),
+    (S.HANDOFF, S.CUSTOMER, Src.TRIGGER),
+    (S.NEW, S.CUSTOMER, Src.TIMER),
 ]
 
 
