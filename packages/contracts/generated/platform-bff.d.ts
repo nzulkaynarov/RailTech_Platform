@@ -3268,7 +3268,7 @@ export interface components {
      */
     ServiceOwner: "admin" | "owner" | "hosting" | "provider";
     /**
-     * @description Действие по смыслу: `enter_key` Ввести новый ключ (форма в карточке «Модели ИИ»), `enter_token` Ввести новый токен (карточка Telegram), `recheck` Проверить снова, `reconnect` Переподключить, `open_settings` Открыть настройки, `write_owner` Написать владельцу и `write_hosting` Передать хостингу (готовый текст `message` — копируется, ничего не отправляется), `disable_provider` Выключить провайдера (пароль администратора).
+     * @description Действие по смыслу: `enter_key` Ввести новый ключ (форма в карточке «Модели ИИ»), `enter_token` Ввести новый токен (карточка Telegram), `recheck` Проверить снова, `reconnect` Переподключить, `open_settings` Открыть настройки, `write_owner` Написать владельцу и `write_hosting` Передать хостингу (готовый текст `message` — копируется, ничего не отправляется), `disable_provider` Выключить провайдера (пароль администратора), `open_bus` Открыть журнал обмена (`/admin/bus`, раздел `admin` — полный; строка «Шина: недоставленные события», W15-H8b).
      * @enum {string}
      */
     ServiceAction:
@@ -3279,7 +3279,8 @@ export interface components {
       | "open_settings"
       | "write_owner"
       | "write_hosting"
-      | "disable_provider";
+      | "disable_provider"
+      | "open_bus";
     /** @description Одна причина — одна строка «Требует внимания» (W15-H3): сервисы реестра CRM с общим корнем свёрнуты вместе («Ключ Anthropic отклонён — не работают: диалог с клиентом, запасная модель, поиск по базе знаний»). Правило группировки, «кто исправляет» и действие решает CRM (`external_cause`); BFF их не оценивает. */
     ServiceGroup: {
       /** @description Корень причины (`vendor.anthropic:key_rejected`) — стабильный ключ строки */
