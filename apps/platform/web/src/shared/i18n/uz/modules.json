@@ -74,7 +74,36 @@
       "label": "Bugungi voqealar",
       "loading": "Lenta yuklanmoqda…",
       "loadErrorTitle": "Lentani yuklab bo‘lmadi",
-      "loadErrorText": "Server javob bermadi. Birozdan keyin qayta urinib ko‘ring."
+      "loadErrorText": "Server javob bermadi. Birozdan keyin qayta urinib ko‘ring.",
+      "events": {
+        "admin": {
+          "company": {
+            "own_created": "O‘z kompaniyasi yaratildi",
+            "archived": "Kompaniya arxivga o‘tkazildi",
+            "unarchived": "Kompaniya arxivdan qaytarildi"
+          },
+          "user": {
+            "created": "Xodim qo‘shildi",
+            "deactivated": "Xodim o‘chirildi",
+            "activated": "Xodim yoqildi",
+            "role_changed": "Xodim rollari o‘zgartirildi"
+          },
+          "email_template": {
+            "created": "Xat shabloni qo‘shildi",
+            "updated": "Xat shabloni o‘zgartirildi",
+            "deleted": "Xat shabloni o‘chirildi"
+          },
+          "lookup": {
+            "created": "Ma’lumotnoma to‘ldirildi",
+            "updated": "Ma’lumotnoma o‘zgartirildi",
+            "deleted": "Ma’lumotnoma qatori o‘chirildi"
+          },
+          "exchange_rate": {
+            "manual": "Valyuta kursi qo‘lda kiritildi",
+            "auto_skipped": "Markaziy bank kursi qo‘llanmadi: qo‘lda kiritilgan kurs amal qiladi"
+          }
+        }
+      }
     }
   },
   "crm": {

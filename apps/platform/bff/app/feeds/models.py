@@ -126,6 +126,7 @@ class ActivityItem(BaseModel):
     id: str
     actor: PersonRef
     text: str
+    code: str | None = None
     module: ModuleCode
     at: datetime
     object: ObjectRef | None = None

@@ -79,7 +79,7 @@
 
 | Экран / действие | BFF | ERP | Статус |
 |---|---|---|---|
-| Заявки в расчёте, Мои расчёты | `GET /erp/calc/requests?mine=` | `GET /calc/tasks/?mine=&scope=` (D2-1): заявки с заданием расчёта, три индикатора виз, исполнители резолюции | ✓ (BFF 0.23.0, D2-1) |
+| Заявки в расчёте, Мои расчёты | `GET /erp/calc/requests?mine=` | `GET /calc/tasks/?mine=&scope=` (D2-1): заявки с заданием расчёта, три индикатора виз, исполнители резолюции | ✓ (BFF 0.24.0, D2-1) |
 | Расчёт по заявке, строки | `GET /erp/calc/{ЗВ}` (заявку по номеру BFF находит в `GET /calc/tasks/?scope=all`, до ERP-09) | `GET /calc/{deal_id}/`: задание (проекция резолюции), КП расчёта, строки с зоной, складом (своё предложение) и лучшим поставщиком, итоги без НДС, готовность | ✓ (D2-1; ячейка и резерв — Δ ERP-14) |
 | Начать расчёт, добавить, изменить, удалить строку | `POST /erp/calc/{ЗВ}/start`, `POST …/lines`, `PATCH\|DELETE …/lines/{id}` | `POST /calc/{deal_id}/start/`, `/lines/`, `/lines/{item_id}/` — правит держатель права зоны строки (`quote.visa_goods`, `quote.visa_services`), правка снимает визу | ✓ (D2-1) |
 | Сопоставить с каталогом, ИИ-разбор (предложение) | `GET /erp/calc/catalog?q=`, `POST /erp/calc/{ЗВ}/parse` + `GET /erp/calc-jobs/{job}` | `GET /calc/catalog/`, `POST /calc/{deal_id}/parse/` (очередь ИИ, без записи) + `GET /sourcing/ai-status/{task}/` | ✓ (D2-1) |

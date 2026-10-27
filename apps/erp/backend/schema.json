@@ -13908,7 +13908,7 @@
                         "description": ""
                     },
                     "400": {
-                        "description": "NO_COMPANY / TEMPLATE_BODY_TOO_LARGE (error code)",
+                        "description": "NO_COMPANY / TEMPLATE_BODY_TOO_LARGE / TEMPLATE_KIND_INVALID (error code)",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -19036,7 +19036,7 @@
         "/api/v1/exchange-rates/journal/": {
             "get": {
                 "operationId": "exchange_rates_journal_list",
-                "description": "Newest first. `kind=manual` — entered by an operator; `kind=auto_skipped` — the CBU rate for the same date was not applied because a manual rate is kept.",
+                "description": "Needs `settings.edit` or administrator (the journal carries colleagues' names and emails). Newest first. `kind=manual` — entered by an operator; `kind=auto_skipped` — the CBU rate for the same date was not applied because a manual rate is kept.",
                 "summary": "Exchange rate manual-entry journal",
                 "parameters": [
                     {
@@ -28399,6 +28399,11 @@
                 "properties": {
                     "body_html": {
                         "type": "string"
+                    },
+                    "kind": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Код вида шаблона (CONTRACT, INVOICE, ACT — каркас вида и образцы блоков; иначе общий каркас)."
                     }
                 }
             },

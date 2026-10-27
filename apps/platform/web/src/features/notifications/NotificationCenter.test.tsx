@@ -230,6 +230,36 @@ describe("Боковое окно «Сегодня»", () => {
     expect(within(feed).getByText(/подтвердила оплату по ПР-2026-099/)).toBeInTheDocument();
   });
 
+  it("административные события ERP — словами на языке сотрудника, не сырым глаголом (O-5)", async () => {
+    const item = (id: string, code: string, text: string) => ({
+      id,
+      actor: { id: "", name: "Система", initials: "С" },
+      text,
+      code,
+      module: "erp",
+      at: new Date().toISOString(),
+    });
+    server.use(
+      http.get("*/activity/today", () =>
+        HttpResponse.json({
+          items: [
+            item("erp:1", "admin.lookup.deleted", "Deleted row text from BFF"),
+            item("erp:2", "admin.email_template.created", "Created text from BFF"),
+          ],
+          sources: { crm: "ok", erp: "ok" },
+        }),
+      ),
+    );
+    signInAs("director@demo.example");
+    renderApp("/dashboard/queue");
+
+    const panel = await screen.findByRole("complementary");
+    const feed = await within(panel).findByRole("list", { name: "События за сегодня" });
+    expect(await within(feed).findByText("Строка справочника удалена")).toBeInTheDocument();
+    expect(within(feed).getByText("Шаблон письма добавлен")).toBeInTheDocument();
+    expect(within(feed).queryByText(/BFF/)).not.toBeInTheDocument();
+  });
+
   it("ERP не отвечает: лента пуста, но плашка объясняет почему", async () => {
     server.use(
       http.get("*/activity/today", () =>

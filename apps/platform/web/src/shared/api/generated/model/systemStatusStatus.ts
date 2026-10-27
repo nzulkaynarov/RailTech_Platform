@@ -133,6 +133,14 @@
  * (директор читает), сброс пароля — `admin: full`; профиль доступен каждому вошедшему. Секреты из записей журнала BFF вырезает
  * (значения полей `password`, `secret`, `token`, `key`, `*_key`, `credentials`, `authorization`, `pin` и им подобных -> `***` целиком, любого типа).
  *
+ * **0.23.0 (W15-H8) — Admin · Компания: шаблоны документов и лента.** Добавляющее изменение. `DocumentTemplateIn.kind` — вид
+ * шаблона при создании (`letter`, `report`, `custom`, `contract`, `invoice`, `act`, `receipt`, `delivery_note`; без поля — `custom`,
+ * как раньше); `DocumentTemplate.kind` отдаёт вид кодом. `DocumentTemplatePreviewIn.kind` — предпросмотр договора, счёта и акта идёт
+ * на каркасе своего вида и с образцами блоков (остальные виды — общий каркас и подписанные заглушки). `ActivityItem.code` — код
+ * административного события ERP (`admin.*`), по которому SPA собирает фразу на языке сотрудника; для остальных событий `null`.
+ * Журнал ручных курсов в ERP виден только с правом `settings.edit` (имена и почта коллег): `GET /admin/company/fx-rate` без
+ * этого права отдаёт текущий курс и пустой журнал с `journal_available = false` (не ошибку; директор раздел смотрит).
+ *
  * **0.22.0 (D1-1, волна 16) — Клиенты · Ждут ответа.** Добавляющее изменение (тег `messages`): очередь передач от бота с
  * запиской (CRM-06) и SLA — `GET /crm/messages`; карточка лида, лента диалога с подгрузкой истории и вложениями через BFF —
  * `GET /crm/messages/{lead}`, `/thread`, `/attachments/{message}/{index}`; действия — `take`, `reply` (ключ повтора
@@ -197,7 +205,7 @@
  * ссылке; неверная или просроченная — 422 `VALIDATION_FAILED`, `details.reason = reset_token_invalid`). `Me.access` остаётся для
  * совместимости, но экран «Доступ: CRM · ERP» убран: вместо него роли словами.
  *
- * **0.23.0 (D2-1) — Расчёт по заявке.** Добавляющее изменение, тег `calc`: `GET /erp/calc/requests` («Заявки в расчёте»,
+ * **0.24.0 (D2-1) — Расчёт по заявке.** Добавляющее изменение, тег `calc`: `GET /erp/calc/requests` («Заявки в расчёте»,
  * `mine` — «Мои расчёты»), `GET /erp/calc/{number}` (экран расчёта: задание из резолюции, строки, склад, поставщик и срок,
  * закупка и цена клиенту, наценка, визы по трём индикаторам, итоги без НДС, готовность), `POST …/start`, `POST …/lines`,
  * `PATCH|DELETE …/lines/{line_id}`, `POST …/lines/{line_id}/visa` (виза строки по зоне: товар — `erp.calc.goods`, услуга —
@@ -224,7 +232,7 @@
  * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; «Забыли пароль?» — 5 запросов в час на IP и на адрес; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.23.0
+ * OpenAPI spec version: 0.24.0
  */
 
 export type SystemStatusStatus = (typeof SystemStatusStatus)[keyof typeof SystemStatusStatus];

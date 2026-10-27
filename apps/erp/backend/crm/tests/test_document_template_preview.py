@@ -224,3 +224,73 @@ def test_placeholder_catalog_returns_grouped_code_and_label(lookups):
 def test_placeholder_catalog_requires_auth(lookups):
     resp = APIClient().get("/api/v1/crm/document-templates/placeholders/")
     assert resp.status_code == 401
+
+
+# ── B-012 (W15-H8): каркас своего вида и образцы блоков ────────────────────────────────────────────
+
+_STUB = "⟦"
+_PREVIEW = "/api/v1/crm/document-templates/preview/"
+
+
+def _preview(user, body, kind=None):
+    payload = {"body_html": body, **({"kind": kind} if kind else {})}
+    resp = _api(user).post(_PREVIEW, payload, format="json")
+    assert resp.status_code == 200, resp.content
+    return resp.json()
+
+
+def test_contract_preview_uses_the_contract_frame_and_sample_blocks(lookups):
+    user = _member(_company("ООО Продавец", "S1"), "s@t.uz")
+    body = "<p>Преамбула</p>{{doc.spec_table}}{{doc.totals}}{{doc.requisites_and_signatures}}"
+
+    result = _preview(user, body, "CONTRACT")
+
+    page = result["document_html"]
+    assert "Договор поставки" in page  # каркас договора, а не «Образец документа»
+    assert "Договор № ДГ-2026-00007" in page
+    assert "Образец документа" not in page
+    assert "Приложение № 1. Спецификация" in page and "Стрелочный привод СП-6" in page
+    assert "Итого к оплате" in page and "Реквизиты и подписи Сторон" in page
+    assert _STUB not in page and _STUB not in result["rendered_html"]
+    assert result["warnings"] == []
+
+
+def test_invoice_and_act_previews_use_their_own_frames(lookups):
+    user = _member(_company("ООО Продавец", "S1"), "s@t.uz")
+
+    invoice = _preview(
+        user, "{{doc.items_table}}{{doc.totals}}{{doc.payment_requisites}}{{doc.signatures}}", "INVOICE"
+    )["document_html"]
+    assert "Счёт на оплату" in invoice and "Платёжные реквизиты" in invoice and "Плательщик" in invoice
+    assert _STUB not in invoice
+
+    act = _preview(user, "{{doc.refs}}{{doc.items_table}}{{doc.totals}}{{doc.signatures}}", "ACT")["document_html"]
+    assert "Акт приёма-передачи" in act and "От Покупателя" in act
+    assert _STUB not in act
+
+
+def test_a_block_of_another_kind_stays_a_labelled_stub(lookups):
+    user = _member(_company("ООО Продавец", "S1"), "s@t.uz")
+
+    result = _preview(user, "{{doc.spec_table}}{{doc.payment_requisites}}", "CONTRACT")
+
+    assert "Приложение № 1. Спецификация" in result["document_html"]  # свой блок договора — образец
+    assert "Блок: платёжные реквизиты" in result["rendered_html"]  # блок счёта в договоре — заглушка
+    assert result["warnings"] == []
+
+
+def test_letter_and_unknown_kind_keep_the_generic_frame_and_stubs(lookups):
+    user = _member(_company("ООО Продавец", "S1"), "s@t.uz")
+
+    for kind in (None, "LETTER", "NO_SUCH_KIND"):
+        result = _preview(user, "<p>Текст</p>{{doc.items_table}}", kind)
+        assert "Образец документа" in result["document_html"], kind
+        assert "Блок: таблица позиций" in result["rendered_html"], kind
+
+
+def test_preview_kind_that_is_not_a_string_is_400_not_500(lookups):
+    user = _member(_company("ООО Продавец", "S1"), "s@t.uz")
+    for bad in (["CONTRACT"], {"a": 1}, 5):
+        resp = _api(user).post(_PREVIEW, {"body_html": "<p>x</p>", "kind": bad}, format="json")
+        assert resp.status_code == 400, bad
+        assert resp.json() == {"detail": "TEMPLATE_KIND_INVALID"}

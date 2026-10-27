@@ -16,7 +16,7 @@ import { CATALOG, type MockCalc, type MockLine, PARSE_PROPOSAL, seedCalcs } from
 import { buildMe, readSession } from "./mockSession";
 
 /**
- * Моки «Расчёта по заявке» (D2-1, BFF 0.23.0) — поведение BFF и ERP вместе: доступ по разделам каталога (`erp.calc` —
+ * Моки «Расчёта по заявке» (D2-1, BFF 0.24.0) — поведение BFF и ERP вместе: доступ по разделам каталога (`erp.calc` —
  * чтение и полный, зоны строк — `erp.calc.goods` и `erp.calc.services`), виза строки по зоне, любая правка снимает визу,
  * «Расчёт готов» только со всеми визами (409 `visas_missing`), себестоимость и наценка — только группе `cost_margin`,
  * итоги закупки — и `totals_only`, цены поставщиков — `supplier_prices`. Состояние — в `localStorage` страницы (как сессия

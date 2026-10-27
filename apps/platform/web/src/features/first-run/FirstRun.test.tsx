@@ -53,7 +53,14 @@ describe("Первый запуск до входа", () => {
     const { router } = await openSetup(secret("code"));
 
     expect(router.state.location.pathname).toBe("/setup");
-    expect(screen.getByText(/setup_code_issued/)).toBeVisible();
+    // основной текст — без технических слов; где искать код, — в свёрнутом блоке для техспециалиста
+    expect(
+      screen.getByText(/Код первого запуска выдаёт тот, кто разворачивал Платформу/),
+    ).toBeVisible();
+    expect(screen.getByText(/docker compose/)).not.toBeVisible(); // только внутри свёрнутого блока
+    expect(screen.getByText("Подробнее для техспециалиста")).toBeVisible();
+    expect(screen.getByText(/setup_code_issued/)).not.toBeVisible();
+    fireEvent.click(screen.getByText("Подробнее для техспециалиста"));
     // «Что произойдёт» перед главной кнопкой
     expect(screen.getByText("Что произойдёт")).toBeVisible();
     expect(screen.getByRole("button", { name: /Создать администратора и войти/ })).toBeVisible();
@@ -70,7 +77,7 @@ describe("Первый запуск до входа", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Создать администратора и войти" }));
-    expect(await screen.findByText("Введите код из журнала сервера")).toBeInTheDocument();
+    expect(await screen.findByText("Введите код первого запуска")).toBeInTheDocument();
     expect(screen.getByText("Введите имя и фамилию")).toBeInTheDocument();
     expect(screen.getByText("Введите электронную почту")).toBeInTheDocument();
 

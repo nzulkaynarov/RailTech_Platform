@@ -13,6 +13,7 @@ import type {
   DocumentKind,
   DocumentTemplateCopyIn,
   DocumentTemplateIn,
+  DocumentTemplateKind,
   DocumentTemplateUpdate,
   EmailTemplateIn,
   EmailTemplateUpdate,
@@ -130,6 +131,23 @@ const REQUIRED_BLOCKS: Record<string, { code: string; label: string }[]> = {
     { code: "doc.totals", label: "Блок: итоги и НДС" },
     { code: "doc.signatures", label: "Блок: подписи сторон" },
   ],
+  Счёт: [
+    { code: "doc.items_table", label: "Блок: таблица позиций" },
+    { code: "doc.totals", label: "Блок: итоги и НДС" },
+    { code: "doc.payment_requisites", label: "Блок: платёжные реквизиты" },
+  ],
+};
+
+/** Вид шаблона словами (ERP `DocumentTemplateKind.name`). */
+const TEMPLATE_KIND_NAME: Record<DocumentTemplateKind, string> = {
+  letter: "Письмо",
+  report: "Рапорт / отчёт",
+  custom: "Произвольный",
+  contract: "Договор",
+  invoice: "Счёт",
+  act: "Акт",
+  receipt: "Квитанция об оплате",
+  delivery_note: "Накладная на отгрузку",
 };
 
 /** Отказ ERP `TEMPLATE_MISSING_REQUIRED_BLOCKS` с названиями блоков (C2A-G-5); `null` — состав блоков в порядке. */
@@ -234,6 +252,7 @@ function fxOverview(state: CompanyMock) {
     current: fx.current,
     max_age_days: 7,
     journal: fx.journal.slice(0, 20),
+    journal_available: true,
   };
 }
 
@@ -504,7 +523,7 @@ export const adminCompanyHandlers = [
   http.post("*/admin/company/document-templates/preview", async ({ request }) => {
     const caller = guard("read");
     if (isResponse(caller)) return caller;
-    const body = (await request.json()) as { body_html: string };
+    const body = (await request.json()) as { body_html: string; kind?: DocumentTemplateKind };
     const known = PLACEHOLDER_GROUPS.flatMap((g) => g.items.map((i) => i.code));
     const used = [...body.body_html.matchAll(/\{\{(\w+)\}\}/g)].map((m) => m[1] ?? "");
     const unknown = used.filter((code) => !known.includes(code));
@@ -512,7 +531,7 @@ export const adminCompanyHandlers = [
       known.includes(code) ? `[${code}]` : `{{${code}}}`,
     );
     return HttpResponse.json({
-      html: `<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>Образец</title></head><body style="font-family:Arial,sans-serif;padding:24px">${html}</body></html>`,
+      html: `<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>Образец</title></head><body data-kind="${body.kind ?? "generic"}" style="font-family:Arial,sans-serif;padding:24px">${html}</body></html>`,
       ...(unknown.length > 0 ? { warnings: unknown } : {}),
     });
   }),
@@ -521,10 +540,18 @@ export const adminCompanyHandlers = [
       request,
       (body, s) => {
         if (body.name.trim() === "") return validation(["name"]);
+        const kind = body.kind ?? "custom";
+        const refusal = missingBlocksFailure(
+          TEMPLATE_KIND_NAME[kind],
+          body.body_html ?? "",
+          body.is_active ?? true,
+        );
+        if (refusal) return refusal;
         const created = {
           id: nextId(s),
           name: body.name,
-          kind_name: "Документ",
+          kind,
+          kind_name: TEMPLATE_KIND_NAME[kind],
           body_html: body.body_html ?? "",
           is_sample: false,
           is_owned: true,

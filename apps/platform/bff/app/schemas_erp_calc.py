@@ -1,4 +1,4 @@
-"""Расчёт по заявке: схемы `Calc*` из packages/contracts/openapi/platform-bff.yaml (0.23.0, D2-1) и
+"""Расчёт по заявке: схемы `Calc*` из packages/contracts/openapi/platform-bff.yaml (0.24.0, D2-1) и
 перевод ответов ERP (`/api/v1/calc/*`, `crm.services.calculation`) в ответ Платформы.
 
 BFF не решает: зону строки, визы, «Расчёт готов» и права решает ERP. Здесь — номер ЗВ и шаг пути (до

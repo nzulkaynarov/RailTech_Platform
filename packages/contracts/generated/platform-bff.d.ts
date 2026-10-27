@@ -4718,6 +4718,8 @@ export interface components {
       actor: components["schemas"]["PersonRef"];
       /** @description Что сделал — «подтвердила оплату по ПР-2026-099» */
       text: string;
+      /** @description Код административного события ERP (`admin.*`), для которого SPA собирает фразу на языке сотрудника; иначе `null` */
+      code?: string | null;
       module: components["schemas"]["ModuleCode"];
       /** Format: date-time */
       at: string;
@@ -5261,9 +5263,23 @@ export interface components {
       sort_order?: number;
       is_active?: boolean;
     };
+    /**
+     * @description Вид шаблона документа
+     * @enum {string}
+     */
+    DocumentTemplateKind:
+      | "letter"
+      | "report"
+      | "custom"
+      | "contract"
+      | "invoice"
+      | "act"
+      | "receipt"
+      | "delivery_note";
     DocumentTemplate: {
       id: components["schemas"]["CompanyItemRef"];
       name: string;
+      kind: components["schemas"]["DocumentTemplateKind"];
       /** @description Вид документа словами */
       kind_name: string;
       body_html: string;
@@ -5281,6 +5297,7 @@ export interface components {
     };
     DocumentTemplateIn: {
       name: string;
+      kind?: components["schemas"]["DocumentTemplateKind"];
       body_html?: string;
       is_active?: boolean;
     };
@@ -5307,6 +5324,7 @@ export interface components {
     };
     DocumentTemplatePreviewIn: {
       body_html: string;
+      kind?: components["schemas"]["DocumentTemplateKind"];
     };
     EmailTemplate: {
       id: components["schemas"]["CompanyItemRef"];
@@ -5537,6 +5555,8 @@ export interface components {
       /** @description Допустимый возраст курса в днях (настройка компании в ERP) */
       max_age_days: number;
       journal: components["schemas"]["FxRateJournalEntry"][];
+      /** @description `false` — журнал недоступен без права `settings.edit` в ERP (имена и почта коллег); `journal` тогда пуст, SPA секцию журнала не показывает */
+      journal_available: boolean;
     };
     FxRateIn: {
       /**

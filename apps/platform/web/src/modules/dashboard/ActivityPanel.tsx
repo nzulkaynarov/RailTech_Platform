@@ -26,6 +26,11 @@ function Row({ item }: { item: ActivityItem }) {
   const format = useFormat();
   const { t } = useTranslation("modules");
   const module = moduleName(t, item.module);
+  // Административные события ERP BFF присылает кодом: фраза — на языке сотрудника, а не готовой русской строкой.
+  const text =
+    item.code && !item.object
+      ? t(`modules:dashboard.activity.events.${item.code}`, { defaultValue: item.text })
+      : item.text;
   const hint = [module, item.object?.number, format.activity(item.at)].filter(Boolean).join(" · ");
   const body = (
     <>
@@ -35,7 +40,7 @@ function Row({ item }: { item: ActivityItem }) {
       <span style={{ minWidth: 0 }}>
         <span style={{ display: "block" }}>
           <b style={{ fontWeight: 500 }}>{item.actor.name}</b>{" "}
-          <span style={{ color: "#595959" }}>{item.text}</span>
+          <span style={{ color: "#595959" }}>{text}</span>
         </span>
         <span className="pf-hint" style={{ display: "block" }}>
           {hint}
