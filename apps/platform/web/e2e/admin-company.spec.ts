@@ -56,7 +56,7 @@ async function expectNoViolations(page: Page, context: string): Promise<void> {
 
 async function openCompany(page: Page, tab: string): Promise<void> {
   await spaGoto(page, `/admin/company?tab=${tab}`);
-  await expect(page.getByRole("heading", { level: 1, name: "Компания" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Компания и бланки" })).toBeVisible();
   const title = TABS.find(([key]) => key === tab)?.[1] ?? "";
   await expect(page.getByRole("heading", { level: 2, name: title })).toBeVisible();
 }
@@ -87,7 +87,7 @@ test.describe("Компания: права и меню", () => {
 
   test("менеджер: пункта «Компания» в меню нет, по адресу — «Нет доступа»", async ({ page }) => {
     await loginAndWait(page, "manager@demo.example");
-    await expect(page.getByRole("link", { name: "Компания" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Компания и бланки" })).toHaveCount(0);
     await spaGoto(page, "/admin/company");
     await expect(page.getByRole("heading", { level: 1, name: "Нет доступа" })).toBeVisible();
   });
@@ -99,10 +99,10 @@ test.describe("Компания: права и меню", () => {
     await spaGoto(page, "/admin/org");
     await page
       .getByRole("navigation", { name: "Разделы модуля" })
-      .getByRole("link", { name: "Компания" })
+      .getByRole("link", { name: "Компания и бланки" })
       .click();
     await expect(page).toHaveURL(/\/admin\/company/);
-    await expect(page.getByRole("heading", { level: 1, name: "Компания" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Компания и бланки" })).toBeVisible();
     await expect(page.getByRole("tab", { name: "Реквизиты" })).toHaveAttribute(
       "aria-selected",
       "true",
@@ -149,7 +149,7 @@ test.describe("Компания: реквизиты, бланк, нумерац�
     await settledScreenshot(page, "company-details-logo");
 
     await page.reload();
-    await expect(page.getByRole("heading", { level: 1, name: "Компания" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Компания и бланки" })).toBeVisible();
     await expect(page.getByLabel("Телефон")).toHaveValue("+998 11 111 11 11");
     await page.getByRole("button", { name: "Удалить логотип" }).click();
     const confirm = page.getByRole("dialog", { name: "Удалить логотип компании?" });

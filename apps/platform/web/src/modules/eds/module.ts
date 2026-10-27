@@ -11,8 +11,6 @@ const EDS_ANY = [
 
 export const eds: ModuleConfig = {
   code: "eds",
-  order: 3,
-  name: "EDS",
   action: { access: "eds.memo.create", to: "/eds/new" },
   sections: [
     {

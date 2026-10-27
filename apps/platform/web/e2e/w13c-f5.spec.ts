@@ -64,13 +64,13 @@ test.describe("Мелкие дефекты гейта C2a: G-5 и G-6", () => {
       await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
       await loginAndWait(page, "admin@demo.example");
       await spaGoto(page, "/crm/kb");
-      await expect(page.getByRole("heading", { level: 1, name: "База знаний" })).toBeVisible();
+      await expect(page.getByRole("heading", { level: 1, name: "База знаний бота" })).toBeVisible();
 
       await page.getByLabel("Вопрос клиента").fill("поиск без ключа");
       await page.getByRole("button", { name: "Найти" }).click();
       await expect(
         page.getByText(
-          "Модель поиска недоступна: добавьте ключ эмбеддингов в Admin · Внешние интеграции, раздел «Модели ИИ», и повторите.",
+          "Модель поиска недоступна: добавьте ключ эмбеддингов в Настройках · Подключениях, раздел «Модели ИИ», и повторите.",
         ),
       ).toBeVisible();
       await expectNoViolations(page, `kb search without key ${String(width)}`);

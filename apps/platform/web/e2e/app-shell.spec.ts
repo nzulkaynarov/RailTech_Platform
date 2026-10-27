@@ -27,19 +27,19 @@ test.describe("панели", () => {
 
     // перезагрузка с ?panel=closed
     await page.reload();
-    await expect(page.getByRole("heading", { level: 1, name: "Моя очередь" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Мои задачи" })).toBeVisible();
     await expect(menu).toHaveCount(0);
     await expect(panel).toHaveCount(0);
 
     // тот же раздел без параметров в адресе: состояние берётся из сохранённого по пользователю и разделу
     await page.goto("/dashboard/queue");
-    await expect(page.getByRole("heading", { level: 1, name: "Моя очередь" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Мои задачи" })).toBeVisible();
     await expect(menu).toHaveCount(0);
     await expect(panel).toHaveCount(0);
 
     // другой раздел — свои умолчания (обе панели открыты)
     await page.goto("/dashboard/projects");
-    await expect(page.getByRole("heading", { level: 1, name: "Все проекты" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Проекты" })).toBeVisible();
     await expect(menu).toBeVisible();
     await expect(panel).toBeVisible();
 
@@ -63,7 +63,7 @@ test.describe("панели", () => {
     await expect(page.getByRole("navigation", { name: "Разделы модуля" })).toBeVisible();
   });
 
-  test("умолчания по приложению А: CRM · Все лиды — без бокового окна, ERP · Расчёт — без подменю", async ({
+  test("умолчания по приложению А: Клиенты · Лиды — без бокового окна, Расчёт · Мои расчёты — без подменю", async ({
     page,
   }) => {
     await loginAndWait(page, "all@demo.example");
@@ -71,13 +71,13 @@ test.describe("панели", () => {
     const panel = page.getByRole("complementary", { name: "Боковое окно" });
 
     await page.goto("/crm/leads");
-    await expect(page.getByRole("heading", { level: 1, name: "Все лиды" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Лиды" })).toBeVisible();
     await expect(menu).toBeVisible();
     await expect(panel).toHaveCount(0);
     await settledScreenshot(page, "crm-leads");
 
     await page.goto("/erp/calc");
-    await expect(page.getByRole("heading", { level: 1, name: "Расчёт" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Мои расчёты" })).toBeVisible();
     await expect(menu).toHaveCount(0);
     await expect(panel).toBeVisible();
     await expect(page.getByRole("tab", { name: "Задание" })).toBeVisible();
@@ -107,12 +107,12 @@ test.describe("панели", () => {
   test("активный пункт подменю и бейджи очереди", async ({ page }) => {
     await loginAndWait(page, "director@demo.example");
     const menu = page.getByRole("navigation", { name: "Разделы модуля" });
-    await expect(menu.getByRole("link", { name: /^Моя очередь/ })).toHaveAttribute(
+    await expect(menu.getByRole("link", { name: /^Мои задачи/ })).toHaveAttribute(
       "aria-current",
       "page",
     );
-    await expect(menu.getByRole("link", { name: "Моя очередь 3, требует действия" })).toBeVisible();
-    await expect(menu.getByRole("link", { name: "Все проекты 4" })).toBeVisible();
+    await expect(menu.getByRole("link", { name: "Мои задачи 3, требует действия" })).toBeVisible();
+    await expect(menu.getByRole("link", { name: "Проекты 4" })).toBeVisible();
     await expect(page.getByRole("button", { name: /^Центр уведомлений, 3 новых/ })).toBeVisible();
   });
 
@@ -191,7 +191,7 @@ test.describe("роли и доступ", () => {
   }) => {
     await loginAndWait(page, "manager@demo.example");
     await expect(railLinks(page)).toHaveText(visibleModules("MANAGER"));
-    await expect(page.getByRole("link", { name: "Admin" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Настройки" })).toHaveCount(0);
 
     await page.goto("/admin/roles");
     await expect(page.getByRole("heading", { level: 1, name: "Нет доступа" })).toBeVisible();
@@ -229,7 +229,7 @@ test.describe("узкие экраны", () => {
       await page.getByRole("button", { name: "Меню" }).click();
       const drawerMenu = page.getByRole("navigation", { name: "Разделы модуля" });
       await expect(drawerMenu).toBeVisible();
-      await drawerMenu.getByRole("link", { name: "Все проекты 4" }).click();
+      await drawerMenu.getByRole("link", { name: "Проекты 4" }).click();
       await expect(page).toHaveURL(/\/dashboard\/projects$/);
       await expect(drawerMenu).toBeHidden();
 

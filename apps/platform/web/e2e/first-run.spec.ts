@@ -164,7 +164,7 @@ test.describe("Первый запуск: полный путь", () => {
     await expect(page.getByText("Готово 1 из 5")).toBeVisible();
     await steps.getByRole("link", { name: "Подключить бота" }).click();
     await expect(page).toHaveURL(/\/admin\/integrations\?card=telegram/);
-    await expect(page.getByRole("heading", { level: 1, name: "Внешние интеграции" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Подключения" })).toBeVisible();
 
     // Баннер на других экранах Платформы
     await spaGoto(page, "/admin/org");
@@ -258,7 +258,7 @@ test.describe("Первый запуск: полный путь", () => {
     await banner.getByRole("button", { name: "Скрыть баннер настройки" }).click();
     await expect(banner).toHaveCount(0);
     await page.reload();
-    await expect(page.getByRole("heading", { level: 1, name: "Оргструктура" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Сотрудники" })).toBeVisible();
     await expect(banner).toHaveCount(0);
 
     // Мастер остаётся по адресу; все шаги сделаны -> «Всё готово»
@@ -278,7 +278,7 @@ test.describe("Первый запуск: полный путь", () => {
     await expect(page.getByText("Всё готово: Платформа настроена.")).toBeVisible();
     await expect(page.getByText("Готово 5 из 5")).toBeVisible();
     await spaGoto(page, "/admin/org");
-    await expect(page.getByRole("heading", { level: 1, name: "Оргструктура" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Сотрудники" })).toBeVisible();
     await expect(page.getByRole("region", { name: "Настройка Платформы" })).toHaveCount(0);
   });
 
@@ -291,7 +291,7 @@ test.describe("Первый запуск: полный путь", () => {
     await expect(page).toHaveURL(/\/dashboard\/queue$/);
     await expect(page.getByRole("region", { name: "Настройка Платформы" })).toHaveCount(0);
     await spaGoto(page, "/admin/org");
-    await expect(page.getByRole("heading", { level: 1, name: "Оргструктура" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "Сотрудники" })).toBeVisible();
     await expect(page.getByRole("region", { name: "Настройка Платформы" })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Пригласить сотрудника" })).toHaveCount(0);
 

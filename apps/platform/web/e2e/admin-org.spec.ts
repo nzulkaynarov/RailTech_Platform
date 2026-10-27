@@ -28,7 +28,7 @@ async function expectNoViolations(page: Page, context: string): Promise<void> {
 
 async function openOrg(page: Page): Promise<void> {
   await spaGoto(page, "/admin/org");
-  await expect(page.getByRole("heading", { level: 1, name: "Оргструктура" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Сотрудники" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Открыть карточку: Демо Менеджеров" })).toBeVisible();
 }
 

@@ -42,7 +42,7 @@ async function expectNoViolations(page: Page, context: string): Promise<void> {
 async function openBot(page: Page, section?: string, extra = ""): Promise<void> {
   const query = [section ? `section=${section}` : "", extra].filter(Boolean).join("&");
   await spaGoto(page, `/admin/bot${query ? `?${query}` : ""}`);
-  await expect(page.getByRole("heading", { level: 1, name: "Настройки бота" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Telegram-бот" })).toBeVisible();
   await expect(page.locator(".ant-skeleton")).toHaveCount(0);
 }
 
@@ -260,7 +260,7 @@ test.describe("Настройки бота: выгрузки CSV", () => {
     for (const title of ["Лиды", "Клиенты", "Сделки"]) {
       await expect(page.getByRole("button", { name: `Скачать: ${title}` })).toBeDisabled();
     }
-    await expect(page.getByText(/нужен раздел «CRM · Все лиды»/)).toBeVisible();
+    await expect(page.getByText(/нужен раздел «Клиенты · Лиды»/)).toBeVisible();
     await settledScreenshot(page, "exports-admin-only");
 
     await page.evaluate("window.localStorage.clear()");
@@ -313,13 +313,13 @@ test.describe("Настройки бота: права", () => {
     await loginAndWait(page, "manager@demo.example");
     await spaGoto(page, "/admin/bot");
     await expect(page.getByRole("heading", { level: 1, name: "Нет доступа" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Настройки бота" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Telegram-бот" })).toHaveCount(0);
 
     await page.evaluate("window.localStorage.clear()");
     await spaGoto(page, "/login");
     await loginAndWait(page, "director@demo.example");
     await spaGoto(page, "/admin/roles");
-    await expect(page.getByRole("link", { name: "Настройки бота" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Telegram-бот" })).toBeVisible();
   });
 });
 

@@ -2,8 +2,6 @@ import type { ModuleConfig } from "../types";
 
 export const erp: ModuleConfig = {
   code: "erp",
-  order: 4,
-  name: "ERP",
   action: { access: "erp.calc" },
   sections: [
     {

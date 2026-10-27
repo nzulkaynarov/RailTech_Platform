@@ -76,7 +76,7 @@ describe("Admin · Ролевая матрица (R-2, ADR-0012)", () => {
     });
     fireEvent.change(
       within(table()).getByRole("combobox", {
-        name: "Все сообщения, Все лиды, Каналы связи, База знаний — роль «Менеджер и бухгалтер»",
+        name: "Ждут ответа, Лиды, Каналы связи, База знаний бота — роль «Менеджер и бухгалтер»",
       }),
       { target: { value: "full" } },
     );
@@ -85,7 +85,7 @@ describe("Admin · Ролевая матрица (R-2, ADR-0012)", () => {
         name: "Только итоговые суммы расчёта (без себестоимости по строкам) — роль «Менеджер и бухгалтер» видит",
       }),
     );
-    expect(within(panel).getByText("Роль открывает модули: CRM.")).toBeVisible();
+    expect(within(panel).getByText("Роль открывает модули: Клиенты.")).toBeVisible();
     fireEvent.click(within(panel).getByRole("button", { name: "Создать роль" }));
 
     await waitFor(() => {
@@ -105,7 +105,7 @@ describe("Admin · Ролевая матрица (R-2, ADR-0012)", () => {
 
     fireEvent.change(
       within(table()).getByRole("combobox", {
-        name: "Роли, Оргструктура, Интеграции, Тикеты — роль «Новая роль»",
+        name: "Роли и права, Сотрудники, Подключения, Telegram-бот, История действий, Обращения сотрудников — роль «Новая роль»",
       }),
       { target: { value: "full" } },
     );
@@ -158,7 +158,7 @@ describe("Admin · Ролевая матрица (R-2, ADR-0012)", () => {
     expect(within(table()).queryAllByRole("combobox")).toHaveLength(0);
     expect(within(table()).queryAllByRole("checkbox")).toHaveLength(0);
     // Права директора видны в его столбце: лиды — только чтение.
-    const row = within(table()).getByRole("row", { name: /Все сообщения, Все лиды/ });
+    const row = within(table()).getByRole("row", { name: /Ждут ответа, Лиды/ });
     expect(within(row).getAllByText("Только чтение").length).toBeGreaterThan(0);
   });
 
@@ -205,7 +205,7 @@ describe("Admin · Ролевая матрица (R-2, ADR-0012)", () => {
 
     fireEvent.change(
       within(table()).getByRole("combobox", {
-        name: "Внешний (клиент: Telegram-бот, почта) — роль «Бухгалтер»",
+        name: "С клиентами (Telegram-бот, почта) — роль «Бухгалтер»",
       }),
       { target: { value: "" } },
     );

@@ -47,11 +47,11 @@
     "notifications": "Jamoa kanali",
     "budget": "Modellar byudjeti",
     "deals": "Bitimlar",
-    "web_form": "Saytdan «So‘rov» formasi",
+    "web_form": "Saytdan «Ariza» formasi",
     "service_alerts": "Xizmat nosozliklari haqida ogohlantirishlar"
   },
   "sectionHints": {
-    "web_form": "Cabinet kirish sahifasidagi «So‘rov» formasining spamga qarshi himoyasi (tashqi xizmatlarsiz): yashirin maydon, imzolangan forma tokeni va IP bo‘yicha limit. Saytdan kelgan lid «Kiruvchilar»ga «Mas’ulsiz» sifatida tushadi.",
+    "web_form": "Cabinet kirish sahifasidagi «Ariza» formasining spamga qarshi himoyasi (tashqi xizmatlarsiz): yashirin maydon, imzolangan forma tokeni va IP bo‘yicha limit. Saytdan kelgan lid «Kiruvchilar»ga «Mas’ulsiz» sifatida tushadi.",
     "business_hours": "SLA, eslatmalar va botning ish vaqtidan tashqari matni ish soatlariga bog‘liq.",
     "texts": "Bot mijozlarga nima yozadi. Har bir matn uch tilda.",
     "stop_words": "Stop-so‘zli xabar darhol menejerga uzatiladi. «so‘z*» — istalgan tugallanma.",
@@ -80,7 +80,7 @@
     "stay": "Qolish"
   },
   "qualificationHint": "Lid barcha majburiy faktlar ma’lum bo‘lganda va qo‘shimcha faktlar belgilangan sondan kam bo‘lmaganda «Kvalifikatsiyalangan» bo‘ladi. Faktlarni AI ajratadi, qarorni tizim qabul qiladi.",
-  "channelMoved": "Jamoa kanali «Tashqi integratsiyalar» → Telegramda tanlanadi; bu yerda — kimni tilga olish va menejerga qanchalik tez-tez yozish.",
+  "channelMoved": "Jamoa kanali «Ulanishlar» → Telegramda tanlanadi; bu yerda — kimni tilga olish va menejerga qanchalik tez-tez yozish.",
   "openIntegrations": "Telegramni ochish",
   "weekdays": {
     "mon": "Du",
@@ -195,8 +195,8 @@
     },
     "sections": {
       "crm": {
-        "leads": "CRM · Barcha lidlar",
-        "clients": "CRM · Barcha mijozlar"
+        "leads": "Mijozlar · Lidlar",
+        "clients": "Mijozlar · Mijozlar"
       }
     }
   },
@@ -455,20 +455,20 @@
         "when": "Mijoz /docs ni chaqirdi, lekin uning hujjatlari yo‘q."
       },
       "request_prompt": {
-        "label": "So‘rovni tasvirlashni iltimos qilish",
+        "label": "Arizani tasvirlashni iltimos qilish",
         "when": "Mijoz /request ni chaqirdi — bot tavsifni bitta xabarda kutadi."
       },
       "request_created": {
-        "label": "So‘rov yaratildi",
-        "when": "So‘rov tavsifi olindi, so‘rov menejerga uzatildi. {number} — so‘rov raqami."
+        "label": "Ariza yaratildi",
+        "when": "Ariza tavsifi olindi, ariza menejerga uzatildi. {number} — ariza raqami."
       },
       "request_status_open": {
-        "label": "Holat: so‘rov ishlanmoqda",
-        "when": "Mijoz /status ni chaqirdi, ochiq so‘rov bor. {number}, {date}, {summary} — so‘rovdan."
+        "label": "Holat: ariza ishlanmoqda",
+        "when": "Mijoz /status ni chaqirdi, ochiq ariza bor. {number}, {date}, {summary} — arizadan."
       },
       "request_status_none": {
-        "label": "Holat: ochiq so‘rovlar yo‘q",
-        "when": "Mijoz /status ni chaqirdi, ochiq so‘rovlar yo‘q."
+        "label": "Holat: ochiq arizalar yo‘q",
+        "when": "Mijoz /status ni chaqirdi, ochiq arizalar yo‘q."
       },
       "phone_request": {
         "label": "Raqamni ulashishni so‘rash",
@@ -515,7 +515,7 @@
         "when": "Bir marta, menejer lidni mijozga aylantirganda: /docs va /request mavjud."
       },
       "request_text_only": {
-        "label": "So‘rov — faqat matn bilan",
+        "label": "Ariza — faqat matn bilan",
         "when": "Mijoz /request ni chaqirdi va tavsif o‘rniga fayl yoki ovozli xabar yubordi."
       },
       "language_first": {

@@ -197,7 +197,7 @@
   },
   "loadError": {
     "title": "Could not load the journal",
-    "text": "The journal is built from CRM, ERP and EDS. Retry; if the error stays, check Admin · External integrations.",
+    "text": "The journal is built from CRM, ERP and EDS. Retry; if the error stays, check Settings · Connections.",
     "retry": "Retry"
   },
   "tableScroll": "{{name}}: the table scrolls horizontally",
