@@ -6,6 +6,7 @@
 [стратегия 2026-10-23](strategy/2026-10-23-platform-architecture-strategy.md) §4 и §7; статусы задач и PR —
 [`PROGRESS.md`](PROGRESS.md); решения — [`DECISIONS.md`](DECISIONS.md); карта документов — [`README.md`](README.md).
 История до 2026-10-23 — [`history/handoff-2026-10.md`](history/handoff-2026-10.md).
+Хвосты, долги и открытые вопросы — единый реестр [`BACKLOG.md`](BACKLOG.md) (ID `B-0xx`).
 
 ## 0. Начни здесь
 
