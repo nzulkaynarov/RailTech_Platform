@@ -428,7 +428,7 @@ def test_context_float_timestamps_are_rejected():
         verify_agent_context(forge_context(iat=now, exp=now + 60), MCP_SECRET)
 
 
-@pytest.mark.parametrize("jti", [None, "", "not-a-uuid", 12345, str(uuid.uuid1())])
+@pytest.mark.parametrize("jti", [None, "", "not-a-uuid", 12345, pytest.param(str(uuid.uuid1()), id="uuid1")])
 def test_context_requires_uuid4_jti(jti):
     token = forge_context(jti=jti)
     with pytest.raises(AgentContextError, match="jti"):

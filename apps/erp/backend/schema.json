@@ -14559,6 +14559,146 @@
                 }
             }
         },
+        "/api/v1/exchange-rates/current/": {
+            "get": {
+                "operationId": "exchange_rates_current_retrieve",
+                "description": "Rate for today by the freshness rule (latest row not older than the company limit); `current` null — no rate.",
+                "summary": "Current exchange rate to UZS",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "currency",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Код валюты (USD, EUR, RUB); по умолчанию USD."
+                    }
+                ],
+                "tags": [
+                    "Finance"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CurrentRate"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "FX_CURRENCY_UNSUPPORTED"
+                    }
+                }
+            }
+        },
+        "/api/v1/exchange-rates/journal/": {
+            "get": {
+                "operationId": "exchange_rates_journal_list",
+                "description": "Newest first. `kind=manual` — entered by an operator; `kind=auto_skipped` — the CBU rate for the same date was not applied because a manual rate is kept.",
+                "summary": "Exchange rate manual-entry journal",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "currency",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Код валюты (USD, EUR, RUB); по умолчанию USD."
+                    },
+                    {
+                        "in": "query",
+                        "name": "limit",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "1..100, default 20."
+                    }
+                ],
+                "tags": [
+                    "Finance"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/JournalEntry"
+                                    }
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "FX_CURRENCY_UNSUPPORTED"
+                    }
+                }
+            }
+        },
+        "/api/v1/exchange-rates/manual/": {
+            "post": {
+                "operationId": "exchange_rates_manual_create",
+                "description": "Needs `settings.edit` or administrator. Replaces the row for (currency, date) — a CBU rate or an earlier manual one; the previous value stays in the journal. The CBU auto-load does not overwrite a manual rate. Errors are `{detail: CODE}`: FX_CURRENCY_UNSUPPORTED, FX_RATE_INVALID, FX_RATE_DATE_INVALID, FX_RATE_DATE_IN_FUTURE, FX_RATE_DATE_TOO_OLD.",
+                "summary": "Enter an exchange rate manually",
+                "tags": [
+                    "Finance"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ManualRateInRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ManualRateInRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ManualRateInRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/_Rate"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "FX_* validation code"
+                    }
+                }
+            }
+        },
         "/api/v1/finance/deals/{deal_id}/margin-deviation/": {
             "get": {
                 "operationId": "finance_deals_margin_deviation_retrieve",
@@ -20963,6 +21103,31 @@
                     "name"
                 ]
             },
+            "CurrentRate": {
+                "type": "object",
+                "properties": {
+                    "currency": {
+                        "type": "string"
+                    },
+                    "current": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/_Rate"
+                            }
+                        ],
+                        "nullable": true,
+                        "description": "Курс на сегодня по правилу «не старше лимита»; null — курса нет."
+                    },
+                    "max_age_days": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "currency",
+                    "current",
+                    "max_age_days"
+                ]
+            },
             "DealDetail": {
                 "type": "object",
                 "description": "MED-3: Full detail serializer with quotes.",
@@ -22574,6 +22739,70 @@
                     "deal"
                 ]
             },
+            "JournalEntry": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "kind": {
+                        "$ref": "#/components/schemas/JournalEntryKindEnum"
+                    },
+                    "currency": {
+                        "type": "string"
+                    },
+                    "rate_date": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "rate_to_uzs": {
+                        "type": "string"
+                    },
+                    "previous_rate_to_uzs": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "previous_source": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "entered_by_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "entered_by_email": {
+                        "type": "string"
+                    },
+                    "entered_by_name": {
+                        "type": "string"
+                    },
+                    "entered_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "currency",
+                    "entered_at",
+                    "entered_by_email",
+                    "entered_by_id",
+                    "entered_by_name",
+                    "id",
+                    "kind",
+                    "previous_rate_to_uzs",
+                    "previous_source",
+                    "rate_date",
+                    "rate_to_uzs"
+                ]
+            },
+            "JournalEntryKindEnum": {
+                "enum": [
+                    "manual",
+                    "auto_skipped"
+                ],
+                "type": "string",
+                "description": "* `manual` - manual\n* `auto_skipped` - auto_skipped"
+            },
             "LanguageB62Enum": {
                 "enum": [
                     "ru",
@@ -22636,6 +22865,27 @@
                     "quantity",
                     "unit_price_excl_vat"
                 ]
+            },
+            "ManualRateInRequest": {
+                "type": "object",
+                "description": "Тело ручного ввода. Проверку значений делает сервис (коды `FX_*`), здесь — только форма.",
+                "properties": {
+                    "currency": {
+                        "type": "string",
+                        "minLength": 1,
+                        "default": "USD"
+                    },
+                    "rate_date": {
+                        "type": "string",
+                        "default": "",
+                        "description": "Дата курса, YYYY-MM-DD; не позже сегодня и не старше 366 дней."
+                    },
+                    "rate_to_uzs": {
+                        "type": "string",
+                        "default": "",
+                        "description": "Курс > 0, не больше 6 знаков после запятой."
+                    }
+                }
             },
             "Manufacturer": {
                 "type": "object",
@@ -29296,6 +29546,32 @@
                 "required": [
                     "amount",
                     "currency"
+                ]
+            },
+            "_Rate": {
+                "type": "object",
+                "properties": {
+                    "currency": {
+                        "type": "string"
+                    },
+                    "rate_to_uzs": {
+                        "type": "string",
+                        "description": "Сумов за 1 единицу валюты, без хвостовых нулей."
+                    },
+                    "rate_date": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "source": {
+                        "type": "string",
+                        "description": "CBU (автозагрузка ЦБ РУз) или MANUAL (вручную)."
+                    }
+                },
+                "required": [
+                    "currency",
+                    "rate_date",
+                    "rate_to_uzs",
+                    "source"
                 ]
             }
         },

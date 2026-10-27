@@ -21,7 +21,9 @@ os.environ["RT_BUS_SUBSCRIPTIONS"] = str(TEST_SUBSCRIPTIONS)
 def _clear_default_cache():
     """Hermetic tests: flush the default cache before every test.
 
-    The default cache is real Redis (DB0), shared with the DRF throttle
+    The default cache is real Redis (DB0; under pytest-xdist worker gwN uses its
+    own DB 3*N, see core/settings_pytest.py — clear() is FLUSHDB, so it must
+    never hit a neighbour's DB), shared with the DRF throttle
     scopes, the SEC-06 login lockout, and the 2FA replay guards (used-ticket /
     used-code markers). Without this, throttle counters and replay markers
     persist across tests AND across local runs (their TTLs outlive a run),

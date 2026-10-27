@@ -216,7 +216,9 @@ def test_several_attachments_and_a_repeated_one(portal_client):
     assert Attachment.objects.count() == 2
 
 
-@pytest.mark.parametrize("upload_id", [str(uuid.uuid4()), "not-a-uuid", "1; DROP TABLE", "{}", "0" * 36])
+@pytest.mark.parametrize(
+    "upload_id", [pytest.param(str(uuid.uuid4()), id="random-uuid4"), "not-a-uuid", "1; DROP TABLE", "{}", "0" * 36]
+)
 def test_unknown_upload_is_422_upload_not_found(portal_client, client_company, upload_id):
     response = post(portal_client, attachments=[{"upload_id": upload_id, "name": "x.pdf"}])
     assert response.status_code == 422, response.content

@@ -6056,6 +6056,66 @@ export interface paths {
         patch: operations["crm_wording_variants_partial_update"];
         trace?: never;
     };
+    "/api/v1/exchange-rates/current/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Current exchange rate to UZS
+         * @description Rate for today by the freshness rule (latest row not older than the company limit); `current` null — no rate.
+         */
+        get: operations["exchange_rates_current_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/exchange-rates/journal/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Exchange rate manual-entry journal
+         * @description Newest first. `kind=manual` — entered by an operator; `kind=auto_skipped` — the CBU rate for the same date was not applied because a manual rate is kept.
+         */
+        get: operations["exchange_rates_journal_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/exchange-rates/manual/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Enter an exchange rate manually
+         * @description Needs `settings.edit` or administrator. Replaces the row for (currency, date) — a CBU rate or an earlier manual one; the previous value stays in the journal. The CBU auto-load does not overwrite a manual rate. Errors are `{detail: CODE}`: FX_CURRENCY_UNSUPPORTED, FX_RATE_INVALID, FX_RATE_DATE_INVALID, FX_RATE_DATE_IN_FUTURE, FX_RATE_DATE_TOO_OLD.
+         */
+        post: operations["exchange_rates_manual_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/finance/deals/{deal_id}/margin-deviation/": {
         parameters: {
             query?: never;
@@ -8844,6 +8904,12 @@ export interface components {
              */
             symbol?: string;
         };
+        CurrentRate: {
+            currency: string;
+            /** @description Курс на сегодня по правилу «не старше лимита»; null — курса нет. */
+            current: components["schemas"]["_Rate"] | null;
+            max_age_days: number;
+        };
         /** @description MED-3: Full detail serializer with quotes. */
         DealDetail: {
             readonly id: number;
@@ -9641,6 +9707,27 @@ export interface components {
             currency?: number | null;
             notes?: string;
         };
+        JournalEntry: {
+            id: number;
+            kind: components["schemas"]["JournalEntryKindEnum"];
+            currency: string;
+            /** Format: date */
+            rate_date: string;
+            rate_to_uzs: string;
+            previous_rate_to_uzs: string | null;
+            previous_source: string | null;
+            entered_by_id: number | null;
+            entered_by_email: string;
+            entered_by_name: string;
+            /** Format: date-time */
+            entered_at: string;
+        };
+        /**
+         * @description * `manual` - manual
+         *     * `auto_skipped` - auto_skipped
+         * @enum {string}
+         */
+        JournalEntryKindEnum: "manual" | "auto_skipped";
         /**
          * @description * `ru` - ru
          *     * `uz` - uz
@@ -9673,6 +9760,21 @@ export interface components {
             quantity: number;
             /** Format: decimal */
             unit_price_excl_vat: string;
+        };
+        /** @description Тело ручного ввода. Проверку значений делает сервис (коды `FX_*`), здесь — только форма. */
+        ManualRateInRequest: {
+            /** @default USD */
+            currency: string;
+            /**
+             * @description Дата курса, YYYY-MM-DD; не позже сегодня и не старше 366 дней.
+             * @default
+             */
+            rate_date: string;
+            /**
+             * @description Курс > 0, не больше 6 знаков после запятой.
+             * @default
+             */
+            rate_to_uzs: string;
         };
         /**
          * @description OEM brand lookup (catalog.Manufacturer) — the canonical `Product.brand` source.
@@ -13467,6 +13569,15 @@ export interface components {
         _Money: {
             amount: string;
             currency: string;
+        };
+        _Rate: {
+            currency: string;
+            /** @description Сумов за 1 единицу валюты, без хвостовых нулей. */
+            rate_to_uzs: string;
+            /** Format: date */
+            rate_date: string;
+            /** @description CBU (автозагрузка ЦБ РУз) или MANUAL (вручную). */
+            source: string;
         };
     };
     responses: never;
@@ -22741,6 +22852,98 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["CompanyWordingVariant"];
                 };
+            };
+        };
+    };
+    exchange_rates_current_retrieve: {
+        parameters: {
+            query?: {
+                /** @description Код валюты (USD, EUR, RUB); по умолчанию USD. */
+                currency?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CurrentRate"];
+                };
+            };
+            /** @description FX_CURRENCY_UNSUPPORTED */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    exchange_rates_journal_list: {
+        parameters: {
+            query?: {
+                /** @description Код валюты (USD, EUR, RUB); по умолчанию USD. */
+                currency?: string;
+                /** @description 1..100, default 20. */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JournalEntry"][];
+                };
+            };
+            /** @description FX_CURRENCY_UNSUPPORTED */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    exchange_rates_manual_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ManualRateInRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ManualRateInRequest"];
+                "multipart/form-data": components["schemas"]["ManualRateInRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["_Rate"];
+                };
+            };
+            /** @description FX_* validation code */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

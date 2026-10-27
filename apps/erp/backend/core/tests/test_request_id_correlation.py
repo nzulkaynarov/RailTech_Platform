@@ -25,7 +25,14 @@ TRACEPARENT = "00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-01"
 
 @pytest.mark.parametrize(
     "value",
-    ["abc", "3d97dc6c-5a9e-490b-8a33-413904685ba9", "req_1.2-3", "A" * 128, "a", str(uuid.uuid4().hex)],
+    [
+        "abc",
+        "3d97dc6c-5a9e-490b-8a33-413904685ba9",
+        "req_1.2-3",
+        "A" * 128,
+        "a",
+        pytest.param(str(uuid.uuid4().hex), id="random-hex32"),
+    ],
 )
 def test_safe_request_ids_are_accepted(value):
     assert is_valid_request_id(value)
