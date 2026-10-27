@@ -215,10 +215,24 @@
 }
 .pf-queue-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 16px;
   padding: 14px 24px;
   border-bottom: 1px solid #f0f0f0;
+}
+/* «Где сделать» (W15-H2): секция под строкой на всю ширину */
+.pf-queue-where {
+  flex: 1 1 100%;
+  margin-top: 4px;
+  padding: 12px 16px;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  background: #fafafa;
+}
+.pf-queue-where:focus-visible {
+  outline: 2px solid #0958d9;
+  outline-offset: 2px;
 }
 .pf-queue-row:last-child {
   border-bottom: 0;

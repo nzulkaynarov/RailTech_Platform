@@ -4,7 +4,7 @@
 # Прогон параллельный (pytest-xdist, W14-S1): у каждого воркера своя база Postgres test_erp_gwN и свои базы Redis.
 #
 #   scripts/test_backend_local.sh [pytest-аргументы]   запустить (контейнеры поднимаются при необходимости)
-#   scripts/test_backend_local.sh --openapi            экспорт backend/schema.json и среза /api/v1 для packages/contracts (FIX-40)
+#   scripts/test_backend_local.sh --openapi            экспорт backend/schema.json и среза /api/v1 для packages/contracts (FIX-40); падает при предупреждении drf-spectacular по /api/v1 (D2-0)
 #   scripts/test_backend_local.sh --migration-check    makemigrations --check и migrate на чистой базе
 #   scripts/test_backend_local.sh --manage <args>      произвольная manage.py-команда (например, makemigrations accounts)
 #   scripts/test_backend_local.sh --down               удалить контейнеры и сеть
@@ -151,6 +151,8 @@ ensure_template() {
 
 case "${1:-}" in
   --openapi)
+    # Страж D2-0 (B-011): выгрузка /api/v1 без предупреждений drf-spectacular — иначе схема угадана, а не описана.
+    run_in python manage.py openapi_v1_check
     # Файл заканчивается переводом строки (end-of-file-fixer в pre-commit), иначе выгрузка и коммит расходятся.
     run_in sh -c 'python manage.py spectacular --format openapi-json --file schema.json && echo >> schema.json'
     echo "▸ backend/schema.json обновлён"

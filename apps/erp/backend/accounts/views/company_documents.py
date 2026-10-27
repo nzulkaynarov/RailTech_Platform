@@ -8,14 +8,20 @@ permissions are unchanged. Mixed into ``CompanyViewSet``, which supplies
 are preserved verbatim.
 """
 
-from drf_spectacular.utils import OpenApiResponse, extend_schema
-from rest_framework import status
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import OpenApiResponse, extend_schema, inline_serializer
+from rest_framework import serializers, status
 from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, MultiPartParser
 from rest_framework.response import Response
 
 from accounts import services
-from accounts.serializers import CompanyDocumentProfileSerializer, CompanySerializer, CompanySettingsSerializer
+from accounts.serializers import (
+    CompanyDocumentProfileSerializer,
+    CompanySerializer,
+    CompanySettingsSerializer,
+    CompanySettingsUpdateSerializer,
+)
 
 
 class CompanyDocumentsMixin:
@@ -32,7 +38,10 @@ class CompanyDocumentsMixin:
                 },
             }
         },
-        responses={200: CompanySerializer},
+        responses={
+            200: CompanySerializer,
+            400: OpenApiResponse(description="NO_FILE_PROVIDED (or the upload validator's message)"),
+        },
         tags=["Accounts"],
     )
     @action(
@@ -89,7 +98,10 @@ class CompanyDocumentsMixin:
         request=CompanyDocumentProfileSerializer,
         responses={
             200: CompanyDocumentProfileSerializer,
-            403: OpenApiResponse(description="Only the company OWNER may read/update the profile"),
+            400: OpenApiResponse(
+                description="INVALID_ACCENT_COLOR / INVALID_SECONDARY_COLOR / INVALID_LAYOUT_PRESET / INVALID_FONT_FAMILY"
+            ),
+            403: OpenApiResponse(description="NOT_COMPANY_OWNER: only the company OWNER may read/update the profile"),
         },
         tags=["Accounts"],
     )
@@ -115,8 +127,20 @@ class CompanyDocumentsMixin:
         "saved), so the editor previews live like the Odoo Document-Layout wizard. GET stays "
         "the legacy saved-profile КП preview. OWNER only. Returns text/html (no WeasyPrint in "
         "the request thread, ARCH-03).",
-        request=None,
-        responses={200: OpenApiResponse(description="Sample document HTML")},
+        request=inline_serializer(
+            "DocumentProfilePreviewRequest",
+            fields={
+                "doc_type": serializers.ChoiceField(choices=["KP", "CT", "INV", "ACT", "DOC"], required=False),
+                "draft": serializers.DictField(
+                    required=False, help_text="Unsaved document-profile fields overlaid in memory (never saved)"
+                ),
+            },
+        ),
+        responses={
+            (200, "text/html"): OpenApiTypes.STR,
+            400: OpenApiResponse(description="INVALID_PREVIEW_DOC_TYPE (POST only)"),
+            403: OpenApiResponse(description="NOT_COMPANY_OWNER"),
+        },
         tags=["Accounts"],
     )
     @action(detail=True, methods=["get", "post"], url_path="document-profile/preview")
@@ -148,7 +172,11 @@ class CompanyDocumentsMixin:
                 "properties": {"logo": {"type": "string", "format": "binary"}},
             }
         },
-        responses={200: CompanyDocumentProfileSerializer},
+        responses={
+            200: CompanyDocumentProfileSerializer,
+            400: OpenApiResponse(description="NO_FILE_PROVIDED / INVALID_IMAGE (or the upload validator's message)"),
+            403: OpenApiResponse(description="NOT_COMPANY_OWNER"),
+        },
         tags=["Accounts"],
     )
     @action(
@@ -171,12 +199,17 @@ class CompanyDocumentsMixin:
             "The selling company's КП defaults (Incoterm, валюта себестоимости, ставка НДС, "
             "маржа, срок действия) and its document-numbering prefix. GET returns the settings "
             "(auto-created); PATCH updates them. delivery_basis / cost_currency are sent as "
-            "master-data CODES (e.g. 'USD', 'FCA'). OWNER of THIS company (or platform admin) only."
+            "master-data CODES (e.g. 'USD', 'FCA'). OWNER of THIS company (or platform admin) only. "
+            "`payment_terms_days` is the invoice payment term in days (0..32767, null = platform default)."
         ),
-        request=CompanySettingsSerializer,
+        request=CompanySettingsUpdateSerializer,
         responses={
             200: CompanySettingsSerializer,
-            403: OpenApiResponse(description="Only the company OWNER may read/update the settings"),
+            400: OpenApiResponse(
+                description="BAD_CURRENCY / BAD_DELIVERY_BASIS / BAD_NUMBER / BAD_PRICE_VISIBILITY / "
+                "BAD_PUBLISH_THRESHOLD / BAD_FX_RATE_MAX_AGE_DAYS / DOC_PREFIX_TAKEN"
+            ),
+            403: OpenApiResponse(description="NOT_COMPANY_OWNER: only the company OWNER may read/update the settings"),
         },
         tags=["Accounts"],
     )

@@ -52,7 +52,7 @@ function Row({
 /**
  * Профиль → «Уведомления» (W13-A6): личные сообщения бота в Telegram — подписки и «Тестовое уведомление». Доступно каждому
  * вошедшему сотруднику (BFF `/me/notification-settings`, `/me/test-notification`); системные оповещения предлагаются тем,
- * у кого есть раздел Admin. Telegram привязывает администратор в карточке сотрудника.
+ * у кого есть раздел Admin. Заголовок блока даёт страница `/me`; Telegram сотрудник привязывает там же, выше (W15-H6).
  */
 export function NotificationSettings({ me }: { me: Me }) {
   const { t } = useTranslation("audit");
@@ -105,10 +105,6 @@ export function NotificationSettings({ me }: { me: Me }) {
     const errorKey = test.isError ? testErrorKey(test.error) : null;
     body = (
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        <div>
-          <strong>{t("profile.telegram")}: </strong>
-          <span>{linked ? t("profile.linked") : t("profile.notLinked")}</span>
-        </div>
         {!linked ? <Alert type="info" showIcon message={t("profile.linkHint")} /> : null}
         {linked && data.delivery_failed_at ? (
           <Alert
@@ -163,17 +159,11 @@ export function NotificationSettings({ me }: { me: Me }) {
   }
 
   return (
-    <section aria-labelledby={`${base}-title`} style={{ marginTop: 16 }}>
-      <h3
-        id={`${base}-title`}
-        style={{ margin: "0 0 4px", fontSize: 16, lineHeight: "24px", fontWeight: 600 }}
-      >
-        {t("profile.notifications")}
-      </h3>
+    <div>
       <p className="pf-hint" style={{ margin: "0 0 12px" }}>
         {t("profile.intro")}
       </p>
       {body}
-    </section>
+    </div>
   );
 }

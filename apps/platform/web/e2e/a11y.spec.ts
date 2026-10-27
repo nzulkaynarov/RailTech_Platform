@@ -79,7 +79,7 @@ test.describe("axe и скриншоты", () => {
     });
   }
 
-  test("меню аватара и профиль на 1440: axe без нарушений", async ({ page }) => {
+  test("меню аватара и страница профиля на 1440: axe без нарушений", async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await loginAndWait(page, "all@demo.example");
     await openAvatarMenu(page);
@@ -87,16 +87,11 @@ test.describe("axe и скриншоты", () => {
     await settledScreenshot(page, "avatar-menu");
     await expectNoViolations(page, "avatar menu");
     await page.getByRole("menuitem", { name: "Профиль" }).click();
-    // axe — только на устоявшемся состоянии: меню аватара закрыто и убрано из видимых, модалка открыта и без движения
-    await expect(page.getByRole("menu")).toBeHidden();
-    await expect
-      .poll(() => page.locator(".ant-dropdown:not(.ant-dropdown-hidden)").count())
-      .toBe(0);
-    await expect(page.getByRole("dialog", { name: "Профиль" })).toBeVisible();
-    await expect
-      .poll(() => page.locator('[class*="-appear"], [class*="-enter"], [class*="-leave"]').count())
-      .toBe(0);
-    await expectNoViolations(page, "profile modal");
+    // Профиль — страница /me (W15-H6), а не окно
+    await expect(page).toHaveURL(/\/me$/);
+    await expect(page.getByRole("heading", { level: 1, name: "Профиль" })).toBeVisible();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expectNoViolations(page, "profile page");
   });
 
   test("центр уведомлений на 1440: axe без нарушений", async ({ page }) => {

@@ -17,7 +17,10 @@ sent to real users.
 
 from __future__ import annotations
 
-from .emails import _render_bodies, send_templated_email
+from django.template import TemplateDoesNotExist, TemplateSyntaxError
+from django.template.loader import get_template
+
+from .emails import _db_template, _render_bodies, render_bodies_from_row, send_templated_email
 
 # Sample merge contexts per template key — what the editor sees in a preview.
 # Mirrors the context dicts the production services build (accounts/services/*,
@@ -74,14 +77,49 @@ def sample_context_for(key: str) -> dict:
     return SAMPLE_CONTEXTS.get(key, dict(_GENERIC_SAMPLE_CONTEXT))
 
 
-def preview_template(key: str, context: dict | None = None) -> dict:
+class EmailTemplateNotFound(Exception):
+    """Для ключа нет ни строки в БД, ни файловых шаблонов — показывать нечего (защита; через API недостижимо)."""
+
+
+class EmailTemplateRenderFailed(Exception):
+    """Шаблон не собирается: `{% include %}`/`{% extends %}` мимо файла или ошибка синтаксиса (вьюха отвечает 400)."""
+
+    def __init__(self, reason: str, message: str):
+        super().__init__(message)
+        self.reason = reason
+        self.message = message[:300]
+
+
+def _has_file_templates(key: str) -> bool:
+    try:
+        get_template(f"emails/{key}_subject.txt")
+    except TemplateDoesNotExist:
+        return False
+    return True
+
+
+def preview_template(key: str, context: dict | None = None, *, template=None) -> dict:
     """Render subject/html/text for a key against a sample context. No send.
 
     Uses the same `_render_bodies` pipeline as production, so it transparently
     reflects whether a DB override or the file template is active for the key.
+    Ключ без файла (оператор завёл произвольный `key`) и без АКТИВНОЙ строки на языке запроса раньше давал
+    `TemplateDoesNotExist` → 500; теперь показывается сама просматриваемая строка `template` (D2-0, Q-D20-1.4).
+    Нет ни её, ни файла — `EmailTemplateNotFound`. Сбой самого рендера (include/extends мимо файла, синтаксис) —
+    `EmailTemplateRenderFailed` с причиной, а не 500.
     """
     rendering_context = context if context is not None else sample_context_for(key)
-    subject, text_body, html_body = _render_bodies(key, rendering_context)
+    try:
+        if _db_template(key) is not None or _has_file_templates(key):
+            subject, text_body, html_body = _render_bodies(key, rendering_context)
+        elif template is not None:
+            subject, text_body, html_body = render_bodies_from_row(template, rendering_context)
+        else:
+            raise EmailTemplateNotFound(key)
+    except TemplateDoesNotExist as exc:
+        raise EmailTemplateRenderFailed("template_does_not_exist", f"TemplateDoesNotExist: {exc}") from exc
+    except TemplateSyntaxError as exc:
+        raise EmailTemplateRenderFailed("template_syntax_error", f"TemplateSyntaxError: {exc}") from exc
     return {
         "key": key,
         "subject": subject,

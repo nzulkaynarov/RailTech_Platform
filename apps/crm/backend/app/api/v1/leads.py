@@ -163,10 +163,23 @@ async def list_leads(
 
 
 @router.get("/inbox", response_model=InboxResponse)
-async def inbox(who: Taker, container: ContainerDep) -> InboxResponse:
-    """Очередь работы — менеджеру и админу; наблюдатель смотрит «Лиды» (SPEC §10.1)."""
+async def inbox(
+    who: Taker,
+    container: ContainerDep,
+    on_behalf_of: Annotated[int | None, Query(gt=0)] = None,
+) -> InboxResponse:
+    """Очередь работы — менеджеру и админу; наблюдатель смотрит «Лиды» (SPEC §10.1).
+
+    `on_behalf_of` — очередь замещаемого коллеги (W15-H6): только пока сегодня идёт период, где
+    вызывающий назначен заместителем (иначе 403 `not_a_deputy`). Ответ — «мои» лиды замещаемого и
+    общие эскалации; список «без ответственного» пуст: его заместитель и так видит в своей очереди.
+    Права на сами объекты — свои, расширения нет."""
+    if on_behalf_of is not None:
+        await container.staff_deputy.require_covering(who.user_id, on_behalf_of)
     async with container.session_factory() as session:
-        escalated, mine, unassigned = await crm.inbox(session, who.user_id)
+        escalated, mine, unassigned = await crm.inbox(session, on_behalf_of or who.user_id)
+        if on_behalf_of is not None:
+            unassigned = []
         ids = [lead.id for lead in (*escalated, *mine, *unassigned)]
         escalations = await crm.active_escalations(session, ids)
         names = await crm.user_names(session, [*escalated, *mine, *unassigned])

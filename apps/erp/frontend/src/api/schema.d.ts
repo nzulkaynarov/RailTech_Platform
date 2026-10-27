@@ -1545,7 +1545,7 @@ export interface paths {
         };
         /**
          * Read / update company КП defaults + numbering
-         * @description The selling company's КП defaults (Incoterm, валюта себестоимости, ставка НДС, маржа, срок действия) and its document-numbering prefix. GET returns the settings (auto-created); PATCH updates them. delivery_basis / cost_currency are sent as master-data CODES (e.g. 'USD', 'FCA'). OWNER of THIS company (or platform admin) only.
+         * @description The selling company's КП defaults (Incoterm, валюта себестоимости, ставка НДС, маржа, срок действия) and its document-numbering prefix. GET returns the settings (auto-created); PATCH updates them. delivery_basis / cost_currency are sent as master-data CODES (e.g. 'USD', 'FCA'). OWNER of THIS company (or platform admin) only. `payment_terms_days` is the invoice payment term in days (0..32767, null = platform default).
          */
         get: operations["accounts_companies_settings_retrieve"];
         put?: never;
@@ -1555,7 +1555,7 @@ export interface paths {
         head?: never;
         /**
          * Read / update company КП defaults + numbering
-         * @description The selling company's КП defaults (Incoterm, валюта себестоимости, ставка НДС, маржа, срок действия) and its document-numbering prefix. GET returns the settings (auto-created); PATCH updates them. delivery_basis / cost_currency are sent as master-data CODES (e.g. 'USD', 'FCA'). OWNER of THIS company (or platform admin) only.
+         * @description The selling company's КП defaults (Incoterm, валюта себестоимости, ставка НДС, маржа, срок действия) and its document-numbering prefix. GET returns the settings (auto-created); PATCH updates them. delivery_basis / cost_currency are sent as master-data CODES (e.g. 'USD', 'FCA'). OWNER of THIS company (or platform admin) only. `payment_terms_days` is the invoice payment term in days (0..32767, null = platform default).
          */
         patch: operations["accounts_companies_settings_partial_update"];
         trace?: never;
@@ -2031,7 +2031,7 @@ export interface paths {
          *
          *     Includes password change, profile update, and user activation/deactivation.
          */
-        delete: operations["accounts_users_delete_avatar_destroy_2"];
+        delete: operations["accounts_users_delete_avatar_for_user_destroy"];
         options?: never;
         head?: never;
         patch?: never;
@@ -2090,7 +2090,7 @@ export interface paths {
          * Upload avatar for a user (admin or self)
          * @description Platform admin may set avatar on behalf of any user; users may set their own.
          */
-        post: operations["accounts_users_upload_avatar_create_2"];
+        post: operations["accounts_users_upload_avatar_for_user_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2643,10 +2643,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * @description POST /api/v1/auth/sso/exchange — обменять токен CRM на сессию ERP.
-         *
-         *     В теле — только access-токен (`access_token`, `expires_in`, `user`); refresh-токен уходит одной
-         *     HttpOnly-cookie, как при обычном входе (S-14, FIX-58): JS его не видит.
+         * Exchange a CRM SSO token for an ERP session
+         * @description The access token rides the body; the refresh token is set as the HttpOnly cookie `refresh_token` (name from REFRESH_COOKIE_NAME). 401 carries `TOKEN_REQUIRED` / `INVALID_SSO_TOKEN` / `SSO_EXCHANGE_FAILED`, 403 — `SSO_DISABLED` / `FORBIDDEN`, 503 — `SSO_NOT_CONFIGURED` or `SSO_TEMPORARILY_UNAVAILABLE` (the latter with a human `message`).
          */
         post: operations["auth_sso_exchange_create"];
         delete?: never;
@@ -2664,7 +2662,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** @description POST /api/v1/auth/sso/token — выдать токен для перехода в CRM. */
+        /**
+         * Issue an SSO token for the jump to CRM
+         * @description POST /api/v1/auth/sso/token — выдать токен для перехода в CRM.
+         */
         post: operations["auth_sso_token_create"];
         delete?: never;
         options?: never;
@@ -4542,9 +4543,8 @@ export interface paths {
         get: operations["crm_document_templates_list"];
         put?: never;
         /**
-         * @description Company template library. Read = own templates + platform samples («скопировать
-         *     к себе»); write is gated on the `settings.edit` CompanyRole permission and limited
-         *     to the caller's own company (never samples, never another tenant).
+         * Create a company template
+         * @description A new template is active unless `is_active=false` (a draft). An active legal template must carry its required blocks; a draft is saved freely.
          */
         post: operations["crm_document_templates_create"];
         delete?: never;
@@ -4567,6 +4567,7 @@ export interface paths {
          */
         get: operations["crm_document_templates_retrieve"];
         /**
+         * Update a company template
          * @description Company template library. Read = own templates + platform samples («скопировать
          *     к себе»); write is gated on the `settings.edit` CompanyRole permission and limited
          *     to the caller's own company (never samples, never another tenant).
@@ -4574,14 +4575,14 @@ export interface paths {
         put: operations["crm_document_templates_update"];
         post?: never;
         /**
-         * @description Company template library. Read = own templates + platform samples («скопировать
-         *     к себе»); write is gated on the `settings.edit` CompanyRole permission and limited
-         *     to the caller's own company (never samples, never another tenant).
+         * Delete a company template
+         * @description A template that already produced documents cannot be deleted (400 TEMPLATE_IN_USE) — deactivate it.
          */
         delete: operations["crm_document_templates_destroy"];
         options?: never;
         head?: never;
         /**
+         * Partially update a company template
          * @description Company template library. Read = own templates + platform samples («скопировать
          *     к себе»); write is gated on the `settings.edit` CompanyRole permission and limited
          *     to the caller's own company (never samples, never another tenant).
@@ -7334,8 +7335,8 @@ export interface components {
             invoice?: number | null;
             /** Номер акта */
             readonly number: string;
-            readonly status: string;
-            readonly status_name: string;
+            readonly status?: string;
+            readonly status_name?: string;
             /** Format: date */
             issued_at?: string | null;
             /** Format: date-time */
@@ -7457,6 +7458,13 @@ export interface components {
              * Format: date-time
              */
             readonly timestamp: string;
+            /**
+             * Тип сущности
+             * @description Код сущности, к которой относится запись (company, user, deal, subscription, ...)
+             */
+            entity_type?: string;
+            /** Сделка */
+            readonly deal_id: number | null;
         };
         AddMembershipRequestRequest: {
             company: number;
@@ -7807,6 +7815,103 @@ export interface components {
              */
             icon?: string | null;
         };
+        /** @description Чтение — вложенные имена, запись — плоские id (конвенция проекта). */
+        CategoryProposal: {
+            readonly id: number;
+            /**
+             * Компания
+             * @description Компания-продавец, которой не хватило категории
+             */
+            readonly company: number;
+            readonly company_name: string;
+            /** @default  */
+            readonly requested_by_email: string;
+            /**
+             * Предлагаемая категория
+             * @description Название категории, которой не хватает в справочнике
+             */
+            proposed_name: string;
+            /**
+             * Предлагаемое место в дереве
+             * @description Категория, внутри которой продавец ожидает увидеть новую
+             */
+            parent?: number | null;
+            /** @default  */
+            readonly parent_name: string;
+            /**
+             * Домен каталога
+             * @description Домен, к которому относится предлагаемая категория
+             */
+            domain_type?: number | null;
+            /** @default  */
+            readonly domain_type_code: string;
+            /**
+             * Пояснение
+             * @description Примеры товаров и почему существующие категории не подходят
+             */
+            justification?: string;
+            /**
+             * Статус
+             * @description Текущий статус рассмотрения обращения
+             *
+             *     * `PENDING` - На рассмотрении
+             *     * `APPROVED` - Одобрено
+             *     * `REJECTED` - Отклонено
+             */
+            readonly status: components["schemas"]["CategoryProposalStatusEnum"];
+            /**
+             * Заведённая категория
+             * @description Категория справочника, которой оператор закрыл обращение
+             */
+            readonly resulting_category: number | null;
+            /** @default  */
+            readonly resulting_category_name: string;
+            /**
+             * Комментарий оператора
+             * @description Основание решения — обязательно при отказе
+             */
+            readonly review_notes: string;
+            /**
+             * Дата рассмотрения
+             * Format: date-time
+             */
+            readonly reviewed_at: string | null;
+            /**
+             * Дата создания
+             * Format: date-time
+             */
+            readonly created_at: string;
+        };
+        /** @description Чтение — вложенные имена, запись — плоские id (конвенция проекта). */
+        CategoryProposalRequest: {
+            /**
+             * Предлагаемая категория
+             * @description Название категории, которой не хватает в справочнике
+             */
+            proposed_name: string;
+            /**
+             * Предлагаемое место в дереве
+             * @description Категория, внутри которой продавец ожидает увидеть новую
+             */
+            parent?: number | null;
+            /**
+             * Домен каталога
+             * @description Домен, к которому относится предлагаемая категория
+             */
+            domain_type?: number | null;
+            /**
+             * Пояснение
+             * @description Примеры товаров и почему существующие категории не подходят
+             */
+            justification?: string;
+        };
+        /**
+         * @description * `PENDING` - На рассмотрении
+         *     * `APPROVED` - Одобрено
+         *     * `REJECTED` - Отклонено
+         * @enum {string}
+         */
+        CategoryProposalStatusEnum: "PENDING" | "APPROVED" | "REJECTED";
         CategoryRequest: {
             /**
              * Название
@@ -7830,29 +7935,6 @@ export interface components {
              */
             icon?: string | null;
         };
-        /** @description Чтение — вложенные имена, запись — плоские id (конвенция проекта). */
-        CategoryRequestRequest: {
-            /**
-             * Предлагаемая категория
-             * @description Название категории, которой не хватает в справочнике
-             */
-            proposed_name: string;
-            /**
-             * Предлагаемое место в дереве
-             * @description Категория, внутри которой продавец ожидает увидеть новую
-             */
-            parent?: number | null;
-            /**
-             * Домен каталога
-             * @description Домен, к которому относится предлагаемая категория
-             */
-            domain_type?: number | null;
-            /**
-             * Пояснение
-             * @description Примеры товаров и почему существующие категории не подходят
-             */
-            justification?: string;
-        };
         /** @description Тело решения оператора: категория (одобрение) или причина (отказ). */
         CategoryRequestReviewRequest: {
             category?: number;
@@ -7869,13 +7951,6 @@ export interface components {
             /** @description Target stage code (e.g. SOURCING, CALCULATING, QUOTE_SENT) */
             stage_code: string;
         };
-        /**
-         * @description * `email` - email
-         *     * `telegram` - telegram
-         *     * `both` - both
-         * @enum {string}
-         */
-        ChannelEnum: "email" | "telegram" | "both";
         /**
          * @description Company-Admin CRUD for per-Incoterm charge templates (org-admin zone).
          *
@@ -8649,8 +8724,8 @@ export interface components {
             readonly created_at: string;
         };
         ContactInviteRequestRequest: {
-            channel?: components["schemas"]["ChannelEnum"];
-            language?: components["schemas"]["LanguageB62Enum"];
+            channel?: components["schemas"]["ContactPreferredChannelEnum"];
+            language?: components["schemas"]["LanguageEnum"];
         };
         ContactInviteResponse: {
             ok: boolean;
@@ -8682,8 +8757,8 @@ export interface components {
             quote: number;
             /** Номер контракта */
             readonly number: string;
-            readonly status: string;
-            readonly status_name: string;
+            readonly status?: string;
+            readonly status_name?: string;
             readonly invoice_id: number | null;
             /**
              * Сумма контракта
@@ -8853,7 +8928,7 @@ export interface components {
             paired_at: string | null;
             /** Format: date-time */
             rotated_at: string | null;
-            token_source: components["schemas"]["TokenSourceEnum"];
+            token_source: components["schemas"]["SecretSourceEnum"];
             crm_to_erp_last4: string;
             /**
              * Format: date-time
@@ -8861,7 +8936,7 @@ export interface components {
              */
             previous_token_valid_until: string | null;
             erp_to_crm_configured: boolean;
-            webhook_secret_source: components["schemas"]["WebhookSecretSourceEnum"];
+            webhook_secret_source: components["schemas"]["SecretSourceEnum"];
             webhook_secret_last4: string;
             code_ttl_seconds: number;
             crm_frontend_url: string;
@@ -8951,13 +9026,13 @@ export interface components {
              * @description Представитель клиента в данной сделке
              */
             client?: number | null;
-            readonly client_name: string;
+            readonly client_name?: string;
             /**
              * Менеджер
              * @description Ответственный менеджер
              */
             manager?: number | null;
-            readonly manager_name: string;
+            readonly manager_name?: string;
             readonly assigned_to: number | null;
             readonly assigned_to_name: string | null;
             /** Format: date-time */
@@ -8969,8 +9044,8 @@ export interface components {
              * @description Текущий этап сделки в воронке продаж
              */
             stage?: number | null;
-            readonly stage_code: string;
-            readonly stage_name: string;
+            readonly stage_code?: string;
+            readonly stage_name?: string;
             /**
              * Название сделки
              * @description Краткое описание сделки (опционально)
@@ -8981,7 +9056,7 @@ export interface components {
              * @description Внутренние заметки, видны только сотрудникам
              */
             notes?: string;
-            readonly active_quote: components["schemas"]["Quote"];
+            readonly active_quote: components["schemas"]["Quote"] | null;
             readonly quotes: components["schemas"]["Quote"][];
             /**
              * @description Исполнение закрыто целиком (оплата + поставка + акт) — НЕ то же, что «сделка выиграна».
@@ -9067,8 +9142,8 @@ export interface components {
              * @description Текущий этап сделки в воронке продаж
              */
             stage?: number | null;
-            readonly stage_code: string;
-            readonly stage_name: string;
+            readonly stage_code?: string;
+            readonly stage_name?: string;
             /** Format: double */
             readonly total_value: number;
             /**
@@ -9082,7 +9157,7 @@ export interface components {
             readonly assigned_at: string | null;
             readonly viewer_can_release: boolean;
             readonly viewer_is_seller: boolean;
-            readonly active_quote: components["schemas"]["Quote"];
+            readonly active_quote: components["schemas"]["Quote"] | null;
             /**
              * @description Исполнение закрыто целиком (оплата + поставка + акт) — НЕ то же, что «сделка выиграна».
              *
@@ -9209,6 +9284,15 @@ export interface components {
          * @enum {string}
          */
         DisplayTypeEnum: "ITEM" | "SECTION" | "NOTE";
+        /**
+         * @description * `KP` - KP
+         *     * `CT` - CT
+         *     * `INV` - INV
+         *     * `ACT` - ACT
+         *     * `DOC` - DOC
+         * @enum {string}
+         */
+        DocTypeEnum: "KP" | "CT" | "INV" | "ACT" | "DOC";
         DocumentBrandPreview: {
             seller_name: string;
             inn: string;
@@ -9225,6 +9309,8 @@ export interface components {
         DocumentPlaceholder: {
             code: string;
             label: string;
+            /** @description i18n-ключ подписи для SPA */
+            label_key: string;
         };
         DocumentPlaceholderCatalog: {
             groups: components["schemas"]["DocumentPlaceholderGroup"][];
@@ -9235,7 +9321,16 @@ export interface components {
         DocumentPlaceholderGroup: {
             key: string;
             label: string;
+            /** @description i18n-ключ подписи группы для SPA */
+            label_key: string;
             items: components["schemas"]["DocumentPlaceholder"][];
+        };
+        DocumentProfilePreviewRequestRequest: {
+            doc_type?: components["schemas"]["DocTypeEnum"];
+            /** @description Unsaved document-profile fields overlaid in memory (never saved) */
+            draft?: {
+                [key: string]: unknown;
+            };
         };
         /** @description Company template CRUD. `company`/`placeholders_used` are server-derived. */
         DocumentTemplate: {
@@ -9279,6 +9374,34 @@ export interface components {
              */
             readonly updated_at: string;
         };
+        /** @description Тело `POST crm/document-templates/{id}/copy/`; без `name` — «<образец> (копия)». */
+        DocumentTemplateCopyRequest: {
+            name?: string;
+        };
+        /** @description Тело `POST crm/document-templates/`; без `is_active` шаблон активен, `false` — черновик (блоки не проверяются). */
+        DocumentTemplateCreateRequest: {
+            name: string;
+            /**
+             * @description Код вида шаблона; по умолчанию CUSTOM
+             * @default CUSTOM
+             */
+            kind: string;
+            body_html?: string;
+            /** @default true */
+            is_active: boolean;
+        };
+        /**
+         * @description Отказ записи шаблона: `{detail: CODE}`; у `TEMPLATE_MISSING_REQUIRED_BLOCKS` ещё `missing_blocks`.
+         *
+         *     Недостающие блоки названы по именам (`label`), чтобы редактор показал их, а не «проверьте заполнение»
+         *     (C2A-G-5). Читает BFF: `apps/platform/bff/app/clients/erp_company.py` (`_missing_blocks`).
+         */
+        DocumentTemplateError: {
+            /** @description Код: TEMPLATE_NAME_REQUIRED, TEMPLATE_NAME_TOO_LONG, TEMPLATE_BODY_TOO_LARGE, TEMPLATE_MISSING_REQUIRED_BLOCKS, … */
+            detail: string;
+            /** @description Только при TEMPLATE_MISSING_REQUIRED_BLOCKS: недостающие блоки с названиями */
+            missing_blocks?: components["schemas"]["MissingBlock"][];
+        };
         DocumentTemplatePreview: {
             rendered_html: string;
             placeholders_used: string[];
@@ -9289,16 +9412,19 @@ export interface components {
         DocumentTemplatePreviewRequestRequest: {
             body_html?: string;
         };
-        /** @description Company template CRUD. `company`/`placeholders_used` are server-derived. */
-        DocumentTemplateRequest: {
-            /** Название */
-            name: string;
-            /**
-             * HTML-тело
-             * @description Санитайзится при сохранении; плейсхолдеры вида {{company.name}}.
-             */
+        /**
+         * @description Тело `PUT/PATCH crm/document-templates/{id}/` — ровно то, что читает `DocumentTemplateViewSet.update`.
+         *
+         *     Только для описания контракта (D2-0, B-011): вьюха не гоняет тело через сериализатор, а берёт поля из
+         *     `request.data` и отдаёт сервису `update_template`. Модельный `DocumentTemplateSerializer` тут не годится:
+         *     `kind` у него только для чтения (в запросе его не было бы), а `kind`, `name`, `body_html`, `is_active` вьюха
+         *     принимает. Не присланное поле не меняется.
+         */
+        DocumentTemplateWriteRequest: {
+            name?: string;
+            /** @description Код вида шаблона (CUSTOM, CONTRACT, …) */
+            kind?: string;
             body_html?: string;
-            /** Активен */
             is_active?: boolean;
         };
         DomainType: {
@@ -9370,7 +9496,7 @@ export interface components {
             is_active?: boolean;
             /** Кто изменил */
             readonly updated_by: number | null;
-            readonly updated_by_email: string;
+            readonly updated_by_email?: string;
             /**
              * Изменён
              * Format: date-time
@@ -9382,6 +9508,23 @@ export interface components {
             context?: {
                 [key: string]: unknown;
             };
+        };
+        /** @description Ответ предпросмотра: тема и тела письма, как их соберёт настоящий конвейер, и контекст, на котором собрано. */
+        EmailTemplatePreviewResult: {
+            key: string;
+            subject: string;
+            text_body: string;
+            html_body: string;
+            /** @description Контекст рендера: образцовый или присланный `context` */
+            context_used: {
+                [key: string]: unknown;
+            };
+        };
+        /** @description Отказ предпросмотра: шаблон не собирается (D2-0). */
+        EmailTemplateRenderError: {
+            /** @description EMAIL_TEMPLATE_RENDER_FAILED */
+            detail: string;
+            details: components["schemas"]["_RenderFailureDetails"];
         };
         /** @description DB-editable email template — Platform-Operator admin CRUD. */
         EmailTemplateRequest: {
@@ -9430,6 +9573,13 @@ export interface components {
             /** Format: email */
             to_email: string;
         };
+        EmailTemplateTestSendResult: {
+            /** @description Статус записи EmailLog или UNKNOWN */
+            status: string;
+            email_log_id: number | null;
+            /** Format: email */
+            to_email: string;
+        };
         /**
          * @description * `sans` - Гротеск (без засечек)
          *     * `serif` - Антиква (с засечками)
@@ -9468,8 +9618,8 @@ export interface components {
             /** Сделка */
             deal: number;
             contract?: number | null;
-            readonly status: string;
-            readonly status_name: string;
+            readonly status?: string;
+            readonly status_name?: string;
             /** Format: date-time */
             shipped_at?: string | null;
             /** Format: date-time */
@@ -9639,8 +9789,8 @@ export interface components {
             contract?: number | null;
             /** Номер инвойса */
             readonly number: string;
-            readonly status: string;
-            readonly status_name: string;
+            readonly status?: string;
+            readonly status_name?: string;
             /**
              * Дата выставления
              * Format: date
@@ -9769,7 +9919,7 @@ export interface components {
          *     * `en` - en
          * @enum {string}
          */
-        LanguageB62Enum: "ru" | "uz" | "en";
+        LanguageEnum: "ru" | "uz" | "en";
         /**
          * @description * `light` - Светлый
          *     * `boxed` - В рамках
@@ -9786,6 +9936,14 @@ export interface components {
          * @enum {string}
          */
         LevelEnum: "INFO" | "SUCCESS" | "WARNING" | "ERROR";
+        Login2faRequired: {
+            "2fa_required": boolean;
+            temp_token: string;
+        };
+        LoginAccess: {
+            access: string;
+        };
+        LoginResult: components["schemas"]["LoginAccess"] | components["schemas"]["Login2faRequired"];
         LogoutRequestRequest: {
             all?: boolean;
             refresh?: string;
@@ -9914,6 +10072,12 @@ export interface components {
          * @enum {string}
          */
         MethodEnum: "BANK_TRANSFER" | "CARD" | "CASH" | "OTHER";
+        MissingBlock: {
+            /** @description Код структурного блока документа */
+            code: string;
+            /** @description Название блока для человека */
+            label: string;
+        };
         Notification: {
             readonly id: number;
             /**
@@ -9926,8 +10090,8 @@ export interface components {
              * @description Тип уведомления из справочника
              */
             type?: number | null;
-            readonly type_code: string;
-            readonly type_name: string;
+            readonly type_code?: string;
+            readonly type_name?: string;
             /**
              * Заголовок
              * @description Краткий заголовок уведомления (RU-fallback; текст собирается по event_code)
@@ -9968,6 +10132,13 @@ export interface components {
              * Format: date-time
              */
             readonly created_at: string;
+        };
+        NotificationMarkedRead: {
+            status: string;
+        };
+        NotificationsMarkedRead: {
+            status: string;
+            count: number;
         };
         /** @description One rendered example number for a document kind (КП / CT / INV). */
         NumberingPreviewItem: {
@@ -10026,9 +10197,9 @@ export interface components {
             /** @default true */
             can_act: boolean;
             /** @default ru */
-            language: components["schemas"]["LanguageB62Enum"];
+            language: components["schemas"]["LanguageEnum"];
             /** @default email */
-            preferred_channel: components["schemas"]["PreferredChannelEf2Enum"];
+            preferred_channel: components["schemas"]["ContactPreferredChannelEnum"];
             /** @default  */
             telegram_username: string;
         };
@@ -10108,7 +10279,7 @@ export interface components {
             previous?: string | null;
             results: components["schemas"]["Category"][];
         };
-        PaginatedCategoryRequestList: {
+        PaginatedCategoryProposalList: {
             /** @example 123 */
             count: number;
             /**
@@ -10121,7 +10292,7 @@ export interface components {
              * @example http://api.example.org/accounts/?page=2
              */
             previous?: string | null;
-            results: components["schemas"]["CategoryRequest"][];
+            results: components["schemas"]["CategoryProposal"][];
         };
         PaginatedCompanyList: {
             /** @example 123 */
@@ -10665,15 +10836,19 @@ export interface components {
             permissions?: unknown;
         };
         /**
-         * @description A selling company's КП defaults + document-numbering prefix.
+         * @description Тело `PATCH accounts/companies/{id}/settings/` — ровно то, что принимает `update_company_settings`.
          *
-         *     Read/update by the company OWNER for THEIR OWN company. FK defaults
-         *     (delivery_basis / cost_currency) are exposed AND written as master-data CODES
-         *     (e.g. "USD", "FCA") — the service resolves them — so the field names below are
-         *     read-only projections; PATCH bodies carry `default_cost_currency` /
-         *     `default_delivery_basis` codes which the view hands to update_company_settings.
+         *     Только для описания контракта (D2-0, B-011): вьюха не гоняет тело через сериализатор, а отдаёт `request.data`
+         *     сервису, который сам разбирает поля, а ошибку возвращает кодом `BAD_*`. Справочники (`default_cost_currency`,
+         *     `default_delivery_basis`) пишутся КОДОМ строки справочника (`"USD"`, `"FCA"`; пусто или `null` — сбросить), а
+         *     читаются как `default_cost_currency_code` / `default_delivery_basis_code` (`CompanySettingsSerializer`).
+         *     `payment_terms_days` — срок оплаты счёта в днях (0..32767, `null` — платформенное умолчание).
          */
-        PatchedCompanySettingsRequest: {
+        PatchedCompanySettingsUpdateRequest: {
+            /** @description Код валюты справочника, например USD */
+            default_cost_currency?: string | null;
+            /** @description Код базиса поставки справочника, например FCA */
+            default_delivery_basis?: string | null;
             /**
              * Ставка НДС по умолчанию (%)
              * Format: decimal
@@ -10686,6 +10861,18 @@ export interface components {
              * @description Наценка на себестоимость, подставляемая в новый КП
              */
             default_margin_percent?: string | null;
+            /**
+             * Порог маржи (%)
+             * Format: decimal
+             * @description Минимальная валовая маржа (на цене). Ниже — КП требует согласования.
+             */
+            min_margin_percent?: string;
+            /**
+             * Целевая маржа (%)
+             * Format: decimal
+             * @description Желаемая валовая маржа (на цене) — зелёная зона в конструкторе КП.
+             */
+            target_margin_percent?: string;
             /**
              * Срок действия КП по умолчанию (дней)
              * @description Через сколько дней истекает новый КП (valid_until = сегодня + N)
@@ -10706,18 +10893,6 @@ export interface components {
              * @description Срок гарантии в месяцах для блока «Условия поставки» КП
              */
             default_warranty_months?: number | null;
-            /**
-             * Порог маржи (%)
-             * Format: decimal
-             * @description Минимальная валовая маржа (на цене). Ниже — КП требует согласования.
-             */
-            min_margin_percent?: string;
-            /**
-             * Целевая маржа (%)
-             * Format: decimal
-             * @description Желаемая валовая маржа (на цене) — зелёная зона в конструкторе КП.
-             */
-            target_margin_percent?: string;
             /**
              * Видимость цен каталога по умолчанию
              * @description Для карточек без своей политики: цена в кабинете клиента или «по запросу».
@@ -10950,16 +11125,19 @@ export interface components {
              */
             seller_pays_delivery?: boolean;
         };
-        /** @description Company template CRUD. `company`/`placeholders_used` are server-derived. */
-        PatchedDocumentTemplateRequest: {
-            /** Название */
+        /**
+         * @description Тело `PUT/PATCH crm/document-templates/{id}/` — ровно то, что читает `DocumentTemplateViewSet.update`.
+         *
+         *     Только для описания контракта (D2-0, B-011): вьюха не гоняет тело через сериализатор, а берёт поля из
+         *     `request.data` и отдаёт сервису `update_template`. Модельный `DocumentTemplateSerializer` тут не годится:
+         *     `kind` у него только для чтения (в запросе его не было бы), а `kind`, `name`, `body_html`, `is_active` вьюха
+         *     принимает. Не присланное поле не меняется.
+         */
+        PatchedDocumentTemplateWriteRequest: {
             name?: string;
-            /**
-             * HTML-тело
-             * @description Санитайзится при сохранении; плейсхолдеры вида {{company.name}}.
-             */
+            /** @description Код вида шаблона (CUSTOM, CONTRACT, …) */
+            kind?: string;
             body_html?: string;
-            /** Активен */
             is_active?: boolean;
         };
         /** @description DB-editable email template — Platform-Operator admin CRUD. */
@@ -11663,13 +11841,6 @@ export interface components {
             role?: string;
         };
         /**
-         * @description * `email` - email
-         *     * `telegram` - telegram
-         *     * `both` - both
-         * @enum {string}
-         */
-        PreferredChannelEf2Enum: "email" | "telegram" | "both";
-        /**
          * @description * `cabinet` - Показывать цену в кабинете
          *     * `on_request` - Цена по запросу
          * @enum {string}
@@ -12205,6 +12376,22 @@ export interface components {
              */
             name: string;
         };
+        PublicCodeSent: {
+            detail: string;
+        };
+        PublicQuoteAcceptRequestRequest: {
+            code: string;
+        };
+        PublicQuoteAccepted: {
+            detail: string;
+            contract_number: string;
+        };
+        PublicQuoteRejectRequestRequest: {
+            reason: string;
+        };
+        PublicQuoteRejected: {
+            detail: string;
+        };
         /**
          * @description Схема OpenAPI проекции `catalog.published.project` (контракт портала `CatalogItem`).
          *
@@ -12265,8 +12452,8 @@ export interface components {
              * @description Текущий статус КП (черновик, отправлено, одобрено)
              */
             readonly status: number | null;
-            readonly status_code: string;
-            readonly status_name: string;
+            readonly status_code?: string;
+            readonly status_name?: string;
             /**
              * Подготовил
              * @description Менеджер, составивший данное КП
@@ -12684,10 +12871,10 @@ export interface components {
              * @description Эталонный товар из каталога (после Smart Match)
              */
             product?: number | null;
-            readonly product_name: string;
-            readonly product_domain: string;
-            readonly product_sku: string;
-            readonly product_gost: string;
+            readonly product_name?: string;
+            readonly product_domain?: string;
+            readonly product_sku?: string;
+            readonly product_gost?: string;
             readonly product_mpn: string;
             readonly product_uom: string;
             /**
@@ -12695,7 +12882,7 @@ export interface components {
              * @description Конкретный оффер, из которого взята базовая цена
              */
             offer?: number | null;
-            readonly offer_supplier_name: string;
+            readonly offer_supplier_name?: string;
             /**
              * Оригинальное наименование
              * @description Строка из Excel-импорта (для нераспознанных позиций)
@@ -12958,6 +13145,12 @@ export interface components {
             code: string;
             name: string;
         };
+        /**
+         * @description * `template_does_not_exist` - template_does_not_exist
+         *     * `template_syntax_error` - template_syntax_error
+         * @enum {string}
+         */
+        ReasonEnum: "template_does_not_exist" | "template_syntax_error";
         ReassignProductRequest: {
             product_id: number | null;
         };
@@ -13018,6 +13211,13 @@ export interface components {
         SearchDocumentsResponse: {
             results: components["schemas"]["SearchDocument"][];
         };
+        /**
+         * @description * `db` - db
+         *     * `env` - env
+         *     * `none` - none
+         * @enum {string}
+         */
+        SecretSourceEnum: "db" | "env" | "none";
         SelectContractWordingRequest: {
             field: string;
             variant_id?: number | null;
@@ -13084,6 +13284,33 @@ export interface components {
             can_setup: boolean;
             /** @description Id своей компании (core.tenant, с учётом OWN_COMPANY_ID); null — её нет. */
             own_company_id: number | null;
+        };
+        SharedSettingReadOnlyError: {
+            detail: string;
+            fields: string[];
+        };
+        SsoExchangeRequestRequest: {
+            token: string;
+        };
+        SsoExchangeResult: {
+            user: components["schemas"]["SsoStaffUser"];
+            access_token: string;
+            expires_in: number;
+        };
+        SsoIssuedToken: {
+            token: string;
+            redirect_url: string;
+        };
+        SsoStaffUser: {
+            erp_user_id: number;
+            crm_user_id: number;
+            email: string;
+            name: string;
+            roles: {
+                [key: string]: string;
+            }[];
+            permissions: string[];
+            platform_access: string[];
         };
         /**
          * @description * `paired` - paired
@@ -13322,6 +13549,12 @@ export interface components {
              */
             readonly updated_at: string;
         };
+        SystemSettingsFieldErrors: {
+            vat_rate?: string[];
+            maintenance_mode?: string[];
+            is_two_factor_required?: string[];
+        };
+        SystemSettingsPatchError: components["schemas"]["SharedSettingReadOnlyError"] | components["schemas"]["SystemSettingsFieldErrors"];
         TOTPDisableRequest: {
             code: string;
             current_password: string;
@@ -13397,28 +13630,17 @@ export interface components {
         ToggleMemberActiveRequest: {
             member_id: number;
         };
-        TokenObtainPair: {
-            readonly access: string;
-            readonly refresh: string;
-        };
         TokenObtainPairRequest: {
             email: string;
             password: string;
         };
-        TokenRefresh: {
-            readonly access: string;
-            refresh: string;
+        TokenRefreshCookieRequestRequest: {
+            /** @description Optional: the cookie is used by default */
+            refresh?: string;
         };
-        TokenRefreshRequest: {
-            refresh: string;
+        TokenRefreshResult: {
+            access: string;
         };
-        /**
-         * @description * `db` - db
-         *     * `env` - env
-         *     * `none` - none
-         * @enum {string}
-         */
-        TokenSourceEnum: "db" | "env" | "none";
         /**
          * @description * `quote` - quote
          *     * `contract` - contract
@@ -13522,8 +13744,8 @@ export interface components {
              * @description Глобальная роль: определяет права доступа на всей платформе
              */
             readonly role: number | null;
-            readonly role_code: string;
-            readonly role_name: string;
+            readonly role_code?: string;
+            readonly role_name?: string;
             readonly role_data: {
                 [key: string]: unknown;
             } | null;
@@ -13594,13 +13816,6 @@ export interface components {
              */
             is_active?: boolean;
         };
-        /**
-         * @description * `db` - db
-         *     * `env` - env
-         *     * `none` - none
-         * @enum {string}
-         */
-        WebhookSecretSourceEnum: "db" | "env" | "none";
         /** @description Response shape for the WorkspaceRole lookup feed ({code, name, applicable_to_types}). */
         WorkspaceRoleLookup: {
             code: string;
@@ -13628,8 +13843,63 @@ export interface components {
             /** @description CBU (автозагрузка ЦБ РУз) или MANUAL (вручную). */
             source: string;
         };
+        _RenderFailureDetails: {
+            reason: components["schemas"]["ReasonEnum"];
+            /** @description Текст ошибки Django (до 300 символов) */
+            message: string;
+        };
+        /** @description Отказ ERP: `detail` — код ошибки (`UPPER_SNAKE`, например `REASON_REQUIRED`; допустимые коды операции перечислены в описании ответа) или английская фраза DRF для ошибок авторизации и лимитов. `message` — текст для человека, если ERP его присылает. */
+        ErrorDetail: {
+            /** @description Код ошибки или фраза DRF */
+            detail: string;
+            /** @description Текст для человека (не у всех ошибок) */
+            message?: string;
+        };
+        /** @description Ошибки полей от сериализатора DRF: ключ — имя поля (или `non_field_errors`), значение — список текстов (у вложенных объектов и списков — вложенная структура). */
+        ValidationErrors: {
+            [key: string]: unknown;
+        };
+        /** @description Отказ проверки: либо код `{detail}`, либо ошибки полей сериализатора. */
+        BadRequest: components["schemas"]["ErrorDetail"] | components["schemas"]["ValidationErrors"];
     };
-    responses: never;
+    responses: {
+        /** @description Отказ проверки: код `detail` или ошибки полей сериализатора */
+        BadRequestResponse: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["BadRequest"];
+            };
+        };
+        /** @description Нет действительной сессии (токена доступа) */
+        UnauthorizedResponse: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorDetail"];
+            };
+        };
+        /** @description Нет права на операцию (код права в `detail`) */
+        ForbiddenResponse: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorDetail"];
+            };
+        };
+        /** @description Объекта нет или он чужой (другая компания) */
+        NotFoundResponse: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["ErrorDetail"];
+            };
+        };
+    };
     parameters: never;
     requestBodies: never;
     headers: never;
@@ -15169,6 +15439,8 @@ export interface operations {
                     "application/json": components["schemas"]["PaginatedCompanyList"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     accounts_companies_create: {
@@ -15194,6 +15466,9 @@ export interface operations {
                     "application/json": components["schemas"]["Company"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     accounts_companies_retrieve: {
@@ -15216,6 +15491,9 @@ export interface operations {
                     "application/json": components["schemas"]["Company"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     accounts_companies_update: {
@@ -15244,6 +15522,10 @@ export interface operations {
                     "application/json": components["schemas"]["Company"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     accounts_companies_destroy: {
@@ -15265,6 +15547,9 @@ export interface operations {
                 };
                 content?: never;
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     accounts_companies_partial_update: {
@@ -15293,6 +15578,10 @@ export interface operations {
                     "application/json": components["schemas"]["Company"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     accounts_companies_archive_create: {
@@ -15326,8 +15615,13 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     accounts_companies_delete_logo_destroy: {
@@ -15349,6 +15643,9 @@ export interface operations {
                 };
                 content?: never;
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     accounts_companies_document_profile_retrieve: {
@@ -15371,13 +15668,26 @@ export interface operations {
                     "application/json": components["schemas"]["CompanyDocumentProfile"];
                 };
             };
-            /** @description Only the company OWNER may read/update the profile */
+            /** @description INVALID_ACCENT_COLOR / INVALID_SECONDARY_COLOR / INVALID_LAYOUT_PRESET / INVALID_FONT_FAMILY */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description NOT_COMPANY_OWNER: only the company OWNER may read/update the profile */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     accounts_companies_document_profile_partial_update: {
@@ -15406,13 +15716,26 @@ export interface operations {
                     "application/json": components["schemas"]["CompanyDocumentProfile"];
                 };
             };
-            /** @description Only the company OWNER may read/update the profile */
+            /** @description INVALID_ACCENT_COLOR / INVALID_SECONDARY_COLOR / INVALID_LAYOUT_PRESET / INVALID_FONT_FAMILY */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description NOT_COMPANY_OWNER: only the company OWNER may read/update the profile */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     accounts_companies_document_profile_preview_retrieve: {
@@ -15427,13 +15750,34 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Sample document HTML */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "text/html": string;
+                };
             };
+            /** @description INVALID_PREVIEW_DOC_TYPE (POST only) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description NOT_COMPANY_OWNER */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     accounts_companies_document_profile_preview_create: {
@@ -15446,15 +15790,42 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["DocumentProfilePreviewRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["DocumentProfilePreviewRequestRequest"];
+                "multipart/form-data": components["schemas"]["DocumentProfilePreviewRequestRequest"];
+            };
+        };
         responses: {
-            /** @description Sample document HTML */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "text/html": string;
+                };
             };
+            /** @description INVALID_PREVIEW_DOC_TYPE (POST only) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description NOT_COMPANY_OWNER */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     accounts_companies_document_profile_upload_logo_create: {
@@ -15484,6 +15855,26 @@ export interface operations {
                     "application/json": components["schemas"]["CompanyDocumentProfile"];
                 };
             };
+            /** @description NO_FILE_PROVIDED / INVALID_IMAGE (or the upload validator's message) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description NOT_COMPANY_OWNER */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     accounts_companies_invite_create: {
@@ -15517,15 +15908,21 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
             };
+            401: components["responses"]["UnauthorizedResponse"];
             /** @description Not authorized */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     accounts_companies_remove_member_create: {
@@ -15553,26 +15950,34 @@ export interface operations {
                 };
                 content?: never;
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
             /** @description Only Company Admin can manage the team */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
             /** @description Member not found */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
             /** @description Cannot remove the last admin */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
         };
     };
@@ -15601,26 +16006,34 @@ export interface operations {
                 };
                 content?: never;
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
             /** @description Only Company Admin can change roles */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
             /** @description Member not found */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
             /** @description Cannot demote the last admin */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
         };
     };
@@ -15644,13 +16057,26 @@ export interface operations {
                     "application/json": components["schemas"]["CompanySettings"];
                 };
             };
-            /** @description Only the company OWNER may read/update the settings */
+            /** @description BAD_CURRENCY / BAD_DELIVERY_BASIS / BAD_NUMBER / BAD_PRICE_VISIBILITY / BAD_PUBLISH_THRESHOLD / BAD_FX_RATE_MAX_AGE_DAYS / DOC_PREFIX_TAKEN */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description NOT_COMPANY_OWNER: only the company OWNER may read/update the settings */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     accounts_companies_settings_partial_update: {
@@ -15665,9 +16091,9 @@ export interface operations {
         };
         requestBody?: {
             content: {
-                "application/json": components["schemas"]["PatchedCompanySettingsRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["PatchedCompanySettingsRequest"];
-                "multipart/form-data": components["schemas"]["PatchedCompanySettingsRequest"];
+                "application/json": components["schemas"]["PatchedCompanySettingsUpdateRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedCompanySettingsUpdateRequest"];
+                "multipart/form-data": components["schemas"]["PatchedCompanySettingsUpdateRequest"];
             };
         };
         responses: {
@@ -15679,13 +16105,26 @@ export interface operations {
                     "application/json": components["schemas"]["CompanySettings"];
                 };
             };
-            /** @description Only the company OWNER may read/update the settings */
+            /** @description BAD_CURRENCY / BAD_DELIVERY_BASIS / BAD_NUMBER / BAD_PRICE_VISIBILITY / BAD_PUBLISH_THRESHOLD / BAD_FX_RATE_MAX_AGE_DAYS / DOC_PREFIX_TAKEN */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description NOT_COMPANY_OWNER: only the company OWNER may read/update the settings */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     accounts_companies_team_list: {
@@ -15717,6 +16156,9 @@ export interface operations {
                     "application/json": components["schemas"]["PaginatedUserList"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     accounts_companies_toggle_member_active_create: {
@@ -15744,26 +16186,34 @@ export interface operations {
                 };
                 content?: never;
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
             /** @description Only Company Admin can manage the team */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
             /** @description Member not found */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
             /** @description Cannot deactivate the sole admin */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
         };
     };
@@ -15798,8 +16248,13 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     accounts_companies_update_member_capabilities_create: {
@@ -15827,19 +16282,25 @@ export interface operations {
                 };
                 content?: never;
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
             /** @description Only OWNER can distribute rights */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
             /** @description Member not found in this company */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
         };
     };
@@ -15870,6 +16331,18 @@ export interface operations {
                     "application/json": components["schemas"]["Company"];
                 };
             };
+            /** @description NO_FILE_PROVIDED (or the upload validator's message) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     accounts_companies_export_retrieve: {
@@ -15889,6 +16362,8 @@ export interface operations {
                     "application/json": components["schemas"]["Company"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     accounts_company_roles_list: {
@@ -15916,6 +16391,8 @@ export interface operations {
                     "application/json": components["schemas"]["PaginatedCompanyRoleList"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     accounts_company_roles_create: {
@@ -15941,6 +16418,9 @@ export interface operations {
                     "application/json": components["schemas"]["CompanyRole"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     accounts_company_roles_retrieve: {
@@ -15963,6 +16443,9 @@ export interface operations {
                     "application/json": components["schemas"]["CompanyRole"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     accounts_company_roles_update: {
@@ -15991,6 +16474,10 @@ export interface operations {
                     "application/json": components["schemas"]["CompanyRole"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     accounts_company_roles_destroy: {
@@ -16012,6 +16499,9 @@ export interface operations {
                 };
                 content?: never;
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     accounts_company_roles_partial_update: {
@@ -16040,6 +16530,10 @@ export interface operations {
                     "application/json": components["schemas"]["CompanyRole"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     accounts_company_roles_assign_create: {
@@ -16065,6 +16559,9 @@ export interface operations {
                     "application/json": components["schemas"]["AssignedCompanyRoles"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     accounts_company_types_list: {
@@ -16087,6 +16584,8 @@ export interface operations {
                     "application/json": components["schemas"]["CompanyTypeLookup"][];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     accounts_company_types_retrieve: {
@@ -16109,6 +16608,9 @@ export interface operations {
                     "application/json": components["schemas"]["CompanyTypeLookup"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     accounts_contacts_list: {
@@ -16135,6 +16637,8 @@ export interface operations {
                     "application/json": components["schemas"]["PaginatedContactList"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     accounts_contacts_create: {
@@ -16160,6 +16664,9 @@ export interface operations {
                     "application/json": components["schemas"]["Contact"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     accounts_contacts_retrieve: {
@@ -16182,6 +16689,9 @@ export interface operations {
                     "application/json": components["schemas"]["Contact"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     accounts_contacts_partial_update: {
@@ -16210,6 +16720,10 @@ export interface operations {
                     "application/json": components["schemas"]["Contact"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     accounts_contacts_invite_create: {
@@ -16238,6 +16752,10 @@ export interface operations {
                     "application/json": components["schemas"]["ContactInviteResponse"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     accounts_me_retrieve: {
@@ -16257,6 +16775,8 @@ export interface operations {
                     "application/json": components["schemas"]["User"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     accounts_permissions_retrieve: {
@@ -16276,6 +16796,8 @@ export interface operations {
                     "application/json": components["schemas"]["CompanyPermissionCatalog"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     accounts_system_roles_list: {
@@ -16298,6 +16820,8 @@ export interface operations {
                     "application/json": components["schemas"]["SystemRoleLookup"][];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     accounts_system_roles_retrieve: {
@@ -16320,6 +16844,9 @@ export interface operations {
                     "application/json": components["schemas"]["SystemRoleLookup"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     accounts_users_list: {
@@ -16349,6 +16876,8 @@ export interface operations {
                     "application/json": components["schemas"]["PaginatedUserList"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     accounts_users_create: {
@@ -16379,8 +16908,12 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     accounts_users_retrieve: {
@@ -16403,6 +16936,9 @@ export interface operations {
                     "application/json": components["schemas"]["User"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     accounts_users_update: {
@@ -16431,6 +16967,10 @@ export interface operations {
                     "application/json": components["schemas"]["User"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     accounts_users_destroy: {
@@ -16452,12 +16992,17 @@ export interface operations {
                 };
                 content?: never;
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
             /** @description Есть история или это последний администратор компании */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
         };
     };
@@ -16487,6 +17032,10 @@ export interface operations {
                     "application/json": components["schemas"]["User"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     accounts_users_add_membership_create: {
@@ -16519,14 +17068,20 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
             /** @description Company not found */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
         };
     };
@@ -16555,9 +17110,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
-    accounts_users_delete_avatar_destroy_2: {
+    accounts_users_delete_avatar_for_user_destroy: {
         parameters: {
             query?: never;
             header?: never;
@@ -16576,6 +17135,9 @@ export interface operations {
                 };
                 content?: never;
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     accounts_users_remove_membership_destroy: {
@@ -16598,12 +17160,16 @@ export interface operations {
                 };
                 content?: never;
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
             /** @description Membership not found */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
         };
     };
@@ -16632,9 +17198,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
-    accounts_users_upload_avatar_create_2: {
+    accounts_users_upload_avatar_for_user_create: {
         parameters: {
             query?: never;
             header?: never;
@@ -16661,6 +17231,10 @@ export interface operations {
                     "application/json": components["schemas"]["User"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     accounts_users_change_password_create: {
@@ -16690,8 +17264,12 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     accounts_users_delete_avatar_destroy: {
@@ -16710,6 +17288,8 @@ export interface operations {
                 };
                 content?: never;
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     accounts_users_export_retrieve: {
@@ -16729,6 +17309,8 @@ export interface operations {
                     "application/json": components["schemas"]["User"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     accounts_users_me_retrieve: {
@@ -16748,6 +17330,8 @@ export interface operations {
                     "application/json": components["schemas"]["User"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     accounts_users_update_me_partial_update: {
@@ -16773,6 +17357,9 @@ export interface operations {
                     "application/json": components["schemas"]["SelfUpdate"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     accounts_users_upload_avatar_create: {
@@ -16799,6 +17386,9 @@ export interface operations {
                     "application/json": components["schemas"]["User"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     accounts_workspace_roles_list: {
@@ -16821,6 +17411,8 @@ export interface operations {
                     "application/json": components["schemas"]["WorkspaceRoleLookup"][];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     accounts_workspace_roles_retrieve: {
@@ -16843,6 +17435,9 @@ export interface operations {
                     "application/json": components["schemas"]["WorkspaceRoleLookup"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     admin_email_templates_list: {
@@ -16869,6 +17464,8 @@ export interface operations {
                     "application/json": components["schemas"]["PaginatedEmailTemplateList"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     admin_email_templates_create: {
@@ -16894,6 +17491,9 @@ export interface operations {
                     "application/json": components["schemas"]["EmailTemplate"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     admin_email_templates_retrieve: {
@@ -16916,6 +17516,9 @@ export interface operations {
                     "application/json": components["schemas"]["EmailTemplate"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     admin_email_templates_update: {
@@ -16944,6 +17547,10 @@ export interface operations {
                     "application/json": components["schemas"]["EmailTemplate"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     admin_email_templates_destroy: {
@@ -16965,6 +17572,9 @@ export interface operations {
                 };
                 content?: never;
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     admin_email_templates_partial_update: {
@@ -16993,6 +17603,10 @@ export interface operations {
                     "application/json": components["schemas"]["EmailTemplate"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     admin_email_templates_preview_create: {
@@ -17013,13 +17627,26 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Rendered subject/text_body/html_body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["EmailTemplatePreviewResult"];
+                };
             };
+            /** @description EMAIL_TEMPLATE_RENDER_FAILED: `details.reason` is template_does_not_exist (include/extends of a missing file) or template_syntax_error; or serializer field errors */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmailTemplateRenderError"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     admin_email_templates_test_send_create: {
@@ -17040,19 +17667,26 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Send result with EmailLog id and status */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["EmailTemplateTestSendResult"];
+                };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
             /** @description Rate limit of test emails per user exceeded */
             429: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
         };
     };
@@ -17072,6 +17706,8 @@ export interface operations {
                 };
                 content?: never;
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     analytics_platform_dashboard_retrieve: {
@@ -17090,6 +17726,8 @@ export interface operations {
                 };
                 content?: never;
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     auth_2fa_disable_create: {
@@ -17119,8 +17757,12 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     auth_2fa_setup_create: {
@@ -17145,8 +17787,12 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     auth_2fa_verify_create: {
@@ -17176,8 +17822,12 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     auth_forgot_password_create: {
@@ -17202,6 +17852,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            400: components["responses"]["BadRequestResponse"];
         };
     };
     auth_login_2fa_create: {
@@ -17231,14 +17882,18 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
             };
             /** @description TOO_MANY_LOGIN_ATTEMPTS */
             429: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
         };
     };
@@ -17264,6 +17919,9 @@ export interface operations {
                 };
                 content?: never;
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     auth_reset_password_create: {
@@ -17293,7 +17951,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
             };
         };
     };
@@ -17314,6 +17974,8 @@ export interface operations {
                     "application/json": components["schemas"]["SessionResponse"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     auth_sessions_revoke_all_create: {
@@ -17333,6 +17995,8 @@ export interface operations {
                     "application/json": components["schemas"]["SessionsRevoked"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     auth_setup_password_create: {
@@ -17362,7 +18026,9 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
             };
         };
     };
@@ -17373,14 +18039,49 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SsoExchangeRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["SsoExchangeRequestRequest"];
+                "multipart/form-data": components["schemas"]["SsoExchangeRequestRequest"];
+            };
+        };
         responses: {
-            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["SsoExchangeResult"];
+                };
+            };
+            400: components["responses"]["BadRequestResponse"];
+            /** @description TOKEN_REQUIRED / INVALID_SSO_TOKEN / SSO_EXCHANGE_FAILED */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description SSO_DISABLED / FORBIDDEN */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description SSO_NOT_CONFIGURED / SSO_TEMPORARILY_UNAVAILABLE (with `message`) */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
         };
     };
@@ -17393,12 +18094,41 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["SsoIssuedToken"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description SSO_DISABLED / FORBIDDEN */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description SSO_ISSUE_FAILED */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description SSO_NOT_CONFIGURED */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
         };
     };
@@ -17422,7 +18152,35 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["TokenObtainPair"];
+                    "application/json": components["schemas"]["LoginResult"];
+                };
+            };
+            400: components["responses"]["BadRequestResponse"];
+            /** @description Bad credentials (`detail` is the DRF phrase) or locked account */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description STAFF_ONLY and other login refusals */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description Login throttled */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
                 };
             };
         };
@@ -17434,11 +18192,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody: {
+        requestBody?: {
             content: {
-                "application/json": components["schemas"]["TokenRefreshRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["TokenRefreshRequest"];
-                "multipart/form-data": components["schemas"]["TokenRefreshRequest"];
+                "application/json": components["schemas"]["TokenRefreshCookieRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["TokenRefreshCookieRequestRequest"];
+                "multipart/form-data": components["schemas"]["TokenRefreshCookieRequestRequest"];
             };
         };
         responses: {
@@ -17447,7 +18205,35 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["TokenRefresh"];
+                    "application/json": components["schemas"]["TokenRefreshResult"];
+                };
+            };
+            400: components["responses"]["BadRequestResponse"];
+            /** @description NO_REFRESH_TOKEN / INVALID_REFRESH_TOKEN (the cookie is cleared) */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description STAFF_ONLY (the cookie is cleared) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description Refresh throttled */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
                 };
             };
         };
@@ -17469,6 +18255,8 @@ export interface operations {
                     "application/json": components["schemas"]["WsTicket"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     catalog_categories_list: {
@@ -17521,6 +18309,9 @@ export interface operations {
                     "application/json": components["schemas"]["Category"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     catalog_categories_retrieve: {
@@ -17543,6 +18334,7 @@ export interface operations {
                     "application/json": components["schemas"]["Category"];
                 };
             };
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     catalog_categories_update: {
@@ -17571,6 +18363,10 @@ export interface operations {
                     "application/json": components["schemas"]["Category"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     catalog_categories_destroy: {
@@ -17592,6 +18388,18 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description CATEGORY_HAS_CHILDREN — the subtree is kept; move or delete it first */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     catalog_categories_partial_update: {
@@ -17620,6 +18428,10 @@ export interface operations {
                     "application/json": components["schemas"]["Category"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     catalog_category_requests_list: {
@@ -17631,6 +18443,8 @@ export interface operations {
                 page_size?: number;
                 /** @description A search term. */
                 search?: string;
+                /** @description Filter by request status (upper-case codes) */
+                status?: "APPROVED" | "PENDING" | "REJECTED";
             };
             header?: never;
             path?: never;
@@ -17643,9 +18457,11 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PaginatedCategoryRequestList"];
+                    "application/json": components["schemas"]["PaginatedCategoryProposalList"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     catalog_category_requests_create: {
@@ -17657,9 +18473,9 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CategoryRequestRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["CategoryRequestRequest"];
-                "multipart/form-data": components["schemas"]["CategoryRequestRequest"];
+                "application/json": components["schemas"]["CategoryProposalRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["CategoryProposalRequest"];
+                "multipart/form-data": components["schemas"]["CategoryProposalRequest"];
             };
         };
         responses: {
@@ -17668,7 +18484,26 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CategoryRequest"];
+                    "application/json": components["schemas"]["CategoryProposal"];
+                };
+            };
+            /** @description CATEGORY_REQUEST_NAME_REQUIRED / COMPANY_REQUIRED / CATEGORY_REQUEST_ALREADY_PENDING, or serializer field errors */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description ADMIN_VIEWER_CANNOT_ACT / ROLE_NOT_PERMITTED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
                 };
             };
         };
@@ -17678,7 +18513,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: string;
+                /** @description A unique integer value identifying this Заявка на категорию. */
+                id: number;
             };
             cookie?: never;
         };
@@ -17689,7 +18525,18 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CategoryRequest"];
+                    "application/json": components["schemas"]["CategoryProposal"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            /** @description Not found (or another company's request) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
                 };
             };
         };
@@ -17699,7 +18546,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: string;
+                /** @description A unique integer value identifying this Заявка на категорию. */
+                id: number;
             };
             cookie?: never;
         };
@@ -17716,7 +18564,35 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CategoryRequest"];
+                    "application/json": components["schemas"]["CategoryProposal"];
+                };
+            };
+            /** @description CATEGORY_REQUEST_ALREADY_REVIEWED / CATEGORY_REQUIRED, or serializer field errors */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description ROLE_NOT_PERMITTED (no required permission) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description Not found (or another company's request) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
                 };
             };
         };
@@ -17726,7 +18602,8 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                id: string;
+                /** @description A unique integer value identifying this Заявка на категорию. */
+                id: number;
             };
             cookie?: never;
         };
@@ -17743,7 +18620,35 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CategoryRequest"];
+                    "application/json": components["schemas"]["CategoryProposal"];
+                };
+            };
+            /** @description CATEGORY_REQUEST_ALREADY_REVIEWED / REASON_REQUIRED, or serializer field errors */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description ROLE_NOT_PERMITTED (no required permission) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description Not found (or another company's request) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
                 };
             };
         };
@@ -17790,6 +18695,7 @@ export interface operations {
                     "application/json": components["schemas"]["DomainType"];
                 };
             };
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     catalog_manufacturers_list: {
@@ -17838,6 +18744,7 @@ export interface operations {
                     "application/json": components["schemas"]["Manufacturer"];
                 };
             };
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     catalog_offers_list: {
@@ -17865,6 +18772,8 @@ export interface operations {
                     "application/json": components["schemas"]["PaginatedSupplierOfferList"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     catalog_offers_create: {
@@ -17890,6 +18799,9 @@ export interface operations {
                     "application/json": components["schemas"]["SupplierOffer"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     catalog_offers_retrieve: {
@@ -17912,6 +18824,9 @@ export interface operations {
                     "application/json": components["schemas"]["SupplierOffer"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     catalog_offers_update: {
@@ -17940,6 +18855,10 @@ export interface operations {
                     "application/json": components["schemas"]["SupplierOffer"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     catalog_offers_destroy: {
@@ -17961,6 +18880,9 @@ export interface operations {
                 };
                 content?: never;
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     catalog_offers_partial_update: {
@@ -17989,6 +18911,10 @@ export interface operations {
                     "application/json": components["schemas"]["SupplierOffer"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     catalog_product_enrich_create: {
@@ -18018,21 +18944,28 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
             };
+            401: components["responses"]["UnauthorizedResponse"];
             /** @description No catalog.manage role permission (ROLE_NOT_PERMITTED) */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
             /** @description AI enrichment disabled */
             503: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
         };
     };
@@ -18056,6 +18989,8 @@ export interface operations {
                     "application/json": components["schemas"]["ProductStatus"][];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     catalog_product_statuses_retrieve: {
@@ -18078,6 +19013,9 @@ export interface operations {
                     "application/json": components["schemas"]["ProductStatus"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     catalog_products_list: {
@@ -18111,6 +19049,8 @@ export interface operations {
                     "application/json": components["schemas"]["PaginatedProductListList"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     catalog_products_create: {
@@ -18136,6 +19076,9 @@ export interface operations {
                     "application/json": components["schemas"]["Product"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     catalog_products_retrieve: {
@@ -18158,6 +19101,9 @@ export interface operations {
                     "application/json": components["schemas"]["Product"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     catalog_products_update: {
@@ -18186,6 +19132,10 @@ export interface operations {
                     "application/json": components["schemas"]["Product"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     catalog_products_destroy: {
@@ -18207,6 +19157,9 @@ export interface operations {
                 };
                 content?: never;
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     catalog_products_partial_update: {
@@ -18235,6 +19188,10 @@ export interface operations {
                     "application/json": components["schemas"]["Product"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     catalog_products_archive_create: {
@@ -18267,8 +19224,13 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     catalog_products_delete_document_destroy: {
@@ -18291,12 +19253,16 @@ export interface operations {
                 };
                 content?: never;
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
             /** @description Document not found */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
         };
     };
@@ -18320,12 +19286,16 @@ export interface operations {
                 };
                 content?: never;
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
             /** @description Image not found */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
         };
     };
@@ -18350,12 +19320,16 @@ export interface operations {
                     "application/octet-stream": string;
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
             /** @description Document not found or has no uploaded file */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
         };
     };
@@ -18389,8 +19363,13 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     catalog_products_publish_create: {
@@ -18423,8 +19402,13 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     catalog_products_restore_create: {
@@ -18457,8 +19441,13 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     catalog_products_unpublish_create: {
@@ -18491,8 +19480,13 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     catalog_products_upload_document_create: {
@@ -18523,6 +19517,10 @@ export interface operations {
                     "application/json": components["schemas"]["ProductDocument"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     catalog_products_upload_image_create: {
@@ -18555,6 +19553,10 @@ export interface operations {
                     "application/json": components["schemas"]["ProductImage"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     catalog_products_bulk_archive_create: {
@@ -18584,8 +19586,12 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     catalog_products_bulk_publish_create: {
@@ -18615,8 +19621,12 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     catalog_products_coverage_retrieve: {
@@ -18635,6 +19645,8 @@ export interface operations {
                 };
                 content?: never;
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     catalog_products_duplicate_suggestions_retrieve: {
@@ -18653,6 +19665,8 @@ export interface operations {
                 };
                 content?: never;
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     catalog_products_export_retrieve: {
@@ -18671,6 +19685,8 @@ export interface operations {
                 };
                 content?: never;
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     catalog_products_export_template_retrieve: {
@@ -18690,6 +19706,8 @@ export interface operations {
                     "application/json": components["schemas"]["Product"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     catalog_products_hs_apply_create: {
@@ -18717,6 +19735,9 @@ export interface operations {
                 };
                 content?: never;
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     catalog_products_hs_browse_retrieve: {
@@ -18737,6 +19758,8 @@ export interface operations {
                 };
                 content?: never;
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     catalog_products_hs_classify_create: {
@@ -18761,6 +19784,9 @@ export interface operations {
                 };
                 content?: never;
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     catalog_products_hs_lookup_create: {
@@ -18785,6 +19811,9 @@ export interface operations {
                 };
                 content?: never;
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     catalog_products_hs_suggest_retrieve: {
@@ -18805,6 +19834,8 @@ export interface operations {
                 };
                 content?: never;
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     catalog_products_hs_validate_retrieve: {
@@ -18825,6 +19856,8 @@ export interface operations {
                 };
                 content?: never;
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     catalog_stock_statuses_list: {
@@ -18847,6 +19880,8 @@ export interface operations {
                     "application/json": components["schemas"]["StockStatus"][];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     catalog_stock_statuses_retrieve: {
@@ -18869,6 +19904,9 @@ export interface operations {
                     "application/json": components["schemas"]["StockStatus"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_activity_logs_list: {
@@ -18895,6 +19933,8 @@ export interface operations {
                     "application/json": components["schemas"]["PaginatedActivityLogList"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     crm_activity_logs_retrieve: {
@@ -18917,6 +19957,9 @@ export interface operations {
                     "application/json": components["schemas"]["ActivityLog"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_acts_list: {
@@ -18948,6 +19991,8 @@ export interface operations {
                     "application/json": components["schemas"]["PaginatedActList"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     crm_acts_retrieve: {
@@ -18970,6 +20015,9 @@ export interface operations {
                     "application/json": components["schemas"]["Act"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_acts_cancel_create: {
@@ -19003,8 +20051,13 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_acts_download_pdf_retrieve: {
@@ -19027,6 +20080,9 @@ export interface operations {
                     "application/json": components["schemas"]["Act"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_acts_download_signed_retrieve: {
@@ -19049,6 +20105,9 @@ export interface operations {
                     "application/json": components["schemas"]["Act"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_acts_reissue_create: {
@@ -19076,8 +20135,13 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_acts_remind_create: {
@@ -19105,8 +20169,13 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_analytics_dashboard_retrieve: {
@@ -19128,6 +20197,8 @@ export interface operations {
                 };
                 content?: never;
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     crm_analytics_recent_documents_retrieve: {
@@ -19150,6 +20221,8 @@ export interface operations {
                     "application/json": components["schemas"]["RecentDocumentsResponse"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     crm_analytics_search_documents_retrieve: {
@@ -19174,6 +20247,8 @@ export interface operations {
                     "application/json": components["schemas"]["SearchDocumentsResponse"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     crm_analytics_time_to_first_quote_retrieve: {
@@ -19194,6 +20269,8 @@ export interface operations {
                 };
                 content?: never;
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     crm_charge_templates_list: {
@@ -19216,6 +20293,8 @@ export interface operations {
                     "application/json": components["schemas"]["ChargeTemplate"][];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     crm_charge_templates_create: {
@@ -19241,6 +20320,9 @@ export interface operations {
                     "application/json": components["schemas"]["ChargeTemplate"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     crm_charge_templates_retrieve: {
@@ -19263,6 +20345,9 @@ export interface operations {
                     "application/json": components["schemas"]["ChargeTemplate"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_charge_templates_update: {
@@ -19291,6 +20376,10 @@ export interface operations {
                     "application/json": components["schemas"]["ChargeTemplate"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_charge_templates_destroy: {
@@ -19312,6 +20401,9 @@ export interface operations {
                 };
                 content?: never;
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_charge_templates_partial_update: {
@@ -19340,6 +20432,10 @@ export interface operations {
                     "application/json": components["schemas"]["ChargeTemplate"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_charge_types_list: {
@@ -19362,6 +20458,8 @@ export interface operations {
                     "application/json": components["schemas"]["ChargeType"][];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     crm_charge_types_retrieve: {
@@ -19384,6 +20482,9 @@ export interface operations {
                     "application/json": components["schemas"]["ChargeType"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_contracts_list: {
@@ -19414,6 +20515,8 @@ export interface operations {
                     "application/json": components["schemas"]["PaginatedContractList"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     crm_contracts_create: {
@@ -19439,6 +20542,9 @@ export interface operations {
                     "application/json": components["schemas"]["Contract"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     crm_contracts_retrieve: {
@@ -19461,6 +20567,9 @@ export interface operations {
                     "application/json": components["schemas"]["Contract"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_contracts_update: {
@@ -19489,6 +20598,10 @@ export interface operations {
                     "application/json": components["schemas"]["Contract"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_contracts_destroy: {
@@ -19510,6 +20623,9 @@ export interface operations {
                 };
                 content?: never;
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_contracts_partial_update: {
@@ -19538,6 +20654,10 @@ export interface operations {
                     "application/json": components["schemas"]["Contract"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_contracts_cancel_create: {
@@ -19566,6 +20686,10 @@ export interface operations {
                     "application/json": components["schemas"]["Contract"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_contracts_download_pdf_retrieve: {
@@ -19588,6 +20712,9 @@ export interface operations {
                     "application/json": components["schemas"]["Contract"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_contracts_download_signed_retrieve: {
@@ -19610,6 +20737,9 @@ export interface operations {
                     "application/json": components["schemas"]["Contract"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_contracts_force_cancel_create: {
@@ -19643,8 +20773,13 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_contracts_select_wording_create: {
@@ -19673,6 +20808,10 @@ export interface operations {
                     "application/json": components["schemas"]["Contract"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_contracts_sign_manager_create: {
@@ -19701,6 +20840,10 @@ export interface operations {
                     "application/json": components["schemas"]["Contract"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_contracts_upload_signed_create: {
@@ -19728,6 +20871,10 @@ export interface operations {
                     "application/json": components["schemas"]["Contract"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_contracts_generate_from_quote_create: {
@@ -19753,6 +20900,9 @@ export interface operations {
                     "application/json": components["schemas"]["Contract"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     crm_deal_stages_list: {
@@ -19775,6 +20925,8 @@ export interface operations {
                     "application/json": components["schemas"]["DealStageLookup"][];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     crm_deal_stages_retrieve: {
@@ -19797,6 +20949,9 @@ export interface operations {
                     "application/json": components["schemas"]["DealStageLookup"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_deals_list: {
@@ -19823,6 +20978,8 @@ export interface operations {
                     "application/json": components["schemas"]["PaginatedDealListList"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     crm_deals_create: {
@@ -19848,6 +21005,9 @@ export interface operations {
                     "application/json": components["schemas"]["DealDetail"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     crm_deals_retrieve: {
@@ -19870,6 +21030,9 @@ export interface operations {
                     "application/json": components["schemas"]["DealDetail"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_deals_update: {
@@ -19898,6 +21061,10 @@ export interface operations {
                     "application/json": components["schemas"]["DealDetail"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_deals_destroy: {
@@ -19919,6 +21086,9 @@ export interface operations {
                 };
                 content?: never;
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_deals_partial_update: {
@@ -19947,6 +21117,10 @@ export interface operations {
                     "application/json": components["schemas"]["DealDetail"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_deals_assign_create: {
@@ -19975,6 +21149,10 @@ export interface operations {
                     "application/json": components["schemas"]["DealDetail"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_deals_change_stage_create: {
@@ -20008,14 +21186,21 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
             /** @description Invalid stage transition */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
         };
     };
@@ -20045,6 +21230,10 @@ export interface operations {
                     "application/json": components["schemas"]["DealDetail"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_deals_documents_retrieve: {
@@ -20066,6 +21255,9 @@ export interface operations {
                 };
                 content?: never;
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_deals_export_pdf_retrieve: {
@@ -20094,19 +21286,25 @@ export interface operations {
                 };
                 content?: never;
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
             /** @description No active quote */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
             /** @description QUOTE_NOT_CLAIMED / FX_RATE_MISSING / QUOTE_BELOW_COST */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
         };
     };
@@ -20141,14 +21339,20 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
             /** @description Stage not found */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
         };
     };
@@ -20182,21 +21386,28 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
             };
+            401: components["responses"]["UnauthorizedResponse"];
             /** @description Not own-company staff */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
             /** @description Deal not found */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
         };
     };
@@ -20226,6 +21437,10 @@ export interface operations {
                     "application/json": components["schemas"]["DealDetail"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_deals_take_and_prepare_create: {
@@ -20265,28 +21480,37 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
             };
+            401: components["responses"]["UnauthorizedResponse"];
             /** @description Не сотрудник своей компании */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
             /** @description Deal not found */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
             /** @description Заявку уже взял коллега (DEAL_ALREADY_CLAIMED) */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
         };
     };
@@ -20310,6 +21534,8 @@ export interface operations {
                     "application/json": components["schemas"]["DocumentTemplate"][];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     crm_document_templates_create: {
@@ -20321,9 +21547,9 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["DocumentTemplateRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["DocumentTemplateRequest"];
-                "multipart/form-data": components["schemas"]["DocumentTemplateRequest"];
+                "application/json": components["schemas"]["DocumentTemplateCreateRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["DocumentTemplateCreateRequest"];
+                "multipart/form-data": components["schemas"]["DocumentTemplateCreateRequest"];
             };
         };
         responses: {
@@ -20333,6 +21559,25 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DocumentTemplate"];
+                };
+            };
+            /** @description TEMPLATE_NAME_REQUIRED / TEMPLATE_NAME_TOO_LONG / TEMPLATE_BODY_TOO_LARGE / TEMPLATE_MISSING_REQUIRED_BLOCKS (with `missing_blocks`) / TEMPLATE_IN_USE (delete) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentTemplateError"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description ROLE_NOT_PERMITTED / NO_COMPANY / SETTINGS_EDIT_REQUIRED / TEMPLATE_NOT_EDITABLE */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
                 };
             };
         };
@@ -20357,6 +21602,9 @@ export interface operations {
                     "application/json": components["schemas"]["DocumentTemplate"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_document_templates_update: {
@@ -20369,11 +21617,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody: {
+        requestBody?: {
             content: {
-                "application/json": components["schemas"]["DocumentTemplateRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["DocumentTemplateRequest"];
-                "multipart/form-data": components["schemas"]["DocumentTemplateRequest"];
+                "application/json": components["schemas"]["DocumentTemplateWriteRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["DocumentTemplateWriteRequest"];
+                "multipart/form-data": components["schemas"]["DocumentTemplateWriteRequest"];
             };
         };
         responses: {
@@ -20385,6 +21633,26 @@ export interface operations {
                     "application/json": components["schemas"]["DocumentTemplate"];
                 };
             };
+            /** @description TEMPLATE_NAME_REQUIRED / TEMPLATE_NAME_TOO_LONG / TEMPLATE_BODY_TOO_LARGE / TEMPLATE_MISSING_REQUIRED_BLOCKS (with `missing_blocks`) / TEMPLATE_IN_USE (delete) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentTemplateError"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description ROLE_NOT_PERMITTED / NO_COMPANY / SETTINGS_EDIT_REQUIRED / TEMPLATE_NOT_EDITABLE */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_document_templates_destroy: {
@@ -20406,6 +21674,26 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description TEMPLATE_NAME_REQUIRED / TEMPLATE_NAME_TOO_LONG / TEMPLATE_BODY_TOO_LARGE / TEMPLATE_MISSING_REQUIRED_BLOCKS (with `missing_blocks`) / TEMPLATE_IN_USE (delete) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentTemplateError"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description ROLE_NOT_PERMITTED / NO_COMPANY / SETTINGS_EDIT_REQUIRED / TEMPLATE_NOT_EDITABLE */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_document_templates_partial_update: {
@@ -20420,9 +21708,9 @@ export interface operations {
         };
         requestBody?: {
             content: {
-                "application/json": components["schemas"]["PatchedDocumentTemplateRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["PatchedDocumentTemplateRequest"];
-                "multipart/form-data": components["schemas"]["PatchedDocumentTemplateRequest"];
+                "application/json": components["schemas"]["PatchedDocumentTemplateWriteRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedDocumentTemplateWriteRequest"];
+                "multipart/form-data": components["schemas"]["PatchedDocumentTemplateWriteRequest"];
             };
         };
         responses: {
@@ -20434,6 +21722,26 @@ export interface operations {
                     "application/json": components["schemas"]["DocumentTemplate"];
                 };
             };
+            /** @description TEMPLATE_NAME_REQUIRED / TEMPLATE_NAME_TOO_LONG / TEMPLATE_BODY_TOO_LARGE / TEMPLATE_MISSING_REQUIRED_BLOCKS (with `missing_blocks`) / TEMPLATE_IN_USE (delete) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentTemplateError"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description ROLE_NOT_PERMITTED / NO_COMPANY / SETTINGS_EDIT_REQUIRED / TEMPLATE_NOT_EDITABLE */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_document_templates_copy_create: {
@@ -20446,15 +21754,15 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody: {
+        requestBody?: {
             content: {
-                "application/json": components["schemas"]["DocumentTemplateRequest"];
-                "application/x-www-form-urlencoded": components["schemas"]["DocumentTemplateRequest"];
-                "multipart/form-data": components["schemas"]["DocumentTemplateRequest"];
+                "application/json": components["schemas"]["DocumentTemplateCopyRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["DocumentTemplateCopyRequest"];
+                "multipart/form-data": components["schemas"]["DocumentTemplateCopyRequest"];
             };
         };
         responses: {
-            200: {
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -20462,6 +21770,26 @@ export interface operations {
                     "application/json": components["schemas"]["DocumentTemplate"];
                 };
             };
+            /** @description TEMPLATE_NAME_REQUIRED / TEMPLATE_NAME_TOO_LONG / TEMPLATE_BODY_TOO_LARGE / TEMPLATE_MISSING_REQUIRED_BLOCKS (with `missing_blocks`) / TEMPLATE_IN_USE (delete) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentTemplateError"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description ROLE_NOT_PERMITTED / NO_COMPANY / SETTINGS_EDIT_REQUIRED / TEMPLATE_NOT_EDITABLE */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_document_templates_placeholders_retrieve: {
@@ -20481,6 +21809,8 @@ export interface operations {
                     "application/json": components["schemas"]["DocumentPlaceholderCatalog"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     crm_document_templates_preview_create: {
@@ -20506,13 +21836,17 @@ export interface operations {
                     "application/json": components["schemas"]["DocumentTemplatePreview"];
                 };
             };
-            /** @description Validation error */
+            /** @description NO_COMPANY / TEMPLATE_BODY_TOO_LARGE (error code) */
             400: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     crm_fulfillments_list: {
@@ -20543,6 +21877,8 @@ export interface operations {
                     "application/json": components["schemas"]["PaginatedFulfillmentList"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     crm_fulfillments_retrieve: {
@@ -20565,6 +21901,9 @@ export interface operations {
                     "application/json": components["schemas"]["Fulfillment"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_fulfillments_download_note_retrieve: {
@@ -20587,6 +21926,9 @@ export interface operations {
                     "application/json": components["schemas"]["Fulfillment"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_fulfillments_update_status_create: {
@@ -20617,21 +21959,29 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
             /** @description NOT_FOUND (сделки нет) */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
             /** @description FULFILLMENT_NOT_READY (отгрузку ещё не создала задача после договора) */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
         };
     };
@@ -20655,6 +22005,8 @@ export interface operations {
                     "application/json": components["schemas"]["GeneratedDocument"][];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     crm_generated_documents_retrieve: {
@@ -20677,6 +22029,9 @@ export interface operations {
                     "application/json": components["schemas"]["GeneratedDocument"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_generated_documents_partial_update: {
@@ -20699,6 +22054,9 @@ export interface operations {
                     "application/json": components["schemas"]["GeneratedDocument"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_generated_documents_cancel_create: {
@@ -20721,6 +22079,9 @@ export interface operations {
                     "application/json": components["schemas"]["GeneratedDocument"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_generated_documents_download_pdf_retrieve: {
@@ -20743,6 +22104,9 @@ export interface operations {
                     "application/json": components["schemas"]["GeneratedDocument"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_generated_documents_issue_create: {
@@ -20765,6 +22129,9 @@ export interface operations {
                     "application/json": components["schemas"]["GeneratedDocument"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_generated_documents_revoke_public_link_create: {
@@ -20787,6 +22154,9 @@ export interface operations {
                     "application/json": components["schemas"]["GeneratedDocument"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_generated_documents_send_email_create: {
@@ -20820,8 +22190,13 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_generated_documents_generate_create: {
@@ -20852,8 +22227,12 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     crm_invoices_list: {
@@ -20884,6 +22263,8 @@ export interface operations {
                     "application/json": components["schemas"]["PaginatedInvoiceList"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     crm_invoices_retrieve: {
@@ -20906,6 +22287,9 @@ export interface operations {
                     "application/json": components["schemas"]["Invoice"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_invoices_update: {
@@ -20934,6 +22318,10 @@ export interface operations {
                     "application/json": components["schemas"]["Invoice"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_invoices_partial_update: {
@@ -20962,6 +22350,10 @@ export interface operations {
                     "application/json": components["schemas"]["Invoice"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_invoices_cancel_create: {
@@ -20990,6 +22382,10 @@ export interface operations {
                     "application/json": components["schemas"]["Invoice"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_invoices_download_pdf_retrieve: {
@@ -21012,6 +22408,9 @@ export interface operations {
                     "application/json": components["schemas"]["Invoice"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_invoices_generate_act_create: {
@@ -21040,6 +22439,10 @@ export interface operations {
                     "application/json": components["schemas"]["Invoice"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_invoices_issue_create: {
@@ -21068,6 +22471,10 @@ export interface operations {
                     "application/json": components["schemas"]["Invoice"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_invoices_record_payment_create: {
@@ -21103,12 +22510,18 @@ export interface operations {
                     "application/json": components["schemas"]["Payment"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
             /** @description PAYMENT_REFERENCE_CONFLICT */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
         };
     };
@@ -21140,8 +22553,12 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     crm_invoices_generate_from_contract_create: {
@@ -21167,6 +22584,9 @@ export interface operations {
                     "application/json": components["schemas"]["Invoice"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     crm_numbering_scheme_retrieve: {
@@ -21186,12 +22606,15 @@ export interface operations {
                     "application/json": components["schemas"]["NumberingScheme"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
             /** @description Not a seller / no settings.edit */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
         };
     };
@@ -21223,14 +22646,19 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
             };
+            401: components["responses"]["UnauthorizedResponse"];
             /** @description Not a seller / no settings.edit */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
         };
     };
@@ -21262,14 +22690,19 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
             };
+            401: components["responses"]["UnauthorizedResponse"];
             /** @description Not a seller / no settings.edit */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
         };
     };
@@ -21299,6 +22732,8 @@ export interface operations {
                     "application/json": components["schemas"]["PaginatedPaymentList"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     crm_payments_retrieve: {
@@ -21321,6 +22756,9 @@ export interface operations {
                     "application/json": components["schemas"]["Payment"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_payments_download_receipt_retrieve: {
@@ -21343,6 +22781,9 @@ export interface operations {
                     "application/json": components["schemas"]["Payment"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_quote_charges_list: {
@@ -21371,6 +22812,8 @@ export interface operations {
                     "application/json": components["schemas"]["PaginatedQuoteChargeList"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     crm_quote_charges_create: {
@@ -21396,6 +22839,9 @@ export interface operations {
                     "application/json": components["schemas"]["QuoteCharge"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     crm_quote_charges_retrieve: {
@@ -21418,6 +22864,9 @@ export interface operations {
                     "application/json": components["schemas"]["QuoteCharge"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_quote_charges_update: {
@@ -21446,6 +22895,10 @@ export interface operations {
                     "application/json": components["schemas"]["QuoteCharge"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_quote_charges_destroy: {
@@ -21467,6 +22920,9 @@ export interface operations {
                 };
                 content?: never;
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_quote_charges_partial_update: {
@@ -21495,6 +22951,10 @@ export interface operations {
                     "application/json": components["schemas"]["QuoteCharge"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_quote_items_list: {
@@ -21521,6 +22981,8 @@ export interface operations {
                     "application/json": components["schemas"]["QuoteItem"][];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     crm_quote_items_create: {
@@ -21546,6 +23008,9 @@ export interface operations {
                     "application/json": components["schemas"]["QuoteItem"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     crm_quote_items_retrieve: {
@@ -21568,6 +23033,9 @@ export interface operations {
                     "application/json": components["schemas"]["QuoteItem"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_quote_items_update: {
@@ -21596,6 +23064,10 @@ export interface operations {
                     "application/json": components["schemas"]["QuoteItem"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_quote_items_destroy: {
@@ -21617,6 +23089,9 @@ export interface operations {
                 };
                 content?: never;
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_quote_items_partial_update: {
@@ -21645,6 +23120,10 @@ export interface operations {
                     "application/json": components["schemas"]["QuoteItem"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_quote_items_match_candidates_retrieve: {
@@ -21667,6 +23146,9 @@ export interface operations {
                     "application/json": components["schemas"]["QuoteItem"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_quote_items_reassign_product_create: {
@@ -21695,6 +23177,10 @@ export interface operations {
                     "application/json": components["schemas"]["QuoteItem"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_quote_items_bulk_create_create: {
@@ -21732,28 +23218,37 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
             };
+            401: components["responses"]["UnauthorizedResponse"];
             /** @description ADMIN_VIEWER_CANNOT_ACT / ONLY_SELLER_CAN_BUILD_QUOTE */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
             /** @description QUOTE_NOT_FOUND */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
             /** @description QUOTE_NOT_DRAFT (КП не в черновике) / QUOTE_FROZEN (отправлено клиенту) */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
         };
     };
@@ -21784,28 +23279,37 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
             };
+            401: components["responses"]["UnauthorizedResponse"];
             /** @description ADMIN_VIEWER_CANNOT_ACT / ONLY_SELLER_CAN_BUILD_QUOTE */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
             /** @description QUOTE_NOT_FOUND */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
             /** @description QUOTE_NOT_DRAFT (КП не в черновике) / QUOTE_FROZEN (отправлено клиенту) */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
         };
     };
@@ -21844,28 +23348,37 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
             };
+            401: components["responses"]["UnauthorizedResponse"];
             /** @description ADMIN_VIEWER_CANNOT_ACT / ONLY_SELLER_CAN_BUILD_QUOTE */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
             /** @description QUOTE_NOT_FOUND */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
             /** @description QUOTE_NOT_DRAFT (КП не в черновике) / QUOTE_FROZEN (отправлено клиенту) */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
         };
     };
@@ -21889,6 +23402,8 @@ export interface operations {
                     "application/json": components["schemas"]["QuoteStatusLookup"][];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     crm_quote_statuses_retrieve: {
@@ -21911,6 +23426,9 @@ export interface operations {
                     "application/json": components["schemas"]["QuoteStatusLookup"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_quotes_list: {
@@ -21937,6 +23455,8 @@ export interface operations {
                     "application/json": components["schemas"]["PaginatedQuoteList"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     crm_quotes_create: {
@@ -21962,6 +23482,9 @@ export interface operations {
                     "application/json": components["schemas"]["Quote"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     crm_quotes_retrieve: {
@@ -21984,6 +23507,9 @@ export interface operations {
                     "application/json": components["schemas"]["Quote"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_quotes_update: {
@@ -22012,6 +23538,10 @@ export interface operations {
                     "application/json": components["schemas"]["Quote"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_quotes_destroy: {
@@ -22033,6 +23563,9 @@ export interface operations {
                 };
                 content?: never;
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_quotes_partial_update: {
@@ -22061,6 +23594,10 @@ export interface operations {
                     "application/json": components["schemas"]["Quote"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_quotes_apply_defaults_create: {
@@ -22082,19 +23619,25 @@ export interface operations {
                 };
                 content?: never;
             };
+            401: components["responses"]["UnauthorizedResponse"];
             /** @description ONLY_SELLER_CAN_BUILD_QUOTE */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
+            404: components["responses"]["NotFoundResponse"];
             /** @description QUOTE_NOT_DRAFT / QUOTE_FROZEN */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
         };
     };
@@ -22129,15 +23672,21 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
             };
+            401: components["responses"]["UnauthorizedResponse"];
             /** @description ROLE_NOT_PERMITTED / SELF_APPROVAL_NOT_ALLOWED (автор КП не согласует своё КП) */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_quotes_approval_preview_retrieve: {
@@ -22159,19 +23708,24 @@ export interface operations {
                 };
                 content?: never;
             };
+            401: components["responses"]["UnauthorizedResponse"];
             /** @description Not permitted */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
             /** @description Quote not found */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
         };
     };
@@ -22201,6 +23755,10 @@ export interface operations {
                     "application/json": components["schemas"]["Quote"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_quotes_download_pdf_retrieve: {
@@ -22229,12 +23787,17 @@ export interface operations {
                 };
                 content?: never;
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
             /** @description QUOTE_NOT_CLAIMED / FX_RATE_MISSING / QUOTE_BELOW_COST */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
         };
     };
@@ -22258,19 +23821,24 @@ export interface operations {
                     "application/json": components["schemas"]["Quote"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
             /** @description Role not permitted (ROLE_NOT_PERMITTED) */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
             /** @description Quote not found */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
         };
     };
@@ -22308,14 +23876,21 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
             /** @description QUOTE_NOT_CLAIMED / FX_RATE_MISSING / QUOTE_BELOW_COST */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
         };
     };
@@ -22350,8 +23925,13 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_quotes_fx_override_create: {
@@ -22384,28 +23964,38 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
             };
+            401: components["responses"]["UnauthorizedResponse"];
             /** @description ROLE_NOT_PERMITTED */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
+            404: components["responses"]["NotFoundResponse"];
             /** @description QUOTE_FROZEN / QUOTE_NOT_DRAFT */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
             /** @description PRECONDITION_FAILED_STALE_WRITE */
             412: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
         };
     };
@@ -22434,19 +24024,27 @@ export interface operations {
                 };
                 content?: never;
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
             /** @description QUOTE_NOT_CLAIMED / FX_RATE_MISSING / QUOTE_BELOW_COST */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
             /** @description PDF generation failed */
             500: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
         };
     };
@@ -22469,6 +24067,9 @@ export interface operations {
                 };
                 content?: never;
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_quotes_recall_create: {
@@ -22502,21 +24103,29 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
             };
+            401: components["responses"]["UnauthorizedResponse"];
             /** @description Not permitted */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
+            404: components["responses"]["NotFoundResponse"];
             /** @description QUOTE_AWAITING_DIRECTOR — визы собраны, КП у директора в EDS */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
         };
     };
@@ -22546,6 +24155,10 @@ export interface operations {
                     "application/json": components["schemas"]["Quote"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_quotes_send_to_client_create: {
@@ -22579,15 +24192,21 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
             };
+            401: components["responses"]["UnauthorizedResponse"];
             /** @description Role not permitted */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_quotes_set_delivery_basis_create: {
@@ -22616,6 +24235,10 @@ export interface operations {
                     "application/json": components["schemas"]["Quote"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_quotes_submit_for_review_create: {
@@ -22649,21 +24272,29 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
             };
+            401: components["responses"]["UnauthorizedResponse"];
             /** @description Role not permitted */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
+            404: components["responses"]["NotFoundResponse"];
             /** @description VISA_ASSIGNEE_NOT_IN_ERP — исполнитель зоны резолюции не заведён в ERP, визировать некому */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
         };
     };
@@ -22685,19 +24316,24 @@ export interface operations {
                 };
                 content?: never;
             };
+            401: components["responses"]["UnauthorizedResponse"];
             /** @description Caller is neither the deal's client nor own-company staff */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
             /** @description Quote not found */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
         };
     };
@@ -22719,19 +24355,24 @@ export interface operations {
                 };
                 content?: never;
             };
+            401: components["responses"]["UnauthorizedResponse"];
             /** @description Caller is neither the deal's client nor own-company staff */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
             /** @description Quote not found */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
         };
     };
@@ -22759,6 +24400,8 @@ export interface operations {
                     "application/json": components["schemas"]["PaginatedQuoteList"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     crm_timeline_list: {
@@ -22787,21 +24430,28 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
             };
+            401: components["responses"]["UnauthorizedResponse"];
             /** @description No access to the requested deal */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
             /** @description Deal not found */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
         };
     };
@@ -22826,6 +24476,8 @@ export interface operations {
                     "application/json": components["schemas"]["CompanyWordingVariant"][];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     crm_wording_variants_create: {
@@ -22851,6 +24503,9 @@ export interface operations {
                     "application/json": components["schemas"]["CompanyWordingVariant"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     crm_wording_variants_retrieve: {
@@ -22873,6 +24528,9 @@ export interface operations {
                     "application/json": components["schemas"]["CompanyWordingVariant"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_wording_variants_destroy: {
@@ -22894,6 +24552,9 @@ export interface operations {
                 };
                 content?: never;
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     crm_wording_variants_partial_update: {
@@ -22922,6 +24583,10 @@ export interface operations {
                     "application/json": components["schemas"]["CompanyWordingVariant"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     exchange_rates_current_retrieve: {
@@ -22949,8 +24614,12 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     exchange_rates_journal_list: {
@@ -22980,8 +24649,12 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     exchange_rates_manual_create: {
@@ -23012,8 +24685,12 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     finance_deals_margin_deviation_retrieve: {
@@ -23035,13 +24712,17 @@ export interface operations {
                     "application/json": components["schemas"]["MarginDeviation"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
             /** @description ROLE_NOT_PERMITTED */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     finance_deals_purchase_actuals_create: {
@@ -23074,21 +24755,29 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
             };
+            401: components["responses"]["UnauthorizedResponse"];
             /** @description ROLE_NOT_PERMITTED */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
+            404: components["responses"]["NotFoundResponse"];
             /** @description MARGIN_NO_REFERENCE_QUOTE */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
         };
     };
@@ -23112,13 +24801,17 @@ export interface operations {
                     "application/json": components["schemas"]["MarginDeviation"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
             /** @description ROLE_NOT_PERMITTED */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     busDeliveries: {
@@ -23152,6 +24845,8 @@ export interface operations {
                     "application/json": components["schemas"]["BusDeliveryPage"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     busRetryDelivery: {
@@ -23173,6 +24868,9 @@ export interface operations {
                     "application/json": components["schemas"]["BusRetryResult"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     busRetryDead: {
@@ -23198,6 +24896,9 @@ export interface operations {
                     "application/json": components["schemas"]["BusRetryResult"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     busInbox: {
@@ -23230,6 +24931,8 @@ export interface operations {
                     "application/json": components["schemas"]["BusInboxPage"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     busRetryInbox: {
@@ -23251,6 +24954,18 @@ export interface operations {
                     "application/json": components["schemas"]["BusRetryResult"];
                 };
             };
+            /** @description `event_id` is not a UUID (field errors: {event_id: [...]}) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     busOverview: {
@@ -23270,6 +24985,8 @@ export interface operations {
                     "application/json": components["schemas"]["BusOverview"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     integration_crm_pairing_retrieve: {
@@ -23289,6 +25006,8 @@ export interface operations {
                     "application/json": components["schemas"]["CrmPairingStatus"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     integration_crm_pairing_code_create: {
@@ -23308,11 +25027,15 @@ export interface operations {
                     "application/json": components["schemas"]["PairingCodeIssued"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     master_data_countries_list: {
         parameters: {
             query?: {
+                /** @description `1`/`true` — вместе с отключёнными строками; только для держателя `settings.edit` или администратора */
+                include_inactive?: string;
                 /** @description A search term. */
                 search?: string;
             };
@@ -23355,6 +25078,9 @@ export interface operations {
                     "application/json": components["schemas"]["Country"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     master_data_countries_retrieve: {
@@ -23377,6 +25103,7 @@ export interface operations {
                     "application/json": components["schemas"]["Country"];
                 };
             };
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     master_data_countries_update: {
@@ -23405,6 +25132,10 @@ export interface operations {
                     "application/json": components["schemas"]["Country"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     master_data_countries_destroy: {
@@ -23426,6 +25157,18 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description LOOKUP_IN_USE[:Модели,…] — на строку ссылаются данные; отключите её вместо удаления */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     master_data_countries_partial_update: {
@@ -23454,11 +25197,17 @@ export interface operations {
                     "application/json": components["schemas"]["Country"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     master_data_currencies_list: {
         parameters: {
             query?: {
+                /** @description `1`/`true` — вместе с отключёнными строками; только для держателя `settings.edit` или администратора */
+                include_inactive?: string;
                 /** @description A search term. */
                 search?: string;
             };
@@ -23501,6 +25250,9 @@ export interface operations {
                     "application/json": components["schemas"]["Currency"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     master_data_currencies_retrieve: {
@@ -23523,6 +25275,7 @@ export interface operations {
                     "application/json": components["schemas"]["Currency"];
                 };
             };
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     master_data_currencies_update: {
@@ -23551,6 +25304,10 @@ export interface operations {
                     "application/json": components["schemas"]["Currency"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     master_data_currencies_destroy: {
@@ -23572,6 +25329,18 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description LOOKUP_IN_USE[:Модели,…] — на строку ссылаются данные; отключите её вместо удаления */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     master_data_currencies_partial_update: {
@@ -23600,11 +25369,17 @@ export interface operations {
                     "application/json": components["schemas"]["Currency"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     master_data_delivery_basis_list: {
         parameters: {
             query?: {
+                /** @description `1`/`true` — вместе с отключёнными строками; только для держателя `settings.edit` или администратора */
+                include_inactive?: string;
                 /** @description A search term. */
                 search?: string;
             };
@@ -23647,6 +25422,9 @@ export interface operations {
                     "application/json": components["schemas"]["DeliveryBasis"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     master_data_delivery_basis_retrieve: {
@@ -23669,6 +25447,7 @@ export interface operations {
                     "application/json": components["schemas"]["DeliveryBasis"];
                 };
             };
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     master_data_delivery_basis_update: {
@@ -23697,6 +25476,10 @@ export interface operations {
                     "application/json": components["schemas"]["DeliveryBasis"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     master_data_delivery_basis_destroy: {
@@ -23718,6 +25501,18 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description LOOKUP_IN_USE[:Модели,…] — на строку ссылаются данные; отключите её вместо удаления */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     master_data_delivery_basis_partial_update: {
@@ -23746,6 +25541,10 @@ export interface operations {
                     "application/json": components["schemas"]["DeliveryBasis"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     master_data_hs_codes_duties_retrieve: {
@@ -23769,11 +25568,16 @@ export interface operations {
                 };
                 content?: never;
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     master_data_units_list: {
         parameters: {
             query?: {
+                /** @description `1`/`true` — вместе с отключёнными строками; только для держателя `settings.edit` или администратора */
+                include_inactive?: string;
                 /** @description A search term. */
                 search?: string;
             };
@@ -23816,6 +25620,9 @@ export interface operations {
                     "application/json": components["schemas"]["UnitOfMeasure"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     master_data_units_retrieve: {
@@ -23838,6 +25645,7 @@ export interface operations {
                     "application/json": components["schemas"]["UnitOfMeasure"];
                 };
             };
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     master_data_units_update: {
@@ -23866,6 +25674,10 @@ export interface operations {
                     "application/json": components["schemas"]["UnitOfMeasure"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     master_data_units_destroy: {
@@ -23887,6 +25699,18 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description LOOKUP_IN_USE[:Модели,…] — на строку ссылаются данные; отключите её вместо удаления */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     master_data_units_partial_update: {
@@ -23915,6 +25739,10 @@ export interface operations {
                     "application/json": components["schemas"]["UnitOfMeasure"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     notifications_list: {
@@ -23941,6 +25769,8 @@ export interface operations {
                     "application/json": components["schemas"]["PaginatedNotificationList"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     notifications_retrieve: {
@@ -23963,6 +25793,9 @@ export interface operations {
                     "application/json": components["schemas"]["Notification"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     notifications_mark_read_partial_update: {
@@ -23983,12 +25816,25 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Notification marked as read */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["NotificationMarkedRead"];
+                };
+            };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            /** @description Not found (or another user's notification) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
         };
     };
@@ -24007,13 +25853,17 @@ export interface operations {
             };
         };
         responses: {
-            /** @description All notifications marked as read */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["NotificationsMarkedRead"];
+                };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     public_doc_links_retrieve: {
@@ -24046,14 +25896,18 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
             /** @description Срок ссылки (10 минут) вышел */
             410: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
         };
     };
@@ -24087,14 +25941,18 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
             /** @description Public link revoked or expired */
             410: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
         };
     };
@@ -24128,14 +25986,18 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
             /** @description Public link revoked or expired */
             410: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
         };
     };
@@ -24148,15 +26010,32 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PublicQuoteAcceptRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PublicQuoteAcceptRequestRequest"];
+                "multipart/form-data": components["schemas"]["PublicQuoteAcceptRequestRequest"];
+            };
+        };
         responses: {
-            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PublicQuoteAccepted"];
+                };
             };
+            /** @description Wrong or expired code (error code from verify_code_and_accept) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     public_quotes_reject_create: {
@@ -24168,15 +26047,32 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PublicQuoteRejectRequestRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PublicQuoteRejectRequestRequest"];
+                "multipart/form-data": components["schemas"]["PublicQuoteRejectRequestRequest"];
+            };
+        };
         responses: {
-            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PublicQuoteRejected"];
+                };
             };
+            /** @description Reason missing or quote not rejectable (error code) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     public_quotes_request_code_create: {
@@ -24190,13 +26086,15 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description No response body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PublicCodeSent"];
+                };
             };
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     public_quotes_viewed_create: {
@@ -24217,6 +26115,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     settings_email_templates_list: {
@@ -24243,6 +26142,8 @@ export interface operations {
                     "application/json": components["schemas"]["PaginatedEmailTemplateList"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     settings_email_templates_create: {
@@ -24268,6 +26169,9 @@ export interface operations {
                     "application/json": components["schemas"]["EmailTemplate"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     settings_email_templates_retrieve: {
@@ -24290,6 +26194,9 @@ export interface operations {
                     "application/json": components["schemas"]["EmailTemplate"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     settings_email_templates_update: {
@@ -24318,6 +26225,10 @@ export interface operations {
                     "application/json": components["schemas"]["EmailTemplate"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     settings_email_templates_destroy: {
@@ -24339,6 +26250,9 @@ export interface operations {
                 };
                 content?: never;
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     settings_email_templates_partial_update: {
@@ -24367,6 +26281,10 @@ export interface operations {
                     "application/json": components["schemas"]["EmailTemplate"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     settings_email_templates_preview_create: {
@@ -24387,13 +26305,26 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Rendered subject/text_body/html_body */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["EmailTemplatePreviewResult"];
+                };
             };
+            /** @description EMAIL_TEMPLATE_RENDER_FAILED: `details.reason` is template_does_not_exist (include/extends of a missing file) or template_syntax_error; or serializer field errors */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmailTemplateRenderError"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     settings_email_templates_test_send_create: {
@@ -24414,19 +26345,26 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Send result with EmailLog id and status */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["EmailTemplateTestSendResult"];
+                };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
             /** @description Rate limit of test emails per user exceeded */
             429: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
         };
     };
@@ -24453,26 +26391,34 @@ export interface operations {
                     "application/json": components["schemas"]["OwnCompanyCreated"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
             /** @description PLATFORM_ADMIN_REQUIRED */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
             /** @description OWN_COMPANY_ALREADY_EXISTS */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
             /** @description Ошибки полей формы */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
         };
     };
@@ -24493,6 +26439,8 @@ export interface operations {
                     "application/json": components["schemas"]["SetupStatus"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     sourcing_ai_status_retrieve: {
@@ -24513,13 +26461,17 @@ export interface operations {
                 };
                 content?: never;
             };
+            401: components["responses"]["UnauthorizedResponse"];
             /** @description No access to this task */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     sourcing_attachments_list: {
@@ -24546,6 +26498,8 @@ export interface operations {
                     "application/json": components["schemas"]["PaginatedAttachmentList"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     sourcing_attachments_create: {
@@ -24569,6 +26523,9 @@ export interface operations {
                     "application/json": components["schemas"]["Attachment"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     sourcing_attachments_retrieve: {
@@ -24591,6 +26548,9 @@ export interface operations {
                     "application/json": components["schemas"]["Attachment"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     sourcing_attachments_update: {
@@ -24617,6 +26577,10 @@ export interface operations {
                     "application/json": components["schemas"]["Attachment"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     sourcing_attachments_destroy: {
@@ -24638,6 +26602,9 @@ export interface operations {
                 };
                 content?: never;
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     sourcing_attachments_partial_update: {
@@ -24664,6 +26631,10 @@ export interface operations {
                     "application/json": components["schemas"]["Attachment"];
                 };
             };
+            400: components["responses"]["BadRequestResponse"];
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     sourcing_attachments_download_retrieve: {
@@ -24686,6 +26657,9 @@ export interface operations {
                     "application/json": components["schemas"]["Attachment"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     sourcing_catalog_template_retrieve: {
@@ -24704,6 +26678,8 @@ export interface operations {
                 };
                 content?: never;
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     sourcing_extract_document_create: {
@@ -24739,21 +26715,29 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
             /** @description Quote/Contract not found or not visible */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
             /** @description AI extraction disabled */
             503: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
         };
     };
@@ -24788,8 +26772,12 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     sourcing_import_catalog_ai_create: {
@@ -24824,21 +26812,28 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
             };
+            401: components["responses"]["UnauthorizedResponse"];
             /** @description Not a can_sell member of a SUPPLIER company */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
             /** @description AI import disabled */
             503: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
         };
     };
@@ -24875,28 +26870,37 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
             };
+            401: components["responses"]["UnauthorizedResponse"];
             /** @description No access to this deal */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
             /** @description Deal not found */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
             /** @description QUOTE_NOT_DRAFT / QUOTE_FROZEN: активное КП сделки уже не черновик */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
         };
     };
@@ -24929,28 +26933,37 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
             };
+            401: components["responses"]["UnauthorizedResponse"];
             /** @description Not own-company staff with pricing permission */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
             /** @description Quote not found */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
             /** @description AI import disabled */
             503: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
         };
     };
@@ -24972,13 +26985,17 @@ export interface operations {
                 };
                 content?: never;
             };
+            401: components["responses"]["UnauthorizedResponse"];
             /** @description No access to this task */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
+            404: components["responses"]["NotFoundResponse"];
         };
     };
     sourcing_match_catalog_create: {
@@ -25008,14 +27025,20 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
             /** @description AI matching disabled */
             503: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
         };
     };
@@ -25046,35 +27069,46 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
             };
+            401: components["responses"]["UnauthorizedResponse"];
             /** @description Not own-company staff with pricing permission */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
             /** @description Quote not found */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
             /** @description Quote is not editable (QUOTE_NOT_DRAFT / QUOTE_FROZEN) or a parse of this quote started by another user is still running (PARSE_ALREADY_RUNNING) */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
             /** @description AI disabled (AI_DISABLED) */
             503: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
             };
         };
     };
@@ -25095,6 +27129,8 @@ export interface operations {
                     "application/json": components["schemas"]["SystemSetting"];
                 };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
     system_settings_partial_update: {
@@ -25120,13 +27156,17 @@ export interface operations {
                     "application/json": components["schemas"]["SystemSetting"];
                 };
             };
-            /** @description SHARED_SETTING_READ_ONLY */
+            /** @description SHARED_SETTING_READ_ONLY (`fields` names the rejected shared fields) or serializer field errors */
             400: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["SystemSettingsPatchError"];
+                };
             };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
         };
     };
 }

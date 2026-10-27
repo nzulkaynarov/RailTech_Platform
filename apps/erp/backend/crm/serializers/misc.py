@@ -27,4 +27,8 @@ class ActivityLogSerializer(serializers.ModelSerializer):
             "user_name",
             "level",
             "timestamp",
+            # Связь со сделкой и тип сущности — для ленты «Сегодня» Платформы (D2-0, Q-D20-1.3); столбцы самой строки,
+            # обхода связей нет (`deal_id` — атрибут FK).
+            "entity_type",
+            "deal_id",
         ]

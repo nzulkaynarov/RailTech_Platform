@@ -81,7 +81,7 @@ REST_FRAMEWORK = {
     # см. core/pagination.py (раньше page_size молча игнорировался и списки резались на 20).
     "DEFAULT_PAGINATION_CLASS": "core.pagination.DefaultPageNumberPagination",
     "PAGE_SIZE": 20,
-    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "DEFAULT_SCHEMA_CLASS": "core.openapi.ErpAutoSchema",
     # API versioning (F2.6): formal contract instead of a hardcoded "v1". Routes are
     # still served under /api/v1/, so request.version resolves to DEFAULT_VERSION;
     # an unknown version simply has no route (404). When v2 is introduced, add it to
@@ -143,11 +143,21 @@ SPECTACULAR_SETTINGS = {
     "LICENSE": {"name": "Proprietary"},
     "SERVE_INCLUDE_SCHEMA": False,
     "COMPONENT_SPLIT_REQUEST": True,
+    # Тела отказов 4xx/5xx без явной схемы — общий компонент ErrorDetail (core/openapi.py, D2-0).
+    "POSTPROCESSING_HOOKS": [
+        "drf_spectacular.hooks.postprocess_schema_enums",
+        "core.openapi.describe_error_responses",
+    ],
     "SCHEMA_PATH_PREFIX": "/api/v[0-9]+/",
     # Одни и те же словари каталога у карточки и у настроек компании (M1-ERP-07) — одно имя enum.
     "ENUM_NAME_OVERRIDES": {
         "PriceVisibilityEnum": "catalog.constants.PriceVisibility",
         "FulfillmentPolicyEnum": "catalog.constants.FulfillmentPolicy",
+        # Те же наборы значений в служебных сериализаторах (приглашение контакта, офлайн-клиент, сопряжение с CRM) —
+        # одно имя, иначе drf-spectacular придумывает хешированные (D2-0, выгрузка без предупреждений).
+        "ContactPreferredChannelEnum": ["email", "telegram", "both"],
+        "LanguageEnum": ["ru", "uz", "en"],
+        "SecretSourceEnum": ["db", "env", "none"],
     },
     "TAGS": [
         {"name": "Auth", "description": "Login, password setup by invitation, JWT tokens"},

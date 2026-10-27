@@ -25,17 +25,17 @@ async function openProfile() {
   renderApp("/dashboard/queue");
   fireEvent.click(await screen.findByRole("button", { name: /профиль и настройки/i }));
   fireEvent.click(await screen.findByRole("menuitem", { name: "Профиль" }));
-  const dialog = await screen.findByRole("dialog", { name: "Профиль" });
-  await within(dialog).findByRole("heading", { name: "Уведомления" });
-  return dialog;
+  // Профиль — страница `/me`; подписки — её блок «Уведомления» (W15-H6).
+  const section = await screen.findByRole("region", { name: "Уведомления" });
+  await within(section).findByRole("switch", { name: "Лиды, которые ждут меня" });
+  return section;
 }
 
-describe("Профиль → Уведомления", () => {
+describe("Профиль /me → Уведомления", () => {
   it("менеджер с Telegram: подписка сохраняется, системных оповещений нет, тест отправляется", async () => {
     signInAs("manager@demo.example");
     const dialog = await openProfile();
 
-    expect(await within(dialog).findByText("Привязан")).toBeInTheDocument();
     expect(within(dialog).queryByText("Системные оповещения")).toBeNull();
     const leads = within(dialog).getByRole("switch", { name: "Лиды, которые ждут меня" });
     expect(leads).toBeChecked();
@@ -67,8 +67,7 @@ describe("Профиль → Уведомления", () => {
     signInAs("engineer@demo.example");
     const dialog = await openProfile();
 
-    expect(await within(dialog).findByText("Не привязан")).toBeInTheDocument();
-    expect(within(dialog).getByText(/Telegram привязывает администратор/)).toBeInTheDocument();
+    expect(await within(dialog).findByText(/Привяжите Telegram в блоке/)).toBeInTheDocument();
     expect(within(dialog).getByRole("switch", { name: "Лиды, которые ждут меня" })).toBeDisabled();
     expect(within(dialog).getByRole("button", { name: "Тестовое уведомление" })).toBeDisabled();
   });

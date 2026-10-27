@@ -8,11 +8,18 @@ import type { MePatchLanguage } from "./mePatchLanguage";
 import type { MePatchUiMode } from "./mePatchUiMode";
 
 /**
- * Своё: режим навигации и подписки на личные уведомления от бота (Q-010).
+ * Своё: режим навигации, подписки на личные уведомления бота (Q-010) и профиль (W15-H6).
+ *
+ * Должность, роли и прочее чужое здесь запрещены (`extra=forbid` -> 422): сотрудник правит только
+ * свой профиль, должность задаёт админ. Пустая строка в `phone` и `email_signature` очищает поле.
  */
 export interface MePatch {
+  email_signature?: string | null;
+  full_name?: string | null;
   language?: MePatchLanguage;
   notify_leads?: boolean | null;
   notify_system?: boolean | null;
+  phone?: string | null;
+  timezone?: string | null;
   ui_mode?: MePatchUiMode;
 }

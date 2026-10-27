@@ -11,7 +11,12 @@ import type { UserOutLanguage } from "./userOutLanguage";
 import type { UserOutPlatformAccessItem } from "./userOutPlatformAccessItem";
 
 export interface UserOut {
+  avatar_version?: number | null;
+  deputy_from?: string | null;
+  deputy_to?: string | null;
+  deputy_user_id?: number | null;
   email: string;
+  email_signature?: string | null;
   erp_role_codes?: UserOutErpRoleCodesItem[];
   erp_sync?: UserOutErpSync;
   erp_sync_error?: string | null;
@@ -22,6 +27,7 @@ export interface UserOut {
   must_change_password: boolean;
   notify_leads: boolean;
   notify_system: boolean;
+  phone?: string | null;
   platform_access?: UserOutPlatformAccessItem[];
   platform_role_ids?: number[];
   platform_role_refs?: PlatformRoleRef[];
@@ -29,5 +35,7 @@ export interface UserOut {
   roles: string[];
   tg_dm_failed_at?: string | null;
   tg_user_id: number | null;
+  tg_username?: string | null;
+  timezone?: string;
   ui_mode: string;
 }

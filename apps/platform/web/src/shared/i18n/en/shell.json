@@ -67,7 +67,8 @@
       "decisions": "D",
       "clients": "C",
       "system": "!"
-    }
+    },
+    "where": "Where to look"
   },
   "panel": {
     "label": "Side panel",
@@ -84,15 +85,6 @@
     "logout": "Sign out",
     "rolesMany": "All roles",
     "selected": "Selected"
-  },
-  "profile": {
-    "title": "Profile",
-    "name": "Name",
-    "email": "Email",
-    "position": "Position",
-    "roles": "Roles",
-    "access": "Access",
-    "noPosition": "not set"
   },
   "languages": {
     "ru": "Русский",
@@ -228,6 +220,16 @@
       "chat": "Chat",
       "ticket": "Staff request",
       "integration": "Integration"
-    }
+    },
+    "actions": {
+      "group": "Actions",
+      "tag": "Action",
+      "createRequest": "Create a request",
+      "createDocument": "Create a memo",
+      "inviteEmployee": "Invite an employee",
+      "legacyHint": "For now done in the old system — press to see where"
+    },
+    "where": "Where to look",
+    "whereClose": "Close the hint"
   }
 }
