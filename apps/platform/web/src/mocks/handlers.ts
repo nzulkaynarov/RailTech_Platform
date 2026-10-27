@@ -11,6 +11,7 @@ import { adminIntegrationsHandlers } from "./adminIntegrations";
 import { adminCompanyHandlers } from "./adminCompany";
 import { adminRolesHandlers } from "./adminRoles";
 import { botKbHandlers } from "./botKb";
+import { crmMessagesHandlers } from "./crmMessages";
 import { bridgeHandlers } from "./bridgeHandlers";
 import { edsLettersHandlers } from "./edsLetters";
 import { erpCalcHandlers } from "./erpCalc";
@@ -149,6 +150,7 @@ export const handlers = [
   ...adminBusHandlers,
   ...setupHandlers,
   ...botKbHandlers,
+  ...crmMessagesHandlers,
   ...bridgeHandlers,
   ...edsDocumentsHandlers,
   ...edsLettersHandlers,

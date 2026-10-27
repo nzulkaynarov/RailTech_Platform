@@ -1,5 +1,5 @@
 # CONTRACTS — шов между CRM и ERP (и портальный вход Cabinet, сервис EDS)
-Статус: действует · Владелец: архитектор · Обновлено: 2026-10-26
+Статус: действует · Владелец: архитектор · Обновлено: 2026-10-27
 
 Версия 0 · 2026-10-13 · Источник истины — файлы в `packages/contracts/` (OpenAPI — в том числе `crm.yaml`, который генерирует CRM, — и JSON-схемы);
 этот документ объясняет их. Изменение контракта — PR с обеих сторон в одной вехе (ORCHESTRATOR §3.3).
@@ -338,6 +338,7 @@ enum, отсутствующее обязательное поле, наруше
 | `uz.railtech.crm.lead.created.v1` / `lead.updated.v1` / `lead.stage_changed.v1` | `rt://crm` → (Платформа, B5) | снимок `lead` без контактов и переписки: `crm_lead_id`, `crm_client_id?`, `display_name`, `company_name`, `stage`, `source`, `language`, `score`, `assigned_user`, `erp_request_id?`, `updated_at`; у `stage_changed` — `from`, `to`, `reason?` |
 | `uz.railtech.crm.lead.erased.v1` | `rt://crm` → (Платформа, B5) | только `crm_lead_id`, `crm_client_id`, `erased_at`, `actor`: лид обезличен по запросу, **подписчики обязаны стереть свои копии ПДн по лиду** |
 | `uz.railtech.crm.lead.merged.v1` | `rt://crm` → (Платформа, B5) | `lead` — снимок выжившего, `merged_lead_id` — поглощённый лид (в CRM его больше нет), `actor` |
+| `uz.railtech.crm.lead.message_added.v1` (D1-1) | `rt://crm` → platform-bff (только он; ERP и EDS — нет) | сигнал без текста: `crm_lead_id`, `crm_client_id?`, `message_id`, `direction` (`in`/`out`), `author` (`lead`/`bot`/`manager`/`system`), `channel`, `has_attachments`, `handoff` (лид не у бота), `crm_assigned_user_id?`, `sent_at`, `actor`; текста, вложений и контактов нет — переписку читают API CRM с правами сотрудника |
 | `uz.railtech.identity.user.created.v1` / `user.updated.v1` | `rt://crm` → platform-bff, eds | снимок `user`: `crm_user_id`, `email`, `full_name`, `position`, `language`, `is_active`, `platform_roles`, `systems`, `erp_role_codes?`, `permissions?` (`{eds: [код EDS]}`, код — строка по шаблону, не перечень; нет поля — доступа к EDS нет; волна 12 — §10.4), `updated_at` |
 | `uz.railtech.identity.user.deactivated.v1` | `rt://crm` → platform-bff, eds | `crm_user_id`, `reason?`, `actor` |
 | `uz.railtech.erp.quote.ready_for_approval.v1` | `rt://erp` → eds (platform-bff — подсказка) | КП готово к одобрению директором (EDS-03): `erp_company_id`, `crm_client_id` (может быть `null`), `deal`, `actor`, `payload` — снимок КП (`QuoteReadyForApproval`: номер, версия, сумма, валюта, себестоимость, маржа %, порог маржи резолюции, нужные и собранные визы — кто и когда, срок); **CRM не подписана** (себестоимость и маржа) |
@@ -506,7 +507,8 @@ Telegram, язык, канал, признак основного); сегмен
 | `crm.contact.created.v1` / `updated.v1` / `deleted.v1` | `ClientContactService` (в т. ч. `updated` для контактов, потерявших признак основного); основной контакт, созданный передачей в бэк-офис (`ErpHandoffService`); `deleted_at` — время базы |
 | `crm.lead.created.v1` | лид из бота, формы сайта, «Новый лид» вручную |
 | `crm.lead.stage_changed.v1` | любой переход стадии (`stages.transition`: менеджер, квалификатор, таймеры, склейка лидов); `reason` — только код из справочника CRM (`app/bus/reasons.py`), свободный текст остаётся в CRM |
-| `crm.lead.updated.v1` | смена ответственного (в т. ч. массовая передача дел уходящего сотрудника — событие на каждый лид и клиента), привязка к клиенту, изменение `score`, заявка ERP (`erp_request_id`) |
+| `crm.lead.updated.v1` | смена ответственного (в т. ч. массовая передача дел уходящего сотрудника — событие на каждый лид и клиента), привязка к клиенту, изменение `score`, заявка ERP (`erp_request_id`); новая передача от бота (`escalation.apply`, `changed_fields = ["handoff"]`, D1-1) |
+| `crm.lead.message_added.v1` | каждое сообщение переписки — входящее от лида и исходящее от бота и менеджера (`app/services/message_log.py`, та же транзакция, что и строка `messages`; D1-1). Заметки команды — не сообщения переписки, не публикуются |
 | `crm.lead.erased.v1` | лид обезличен по `/delete` бота (без данных, только идентификаторы) |
 | `crm.lead.merged.v1` | склейка Telegram-лида и лида с тем же телефоном |
 | `identity.user.created.v1` / `updated.v1` / `deactivated.v1` | `UserService`: создание, смена имени, должности, языка, ролей Платформы и доступа, отключение; первый администратор; смена имени при входе по SSO (`SsoService`) |

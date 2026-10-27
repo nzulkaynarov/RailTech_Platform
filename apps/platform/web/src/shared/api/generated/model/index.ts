@@ -133,6 +133,14 @@
  * (директор читает), сброс пароля — `admin: full`; профиль доступен каждому вошедшему. Секреты из записей журнала BFF вырезает
  * (значения полей `password`, `secret`, `token`, `key`, `*_key`, `credentials`, `authorization`, `pin` и им подобных -> `***` целиком, любого типа).
  *
+ * **0.22.0 (D1-1, волна 16) — Клиенты · Ждут ответа.** Добавляющее изменение (тег `messages`): очередь передач от бота с
+ * запиской (CRM-06) и SLA — `GET /crm/messages`; карточка лида, лента диалога с подгрузкой истории и вложениями через BFF —
+ * `GET /crm/messages/{lead}`, `/thread`, `/attachments/{message}/{index}`; действия — `take`, `reply` (ключ повтора
+ * `client_message_id`: «Повторить» не дублирует сообщение; Telegram не ответил — 502 `INTEGRATION_FAILED`, `delivery_failed`),
+ * `note` (заметка команде), `assist` (подсказка ответа через CRM/LiteLLM), `return-to-bot`; шаблоны — `GET /crm/reply-templates`
+ * (раздел `crm.leads` полный). Чтение — `crm.leads` от чтения (директор), действия — полный. Новая тема подсказки потока
+ * `InvalidationTopic.messages`: событие CRM `lead.message_added` (новое сообщение в переписке) и события лида — экран
+ * перезапрашивает очередь и открытую ленту.
  * **0.19.0 (W15-H1) — мост в старые экраны.** Добавляющее изменение (тег `bridge`). Пока раздел Платформы ещё заглушка, сотрудник
  * открывает ту же работу в старой CRM или старом ERP новой вкладкой. `GET /bridge` отдаёт публичные адреса старых фронтов
  * (`crm_url`, `erp_url`): настройки `PLATFORM_CRM_PUBLIC_URL` и `PLATFORM_ERP_PUBLIC_URL`, а если они пусты — адрес выводится из
@@ -189,7 +197,7 @@
  * ссылке; неверная или просроченная — 422 `VALIDATION_FAILED`, `details.reason = reset_token_invalid`). `Me.access` остаётся для
  * совместимости, но экран «Доступ: CRM · ERP» убран: вместо него роли словами.
  *
- * **0.22.0 (D2-1) — Расчёт по заявке.** Добавляющее изменение, тег `calc`: `GET /erp/calc/requests` («Заявки в расчёте»,
+ * **0.23.0 (D2-1) — Расчёт по заявке.** Добавляющее изменение, тег `calc`: `GET /erp/calc/requests` («Заявки в расчёте»,
  * `mine` — «Мои расчёты»), `GET /erp/calc/{number}` (экран расчёта: задание из резолюции, строки, склад, поставщик и срок,
  * закупка и цена клиенту, наценка, визы по трём индикаторам, итоги без НДС, готовность), `POST …/start`, `POST …/lines`,
  * `PATCH|DELETE …/lines/{line_id}`, `POST …/lines/{line_id}/visa` (виза строки по зоне: товар — `erp.calc.goods`, услуга —
@@ -216,7 +224,7 @@
  * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; «Забыли пароль?» — 5 запросов в час на IP и на адрес; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.22.0
+ * OpenAPI spec version: 0.23.0
  */
 
 export * from "./accessLevel";
@@ -239,6 +247,10 @@ export * from "./aiSpendReportGroup";
 export * from "./aiSpendRow";
 export * from "./aiSpendTotals";
 export * from "./aiSystemBudget";
+export * from "./assistIn";
+export * from "./assistInMode";
+export * from "./assistSuggestion";
+export * from "./assistSuggestionNotice";
 export * from "./attentionItem";
 export * from "./attentionItemSeverity";
 export * from "./attentionKind";
@@ -349,6 +361,9 @@ export * from "./colleague";
 export * from "./companyItemRef";
 export * from "./companyProfile";
 export * from "./companyProfileUpdate";
+export * from "./conversationCard";
+export * from "./conversationContacts";
+export * from "./conversationThread";
 export * from "./covering";
 export * from "./createdId";
 export * from "./csrfFailedResponse";
@@ -440,10 +455,18 @@ export * from "./fxRateOverviewCurrency";
 export * from "./fxRateSource";
 export * from "./getAiSpendReportGroup";
 export * from "./getAiSpendReportParams";
+export * from "./getCrmThreadParams";
 export * from "./getQueueCardsParams";
 export * from "./getQueueParams";
 export * from "./getRoleJournalParams";
 export * from "./getSpendReportParams";
+export * from "./handoffFacts";
+export * from "./handoffFactsDecisionRole";
+export * from "./handoffFactsTimeline";
+export * from "./handoffInfo";
+export * from "./handoffInfoPriority";
+export * from "./handoffInfoState";
+export * from "./handoffNote";
 export * from "./health";
 export * from "./healthChecks";
 export * from "./healthChecksCrm";
@@ -480,6 +503,7 @@ export * from "./kbSearchHit";
 export * from "./kbSearchIn";
 export * from "./kbSearchResult";
 export * from "./language";
+export * from "./leadOwnerMode";
 export * from "./letterAssignee";
 export * from "./letterCard";
 export * from "./letterClient";
@@ -524,6 +548,11 @@ export * from "./meAccess";
 export * from "./menuCounter";
 export * from "./menuCounters";
 export * from "./meResources";
+export * from "./messageChannel";
+export * from "./messageInbox";
+export * from "./messageInboxItem";
+export * from "./messageInboxItemGroup";
+export * from "./messagesConflictResponse";
 export * from "./meUpdate";
 export * from "./moduleCode";
 export * from "./notFoundResponse";
@@ -567,6 +596,7 @@ export * from "./referenceItemIn";
 export * from "./referenceItemList";
 export * from "./referenceItemUpdate";
 export * from "./referenceKind";
+export * from "./replyIn";
 export * from "./replyTemplate";
 export * from "./replyTemplateIn";
 export * from "./replyTemplateList";
@@ -579,6 +609,7 @@ export * from "./resolutionIn";
 export * from "./resolutionZone";
 export * from "./resourceAccess";
 export * from "./restrictedField";
+export * from "./returnToBotIn";
 export * from "./role";
 export * from "./roleChange";
 export * from "./roleChangeAction";
@@ -604,6 +635,7 @@ export * from "./searchHit";
 export * from "./searchParams";
 export * from "./searchResult";
 export * from "./sectionLevel";
+export * from "./sentMessage";
 export * from "./serviceAction";
 export * from "./serviceCheck";
 export * from "./serviceCheckStatus";
@@ -644,12 +676,18 @@ export * from "./systemComponent";
 export * from "./systemComponentStatus";
 export * from "./systemStatus";
 export * from "./systemStatusStatus";
+export * from "./teamNote";
+export * from "./teamNoteIn";
 export * from "./telegramChannel";
 export * from "./telegramChannelList";
 export * from "./telegramConnector";
 export * from "./telegramLink";
 export * from "./telegramState";
 export * from "./telegramTokenIn";
+export * from "./threadAttachment";
+export * from "./threadMessage";
+export * from "./threadMessageAuthor";
+export * from "./threadMessageDelivery";
 export * from "./timezone";
 export * from "./tooManyRequestsResponse";
 export * from "./validationFailedResponse";

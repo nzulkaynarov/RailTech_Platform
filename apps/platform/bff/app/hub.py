@@ -24,7 +24,7 @@ log = structlog.get_logger()
 
 CHANNEL = "platform:hints"
 # Темы подсказок — перечисление `InvalidationTopic` в platform-bff.yaml.
-TOPICS: tuple[str, ...] = ("notifications", "counters", "queue", "activity")
+TOPICS: tuple[str, ...] = ("notifications", "counters", "queue", "activity", "messages")
 RESYNC_REASON = "resync"
 
 LISTEN_POLL_SECONDS = 1.0
