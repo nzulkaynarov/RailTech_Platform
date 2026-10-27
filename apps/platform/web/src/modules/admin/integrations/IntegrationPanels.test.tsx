@@ -290,7 +290,15 @@ describe("карточка «Модели ИИ»", () => {
   it("проверка модели, смена с ключом (ключ не показывается), сброс", async () => {
     const side = await openPanel("models");
     expect(await within(side).findByText("Поиск по базе знаний")).toBeVisible();
-    expect(within(side).getByText("401: ключ отклонён провайдером")).toBeVisible();
+    // сырой текст провайдера в строках ролей — только под «Техническими подробностями» (свёрнуто)
+    expect(within(side).queryAllByText("401: ключ отклонён провайдером")).toHaveLength(0);
+    const embedRow = within(side).getByText("Поиск по базе знаний").closest("li");
+    fireEvent.click(
+      within(embedRow as HTMLElement).getByRole("button", { name: "Технические подробности" }),
+    );
+    expect(
+      within(embedRow as HTMLElement).getByText("401: ключ отклонён провайдером"),
+    ).toBeVisible();
     // маска ключа: источник и последние 4 символа, сам ключ не приходит
     const dialog = within(side).getByText("Диалог с клиентом").closest("li");
     expect(within(dialog as HTMLElement).getByText("•••• 77aa")).toBeVisible();
@@ -340,10 +348,8 @@ describe("карточка «Модели ИИ»", () => {
     await waitFor(() => {
       expect(within(embed as HTMLElement).getByText("•••• 91zx")).toBeVisible();
     });
-    // поставщик восстановлен: проблема ушла из «Требует внимания»
-    await waitFor(() => {
-      expect(within(attention()).queryByText("OpenAI")).not.toBeInTheDocument();
-    });
+    // у поставщика остаётся роль с проблемой («Проверка качества») — строка группы пока на месте
+    expect(within(attention()).getByText(/Ключ OpenAI отклонён/)).toBeVisible();
 
     fireEvent.click(
       within(side).getByRole("button", { name: "Сбросить модель: Диалог с клиентом" }),

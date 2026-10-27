@@ -133,7 +133,7 @@
  * (директор читает), сброс пароля — `admin: full`; профиль доступен каждому вошедшему. Секреты из записей журнала BFF вырезает
  * (значения полей `password`, `secret`, `token`, `key`, `*_key`, `credentials`, `authorization`, `pin` и им подобных -> `***` целиком, любого типа).
  *
- * **0.18.0 (D1-4) — EDS · КП на одобрение и документы на согласовании.** Добавляющее изменение, тег `eds-approvals`: `GET /eds/quotes`
+ * **0.20.0 (D1-4) — EDS · КП на одобрение и документы на согласовании.** Добавляющее изменение, тег `eds-approvals`: `GET /eds/quotes`
  * (КП на одобрение: «на моём шаге» или все), `GET /eds/quotes/{ref}` (карточка КП по id маршрута или номеру `КП-2026/115`: шаги маршрута,
  * чек-лист с датой и автором, состав и итоги из ERP, письмо и заявка, каналы отправки по контакту клиента; **внутренний блок**
  * `internal` — себестоимость, маржа, порог, сроки — и значение маржи в чек-листе BFF вырезает у роли без группы `cost_margin`),
@@ -144,6 +144,17 @@
  * на доработку», «Отклонить»). Разделы: КП — `eds.drafts` (полный — решение, чтение — менеджер); служебки — `eds.memo.approve`
  * (полный — решение), чтение также у `eds.memo.create` (автор видит свой документ). `comment` для `return` и `reject` обязателен
  * (422 в BFF до EDS). Ошибки EDS (`not_your_step`, `route_closed`, `checklist_not_green` с `details.failed`) приходят в формате `Error`.
+ *
+ * **0.19.0 (W15-H1) — мост в старые экраны.** Добавляющее изменение (тег `bridge`). Пока раздел Платформы ещё заглушка, сотрудник
+ * открывает ту же работу в старой CRM или старом ERP новой вкладкой. `GET /bridge` отдаёт публичные адреса старых фронтов
+ * (`crm_url`, `erp_url`): настройки `PLATFORM_CRM_PUBLIC_URL` и `PLATFORM_ERP_PUBLIC_URL`, а если они пусты — адрес выводится из
+ * адреса, по которому открыта Платформа (`platform.<домен>` -> `crm.<домен>` и `erp.<домен>`, схема и порт те же); не задан и не
+ * выводится — `null`, SPA не показывает кнопку. `erp_sso` — у сотрудника есть доступ к ERP, и вход можно сделать без второго пароля.
+ * `POST /bridge/erp-sso` — тот же путь, каким старая CRM открывает ERP: BFF просит у CRM одноразовый SSO-токен (`POST
+ * /auth/sso/token`, живёт 60 секунд) токеном сотрудника и возвращает готовый адрес обмена `{ERP}/sso/exchange#token=…`; адрес
+ * ERP берёт сама CRM (`ERP_FRONTEND_URL`). Токен в журнал не пишется, ответ — `Cache-Control: no-store`. Права раздела не нужны:
+ * достаточно сессии и доступа к ERP (CRM не выдала токен — 403 `FORBIDDEN`, `details.reason`: `platform_access_denied` или
+ * `sso_disabled`).
  *
  * **0.17.0 (D1-5) — EDS · Создать документ и «Мои документы».** Добавляющее изменение, тег `eds-documents`: `GET/POST /eds/documents`
  * (мои документы или реестр «Все документы»; создать и сразу отправить), `GET/PUT /eds/documents/{id}` (карточка с маршрутом и
@@ -159,6 +170,15 @@
  * «своя компания» спрашивает ERP только после сопряжения; почему данных о компании нет — `SetupChecklist.company_blocker`
  * (`erp_not_connected` — сначала подключите ERP, `erp_unavailable` — ERP не ответила). `POST /setup/company` без сопряжённой ERP —
  * 409 `ERP_NOT_CONNECTED` (новый код) с текстом и `details.link` на карточку ERP; недоступная ERP — прежний 503 `BACKEND_UNAVAILABLE`.
+ *
+ * **0.17.0 (W15-H3) — здоровье интеграций: одна причина, одна строка, одно действие.** Добавляющее изменение. `GET
+ * /admin/integrations` и `GET /admin/integrations/services` отдают группы по причине (`ServiceGroup`: состояние `ServiceState`
+ * — «Сломано» только после 15 минут непрерывного сбоя, «Нестабильно» для дребезга, «Ожидаемо на стенде», «Не проверено»;
+ * «кто исправляет» `ServiceOwner`, действия `ServiceAction`, «с …», `flaps_24h`, готовый текст `message`, замаскированный
+ * `technical`), у сервисов — `state`, `cause_key`, `owner`, `action`, `since`, `flaps_24h`, `last_recovered_at`, у
+ * `AttentionItem` — `group` и `technical`, у компонентов состояния — `expected_on_stand`. Новый `PUT
+ * /admin/integrations/models/providers/{provider}/key` — ключ провайдера на все его роли одной операцией (один пароль, без
+ * частичного применения).
  *
  * **0.16.0 (D1-3) — EDS · Входящие письма и резолюция директора.** Добавляющее изменение, тег `letters`: `GET /eds/letters`
  * (список со статусом словами интерфейса и фильтром по статусу), `GET /eds/letters/{ref}` (карточка письма по id или по
@@ -189,7 +209,7 @@
  * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.18.0
+ * OpenAPI spec version: 0.20.0
  */
 import { faker } from "@faker-js/faker";
 
@@ -229,6 +249,9 @@ import {
   ObjectKind,
   QueueItemKind,
   RestrictedField,
+  ServiceAction,
+  ServiceOwner,
+  ServiceState,
   SetupCompanyBlocker,
   SetupStepKey,
   SetupStepState,
@@ -247,6 +270,8 @@ import type {
   BotProfileState,
   BotSettings,
   BrandProfile,
+  Bridge,
+  BridgeErpSso,
   BusDeliveryPage,
   BusInboxPage,
   BusJournal,
@@ -312,6 +337,7 @@ import type {
   NumberingScheme,
   PersonRef,
   PlatformSettings,
+  ProviderKeyResult,
   Queue,
   QueueCards,
   QuoteApprovalCard,
@@ -499,6 +525,22 @@ export const getCreateOwnCompanyResponseMock = (
 ): SetupCompanyCreated => ({
   id: faker.number.int(),
   name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ...overrideResponse,
+});
+
+export const getGetBridgeResponseMock = (
+  overrideResponse: Partial<Extract<Bridge, object>> = {},
+): Bridge => ({
+  crm_url: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  erp_url: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  erp_sso: faker.datatype.boolean(),
+  ...overrideResponse,
+});
+
+export const getCreateBridgeErpSsoResponseMock = (
+  overrideResponse: Partial<Extract<BridgeErpSso, object>> = {},
+): BridgeErpSso => ({
+  url: faker.string.alpha({ length: { min: 10, max: 20 } }),
   ...overrideResponse,
 });
 
@@ -1981,6 +2023,60 @@ export const getGetIntegrationsOverviewResponseMock = (
         faker.string.alpha({ length: { min: 10, max: 20 } }),
         null,
       ]),
+      group: faker.helpers.arrayElement([
+        {
+          id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          state: faker.helpers.arrayElement(Object.values(ServiceState)),
+          owner: faker.helpers.arrayElement([
+            faker.helpers.arrayElement(Object.values(ServiceOwner)),
+            null,
+          ]),
+          action: faker.helpers.arrayElement([
+            faker.helpers.arrayElement(Object.values(ServiceAction)),
+            null,
+          ]),
+          more_actions: faker.helpers.arrayElements(Object.values(ServiceAction)),
+          headline: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          detail: faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
+          affected: Array.from(
+            { length: faker.number.int({ min: 1, max: 10 }) },
+            (_, i) => i + 1,
+          ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+          service_keys: Array.from(
+            { length: faker.number.int({ min: 1, max: 10 }) },
+            (_, i) => i + 1,
+          ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+          titles: Array.from(
+            { length: faker.number.int({ min: 1, max: 10 }) },
+            (_, i) => i + 1,
+          ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+          since: faker.helpers.arrayElement([
+            faker.date.past().toISOString().slice(0, 19) + "Z",
+            null,
+          ]),
+          technical: Array.from(
+            { length: faker.number.int({ min: 1, max: 10 }) },
+            (_, i) => i + 1,
+          ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+          flaps_24h: faker.number.int(),
+          message: faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
+          fix_card: faker.helpers.arrayElement([
+            faker.helpers.arrayElement(Object.values(IntegrationCardKey)),
+            null,
+          ]),
+        },
+        null,
+      ]),
+      technical: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
     }),
   ),
   ...overrideResponse,
@@ -2378,6 +2474,50 @@ export const getListExternalServicesResponseMock = (
     faker.date.past().toISOString().slice(0, 19) + "Z",
     null,
   ]),
+  stand: faker.datatype.boolean(),
+  groups: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      state: faker.helpers.arrayElement(Object.values(ServiceState)),
+      owner: faker.helpers.arrayElement([
+        faker.helpers.arrayElement(Object.values(ServiceOwner)),
+        null,
+      ]),
+      action: faker.helpers.arrayElement([
+        faker.helpers.arrayElement(Object.values(ServiceAction)),
+        null,
+      ]),
+      more_actions: faker.helpers.arrayElements(Object.values(ServiceAction)),
+      headline: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      detail: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      affected: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+      service_keys: Array.from(
+        { length: faker.number.int({ min: 1, max: 10 }) },
+        (_, i) => i + 1,
+      ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+      titles: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+      since: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
+      technical: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+      flaps_24h: faker.number.int(),
+      message: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      fix_card: faker.helpers.arrayElement([
+        faker.helpers.arrayElement(Object.values(IntegrationCardKey)),
+        null,
+      ]),
+    }),
+  ),
   summary: {
     disabled: faker.number.int(),
     fail: faker.number.int(),
@@ -2459,6 +2599,23 @@ export const getListExternalServicesResponseMock = (
     uptime_7d: faker.helpers.arrayElement([faker.number.float({ fractionDigits: 2 }), null]),
     fix_card: faker.helpers.arrayElement([
       faker.helpers.arrayElement(Object.values(IntegrationCardKey)),
+      null,
+    ]),
+    state: faker.helpers.arrayElement(Object.values(ServiceState)),
+    flaps_24h: faker.number.int(),
+    cause_key: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    owner: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(ServiceOwner)),
+      null,
+    ]),
+    action: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(ServiceAction)),
+      null,
+    ]),
+    more_actions: faker.helpers.arrayElements(Object.values(ServiceAction)),
+    since: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
+    last_recovered_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
       null,
     ]),
   })),
@@ -2580,6 +2737,23 @@ export const getGetExternalServiceResponseMock = (
       faker.helpers.arrayElement(Object.values(IntegrationCardKey)),
       null,
     ]),
+    state: faker.helpers.arrayElement(Object.values(ServiceState)),
+    flaps_24h: faker.number.int(),
+    cause_key: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    owner: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(ServiceOwner)),
+      null,
+    ]),
+    action: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(ServiceAction)),
+      null,
+    ]),
+    more_actions: faker.helpers.arrayElements(Object.values(ServiceAction)),
+    since: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
+    last_recovered_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
   },
   ...overrideResponse,
 });
@@ -2699,6 +2873,23 @@ export const getCheckExternalServiceResponseMock = (
       faker.helpers.arrayElement(Object.values(IntegrationCardKey)),
       null,
     ]),
+    state: faker.helpers.arrayElement(Object.values(ServiceState)),
+    flaps_24h: faker.number.int(),
+    cause_key: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    owner: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(ServiceOwner)),
+      null,
+    ]),
+    action: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(ServiceAction)),
+      null,
+    ]),
+    more_actions: faker.helpers.arrayElements(Object.values(ServiceAction)),
+    since: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
+    last_recovered_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
   },
   ...overrideResponse,
 });
@@ -2772,6 +2963,23 @@ export const getDisableExternalServiceResponseMock = (
   uptime_7d: faker.helpers.arrayElement([faker.number.float({ fractionDigits: 2 }), null]),
   fix_card: faker.helpers.arrayElement([
     faker.helpers.arrayElement(Object.values(IntegrationCardKey)),
+    null,
+  ]),
+  state: faker.helpers.arrayElement(Object.values(ServiceState)),
+  flaps_24h: faker.number.int(),
+  cause_key: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  owner: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(Object.values(ServiceOwner)),
+    null,
+  ]),
+  action: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(Object.values(ServiceAction)),
+    null,
+  ]),
+  more_actions: faker.helpers.arrayElements(Object.values(ServiceAction)),
+  since: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
+  last_recovered_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
     null,
   ]),
   ...overrideResponse,
@@ -2848,6 +3056,23 @@ export const getEnableExternalServiceResponseMock = (
     faker.helpers.arrayElement(Object.values(IntegrationCardKey)),
     null,
   ]),
+  state: faker.helpers.arrayElement(Object.values(ServiceState)),
+  flaps_24h: faker.number.int(),
+  cause_key: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  owner: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(Object.values(ServiceOwner)),
+    null,
+  ]),
+  action: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(Object.values(ServiceAction)),
+    null,
+  ]),
+  more_actions: faker.helpers.arrayElements(Object.values(ServiceAction)),
+  since: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
+  last_recovered_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
   ...overrideResponse,
 });
 
@@ -2892,6 +3117,22 @@ export const getChangeAiModelResponseMock = (
   provider: faker.string.alpha({ length: { min: 10, max: 20 } }),
   quality_check_recommended: faker.datatype.boolean(),
   reindex_required: faker.datatype.boolean(),
+  ...overrideResponse,
+});
+
+export const getChangeProviderKeyResponseMock = (
+  overrideResponse: Partial<Extract<ProviderKeyResult, object>> = {},
+): ProviderKeyResult => ({
+  provider: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  roles: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    alias: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    key_source: faker.helpers.arrayElement(["crm", "env"] as const),
+    model: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    provider: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    quality_check_recommended: faker.datatype.boolean(),
+    reindex_required: faker.datatype.boolean(),
+  })),
+  checked: faker.datatype.boolean(),
   ...overrideResponse,
 });
 
@@ -3100,6 +3341,7 @@ export const getGetSystemStatusResponseMock = (
       reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
       status: faker.helpers.arrayElement(["ok", "warn", "fail", "unknown"] as const),
       title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      expected_on_stand: faker.datatype.boolean(),
     }),
   ),
   status: faker.helpers.arrayElement(["ok", "warn", "fail", "unknown"] as const),
@@ -5685,6 +5927,51 @@ export const getCreateOwnCompanyMockHandler = (
   );
 };
 
+export const getGetBridgeMockHandler = (
+  overrideResponse?:
+    Bridge | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<Bridge> | Bridge),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/bridge",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetBridgeResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getCreateBridgeErpSsoMockHandler = (
+  overrideResponse?:
+    | BridgeErpSso
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<BridgeErpSso> | BridgeErpSso),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/bridge/erp-sso",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCreateBridgeErpSsoResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getGetMeMockHandler = (
   overrideResponse?:
     Me | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<Me> | Me),
@@ -6869,6 +7156,30 @@ export const getChangeAiModelMockHandler = (
             ? await overrideResponse(info)
             : overrideResponse
           : getChangeAiModelResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getChangeProviderKeyMockHandler = (
+  overrideResponse?:
+    | ProviderKeyResult
+    | ((
+        info: Parameters<Parameters<typeof http.put>[1]>[0],
+      ) => Promise<ProviderKeyResult> | ProviderKeyResult),
+  options?: RequestHandlerOptions,
+) => {
+  return http.put(
+    "*/admin/integrations/models/providers/:provider/key",
+    async (info: Parameters<Parameters<typeof http.put>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getChangeProviderKeyResponseMock(),
         { status: 200 },
       );
     },
@@ -9301,6 +9612,8 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getCreateFirstAdminMockHandler(),
   getGetSetupChecklistMockHandler(),
   getCreateOwnCompanyMockHandler(),
+  getGetBridgeMockHandler(),
+  getCreateBridgeErpSsoMockHandler(),
   getGetMeMockHandler(),
   getUpdateMeMockHandler(),
   getGetNotificationSettingsMockHandler(),
@@ -9353,6 +9666,7 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getEnableExternalServiceMockHandler(),
   getListAiModelsMockHandler(),
   getChangeAiModelMockHandler(),
+  getChangeProviderKeyMockHandler(),
   getResetAiModelMockHandler(),
   getTestAiModelMockHandler(),
   getGetSpendReportMockHandler(),

@@ -455,6 +455,25 @@ async def test_checklist_when_erp_does_not_answer_says_so(
     assert steps(response)["erp"] == "done"
 
 
+async def test_unchecked_models_step_is_unknown_not_done(web: Web, crm: SetupCrm) -> None:
+    """O-4: CRM пометила шаг `unchecked` (проверка не выполнялась) — «Готово» быть не может."""
+    await web.login(["ADMIN"])
+    keys = ["bot", "erp", "mail", "models", "first_employee"]
+    items = [
+        {"key": key, "done": True, "link": f"/{key}", "unchecked": key == "models"} for key in keys
+    ]
+    crm.checklist_response = httpx.Response(
+        200, json={"items": items, "done": len(items), "total": len(items)}
+    )
+
+    response = await web.client.get("/api/v1/setup/checklist")
+
+    states = steps(response)
+    assert states["models"] == "unknown"
+    assert states["bot"] == states["erp"] == "done"
+    assert response.json()["done"] == 4
+
+
 async def test_checklist_with_hanging_erp_is_200_and_erp_unavailable(
     web: Web, crm: SetupCrm, check: ContractChecker
 ) -> None:

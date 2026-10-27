@@ -1,6 +1,7 @@
 {
   "docTitle": "{{page}} — RailTech Platform",
-  "soon": "P2 bosqichida paydo bo‘ladi",
+  "soon": "Yaqin yangilanishda paydo bo‘ladi",
+  "soonPilot": "Pilotgacha paydo bo‘ladi",
   "skip": "Tarkibga o‘tish",
   "loading": "Yuklanmoqda…",
   "rail": {
@@ -194,7 +195,7 @@
     "write": "Administratorga yozish",
     "titleActiveRole": "Bo‘lim tanlangan rol uchun mavjud emas",
     "textActiveRole": "Barcha bo‘limlaringizga kirishni qaytarish uchun profil menyusida (avatar) «Barcha rollar»ni tanlang. Ish uchun kerak bo‘lsa, administratorga yozing.",
-    "writeSoon": "P4 bosqichida paydo bo‘ladi"
+    "writeSoon": "Pilotgacha paydo bo‘ladi. Hozircha administratorga to‘g‘ridan-to‘g‘ri yozing"
   },
   "notFound": {
     "heading": "Sahifa topilmadi",
@@ -203,8 +204,7 @@
     "back": "Mening vazifalarim"
   },
   "stub": {
-    "subtitle": "Bo‘lim keyingi bosqichlarda to‘ldiriladi: hozircha karkas va navigatsiya mavjud.",
-    "object": "{{id}} kartochkasi"
+    "subtitle": "Bo‘lim Platformaga ko‘chirilmoqda"
   },
   "search": {
     "label": "Qidiruv natijalari",

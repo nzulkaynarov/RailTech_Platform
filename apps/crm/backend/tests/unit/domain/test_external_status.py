@@ -313,3 +313,27 @@ def test_tls_days_left_rounds_down() -> None:
 )
 def test_stale(age: timedelta, tiers: tuple[str, ...], stale: bool) -> None:
     assert rules.stale(NOW - age, tiers, NOW) is stale
+
+
+def test_backing_off_failed_service_is_not_called_stale() -> None:
+    """Сломанное перепроверяется по затуханию (до раза в 15 мин) — пауза не «проверки стоят»."""
+    ten = timedelta(minutes=10)
+    assert rules.stale(NOW - ten, ("cheap",), NOW) is True
+    assert rules.stale(NOW - ten, ("cheap",), NOW, backing_off=True) is False
+    assert rules.stale(NOW - timedelta(minutes=21), ("cheap",), NOW, backing_off=True) is True
+
+
+def test_every_unhealthy_rule_names_a_cause() -> None:
+    """Код причины нужен `external_cause`: без него «кто исправляет» берётся по умолчанию."""
+    samples = [
+        rules.telegram(TelegramFacts(False, "polling"), NOW),
+        rules.telegram(TelegramFacts(True, "polling", error="unauthorized"), NOW),
+        rules.telegram(TelegramFacts(True, "polling", error="timeout"), NOW),
+        rules.litellm(rules.GatewayFacts(HttpFacts("unavailable", "x"))),
+        rules.langfuse(rules.LangfuseFacts(True, HttpFacts("unavailable", "x"))),
+        rules.s3(HttpFacts("unavailable", "x")),
+        rules.docling(HttpFacts("unavailable", "x")),
+        rules.mail(rules.MailFacts(configured=False), NOW),
+        rules.tls(TlsFacts("crm", "crm.example.uz", error="unavailable")),
+    ]
+    assert all(r.cause for r in samples)

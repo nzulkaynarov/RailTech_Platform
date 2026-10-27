@@ -18,6 +18,7 @@ describe("i18n", () => {
   it.each([
     "common",
     "shell",
+    "bridge",
     "modules",
     "dictionary",
     "ui",
@@ -42,6 +43,7 @@ describe("i18n", () => {
       for (const ns of [
         "common",
         "shell",
+        "bridge",
         "modules",
         "dictionary",
         "ui",

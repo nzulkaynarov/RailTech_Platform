@@ -126,24 +126,32 @@ async def test_no_copy_for_a_day_opens_one_incident_and_fresh_copy_closes_it(
     service = client.app.state.container.backup_service  # type: ignore[attr-defined]
     await upload_backup(storage, bucket, 30)
 
+    # «Сломано» — непрерывный fail не короче 15 минут: первая проверка 20 минут назад
+    container = client.app.state.container  # type: ignore[attr-defined]
+    await container.external_checks.run(
+        "manual", datetime.now(UTC) - timedelta(minutes=20), keys=["backup"]
+    )
     failed = check(client, auth)
     assert failed["service"]["status"] == "fail"
+    assert failed["service"]["state"] == "broken"
     assert "за сутки" in failed["service"]["summary"]
     assert failed["service"]["hint"]
     assert failed["service"]["incident"]["ended_at"] is None
     metrics = failed["service"]["metrics"]
     assert metrics["backup_source"] == "rustfs"
     assert metrics["last_copy_at"]
-    check(client, auth)  # повтор — тот же инцидент, без второго оповещения
-    assert [k for k, _ in alerts.sent] == ["backup"]
-    assert alerts.sent[0][1].subject.startswith("⚠️ Сбой:")
+    check(client, auth)  # повтор — тот же инцидент и то же единственное оповещение
+    assert [k for k, _ in alerts.sent] == ["backup:backup_admin"]
+    assert alerts.sent[0][1].subject.startswith("⚠️ Сломано:")
 
     await upload_backup(storage, bucket, 1)
     service._cached = None
     recovered = check(client, auth)
     assert recovered["service"]["status"] == "ok"
-    assert recovered["service"]["incident"] is None
-    assert [a.subject.split(":")[0] for _, a in alerts.sent] == ["⚠️ Сбой", "✅ Восстановлено"]
+    assert len(alerts.sent) == 1  # ok короче 5 минут: «Восстановлено» ещё рано, инцидент открыт
+    later = datetime.now(UTC) + timedelta(minutes=6)
+    await container.external_checks.run("manual", later, keys=["backup"])
+    assert [a.subject.split(":")[0] for _, a in alerts.sent] == ["⚠️ Сломано", "✅ Восстановлено"]
 
 
 async def test_missing_bucket_is_explained(

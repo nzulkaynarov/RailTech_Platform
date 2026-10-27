@@ -146,6 +146,7 @@ class Container:
             self.settings_service,
             self.switch_board,
             defaults=self.settings.litellm_models_path,
+            stand=self.settings.is_stand,
         )
 
     @cached_property

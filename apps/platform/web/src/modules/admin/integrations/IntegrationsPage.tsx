@@ -26,7 +26,9 @@ import { PageHeader } from "../../../shared/ui/PageHeader";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { LockIcon } from "../../../shared/ui/icons";
+import { AttentionGroupRow } from "./AttentionGroup";
 import { integrationErrorText } from "./errors";
+import { TechnicalDetails } from "./HealthParts";
 import { ErpPanel } from "./ErpPanel";
 import { MailPanel } from "./MailPanel";
 import { ModelsPanel } from "./ModelsPanel";
@@ -231,11 +233,10 @@ function attentionTexts(
   switch (item.kind) {
     case "not_configured":
       return { subject: card, detail: t(`attention.notConfigured.${item.card}`) };
-    case "model_problem":
-      return {
-        subject: t(`models.alias.${item.subject ?? ""}`, { defaultValue: item.subject ?? card }),
-        detail: item.detail,
-      };
+    case "model_problem": {
+      const alias = t(`models.alias.${item.subject ?? ""}`, { defaultValue: item.subject ?? card });
+      return { subject: alias, detail: t("health.model.problem", { alias }) };
+    }
     case "backup_stale":
       return {
         subject: card,
@@ -264,7 +265,13 @@ function attentionTexts(
   }
 }
 
-function AttentionSection({ items }: { items: readonly AttentionItem[] }) {
+function AttentionSection({
+  items,
+  editable,
+}: {
+  items: readonly AttentionItem[];
+  editable: boolean;
+}) {
   const { t } = useTranslation("integrations");
   return (
     <section aria-labelledby="pf-int-attention">
@@ -281,6 +288,16 @@ function AttentionSection({ items }: { items: readonly AttentionItem[] }) {
         ) : (
           <ul className="pf-int-attention">
             {items.map((item) => {
+              if (item.group !== null) {
+                return (
+                  <AttentionGroupRow
+                    key={item.id}
+                    group={item.group}
+                    severity={item.severity}
+                    editable={editable}
+                  />
+                );
+              }
               const { subject, detail } = attentionTexts(t, item);
               return (
                 <li key={item.id} data-severity={item.severity}>
@@ -298,6 +315,16 @@ function AttentionSection({ items }: { items: readonly AttentionItem[] }) {
                   <div className="pf-int-attention-text">
                     <span className="pf-int-attention-subject">{subject}</span>
                     {detail ? <span className="pf-int-attention-detail">{detail}</span> : null}
+                    {item.technical ? (
+                      <TechnicalDetails
+                        lines={[item.technical]}
+                        context={{
+                          services: subject,
+                          state: t(`attention.severity.${item.severity}`),
+                          since: "",
+                        }}
+                      />
+                    ) : null}
                   </div>
                   <Link
                     className="pf-focusable"
@@ -381,7 +408,7 @@ export function IntegrationsPage() {
     const data = overview.data;
     body = (
       <>
-        <AttentionSection items={data.attention} />
+        <AttentionSection items={data.attention} editable={editable} />
         <section aria-labelledby="pf-int-cards">
           <h2 className="pf-int-section-title" id="pf-int-cards" style={{ marginBottom: 12 }}>
             {t("integrations:cardsTitle")}

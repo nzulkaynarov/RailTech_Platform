@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ComponentStatusOut(BaseModel):
@@ -12,6 +12,10 @@ class ComponentStatusOut(BaseModel):
     status: Literal["ok", "warn", "fail", "unknown"]
     reason: str
     checked_at: datetime | None
+    expected_on_stand: bool = Field(
+        default=False,
+        description="Тестовый стенд: здесь это ожидаемо (секреты сервера, адрес CRM, бот)",
+    )
 
 
 class SystemStatusOut(BaseModel):

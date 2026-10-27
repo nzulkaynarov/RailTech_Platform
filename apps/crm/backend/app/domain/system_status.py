@@ -15,6 +15,23 @@ from app.domain.public_urls import is_local_url
 
 Status = Literal["ok", "warn", "fail", "unknown"]
 STALLED_MINUTES: Final = 15
+#: Компоненты, чей сбой на тестовом стенде ожидаем: нет секретов сервера, локальный адрес CRM.
+STAND_EXPECTED: Final = frozenset({"secrets", "crm_url", "bot", "channel"})
+HOSTING_WHO: Final = "Это настраивает тот, кто разворачивал Платформу (хостинг)"
+
+
+def hosting_hint(what: str, ask: str) -> str:
+    """«Что случилось. Кто исправляет (хостинг). Что ему передать» (W15-H3)."""
+    return f"{what}. {HOSTING_WHO}. Отправьте ему: «{ask}»"
+
+
+def hosting_ask(hint: str | None) -> str | None:
+    """Что передать хостингу — из текста `hosting_hint`; нет такой фразы — None."""
+    if not hint or HOSTING_WHO not in hint:
+        return None
+    _, _, tail = hint.partition("Отправьте ему: «")
+    return tail.removesuffix("»") or None
+
 
 _DEPENDENCIES: Final = {
     "database": ("База данных", "PostgreSQL недоступен — CRM и бот не работают"),
@@ -194,8 +211,12 @@ def budget(alerts: Sequence[AlertRow], now: datetime) -> Component:
 
 # Бот живёт в отдельном процессе `crm-bot` (S0-4): если он не отчитывается, статус бота неизвестен.
 BOT_PROCESS_ERRORS = {
-    "bot_process_never_started": "Процесс бота (crm-bot) ещё не запускался — docker compose ps",
-    "bot_process_down": "Процесс бота (crm-bot) не отвечает — docker compose logs crm-bot",
+    "bot_process_never_started": hosting_hint(
+        "Процесс бота ещё ни разу не запускался на сервере", "Запустить crm-bot вместе с ансамблем"
+    ),
+    "bot_process_down": hosting_hint(
+        "Процесс бота на сервере не отвечает", "Перезапустить crm-bot и посмотреть его журнал"
+    ),
 }
 
 
@@ -378,14 +399,20 @@ def backup(now: datetime, facts: BackupFacts) -> Component:
         return _rustfs_backup(now, facts)
     name = BACKUP_TITLE
     if not facts.mounted:
-        reason = "Хранилище резервных копий не подключено — обратитесь к администратору сервера"
+        reason = hosting_hint(
+            "Хранилище резервных копий не подключено к CRM",
+            "Подключить хранилище резервных копий к CRM",
+        )
         return Component("backup", name, "unknown", reason, now)
     if not facts.daemon_alive and not facts.daemon_seen:
         # Демона нет вовсе (dev, сервис не развёрнут) — предупреждение, а не авария.
         reason = "Резервное копирование не запущено на этом сервере"
         return Component("backup", name, "warn", reason, now)
     if not facts.daemon_alive:
-        reason = "Сервис резервного копирования не отвечает — обратитесь к администратору сервера"
+        reason = hosting_hint(
+            "Сервис резервного копирования не отвечает, копии не делаются",
+            "Запустить сервис резервных копий (backup)",
+        )
         return Component("backup", name, "fail", reason, now)
     if request_unanswered(now, facts):
         reason = "Запрошенная копия не началась — сервис резервного копирования не отвечает"
@@ -443,7 +470,10 @@ def secrets(missing: Sequence[str], now: datetime, *, secrets_key: bool = True) 
     title = "Секреты сервера"
     if missing:
         names = ", ".join(missing)
-        reason = f"Не заданы на сервере: {names} — обратитесь к администратору сервера"
+        reason = hosting_hint(
+            f"На сервере не заданы обязательные настройки: {names}",
+            f"Задать в .env сервера: {names}",
+        )
         return Component("secrets", title, "fail", reason, now)
     if not secrets_key:
         reason = "Не задан ключ шифрования (SECRETS_KEY) — токен бота нельзя сменить из интерфейса"

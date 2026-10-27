@@ -33,6 +33,7 @@ from app.repositories import telegram_chats
 from app.repositories import users as users_repo
 from app.schemas.settings_profile import BotProfileSettings
 from app.security import audit, reauth
+from app.security.log_mask import mask_secrets
 from app.security.principal import Principal
 from app.security.secrets_store import TELEGRAM_BOT_TOKEN, SecretsStore, last4
 from app.services import channel_texts
@@ -80,7 +81,7 @@ def _bot_error(bot: BotSnapshot | None) -> str | None:
         return "bot_process_never_started"
     if not bot.alive:
         return "bot_process_down"
-    return bot.last_error
+    return mask_secrets(bot.last_error) if bot.last_error else None
 
 
 class TelegramIntegrationService:

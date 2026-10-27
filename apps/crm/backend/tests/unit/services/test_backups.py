@@ -94,11 +94,24 @@ def _c(key: str, status: str) -> Component:
     return Component(key, key, status, "", NOW)  # type: ignore[arg-type]
 
 
+def test_models_are_not_ready_until_the_monitor_checked_them() -> None:
+    """O-4: «Готово» без единой проверки — ложь; шаг «Не проверено»."""
+    from app.services.setup_checklist import models_checked, unchecked_keys
+
+    never = [_c("litellm", "ok"), _c("models", "unknown"), _c("bot", "ok")]
+    assert health_facts(never)[0] is False
+    assert models_checked(never) is False
+    assert unchecked_keys(replace(ALL_DONE, models_ok=False, models_checked=False)) == {"models"}
+    checked = [_c("litellm", "ok"), _c("model:dialog-model", "ok")]
+    assert models_checked(checked) is True
+    assert unchecked_keys(ALL_DONE) == frozenset()
+
+
 @pytest.mark.parametrize(
     ("components", "expected"),
     [
         ([_c("litellm", "ok"), _c("model:dialog-model", "ok"), _c("bot", "ok")], (True, True)),
-        ([_c("litellm", "ok"), _c("models", "unknown"), _c("bot", "fail")], (True, False)),
+        ([_c("litellm", "ok"), _c("models", "unknown"), _c("bot", "fail")], (False, False)),
         ([_c("litellm", "fail"), _c("model:dialog-model", "ok")], (False, False)),
         ([_c("litellm", "ok"), _c("model:a", "ok"), _c("model:b", "fail")], (False, False)),
     ],

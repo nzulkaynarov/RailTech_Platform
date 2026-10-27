@@ -38,6 +38,25 @@ class ExternalServiceCheck(Base):
         CheckConstraint("tier IN ('cheap', 'heavy', 'manual')", name="tier"),
         Index("ix_external_service_checks_service_at", "service_key", "checked_at"),
         Index("ix_external_service_checks_checked_at", "checked_at"),
+        # W15-H3: последняя `ok` / не-`fail` проверка сервиса — «с какого времени» и полоса `fail`.
+        Index(
+            "ix_external_service_checks_ok_at",
+            "service_key",
+            "checked_at",
+            postgresql_where=text("status = 'ok'"),
+        ),
+        Index(
+            "ix_external_service_checks_notok_at",
+            "service_key",
+            "checked_at",
+            postgresql_where=text("status <> 'ok'"),
+        ),
+        Index(
+            "ix_external_service_checks_notfail_at",
+            "service_key",
+            "checked_at",
+            postgresql_where=text("status <> 'fail'"),
+        ),
     )
 
     id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
@@ -75,6 +94,35 @@ class ExternalServiceIncident(Base):
     summary: Mapped[str] = mapped_column(Text, nullable=False)
     alerted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     recovery_alerted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class ExternalCauseAlert(Base):
+    """Эпизод «Сломано» по причине (общий корень сервисов) и отметки оповещений (W15-H3)."""
+
+    __tablename__ = "external_cause_alerts"
+    __table_args__ = (
+        Index("ix_external_cause_alerts_cause_started", "cause_key", "started_at"),
+        # Одна открытая запись на причину — дедупликация оповещений переживает рестарт процесса.
+        Index(
+            "uq_external_cause_alerts_open",
+            "cause_key",
+            unique=True,
+            postgresql_where=text("ended_at IS NULL"),
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
+    cause_key: Mapped[str] = mapped_column(String(96), nullable=False)
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    alerted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    recovery_alerted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Повторный сбой той же причины за сутки: сообщения не было — «нестабильно» видно в «Здоровье».
+    suppressed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    headline: Mapped[str] = mapped_column(Text, nullable=False)
+    service_keys: Mapped[list[str]] = mapped_column(
+        JSONB, nullable=False, server_default=text("'[]'::jsonb")
+    )
 
 
 class ExternalServiceSwitch(Base):
