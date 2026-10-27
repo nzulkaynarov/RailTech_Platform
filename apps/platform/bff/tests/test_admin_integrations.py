@@ -114,6 +114,12 @@ WRITES: tuple[tuple[str, str, str, dict[str, Any] | None], ...] = (
         "/admin/integrations/models/{alias}/reset",
         {"password": PASSWORD},
     ),
+    (
+        "PUT",
+        f"{BASE}/models/providers/anthropic/key",
+        "/admin/integrations/models/providers/{provider}/key",
+        {"api_key": "sk-test-provider-key-0001", "password": PASSWORD},
+    ),
     ("POST", f"{BASE}/models/dialog-model/test", "/admin/integrations/models/{alias}/test", None),
     ("POST", f"{BASE}/backups", "/admin/integrations/backups", None),
 )
@@ -610,6 +616,45 @@ async def test_model_change_sends_key_to_crm_and_reports_only_its_source(
     assert PASSWORD not in response.text
     assert response.json()["key_source"] == "crm"
     assert response.json()["reindex_required"] is True
+
+
+async def test_provider_key_goes_to_crm_in_one_call_and_never_comes_back(
+    web: Web, crm: CrmIntegrationsFake, check: ContractChecker
+) -> None:
+    """W15-H3: один ключ — все роли провайдера, один пароль; ключ и пароль в ответ не попадают."""
+    await web.login(["ADMIN"])
+    api_key = "sk-" + fresh_secret("key", 20)
+
+    response = await web.send(
+        "PUT",
+        f"{BASE}/models/providers/anthropic/key",
+        json={"api_key": api_key, "password": PASSWORD},
+    )
+
+    assert response.status_code == 200, response.text
+    check(response, "/admin/integrations/models/providers/{provider}/key", "put")
+    assert crm.body("PUT", "models/providers/anthropic/key") == {
+        "api_key": api_key,
+        "password": PASSWORD,
+    }
+    assert len(crm.requests("PUT", "models/providers/anthropic/key")) == 1
+    assert api_key not in response.text
+    assert PASSWORD not in response.text
+    body = response.json()
+    assert [r["alias"] for r in body["roles"]] == ["dialog-model", "qualifier-model"]
+    assert body["checked"] is True
+
+
+@pytest.mark.parametrize(
+    "payload", [{"api_key": "short", "password": PASSWORD}, {"api_key": "sk-long-enough-key"}]
+)
+async def test_provider_key_body_is_validated(
+    web: Web, crm: CrmIntegrationsFake, payload: dict[str, Any]
+) -> None:
+    await web.login(["ADMIN"])
+    response = await web.send("PUT", f"{BASE}/models/providers/anthropic/key", json=payload)
+    assert response.status_code == 422
+    assert crm.requests("PUT", "models/providers/anthropic/key") == []
 
 
 @pytest.mark.parametrize(

@@ -13,6 +13,7 @@ import { useFormat } from "../../../shared/lib/useFormat";
 import { type StatusTone } from "../../../shared/lib/statuses";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { hasFailedField } from "./errors";
+import { TechnicalDetails } from "./HealthParts";
 import { bareModelName } from "./modelName";
 import { ActionForm, ErrorNote, Field, Masked, PanelState, PanelTitle } from "./parts";
 import { useRefreshIntegrations } from "./refresh";
@@ -219,7 +220,15 @@ function ModelRow({ model, editable }: { model: AiModel; editable: boolean }) {
           amount: money(model.today_usd, { currency: "USD", fractionDigits: 2 }),
         })}
       </p>
-      {model.health_detail ? <p className="pf-int-sub">{model.health_detail}</p> : null}
+      {model.health === "problem" ? (
+        <p className="pf-int-sub">{t("health.model.problem", { alias: title })}</p>
+      ) : null}
+      {model.health_detail ? (
+        <TechnicalDetails
+          lines={[model.health_detail]}
+          context={{ services: title, state: t("models.health.problem"), since: "" }}
+        />
+      ) : null}
       <p className="pf-int-sub">
         {t("models.key.label")}{" "}
         {model.key_source === "crm" ? (
@@ -283,10 +292,15 @@ function ModelRow({ model, editable }: { model: AiModel; editable: boolean }) {
                   amount: money(test.data.cost_usd, { currency: "USD", fractionDigits: 4 }),
                 })
               : null,
-            test.data.detail,
           ]
             .filter(Boolean)
             .join(" · ")}
+        />
+      ) : null}
+      {test.data?.detail ? (
+        <TechnicalDetails
+          lines={[test.data.detail]}
+          context={{ services: title, state: t("models.test.fail", { alias: title }), since: "" }}
         />
       ) : null}
       <ErrorNote error={test.error} />

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.17.0
+  version: 0.19.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -135,6 +135,17 @@ info:
     (директор читает), сброс пароля — `admin: full`; профиль доступен каждому вошедшему. Секреты из записей журнала BFF вырезает
     (значения полей `password`, `secret`, `token`, `key`, `*_key`, `credentials`, `authorization`, `pin` и им подобных -> `***` целиком, любого типа).
 
+    **0.19.0 (W15-H1) — мост в старые экраны.** Добавляющее изменение (тег `bridge`). Пока раздел Платформы ещё заглушка, сотрудник
+    открывает ту же работу в старой CRM или старом ERP новой вкладкой. `GET /bridge` отдаёт публичные адреса старых фронтов
+    (`crm_url`, `erp_url`): настройки `PLATFORM_CRM_PUBLIC_URL` и `PLATFORM_ERP_PUBLIC_URL`, а если они пусты — адрес выводится из
+    адреса, по которому открыта Платформа (`platform.<домен>` -> `crm.<домен>` и `erp.<домен>`, схема и порт те же); не задан и не
+    выводится — `null`, SPA не показывает кнопку. `erp_sso` — у сотрудника есть доступ к ERP, и вход можно сделать без второго пароля.
+    `POST /bridge/erp-sso` — тот же путь, каким старая CRM открывает ERP: BFF просит у CRM одноразовый SSO-токен (`POST
+    /auth/sso/token`, живёт 60 секунд) токеном сотрудника и возвращает готовый адрес обмена `{ERP}/sso/exchange#token=…`; адрес
+    ERP берёт сама CRM (`ERP_FRONTEND_URL`). Токен в журнал не пишется, ответ — `Cache-Control: no-store`. Права раздела не нужны:
+    достаточно сессии и доступа к ERP (CRM не выдала токен — 403 `FORBIDDEN`, `details.reason`: `platform_access_denied` или
+    `sso_disabled`).
+
     **0.17.0 (D1-5) — EDS · Создать документ и «Мои документы».** Добавляющее изменение, тег `eds-documents`: `GET/POST /eds/documents`
     (мои документы или реестр «Все документы»; создать и сразу отправить), `GET/PUT /eds/documents/{id}` (карточка с маршрутом и
     решениями; сохранить черновик), `POST /eds/document-files` и `GET /eds/document-files/{file_id}` (вложения: загрузка потоком до 25 МБ,
@@ -149,6 +160,15 @@ info:
     «своя компания» спрашивает ERP только после сопряжения; почему данных о компании нет — `SetupChecklist.company_blocker`
     (`erp_not_connected` — сначала подключите ERP, `erp_unavailable` — ERP не ответила). `POST /setup/company` без сопряжённой ERP —
     409 `ERP_NOT_CONNECTED` (новый код) с текстом и `details.link` на карточку ERP; недоступная ERP — прежний 503 `BACKEND_UNAVAILABLE`.
+
+    **0.17.0 (W15-H3) — здоровье интеграций: одна причина, одна строка, одно действие.** Добавляющее изменение. `GET
+    /admin/integrations` и `GET /admin/integrations/services` отдают группы по причине (`ServiceGroup`: состояние `ServiceState`
+    — «Сломано» только после 15 минут непрерывного сбоя, «Нестабильно» для дребезга, «Ожидаемо на стенде», «Не проверено»;
+    «кто исправляет» `ServiceOwner`, действия `ServiceAction`, «с …», `flaps_24h`, готовый текст `message`, замаскированный
+    `technical`), у сервисов — `state`, `cause_key`, `owner`, `action`, `since`, `flaps_24h`, `last_recovered_at`, у
+    `AttentionItem` — `group` и `technical`, у компонентов состояния — `expected_on_stand`. Новый `PUT
+    /admin/integrations/models/providers/{provider}/key` — ключ провайдера на все его роли одной операцией (один пароль, без
+    частичного применения).
 
     **0.16.0 (D1-3) — EDS · Входящие письма и резолюция директора.** Добавляющее изменение, тег `letters`: `GET /eds/letters`
     (список со статусом словами интерфейса и фильтром по статусу), `GET /eds/letters/{ref}` (карточка письма по id или по
@@ -188,6 +208,8 @@ security:
 tags:
   - name: auth
     description: Вход логином CRM; токены CRM и ERP живут только в сессии BFF
+  - name: bridge
+    description: Мост в старые экраны CRM и ERP, пока раздел Платформы ещё заглушка (адреса и вход без второго пароля; нужна только сессия)
   - name: setup
     description: Первый запуск — администратор (без сессии), чек-лист из пяти шагов и своя компания (раздел `admin`)
   - name: me
@@ -470,6 +492,66 @@ paths:
                 $ref: '#/components/schemas/Error'
         '422':
           $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /bridge:
+    get:
+      tags: [bridge]
+      operationId: getBridge
+      summary: Публичные адреса старых CRM и ERP для кнопок «Открыть в старой CRM / ERP»
+      description: >-
+        Адреса задают `PLATFORM_CRM_PUBLIC_URL` и `PLATFORM_ERP_PUBLIC_URL`; пусто — выводятся из адреса Платформы (`platform.X` ->
+        `crm.X`, `erp.X`). Не задан и не выводится — `null`: SPA не показывает кнопку и честно пишет, где работа делается. Адреса не
+        секрет; ответ `no-store` (смена настройки подхватывается при следующей загрузке). Права раздела не нужны, но нужна сессия и
+        хотя бы один раздел каталога: пока не сменён временный пароль — 403 `FORBIDDEN` с `details.reason = password_change_required`,
+        у ролей нет ни одного раздела — 403 `FORBIDDEN` с `details.reason = no_sections`.
+      responses:
+        '200':
+          description: Адреса
+          headers:
+            Cache-Control:
+              description: '`no-store`'
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bridge'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /bridge/erp-sso:
+    post:
+      tags: [bridge]
+      operationId: createBridgeErpSso
+      summary: Адрес входа в старый ERP без второго пароля
+      description: >-
+        Тот же SSO CRM -> ERP, что у кнопки «Перейти в ERP» старой CRM (`docs/architecture/sso-token.md`): CRM выдаёт токен
+        на 60 секунд, `url` — `{ERP}/sso/exchange#token=…`. Старый ERP после обмена открывает свою главную страницу. Токен в
+        журнал BFF не попадает. Нужна сессия и хотя бы один раздел каталога (иначе 403 `FORBIDDEN`,
+        `details.reason`: `password_change_required` или `no_sections`); нет доступа к ERP — 403 `FORBIDDEN` с `details.reason =
+        platform_access_denied`; CRM отказала (переход по SSO выключен) — 403 `FORBIDDEN` с `details.reason = sso_disabled`.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      responses:
+        '200':
+          description: Адрес обмена
+          headers:
+            Cache-Control:
+              description: '`no-store`'
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BridgeErpSso'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '503':
           $ref: '#/components/responses/BackendUnavailable'
 
@@ -1823,6 +1905,54 @@ paths:
           $ref: '#/components/responses/SessionExpired'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/IntegrationConflict'
+        '422':
+          $ref: '#/components/responses/IntegrationInvalid'
+        '423':
+          $ref: '#/components/responses/AccountLocked'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '502':
+          $ref: '#/components/responses/IntegrationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /admin/integrations/models/providers/{provider}/key:
+    put:
+      tags: [integrations]
+      operationId: changeProviderKey
+      summary: 'Новый ключ провайдера для всех его ролей разом'
+      description: >-
+        CRM `PUT /models/providers/{provider}/key` (W15-H3): один пароль администратора, один аудит. Новые deployment
+        всех ролей провайдера создаются первыми, прежние удаляются, когда все созданы; сбой посередине откатывает созданное —
+        частичного применения нет. Модели ролей не меняются. После смены провайдер сразу проверяется. Ключ и пароль
+        уходят только в CRM, в ответ не попадают.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - name: provider
+          in: path
+          required: true
+          schema: {type: string, enum: [anthropic, gemini, openai]}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProviderKeyIn'
+      responses:
+        '200':
+          description: Ключ применён ко всем ролям провайдера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProviderKeyResult'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/IntegrationConflict'
         '422':
@@ -5936,12 +6066,90 @@ components:
       type: string
       enum: [not_configured, service, model_problem, backup_stale, component, budget_over, budget_near, rotation_pending, paused, bot_not_running]
 
+    ServiceState:
+      type: string
+      enum: [ok, broken, unstable, degraded, not_configured, disabled, expected, not_checked]
+      description: >-
+        Состояние словом (W15-H3, решает CRM): `broken` Сломано (непрерывный сбой не короче 15 минут), `unstable` Нестабильно
+        (короткие провалы и дребезг — жёлтое, без оповещений), `degraded` Работает с перебоями, `not_configured`
+        Не настроено, `disabled` Выключено намеренно, `expected` Ожидаемо на стенде (серым, без оповещений и без «Требует
+        внимания»), `not_checked` Не проверено — нажмите «Проверить», `ok` Работает.
+
+    ServiceOwner:
+      type: string
+      enum: [admin, owner, hosting, provider]
+      description: >-
+        Кто исправляет: `admin` Вы (администратор); `owner` Владелец компании — ключ и оплата провайдера; `hosting` Хостинг —
+        сервер (тот, кто разворачивал Платформу); `provider` Провайдер — сбой на их стороне, ждём.
+
+    ServiceAction:
+      type: string
+      enum: [enter_key, enter_token, recheck, reconnect, open_settings, write_owner, write_hosting, disable_provider]
+      description: >-
+        Действие по смыслу: `enter_key` Ввести новый ключ (форма в карточке «Модели ИИ»), `enter_token` Ввести новый токен
+        (карточка Telegram), `recheck` Проверить снова, `reconnect` Переподключить, `open_settings` Открыть настройки,
+        `write_owner` Написать владельцу и `write_hosting` Передать хостингу (готовый текст `message` — копируется, ничего
+        не отправляется), `disable_provider` Выключить провайдера (пароль администратора).
+
+    ServiceGroup:
+      type: object
+      additionalProperties: false
+      required: [id, state, owner, action, more_actions, headline, detail, affected, service_keys, titles, since, technical, message, fix_card, flaps_24h]
+      description: >-
+        Одна причина — одна строка «Требует внимания» (W15-H3): сервисы реестра CRM с общим корнем свёрнуты вместе
+        («Ключ Anthropic отклонён — не работают: диалог с клиентом, запасная модель, поиск по базе знаний»). Правило
+        группировки, «кто исправляет» и действие решает CRM (`external_cause`); BFF их не оценивает.
+      properties:
+        id: {type: string, description: 'Корень причины (`vendor.anthropic:key_rejected`) — стабильный ключ строки'}
+        state: {$ref: '#/components/schemas/ServiceState'}
+        owner:
+          anyOf:
+          - {$ref: '#/components/schemas/ServiceOwner'}
+          - {type: 'null'}
+        action:
+          description: Главное действие (одно); `null` — исправлять нечего
+          anyOf:
+          - {$ref: '#/components/schemas/ServiceAction'}
+          - {type: 'null'}
+        more_actions:
+          type: array
+          description: Запасные действия
+          items: {$ref: '#/components/schemas/ServiceAction'}
+        headline: {type: string, description: 'Что случилось одной фразой на русском (текст CRM), без сырых ответов провайдера'}
+        detail: {type: [string, 'null'], description: 'Что сделать и кому передать (текст CRM)'}
+        affected:
+          type: array
+          description: Что перестало работать — функции списком (текст CRM)
+          items: {type: string}
+        service_keys:
+          type: array
+          items: {type: string}
+        titles:
+          type: array
+          items: {type: string}
+        since: {type: [string, 'null'], format: date-time, description: 'Когда впервые обнаружено («с …»)'}
+        technical:
+          type: array
+          description: >-
+            Сырой текст проверки для «Технических подробностей» (свёрнуто, «Скопировать для поддержки»); секреты
+            замаскированы CRM.
+          items: {type: string}
+        flaps_24h: {type: integer, description: 'Провалов (полос сбоя) за сутки по сервисам причины — наибольшее'}
+        message:
+          type: [string, 'null']
+          description: Готовый текст владельцу или хостингу; пользователь копирует его сам, Платформа ничего не отправляет
+        fix_card:
+          description: Карточка экрана, где действие выполняется; `null` — действие не требует карточки
+          anyOf:
+          - {$ref: '#/components/schemas/IntegrationCardKey'}
+          - {type: 'null'}
+
     AttentionItem:
       type: object
       additionalProperties: false
-      required: [id, card, severity, kind, subject, detail]
+      required: [id, card, severity, kind, subject, detail, group, technical]
       properties:
-        id: {type: string, description: 'Стабильный ключ строки (`service:telegram`, `model:dialog-model`, `setup:erp`)'}
+        id: {type: string, description: 'Стабильный ключ строки (`group:docling:server_down`, `model:dialog-model`, `setup:erp`)'}
         card: {$ref: '#/components/schemas/IntegrationCardKey'}
         severity:
           type: string
@@ -5954,6 +6162,16 @@ components:
         detail:
           type: [string, 'null']
           description: Итог проверки и подсказка «что сделать» от CRM (текст CRM, на русском)
+        group:
+          description: >-
+            Для `kind: service` — группа по причине (состояние, кто исправляет, действие, «с …»); для остальных `null`.
+            «Ожидаемо на стенде» в `attention` не попадает.
+          anyOf:
+          - {$ref: '#/components/schemas/ServiceGroup'}
+          - {type: 'null'}
+        technical:
+          type: [string, 'null']
+          description: 'Сырой ответ провайдера (секреты замаскированы) — интерфейс показывает его только свёрнутым, под «Технические подробности»'
 
     IntegrationsOverview:
       type: object
@@ -6079,9 +6297,14 @@ components:
     ExternalServiceList:
       type: object
       additionalProperties: false
-      required: [checked_at, summary, items]
+      required: [checked_at, summary, items, stand, groups]
       properties:
         checked_at: {type: [string, 'null'], format: date-time}
+        stand: {type: boolean, description: 'Тестовый стенд (не прод): часть причин «ожидаема на стенде»'}
+        groups:
+          type: array
+          description: 'Не-`ok` сервисы, свёрнутые по причине; порядок: сломано, перебои, не настроено, не проверено, ожидаемо, выключено'
+          items: {$ref: '#/components/schemas/ServiceGroup'}
         summary: {$ref: '#/components/schemas/ServicesSummary'}
         items:
           type: array
@@ -6284,8 +6507,25 @@ components:
           anyOf:
           - {$ref: '#/components/schemas/IntegrationCardKey'}
           - {type: 'null'}
+        state: {$ref: '#/components/schemas/ServiceState'}
+        flaps_24h: {type: integer, description: 'Провалов (полос сбоя) за сутки: много — «Нестабильно»'}
+        cause_key: {type: string, description: 'Корень причины; у сервисов с общей причиной он общий'}
+        owner:
+          anyOf:
+          - {$ref: '#/components/schemas/ServiceOwner'}
+          - {type: 'null'}
+        action:
+          anyOf:
+          - {$ref: '#/components/schemas/ServiceAction'}
+          - {type: 'null'}
+        more_actions:
+          type: array
+          items: {$ref: '#/components/schemas/ServiceAction'}
+        since: {type: [string, 'null'], format: date-time, description: 'Когда впервые обнаружено (не в порядке с …)'}
+        last_recovered_at: {type: [string, 'null'], format: date-time, description: 'Когда восстановился после последнего сбоя за 30 дней — «восстановлено в …» из журнала инцидентов'}
       required: [check, checked_at, checks_24h, error, failures_24h, frequency, hint, incident, key, latency_ms, p95_ms_24h, purpose,
-        source, stale, status, summary, switch, system, title, uptime_24h, uptime_7d, fix_card]
+        source, stale, status, summary, switch, system, title, uptime_24h, uptime_7d, fix_card, state, cause_key, owner, action,
+        more_actions, since, last_recovered_at, flaps_24h]
       type: object
       additionalProperties: false
     ExternalServiceDetail:
@@ -6365,6 +6605,26 @@ components:
       required: [alias, checked_at, health, health_detail, key_last4, key_source, model, provider, today_usd]
       type: object
       additionalProperties: false
+    ProviderKeyIn:
+      type: object
+      additionalProperties: false
+      required: [api_key, password]
+      properties:
+        api_key: {type: string, format: password, writeOnly: true, minLength: 8, maxLength: 512}
+        password: {type: string, format: password, writeOnly: true, minLength: 1, maxLength: 256}
+
+    ProviderKeyResult:
+      type: object
+      additionalProperties: false
+      description: 'Итог смены ключа провайдера: роли, к которым применён ключ, и проверен ли провайдер сразу.'
+      required: [provider, roles, checked]
+      properties:
+        provider: {type: string}
+        roles:
+          type: array
+          items: {$ref: '#/components/schemas/AiModelChange'}
+        checked: {type: boolean}
+
     AiModelChange:
       description: 'Итог смены или сброса модели; `key_source`: `crm` — ключ задан в Платформе, `env` — из настроек сервера.'
       properties:
@@ -6551,8 +6811,8 @@ components:
       additionalProperties: false
     SystemComponent:
       properties: {checked_at: {format: date-time, type: [string, 'null']}, key: {type: string}, reason: {type: string}, status: {
-          enum: [ok, warn, fail, unknown], type: string}, title: {type: string}}
-      required: [checked_at, key, reason, status, title]
+          enum: [ok, warn, fail, unknown], type: string}, title: {type: string}, expected_on_stand: {type: boolean, description: 'Тестовый стенд: здесь это ожидаемо — в «Требует внимания» не попадает'}}
+      required: [checked_at, key, reason, status, title, expected_on_stand]
       type: object
       additionalProperties: false
 
@@ -6815,6 +7075,32 @@ components:
           type: string
           minLength: 1
           description: Одноразовый временный пароль; сотрудник обязан сменить его при входе. Не логируется и не кэшируется
+
+    Bridge:
+      type: object
+      additionalProperties: false
+      required: [crm_url, erp_url, erp_sso]
+      properties:
+        crm_url:
+          type: [string, 'null']
+          description: Публичный адрес старой CRM без завершающего `/`; `null` — не задан и не выводится
+          examples: ['https://crm.example']
+        erp_url:
+          type: [string, 'null']
+          description: Публичный адрес старого ERP без завершающего `/`; `null` — не задан и не выводится
+          examples: ['https://erp.example']
+        erp_sso:
+          type: boolean
+          description: Сотрудника можно впустить в старый ERP без второго пароля (`POST /bridge/erp-sso`)
+
+    BridgeErpSso:
+      type: object
+      additionalProperties: false
+      required: [url]
+      properties:
+        url:
+          type: string
+          description: '`{ERP}/sso/exchange#token=…`; токен одноразовый, живёт 60 секунд, в журнал не пишется'
 
     SetupState:
       type: object

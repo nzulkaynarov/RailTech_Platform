@@ -41,6 +41,14 @@ const base: ExternalServiceOut = {
   p95_ms_24h: 30,
   switch: null,
   incident: null,
+  state: "ok",
+  cause_key: "x:ok",
+  owner: null,
+  action: null,
+  more_actions: [],
+  since: null,
+  last_recovered_at: null,
+  flaps_24h: 0,
 };
 
 const telegram: ExternalServiceOut = {
@@ -153,6 +161,8 @@ const list: ExternalServicesOut = {
   checked_at: "2026-10-14T08:59:00Z",
   summary: { ok: 3, warn: 0, fail: 2, unknown: 0, off: 0, disabled: 1 },
   services: [base, telegram, mail, gemini, erp, erpMail],
+  stand: false,
+  groups: [],
 };
 
 const detail: ExternalServiceDetailOut = {

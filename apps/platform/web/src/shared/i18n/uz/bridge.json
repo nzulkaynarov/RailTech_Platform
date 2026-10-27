@@ -1,0 +1,66 @@
+{
+  "title": "Bu bo‘lim hali Platformaga ko‘chirilmoqda",
+  "system": {
+    "crm": {
+      "name": "eski CRM",
+      "in": "eski CRMda",
+      "open": "Eski CRMda ochish"
+    },
+    "erp": {
+      "name": "eski ERP",
+      "in": "eski ERPda",
+      "open": "Eski ERPda ochish"
+    }
+  },
+  "newTab": "yangi varaqda ochiladi",
+  "intro": {
+    "legacy": "Hozir bu ish {{system}} bajariladi: {{where}}. Ma’lumotlar yo‘qolmagan.",
+    "none": "Hozir bu ish interfeysda yo‘q. Uni bajaradi: {{who}}.",
+    "internal": "Hozir bu ish Platformaning «{{section}}» bo‘limida bajariladi; uni administrator bajaradi. Ma’lumotlar yo‘qolmagan."
+  },
+  "internalOpen": "«{{section}}» bo‘limini ochish",
+  "when": "Qachon paydo bo‘ladi: {{when}}.",
+  "whenValue": {
+    "soon": "yaqin yangilanishda",
+    "pilot": "pilotgacha"
+  },
+  "login": {
+    "crm": "Eski CRMga kirish — xuddi shu login va parol bilan.",
+    "erp": "Xuddi shu login bilan kirishni so‘rashi mumkin.",
+    "erpSso": "Kirish o‘zi bajariladi. Eski ERP bosh sahifada ochiladi, keyin: {{where}}."
+  },
+  "erpFallback": "Ikkinchi parolsiz kirish bo‘lmadi: eski ERP xuddi shu login bilan kirishni so‘rashi mumkin.",
+  "noAddress": "Manzil aniqlanmadi: {{name}} qayerda ochilishini administratordan so‘rang.",
+  "badgeHint": "hali eski tizimda: {{count}}",
+  "objectKnown": "«Mening navbatim»dan ma’lum bo‘lgani",
+  "object": {
+    "task": "Nima qilish kerak",
+    "details": "Tafsilotlar",
+    "due": "Muddat"
+  },
+  "where": {
+    "crmInbox": "«Входящие» bo‘limi",
+    "crmLeads": "«Лиды» bo‘limi",
+    "crmClients": "«Клиенты» bo‘limi",
+    "crmDashboard": "«Дашборд» bo‘limi",
+    "erpDeals": "«Сделки» bo‘limi",
+    "erpCalc": "«Сделки» → ariza kartochkasi → TT hisob-kitobi",
+    "erpQuotes": "«Документы» → «Коммерческие предложения»",
+    "erpDocuments": "«Документы» (TT, shartnomalar, hisoblar, dalolatnomalar)",
+    "erpPayments": "«Документы» → «Платежи»",
+    "erpStock": "«Товары» → «Мои товары» (qoldiq va yetkazish muddati — tovar kartochkasida)",
+    "erpCatalog": "«Товары» → «Справочники»",
+    "erpFiles": "«Документы» → «Файлы»"
+  },
+  "who": {
+    "memos": "direktor va buxgalter — xizmat yozuvlarini hozircha og‘zaki yoki qog‘ozda kelishadi",
+    "newDocument": "xodimning o‘zi — xizmat yozuvi, ariza va hisobotlarni hozircha qog‘ozda rasmiylashtiradi",
+    "chats": "jamoa — ish yozishmalari hozircha tizimdan tashqari messenjerlarda yuritiladi",
+    "tickets": "administrator — unga so‘rovlar hozircha Telegramda yoki shaxsan keladi",
+    "unknown": "interfeysdan tashqaridagi mas’ul xodim"
+  },
+  "panel": {
+    "title": "Bo‘lim hali ko‘chirilmoqda",
+    "text": "Bo‘lim Platformaga ko‘chgach, obyekt kartochkasi va u bo‘yicha amallar shu yerda paydo bo‘ladi."
+  }
+}

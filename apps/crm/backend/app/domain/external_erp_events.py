@@ -45,6 +45,7 @@ def erp_events(f: ErpEventsFacts) -> CheckResult:
             error=f.last_error,
             hint=_hint(f),
             metrics=metrics,
+            cause="erp_events_failed",
         )
     return CheckResult(KEY, "ok", "События из ERP принимаются без ошибок", metrics=metrics)
 
