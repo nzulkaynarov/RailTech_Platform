@@ -15,10 +15,19 @@
 
 import os
 import re
+import sys
 import tempfile
 from urllib.parse import urlsplit, urlunsplit
 
+from django.core.exceptions import ImproperlyConfigured
+
 from core.settings import *  # noqa: F401,F403
+
+# Защита от ошибки в DJANGO_SETTINGS_MODULE: MD5-хешер паролей не должен попасть в прод, модуль живёт только внутри pytest.
+if "pytest" not in sys.modules:
+    raise ImproperlyConfigured(
+        "core.settings_pytest — настройки только для pytest; для запуска ERP используйте core.settings"
+    )
 
 PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]
 

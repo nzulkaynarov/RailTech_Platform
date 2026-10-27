@@ -17,7 +17,9 @@
 # внутри контейнера Postgres этого ERP_TEST_NS): тестовые базы каждого прогона клонируются из шаблона за секунды. Новый
 # контейнер Postgres или правка миграций (в том числе rt_bus) — шаблон строится заново сам; штампов на диске нет.
 # Образ: `docker build` с кэшем слоёв укладывается в секунды, штамп не нужен; ERP_TEST_REBUILD=1 — пересобрать без кэша
-# (после правки requirements, Dockerfile или packages/rt-bus/packages/contracts, если кэш по какой-то причине подвёл).
+# (после правки requirements, Dockerfile или packages/rt-bus/packages/contracts, если кэш по какой-то причине подвёл); только значение 1.
+# Для широкого -k задайте -n auto явно (по умолчанию -k идёт последовательно). Два прогона одного ERP_TEST_NS одновременно не
+# поддерживаются (общие база, шаблон и Redis): у параллельных сессий свои ERP_TEST_NS.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -45,7 +47,7 @@ down() {
   echo "Контейнеры $PG, $RD и сеть $NET удалены."
 }
 case "${1:-}" in
-  -h | --help) sed -n '2,20p' "$0"; exit 0 ;;
+  -h | --help) sed -n '2,22p' "$0"; exit 0 ;;
   --down) down; exit 0 ;;
 esac
 
@@ -80,7 +82,9 @@ done
 # Сборка идёт каждый раз: слои из кэша docker — доли секунды (замер: ≤ 2 с), а вход образа не ограничен requirements*
 # (rtbus, contracts, Dockerfile) — штамп по ним дал бы шанс забыть пересборку и получить устаревшую шину в образе.
 echo "▸ сборка образа $IMAGE"
-docker build -q ${ERP_TEST_REBUILD:+--no-cache} -t "$IMAGE" \
+NO_CACHE=()
+[ "${ERP_TEST_REBUILD:-}" = 1 ] && NO_CACHE=(--no-cache)
+docker build -q ${NO_CACHE[@]+"${NO_CACHE[@]}"} -t "$IMAGE" \
   --build-context "rtbus=$ROOT/../../packages/rt-bus" \
   --build-context "contracts=$ROOT/../../packages/contracts" \
   "$ROOT/backend" >/dev/null
@@ -122,8 +126,10 @@ migrations_hash() {
 # Шаблонная база: мигрированная схема со словарями, из неё клонируются тестовые базы воркеров. Строится под именем *_build и
 # переименовывается по успеху, поэтому оборванная сборка шаблоном не становится.
 ensure_template() {
-  local tpl="rt_tpl_$(migrations_hash)" psql=(docker exec "$PG" psql -U rt -d postgres -v ON_ERROR_STOP=1 -tAq)
-  if [ -n "${ERP_TEST_REBUILD:-}" ] || [ "$("${psql[@]}" -c "SELECT 1 FROM pg_database WHERE datname='$tpl'")" != 1 ]; then
+  local tpl hash psql=(docker exec "$PG" psql -U rt -d postgres -v ON_ERROR_STOP=1 -tAq)
+  hash="$(migrations_hash)" # отдельной строкой: сбой хеша роняет скрипт (set -e), а не даёт молча неверное имя шаблона
+  tpl="rt_tpl_${hash}"
+  if [ "${ERP_TEST_REBUILD:-}" = 1 ] || [ "$("${psql[@]}" -c "SELECT 1 FROM pg_database WHERE datname='$tpl'")" != 1 ]; then
     echo "▸ шаблонная база $tpl: миграции с нуля (один раз на набор миграций)" >&2
     for old in $("${psql[@]}" -c "SELECT datname FROM pg_database WHERE datname LIKE 'rt\_tpl\_%'"); do
       "${psql[@]}" -c "DROP DATABASE \"$old\" WITH (FORCE)" >/dev/null
