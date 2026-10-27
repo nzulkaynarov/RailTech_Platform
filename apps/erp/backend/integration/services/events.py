@@ -1,6 +1,6 @@
 """Публикация событий ERP на шину rt_bus из сервисного слоя (B3, ADR-0014, CONTRACTS §3 и §9).
 
-Единственный способ, которым ERP сообщает о своих сущностях: 23 типа `uz.railtech.erp.<сущность>.<действие>.v1`
+Единственный способ, которым ERP сообщает о своих сущностях: 24 типа `uz.railtech.erp.<сущность>.<действие>.v1`
 (`packages/contracts/events/erp/`). Вызывает сервис, который меняет состояние (продажи, документы, портал, интеграция), и
 только внутри `transaction.atomic()` этого изменения: `rt_bus` пишет строку outbox в ту же транзакцию, поэтому
 
@@ -425,6 +425,24 @@ def publish_invite_sent(contact: Any, channels: List[str], actor: Optional[Dict[
         payload["crm_contact_id"] = crm_contact_id
 
     return publish_event("invite.sent", erp_company_id=company_id, payload=payload, deal=None, actor=actor)
+
+
+def publish_invite_requested(contact: Any, actor: Optional[Dict[str, Any]] = None) -> Optional[Event]:
+    """Событие `invite.requested` (D1-9): приглашение в Cabinet через Telegram — доставит бот CRM, ERP в Telegram не пишет.
+
+    Шлётся только контакту, сопоставленному с контактом CRM (`crm_contact_id`) и с привязанным `telegram_user_id`:
+    иначе боту некому писать — `None`, и вызывающий код отвечает `CONTACT_TELEGRAM_REQUIRED`. В событии нет ссылки
+    входа и токенов: контакт открывает Mini App, а сессию выпускает подписанный `initData` его аккаунта.
+    """
+    if not contact.company_id or not contact.telegram_user_id:
+        return None
+    crm_contact_id = CrmContactMapping.objects.filter(contact=contact).values_list("crm_contact_id", flat=True).first()
+    if not crm_contact_id:
+        return None
+    payload: Dict[str, Any] = {"channel": "telegram", "erp_contact_id": contact.id, "crm_contact_id": crm_contact_id}
+    if contact.language in ("ru", "uz", "en"):
+        payload["language"] = contact.language
+    return publish_event("invite.requested", erp_company_id=contact.company_id, payload=payload, deal=None, actor=actor)
 
 
 #: Решение клиента по строке поставки → тип события (`DeliveryLineDecision.status`).
