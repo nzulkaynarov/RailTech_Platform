@@ -1,0 +1,232 @@
+=== s2
+PASS [s2] обзор: «Требует внимания» и восемь карточек со статусом словом
+NOTE [s2] статусы карточек на обзоре :: erp: ERP / Работает ;; telegram: Telegram / Не подключено ;; mail: Почта / Не подключено ;; services: Внешние сервисы / Сбой ;; models: Модели ИИ / Сбой ;; spend: Расходы / Работает ;; storage: Хранилище и бэкапы / Внимание ;; system: Состояние системы / Сбой
+PASS [s2] overview @1440: без горизонтальной прокрутки :: scrollWidth=1440, innerWidth=1440
+PASS [s2] overview @1440: axe без нарушений
+PASS [s2] overview @390: без горизонтальной прокрутки :: scrollWidth=390, innerWidth=390
+PASS [s2] overview @390: axe без нарушений
+PASS [s2] плитка «telegram»: «Проверить/Обновить» отработала, результат словами :: Telegram | Не подключено | Клиентский бот, канал команды и профиль бота. | Ещё не подключено | Последняя проверка: 27.10.2026 10:39 | Проверено: Не подключено | Открыть | Проверить
+PASS [s2] плитка «mail»: «Проверить/Обновить» отработала, результат словами :: Почта | Не подключено | Один SMTP на ансамбль: приглашения, сброс пароля, оповещения. | Ещё не подключено | Последняя проверка: 27.10.2026 10:39 | Почта ещё не настроена. | Открыть | Проверить
+PASS [s2] плитка «services»: «Проверить/Обновить» отработала, результат словами :: Внешние сервисы | Сбой | Реестр всех внешних сервисов ансамбля: статус, проверка, выключатель. | Требуют внимания: 3 | Последняя проверка: 27.10.2026 10:39 | Проверено: Сбой | Открыть | Проверить
+PASS [s2] плитка «models»: «Проверить/Обновить» отработала, результат словами :: Модели ИИ | Сбой | Модели и ключи по ролям: диалог, поиск по базе знаний, проверка качества. | Требуют внимания: 3 | Последняя проверка: 27.10.2026 10:39 | Проверено: Сбой | Открыть | Проверить
+PASS [s2] плитка «storage»: «Проверить/Обновить» отработала, результат словами :: Хранилище и бэкапы | Внимание | Файлы клиентов и резервные копии баз. | Копий ещё нет | Последняя проверка: 27.10.2026 10:39 | Проверено: Внимание | Открыть | Проверить
+PASS [s2] плитка «system»: «Проверить/Обновить» отработала, результат словами :: Состояние системы | Сбой | Компоненты ансамбля: база, очереди, бот, модели. | Требуют внимания: 9 | Последняя проверка: 27.10.2026 10:39 | Данные обновлены | Открыть | Обновить
+PASS [s2] плитка «spend»: «Проверить/Обновить» отработала, результат словами :: Расходы | Работает | Сколько тратят модели ИИ: бот и весь ансамбль, бюджеты. | Всё в порядке | Расход сегодня: 0,00 USD | Проверок ещё не было | Данные обновлены | Открыть | Обновить
+PASS [s2] card-erp @1440: без горизонтальной прокрутки :: scrollWidth=1440, innerWidth=1440
+PASS [s2] card-erp @1440: axe без нарушений
+PASS [s2] card-erp @390: без горизонтальной прокрутки :: scrollWidth=390, innerWidth=390
+PASS [s2] card-erp @390: axe без нарушений
+PASS [s2] card-telegram @1440: без горизонтальной прокрутки :: scrollWidth=1440, innerWidth=1440
+PASS [s2] card-telegram @1440: axe без нарушений
+PASS [s2] card-telegram @390: без горизонтальной прокрутки :: scrollWidth=390, innerWidth=390
+PASS [s2] card-telegram @390: axe без нарушений
+PASS [s2] card-mail @1440: без горизонтальной прокрутки :: scrollWidth=1440, innerWidth=1440
+PASS [s2] card-mail @1440: axe без нарушений
+PASS [s2] card-mail @390: без горизонтальной прокрутки :: scrollWidth=390, innerWidth=390
+PASS [s2] card-mail @390: axe без нарушений
+PASS [s2] card-services @1440: без горизонтальной прокрутки :: scrollWidth=1440, innerWidth=1440
+PASS [s2] card-services @1440: axe без нарушений
+PASS [s2] card-services @390: без горизонтальной прокрутки :: scrollWidth=390, innerWidth=390
+PASS [s2] card-services @390: axe без нарушений
+PASS [s2] card-models @1440: без горизонтальной прокрутки :: scrollWidth=1440, innerWidth=1440
+PASS [s2] card-models @1440: axe без нарушений
+PASS [s2] card-models @390: без горизонтальной прокрутки :: scrollWidth=390, innerWidth=390
+PASS [s2] card-models @390: axe без нарушений
+PASS [s2] card-spend @1440: без горизонтальной прокрутки :: scrollWidth=1440, innerWidth=1440
+PASS [s2] card-spend @1440: axe без нарушений
+PASS [s2] card-spend @390: без горизонтальной прокрутки :: scrollWidth=390, innerWidth=390
+PASS [s2] card-spend @390: axe без нарушений
+PASS [s2] card-storage @1440: без горизонтальной прокрутки :: scrollWidth=1440, innerWidth=1440
+PASS [s2] card-storage @1440: axe без нарушений
+PASS [s2] card-storage @390: без горизонтальной прокрутки :: scrollWidth=390, innerWidth=390
+PASS [s2] card-storage @390: axe без нарушений
+PASS [s2] card-system @1440: без горизонтальной прокрутки :: scrollWidth=1440, innerWidth=1440
+PASS [s2] card-system @1440: axe без нарушений
+PASS [s2] card-system @390: без горизонтальной прокрутки :: scrollWidth=390, innerWidth=390
+PASS [s2] card-system @390: axe без нарушений
+PASS [s2] Telegram: токен без настоящего бота — ошибка словами, не 500 :: Telegram не принял токен: проверьте, что он скопирован целиком.
+PASS [s2] Почта без SMTP: «Проверить связь» и «Тестовое письмо» недоступны, а не падают :: check disabled=true, test disabled=true
+NOTE [s2] Почта · состояние карточки без SMTP :: Карточка | Почта | Состояние | Не настроена | Сервер | — | не указано | Шифрование | — | не указано | Адрес отправителя | — | не указано | Имя отправителя | — | не указано | Логин | — | не указано | Пароль SMTP | не задан | Проверить связь | Тестовое письмо | Настроить SMTP | Журнал отправок | Показать | Все письма | Писем в журнале пока нет.
+PASS [s2] SMTP: форма с «Что произойдёт»
+PASS [s2] SMTP: некорректный сервер — ошибка словами у формы
+NOTE [s2] Сервисы · проверка S3 :: см. снимок services-after-check
+PASS [s2] выключатель сервиса: «Что произойдёт», причина, пароль
+PASS [s2] сервис выключен вручную — виден в карточке
+PASS [s2] сервис включён обратно
+PASS [s2] модели ИИ: список ролей (9 строк) :: 9
+PASS [s2] проверка модели: предупреждение о платном запросе
+NOTE [s2] Модели · проверка без ключей :: Карточка | Модели ИИ | Диалог с клиентом | Сбой | anthropic · anthropic/claude-sonnet-5-5 · сегодня 0,00 USD | 401: Error code: 401 - {'error': {'message': 'litellm.AuthenticationError: AnthropicException - {"type":"error","error":{"type":"authentication_error","message":"x-api-key header is required"},"reques | Ключ: не менялся из Платформы | Проверено: 27.10.2026 10:40 | Проверить | Сменить | Сб
+FAIL [s2] смена ключа без правки предзаполненной модели проходит :: в поле «Модель» предзаполнено «anthropic/claude-haiku-5-5»; ответ: Проверьте заполнение полей.
+PASS [s2] ключ провайдера на экране не появляется
+NOTE [s2] Модели · смена с ключом :: Карточка | Модели ИИ | Диалог с клиентом | Сбой | anthropic · anthropic/claude-sonnet-5-5 · сегодня 0,00 USD | 401: Error code: 401 - {'error': {'message': 'litellm.AuthenticationError: AnthropicException - {"type":"error","error":{"type":"authentication_error","message":"x-api-key header is required"},"reques | Ключ: не менялся из Платформы | Проверено: 27.10.2026 10:40 | Проверить | Сменить | Сбросить | Модель «Диалог с клиентом» не ответила | 1800 мс · 401: Error code: 401 - {'error': {'messa
+FAIL [s2] маска ключа «•••• ХХХХ» после смены
+PASS [s2] сброс модели к значению по умолчанию
+PASS [s2] расходы: бот и весь ансамбль, таблицы
+PASS [s2] копия вне расписания: «Что произойдёт»
+NOTE [s2] Бэкапы · «Запросить копию» без сервиса бэкапа :: Карточка | Хранилище и бэкапы | Хранилище файлов | Хранилище файлов (S3) | Работает | Документы клиентов, база знаний и вложения из Telegram | Хранилище отвечает | Проверено: 27.10.2026 10:41 | Резервные копии | Где лежат копии | том сервера | Последняя копия | нет | Свежесть | копий ещё нет | Сервис бэкапа | не отвечает | Копия по запросу ожидает сервис бэкапа с 27.10.2026 10:41. | Файлов копий пока нет. | Сделать копию сейчас
+PASS [s2] состояние системы: список компонентов
+NOTE [s2] ошибки консоли / ответы 5xx :: Failed to load resource: the server responded with a status of 401 (Unauthorized) | Failed to load resource: the server responded with a status of 409 (Conflict) | Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) | Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) | Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) | Failed to load resource: the server responded with a status of 502 (Bad Gateway) ;; 502 PUT /api/v1/admin/integrations/models/qualifier-model
+=== s3
+PASS [s3] реквизиты: сохранено
+FAIL [s3] логотип загружен и показан на экране (CSP не блокирует) :: locator.waitFor: Timeout 20000ms exceeded. / Call log: /   - waiting for locator('.ant-message').getByText('Логотип загружен') to be visible
+PASS [s3] в консоли нет нарушений CSP при показе логотипа
+PASS [s3] company-details-logo @1440: без горизонтальной прокрутки :: scrollWidth=1440, innerWidth=1440
+PASS [s3] company-details-logo @1440: axe без нарушений
+PASS [s3] company-details-logo @390: без горизонтальной прокрутки :: scrollWidth=390, innerWidth=390
+PASS [s3] company-details-logo @390: axe без нарушений
+PASS [s3] после перезагрузки реквизиты и логотип на месте
+PASS [s3] бланк: образец документа показан (КП)
+PASS [s3] бланк: образец меняется до сохранения (цвет)
+FAIL [s3] бланк: образец «Договор» переключается :: locator.waitFor: Timeout 20000ms exceeded. / Call log: /   - waiting for locator('iframe[title="Образец: Договор"]').contentFrame().getByText('Договор').first() to be visible
+PASS [s3] бланк: сохранён
+PASS [s3] company-brand @1440: без горизонтальной прокрутки :: scrollWidth=1440, innerWidth=1440
+PASS [s3] company-brand @1440: axe без нарушений
+PASS [s3] company-brand @390: без горизонтальной прокрутки :: scrollWidth=390, innerWidth=390
+PASS [s3] company-brand @390: axe без нарушений
+PASS [s3] нумерация: образец номеров по черновику (префикс DEMO)
+PASS [s3] нумерация: маска без {seq} — ошибка словами, сохранение закрыто
+PASS [s3] нумерация: сохранена
+PASS [s3] company-numbering @1440: без горизонтальной прокрутки :: scrollWidth=1440, innerWidth=1440
+PASS [s3] company-numbering @1440: axe без нарушений
+PASS [s3] company-numbering @390: без горизонтальной прокрутки :: scrollWidth=390, innerWidth=390
+PASS [s3] company-numbering @390: axe без нарушений
+PASS [s3] условия КП: сохранены
+NOTE [s3] администратор без роли «себестоимость/маржа»: поля маржи :: скрыты, сказано словами
+PASS [s3] company-quote @1440: без горизонтальной прокрутки :: scrollWidth=1440, innerWidth=1440
+PASS [s3] company-quote @1440: axe без нарушений
+PASS [s3] company-quote @390: без горизонтальной прокрутки :: scrollWidth=390, innerWidth=390
+PASS [s3] company-quote @390: axe без нарушений
+PASS [s3] статья расхода: добавлена
+PASS [s3] статья расхода: строка в таблице
+PASS [s3] company-charges @1440: без горизонтальной прокрутки :: scrollWidth=1440, innerWidth=1440
+PASS [s3] company-charges @1440: axe без нарушений
+PASS [s3] company-charges @390: без горизонтальной прокрутки :: scrollWidth=390, innerWidth=390
+PASS [s3] company-charges @390: axe без нарушений
+PASS [s3] статья расхода: изменена (300)
+PASS [s3] статья расхода: удаление с «Что произойдёт»
+PASS [s3] статья расхода: удалена
+PASS [s3] шаблон документа: копия образца создана
+FAIL [s3] шаблон документа: копия получила введённое администратором название :: строки с «Договор поставки (рельсы 15)» нет; свои шаблоны: Договор поставки (образец платформы)
+FAIL [s3] шаблон договора с неполным телом: ответ называет, каких блоков не хватает :: текст ответа администратору: «Проверьте заполнение полей.»
+PASS [s3] шаблон документа: правка названия сохранена (тело нетронуто)
+PASS [s3] шаблон документа: в списке название, введённое при правке
+PASS [s3] шаблон документа: удалён
+PASS [s3] шаблон письма: создан
+PASS [s3] company-templates-emails @1440: без горизонтальной прокрутки :: scrollWidth=1440, innerWidth=1440
+PASS [s3] company-templates-emails @1440: axe без нарушений
+PASS [s3] company-templates-emails @390: без горизонтальной прокрутки :: scrollWidth=390, innerWidth=390
+PASS [s3] company-templates-emails @390: axe без нарушений
+PASS [s3] шаблон письма: удалён
+PASS [s3] справочник «Страны»: строка добавлена
+PASS [s3] справочник «Страны»: неиспользуемая строка удалена
+PASS [s3] справочник «Валюты»: строка отключена
+PASS [s3] справочник «Валюты»: строка включена обратно
+PASS [s3] company-reference @1440: без горизонтальной прокрутки :: scrollWidth=1440, innerWidth=1440
+PASS [s3] company-reference @1440: axe без нарушений
+PASS [s3] company-reference @390: без горизонтальной прокрутки :: scrollWidth=390, innerWidth=390
+PASS [s3] company-reference @390: axe без нарушений
+PASS [s3] категория: подкатегория добавлена
+PASS [s3] категория: переименована
+PASS [s3] company-categories @1440: без горизонтальной прокрутки :: scrollWidth=1440, innerWidth=1440
+PASS [s3] company-categories @1440: axe без нарушений
+PASS [s3] company-categories @390: без горизонтальной прокрутки :: scrollWidth=390, innerWidth=390
+PASS [s3] company-categories @390: axe без нарушений
+PASS [s3] категория: удалена
+NOTE [s3] НДС до правки :: 9.0
+FAIL [s3] платформенные настройки: ставка НДС сохранена :: locator.waitFor: Error: strict mode violation: locator('.ant-message').getByText('Сохранено') resolved to 2 elements: /     1) <span>Сохранено</span> aka getByText('Сохранено').first() /     2) <span>Сохранено</span> aka getByText('Сохранено').nth(1)
+PASS [s3] НДС после перезагрузки = введённому :: введено 16, на экране 16.0
+PASS [s3] company-platform @1440: без горизонтальной прокрутки :: scrollWidth=1440, innerWidth=1440
+PASS [s3] company-platform @1440: axe без нарушений
+PASS [s3] company-platform @390: без горизонтальной прокрутки :: scrollWidth=390, innerWidth=390
+PASS [s3] company-platform @390: axe без нарушений
+NOTE [s3] ошибки консоли / 5xx :: Failed to load resource: the server responded with a status of 401 (Unauthorized) | Failed to load resource: the server responded with a status of 503 (Service Unavailable) | Failed to load resource: the server responded with a status of 503 (Service Unavailable) | Failed to load resource: the server responded with a status of 503 (Service Unavailable) | Failed to load resource: the server responded with a status of 503 (Service Unavailable) | Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) ;; 503 POST /api/v1/admin/company/logo | 503 GET /api/v1/admin/company | 503 GET /api/v1/admin/company/numbering | 503 POST /api/v1/admin/company/brand/preview
+=== s5b
+PASS [s5b] сброс пароля: «Что произойдёт», варианты «По почте» / «Временным паролем»
+PASS [s5b] сброс по почте без SMTP — понятная ошибка
+NOTE [s5b] текст ошибки сброса по почте :: Почта не подключена, пароль не изменён. Подключите почту в Admin · Интеграции и повторите. | Открыть Admin · Интеграции
+PASS [s5b] сброс по почте без SMTP не оставил сотрудника без пароля молча (текст ошибки не пуст, нет 5xx)
+PASS [s5b] сброс временным паролем: пароль показан
+PASS [s5b] после «Готово» временного пароля на экране нет
+PASS [s5b] вход со сброшенным временным паролем ведёт на обязательную смену
+PASS [s5b] сотрудник сменил пароль и вошёл
+PASS [s5b] roles-matrix @1440: без горизонтальной прокрутки :: scrollWidth=1440, innerWidth=1440
+PASS [s5b] roles-matrix @1440: axe без нарушений
+PASS [s5b] roles-matrix @390: без горизонтальной прокрутки :: scrollWidth=390, innerWidth=390
+PASS [s5b] roles-matrix @390: axe без нарушений
+PASS [s5b] роль создана
+PASS [s5b] роль сохранена после правки названия
+PASS [s5b] вкладка «Журнал» роли: кто, когда, что изменилось
+PASS [s5b] roles-journal-tab @1440: без горизонтальной прокрутки :: scrollWidth=1440, innerWidth=1440
+PASS [s5b] roles-journal-tab @1440: axe без нарушений
+PASS [s5b] roles-journal-tab @390: без горизонтальной прокрутки :: scrollWidth=390, innerWidth=390
+PASS [s5b] roles-journal-tab @390: axe без нарушений
+PASS [s5b] журнал аудита: записи за гейт (кто, что, когда, над чем)
+NOTE [s5b] журнал аудита: счётчик до фильтров :: Записей: 636
+PASS [s5b] audit-list @1440: без горизонтальной прокрутки :: scrollWidth=1440, innerWidth=1440
+PASS [s5b] audit-list @1440: axe без нарушений
+PASS [s5b] audit-list @390: без горизонтальной прокрутки :: scrollWidth=390, innerWidth=390
+PASS [s5b] audit-list @390: axe без нарушений
+PASS [s5b] фильтр «Показывать входы в систему» меняет выдачу :: Записей: 636 -> Записей: 769
+NOTE [s5b] фильтр «Объект»: варианты :: Сотрудник | Роль Платформы | Настройки | Подключение | Подключение | Внешний сервис | Модель ИИ | Система | Лид | Клиент
+PASS [s5b] фильтр «Объект = Роль Платформы» оставляет только записи ролей :: строк 5
+PASS [s5b] фильтр «С даты» в будущем — «По этим фильтрам записей нет»
+PASS [s5b] запись аудита открывается в боковом окне: что именно изменилось, без секретов
+PASS [s5b] audit-entry-panel @1440: без горизонтальной прокрутки :: scrollWidth=1440, innerWidth=1440
+PASS [s5b] audit-entry-panel @1440: axe без нарушений
+PASS [s5b] audit-entry-panel @390: без горизонтальной прокрутки :: scrollWidth=390, innerWidth=390
+PASS [s5b] audit-entry-panel @390: axe без нарушений
+PASS [s5b] профиль: имя, почта, роли, доступ, подписки на уведомления
+NOTE [s5b] профиль: «Тестовое уведомление» (Telegram не привязан) :: кнопка недоступна, причина на экране: Telegram не привязан
+NOTE [s5b] профиль: подписки на уведомления недоступны, пока Telegram не привязан :: переключатели неактивны, причина написана на экране (Telegram: Не привязан)
+PASS [s5b] profile-dialog-axe @1440: без горизонтальной прокрутки :: scrollWidth=1440, innerWidth=1440
+PASS [s5b] profile-dialog-axe @1440: axe без нарушений
+PASS [s5b] profile-dialog-axe @390: без горизонтальной прокрутки :: scrollWidth=390, innerWidth=390
+PASS [s5b] profile-dialog-axe @390: axe без нарушений
+NOTE [s5b] ошибки консоли / 5xx :: Failed to load resource: the server responded with a status of 401 (Unauthorized) | Failed to load resource: the server responded with a status of 409 (Conflict) | Failed to load resource: the server responded with a status of 401 (Unauthorized) | Failed to load resource: the server responded with a status of 401 (Unauthorized) ;;
+=== s6kb
+PASS [s6kb] загрузка: форма с «Что произойдёт», кнопка недоступна без файла
+PASS [s6kb] загрузка PDF — «Принимаются только файлы Markdown (.md)»
+PASS [s6kb] загрузка .md без front matter — ошибка словами от CRM
+PASS [s6kb] верный .md принят: «Документ добавлен — индексация займёт до минуты»
+PASS [s6kb] ручной ввод: документ добавлен
+NOTE [s6kb] документы и статусы индексации через ~30 с :: Рассрочка платежа 15 Русский Без продукта В очереди 0 27.10.2026 10:44 ;; Сроки и условия поставки 15 Русский Без продукта Обрабатывается 0 27.10.2026 10:44 ;; Рассрочка платежа Русский Без продукта Ошибка 0 27.10.2026 10:27 ;; Сроки и условия поставки Русский Без продукта Ошибка 0 27.10.2026 10:27 ;; Рассрочка платежа Русский Без продукта Ошибка 0 27.10.2026 10:25 ;; price.pdf Русский Без продукта Ошибка 0 27.10.2026 10:25
+PASS [s6kb] у каждого документа статус индексации словом :: В очереди, Обрабатывается, Ошибка
+PASS [s6kb] kb-documents @1440: без горизонтальной прокрутки :: scrollWidth=1440, innerWidth=1440
+PASS [s6kb] kb-documents @1440: axe без нарушений
+PASS [s6kb] kb-documents @390: без горизонтальной прокрутки :: scrollWidth=390, innerWidth=390
+PASS [s6kb] kb-documents @390: axe без нарушений
+NOTE [s6kb] карточка документа :: Карточка | Чат проекта | Документы | Сроки и условия поставки 15 | В очереди | Участвует в поиске бота | Язык | Русский | Продукт | — | не указано | Источник | Файл | Версия | 1 | Фрагментов | 0 | Создан | 27.10.2026 10:44 | Обновлён | 27.10.2026 10:44 | Действия | Выключить документ | Переиндексировать | Фрагменты | Так документ видит поиск бота: бот отвечает по этим кускам текста. | Фрагментов пока нет: документ ещё не проиндексирован.
+PASS [s6kb] kb-document-card @1440: без горизонтальной прокрутки :: scrollWidth=1440, innerWidth=1440
+PASS [s6kb] kb-document-card @1440: axe без нарушений
+PASS [s6kb] kb-document-card @390: без горизонтальной прокрутки :: scrollWidth=390, innerWidth=390
+PASS [s6kb] kb-document-card @390: axe без нарушений
+PASS [s6kb] переиндексация: «Что произойдёт»
+NOTE [s6kb] после «Переиндексировать» :: Рассрочка платежа 15 Русский Без продукта В очереди 0 27.10.2026 10:44 ;; Сроки и условия поставки 15 Русский Без продукта Обрабатывается 0 27.10.2026 10:44 ;; Рассрочка платежа Русский Без продукта Ошибка 0 27.10.2026 10:27 ;; Сроки и условия поставки Русский Без продукта Ошибка 0 27.10.2026 10:27 ;; Рассрочка платежа Русский Без продукта Ошибка 0 27.10.2026 10:25 ;; price.pdf Русский Без продукта Ошибка 0 27.10.2026 10:25
+NOTE [s6kb] «Что найдёт бот»: ответ поиска :: Что найдёт бот», пробелы — вопросы без ответа — и песочница для проверки бота. | Загрузить файл | Добавить вручную | Документы | Пробелы | Песочница бота | Что найдёт бот | Проверьте, какие фрагменты бот найдёт на вопрос клиента и ответит ли он. Поиск ничего не меняет. | Вопрос клиента | Язык вопроса | Любой язык | Найти | CRM не отвечает. Подождите минуту и повторите. | Документы | Документы базы знаний | Название	Язык	Продукт	Индексация	Фрагментов	Обновлён | Рассрочка платежа 15	Русский	Без продукта	В очереди	0	27.10.2026 10:44 | Сроки и условия поставки 15	Русский	Без продукта	Обрабатывается	0	27.10.2026 10:44 | Рассрочка платежа	Русский	Без продукта	Ошибка	0	27.10.2026 10:27 | Сроки и ус
+PASS [s6kb] пробелы: экран и пустое состояние словами
+PASS [s6kb] kb-gaps @1440: без горизонтальной прокрутки :: scrollWidth=1440, innerWidth=1440
+PASS [s6kb] kb-gaps @1440: axe без нарушений
+PASS [s6kb] kb-gaps @390: без горизонтальной прокрутки :: scrollWidth=390, innerWidth=390
+PASS [s6kb] kb-gaps @390: axe без нарушений
+NOTE [s6kb] песочница: ответ без ключей моделей :: Вопрос клиента | ЧТО ПРОИЗОЙДЁТ | 1 | Сообщение уйдёт боту от имени тестового клиента: бот ответит по базе знаний, текстам и правилам передачи. | 2 | Ответ платный: вызовы модели попадут в «Расходы» с пометкой «тест». | 3 | Передача менеджеру только показывается ниже, в CRM она не создаётся. | Отправить боту
+PASS [s6kb] песочница: без ключей модели — ожидаемая ошибка словами, не белый экран
+PASS [s6kb] kb-sandbox @1440: без горизонтальной прокрутки :: scrollWidth=1440, innerWidth=1440
+PASS [s6kb] kb-sandbox @1440: axe без нарушений
+PASS [s6kb] kb-sandbox @390: без горизонтальной прокрутки :: scrollWidth=390, innerWidth=390
+PASS [s6kb] kb-sandbox @390: axe без нарушений
+NOTE [s6kb] ошибки консоли / 5xx :: Failed to load resource: the server responded with a status of 401 (Unauthorized) | Failed to load resource: the server responded with a status of 403 (Forbidden) | Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) | Failed to load resource: the server responded with a status of 403 (Forbidden) | Failed to load resource: the server responded with a status of 503 (Service Unavailable) | Failed to load resource: the server responded with a status of 503 (Service Unavailable) ;; 503 POST /api/v1/crm/kb/documents/5/reingest | 503 POST /api/v1/crm/kb/search
+=== s2tail
+PASS [s2tail] ротация ключей ERP: «Что произойдёт»
+PASS [s2tail] ротация ключей ERP: «Ключи обновлены»
+NOTE [s2tail] карточка ERP после ротации :: Карточка | ERP | Состояние | Сопряжена | Адрес | http://erp-backend:8000 | Токен CRM → ERP | •••• uGBS | задан, последние символы uGBS | Секрет событий | •••• uIHv | задан, последние символы uIHv | Ключи обновлены | 27.10.2026 10:45 | Проверить связь | Подключить заново | Ротация ключа | Ключи обновлены. | ERP отвечает | версия 0.1.0 · 43 мс
+PASS [s2tail] после ротации «Проверить связь» зелёное (шина и сопряжение живы)
+PASS [s2tail] SMTP: настройки сохранены, пароль показан маской
+NOTE [s2tail] SMTP · «Проверить связь» на недоступный сервер :: Карточка | Почта | Состояние | Настроена | Сервер | smtp.invalid.example:587 | Шифрование | STARTTLS | Адрес отправителя | noreply@demo.example | Имя отправителя | RailTech Демо | Логин | demo-user | Пароль SMTP | •••• -Aa1 | задан, последние символы -Aa1 | Проверить связь | Тестовое письмо | Почтовый сервер не отвечает. | Настроить SMTP | Журнал отправок | Показать | Все письма | Писем в журнале пока нет.
+NOTE [s2tail] SMTP · «Тестовое письмо» на недоступный сервер :: Карточка | Почта | Состояние | Настроена | Сервер | smtp.invalid.example:587 | Шифрование | STARTTLS | Адрес отправителя | noreply@demo.example | Имя отправителя | RailTech Демо | Логин | demo-user | Пароль SMTP | •••• -Aa1 | задан, последние символы -Aa1 | Проверить связь | Тестовое письмо | Почтовый сервер не отвечает. | CRM не отвечает. Повторите через минуту. | Настроить SMTP | Журнал отправок | Показать | Все письма | Писем в журнале пока нет.
+PASS [s2tail] mail-smtp-after-test @1440: без горизонтальной прокрутки :: scrollWidth=1440, innerWidth=1440
+PASS [s2tail] mail-smtp-after-test @1440: axe без нарушений
+PASS [s2tail] mail-smtp-after-test @390: без горизонтальной прокрутки :: scrollWidth=390, innerWidth=390
+PASS [s2tail] mail-smtp-after-test @390: axe без нарушений
+PASS [s2tail] приглашение по почте при недоступном SMTP — понятная ошибка
+NOTE [s2tail] текст ошибки приглашения (SMTP настроен, сервер недоступен) :: Сотрудник добавлен в список со статусом «Приглашён», но CRM не ответила, и письмо не отправлено. Повторите позже кнопкой «Отправить приглашение снова» в карточке. | Открыть карточку
+FAIL [s2tail] страница не вернула 5xx (кроме честного 502 «сервер почты не отвечает») :: 502 POST /api/v1/admin/integrations/smtp/check | 503 POST /api/v1/admin/integrations/smtp/test-send | 503 POST /api/v1/admin/users/invite

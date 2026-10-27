@@ -1,0 +1,512 @@
+{
+  "rows": [
+    {
+      "desc": "реквизиты: сохранено",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "логотип загружен и показан на экране (CSP не блокирует)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "в консоли нет нарушений CSP при показе логотипа",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "company-details-logo @1440: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=1440, innerWidth=1440"
+    },
+    {
+      "desc": "company-details-logo @1440: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "company-details-logo @390: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=390, innerWidth=390"
+    },
+    {
+      "desc": "company-details-logo @390: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "после перезагрузки реквизиты и логотип на месте",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "бланк: образец документа показан (КП)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "бланк: образец меняется до сохранения (цвет)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "бланк: образец «Договор» переключается",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "бланк: сохранён",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "company-brand @1440: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=1440, innerWidth=1440"
+    },
+    {
+      "desc": "company-brand @1440: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "company-brand @390: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=390, innerWidth=390"
+    },
+    {
+      "desc": "company-brand @390: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "нумерация: образец номеров по черновику (префикс DEMO)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "нумерация: маска без {seq} — ошибка словами, сохранение закрыто",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "нумерация: сохранена",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "company-numbering @1440: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=1440, innerWidth=1440"
+    },
+    {
+      "desc": "company-numbering @1440: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "company-numbering @390: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=390, innerWidth=390"
+    },
+    {
+      "desc": "company-numbering @390: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "условия КП: сохранены",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "администратор без роли «себестоимость/маржа»: поля маржи",
+      "ok": null,
+      "detail": "скрыты, сказано словами"
+    },
+    {
+      "desc": "company-quote @1440: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=1440, innerWidth=1440"
+    },
+    {
+      "desc": "company-quote @1440: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "company-quote @390: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=390, innerWidth=390"
+    },
+    {
+      "desc": "company-quote @390: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "статья расхода: добавлена",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "статья расхода: строка в таблице",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "company-charges @1440: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=1440, innerWidth=1440"
+    },
+    {
+      "desc": "company-charges @1440: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "company-charges @390: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=390, innerWidth=390"
+    },
+    {
+      "desc": "company-charges @390: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "статья расхода: изменена (300)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "статья расхода: удаление с «Что произойдёт»",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "статья расхода: удалена",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "шаблон документа: копия образца создана",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "шаблон документа: копия получила введённое администратором название",
+      "ok": false,
+      "detail": "строки с «Договор поставки (рельсы 19)» нет; свои шаблоны: Договор поставки (образец платформы)"
+    },
+    {
+      "desc": "шаблон договора с неполным телом: ответ называет, каких блоков не хватает",
+      "ok": false,
+      "detail": "текст ответа администратору: «Проверьте заполнение полей.»"
+    },
+    {
+      "desc": "шаблон документа: правка названия сохранена (тело нетронуто)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "шаблон документа: в списке название, введённое при правке",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "шаблон документа: удалён",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "шаблон письма: создан",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "company-templates-emails @1440: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=1440, innerWidth=1440"
+    },
+    {
+      "desc": "company-templates-emails @1440: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "company-templates-emails @390: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=390, innerWidth=390"
+    },
+    {
+      "desc": "company-templates-emails @390: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "шаблон письма: удалён",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "справочник «Страны»: строка добавлена",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "справочник «Страны»: неиспользуемая строка удалена",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "справочник «Валюты»: строка отключена",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "справочник «Валюты»: строка включена обратно",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "company-reference @1440: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=1440, innerWidth=1440"
+    },
+    {
+      "desc": "company-reference @1440: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "company-reference @390: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=390, innerWidth=390"
+    },
+    {
+      "desc": "company-reference @390: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "категория: подкатегория добавлена",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "категория: переименована",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "company-categories @1440: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=1440, innerWidth=1440"
+    },
+    {
+      "desc": "company-categories @1440: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "company-categories @390: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=390, innerWidth=390"
+    },
+    {
+      "desc": "company-categories @390: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "категория: удалена",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "НДС до правки",
+      "ok": null,
+      "detail": "16.0"
+    },
+    {
+      "desc": "платформенные настройки: ставка НДС сохранена",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "НДС после перезагрузки = введённому",
+      "ok": true,
+      "detail": "введено 20, на экране 20.0"
+    },
+    {
+      "desc": "company-platform @1440: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=1440, innerWidth=1440"
+    },
+    {
+      "desc": "company-platform @1440: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "company-platform @390: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=390, innerWidth=390"
+    },
+    {
+      "desc": "company-platform @390: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "ошибки консоли / 5xx",
+      "ok": null,
+      "detail": "Failed to load resource: the server responded with a status of 401 (Unauthorized) | Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) ;; "
+    }
+  ],
+  "screens": [
+    {
+      "name": "company-details-logo",
+      "width": 1440,
+      "file": "s3-company-details-logo-1440.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "company-details-logo",
+      "width": 390,
+      "file": "s3-company-details-logo-390.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "company-brand",
+      "width": 1440,
+      "file": "s3-company-brand-1440.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "company-brand",
+      "width": 390,
+      "file": "s3-company-brand-390.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "company-numbering",
+      "width": 1440,
+      "file": "s3-company-numbering-1440.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "company-numbering",
+      "width": 390,
+      "file": "s3-company-numbering-390.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "company-quote",
+      "width": 1440,
+      "file": "s3-company-quote-1440.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "company-quote",
+      "width": 390,
+      "file": "s3-company-quote-390.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "company-charges-add",
+      "width": 1440,
+      "file": "s3-company-charges-add-1440.png"
+    },
+    {
+      "name": "company-charges",
+      "width": 1440,
+      "file": "s3-company-charges-1440.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "company-charges",
+      "width": 390,
+      "file": "s3-company-charges-390.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "company-templates-editor-unknown-placeholder",
+      "width": 1440,
+      "file": "s3-company-templates-editor-unknown-placeholder-1440.png"
+    },
+    {
+      "name": "company-templates-editor-save-error",
+      "width": 1440,
+      "file": "s3-company-templates-editor-save-error-1440.png"
+    },
+    {
+      "name": "company-templates-emails",
+      "width": 1440,
+      "file": "s3-company-templates-emails-1440.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "company-templates-emails",
+      "width": 390,
+      "file": "s3-company-templates-emails-390.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "company-reference",
+      "width": 1440,
+      "file": "s3-company-reference-1440.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "company-reference",
+      "width": 390,
+      "file": "s3-company-reference-390.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "company-categories",
+      "width": 1440,
+      "file": "s3-company-categories-1440.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "company-categories",
+      "width": 390,
+      "file": "s3-company-categories-390.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "company-platform",
+      "width": 1440,
+      "file": "s3-company-platform-1440.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "company-platform",
+      "width": 390,
+      "file": "s3-company-platform-390.png",
+      "noHScroll": true,
+      "axe": []
+    }
+  ]
+}
