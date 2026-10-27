@@ -1,6 +1,6 @@
 """Обращения сотрудников к администратору (W15-H7, ADR-0015): свои — любому, все — админу.
 
-Автор видит и пишет только своё (`/mine`); список всех, ответ и смена статуса — права
+Автор видит и пишет только своё (`/me/tickets`); список всех, ответ и смена статуса — права
 `tickets:read` / `tickets:write` раздела `admin` каталога (директор читает, администратор правит).
 Чужое обращение автору отвечает 404: его не существует.
 """
@@ -25,6 +25,8 @@ from app.security.principal import Principal
 from app.services.staff_tickets import TicketDetail, TicketRow
 
 router = APIRouter(prefix="/api/v1/staff-tickets", tags=["staff-tickets"])
+# Свои обращения — отдельный префикс: `/mine/{id}` рядом с `/{id}/reply` читался бы двусмысленно.
+mine_router = APIRouter(prefix="/api/v1/me/tickets", tags=["staff-tickets"])
 
 Reader = Annotated[Principal, Depends(require("tickets", "read"))]
 Writer = Annotated[Principal, Depends(require("tickets", "write"))]
@@ -66,7 +68,7 @@ def _detail(detail: TicketDetail) -> TicketOut:
     )
 
 
-@router.post("", response_model=TicketOut, status_code=status.HTTP_201_CREATED)
+@mine_router.post("", response_model=TicketOut, status_code=status.HTTP_201_CREATED)
 async def create_ticket(body: TicketIn, who: Settled, container: ContainerDep) -> TicketOut:
     """«Написать администратору»: не больше 5 обращений в час (429 `ticket_rate_limited`)."""
     detail = await container.staff_tickets.create(
@@ -80,13 +82,13 @@ async def create_ticket(body: TicketIn, who: Settled, container: ContainerDep) -
     return _detail(detail)
 
 
-@router.get("/mine", response_model=list[TicketRowOut])
-async def my_tickets(who: Settled, container: ContainerDep) -> list[TicketRowOut]:
+@mine_router.get("", response_model=list[TicketRowOut])
+async def list_my_tickets(who: Settled, container: ContainerDep) -> list[TicketRowOut]:
     return [_slots(r) for r in await container.staff_tickets.list_own(who.user_id)]
 
 
-@router.get("/mine/{ticket_id}", response_model=TicketOut)
-async def my_ticket(ticket_id: TicketId, who: Settled, container: ContainerDep) -> TicketOut:
+@mine_router.get("/{ticket_id}", response_model=TicketOut)
+async def get_my_ticket(ticket_id: TicketId, who: Settled, container: ContainerDep) -> TicketOut:
     return _detail(await container.staff_tickets.get_own(who.user_id, ticket_id))
 
 
@@ -115,7 +117,7 @@ async def get_ticket(ticket_id: TicketId, _: Reader, container: ContainerDep) ->
 
 
 @router.post("/{ticket_id}/reply", response_model=TicketOut)
-async def reply(
+async def reply_to_ticket(
     ticket_id: TicketId, body: TicketReplyIn, who: Writer, container: ContainerDep
 ) -> TicketOut:
     """Ответ автору (колокольчик и Telegram); новое обращение уходит «В работу»."""
@@ -126,7 +128,7 @@ async def reply(
 
 
 @router.post("/{ticket_id}/status", response_model=TicketOut)
-async def set_status(
+async def set_ticket_status(
     ticket_id: TicketId, body: TicketStatusIn, who: Writer, container: ContainerDep
 ) -> TicketOut:
     return _detail(await container.staff_tickets.set_status(who.actor, ticket_id, body.status))

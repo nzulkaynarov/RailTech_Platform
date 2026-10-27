@@ -255,7 +255,7 @@ async def test_api_author_creates_and_reads_only_own_admin_replies(
     admin = login(client, boss.email, boss_pw)
 
     created = client.post(
-        "/api/v1/staff-tickets",
+        "/api/v1/me/tickets",
         headers=mine,
         json={
             "subject": "template",
@@ -269,11 +269,9 @@ async def test_api_author_creates_and_reads_only_own_admin_replies(
     assert ticket["status"] == "new"
     ticket_id = ticket["id"]
 
-    assert [t["id"] for t in client.get("/api/v1/staff-tickets/mine", headers=mine).json()] == [
-        ticket_id
-    ]
-    assert client.get("/api/v1/staff-tickets/mine", headers=theirs).json() == []
-    assert client.get(f"/api/v1/staff-tickets/mine/{ticket_id}", headers=theirs).status_code == 404
+    assert [t["id"] for t in client.get("/api/v1/me/tickets", headers=mine).json()] == [ticket_id]
+    assert client.get("/api/v1/me/tickets", headers=theirs).json() == []
+    assert client.get(f"/api/v1/me/tickets/{ticket_id}", headers=theirs).status_code == 404
     # Свои обращения — не раздел админа: список всех и ответ автору недоступны.
     assert client.get("/api/v1/staff-tickets", headers=mine).status_code == 403
     assert (
@@ -295,7 +293,7 @@ async def test_api_author_creates_and_reads_only_own_admin_replies(
     assert replied.json()["status"] == "resolved"
     assert replied.json()["messages"][0]["body"] == "Шаблон добавлен"
 
-    seen = client.get(f"/api/v1/staff-tickets/mine/{ticket_id}", headers=mine).json()
+    seen = client.get(f"/api/v1/me/tickets/{ticket_id}", headers=mine).json()
     assert seen["messages"][0]["body"] == "Шаблон добавлен"
     bell = client.get("/api/v1/me/notifications", headers=mine).json()
     assert bell["unread_count"] == 1
@@ -322,7 +320,7 @@ async def test_api_validation_errors_carry_reason_and_field(
             "page",
         ),
     ]:
-        response = client.post("/api/v1/staff-tickets", headers=headers, json=payload)
+        response = client.post("/api/v1/me/tickets", headers=headers, json=payload)
         assert response.status_code == 422, response.text
         details = response.json()["details"]
         assert (details["reason"], details["field"]) == (reason, field)
@@ -335,11 +333,11 @@ async def test_api_rate_limit_returns_429(
     headers = login(client, author.email, password)
     for i in range(5):
         ok = client.post(
-            "/api/v1/staff-tickets", headers=headers, json={"subject": "other", "body": f"п{i}"}
+            "/api/v1/me/tickets", headers=headers, json={"subject": "other", "body": f"п{i}"}
         )
         assert ok.status_code == 201
     over = client.post(
-        "/api/v1/staff-tickets", headers=headers, json={"subject": "other", "body": "ещё"}
+        "/api/v1/me/tickets", headers=headers, json={"subject": "other", "body": "ещё"}
     )
     assert over.status_code == 429
     assert over.json()["details"]["reason"] == "ticket_rate_limited"

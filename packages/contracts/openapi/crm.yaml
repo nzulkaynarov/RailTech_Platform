@@ -11190,6 +11190,86 @@ paths:
       summary: Test Notification
       tags:
       - me
+  /api/v1/me/tickets:
+    get:
+      operationId: list_my_tickets
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/TicketRowOut'
+                title: Response List My Tickets
+                type: array
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: List My Tickets
+      tags:
+      - staff-tickets
+    post:
+      description: '«Написать администратору»: не больше 5 обращений в час (429 `ticket_rate_limited`).'
+      operationId: create_ticket
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TicketIn'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketOut'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Create Ticket
+      tags:
+      - staff-tickets
+  /api/v1/me/tickets/{ticket_id}:
+    get:
+      operationId: get_my_ticket
+      parameters:
+      - in: path
+        name: ticket_id
+        required: true
+        schema:
+          exclusiveMinimum: 0
+          title: Ticket Id
+          type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketOut'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Get My Ticket
+      tags:
+      - staff-tickets
   /api/v1/models:
     get:
       operationId: list_models
@@ -12016,86 +12096,6 @@ paths:
       summary: List Tickets
       tags:
       - staff-tickets
-    post:
-      description: '«Написать администратору»: не больше 5 обращений в час (429 `ticket_rate_limited`).'
-      operationId: create_ticket
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/TicketIn'
-        required: true
-      responses:
-        '201':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TicketOut'
-          description: Successful Response
-        '422':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorOut'
-          description: Ошибка валидации
-      security:
-      - HTTPBearer: []
-      summary: Create Ticket
-      tags:
-      - staff-tickets
-  /api/v1/staff-tickets/mine:
-    get:
-      operationId: my_tickets
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                items:
-                  $ref: '#/components/schemas/TicketRowOut'
-                title: Response My Tickets
-                type: array
-          description: Successful Response
-        '422':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorOut'
-          description: Ошибка валидации
-      security:
-      - HTTPBearer: []
-      summary: My Tickets
-      tags:
-      - staff-tickets
-  /api/v1/staff-tickets/mine/{ticket_id}:
-    get:
-      operationId: my_ticket
-      parameters:
-      - in: path
-        name: ticket_id
-        required: true
-        schema:
-          exclusiveMinimum: 0
-          title: Ticket Id
-          type: integer
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TicketOut'
-          description: Successful Response
-        '422':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorOut'
-          description: Ошибка валидации
-      security:
-      - HTTPBearer: []
-      summary: My Ticket
-      tags:
-      - staff-tickets
   /api/v1/staff-tickets/{ticket_id}:
     get:
       operationId: get_ticket
@@ -12128,7 +12128,7 @@ paths:
   /api/v1/staff-tickets/{ticket_id}/reply:
     post:
       description: Ответ автору (колокольчик и Telegram); новое обращение уходит «В работу».
-      operationId: reply
+      operationId: reply_to_ticket
       parameters:
       - in: path
         name: ticket_id
@@ -12158,12 +12158,12 @@ paths:
           description: Ошибка валидации
       security:
       - HTTPBearer: []
-      summary: Reply
+      summary: Reply To Ticket
       tags:
       - staff-tickets
   /api/v1/staff-tickets/{ticket_id}/status:
     post:
-      operationId: set_status
+      operationId: set_ticket_status
       parameters:
       - in: path
         name: ticket_id
@@ -12193,7 +12193,7 @@ paths:
           description: Ошибка валидации
       security:
       - HTTPBearer: []
-      summary: Set Status
+      summary: Set Ticket Status
       tags:
       - staff-tickets
   /api/v1/staff/{user_id}/avatar:

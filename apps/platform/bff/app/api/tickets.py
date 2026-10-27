@@ -32,6 +32,7 @@ from app.schemas_tickets import (
 router = APIRouter(tags=["tickets"])
 
 CRM = "/api/v1/staff-tickets"
+CRM_MINE = "/api/v1/me/tickets"
 Author = Annotated[Authed, Depends(require_any_section)]
 AdminRead = Annotated[Authed, Depends(require("admin", "read"))]
 AdminWrite = Annotated[Authed, Depends(require("admin", "full"))]
@@ -116,7 +117,7 @@ async def create_ticket(body: TicketCreate, authed: Author) -> Ticket:
         "page": body.page,
         "role": author_role_of(authed.data),
     }
-    return to_ticket(_json(await authed.call("crm", "POST", CRM, json=payload)))
+    return to_ticket(_json(await authed.call("crm", "POST", CRM_MINE, json=payload)))
 
 
 @router.get(
@@ -126,7 +127,7 @@ async def create_ticket(body: TicketCreate, authed: Author) -> Ticket:
     operation_id="listMyTickets",
 )
 async def list_my_tickets(authed: Author) -> TicketList:
-    rows = _json(await authed.call("crm", "GET", f"{CRM}/mine"))
+    rows = _json(await authed.call("crm", "GET", CRM_MINE))
     return TicketList(items=[to_row(r) for r in rows])
 
 
@@ -137,7 +138,7 @@ async def list_my_tickets(authed: Author) -> TicketList:
     operation_id="getMyTicket",
 )
 async def get_my_ticket(number: Number, authed: Author) -> Ticket:
-    return to_ticket(_json(await authed.call("crm", "GET", f"{CRM}/mine/{_id(number)}")))
+    return to_ticket(_json(await authed.call("crm", "GET", f"{CRM_MINE}/{_id(number)}")))
 
 
 @router.get(

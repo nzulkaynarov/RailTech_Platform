@@ -151,4 +151,5 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     for module in routers:
         router = module.router
         app.include_router(router)
+    app.include_router(staff_tickets.mine_router)
     return app

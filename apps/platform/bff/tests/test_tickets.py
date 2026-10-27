@@ -16,6 +16,7 @@ from tests.conftest import ContractChecker, Web
 from tests.consts import CRM_URL
 
 TICKETS = f"{CRM_URL}/api/v1/staff-tickets"
+MINE = f"{CRM_URL}/api/v1/me/tickets"
 NOW = datetime(2026, 10, 28, 9, 0, tzinfo=UTC).isoformat().replace("+00:00", "Z")
 
 
@@ -55,13 +56,11 @@ class CrmTickets:
         self.calls: list[tuple[str, str, Any]] = []
         self.reply: httpx.Response | None = None
         router = be.router
-        router.post(TICKETS).mock(
+        router.post(MINE).mock(
             side_effect=lambda r: self._answer("create", r, 201, crm_ticket())
         )
-        router.get(f"{TICKETS}/mine").mock(
-            side_effect=lambda r: self._answer("mine", r, 200, [crm_row()])
-        )
-        router.get(url__regex=rf"^{TICKETS}/mine/\d+$").mock(
+        router.get(MINE).mock(side_effect=lambda r: self._answer("mine", r, 200, [crm_row()]))
+        router.get(url__regex=rf"^{MINE}/\d+$").mock(
             side_effect=lambda r: self._answer("mine_one", r, 200, crm_ticket())
         )
         router.get(url__regex=rf"^{TICKETS}\?.*").mock(
@@ -178,7 +177,7 @@ async def test_value_errors_of_crm_become_422_with_field_and_reason(
     web: Web, be: Backends, crm: CrmTickets, check: ContractChecker
 ) -> None:
     await web.login(["MANAGER"])
-    be.router.post(TICKETS).mock(
+    be.router.post(MINE).mock(
         return_value=error(422, "validation_failed", "ticket_text_empty", field="body")
     )
 
@@ -196,7 +195,7 @@ async def test_rate_limit_is_translated_with_retry_after(
     web: Web, be: Backends, crm: CrmTickets, check: ContractChecker
 ) -> None:
     await web.login(["MANAGER"])
-    be.router.post(TICKETS).mock(
+    be.router.post(MINE).mock(
         return_value=httpx.Response(
             429,
             headers={"Retry-After": "120"},
@@ -229,7 +228,7 @@ async def test_my_tickets_list_and_card_by_number(
     check(one, "/tickets/{number}", "get")
     assert [t["number"] for t in mine.json()["items"]] == ["ОБР-0012"]
     assert one.json()["messages"] == []
-    assert crm.last("mine_one")[0].endswith("/staff-tickets/mine/12")
+    assert crm.last("mine_one")[0].endswith("/me/tickets/12")
 
 
 async def test_card_with_a_bad_number_is_not_sent_to_crm(web: Web, crm: CrmTickets) -> None:
@@ -243,7 +242,7 @@ async def test_card_with_a_bad_number_is_not_sent_to_crm(web: Web, crm: CrmTicke
 
 async def test_foreign_ticket_is_not_found(web: Web, be: Backends, crm: CrmTickets) -> None:
     await web.login(["MANAGER"])
-    be.router.get(url__regex=rf"^{TICKETS}/mine/\d+$").mock(return_value=error(404, "not_found"))
+    be.router.get(url__regex=rf"^{MINE}/\d+$").mock(return_value=error(404, "not_found"))
 
     response = await web.client.get("/api/v1/tickets/ОБР-0099")
 
@@ -321,7 +320,7 @@ async def test_status_transition_conflict_is_a_409_with_reason(
 
 async def test_crm_down_is_a_503_on_create(web: Web, be: Backends, crm: CrmTickets) -> None:
     await web.login(["MANAGER"])
-    be.router.post(TICKETS).mock(side_effect=httpx.ConnectError("down"))
+    be.router.post(MINE).mock(side_effect=httpx.ConnectError("down"))
 
     response = await web.send("POST", "/api/v1/tickets", json={"subject": "error", "body": "сбой"})
 
