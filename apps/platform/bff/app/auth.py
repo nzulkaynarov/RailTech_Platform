@@ -503,6 +503,7 @@ class AuthService:
         probe: bool = False,
         content: bytes | None = None,
         content_type: str | None = None,
+        stream: bool = False,
     ) -> httpx.Response:
         client = {"crm": self.crm, "erp": self.erp, "eds": self.eds}[backend]
         if client is None:
@@ -518,6 +519,7 @@ class AuthService:
                 headers=headers,
                 content=content,
                 probe=probe,
+                stream=stream,
             )
         except BackendUnavailableError as exc:
             raise backend_unavailable(backend, exc.reason) from exc
@@ -534,28 +536,34 @@ class AuthService:
         content: bytes | None = None,
         content_type: str | None = None,
         probe: bool = False,
+        stream: bool = False,
     ) -> httpx.Response:
         """Вызов CRM или ERP с токеном сотрудника. 2xx и 4xx бэкенда возвращаются как есть
         (`probe` — ещё и 502, см. `BackendClient.send`).
 
         Просроченный access обновляется заранее; если бэкенд всё же ответил 401 — одно обновление и
-        повтор. Не помогло — сессия удаляется, 401 `SESSION_EXPIRED`.
+        повтор. Не помогло — сессия удаляется, 401 `SESSION_EXPIRED`. `stream` — ответ отдаётся
+        открытым (тело не прочитано), закрывает его вызывающий; отвергнутый 401 закрывается здесь.
         """
         data = await self._prepare(sid, backend)
         tokens = _tokens(data, backend)
         assert tokens is not None  # noqa: S101 — _prepare гарантирует токены
         resp = await self._send(
-            backend, tokens, method, path, json, params, probe, content, content_type
+            backend, tokens, method, path, json, params, probe, content, content_type, stream
         )
         if resp.status_code != 401:
             return resp
+        if stream:
+            await resp.aclose()
         data = await self._prepare(sid, backend, rejected=tokens.access)
         tokens = _tokens(data, backend)
         assert tokens is not None  # noqa: S101
         resp = await self._send(
-            backend, tokens, method, path, json, params, probe, content, content_type
+            backend, tokens, method, path, json, params, probe, content, content_type, stream
         )
         if resp.status_code == 401:
+            if stream:
+                await resp.aclose()
             if backend == "eds":
                 # Свежий токен EDS отвергнут: сбой EDS (секреты), а не конец сессии Платформы. Токен
                 # сбрасывается, новый обмен — не раньше паузы.

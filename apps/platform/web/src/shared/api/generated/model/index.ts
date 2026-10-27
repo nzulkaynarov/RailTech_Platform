@@ -52,15 +52,6 @@
  * обычными API (с проверкой прав). Данных событий в потоке нет. Пока поток жив, опрос — редкий (5 минут), при обрыве —
  * прежние 30 секунд. Чисто добавляющее изменение.
  *
- * **0.12.0 (W13-A6) — Admin · Оргструктура, Журнал аудита, профиль.** Чисто добавляющее изменение: `POST /admin/users/{id}/reset-password/email`
- * (сброс пароля сотрудника с письмом; себе — 409 `CONFLICT` с `details.reason = self_reset`; почта не подключена — 409
- * `NOT_CONFIGURED`), `GET /admin/audit` (журнал аудита CRM «кто, что, когда» с фильтрами по автору, действию, объекту и периоду и
- * постраничным ответом), `GET /admin/roles/{id}/journal` (изменения роли: кто, когда и что — матрица до и после; вкладка «Журнал»
- * роли, скрытая с R-1b), `GET/PATCH /me/notification-settings` и `POST /me/test-notification` (личные уведомления от бота: Telegram
- * привязан ли, подписки, последняя неудача доставки, пробное сообщение). Журнал и журнал роли — раздел `admin` от чтения
- * (директор читает), сброс пароля — `admin: full`; профиль доступен каждому вошедшему. Секреты из записей журнала BFF вырезает
- * (значения полей `password`, `secret`, `token`, `key`, `*_key`, `credentials`, `authorization`, `pin` и им подобных -> `***` целиком, любого типа).
- *
  * **0.8.0 (W13-A3) — Admin · Компания.** Чисто добавляющее изменение: `GET/PATCH /admin/company` (реквизиты), `/admin/company/logo`
  * (загрузка `multipart/form-data` и удаление), `/admin/company/brand` (+ `/logo`, `/preview`) — бланк и бренд документов,
  * `/admin/company/numbering` (+ `/preview`), `/admin/company/quote-defaults`, `/admin/company/charge-types` и `charge-templates`,
@@ -112,6 +103,27 @@
  * `SETUP_DONE` (409), `SETUP_CODE_INVALID`, `SETUP_CODE_EXPIRED` (422), `SETUP_LOCKED` (429, 15 минут после десяти неверных
  * кодов), `OWN_COMPANY_ALREADY_EXISTS` (409). Право: чек-лист и мастер компании видит и выполняет только `admin: full` — CRM
  * `/setup/checklist` требует право записи настроек; директору баннер не показывается.
+ *
+ * **0.11.0 (W13-A5) — добавляющее.** CRM · База знаний и Admin · Настройки бота (теги `kb` и `bot`). **База знаний** (`/crm/kb/*`,
+ * `/crm/sandbox/*`): документы (список, загрузка файла `.md` multipart, ручной ввод, включение и выключение, переиндексация,
+ * фрагменты), поиск «Что найдёт бот», пробелы (закрыть привязкой к документу, игнорировать, вернуть), справочник продуктов,
+ * песочница бота (сообщение, «начать заново»). Читают роли с `crm.leads` или `admin`; правят, переиндексируют и пользуются
+ * песочницей — `admin: full`. **Настройки бота** (`/admin/bot/*`): разделы CRM `/settings` значениями и JSON Schema (форма строится
+ * по схеме CRM), сохранение раздела, пробный прогон правил передачи, шаблоны быстрых ответов, выгрузки CSV лидов, клиентов и
+ * сделок — потоком, с правом на выгружаемые данные (`crm.leads` для лидов, `crm.clients` для клиентов и сделок). Чтение настроек
+ * — `admin` от `read`, правка — `admin: full`. Каталог ролей: директор (`admin: read`) читает настройки бота, шаблоны ответов и
+ * базу знаний (права CRM `settings:read`, `reply_templates:read`, `kb:read`); пункт меню CRM «База знаний» открывает и раздел
+ * `admin`; в Admin новый пункт «Настройки бота». Нового кода ошибки нет: ошибки формата документа и пути невалидных полей настроек
+ * — `VALIDATION_FAILED` с `details.reason`, `details.rule`, `details.messages`, `details.paths`.
+ *
+ * **0.12.0 (W13-A6) — Admin · Оргструктура, Журнал аудита, профиль.** Чисто добавляющее изменение: `POST /admin/users/{id}/reset-password/email`
+ * (сброс пароля сотрудника с письмом; себе — 409 `CONFLICT` с `details.reason = self_reset`; почта не подключена — 409
+ * `NOT_CONFIGURED`), `GET /admin/audit` (журнал аудита CRM «кто, что, когда» с фильтрами по автору, действию, объекту и периоду и
+ * постраничным ответом), `GET /admin/roles/{id}/journal` (изменения роли: кто, когда и что — матрица до и после; вкладка «Журнал»
+ * роли, скрытая с R-1b), `GET/PATCH /me/notification-settings` и `POST /me/test-notification` (личные уведомления от бота: Telegram
+ * привязан ли, подписки, последняя неудача доставки, пробное сообщение). Журнал и журнал роли — раздел `admin` от чтения
+ * (директор читает), сброс пароля — `admin: full`; профиль доступен каждому вошедшему. Секреты из записей журнала BFF вырезает
+ * (значения полей `password`, `secret`, `token`, `key`, `*_key`, `credentials`, `authorization`, `pin` и им подобных -> `***` целиком, любого типа).
  *
  * 0.2.4: `423 ACCOUNT_LOCKED` объявлен и на `POST /auth/change-password` (CRM блокирует учётную запись после неверных
  * текущих паролей).
@@ -172,6 +184,9 @@ export * from "./botProfile";
 export * from "./botProfilePublish";
 export * from "./botProfilePublishError";
 export * from "./botProfileState";
+export * from "./botSettings";
+export * from "./botSettingsSchemas";
+export * from "./botSettingsValues";
 export * from "./brandPreviewIn";
 export * from "./brandProfile";
 export * from "./brandProfileFontFamily";
@@ -220,6 +235,7 @@ export * from "./chargeTypeList";
 export * from "./companyItemRef";
 export * from "./companyProfile";
 export * from "./companyProfileUpdate";
+export * from "./createdId";
 export * from "./csrfFailedResponse";
 export * from "./csrfTokenParameter";
 export * from "./decimalString";
@@ -234,6 +250,7 @@ export * from "./documentTemplateIn";
 export * from "./documentTemplateList";
 export * from "./documentTemplatePreviewIn";
 export * from "./documentTemplateUpdate";
+export * from "./downloadCsvExportParams";
 export * from "./dueLabel";
 export * from "./emailTemplate";
 export * from "./emailTemplateIn";
@@ -257,6 +274,11 @@ export * from "./erpSyncState";
 export * from "./error";
 export * from "./errorDetails";
 export * from "./errorSource";
+export * from "./escalationDryRun";
+export * from "./escalationDryRunByCodeCandidate";
+export * from "./escalationDryRunByCodeCurrent";
+export * from "./escalationDryRunRow";
+export * from "./escalationSettingsIn";
 export * from "./externalService";
 export * from "./externalServiceDetail";
 export * from "./externalServiceFrequency";
@@ -288,12 +310,32 @@ export * from "./integrationsOverview";
 export * from "./integrationStatus";
 export * from "./invalidationHint";
 export * from "./invalidationTopic";
+export * from "./kbChunk";
+export * from "./kbChunkList";
+export * from "./kbDocument";
+export * from "./kbDocumentIngestStatus";
+export * from "./kbDocumentList";
+export * from "./kbDocumentPatch";
+export * from "./kbDocumentSourceType";
+export * from "./kbDocumentUpload";
+export * from "./kbGap";
+export * from "./kbGapPage";
+export * from "./kbGapResolveIn";
+export * from "./kbGapStatus";
+export * from "./kbManualDocumentIn";
+export * from "./kbProduct";
+export * from "./kbProductList";
+export * from "./kbSearchHit";
+export * from "./kbSearchIn";
+export * from "./kbSearchResult";
 export * from "./language";
 export * from "./listAuditParams";
 export * from "./listBusDeliveriesParams";
 export * from "./listBusInboxParams";
 export * from "./listCategoryRequestsParams";
 export * from "./listEmployeesParams";
+export * from "./listKbDocumentsParams";
+export * from "./listKbGapsParams";
 export * from "./listMailLogParams";
 export * from "./listMailLogStatus";
 export * from "./listNotificationsParams";
@@ -348,6 +390,9 @@ export * from "./referenceItemIn";
 export * from "./referenceItemList";
 export * from "./referenceItemUpdate";
 export * from "./referenceKind";
+export * from "./replyTemplate";
+export * from "./replyTemplateIn";
+export * from "./replyTemplateList";
 export * from "./resourceAccess";
 export * from "./restrictedField";
 export * from "./role";
@@ -364,6 +409,11 @@ export * from "./roleQueryParameter";
 export * from "./roleRef";
 export * from "./roleSnapshot";
 export * from "./roleUpdate";
+export * from "./sandboxMessageIn";
+export * from "./sandboxReply";
+export * from "./sandboxTurn";
+export * from "./sandboxWhy";
+export * from "./saveBotSettingBody";
 export * from "./searchGroup";
 export * from "./searchHit";
 export * from "./searchParams";

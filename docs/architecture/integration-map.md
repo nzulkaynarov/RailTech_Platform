@@ -52,7 +52,9 @@
 | Новая заявка для клиента | `POST /clients/{id}/request` | `POST /leads/{id}/actions/new_deal` | handoff с `create_request` | Δ CRM-03 |
 | Все заявки (ЗВ/ПР, 7 шагов) | `GET /requests` | — | `GET /crm/deals/` + документы | ✓, шаг — §2 |
 | Каналы связи | `GET /channels` | `GET /integrations/telegram`, `GET /settings` (тексты), `GET /integrations/smtp` | — | ✓ |
-| База знаний | `/kb/*` | `/kb/documents*`, `/kb/gaps*`, `/kb/products*`, `/reply-templates*` | — | ✓ |
+| База знаний: документы, поиск «Что найдёт бот», карточка и фрагменты | `GET /crm/kb/documents`, `GET /crm/kb/documents/{id}[/chunks]`, `POST /crm/kb/search`; изменения — `PATCH /crm/kb/documents/{id}`, `POST /crm/kb/documents/{id}/reingest`, `POST /crm/kb/documents` (multipart, тело CRM не разбирается), `POST /crm/kb/documents/manual` | `/kb/documents*`, `/kb/search` | — | ✓ (BFF 0.11.0, W13-A5); чтение — `crm.leads` или `admin`, правка — `admin: full` |
+| База знаний: пробелы, продукты | `GET /crm/kb/gaps`, `POST /crm/kb/gaps/{id}/{resolve,ignore,reopen}`, `GET /crm/kb/products` | `/kb/gaps*`, `/kb/products` (чтение требует `leads:read`) | — | ✓ (W13-A5); разрыв CRM-11 |
+| Песочница бота | `POST /crm/sandbox/messages`, `POST /crm/sandbox/reset` | `/sandbox/messages`, `/sandbox/reset` (`sandbox:use`; платно, в «Расходах» с пометкой «тест») | — | ✓ (W13-A5), `admin: full` |
 
 ### 1.4. EDS
 
@@ -105,6 +107,10 @@
 | Первый запуск: администратор (до входа) | `GET /setup/state`, `POST /setup/admin` (без сессии; ответ как у входа) | `GET /setup/state`, `POST /setup/admin` (код из журнала `crm-api`) | — | ✓ (BFF 0.10.0, W13-A4) |
 | Первый запуск: своя компания и чек-лист из пяти шагов | `GET /setup/checklist`, `POST /setup/company` (раздел `admin` полный) | `GET /setup/checklist`, `/integrations/erp`, `/integrations/smtp`, `/users` | `setup/status/`, `setup/company/` | ✓ (BFF 0.10.0, W13-A4); разрывы — `QUESTIONS.md` Q-W13-A4-2 |
 | Сотрудник без почты: временный пароль один раз | `POST /admin/users`, `POST /admin/users/{id}/temporary-password` | `POST /users` (`temporary_password`), `POST /users/{id}/reset-password` | — | ✓ (BFF 0.10.0, W13-A4) |
+| Настройки бота (14 разделов: компания, часы, тексты, поведение, поиск по БЗ, стоп-слова, конкуренты, передачи, квалификация, веб-форма, канал команды, оповещения, сделки, бюджет) | `GET /admin/bot/settings` (значения и JSON Schema), `PUT /admin/bot/settings/{key}` — форма строится по схеме CRM | `GET /settings`, `PUT /settings/{key}` (`settings:read` / `settings:write`) | — | ✓ (BFF 0.11.0, W13-A5); чтение `admin: read`, правка `admin: full` |
+| Пробный прогон правил передачи | `POST /admin/bot/settings/escalation/dry-run` | `POST /settings/escalation/dry-run` | — | ✓ (W13-A5), `admin: full` |
+| Шаблоны быстрых ответов | `GET/POST /admin/bot/reply-templates`, `PUT/DELETE /admin/bot/reply-templates/{id}` | `/reply-templates*` (`reply_templates:read` / `reply_templates:write`) | — | ✓ (W13-A5); читает и менеджер с `crm.leads` полным |
+| Выгрузки CSV лидов, клиентов, сделок | `GET /admin/bot/exports/{leads,clients,deals}` — поток, имя файла с датой | `GET /export/{leads,clients,deals}.csv` (`export:read` и чтение данных) | — | ✓ (W13-A5): `admin: full` и `crm.leads` / `crm.clients`; одному «Администратору» данные не выгружаются (R3-D-2) |
 | Тикеты от команды | `GET/POST /admin/tickets` | новое `tickets` | — | Δ CRM-05 |
 | Компания (W13-A3, BFF 0.8.0): реквизиты и логотип, бланк и бренд, нумерация, условия КП, статьи расхода, шаблоны документов и писем, справочники, категории и запросы, НДС | `/admin/company*` (раздел `company.settings`; `GET`/предпросмотры — чтение, изменения — полный) | — | `accounts/companies/{id}/` (+ `upload-logo`, `delete-logo`, `document-profile/` + `preview`, `upload-logo`, `settings/`), `crm/numbering-scheme/` (+ `preview`), `crm/charge-templates/`, `crm/charge-types/`, `crm/document-templates/*`, `settings/email-templates/`, `master-data/{countries,currencies,units,delivery-basis}/`, `catalog/categories/`, `catalog/category-requests/` (+ `approve`, `reject`), `system-settings/`; id компании — `setup/status/` (`own_company_id`) | ✓, разрывы — Q-W13A3-1 |
 
@@ -262,6 +268,7 @@
 | CRM-08 | `GET /inbox` с фильтром «мои» (`taken_by`, отложенные) на стороне CRM, вместо фильтрации в BFF | P2 |
 | CRM-09 | итог провижининга в ERP в выдаче пользователя (`erp_sync`: ok/pending/error), повторная отправка приглашения без смены пароля | P2 |
 | CRM-10 | канал администратора для системных оповещений (никогда в канал команды), подавление «мигания» сервиса | по решению владельца |
+| CRM-11 | W13-A5: (1) удаление документа базы знаний (сейчас только выключение `is_active`); (2) `GET /kb/products` для `kb:read`, а не только `leads:read` (администратор без второй роли вводит ключ продукта руками); (3) подписи полей настроек и тексты ошибок формата на трёх языках приходят от экрана и CRM только по-русски там, где их пишет CRM (`description` схем) | по решению владельца |
 
 ### Cabinet и портал ERP
 

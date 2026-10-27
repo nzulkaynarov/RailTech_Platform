@@ -1,0 +1,488 @@
+{
+  "company": {
+    "name": "RailTech",
+    "crm_base_url": "http://localhost",
+    "phone": "",
+    "site": "",
+    "address": "",
+    "cabinet_url": ""
+  },
+  "business_hours": {
+    "timezone": "Asia/Tashkent",
+    "start": "09:00:00",
+    "end": "18:00:00",
+    "weekdays": [0, 1, 2, 3, 4],
+    "holidays": []
+  },
+  "texts": {
+    "maintenance": {
+      "ru": "Идут технические работы — бот временно не отвечает. Ваше сообщение сохранено, мы ответим, как только закончим.",
+      "uz": "Texnik ishlar olib borilmoqda — bot vaqtincha javob bermaydi. Xabaringiz saqlandi, ishlarni tugatishimiz bilan javob beramiz.",
+      "en": "We are doing maintenance — the bot is temporarily not replying. Your message is saved and we will reply as soon as we are done."
+    },
+    "menu_start": { "ru": "Начать", "uz": "Boshlash", "en": "Start" },
+    "menu_human": {
+      "ru": "Связаться с менеджером",
+      "uz": "Menejer bilan bogʻlanish",
+      "en": "Talk to a manager"
+    },
+    "menu_lang": { "ru": "Сменить язык", "uz": "Tilni oʻzgartirish", "en": "Change language" },
+    "menu_help": {
+      "ru": "Что умеет бот",
+      "uz": "Bot nimalar qila oladi",
+      "en": "What the bot can do"
+    },
+    "menu_delete": {
+      "ru": "Удалить переписку",
+      "uz": "Yozishmani oʻchirish",
+      "en": "Delete the conversation"
+    },
+    "menu_docs": { "ru": "Мои документы", "uz": "Hujjatlarim", "en": "My documents" },
+    "menu_request": {
+      "ru": "Запрос менеджеру",
+      "uz": "Menejerga soʻrov",
+      "en": "Request to a manager"
+    },
+    "menu_status": { "ru": "Статус запроса", "uz": "Soʻrov holati", "en": "Request status" },
+    "client_only": {
+      "ru": "Эта команда доступна клиентам компании после заключения договора. Если договор уже есть — нажмите /human, менеджер подключит доступ. Пока я могу ответить на ваши вопросы.",
+      "uz": "Bu buyruq shartnoma tuzilgandan soʻng kompaniya mijozlari uchun mavjud. Shartnoma boʻlsa — /human tugmasini bosing, menejer kirishni ulab beradi. Hozircha savollaringizga javob berishim mumkin.",
+      "en": "This command is available to company clients once a contract is signed. If you already have a contract, tap /human and a manager will connect your access. For now I can answer your questions."
+    },
+    "help_with_manager": {
+      "ru": "Вашим вопросом занимается менеджер — пишите сюда, он ответит. Команды: /lang — сменить язык, /delete — удалить переписку.",
+      "uz": "Savolingiz bilan menejer shugʻullanmoqda — shu yerga yozing, u javob beradi. Buyruqlar: /lang — tilni oʻzgartirish, /delete — yozishmani oʻchirish.",
+      "en": "A manager is handling your question — write here and they will reply. Commands: /lang — change language, /delete — delete the conversation."
+    },
+    "help_client": {
+      "ru": "Я помогаю клиентам {company}. Команды: /docs — ваши документы, /request — запрос менеджеру, /status — статус запроса, /human — связаться с менеджером, /lang — сменить язык, /delete — удалить переписку.",
+      "uz": "Men {company} mijozlariga yordam beraman. Buyruqlar: /docs — hujjatlaringiz, /request — menejerga soʻrov, /status — soʻrov holati, /human — menejer bilan bogʻlanish, /lang — tilni oʻzgartirish, /delete — yozishmani oʻchirish.",
+      "en": "I help {company} clients. Commands: /docs — your documents, /request — a request to a manager, /status — request status, /human — talk to a manager, /lang — change language, /delete — delete the conversation."
+    },
+    "client_access_granted": {
+      "ru": "Теперь вам доступны документы и запросы менеджеру: /docs — ваши документы, /request — новый запрос, /help — все команды.",
+      "uz": "Endi sizga hujjatlar va menejerga soʻrovlar ochiq: /docs — hujjatlaringiz, /request — yangi soʻrov, /help — barcha buyruqlar.",
+      "en": "Documents and requests to a manager are now available to you: /docs — your documents, /request — a new request, /help — all commands."
+    },
+    "request_text_only": {
+      "ru": "Опишите запрос текстом одним сообщением. Файл можно отправить после — менеджер его увидит.",
+      "uz": "Soʻrovni bitta matnli xabarda yozing. Faylni keyin yuborishingiz mumkin — menejer uni koʻradi.",
+      "en": "Please describe the request in one text message. You can send the file afterwards and a manager will see it."
+    },
+    "language_first": {
+      "ru": "Выберите язык общения.",
+      "uz": "Muloqot tilini tanlang.",
+      "en": "Choose your language."
+    },
+    "handoff_offer_declined": {
+      "ru": "Хорошо, спрашивайте.",
+      "uz": "Yaxshi, savolingizni yozing.",
+      "en": "Okay, go ahead and ask."
+    },
+    "contacts": {
+      "ru": "Контакты {company}:",
+      "uz": "{company} bilan bogʻlanish:",
+      "en": "{company} contacts:"
+    },
+    "contact_labels": {
+      "ru": "Телефон|Сайт|Адрес",
+      "uz": "Telefon|Sayt|Manzil",
+      "en": "Phone|Website|Address"
+    },
+    "contacts_missing": {
+      "ru": "Контакты подскажет менеджер. Позвать его?",
+      "uz": "Bogʻlanish maʼlumotlarini menejer aytib beradi. Uni chaqiraymi?",
+      "en": "A manager can share the contact details. Shall I call one?"
+    },
+    "sla_promise": {
+      "ru": "Обычно отвечаем в течение {minutes} минут в рабочее время",
+      "uz": "Odatda ish vaqtida {minutes} daqiqa ichida javob beramiz",
+      "en": "We usually reply within {minutes} minutes during working hours"
+    },
+    "docs_list": {
+      "ru": "Ваши документы — нажмите, чтобы получить файл:",
+      "uz": "Hujjatlaringiz — faylni olish uchun bosing:",
+      "en": "Your documents — tap one to get the file:"
+    },
+    "docs_choose": {
+      "ru": "Нашлось несколько документов — выберите нужный:",
+      "uz": "Bir nechta hujjat topildi — keraklisini tanlang:",
+      "en": "I found several documents — choose the one you need:"
+    },
+    "docs_empty": {
+      "ru": "Пока у вас нет документов в системе. Если документ нужен — напишите /request.",
+      "uz": "Hozircha tizimda hujjatlaringiz yoʻq. Hujjat kerak boʻlsa — /request yozing.",
+      "en": "There are no documents for you yet. If you need one, send /request."
+    },
+    "request_prompt": {
+      "ru": "Опишите ваш запрос одним сообщением — я передам его менеджеру.",
+      "uz": "Soʻrovingizni bitta xabarda yozing — uni menejerga yuboraman.",
+      "en": "Describe your request in one message and I'll pass it to a manager."
+    },
+    "request_created": {
+      "ru": "Запрос №{number} передан менеджеру. Статус — /status.",
+      "uz": "№{number} soʻrov menejerga yuborildi. Holati — /status.",
+      "en": "Request #{number} has been passed to a manager. Check its status: /status."
+    },
+    "request_status_open": {
+      "ru": "Запрос №{number} от {date} в работе у менеджера: «{summary}».",
+      "uz": "{date} sanadagi №{number} soʻrovingiz koʻrib chiqilmoqda: «{summary}».",
+      "en": "Request #{number} from {date} is being handled by a manager: “{summary}”."
+    },
+    "request_status_none": {
+      "ru": "Открытых запросов нет. Новый запрос — /request.",
+      "uz": "Ochiq soʻrovlar yoʻq. Yangi soʻrov — /request.",
+      "en": "You have no open requests. New request — /request."
+    },
+    "phone_request": {
+      "ru": "Чтобы менеджер мог при необходимости позвонить, поделитесь номером телефона кнопкой ниже. Это необязательно.",
+      "uz": "Menejer kerak boʻlsa qoʻngʻiroq qila olishi uchun quyidagi tugma orqali telefon raqamingizni yuboring. Bu majburiy emas.",
+      "en": "So a manager can call you if needed, share your phone number with the button below. This is optional."
+    },
+    "phone_share_button": {
+      "ru": "Поделиться номером",
+      "uz": "Raqamni yuborish",
+      "en": "Share my number"
+    },
+    "phone_skip_button": { "ru": "Не сейчас", "uz": "Hozir emas", "en": "Not now" },
+    "phone_saved": {
+      "ru": "Спасибо, номер сохранён.",
+      "uz": "Rahmat, raqam saqlandi.",
+      "en": "Thank you, your number is saved."
+    },
+    "phone_skipped": {
+      "ru": "Хорошо, продолжаем без номера.",
+      "uz": "Yaxshi, raqamsiz davom etamiz.",
+      "en": "Okay, we'll continue without it."
+    },
+    "phone_before_manager": {
+      "ru": "Чтобы менеджер мог связаться с вами, поделитесь номером телефона кнопкой ниже — сразу после этого передам ваш вопрос. Это также защищает от спама.",
+      "uz": "Menejer siz bilan bogʻlana olishi uchun quyidagi tugma orqali telefon raqamingizni yuboring — shundan soʻng savolingizni darhol menejerga beraman. Bu spamdan ham himoya qiladi.",
+      "en": "So a manager can contact you, share your phone number with the button below — I will pass your question on right after that. This also protects against spam."
+    },
+    "phone_declined_manager": {
+      "ru": "Хорошо, продолжу отвечать сам. Менеджера позову, когда поделитесь номером.",
+      "uz": "Yaxshi, oʻzim javob berishda davom etaman. Raqamingizni yuborganingizda menejerni chaqiraman.",
+      "en": "Okay, I'll keep answering myself. I'll call a manager once you share your number."
+    },
+    "phone_not_own": {
+      "ru": "Сохранить можно только ваш собственный номер — кнопкой «Поделиться номером».",
+      "uz": "Faqat oʻz raqamingizni «Raqamni yuborish» tugmasi orqali saqlash mumkin.",
+      "en": "Only your own number can be saved — use the “Share my number” button."
+    },
+    "erp_quote_sent": {
+      "ru": "Вам подготовлено коммерческое предложение по сделке «{deal}».",
+      "uz": "Sizga «{deal}» bitimi boʻyicha tijorat taklifi tayyorlandi.",
+      "en": "A commercial proposal for the deal “{deal}” has been prepared for you."
+    },
+    "erp_quote_acceptance_code": {
+      "ru": "Код подтверждения КП по сделке «{deal}»: {code}. Действует {minutes} мин. Никому его не сообщайте.",
+      "uz": "«{deal}» bitimi boʻyicha tijorat taklifini tasdiqlash kodi: {code}. {minutes} daqiqa amal qiladi. Uni hech kimga aytmang.",
+      "en": "Confirmation code for the quote on the deal “{deal}”: {code}. Valid for {minutes} min. Do not share it with anyone."
+    },
+    "erp_invoice_issued": {
+      "ru": "Выставлен счёт {number} на сумму {amount} {currency}. Срок оплаты: до {due}.",
+      "uz": "{number}-hisob {amount} {currency} summasida berildi. Toʻlov muddati: {due} gacha.",
+      "en": "Invoice {number} for {amount} {currency} has been issued. Due by {due}."
+    },
+    "erp_invoice_paid": {
+      "ru": "Поступила оплата по счёту {number} на сумму {amount} {currency}. Спасибо!",
+      "uz": "{number}-hisob boʻyicha {amount} {currency} toʻlov kelib tushdi. Rahmat!",
+      "en": "Payment of {amount} {currency} for invoice {number} has been received. Thank you!"
+    },
+    "erp_delivery_status": {
+      "ru": "Статус доставки по заказу «{deal}» ({summary}): {status}.",
+      "uz": "«{deal}» buyurtmasi ({summary}) yetkazib berish holati: {status}.",
+      "en": "Delivery status for the order “{deal}” ({summary}): {status}."
+    },
+    "erp_delivery_statuses": {
+      "ru": "Собирается|В пути|Готов к отгрузке|Отгружен|Доставлен",
+      "uz": "Yigʻilmoqda|Yoʻlda|Joʻnatishga tayyor|Joʻnatildi|Yetkazildi",
+      "en": "Being assembled|In transit|Ready to ship|Shipped|Delivered"
+    },
+    "erp_delivery_eta_changed": {
+      "ru": "Срок доставки по заказу «{deal}» ({summary}) обновлён: ожидается {eta}.",
+      "uz": "«{deal}» buyurtmasi ({summary}) yetkazib berish muddati yangilandi: kutilayotgan sana {eta}.",
+      "en": "The delivery date for the order “{deal}” ({summary}) has been updated: expected {eta}."
+    },
+    "erp_act_issued": {
+      "ru": "Акт {number} сформирован и ждёт вашего подтверждения в кабинете.",
+      "uz": "{number}-dalolatnoma shakllantirildi va kabinetda tasdiqlashingizni kutmoqda.",
+      "en": "Act {number} has been issued and is waiting for your confirmation in the cabinet."
+    },
+    "erp_btn_quote": { "ru": "Открыть КП", "uz": "Taklifni ochish", "en": "Open the quote" },
+    "erp_btn_invoice": { "ru": "Открыть счёт", "uz": "Hisobni ochish", "en": "Open the invoice" },
+    "erp_btn_cabinet": { "ru": "Кабинет", "uz": "Kabinet", "en": "Cabinet" },
+    "erp_staff_quote_accepted": {
+      "ru": "🎉 Клиент «{client}» акцептовал КП #{quote} по сделке «{deal}».",
+      "uz": "🎉 Mijoz «{client}» «{deal}» bitimi boʻyicha #{quote} tijorat taklifini qabul qildi.",
+      "en": "🎉 The client “{client}” accepted quote #{quote} for the deal “{deal}”."
+    },
+    "erp_staff_act_returned": {
+      "ru": "⚠️ Акт {number} по сделке «{deal}» возвращён клиентом с замечаниями: {reason}.",
+      "uz": "⚠️ «{deal}» bitimi boʻyicha {number}-dalolatnoma mijoz tomonidan izoh bilan qaytarildi: {reason}.",
+      "en": "⚠️ Act {number} for the deal “{deal}” was returned by the client with remarks: {reason}."
+    },
+    "erp_note_delivery_line_accepted": {
+      "ru": "Клиент ({contact}) принял строку {line} «{title}» по сделке «{deal}».",
+      "uz": "Mijoz ({contact}) «{deal}» bitimi boʻyicha {line}-qator «{title}»ni qabul qildi.",
+      "en": "The client ({contact}) accepted line {line} “{title}” of the deal “{deal}”."
+    },
+    "erp_note_delivery_line_disputed": {
+      "ru": "Клиент ({contact}) оспорил строку {line} «{title}» по сделке «{deal}». Замечание: {remark}",
+      "uz": "Mijoz ({contact}) «{deal}» bitimi boʻyicha {line}-qator «{title}»ga eʼtiroz bildirdi. Izoh: {remark}",
+      "en": "The client ({contact}) disputed line {line} “{title}” of the deal “{deal}”. Remark: {remark}"
+    },
+    "erp_staff_delivery_line_disputed": {
+      "ru": "⚠️ Клиент «{client}» оспорил строку {line} «{title}» по сделке «{deal}»: {remark}",
+      "uz": "⚠️ Mijoz «{client}» «{deal}» bitimi boʻyicha {line}-qator «{title}»ga eʼtiroz bildirdi: {remark}",
+      "en": "⚠️ The client “{client}” disputed line {line} “{title}” of the deal “{deal}”: {remark}"
+    },
+    "consent_version": "2026-10-08",
+    "greeting": {
+      "ru": "Здравствуйте! Я ассистент компании {company}. Отвечаю на вопросы о наших продуктах и услугах и, если нужно, подключу менеджера.",
+      "uz": "Assalomu alaykum! Men {company} kompaniyasining yordamchisiman. Mahsulot va xizmatlarimiz haqidagi savollarga javob beraman, kerak boʻlsa, menejerni ulayman.",
+      "en": "Hello! I'm the {company} assistant. I answer questions about our products and services and can connect you with a manager when needed."
+    },
+    "consent": {
+      "ru": "Чтобы продолжить, подтвердите согласие на обработку персональных данных. Переписка хранится в системе компании и обрабатывается внешними ИИ-сервисами для подготовки ответов. Удалить переписку можно в любой момент командой /delete.",
+      "uz": "Davom etish uchun shaxsiy maʼlumotlarni qayta ishlashga roziligingizni tasdiqlang. Yozishmalar kompaniya tizimida saqlanadi va javoblarni tayyorlash uchun tashqi sunʼiy intellekt xizmatlari tomonidan qayta ishlanadi. Yozishmalarni istalgan vaqtda /delete buyrugʻi bilan oʻchirishingiz mumkin.",
+      "en": "To continue, please confirm your consent to the processing of personal data. The conversation is stored in the company's system and processed by external AI services to prepare answers. You can delete the conversation at any time with /delete."
+    },
+    "consent_button": { "ru": "Даю согласие", "uz": "Roziman", "en": "I agree" },
+    "consent_accepted": {
+      "ru": "Спасибо! Задайте ваш вопрос.",
+      "uz": "Rahmat! Savolingizni yozing.",
+      "en": "Thank you! Please ask your question."
+    },
+    "consent_accepted_pending": {
+      "ru": "Спасибо! Отвечаю на ваш вопрос.",
+      "uz": "Rahmat! Savolingizga javob beraman.",
+      "en": "Thank you! Let me answer your question."
+    },
+    "consent_decline_button": {
+      "ru": "Не даю согласия",
+      "uz": "Rozi emasman",
+      "en": "I don't agree"
+    },
+    "consent_declined": {
+      "ru": "Понимаю. Без согласия я не могу отвечать на вопросы. Если передумаете — нажмите «Даю согласие» выше или напишите /start. Удалить уже отправленные сообщения — /delete.",
+      "uz": "Tushunarli. Roziliksiz savollarga javob bera olmayman. Fikringiz oʻzgarsa — yuqoridagi «Roziman» tugmasini bosing yoki /start yozing. Yuborilgan xabarlarni oʻchirish — /delete.",
+      "en": "Understood. Without consent I can't answer questions. If you change your mind, tap “I agree” above or type /start. To delete messages already sent, use /delete."
+    },
+    "consent_required": {
+      "ru": "Пожалуйста, сначала подтвердите согласие кнопкой ниже.",
+      "uz": "Iltimos, avval quyidagi tugma orqali roziligingizni tasdiqlang.",
+      "en": "Please confirm your consent with the button below first."
+    },
+    "handoff": {
+      "ru": "Передаю ваш запрос менеджеру — он ответит здесь. {sla}.",
+      "uz": "Soʻrovingizni menejerga yuboraman — u shu yerda javob beradi. {sla}.",
+      "en": "I'm passing your request to a manager, who will reply here. {sla}."
+    },
+    "off_hours": {
+      "ru": "Передаю ваш запрос менеджеру. Сейчас нерабочее время — ответим {next}.",
+      "uz": "Soʻrovingizni menejerga yuboraman. Hozir ish vaqti emas — {next} javob beramiz.",
+      "en": "I'm passing your request to a manager. It's outside working hours now — we'll reply {next}."
+    },
+    "waiting_for_manager": {
+      "ru": "Ваше сообщение передано менеджеру, он скоро ответит.",
+      "uz": "Xabaringiz menejerga yuborildi, u tez orada javob beradi.",
+      "en": "Your message has been passed to a manager, who will reply soon."
+    },
+    "fallback": {
+      "ru": "В моих материалах нет точного ответа на этот вопрос. Передать его менеджеру? Он ответит здесь же.",
+      "uz": "Materiallarimda bu savolga aniq javob yoʻq. Savolni menejerga yuboraymi? U shu yerda javob beradi.",
+      "en": "I don't have a reliable answer to that in my materials. Shall I pass it to a manager? They'll reply right here."
+    },
+    "handoff_offer_yes": {
+      "ru": "Позвать менеджера",
+      "uz": "Menejerni chaqirish",
+      "en": "Talk to a manager"
+    },
+    "handoff_offer_no": { "ru": "Не нужно", "uz": "Kerak emas", "en": "No, thanks" },
+    "help": {
+      "ru": "Я отвечаю на вопросы о продуктах {company}. Команды: /lang — сменить язык, /human — связаться с менеджером, /delete — удалить переписку.",
+      "uz": "Men {company} mahsulotlari haqidagi savollarga javob beraman. Buyruqlar: /lang — tilni oʻzgartirish, /human — menejer bilan bogʻlanish, /delete — yozishmani oʻchirish.",
+      "en": "I answer questions about {company} products. Commands: /lang — change language, /human — talk to a manager, /delete — delete the conversation."
+    },
+    "rate_limited": {
+      "ru": "Получил много сообщений подряд — дайте мне минуту, и продолжим.",
+      "uz": "Ketma-ket koʻp xabar keldi — bir daqiqa kuting, keyin davom etamiz.",
+      "en": "I've received a lot of messages in a row — give me a minute and we'll continue."
+    },
+    "erase_confirm": {
+      "ru": "Удалить всю переписку с нами? Это действие нельзя отменить.",
+      "uz": "Biz bilan barcha yozishmalarni oʻchiraymi? Bu amalni qaytarib boʻlmaydi.",
+      "en": "Delete your whole conversation with us? This cannot be undone."
+    },
+    "erase_button": { "ru": "Удалить", "uz": "Oʻchirish", "en": "Delete" },
+    "cancel_button": { "ru": "Отмена", "uz": "Bekor qilish", "en": "Cancel" },
+    "erase_cancelled": {
+      "ru": "Хорошо, ничего не удаляю.",
+      "uz": "Yaxshi, hech narsa oʻchirilmadi.",
+      "en": "OK, nothing was deleted."
+    },
+    "erased": {
+      "ru": "Ваша переписка удалена. Если захотите продолжить, просто напишите снова.",
+      "uz": "Yozishmangiz oʻchirildi. Davom etmoqchi boʻlsangiz, shunchaki qayta yozing.",
+      "en": "Your conversation has been deleted. If you want to continue, just write again."
+    },
+    "document_sent": {
+      "ru": "Отправляю документ: {title}.",
+      "uz": "Hujjatni yuboraman: {title}.",
+      "en": "Sending the document: {title}."
+    },
+    "document_failed": {
+      "ru": "Не получилось отправить файл. Попробуйте запросить его ещё раз чуть позже.",
+      "uz": "Faylni yuborib boʻlmadi. Birozdan keyin qayta soʻrab koʻring.",
+      "en": "I couldn't send the file. Please ask for it again a bit later."
+    },
+    "manager_joined": {
+      "ru": "Здравствуйте! Вашим вопросом занимается {manager}, ответ придёт в этот чат.",
+      "uz": "Assalomu alaykum! Savolingiz bilan {manager} shugʻullanmoqda, javob shu chatga keladi.",
+      "en": "Hello! {manager} is now handling your request and will reply in this chat."
+    },
+    "service_request_closed": {
+      "ru": "По вашему запросу №{number} «{summary}»: {resolution}",
+      "uz": "№{number} «{summary}» soʻrovingiz boʻyicha: {resolution}",
+      "en": "Regarding your request #{number} “{summary}”: {resolution}"
+    },
+    "returned_to_bot": {
+      "ru": "Снова на связи ассистент {company}. Если понадобится менеджер, напишите /human.",
+      "uz": "Yana {company} yordamchisi aloqada. Menejer kerak boʻlsa, /human deb yozing.",
+      "en": "The {company} assistant is back. If you need a manager, type /human."
+    },
+    "attachment_received": {
+      "ru": "Спасибо, получил. Передам менеджеру.",
+      "uz": "Rahmat, qabul qildim. Menejerga yuboraman.",
+      "en": "Thanks, got it. I'll pass it to a manager."
+    },
+    "attachment_too_large": {
+      "ru": "Файл больше 20 МБ — пришлите ссылку или сожмите.",
+      "uz": "Fayl 20 MB dan katta — havolani yuboring yoki siqib yuboring.",
+      "en": "The file is larger than 20 MB — please send a link or compress it."
+    },
+    "unsupported_message": {
+      "ru": "Я понимаю текст, а файлы и голосовые сообщения передаю менеджеру. Напишите, пожалуйста, ваш вопрос.",
+      "uz": "Men matnni tushunaman, fayl va ovozli xabarlarni esa menejerga yuboraman. Savolingizni yozing, iltimos.",
+      "en": "I can read text, and I'll pass files and voice messages to a manager. Please type your question."
+    },
+    "service_unavailable": {
+      "ru": "Извините, сейчас не получается ответить. Ваше сообщение сохранено, менеджер его увидит.",
+      "uz": "Kechirasiz, hozir javob bera olmayapman. Xabaringiz saqlandi, menejer uni koʻradi.",
+      "en": "Sorry, I can't answer right now. Your message has been saved and a manager will see it."
+    },
+    "language_prompt": {
+      "ru": "Выберите язык общения:",
+      "uz": "Muloqot tilini tanlang:",
+      "en": "Choose your language:"
+    },
+    "language_set": {
+      "ru": "Буду отвечать на русском.",
+      "uz": "Oʻzbek tilida javob beraman.",
+      "en": "I'll reply in English."
+    },
+    "smalltalk_ack": {
+      "ru": "Пожалуйста! Если появятся вопросы — пишите.",
+      "uz": "Arzimaydi! Savollar boʻlsa, yozing.",
+      "en": "You're welcome! Write any time you have a question."
+    }
+  },
+  "escalation": {
+    "high_score_threshold": 70,
+    "no_progress_turns": 4,
+    "kb_gap_streak": 2,
+    "qualifier_min_confidence": 0.7,
+    "sla_minutes": 15,
+    "reminder_minutes": 60,
+    "disabled_triggers": [],
+    "price_always_to_manager": false,
+    "require_phone_for_human_request": true,
+    "human_request_terms": [
+      "менеджер*",
+      "оператор*",
+      "сотрудник*",
+      "человеком",
+      "человеку",
+      "живой человек",
+      "живым человеком",
+      "позовите",
+      "соедините",
+      "menejer*",
+      "operator*",
+      "xodim*",
+      "odam bilan",
+      "odamga",
+      "tirik odam",
+      "manager*",
+      "human*",
+      "real person",
+      "live person",
+      "a person"
+    ]
+  },
+  "qualification": {
+    "required_facts": ["need", "product"],
+    "any_of_facts": ["timeline", "decision_role", "budget"],
+    "min_any_of": 1,
+    "timeline_max": ">12m",
+    "decision_roles": ["decision_maker", "influencer", "researcher"]
+  },
+  "kb": { "min_score": 0.7, "top_k": 6, "search_timeout_s": 6.0 },
+  "bot": {
+    "persona": "Вежливый, спокойный ассистент без давления и навязывания; отвечает по делу.",
+    "max_words": 60,
+    "history_messages": 20,
+    "rate_limit_per_minute": 20,
+    "unresponsive_days": 7,
+    "ask_phone": true,
+    "assist_enabled": true,
+    "assist_max_input_chars": 2000
+  },
+  "competitors": { "terms": [] },
+  "stop_words": {
+    "terms": [
+      "обман*",
+      "мошенни*",
+      "жалоб*",
+      "суд",
+      "aldov*",
+      "firibgar*",
+      "scam*",
+      "fraud*",
+      "lawyer*"
+    ]
+  },
+  "notifications": { "channel_id": null, "duty_user_ids": [], "manager_dm_throttle_minutes": 5 },
+  "budget": {
+    "daily_usd": 2.0,
+    "erp_daily_usd": 1.0,
+    "fallback_model_enabled": true,
+    "providers": { "anthropic": 2.4, "gemini": 0.8 }
+  },
+  "deals": {
+    "lost_reasons": [
+      "Дорого",
+      "Выбрали конкурента",
+      "Нет бюджета",
+      "Не актуально",
+      "Не вышли на связь",
+      "Другое"
+    ],
+    "currency": "UZS"
+  },
+  "web_form": {
+    "min_fill_seconds": 3,
+    "token_ttl_minutes": 60,
+    "rate_limit_per_hour": 5,
+    "max_text_chars": 4000
+  },
+  "service_alerts": {
+    "telegram_admins": true,
+    "telegram_channel": "fallback",
+    "email_admins": true,
+    "extra_emails": [],
+    "repeat_minutes": 60
+  }
+}

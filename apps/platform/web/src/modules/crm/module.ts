@@ -28,6 +28,12 @@ export const crm: ModuleConfig = {
     },
     { key: "requests", path: "/crm/requests", access: { resource: "crm.clients" } },
     { key: "channels", path: "/crm/channels", access: { resource: "crm.leads" } },
-    { key: "kb", path: "/crm/kb", access: { resource: "crm.leads" } },
+    // База знаний: читают лиды (`crm.leads`) и администратор (`admin`, он её ведёт — `kb:write`), W13-A5
+    {
+      key: "kb",
+      path: "/crm/kb",
+      access: { anyOf: ["crm.leads", "admin"] },
+      defaults: { panelOpen: false },
+    },
   ],
 };

@@ -3,28 +3,34 @@ import { initReactI18next } from "react-i18next";
 
 import enAudit from "./en/audit.json";
 import enBus from "./en/bus.json";
+import enBot from "./en/bot.json";
 import enCommon from "./en/common.json";
 import enCompany from "./en/company.json";
 import enDictionary from "./en/dictionary.json";
 import enIntegrations from "./en/integrations.json";
+import enKb from "./en/kb.json";
 import enModules from "./en/modules.json";
 import enShell from "./en/shell.json";
 import enUi from "./en/ui.json";
 import ruAudit from "./ru/audit.json";
 import ruBus from "./ru/bus.json";
+import ruBot from "./ru/bot.json";
 import ruCommon from "./ru/common.json";
 import ruCompany from "./ru/company.json";
 import ruDictionary from "./ru/dictionary.json";
 import ruIntegrations from "./ru/integrations.json";
+import ruKb from "./ru/kb.json";
 import ruModules from "./ru/modules.json";
 import ruShell from "./ru/shell.json";
 import ruUi from "./ru/ui.json";
 import uzAudit from "./uz/audit.json";
 import uzBus from "./uz/bus.json";
+import uzBot from "./uz/bot.json";
 import uzCommon from "./uz/common.json";
 import uzCompany from "./uz/company.json";
 import uzDictionary from "./uz/dictionary.json";
 import uzIntegrations from "./uz/integrations.json";
+import uzKb from "./uz/kb.json";
 import uzModules from "./uz/modules.json";
 import uzShell from "./uz/shell.json";
 import uzUi from "./uz/ui.json";
@@ -41,6 +47,8 @@ export const resources = {
     dictionary: ruDictionary,
     integrations: ruIntegrations,
     bus: ruBus,
+    kb: ruKb,
+    bot: ruBot,
     ui: ruUi,
     company: ruCompany,
   },
@@ -52,6 +60,8 @@ export const resources = {
     dictionary: uzDictionary,
     integrations: uzIntegrations,
     bus: uzBus,
+    kb: uzKb,
+    bot: uzBot,
     ui: uzUi,
     company: uzCompany,
   },
@@ -63,6 +73,8 @@ export const resources = {
     dictionary: enDictionary,
     integrations: enIntegrations,
     bus: enBus,
+    kb: enKb,
+    bot: enBot,
     ui: enUi,
     company: enCompany,
   },
@@ -89,13 +101,24 @@ export function rememberLanguage(language: Language): void {
   }
 }
 
-/** ru — язык по умолчанию (SPEC-v3 §8); uz — латиница. Пространства имён: common, shell (каркас и вход), modules (меню и заглушки), dictionary (словарь SPEC-v3 §2: стадии и статусы), ui (тексты общих компонентов), integrations (Admin · Внешние интеграции), company (Admin · Компания), bus (Admin · Журнал интеграций). */
+/** ru — язык по умолчанию (SPEC-v3 §8); uz — латиница. Пространства имён: common, shell (каркас и вход), modules (меню и заглушки), dictionary (словарь SPEC-v3 §2: стадии и статусы), ui (тексты общих компонентов), integrations (Admin · Внешние интеграции), company (Admin · Компания), kb (CRM · База знаний), bot (Admin · Настройки бота), bus (Admin · Журнал интеграций). */
 void i18n.use(initReactI18next).init({
   resources,
   lng: storedLanguage(),
   fallbackLng: "ru",
   defaultNS: "common",
-  ns: ["common", "shell", "modules", "dictionary", "ui", "integrations", "company", "bus"],
+  ns: [
+    "common",
+    "shell",
+    "modules",
+    "dictionary",
+    "ui",
+    "integrations",
+    "company",
+    "bus",
+    "kb",
+    "bot",
+  ],
   interpolation: { escapeValue: false },
 });
 

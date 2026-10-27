@@ -37,7 +37,7 @@
 | Эксплуатация | [`runbooks/`](runbooks/) (ансамбль), [`runbooks/crm/`](runbooks/crm/), [`runbooks/erp/`](runbooks/erp/); волны агентов — `runbooks/wave*.md` | действует | лид |
 | Аудиты | [`audits/`](audits/), [`audits/crm/`](audits/crm/) | снимок на дату | архитектор |
 | Исследования | [`research/`](research/) | снимок на дату | архитектор |
-| База знаний CRM: формат и промпт подготовки | [`kb/`](kb/) (копию в CRM делает `pnpm kb:sync`) | действует | лид |
+| База знаний CRM: формат и промпт подготовки | [`kb/`](kb/) (копию в Платформу делает `pnpm kb:sync` в `apps/platform/web`, `make -C apps/platform kb-sync`) | действует | лид |
 | Скриншоты DoD | [`screens/<задача>/`](screens/) | артефакт PR | исполнитель |
 | Всё недействующее | [`history/`](history/README.md) | история | — |
 

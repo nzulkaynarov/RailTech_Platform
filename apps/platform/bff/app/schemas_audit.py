@@ -36,7 +36,8 @@ MASK = "***"
 #    passphrase, passcode, cookie, bearer, signature, hmac, а также склейки apikey, privatekey,
 #    secretkey, accesskey, databaseurl;
 # 2) короткие основы — только ЦЕЛЫМ словом (слова режутся по `_`), с отрезанием хвостовых цифр
-#    (`key1` -> `key`) и допуском множественного числа: key, pin, pwd, otp, cvv, jwt, dsn.
+#    (`key1` -> `key`) и допуском множественного числа: key, pin, pwd, otp, cvv, jwt, dsn, pass,
+#    auth, totp, mfa, sig. Ещё подстрокой: passw0rd, keyfile, ssh_private, session_id.
 # Значение под таким полем маскируется целиком, любого типа: строка, число, флаг, список, словарь.
 # Пустое значение (`null`, `""`) остаётся: оно говорит «не задано» и ничего не раскрывает.
 _STEMS = (
@@ -57,8 +58,14 @@ _STEMS = (
     "secretkey",
     "accesskey",
     "databaseurl",
+    "passw0rd",
+    "keyfile",
+    "sshprivate",
+    "sessionid",
 )
-_WORDS = frozenset({"key", "pin", "pwd", "otp", "cvv", "jwt", "dsn"})
+_WORDS = frozenset(
+    {"key", "pin", "pwd", "otp", "cvv", "jwt", "dsn", "pass", "auth", "totp", "mfa", "sig"}
+)
 
 # Исключения — явно и только по причине.
 # A) Имена-коды, где «key» значит «код», а не ключ доступа (CRM пишет их в аудит сервисов, продуктов

@@ -110,7 +110,7 @@ Compose: `crm-web`, `erp-web` (`infra/compose/base.yml`, `dev.yml`, `prod.yml`),
 `lib.sh`, `cpu-baseline-rules.sh`, тесты `infra/deploy/tests/*`; CI: `deploy.yml` (образы `rt-crm-frontend`, `rt-erp-frontend`), `ci.yml`
 (frontend-шаги CRM, `crm-e2e`, `erp` frontend, `cpu-image`, `ci-ok.needs`), `scripts/ci_local.sh`, `apps/crm/scripts/ci_local.sh`,
 `scripts/qemu_cpu_check.sh`; Makefile CRM и ERP (frontend-цели, генерация типов), `packages/ui-tokens` (копии в фронты), синхронизация
-`docs/kb`; env (`*_FRONTEND_URL`, CSRF/CORS ERP); ссылки бэкендов на фронты — CRM `crm_base_url` (приглашения, уведомления, мониторинг),
+`docs/kb` (с W13-A5 её цель — Платформа, `make -C apps/platform kb-sync`; скрипт старого фронта CRM только перенаправляет); env (`*_FRONTEND_URL`, CSRF/CORS ERP); ссылки бэкендов на фронты — CRM `crm_base_url` (приглашения, уведомления, мониторинг),
 `erp_frontend_url` и SSO-редирект; ERP `FRONTEND_URL` (письма сделок, сброс пароля, приглашения), `CRM_FRONTEND_URL`; мёртвые после
 удаления — ERP `auth/sso/token/`, CRM `/auth/sso/exchange`; документы `docs/systems/{crm,erp,infra,platform,ui-tokens,contracts}`, `stand.md`,
 `servers.md`, `request-id.md`, указатели `apps/*/CLAUDE.md`.

@@ -232,7 +232,7 @@ describe("каркас на 1440", () => {
         within(rail())
           .getAllByRole("link")
           .map((a) => a.textContent),
-      ).toEqual(["RT", "Dashboard", "EDS", "Chats", "Admin"]);
+      ).toEqual(["RT", "Dashboard", "CRM", "EDS", "Chats", "Admin"]);
     });
   });
 

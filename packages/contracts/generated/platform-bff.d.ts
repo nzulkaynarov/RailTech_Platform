@@ -1985,6 +1985,390 @@ export interface paths {
     patch: operations["updatePlatformSettings"];
     trace?: never;
   };
+  "/crm/kb/documents": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * CRM · База знаний: документы
+     * @description CRM `GET /kb/documents`. Читают роли с разделом `crm.leads` или `admin` (любой уровень): у них есть право CRM `kb:read`. Администратор без `crm.leads` видит базу знаний тоже — пункт меню `kb` открывает и раздел `admin`.
+     */
+    get: operations["listKbDocuments"];
+    put?: never;
+    /**
+     * Загрузить файл Markdown в базу знаний
+     * @description CRM `POST /kb/documents` (multipart). Раздел `admin` — полный (право CRM `kb:write`). Принимается один файл `.md` по формату базы знаний (`docs/kb/FORMAT.md`), не больше 25 МБ: BFF читает файл ограниченно и передаёт CRM, весь файл в память не накапливается сверх лимита. Индексация идёт в фоне — документ появляется в списке со статусом «В очереди». Нарушение формата — 422 `VALIDATION_FAILED` с `details.reason = kb_format`, `details.rule` и текстами `details.messages {ru, uz, en}` «что исправить»; не `.md` — `kb_markdown_only`; пустой файл — `file_empty`; больше 25 МБ — `file_too_large` (`details.max_bytes`); неизвестный продукт — поле `product_key` в `details.fields`.
+     */
+    post: operations["uploadKbDocument"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/kb/documents/manual": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Добавить документ базы знаний вручную (Markdown)
+     * @description CRM `POST /kb/documents/manual`. Раздел `admin` — полный. Текст без заголовка получает заголовок из названия; формат front matter ручной ввод не проверяет. `gap_id` закрывает пробел базы знаний созданным документом.
+     */
+    post: operations["createManualKbDocument"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/kb/documents/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Документ базы знаний */
+    get: operations["getKbDocument"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /**
+     * Включить или выключить документ, сменить продукт или название
+     * @description CRM `PATCH /kb/documents/{id}`. Раздел `admin` — полный. Удаления документов в CRM нет: «Выключить» убирает документ из поиска бота, «Включить» возвращает (разрыв в `docs/QUESTIONS.md`).
+     */
+    patch: operations["updateKbDocument"];
+    trace?: never;
+  };
+  "/crm/kb/documents/{id}/chunks": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Фрагменты документа — как их видит поиск бота */
+    get: operations["listKbChunks"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/kb/documents/{id}/reingest": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Переиндексировать документ
+     * @description CRM `POST /kb/documents/{id}/reingest`. Раздел `admin` — полный. Документ, который сейчас индексируется, — 409 `CONFLICT` с `details.reason = document_indexing`.
+     */
+    post: operations["reingestKbDocument"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/kb/search": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Что найдёт бот на этот вопрос
+     * @description CRM `POST /kb/search`: тот же поиск и порог, что у диалогового агента; ничего не меняет и не пишет в расходы (поиск по векторам и словам без вызова модели ответа).
+     */
+    post: operations["searchKb"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/kb/gaps": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Пробелы базы знаний: вопросы, на которые бот не нашёл ответа
+     * @description CRM `GET /kb/gaps`. По умолчанию — открытые, чаще повторяющиеся не выше, страницами.
+     */
+    get: operations["listKbGaps"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/kb/gaps/{id}/resolve": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Закрыть пробел: ответ есть в документе
+     * @description CRM `POST /kb/gaps/{id}/resolve`. Раздел `admin` — полный. Привязывает пробел к документу и закрывает его.
+     */
+    post: operations["resolveKbGap"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/kb/gaps/{id}/ignore": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Игнорировать пробел
+     * @description CRM `POST /kb/gaps/{id}/ignore`. Раздел `admin` — полный. Вопрос уходит из открытых; вернуть его можно.
+     */
+    post: operations["ignoreKbGap"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/kb/gaps/{id}/reopen": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Вернуть пробел в открытые
+     * @description CRM `POST /kb/gaps/{id}/reopen`. Раздел `admin` — полный.
+     */
+    post: operations["reopenKbGap"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/kb/products": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Справочник продуктов (ключ → название)
+     * @description CRM `GET /kb/products` требует право `leads:read`. У администратора без второй роли его нет: CRM отвечает 403, BFF передаёт его как есть, а экран подставляет ключ продукта вручную (разрыв в `docs/QUESTIONS.md`).
+     */
+    get: operations["listKbProducts"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/sandbox/messages": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Песочница: сообщение боту от имени тестового клиента
+     * @description CRM `POST /sandbox/messages`. Раздел `admin` — полный (право CRM `sandbox:use`). Тот же ход, что в Telegram: база знаний, тексты, правила передачи; **платно** — вызовы моделей пишутся в «Расходы» с пометкой «тест». Передача менеджеру только показывается в `why` и в CRM не создаётся. Таймаут ответа — как у проб (30 с).
+     */
+    post: operations["sendSandboxMessage"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/sandbox/reset": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Песочница: начать заново
+     * @description CRM `POST /sandbox/reset`. Раздел `admin` — полный. Тестовый диалог сотрудника удаляется целиком.
+     */
+    post: operations["resetSandbox"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/bot/settings": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Настройки бота: значения и схемы разделов
+     * @description CRM `GET /settings`. Раздел `admin` — от чтения (директор видит без правки): компания, рабочие часы, тексты бота, поведение бота, поиск по базе знаний, стоп-слова, конкуренты, правила передачи, квалификация, канал команды, бюджет моделей, сделки, форма «Запрос», оповещения о сбоях. Ключ раздела и его схема приходят из CRM как есть (JSON Schema Pydantic CRM): экран строит форму по схеме, поэтому новый параметр в CRM появляется в Платформе без правки BFF. Профиль бота и коннекторы правятся в «Внешних интеграциях» и сюда не входят.
+     */
+    get: operations["getBotSettings"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/bot/settings/{key}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Сохранить раздел настроек бота
+     * @description CRM `PUT /settings/{key}`. Раздел `admin` — полный (право CRM `settings:write`). Тело — значения раздела целиком (по схеме из `getBotSettings`). CRM проверяет значения своей моделью: ошибка — 422 `VALIDATION_FAILED`, `details.fields = [key]`, `details.paths` — пути невалидных полей («greeting.uz»). Неизвестный раздел — 404.
+     */
+    put: operations["saveBotSetting"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/bot/settings/escalation/dry-run": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Пробный прогон правил передачи на последних диалогах
+     * @description CRM `POST /settings/escalation/dry-run`. Раздел `admin` — полный. Считает, сколько передач менеджеру было бы на последних 50 диалогах при новых значениях, и какие лиды изменились. Ничего не сохраняет и не меняет.
+     */
+    post: operations["dryRunEscalation"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/bot/reply-templates": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Шаблоны быстрых ответов
+     * @description CRM `GET /reply-templates`. Читают `admin` от чтения и `crm.leads` полный (менеджеру шаблоны нужны в карточке лида); правит `admin` полный.
+     */
+    get: operations["listReplyTemplates"];
+    put?: never;
+    /** Новый шаблон ответа */
+    post: operations["createReplyTemplate"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/bot/reply-templates/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /** Изменить шаблон ответа */
+    put: operations["updateReplyTemplate"];
+    post?: never;
+    /**
+     * Удалить шаблон ответа
+     * @description Раздел `admin` — полный. Шаблон удаляется без возможности вернуть; в карточках лидов он больше не предлагается.
+     */
+    delete: operations["deleteReplyTemplate"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/bot/exports/{entity}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Выгрузка CSV: лиды, клиенты или сделки
+     * @description CRM `GET /export/{leads|clients|deals}.csv`. Нужен `admin: full` (право CRM `export:read`) **и** чтение выгружаемых данных: лиды — `crm.leads`, клиенты и сделки — `crm.clients` (системная «Администратор» без второй роли бизнес-данные не выгружает, R3-D-2). BFF проверяет оба раздела и отдаёт файл потоком, не накапливая его в памяти: CSV для Excel (UTF-8 с BOM, разделитель `;`), до 10 000 строк, имя файла с датой в `Content-Disposition` (`leads-20261026-1530.csv`). Каждая выгрузка пишется в журнал аудита CRM. Фильтры — как на экранах списков; недопустимый — 422.
+     */
+    get: operations["downloadCsvExport"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -3801,6 +4185,229 @@ export interface components {
       /** @description Ставка НДС платформы, % */
       vat_rate?: components["schemas"]["DecimalString"];
     };
+    /** @description Объект создан в CRM. */
+    CreatedId: {
+      id: number;
+    };
+    /** @description Документ базы знаний (CRM `KbDocumentOut`). */
+    KbDocument: {
+      id: number;
+      title: string;
+      /** @description Ключ продукта справочника; пусто — документ про компанию в целом */
+      product_key: string | null;
+      language: components["schemas"]["Language"];
+      /**
+       * @description `file` — загруженный файл, `manual` — введён вручную, `url` — из ссылки (в CRM пока не создаётся)
+       * @enum {string}
+       */
+      source_type: "file" | "url" | "manual";
+      mime: string | null;
+      /** @description Версия документа */
+      version: number;
+      /** @description Выключенный документ в поиске бота не участвует */
+      is_active: boolean;
+      /**
+       * @description В очереди, обрабатывается, готов, ошибка
+       * @enum {string}
+       */
+      ingest_status: "pending" | "processing" | "done" | "failed";
+      /** @description Причина, если индексация не удалась */
+      ingest_error: string | null;
+      chunk_count: number;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      updated_at: string;
+    };
+    KbDocumentList: {
+      items: components["schemas"]["KbDocument"][];
+    };
+    KbDocumentUpload: {
+      /**
+       * Format: binary
+       * @description Один файл `.md` по формату базы знаний, не больше 25 МБ
+       */
+      file: string;
+      title: string;
+      language: components["schemas"]["Language"];
+      /** @description Ключ продукта; не передавать, если документ не про один продукт */
+      product_key?: string;
+      /** @description Пробел базы знаний, который закрывает этот документ */
+      gap_id?: number;
+    };
+    KbManualDocumentIn: {
+      title: string;
+      markdown: string;
+      language: components["schemas"]["Language"];
+      product_key?: string | null;
+      gap_id?: number | null;
+    };
+    /** @description Поля, которые нужно изменить; отсутствующие не трогаются. */
+    KbDocumentPatch: {
+      title?: string;
+      is_active?: boolean;
+      product_key?: string;
+      /** @description Снять продукт (документ про компанию в целом) */
+      clear_product?: boolean;
+    };
+    KbChunk: {
+      id: number;
+      position: number;
+      /** @description Путь заголовков: «Доставка > Сроки» */
+      heading_path: string | null;
+      content: string;
+      token_count: number;
+    };
+    KbChunkList: {
+      items: components["schemas"]["KbChunk"][];
+    };
+    KbSearchIn: {
+      query: string;
+      language?: components["schemas"]["Language"] | null;
+      product_key?: string | null;
+      /** @default 6 */
+      top_k: number;
+    };
+    KbSearchHit: {
+      chunk_id: number;
+      document_id: number;
+      document_title: string;
+      heading_path: string | null;
+      content: string;
+      /** @description Сходство 0–1; пусто — найден только по словам */
+      similarity: number | null;
+      rrf_score: number;
+    };
+    KbSearchResult: {
+      hits: components["schemas"]["KbSearchHit"][];
+      best_score: number | null;
+      /** @description Порог настроек «Поиск по базе знаний»: ниже бот говорит «не знаю» */
+      min_score: number;
+      /** @description Хватит ли найденного, чтобы бот ответил */
+      confident: boolean;
+      language: components["schemas"]["Language"];
+    };
+    /** @enum {string} */
+    KbGapStatus: "open" | "resolved" | "ignored";
+    KbGap: {
+      id: number;
+      /** @description Лид, чей вопрос остался без ответа (номер L-NNNN — id лида) */
+      lead_id: number | null;
+      question: string;
+      language: components["schemas"]["Language"];
+      best_score: number | null;
+      /** @description Сколько раз спросили */
+      occurrences: number;
+      status: components["schemas"]["KbGapStatus"];
+      resolved_document_id: number | null;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      updated_at: string;
+    };
+    KbGapPage: {
+      items: components["schemas"]["KbGap"][];
+      total: number;
+    };
+    KbGapResolveIn: {
+      document_id: number;
+    };
+    KbProduct: {
+      key: string;
+      name: string;
+      description: string | null;
+      is_active: boolean;
+    };
+    KbProductList: {
+      items: components["schemas"]["KbProduct"][];
+    };
+    SandboxMessageIn: {
+      text: string;
+      /** @default ru */
+      language: components["schemas"]["Language"];
+    };
+    SandboxReply: {
+      text: string;
+      buttons: string[];
+    };
+    /** @description Почему бот ответил так. */
+    SandboxWhy: {
+      /** @description answer, fallback, handoff, deliver_document, choose_document, silent, system; новые значения экран показывает как есть */
+      decision: string;
+      reason: string | null;
+      best_score: number | null;
+      documents: string[];
+      /** @description Коды сработавших правил передачи (`human_requested`, `price_or_contract_asked`, …) */
+      triggers: string[];
+      priority: string | null;
+    };
+    SandboxTurn: {
+      replies: components["schemas"]["SandboxReply"][];
+      why: components["schemas"]["SandboxWhy"];
+    };
+    /** @description Настройки бота постранично: `values[ключ]` — текущие значения, `schemas[ключ]` — JSON Schema формы (Pydantic CRM). Структура значений — модель раздела в CRM (`apps/crm/backend/app/schemas/settings*.py`). */
+    BotSettings: {
+      values: {
+        [key: string]: {
+          [key: string]: unknown;
+        };
+      };
+      schemas: {
+        [key: string]: {
+          [key: string]: unknown;
+        };
+      };
+    };
+    /** @description Правила передачи менеджеру (раздел `escalation`); пропущенное поле — значение по умолчанию CRM. */
+    EscalationSettingsIn: {
+      high_score_threshold?: number;
+      no_progress_turns?: number;
+      kb_gap_streak?: number;
+      qualifier_min_confidence?: number;
+      sla_minutes?: number;
+      reminder_minutes?: number;
+      disabled_triggers?: string[];
+      price_always_to_manager?: boolean;
+      require_phone_for_human_request?: boolean;
+      human_request_terms?: string[];
+    };
+    EscalationDryRunRow: {
+      run_id: number;
+      lead_id: number;
+      /** Format: date-time */
+      at: string;
+      /** @description Причины передачи сейчас */
+      current: string[];
+      /** @description Причины передачи с новыми правилами */
+      candidate: string[];
+    };
+    EscalationDryRun: {
+      dialogs: number;
+      escalated_current: number;
+      escalated_candidate: number;
+      by_code_current: {
+        [key: string]: number;
+      };
+      by_code_candidate: {
+        [key: string]: number;
+      };
+      changed: components["schemas"]["EscalationDryRunRow"][];
+    };
+    ReplyTemplate: {
+      id: number;
+      /** @description Видно менеджеру в списке, клиенту не отправляется */
+      title: string;
+      text: components["schemas"]["LocalizedText"];
+      /** Format: date-time */
+      updated_at: string;
+    };
+    ReplyTemplateList: {
+      items: components["schemas"]["ReplyTemplate"][];
+    };
+    ReplyTemplateIn: {
+      title: string;
+      text: components["schemas"]["LocalizedText"];
+    };
   };
   responses: {
     /** @description `SESSION_EXPIRED` — сессии нет, истекла или сотрудник отключён */
@@ -3929,6 +4536,12 @@ export interface components {
     BusLimit: number;
     /** @description Значение cookie `rt_pf_csrf` */
     CsrfToken: string;
+    /** @description Id документа базы знаний (CRM) */
+    KbDocumentId: number;
+    /** @description Id пробела базы знаний (CRM) */
+    KbGapId: number;
+    /** @description Id шаблона ответа (CRM) */
+    ReplyTemplateId: number;
     /** @description Id объекта ERP (строкой) */
     CompanyItemId: components["schemas"]["CompanyItemRef"];
     /** @description Справочник ERP */
@@ -7748,6 +8361,711 @@ export interface operations {
       401: components["responses"]["SessionExpired"];
       403: components["responses"]["Forbidden"];
       422: components["responses"]["ValidationFailed"];
+    };
+  };
+  listKbDocuments: {
+    parameters: {
+      query?: {
+        /** @description Только включённые (`true`) или только выключенные (`false`) документы */
+        active?: boolean;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Документы, новые выше */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["KbDocumentList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  uploadKbDocument: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["KbDocumentUpload"];
+      };
+    };
+    responses: {
+      /** @description Документ принят, индексация поставлена в очередь */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CreatedId"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+      502: components["responses"]["IntegrationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  createManualKbDocument: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["KbManualDocumentIn"];
+      };
+    };
+    responses: {
+      /** @description Документ создан, индексация поставлена в очередь */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CreatedId"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+      502: components["responses"]["IntegrationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getKbDocument: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Id документа базы знаний (CRM) */
+        id: components["parameters"]["KbDocumentId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Документ */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["KbDocument"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  updateKbDocument: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id документа базы знаний (CRM) */
+        id: components["parameters"]["KbDocumentId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["KbDocumentPatch"];
+      };
+    };
+    responses: {
+      /** @description Сохранено */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ActionOk"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listKbChunks: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Id документа базы знаний (CRM) */
+        id: components["parameters"]["KbDocumentId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Фрагменты по порядку */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["KbChunkList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  reingestKbDocument: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id документа базы знаний (CRM) */
+        id: components["parameters"]["KbDocumentId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Поставлен в очередь */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ActionOk"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      /** @description `CONFLICT` — `details.reason = document_indexing` */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  searchKb: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["KbSearchIn"];
+      };
+    };
+    responses: {
+      /** @description Найденные фрагменты и уверенность */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["KbSearchResult"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+      502: components["responses"]["IntegrationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listKbGaps: {
+    parameters: {
+      query?: {
+        status?: components["schemas"]["KbGapStatus"];
+        language?: components["schemas"]["Language"];
+        limit?: number;
+        offset?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Страница пробелов */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["KbGapPage"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  resolveKbGap: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id пробела базы знаний (CRM) */
+        id: components["parameters"]["KbGapId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["KbGapResolveIn"];
+      };
+    };
+    responses: {
+      /** @description Пробел закрыт */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ActionOk"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  ignoreKbGap: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id пробела базы знаний (CRM) */
+        id: components["parameters"]["KbGapId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Пробел скрыт */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ActionOk"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  reopenKbGap: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id пробела базы знаний (CRM) */
+        id: components["parameters"]["KbGapId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Пробел снова открыт */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ActionOk"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listKbProducts: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Продукты */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["KbProductList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  sendSandboxMessage: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SandboxMessageIn"];
+      };
+    };
+    responses: {
+      /** @description Ответ бота и разбор «почему так» */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SandboxTurn"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+      502: components["responses"]["IntegrationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  resetSandbox: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Диалог очищен */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getBotSettings: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Значения и схемы */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BotSettings"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  saveBotSetting: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Ключ раздела (`company`, `business_hours`, `texts`, …) */
+        key: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": {
+          [key: string]: unknown;
+        };
+      };
+    };
+    responses: {
+      /** @description Сохранено */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ActionOk"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  dryRunEscalation: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["EscalationSettingsIn"];
+      };
+    };
+    responses: {
+      /** @description Сравнение «сейчас» и «с новыми правилами» */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EscalationDryRun"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+      502: components["responses"]["IntegrationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listReplyTemplates: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Шаблоны по названию; текст на ru, uz, en с подстановками `{name}`, `{manager}` */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ReplyTemplateList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  createReplyTemplate: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ReplyTemplateIn"];
+      };
+    };
+    responses: {
+      /** @description Шаблон создан */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CreatedId"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  updateReplyTemplate: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id шаблона ответа (CRM) */
+        id: components["parameters"]["ReplyTemplateId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ReplyTemplateIn"];
+      };
+    };
+    responses: {
+      /** @description Сохранено */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ActionOk"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  deleteReplyTemplate: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id шаблона ответа (CRM) */
+        id: components["parameters"]["ReplyTemplateId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Удалён */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ActionOk"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  downloadCsvExport: {
+    parameters: {
+      query?: {
+        /** @description Поиск (лиды, клиенты), до 100 символов */
+        q?: string;
+        /** @description Стадия: у сделок `open`, `won`, `lost`; у лидов — код стадии CRM */
+        stage?: string;
+        /** @description Лиды — язык */
+        language?: components["schemas"]["Language"];
+        /** @description Лиды — созданы не раньше (дата-время) */
+        created_from?: string;
+        /** @description Лиды — созданы не позже (дата-время) */
+        created_to?: string;
+        /** @description Сделки — закрыты не раньше */
+        closed_from?: string;
+        /** @description Сделки — закрыты не позже */
+        closed_to?: string;
+      };
+      header?: never;
+      path: {
+        entity: "leads" | "clients" | "deals";
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Файл CSV */
+      200: {
+        headers: {
+          /** @description `attachment; filename="leads-20261026-1530.csv"` */
+          "Content-Disposition"?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          "text/csv": string;
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
     };
   };
 }
