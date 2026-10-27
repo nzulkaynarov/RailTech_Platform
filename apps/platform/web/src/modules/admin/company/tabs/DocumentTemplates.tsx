@@ -291,12 +291,13 @@ function DocumentEditor({
       );
     };
     if (row) {
-      const changed = changedFields(initial, values);
+      // Вид после создания не меняется (поля в форме нет): сравниваем и отправляем без него.
+      const changed = changedFields(omit(initial, ["kind"]), omit(values, ["kind"]));
       if (isEmptyObject(changed)) {
         onClose();
         return;
       }
-      update.mutate({ id: row.id, data: omit(changed, ["kind"]) }, { onError });
+      update.mutate({ id: row.id, data: changed }, { onError });
     } else {
       create.mutate({ data: values }, { onError });
     }
@@ -343,20 +344,29 @@ function DocumentEditor({
           {row?.is_sample ? (
             <p className="pf-co-hint">{t("templates.documents.viewSampleHint")}</p>
           ) : null}
-          <Form.Item
-            name="kind"
-            label={t("templates.documents.kindField")}
-            extra={row ? t("templates.documents.kindFixed") : t("templates.documents.kindHint")}
-          >
-            <Select<DocumentTemplateKind>
-              disabled={row !== null}
-              onChange={chooseKind}
-              options={KINDS.map((value) => ({
-                value,
-                label: t(`templates.documents.kinds.${value}`),
-              }))}
-            />
-          </Form.Item>
+          {row ? (
+            // Вид задаётся при создании: у готового шаблона он показан словом, без отключённого поля (контраст).
+            <Form.Item
+              label={t("templates.documents.kindField")}
+              extra={t("templates.documents.kindFixed")}
+            >
+              <span>{t(`templates.documents.kinds.${row.kind}`)}</span>
+            </Form.Item>
+          ) : (
+            <Form.Item
+              name="kind"
+              label={t("templates.documents.kindField")}
+              extra={t("templates.documents.kindHint")}
+            >
+              <Select<DocumentTemplateKind>
+                onChange={chooseKind}
+                options={KINDS.map((value) => ({
+                  value,
+                  label: t(`templates.documents.kinds.${value}`),
+                }))}
+              />
+            </Form.Item>
+          )}
           <Form.Item
             name="body_html"
             label={t("templates.documents.body")}
