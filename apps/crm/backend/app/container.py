@@ -606,9 +606,16 @@ class CurrentBotSender:
 
 
 async def _enqueue_ingest(document_id: int) -> object:
+    from procrastinate.exceptions import AlreadyEnqueued
+
     from app.tasks.ingest import enqueue_ingest
 
-    return await enqueue_ingest(document_id, force=True)
+    try:
+        return await enqueue_ingest(document_id, force=True)
+    except AlreadyEnqueued as exc:
+        # Замок `kb-document-N`: ингест этого документа уже стоит в очереди — повторять не нужно
+        # (C2A-G-6: раньше это было 500 «CRM не отвечает»).
+        raise ConflictError("document is already queued", reason=Reason.DOCUMENT_INDEXING) from exc
 
 
 async def _enqueue_email(email_log_id: int) -> object:

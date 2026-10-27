@@ -453,7 +453,16 @@ export const botKbHandlers = [
   http.post("*/crm/kb/search", async ({ request }) => {
     const denied = reader();
     if (denied) return denied;
-    return HttpResponse.json(searchFor(readKb(), (await request.json()) as KbSearchIn));
+    const body = (await request.json()) as KbSearchIn;
+    // Нет ключа эмбеддингов (C2A-G-6): CRM отвечает 422 с подкодом, экран подсказывает «Модели ИИ».
+    if (body.query.includes("без ключа")) {
+      return failure(422, "VALIDATION_FAILED", "Проверьте заполнение полей.", "crm", {
+        backend_status: 422,
+        backend_code: "validation_failed",
+        reason: "model_key_required",
+      });
+    }
+    return HttpResponse.json(searchFor(readKb(), body));
   }),
 
   // --- пробелы и продукты ---

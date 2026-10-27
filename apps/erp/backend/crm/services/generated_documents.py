@@ -29,6 +29,8 @@ from .document_placeholders import (
 # re-parsed/re-rendered on every generation (stored-DoS guard, A4/m6). 100 KB is far above any
 # real letter/report.
 MAX_TEMPLATE_BODY_CHARS = 100_000
+# Название шаблона — `DocumentTemplate.name` (CharField max_length=255): длиннее — 400 с кодом, не 500 БД.
+MAX_TEMPLATE_NAME_CHARS = 255
 
 # TTL of the public no-login link minted when a document is ISSUED (mirrors the КП public link
 # lifecycle). A generated letter/report is a point-in-time deliverable; 30 days matches the КП
@@ -235,8 +237,15 @@ def _assert_legal_template_integrity(kind_code: str, body_html: str, is_active: 
         return
     from .document_blocks import missing_required_blocks
 
-    if missing_required_blocks(kind_code, body_html):
-        raise ValidationError("TEMPLATE_MISSING_REQUIRED_BLOCKS")
+    missing = missing_required_blocks(kind_code, body_html)
+    if missing:
+        # Список недостающих блоков едет в `params` — вьюха кладёт его в тело ответа (`missing_blocks`),
+        # чтобы редактор назвал блоки по именам, а не «проверьте заполнение» (C2A-G-5).
+        raise ValidationError(
+            "TEMPLATE_MISSING_REQUIRED_BLOCKS",
+            code="TEMPLATE_MISSING_REQUIRED_BLOCKS",
+            params={"missing_blocks": missing},
+        )
 
 
 @transaction.atomic
@@ -246,6 +255,8 @@ def create_template(company, user: CustomUser, *, name: str, kind_code: str, bod
 
     if not (name or "").strip():
         raise ValidationError("TEMPLATE_NAME_REQUIRED")
+    if len(name.strip()) > MAX_TEMPLATE_NAME_CHARS:
+        raise ValidationError("TEMPLATE_NAME_TOO_LONG")
     if len(body_html or "") > MAX_TEMPLATE_BODY_CHARS:
         raise ValidationError("TEMPLATE_BODY_TOO_LARGE")
     clean_html = sanitize_template_html(body_html)
@@ -268,6 +279,8 @@ def update_template(template, *, name=None, kind_code=None, body_html=None, is_a
     if name is not None:
         if not name.strip():
             raise ValidationError("TEMPLATE_NAME_REQUIRED")
+        if len(name.strip()) > MAX_TEMPLATE_NAME_CHARS:
+            raise ValidationError("TEMPLATE_NAME_TOO_LONG")
         template.name = name.strip()
         fields.append("name")
     if kind_code is not None:

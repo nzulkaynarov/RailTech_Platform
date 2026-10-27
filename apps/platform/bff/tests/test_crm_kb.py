@@ -317,6 +317,35 @@ async def test_reingest_of_a_document_being_indexed_is_409(
     assert response.json()["details"]["reason"] == "document_indexing"
 
 
+async def test_search_without_embedding_key_is_422_not_crm_down(
+    web: Web, crm: CrmBotFake, check: ContractChecker
+) -> None:
+    """C2A-G-6: CRM отвечает 422 `model_key_required` — BFF отдаёт его, а не «CRM не отвечает» (503)."""
+    crm.error("POST", "kb/search", 422, "validation_failed", "model_key_required")
+    await web.login(["ADMIN"])
+
+    response = await web.send("POST", f"{BASE}/search", json={"query": "срок поставки"})
+
+    assert response.status_code == 422
+    check(response, "/crm/kb/search", "post")
+    assert response.json()["code"] == "VALIDATION_FAILED"
+    assert response.json()["details"]["reason"] == "model_key_required"
+
+
+async def test_search_with_unreachable_model_gateway_is_502_integration_failed(
+    web: Web, crm: CrmBotFake, check: ContractChecker
+) -> None:
+    crm.error("POST", "kb/search", 502, "upstream_unavailable", "litellm_unavailable")
+    await web.login(["ADMIN"])
+
+    response = await web.send("POST", f"{BASE}/search", json={"query": "срок поставки"})
+
+    assert response.status_code == 502
+    check(response, "/crm/kb/search", "post")
+    assert response.json()["code"] == "INTEGRATION_FAILED"
+    assert response.json()["details"]["reason"] == "litellm_unavailable"
+
+
 async def test_unknown_document_is_404(web: Web, crm: CrmBotFake, check: ContractChecker) -> None:
     crm.error("GET", "kb/documents/9", 404, "not_found")
     await web.login(["ADMIN"])

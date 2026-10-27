@@ -9,7 +9,7 @@ import { useAuth } from "../../../app/auth/useAuth";
 import { ApiError } from "../../../shared/api/errors";
 import { Consequence } from "../../../shared/ui/Consequence";
 import { EmptyState } from "../../../shared/ui/EmptyState";
-import { companyErrorText, isCompanyNotSet } from "./errors";
+import { companyErrorText, isCompanyNotSet, missingBlocks } from "./errors";
 
 import "./company.css";
 
@@ -241,6 +241,26 @@ export function LogoField({
   );
 }
 
+/** Какие обязательные блоки не хватает в тексте шаблона и что с этим делать (пусто, если ошибка не про блоки). */
+function MissingBlocks({ error }: { error: unknown }) {
+  const { t } = useTranslation("company");
+  const blocks = missingBlocks(error);
+  if (blocks.length === 0) return null;
+  return (
+    <div>
+      <p style={{ margin: "0 0 4px" }}>{t("errors.missingBlocks.title")}</p>
+      <ul style={{ margin: "0 0 4px", paddingLeft: 20 }}>
+        {blocks.map((block) => (
+          <li key={block.code}>
+            {block.label} — <code className="pf-co-mono">{`{{${block.code}}}`}</code>
+          </li>
+        ))}
+      </ul>
+      <p style={{ margin: 0 }}>{t("errors.missingBlocks.hint")}</p>
+    </div>
+  );
+}
+
 /**
  * Окно с формой: «Отмена» и главная кнопка окна, связанная с формой атрибутом `form` (кнопка вне `<form>`). Заголовок —
  * имя действия; блок «Что произойдёт» (если есть) лежит под полями, внутри формы.
@@ -301,6 +321,9 @@ export function FormModal({
           showIcon
           role="alert"
           message={companyErrorText(t, error)}
+          description={
+            missingBlocks(error).length > 0 ? <MissingBlocks error={error} /> : undefined
+          }
           style={{ marginBottom: 16 }}
         />
       ) : null}

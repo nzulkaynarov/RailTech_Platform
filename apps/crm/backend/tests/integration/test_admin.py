@@ -5,12 +5,16 @@ from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
+from openai import APIConnectionError, InternalServerError
+from procrastinate.exceptions import AlreadyEnqueued
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.config import Settings
+from app.container import _enqueue_ingest
 from app.main import create_app
 from app.models.auth import AuditLog
 from app.models.kb import KbDocument, KbGap
@@ -102,6 +106,73 @@ async def test_upload_ingest_and_test_search(harness: Harness, admin: dict[str, 
         files={"file": ("virus.exe", b"MZ", "application/octet-stream")},
     )
     assert bad.status_code == 422
+
+
+_REQUEST = httpx.Request("POST", "http://litellm.test/v1/embeddings")
+
+
+class BrokenEmbedder:
+    """Шлюз моделей отвечает отказом или не отвечает вовсе — как без ключа `embed-model`."""
+
+    def __init__(self, error: Exception) -> None:
+        self._error = error
+
+    async def embed_query(self, text: str) -> list[float]:
+        raise self._error
+
+
+async def test_search_without_embedding_key_is_422_with_a_hint_not_500(
+    harness: Harness, admin: dict[str, str], sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    """C2A-G-6: LiteLLM `/v1/embeddings` отвечает 500 (нет ключа) — подкод для подсказки, не 500."""
+    refusal = InternalServerError(
+        "no api key", response=httpx.Response(500, request=_REQUEST), body=None
+    )
+    harness.client.app.state.container.__dict__["kb_search"] = KbSearchService(  # type: ignore[attr-defined]
+        sessions, BrokenEmbedder(refusal)
+    )
+    response = harness.client.post("/api/v1/kb/search", headers=admin, json={"query": "доставка"})
+    assert response.status_code == 422, response.text
+    body = response.json()
+    assert (body["code"], body["details"]["reason"]) == ("validation_failed", "model_key_required")
+
+
+async def test_search_with_unreachable_gateway_is_502_not_500(
+    harness: Harness, admin: dict[str, str], sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    harness.client.app.state.container.__dict__["kb_search"] = KbSearchService(  # type: ignore[attr-defined]
+        sessions, BrokenEmbedder(APIConnectionError(request=_REQUEST))
+    )
+    response = harness.client.post("/api/v1/kb/search", headers=admin, json={"query": "доставка"})
+    assert response.status_code == 502, response.text
+    assert response.json()["details"]["reason"] == "litellm_unavailable"
+
+
+async def test_reingest_of_a_queued_document_is_409_not_500(
+    harness: Harness,
+    admin: dict[str, str],
+    sessions: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """C2A-G-6: замок `kb-document-N` уже занят (`AlreadyEnqueued`) — «документ уже в очереди»."""
+    document_id = harness.client.post(
+        "/api/v1/kb/documents/manual",
+        headers=admin,
+        json={"title": "Склад", "markdown": "Склад работает круглосуточно.", "language": "ru"},
+    ).json()["id"]
+    await harness.run_ingest()
+
+    async def already_queued(document_id: int, *, force: bool = False) -> int:
+        raise AlreadyEnqueued("queueing lock is taken")
+
+    monkeypatch.setattr("app.tasks.ingest.enqueue_ingest", already_queued)
+    harness.client.app.state.container.__dict__["kb_admin"] = KbAdminService(  # type: ignore[attr-defined]
+        sessions, harness.ingest, _enqueue_ingest
+    )
+    response = harness.client.post(f"/api/v1/kb/documents/{document_id}/reingest", headers=admin)
+    assert response.status_code == 409, response.text
+    body = response.json()
+    assert (body["code"], body["details"]["reason"]) == ("conflict", "document_indexing")
 
 
 async def test_only_markdown_in_the_format_is_accepted(

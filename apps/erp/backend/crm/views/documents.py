@@ -63,6 +63,19 @@ def _brand_preview_field():
     )
 
 
+def _template_error(exc):
+    """400 `{"detail": CODE}`; у `TEMPLATE_MISSING_REQUIRED_BLOCKS` — ещё `missing_blocks`
+    (`[{code, label}]`): редактор называет недостающие блоки по именам (C2A-G-5)."""
+    from crm.services.document_blocks import DOCUMENT_BLOCKS
+
+    body = {"detail": exc.messages[0]}
+    params = exc.params if isinstance(getattr(exc, "params", None), dict) else {}
+    missing = params.get("missing_blocks")
+    if missing:
+        body["missing_blocks"] = [{"code": code, "label": DOCUMENT_BLOCKS.get(code, code)} for code in missing]
+    return Response(body, status=400)
+
+
 class DocumentTemplateViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
     """Company template library. Read = own templates + platform samples («скопировать
     к себе»); write is gated on the `settings.edit` CompanyRole permission and limited
@@ -130,7 +143,7 @@ class DocumentTemplateViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
         except DjangoValidationError as exc:
             # Сервисные коды обязаны доехать как {"detail": CODE} — без перехвата Django
             # отдаёт HTML-страницу «Bad Request», которую SPA не может ни разобрать, ни перевести.
-            return Response({"detail": exc.messages[0]}, status=400)
+            return _template_error(exc)
         return Response(self.get_serializer(template).data, status=201)
 
     def update(self, request, *args, **kwargs):
@@ -148,7 +161,7 @@ class DocumentTemplateViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
                 is_active=request.data.get("is_active"),
             )
         except DjangoValidationError as exc:
-            return Response({"detail": exc.messages[0]}, status=400)
+            return _template_error(exc)
         return Response(self.get_serializer(template).data)
 
     def partial_update(self, request, *args, **kwargs):
@@ -174,16 +187,23 @@ class DocumentTemplateViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
 
         source = self.get_object()
         company = self._owner_company()
+        # Название из окна «Скопировать к себе» (C2A-G-4); без него — «<образец> (копия)». Пустое/слишком
+        # длинное проверяет тот же сервис, что и создание.
+        raw_name = request.data.get("name")
+        if raw_name is None:
+            name = f"{source.name} (копия)"
+        else:
+            name = raw_name if isinstance(raw_name, str) else ""
         try:
             template = crm_services.create_template(
                 company,
                 request.user,
-                name=source.name,
+                name=name,
                 kind_code=source.kind.code,
                 body_html=source.body_html,
             )
         except DjangoValidationError as exc:
-            return Response({"detail": exc.messages[0]}, status=400)
+            return _template_error(exc)
         return Response(self.get_serializer(template).data, status=201)
 
     @extend_schema(
