@@ -1398,6 +1398,34 @@ async def test_silence_after_an_ai_outage_is_not_a_recovery_and_not_a_new_failur
     assert len(alerts.sent) == 1  # без «Восстановлено» и без нового «Сломано»
 
 
+async def test_night_without_traffic_keeps_ok_after_a_successful_answer_and_restores(
+    sessions: async_sessionmaker[AsyncSession],
+    client: TestClient,
+    alerts: FakeAlerts,
+) -> None:
+    """Сбой днём — «Сломано»; последний ответ успешный, ночью обращений нет — «Восстановлено»."""
+    conversation = await _conversation(sessions)
+    for minute in range(0, 17):
+        await _bot_message(sessions, conversation, minute, failed=True)
+        await run_at(client, at(minute), "ai_replies")
+    await _bot_message(sessions, conversation, 17, failed=False)  # последний ответ — успешный
+    for minute in (18, 20, 22, 24, 26, 30, 60, 600):  # дальше трафика нет, строка остаётся ok
+        await run_at(client, at(minute), "ai_replies")
+    assert [a.subject.split(":")[0] for _, a in alerts.sent] == ["⚠️ Сломано", "✅ Восстановлено"]
+
+
+async def test_no_bot_answers_for_a_day_is_unknown_not_ok(
+    sessions: async_sessionmaker[AsyncSession],
+    client: TestClient,
+    alerts: FakeAlerts,
+) -> None:
+    conversation = await _conversation(sessions)
+    await _bot_message(sessions, conversation, 0, failed=False)
+    await run_at(client, at(0), "ai_replies")
+    await run_at(client, at(25 * 60), "ai_replies")  # сутки без ответов бота — «нечего проверять»
+    assert alerts.sent == []
+
+
 class _Clocked:
     """Оповещения с отметкой «в какую минуту прохода ушло» — для проверки времени писем."""
 

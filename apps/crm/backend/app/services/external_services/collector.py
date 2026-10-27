@@ -308,8 +308,8 @@ class _Run:
         """Ответы бота клиентам за 5 минут: сбои агента и успешные ответы (без вызова моделей)."""
         window = timedelta(minutes=ai_rules.WINDOW_MINUTES)
         async with self.d.sessions() as session:
-            facts = await repo.ai_reply_stats(session, self.now - window)
-        return ai_rules.ai_replies(facts)
+            facts = await repo.ai_reply_stats(session, self.now - window, self.now - DAY)
+        return ai_rules.ai_replies(facts, self.now)
 
     async def erp_events(self) -> CheckResult:
         """Итог обмена событиями с ERP на шине: недоставленные, упавшие, зависшие."""
