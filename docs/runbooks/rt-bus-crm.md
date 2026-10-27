@@ -130,6 +130,19 @@ DLQ растёт после исправления причины, `company mism
 `.env` и перезапустите `crm-worker`. Предохранитель шины (5 ошибок подряд — пауза 5 мин) сам снимает нагрузку: подписчик на паузе
 не опрашивается. Выделять отдельный воркер под очередь `rt_bus` — отдельная задача инфраструктуры, не строка конфигурации.
 
+## Поля журнала шины (W15-H8b, B-006)
+Записи `rt_bus*` в JSON-журнале CRM и EDS несут поля `extra` отдельными ключами, а не только имя события: `subscriber`, `event_id`,
+`event_type`, `attempt`, `status_code` (код ответа подписчика или отказа приёма), `reason` (причина отказа приёма, `rt_bus_receive_rejected`),
+`error`, `next_attempt_at`, `delivery_id`, `publisher`, `actor`. Причину повтора и отказа доставки видно в одной строке:
+
+```bash
+$C logs --no-log-prefix crm-worker | grep rt_bus_delivery_retry | jq '{event, subscriber, event_id, attempt, status_code, error}'
+```
+
+Поля переносит `rt_bus.structlog_extra_processor` (явный перечень `LOG_EXTRA_FIELDS`, только записи логгеров `rt_bus*`), он подключён в
+`apps/crm/backend/app/log.py` и `apps/eds/app/log.py`. ERP (Django) и BFF настраивают журнал сами: ERP и приёмник BFF по-прежнему печатают
+имя события без полей — отдельная задача этих систем (подключить тот же процессор или форматтер), `request_id` у приёмника BFF тоже там.
+
 ## Метрики и уборка
 `rt_bus.log_metrics` пишет строку `rt_bus_metrics` раз в 5 минут (`outbox_pending`, `dlq_size`, `inbox_failed`, по подписчикам).
 Доставленное и обработанное старше 30 суток удаляет `rt_bus.purge` (раз в сутки); `dead` и `failed` остаются до разбора.
