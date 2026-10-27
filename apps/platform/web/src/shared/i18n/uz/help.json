@@ -417,8 +417,8 @@
     "never": "Boshqa ko‘rsatilmasin",
     "steps": {
       "rail": {
-        "title": "Chapdagi modullar",
-        "text": "Bu yerda rolingizga tegishli modullar: Bosh sahifa, Mijozlar, Hujjatlar, Hisob-kitob, Chatlar, Sozlamalar. Qolganlari yashirilgan."
+        "title": "Modullar",
+        "text": "Chapda (telefonda — pastda) faqat rolingizga tegishli modullar ko‘rinadi. Qolganlari yashirilgan, kirish mumkin bo‘lmagan bo‘lim buni o‘zi aytadi."
       },
       "menu": {
         "title": "«Mening vazifalarim»",

@@ -417,8 +417,8 @@
     "never": "Do not show again",
     "steps": {
       "rail": {
-        "title": "Modules on the left",
-        "text": "These are the modules your role allows: Home, Clients, Documents, Costing, Chats, Settings. The rest are hidden."
+        "title": "Modules",
+        "text": "On the left (at the bottom on a phone) are only the modules your role allows. The rest are hidden, and a section you cannot open says so itself."
       },
       "menu": {
         "title": "“My tasks”",

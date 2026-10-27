@@ -56,9 +56,7 @@ class CrmTickets:
         self.calls: list[tuple[str, str, Any]] = []
         self.reply: httpx.Response | None = None
         router = be.router
-        router.post(MINE).mock(
-            side_effect=lambda r: self._answer("create", r, 201, crm_ticket())
-        )
+        router.post(MINE).mock(side_effect=lambda r: self._answer("create", r, 201, crm_ticket()))
         router.get(MINE).mock(side_effect=lambda r: self._answer("mine", r, 200, [crm_row()]))
         router.get(url__regex=rf"^{MINE}/\d+$").mock(
             side_effect=lambda r: self._answer("mine_one", r, 200, crm_ticket())

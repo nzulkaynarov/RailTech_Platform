@@ -53,7 +53,7 @@ describe("Первый вход", () => {
       expect(document.activeElement).toBe(tour);
     });
     expect(tour).toHaveAttribute("aria-modal", "true");
-    expect(tour).toHaveAccessibleDescription(/Модули слева/);
+    expect(tour).toHaveAccessibleDescription(/Модули/);
     expect(within(tour).getByText("Шаг 1 из 4")).toBeInTheDocument();
 
     for (const title of ["«Мои задачи»", "Колокольчик", "Помощь"]) {
