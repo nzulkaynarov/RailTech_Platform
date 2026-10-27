@@ -2972,6 +2972,82 @@ components:
       - disabled
       title: ExternalServicesSummary
       type: object
+    HandoffFacts:
+      description: 'Факты квалификации от бота (коды CRM: срок `<1m|<3m|<12m|>12m`, роль `decision_maker|…`).'
+      properties:
+        budget_hint:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Budget Hint
+        company:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Company
+        company_size:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Company Size
+        decision_role:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Decision Role
+        interest:
+          items:
+            type: string
+          title: Interest
+          type: array
+        region:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Region
+        timeline:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Timeline
+      title: HandoffFacts
+      type: object
+    HandoffNote:
+      description: 'Записка передачи (CRM-06, D1-1): запрос, факты, причина, рекомендуемый шаг — как в
+
+        карточке канала команды, без сырых кодов продуктов. Причины — коды `reason_codes`
+
+        (подписи — у экрана).'
+      properties:
+        facts:
+          $ref: '#/components/schemas/HandoffFacts'
+        last_lead_message:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Last Lead Message
+        reason_codes:
+          items:
+            type: string
+          title: Reason Codes
+          type: array
+        reason_text:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Reason Text
+        recommendation:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Recommendation
+        request:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Request
+      title: HandoffNote
+      type: object
     HealthResponse:
       properties:
         status:
@@ -3383,6 +3459,10 @@ components:
           anyOf:
           - $ref: '#/components/schemas/EscalationOut'
           - type: 'null'
+        handoff_note:
+          anyOf:
+          - $ref: '#/components/schemas/HandoffNote'
+          - type: 'null'
         id:
           title: Id
           type: integer
@@ -3496,6 +3576,10 @@ components:
         escalation:
           anyOf:
           - $ref: '#/components/schemas/EscalationOut'
+          - type: 'null'
+        handoff_note:
+          anyOf:
+          - $ref: '#/components/schemas/HandoffNote'
           - type: 'null'
         id:
           title: Id
@@ -4829,6 +4913,12 @@ components:
       type: object
     Reply:
       properties:
+        client_message_id:
+          anyOf:
+          - pattern: ^[A-Za-z0-9_-]{8,64}$
+            type: string
+          - type: 'null'
+          title: Client Message Id
         text:
           maxLength: 4000
           minLength: 1
@@ -8077,7 +8167,9 @@ paths:
       - export
   /api/v1/inbox:
     get:
-      description: Очередь работы — менеджеру и админу; наблюдатель смотрит «Лиды» (SPEC §10.1).
+      description: 'Очередь работы с запиской передачи (CRM-06). Читает любой с `leads:read` (D1-1: директор
+
+        видит «Ждут ответа» только для просмотра); забрать и ответить — права `leads:take`/`reply`.'
       operationId: inbox
       responses:
         '200':
@@ -9851,6 +9943,49 @@ paths:
       security:
       - HTTPBearer: []
       summary: Reply
+      tags:
+      - leads
+  /api/v1/leads/{lead_id}/messages/{message_id}/attachments/{index}:
+    get:
+      description: 'Файл вложения; 404 — нет лида, сообщения, вложения или файл не сохранён (до согласия,
+
+        больше 20 МБ, лид обезличен).'
+      operationId: message_attachment
+      parameters:
+      - in: path
+        name: lead_id
+        required: true
+        schema:
+          title: Lead Id
+          type: integer
+      - in: path
+        name: message_id
+        required: true
+        schema:
+          title: Message Id
+          type: integer
+      - in: path
+        name: index
+        required: true
+        schema:
+          exclusiveMaximum: 20
+          minimum: 0
+          title: Index
+          type: integer
+      responses:
+        '200':
+          content:
+            application/octet-stream: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Message Attachment
       tags:
       - leads
   /api/v1/leads/{lead_id}/notes:
