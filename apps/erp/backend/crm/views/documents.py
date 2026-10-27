@@ -270,7 +270,13 @@ class DocumentTemplateViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
         tags=["CRM"],
         request=inline_serializer(
             "DocumentTemplatePreviewRequest",
-            fields={"body_html": drf_serializers.CharField(required=False, allow_blank=True)},
+            fields={
+                "body_html": drf_serializers.CharField(required=False, allow_blank=True),
+                "kind": drf_serializers.CharField(
+                    required=False,
+                    help_text="Код вида шаблона (CONTRACT, INVOICE, ACT — каркас вида и образцы блоков; иначе общий каркас).",
+                ),
+            },
         ),
         responses={
             200: inline_serializer(
@@ -287,7 +293,9 @@ class DocumentTemplateViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
                     "document_html": drf_serializers.CharField(),
                 },
             ),
-            400: OpenApiResponse(description="NO_COMPANY / TEMPLATE_BODY_TOO_LARGE (error code)"),
+            400: OpenApiResponse(
+                description="NO_COMPANY / TEMPLATE_BODY_TOO_LARGE / TEMPLATE_KIND_INVALID (error code)"
+            ),
         },
     )
     @action(detail=False, methods=["post"], url_path="preview", throttle_classes=[DocumentPreviewThrottle])
@@ -300,11 +308,15 @@ class DocumentTemplateViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
         company_id = crm_services.resolve_owner_company_id(request.user)
         if not company_id:
             return Response({"detail": "NO_COMPANY"}, status=400)
+        kind_code = request.data.get("kind") or None
+        if kind_code is not None and not isinstance(kind_code, str):
+            return Response({"detail": "TEMPLATE_KIND_INVALID"}, status=400)  # список или объект — не 500
         try:
             result = crm_services.preview_template(
                 Company.objects.get(pk=company_id),
                 request.user,
                 body_html=request.data.get("body_html", ""),
+                kind_code=kind_code,
             )
         except DjangoValidationError as exc:
             return Response({"detail": exc.messages[0]}, status=400)
