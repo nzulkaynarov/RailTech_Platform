@@ -1,6 +1,6 @@
 {
   "page": {
-    "title": "Audit log",
+    "title": "Activity log",
     "subtitle": "Who changed what and when in CRM and the Platform. Entries are read-only: they cannot be edited or deleted."
   },
   "filters": {
@@ -46,7 +46,7 @@
   },
   "loadError": {
     "title": "Could not load the log",
-    "text": "The log is kept by CRM. Retry; if the error persists, check CRM in Admin · Integrations.",
+    "text": "The log is kept by CRM. Retry; if the error persists, check CRM in Settings · Connections.",
     "retry": "Retry"
   },
   "card": {
@@ -117,7 +117,7 @@
     "self": "You cannot reset your own password here: choose “Change password” in the avatar menu.",
     "sent": "An email with the new password was sent to {{email}}",
     "errors": {
-      "NOT_CONFIGURED": "Mail is not connected, the password is unchanged. Connect mail in Admin · Integrations and retry.",
+      "NOT_CONFIGURED": "Mail is not connected, the password is unchanged. Connect mail in Settings · Connections and retry.",
       "SECRETS_KEY_MISSING": "The server has no secrets encryption key: the email cannot be sent. Set it in the server settings.",
       "SELF_RESET": "You cannot reset your own password here: choose “Change password” in the avatar menu.",
       "FORBIDDEN": "Not enough rights: passwords are reset by an administrator.",
@@ -125,7 +125,7 @@
       "BACKEND_UNAVAILABLE": "CRM is not responding. The password is unchanged, retry later.",
       "DEFAULT": "Could not reset the password. Please retry."
     },
-    "integrations": "Open Admin · Integrations",
+    "integrations": "Open Settings · Connections",
     "temporaryHint": "No email: you see the new password once and hand it to the employee in person; the old one stops working.",
     "confirmTemporary": "Issue password"
   },
@@ -137,7 +137,7 @@
     "telegram": "Telegram",
     "linked": "Linked",
     "notLinked": "Not linked",
-    "linkHint": "An administrator links Telegram in the employee card (Admin · Organization). Until it is linked, subscriptions do not work.",
+    "linkHint": "An administrator links Telegram in the employee card (Settings · Employees). Until it is linked, subscriptions do not work.",
     "failed": "The bot's last message was not delivered ({{time}}). Open the bot in Telegram, press Start, then send a test notification.",
     "leads": "Leads waiting for me",
     "leadsHint": "The bot writes when a lead is handed to a manager or a client replies.",
@@ -150,7 +150,7 @@
     "errors": {
       "NOT_LINKED": "Telegram is not linked: ask an administrator to link it in the employee card.",
       "REFUSED": "Telegram did not accept the message. Open the bot, press Start and make sure it is not blocked.",
-      "NOT_CONFIGURED": "The bot is not connected. An administrator connects it in Admin · Integrations.",
+      "NOT_CONFIGURED": "The bot is not connected. An administrator connects it in Settings · Connections.",
       "BACKEND_UNAVAILABLE": "CRM is not responding. Retry later.",
       "DEFAULT": "The action failed. Please retry."
     }

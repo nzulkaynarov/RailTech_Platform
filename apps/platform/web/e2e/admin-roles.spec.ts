@@ -31,7 +31,7 @@ async function expectNoViolations(page: Page, context: string): Promise<void> {
 
 async function openRoles(page: Page): Promise<void> {
   await spaGoto(page, "/admin/roles");
-  await expect(page.getByRole("heading", { level: 1, name: "Ролевая матрица" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Роли и права" })).toBeVisible();
   await expect(page.getByRole("button", { name: /^Администратор/ })).toBeVisible();
 }
 
@@ -66,7 +66,7 @@ test.describe("Ролевая матрица: роли — данные", () => 
     await expect(panel.getByRole("heading", { level: 3, name: "Новая роль" })).toBeVisible();
     await panel.getByLabel("Название").fill(MIXED);
     const leads = matrix(page).getByRole("combobox", {
-      name: `Все сообщения, Все лиды, Каналы связи, База знаний — роль «${MIXED}»`,
+      name: `Ждут ответа, Лиды, Каналы связи, База знаний бота — роль «${MIXED}»`,
     });
     await leads.selectOption({ label: "Полный доступ" });
     const payments = matrix(page).getByRole("combobox", {
@@ -74,7 +74,7 @@ test.describe("Ролевая матрица: роли — данные", () => 
     });
     await payments.selectOption({ label: "Полный доступ" });
     const consequence = panel.getByRole("group", { name: "Что произойдёт" });
-    await expect(consequence.getByText("Роль открывает модули: CRM, EDS.")).toBeVisible();
+    await expect(consequence.getByText("Роль открывает модули: Клиенты, Документы.")).toBeVisible();
     await settledScreenshot(page, "roles-new");
     await panel.getByRole("button", { name: "Создать роль" }).click();
     await expect(page.getByText(`Роль «${MIXED}» создана`)).toBeVisible();
@@ -89,7 +89,7 @@ test.describe("Ролевая матрица: роли — данные", () => 
     await expect(panel.getByRole("heading", { level: 3, name: "Демо Инженеров" })).toBeVisible();
     await panel.getByRole("checkbox", { name: /^Гл\. инженер/ }).uncheck();
     await panel.getByRole("checkbox", { name: new RegExp(`^${MIXED}`) }).check();
-    await expect(panel.getByText("Сотрудник увидит модули: CRM, EDS.")).toBeVisible();
+    await expect(panel.getByText("Сотрудник увидит модули: Клиенты, Документы.")).toBeVisible();
     await panel.getByRole("button", { name: "Сохранить роли" }).click();
     await expect(page.getByText("Сохранено")).toBeVisible();
     await expect(page.getByRole("row", { name: /Демо Инженеров/ })).toContainText(MIXED);
@@ -98,11 +98,11 @@ test.describe("Ролевая матрица: роли — данные", () => 
     await signOut(page);
     await login(page, "engineer@demo.example");
     await expect(page).toHaveURL(/\/crm\/messages$/);
-    await expect(railLinks(page)).toHaveText(["CRM", "EDS"]);
+    await expect(railLinks(page)).toHaveText(["Клиенты", "Документы"]);
     const submenu = page.getByRole("navigation", { name: "Разделы модуля" });
     await expect(submenu.getByRole("link")).toHaveText([
-      /Все сообщения/,
-      /Все лиды/,
+      /Ждут ответа/,
+      /Лиды/,
       /Каналы связи/,
       /База знаний/,
     ]);
@@ -114,7 +114,7 @@ test.describe("Ролевая матрица: роли — данные", () => 
     await expect(page.getByRole("option", { name: /L-2041/ })).toBeVisible();
     await expect(page.getByRole("option", { name: /ИНН 300000001/ })).toHaveCount(0);
     await search.press("Escape");
-    await railLinks(page).filter({ hasText: "EDS" }).click();
+    await railLinks(page).filter({ hasText: "Документы" }).click();
     await expect(submenu.getByRole("link")).toHaveText([/Все документы/, /Счета и оплаты/]);
     // Название роли под аватаром — из данных.
     await expect(
@@ -134,7 +134,7 @@ test.describe("Ролевая матрица: роли — данные", () => 
     await page.getByRole("button", { name: MIXED, exact: true }).click();
     await expect(
       panel.getByText(
-        "Удалить нельзя: роль выдана сотрудникам (1). Сначала назначьте им другие роли в Оргструктуре.",
+        "Удалить нельзя: роль выдана сотрудникам (1). Сначала назначьте им другие роли в разделе «Сотрудники».",
       ),
     ).toBeVisible();
     await expect(panel.getByRole("button", { name: "Удалить роль" })).toBeDisabled();
@@ -155,9 +155,7 @@ test.describe("Ролевая матрица: роли — данные", () => 
     await summary.selectOption({ label: "Только чтение" });
     const consequence = panel.getByRole("group", { name: "Что произойдёт" });
     await expect(
-      consequence.getByText(
-        /сотрудник\S* получат: Dashboard · Сводка по компании \(только чтение\)/,
-      ),
+      consequence.getByText(/сотрудник\S* получат: Главная · Сводка по компании \(только чтение\)/),
     ).toBeVisible();
     await settledScreenshot(page, "roles-edit-preview");
     await panel.getByRole("button", { name: "Сохранить роль" }).click();
@@ -195,7 +193,7 @@ test.describe("Ролевая матрица: директор — только 
       await page.setViewportSize({ width, height: 900 });
       await loginAndWait(page, "director@demo.example");
       await spaGoto(page, "/admin/roles");
-      await expect(page.getByRole("heading", { level: 1, name: "Ролевая матрица" })).toBeVisible();
+      await expect(page.getByRole("heading", { level: 1, name: "Роли и права" })).toBeVisible();
       await expect(page.getByRole("button", { name: /^Менеджер/ })).toBeVisible();
       await expect(page.getByText("Ролевую матрицу ведёт администратор")).toHaveCount(0);
       await expect(page.getByText("Только просмотр", { exact: true })).toBeVisible();

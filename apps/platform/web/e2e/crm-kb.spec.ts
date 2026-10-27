@@ -23,7 +23,7 @@ async function expectNoViolations(page: Page, context: string): Promise<void> {
 
 async function openKb(page: Page, query = ""): Promise<void> {
   await spaGoto(page, `/crm/kb${query}`);
-  await expect(page.getByRole("heading", { level: 1, name: "База знаний" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "База знаний бота" })).toBeVisible();
 }
 
 function side(page: Page): Locator {
@@ -277,7 +277,7 @@ test.describe("База знаний: права", () => {
   }) => {
     await loginAndWait(page, "supply@demo.example");
     await spaGoto(page, "/crm/clients");
-    await expect(page.getByRole("link", { name: "База знаний" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "База знаний бота" })).toHaveCount(0);
     await spaGoto(page, "/crm/kb");
     await expect(page.getByRole("heading", { level: 1, name: "Нет доступа" })).toBeVisible();
 
@@ -285,8 +285,8 @@ test.describe("База знаний: права", () => {
     await spaGoto(page, "/login");
     await loginAndWait(page, "admin@demo.example");
     await spaGoto(page, "/crm/kb");
-    await expect(page.getByRole("link", { name: "База знаний" })).toBeVisible();
-    await expect(page.getByRole("heading", { level: 1, name: "База знаний" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "База знаний бота" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "База знаний бота" })).toBeVisible();
   });
 });
 

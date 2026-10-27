@@ -42,7 +42,7 @@ test.describe("axe и скриншоты", () => {
         await expect(page.getByRole("navigation", { name: "Разделы модуля" })).toBeVisible();
         await expectNoViolations(page, "menu drawer 390");
         await settledScreenshot(page, "dashboard-menu-drawer");
-        await page.getByRole("link", { name: "Моя очередь 3, требует действия" }).click();
+        await page.getByRole("link", { name: "Мои задачи 3, требует действия" }).click();
         await page.getByRole("button", { name: "Показать боковое окно" }).click();
         await expect(page.getByRole("tab", { name: "Сегодня" })).toBeVisible();
         await expectNoViolations(page, "panel drawer 390");
@@ -73,7 +73,7 @@ test.describe("axe и скриншоты", () => {
       await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
       await loginAndWait(page, "all@demo.example");
       await page.goto("/eds/inbox");
-      await expect(page.getByRole("heading", { level: 1, name: "Входящие" })).toBeVisible();
+      await expect(page.getByRole("heading", { level: 1, name: "Входящие письма" })).toBeVisible();
       await expectNoViolations(page, `inbox ${String(width)}`);
       await settledScreenshot(page, "eds-inbox");
     });

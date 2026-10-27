@@ -31,7 +31,7 @@ describe("Admin · Журнал интеграций: подписчики", () 
     renderAt("/admin/bus");
 
     expect(
-      await screen.findByRole("heading", { level: 1, name: "Журнал интеграций" }),
+      await screen.findByRole("heading", { level: 1, name: "Обмен между системами" }),
     ).toBeVisible();
     await screen.findByRole("heading", { level: 3, name: "CRM отправляет" });
 
@@ -199,14 +199,14 @@ describe("Admin · Журнал интеграций: права", () => {
       signIn(email);
       renderAt("/admin/bus");
       expect(await screen.findByRole("heading", { level: 1 })).toBeVisible();
-      expect(screen.queryByRole("link", { name: "Журнал интеграций" })).toBeNull();
-      expect(screen.queryByRole("heading", { level: 1, name: "Журнал интеграций" })).toBeNull();
+      expect(screen.queryByRole("link", { name: "Обмен между системами" })).toBeNull();
+      expect(screen.queryByRole("heading", { level: 1, name: "Обмен между системами" })).toBeNull();
     },
   );
 
   it("администратор видит пункт «Журнал интеграций» в подменю Admin", async () => {
     signIn("admin@demo.example");
     renderAt("/admin/org");
-    expect(await screen.findByRole("link", { name: "Журнал интеграций" })).toBeVisible();
+    expect(await screen.findByRole("link", { name: "Обмен между системами" })).toBeVisible();
   });
 });

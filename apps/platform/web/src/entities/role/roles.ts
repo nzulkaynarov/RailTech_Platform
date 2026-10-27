@@ -27,11 +27,11 @@ export function lang(language: string): Language {
   return language === "uz" || language === "en" ? language : "ru";
 }
 
-/** Подпись раздела каталога в строке матрицы: без префикса модуля («CRM · …»), он — в заголовке группы. */
+/** Подпись раздела каталога в строке матрицы: без префикса модуля («Клиенты · …»), он — в заголовке группы. */
 export function sectionLabel(key: ResourceKey, language: string): string {
   const label = RESOURCES[key].label[lang(language)];
-  const prefix = /^(Dashboard|CRM|EDS|ERP|Chats|Admin) · /;
-  return label.replace(prefix, "");
+  // Подпись каталога начинается с имени модуля («Клиенты · …»); в матрице строка стоит под заголовком модуля.
+  return label.replace(/^[^·]+ · /, "");
 }
 
 /** Полная подпись раздела (с модулем) — для списков «получат / потеряют». */

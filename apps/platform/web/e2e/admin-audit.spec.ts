@@ -38,13 +38,13 @@ async function signOut(page: Page): Promise<void> {
   await expect(page).toHaveURL(/\/login/);
 }
 
-test.describe("Журнал аудита", () => {
+test.describe("История действий", () => {
   test.skip(({ isMobile }) => isMobile, "ширины задаёт сам тест");
 
   test("админ фильтрует журнал, открывает запись и видит, что изменилось", async ({ page }) => {
     await loginAndWait(page, "admin@demo.example");
     await spaGoto(page, "/admin/audit");
-    await expect(page.getByRole("heading", { level: 1, name: "Журнал аудита" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: "История действий" })).toBeVisible();
     const table = page.getByRole("table", { name: "Записи журнала аудита" });
     await expect(table.getByRole("row")).toHaveCount(14);
     await expect(page.getByText("Записей: 13")).toBeVisible();
@@ -84,7 +84,9 @@ test.describe("Журнал аудита", () => {
     await loginAndWait(page, "admin@demo.example");
     await spaGoto(page, "/admin/audit?entry=116&panel=open");
     const side = page.locator(PANEL);
-    await expect(side.getByText(/Все запросы, Расчёт: Скрыто → Только чтение/)).toBeVisible();
+    await expect(
+      side.getByText(/Заявки в расчёте, Мои расчёты: Скрыто → Только чтение/),
+    ).toBeVisible();
     await expect(side.getByText(/Поле «Цены поставщиков»: станет видно/)).toBeVisible();
 
     await spaGoto(page, "/admin/audit?entry=119&panel=open");
