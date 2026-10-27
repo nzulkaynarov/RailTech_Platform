@@ -11562,7 +11562,7 @@ export const getCreateDocumentTemplateUrl = () => {
 };
 
 /**
- * Раздел `company.settings` — полный.
+ * Раздел `company.settings` — полный. Активный шаблон договора, счёта или акта без обязательных блоков — 422 `VALIDATION_FAILED` с `details.reason = template_missing_required_blocks` и `details.missing_blocks` — список `{code, label}` недостающих блоков (подстановки `{{doc.…}}`); черновик (`is_active = false`) сохраняется без блоков.
  * @summary Создать шаблон документа
  */
 export const createDocumentTemplate = async (
@@ -11915,7 +11915,7 @@ export const getUpdateDocumentTemplateUrl = (id: string) => {
 };
 
 /**
- * Образец платформы изменить нельзя — сначала копия. Раздел `company.settings` — полный.
+ * Образец платформы изменить нельзя — сначала копия. Раздел `company.settings` — полный. Итоговое состояние (вид, текст, `is_active`) проверяется как при создании: нехватка обязательных блоков — 422 `VALIDATION_FAILED` с `details.reason = template_missing_required_blocks` и `details.missing_blocks` (`{code, label}`).
  * @summary Изменить шаблон документа
  */
 export const updateDocumentTemplate = async (
@@ -12123,7 +12123,7 @@ export const getCopyDocumentTemplateUrl = (id: string) => {
 };
 
 /**
- * Раздел `company.settings` — полный.
+ * Раздел `company.settings` — полный. Копия получает название из `name` (до 255 символов; пустое — 422 `VALIDATION_FAILED`).
  * @summary Скопировать образец платформы к себе
  */
 export const copyDocumentTemplate = async (
@@ -15316,7 +15316,7 @@ export const getReingestKbDocumentUrl = (id: number) => {
 };
 
 /**
- * CRM `POST /kb/documents/{id}/reingest`. Раздел `admin` — полный. Документ, который сейчас индексируется, — 409 `CONFLICT` с `details.reason = document_indexing`.
+ * CRM `POST /kb/documents/{id}/reingest`. Раздел `admin` — полный. Документ, который сейчас индексируется или уже стоит в очереди на индексацию, — 409 `CONFLICT` с `details.reason = document_indexing`.
  * @summary Переиндексировать документ
  */
 export const reingestKbDocument = async (
@@ -15419,7 +15419,7 @@ export const getSearchKbUrl = () => {
 };
 
 /**
- * CRM `POST /kb/search`: тот же поиск и порог, что у диалогового агента; ничего не меняет и не пишет в расходы (поиск по векторам и словам без вызова модели ответа).
+ * CRM `POST /kb/search`: тот же поиск и порог, что у диалогового агента; ничего не меняет и не пишет в расходы (поиск по векторам и словам без вызова модели ответа). Шлюз моделей отказал (нет ключа эмбеддингов, модель недоступна) — 422 `VALIDATION_FAILED` с `details.reason = model_key_required`; шлюз не отвечает по сети — 502 `INTEGRATION_FAILED` с `details.reason = litellm_unavailable`.
  * @summary Что найдёт бот на этот вопрос
  */
 export const searchKb = async (

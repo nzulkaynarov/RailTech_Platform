@@ -118,6 +118,35 @@ async function write<B>(
   return result instanceof Response ? result : HttpResponse.json(result as never, { status });
 }
 
+/** Обязательные блоки юридических видов (ERP `REQUIRED_TEMPLATE_BLOCKS`): без них активный шаблон не сохраняется. */
+const REQUIRED_BLOCKS: Record<string, { code: string; label: string }[]> = {
+  Договор: [
+    { code: "doc.spec_table", label: "Блок: спецификация (Приложение № 1)" },
+    { code: "doc.totals", label: "Блок: итоги и НДС" },
+    { code: "doc.requisites_and_signatures", label: "Блок: реквизиты и подписи Сторон" },
+  ],
+  Акт: [
+    { code: "doc.items_table", label: "Блок: таблица позиций" },
+    { code: "doc.totals", label: "Блок: итоги и НДС" },
+    { code: "doc.signatures", label: "Блок: подписи сторон" },
+  ],
+};
+
+/** Отказ ERP `TEMPLATE_MISSING_REQUIRED_BLOCKS` с названиями блоков (C2A-G-5); `null` — состав блоков в порядке. */
+function missingBlocksFailure(kindName: string, bodyHtml: string, active: boolean) {
+  const required = REQUIRED_BLOCKS[kindName];
+  if (!active || !required) return null;
+  const present = new Set([...bodyHtml.matchAll(/\{\{\s*([\w.]+)\s*\}\}/g)].map((m) => m[1] ?? ""));
+  const missing = required.filter((block) => !present.has(block.code));
+  if (missing.length === 0) return null;
+  return fail(422, "VALIDATION_FAILED", "Проверьте заполнение полей.", "erp", {
+    backend_status: 400,
+    backend_code: "TEMPLATE_MISSING_REQUIRED_BLOCKS",
+    reason: "template_missing_required_blocks",
+    missing_blocks: missing,
+  });
+}
+
 const noContent = () => new HttpResponse(null, { status: 204 });
 const notFound = () => fail(404, "NOT_FOUND", "Не найдено.", "erp");
 
@@ -484,9 +513,7 @@ export const adminCompanyHandlers = [
     );
     return HttpResponse.json({
       html: `<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>Образец</title></head><body style="font-family:Arial,sans-serif;padding:24px">${html}</body></html>`,
-      ...(unknown.length > 0
-        ? { warnings: unknown.map((code) => `Неизвестная подстановка {{${code}}}`) }
-        : {}),
+      ...(unknown.length > 0 ? { warnings: unknown } : {}),
     });
   }),
   http.post("*/admin/company/document-templates", ({ request }) =>
@@ -519,6 +546,12 @@ export const adminCompanyHandlers = [
       if (!row) return notFound();
       if (row.is_sample) return erpForbidden();
       if (body.name !== undefined && body.name.trim() === "") return validation(["name"]);
+      const refusal = missingBlocksFailure(
+        row.kind_name,
+        body.body_html ?? row.body_html,
+        body.is_active ?? row.is_active,
+      );
+      if (refusal) return refusal;
       Object.assign(row, body, { updated_at: nowIso() });
       row.placeholders_used = [...row.body_html.matchAll(/\{\{(\w+)\}\}/g)].map((m) => m[1] ?? "");
       return row;

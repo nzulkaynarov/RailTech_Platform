@@ -1170,6 +1170,58 @@ async def test_document_template_in_use_is_409(
     assert response.json()["details"]["reason"] == "template_in_use"
 
 
+async def test_document_template_without_required_blocks_names_them(
+    web: Web, erp: respx.MockRouter, check: ContractChecker
+) -> None:
+    """C2A-G-5: отказ ERP по составу блоков доезжает с названиями блоков, а не только кодом."""
+    await web.login(["DIRECTOR"])
+    blocks = [
+        {"code": "doc.spec_table", "label": "Блок: спецификация (Приложение № 1)"},
+        {"code": "doc.totals", "label": "Блок: итоги и НДС"},
+    ]
+    erp.patch(f"{API}/crm/document-templates/7/").mock(
+        return_value=httpx.Response(
+            400, json={"detail": "TEMPLATE_MISSING_REQUIRED_BLOCKS", "missing_blocks": blocks}
+        )
+    )
+
+    response = await web.send(
+        "PATCH", "/api/v1/admin/company/document-templates/7", json={"body_html": "{{buyer_name}}"}
+    )
+
+    assert response.status_code == 422
+    check(response, "/admin/company/document-templates/{id}", "patch")
+    body = response.json()
+    assert body["code"] == "VALIDATION_FAILED"
+    assert body["details"]["reason"] == "template_missing_required_blocks"
+    assert body["details"]["missing_blocks"] == blocks
+    assert "fields" not in body["details"]  # блоки — не поле формы
+
+
+async def test_document_template_blocks_in_a_malformed_erp_body_are_dropped(
+    web: Web, erp: respx.MockRouter
+) -> None:
+    await web.login(["DIRECTOR"])
+    erp.post(f"{API}/crm/document-templates/").mock(
+        return_value=httpx.Response(
+            400,
+            json={
+                "detail": "TEMPLATE_MISSING_REQUIRED_BLOCKS",
+                "missing_blocks": ["doc.totals", {"code": 5}],
+            },
+        )
+    )
+
+    response = await web.send(
+        "POST",
+        "/api/v1/admin/company/document-templates",
+        json={"name": "Договор", "kind": "CONTRACT", "body_html": "x"},
+    )
+
+    assert response.status_code == 422
+    assert "missing_blocks" not in response.json()["details"]
+
+
 # --- шаблоны писем -----------------------------------------------------------------------------
 
 

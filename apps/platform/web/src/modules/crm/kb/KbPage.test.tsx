@@ -71,6 +71,21 @@ describe("CRM · База знаний: документы", () => {
     expect(screen.getByText("Ничего не найдено.")).toBeVisible();
   });
 
+  it("поиск без ключа эмбеддингов — словами и с подсказкой, куда идти (C2A-G-6)", async () => {
+    await openKb("admin@demo.example");
+
+    fireEvent.change(await screen.findByLabelText("Вопрос клиента"), {
+      target: { value: "поиск без ключа" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Найти" }));
+
+    expect(
+      await screen.findByText(
+        "Модель поиска недоступна: добавьте ключ эмбеддингов в Admin · Внешние интеграции, раздел «Модели ИИ», и повторите.",
+      ),
+    ).toBeVisible();
+  });
+
   it("карточка документа в боковом окне: реквизиты, фрагменты, «Что произойдёт» перед выключением", async () => {
     await openKb("admin@demo.example");
 
@@ -130,7 +145,9 @@ describe("CRM · База знаний: документы", () => {
       ),
     );
     expect(
-      await screen.findByText("Документ индексируется прямо сейчас. Подождите минуту и повторите."),
+      await screen.findByText(
+        "Документ уже стоит в очереди на индексацию или индексируется. Подождите минуту и повторите.",
+      ),
     ).toBeVisible();
   });
 

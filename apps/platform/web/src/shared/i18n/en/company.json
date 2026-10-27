@@ -71,10 +71,15 @@
     "VALIDATION_FAILED": "Check the fields.",
     "CONFLICT": "The object has changed or is in use. Refresh the page and try again.",
     "BACKEND_UNAVAILABLE": "ERP is not responding. Try again later.",
+    "missingBlocks": {
+      "title": "Missing blocks:",
+      "hint": "Insert them into the template text or clear \"Template is active\": a draft saves without the blocks."
+    },
     "reason": {
       "lookup_in_use": "The row is used in documents and data. Disable it instead of deleting.",
       "category_has_children": "The category has subcategories. Move or delete them first.",
       "template_in_use": "Documents were already issued from this template. Disable it instead of deleting.",
+      "template_missing_required_blocks": "The text is missing required document blocks.",
       "doc_prefix_taken": "This numbering prefix is already taken by another company. Choose another one.",
       "already_reviewed": "The request has already been reviewed. Refresh the list.",
       "invalid_numbering_pattern": "The mask has no required {seq} token.",
@@ -299,6 +304,10 @@
       "bodyHint": "{{example}} placeholders are replaced with document data.",
       "activeLabel": "Template is active",
       "placeholders": "Available placeholders",
+      "unknownWarning": "Unknown placeholder {{token}}",
+      "placeholdersUnknown": "Unknown placeholders: {{count}}",
+      "unknownTitle": "Not in the list — they appear in the document as is",
+      "unknownMark": "not in the list",
       "previewTitle": "Sample on test data",
       "previewFrame": "Sample document from the template",
       "copy": "Copy to my company",

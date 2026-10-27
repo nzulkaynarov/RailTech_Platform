@@ -106,14 +106,30 @@ def _validation_fields(body: Any) -> list[str]:
     """Поля DRF-ошибки `{"поле": ["текст"]}`; `detail` и `non_field_errors` полями не считаются."""
     if not isinstance(body, dict):
         return []
-    return sorted(k for k in body if k not in ("detail", "non_field_errors"))
+    return sorted(k for k in body if k not in ("detail", "non_field_errors", "missing_blocks"))
+
+
+def _missing_blocks(body: Any) -> list[dict[str, str]]:
+    """Недостающие блоки из отказа ERP `TEMPLATE_MISSING_REQUIRED_BLOCKS`: `[{code, label}]`."""
+    raw = body.get("missing_blocks") if isinstance(body, dict) else None
+    if not isinstance(raw, list):
+        return []
+    return [
+        {"code": item["code"], "label": item["label"]}
+        for item in raw[:20]
+        if isinstance(item, dict)
+        and isinstance(item.get("code"), str)
+        and isinstance(item.get("label"), str)
+    ]
 
 
 def erp_error(response: httpx.Response) -> PlatformError:
     """Ответ ERP 4xx -> ошибка контракта (`source = erp`).
 
     400 у ERP — отказ проверки: 422 `VALIDATION_FAILED` с `details.reason` (код ERP в нижнем
-    регистре) и `details.fields`; отказы «используется» и «уже рассмотрен» — 409 `CONFLICT`.
+    регистре) и `details.fields`, у `TEMPLATE_MISSING_REQUIRED_BLOCKS` — ещё
+    `details.missing_blocks` (`[{code, label}]`); отказы «используется» и «уже рассмотрен» —
+    409 `CONFLICT`.
     403, 404, 409 и 429 переводит общий `from_backend`.
     """
     if response.status_code not in (400, 422):
@@ -137,6 +153,8 @@ def erp_error(response: httpx.Response) -> PlatformError:
             fields = [_FIELD_OF[erp_code]]
     if fields:
         details["fields"] = fields
+    if erp_code == "TEMPLATE_MISSING_REQUIRED_BLOCKS" and (blocks := _missing_blocks(body)):
+        details["missing_blocks"] = blocks
     return PlatformError(
         "VALIDATION_FAILED",
         "Проверьте заполнение полей.",
