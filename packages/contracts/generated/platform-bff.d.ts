@@ -159,6 +159,46 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/bridge": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Публичные адреса старых CRM и ERP для кнопок «Открыть в старой CRM / ERP»
+     * @description Адреса задают `PLATFORM_CRM_PUBLIC_URL` и `PLATFORM_ERP_PUBLIC_URL`; пусто — выводятся из адреса Платформы (`platform.X` -> `crm.X`, `erp.X`). Не задан и не выводится — `null`: SPA не показывает кнопку и честно пишет, где работа делается. Адреса не секрет; ответ не кэшируется долго (смена настройки подхватывается при следующей загрузке).
+     */
+    get: operations["getBridge"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/bridge/erp-sso": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Адрес входа в старый ERP без второго пароля
+     * @description Тот же SSO CRM -> ERP, что у кнопки «Перейти в ERP» старой CRM (`docs/architecture/sso-token.md`): CRM выдаёт токен на 60 секунд, `url` — `{ERP}/sso/exchange#token=…`. Старый ERP после обмена открывает свою главную страницу. Токен в журнал BFF не попадает.
+     */
+    post: operations["createBridgeErpSso"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/me": {
     parameters: {
       query?: never;
@@ -3444,6 +3484,24 @@ export interface components {
       /** @description Одноразовый временный пароль; сотрудник обязан сменить его при входе. Не логируется и не кэшируется */
       temporary_password: string;
     };
+    Bridge: {
+      /**
+       * @description Публичный адрес старой CRM без завершающего `/`; `null` — не задан и не выводится
+       * @example https://crm.example
+       */
+      crm_url: string | null;
+      /**
+       * @description Публичный адрес старого ERP без завершающего `/`; `null` — не задан и не выводится
+       * @example https://erp.example
+       */
+      erp_url: string | null;
+      /** @description Сотрудника можно впустить в старый ERP без второго пароля (`POST /bridge/erp-sso`) */
+      erp_sso: boolean;
+    };
+    BridgeErpSso: {
+      /** @description `{ERP}/sso/exchange#token=…`; токен одноразовый, живёт 60 секунд, в журнал не пишется */
+      url: string;
+    };
     SetupState: {
       /** @description В CRM ещё нет активного администратора — нужен экран «Первый запуск» */
       needs_admin: boolean;
@@ -4923,6 +4981,55 @@ export interface operations {
         };
       };
       422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getBridge: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Адреса */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Bridge"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+    };
+  };
+  createBridgeErpSso: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Адрес обмена */
+      200: {
+        headers: {
+          /** @description `no-store` */
+          "Cache-Control"?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BridgeErpSso"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
       503: components["responses"]["BackendUnavailable"];
     };
   };

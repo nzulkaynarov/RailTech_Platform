@@ -10,16 +10,6 @@
         "title": "Sizdan qaror hozircha talab qilinmaydi",
         "text": "Yangi xatlar CRMdan, TT qoralamalari ERPdan, xizmat xatlari xodimlardan keladi.",
         "action": "Barcha loyihalar"
-      },
-      "projects": {
-        "title": "Loyihalar hozircha yo‘q",
-        "text": "Mijoz tijorat taklifini qabul qilganda loyiha paydo bo‘ladi. To‘liq ro‘yxat EDS · Barcha loyihalarda.",
-        "action": "Mening navbatim"
-      },
-      "summary": {
-        "title": "Xulosa hozircha bo‘sh",
-        "text": "Bu yerda «xabar → to‘lov» voronkasi, qotib qolgan loyihalar, debitorlik qarzi va davr bo‘yicha rad etish sabablari ko‘rinadi.",
-        "action": "Mening navbatim"
       }
     },
     "queue": {
@@ -60,38 +50,6 @@
       "channels": "Aloqa kanallari",
       "kb": "Bilimlar bazasi"
     },
-    "stub": {
-      "messages": {
-        "title": "Xabarlar hozircha yo‘q",
-        "text": "Bu yerga bot topshirgan suhbatlar yozuv, javob taymeri va «Olish» tugmasi bilan keladi. Menejer suhbatda bo‘lganda bot jim turadi.",
-        "action": "Barcha lidlar"
-      },
-      "leads": {
-        "title": "Lidlar hozircha yo‘q",
-        "text": "Ular Telegram-bot, veb-forma va pochtadan keladi — yoki murojaatni qo‘lda ro‘yxatdan o‘tkazing.",
-        "action": "Murojaatni ro‘yxatdan o‘tkazish"
-      },
-      "clients": {
-        "title": "Mijozlar hozircha yo‘q",
-        "text": "Lid mijozga aylanganda kompaniyalar va kontaktlar paydo bo‘ladi. Kartochkada arizalar, loyihalar, hujjatlar va yozishmalar bor.",
-        "action": "Barcha lidlar"
-      },
-      "requests": {
-        "title": "Arizalar hozircha yo‘q",
-        "text": "Ular CRM va kabinetdan keladi — yoki qo‘lda yarating.",
-        "action": "Ariza yaratish"
-      },
-      "channels": {
-        "title": "Kanallar hali ulanmagan",
-        "text": "Bu yerda Telegram-bot, pochta, veb-forma va telefon holati hamda salomlashuv matnlari bo‘ladi. Xizmatlarni ulash — Adminda.",
-        "action": "Matnlarni sozlash"
-      },
-      "kb": {
-        "title": "Maqolalar hozircha yo‘q",
-        "text": "Kategoriyalar bo‘yicha tezkor javoblar va bot qoidalari: narxlar faqat e’lon qilingan katalogdan, aks holda «menejerdan aniqlayman».",
-        "action": "Maqola qo‘shish"
-      }
-    },
     "action": "Ariza yaratish"
   },
   "eds": {
@@ -105,48 +63,6 @@
       "payments": "Hisoblar va to‘lovlar",
       "new": "Hujjat yaratish"
     },
-    "stub": {
-      "documents": {
-        "title": "Hujjatlar hozircha yo‘q",
-        "text": "Xatlar, TTlar, shartnomalar, hisoblar, dalolatnomalar va xizmat xatlari tur va holat filtrlari bilan yagona reestrga yig‘iladi.",
-        "action": "Hujjat yaratish"
-      },
-      "inbox": {
-        "title": "Kiruvchi xatlar hozircha yo‘q",
-        "text": "Mijoz xatlari ariza yaratilgach CRMdan keladi. Bu yerda direktor rezolyutsiya qo‘yadi.",
-        "action": "Barcha hujjatlar"
-      },
-      "outbox": {
-        "title": "Chiquvchilar hozircha yo‘q",
-        "text": "Tasdiqlangan TTlar va mijozlarga xatlar: ISH raqami, yuborish kanallari va mijozdagi holati bilan.",
-        "action": "Barcha hujjatlar"
-      },
-      "projects": {
-        "title": "Loyihalar hozircha yo‘q",
-        "text": "Mijoz TTni qabul qilganda loyiha paydo bo‘ladi: shartnoma, hisoblar, dalolatnoma va bajarilishi bitta kartochkada.",
-        "action": "Barcha hujjatlar"
-      },
-      "drafts": {
-        "title": "TT qoralamalari yo‘q",
-        "text": "Ular hisob-kitob tayyor va barcha vizalar yig‘ilganda ERPdan keladi. Direktor tasdig‘isiz mijozga yuborib bo‘lmaydi.",
-        "action": "Barcha hujjatlar"
-      },
-      "approvals": {
-        "title": "Kelishuvda hech narsa yo‘q",
-        "text": "Xizmat xatlari va kelishuv yo‘nalishi bor boshqa hujjatlar shu yerda paydo bo‘ladi.",
-        "action": "Hujjat yaratish"
-      },
-      "payments": {
-        "title": "Hisoblar va to‘lovlar hozircha yo‘q",
-        "text": "Bu yerda buxgalter to‘lovni tasdiqlaydi, to‘lov topshirig‘ini so‘raydi va muddati o‘tgan hisoblarni ko‘radi.",
-        "action": "Barcha loyihalar"
-      },
-      "new": {
-        "title": "Hujjat shakli keyinroq paydo bo‘ladi",
-        "text": "Xizmat xati, ariza, hisobot va xat shu yerda yoki to‘g‘ridan-to‘g‘ri chatdagi xabardan yaratiladi.",
-        "action": "Barcha hujjatlar"
-      }
-    },
     "action": "Hujjat yaratish"
   },
   "erp": {
@@ -157,33 +73,6 @@
       "catalog": "Ma’lumotnomalar",
       "docs": "Hujjatlar"
     },
-    "stub": {
-      "requests": {
-        "title": "So‘rovlar hozircha yo‘q",
-        "text": "ERPdagi arizalar: bosqich, hisob-kitob muddati, ombor, ta’minot va bosh muhandis vizalari bilan.",
-        "action": "So‘rov yaratish"
-      },
-      "calc": {
-        "title": "Hisob-kitob topshiriqlari yo‘q",
-        "text": "Ular direktor rezolyutsiyasidan keyin keladi.",
-        "action": "Barcha so‘rovlar"
-      },
-      "stock": {
-        "title": "Ombor hozircha bo‘sh",
-        "text": "Qoldiqlar va zaxiralar, yetkazib beruvchilarga buyurtmalar, qabul qilish va loyihalar bo‘yicha jo‘natmalar.",
-        "action": "Ma’lumotnomalar"
-      },
-      "catalog": {
-        "title": "Ma’lumotnomalar hozircha bo‘sh",
-        "text": "Nomenklatura, kvota va narx muddatlari bilan yetkazib beruvchilar, brigadalar va xizmat ijrochilari, kontragentlar.",
-        "action": "Ombor"
-      },
-      "docs": {
-        "title": "Hujjatlar hozircha yo‘q",
-        "text": "Texnik topshiriqlar, chizmalar, sertifikatlar va reglamentlar nomenklatura va loyihalarga bog‘langan holda.",
-        "action": "Ma’lumotnomalar"
-      }
-    },
     "action": "So‘rov yaratish"
   },
   "chats": {
@@ -192,28 +81,6 @@
       "internal": "Ichki",
       "external": "Tashqi",
       "contacts": "Kontaktlar"
-    },
-    "stub": {
-      "all": {
-        "title": "Chatlar hozircha yo‘q",
-        "text": "Loyiha chati ariza bilan birga yaratiladi. Jamoa va shaxsiy chatlar — so‘rov bo‘yicha; mijozlar bilan yozishma Telegram-bot va pochta orqali.",
-        "action": "Chat yaratish"
-      },
-      "internal": {
-        "title": "Ichki chatlar hozircha yo‘q",
-        "text": "Loyihalar va jamoa chatlari. Istalgan xabardan xizmat xati yaratish mumkin.",
-        "action": "Chat yaratish"
-      },
-      "external": {
-        "title": "Mijozlar bilan yozishma hozircha yo‘q",
-        "text": "Telegram-bot va pochtadan mijoz xabarlari. Menejer suhbatda bo‘lganda bot jim turadi.",
-        "action": "Ichki"
-      },
-      "contacts": {
-        "title": "Kontaktlar hozircha yo‘q",
-        "text": "Rollar va onlayn holati bilan xodimlar hamda aloqa kanallari bilan mijoz kontaktlari.",
-        "action": "Chat yaratish"
-      }
     },
     "action": "Chat yaratish"
   },
@@ -228,53 +95,6 @@
       "setup": "Birinchi ishga tushirish",
       "bot": "Bot sozlamalari",
       "audit": "Audit jurnali"
-    },
-    "stub": {
-      "roles": {
-        "title": "Rollar matritsasi shu yerda ochiladi",
-        "text": "Kompaniya rollari matritsasi: tizim rollari va administrator yaratadigan rollar.",
-        "action": "Tashkiliy tuzilma"
-      },
-      "org": {
-        "title": "Xodimlar hozircha yo‘q",
-        "text": "Rollar beriladigan yagona joy: ism, lavozim, rollar, CRM va ERPga kirish, bildirishnomalar uchun Telegram, holat.",
-        "action": "Xodimni taklif qilish"
-      },
-      "integrations": {
-        "title": "Integratsiyalar hali ulanmagan",
-        "text": "Telegram-bot, pochta, fayl ombori, zaxira nusxalar va SI modellari: holat, oxirgi faollik, tekshirish va qayta ulash.",
-        "action": "Jamoa tiketlari"
-      },
-      "bus": {
-        "title": "Integratsiyalar jurnali shu yerda ochiladi",
-        "text": "CRM, ERP va EDS hodisalar shinasi: obunachilar, yetkazishlar, yetkazilmaganlar va xatoli kiruvchilar.",
-        "action": "Tashqi integratsiyalar"
-      },
-      "tickets": {
-        "title": "Tiketlar hozircha yo‘q",
-        "text": "Xodimlarning administratorga murojaatlari: xato, kirish, taklif.",
-        "action": "Tashkiliy tuzilma"
-      },
-      "company": {
-        "title": "Kompaniya rekvizitlari shu yerda ochiladi",
-        "text": "Kompaniya rekvizitlari, hujjat shablonlari, raqamlash va to'lov shartlari. Ekran ERP sozlamalari Platformaga ko'chirilishi bilan paydo bo'ladi.",
-        "action": "Tuzilma"
-      },
-      "setup": {
-        "title": "Birinchi ishga tushirish ustozi",
-        "text": "Administrator, o'z kompaniyasi va ulanishning besh qadami: bot, ERP, pochta, AI modellari va birinchi xodim.",
-        "action": "Tashkiliy tuzilma"
-      },
-      "bot": {
-        "title": "Bot sozlamalari shu yerda ochiladi",
-        "text": "Telegram-botning matnlari, xulq-atvori va uzatish qoidalari, javob shablonlari va CSV yuklamalar.",
-        "action": "Tuzilma"
-      },
-      "audit": {
-        "title": "Hozircha yozuvlar yo'q",
-        "text": "Bu yerda har bir o'zgarish paydo bo'ladi: kim rol bergan, parolni tiklagan yoki sozlamani o'zgartirgan — sana va vaqt bilan.",
-        "action": "Tashkiliy tuzilma"
-      }
     },
     "action": "Xodimni taklif qilish",
     "setup": {

@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Outlet, useLocation } from "react-router";
 
+import { MODULE_ACTION_WHEN, bridgeEntry, isStubSection } from "../../modules/bridge";
 import { MODULES, findModule, isSectionActive, matchSection } from "../../modules/registry";
 import type { ModuleConfig, SectionConfig } from "../../modules/types";
 import { SetupBanner } from "../../features/first-run/SetupBanner";
@@ -48,7 +49,7 @@ function isMac(): boolean {
  */
 export function AppShell() {
   const { me } = useAuth();
-  const { t } = useTranslation(["shell", "modules"]);
+  const { t } = useTranslation(["shell", "modules", "bridge"]);
   const location = useLocation();
   const viewport = useViewport();
   const [menuDrawer, setMenuDrawer] = useState(false);
@@ -111,8 +112,23 @@ export function AppShell() {
     };
   });
 
-  const badgeFor = (item: MenuCounter | undefined) =>
-    item && item.count > 0 ? { count: item.count, attention: item.attention } : undefined;
+  const badgeFor = (item: MenuCounter | undefined, section: SectionConfig) => {
+    if (!item || item.count <= 0) return undefined;
+    // Раздел-заглушка (W15-H1): бейдж только с подсказкой «в старой CRM: N», если то же число видно в старой системе;
+    // иначе бейджа нет — рядом с честной заглушкой число без дела только путает.
+    if (isStubSection(activeModule.code, section.key)) {
+      const entry = bridgeEntry(activeModule.code, section.key);
+      const legacy = entry?.legacyCount ? entry.legacy : undefined;
+      if (!legacy) return undefined;
+      const system = t(`bridge:system.${legacy.system}.in`);
+      return {
+        count: item.count,
+        attention: false,
+        hint: t("bridge:badgeHint", { system, count: item.count }),
+      };
+    }
+    return { count: item.count, attention: item.attention };
+  };
   const menuItems: MenuItem[] = activeModule.sections
     .filter((s) => !s.hidden && sectionAllowed(s))
     .map((section) => ({
@@ -124,6 +140,7 @@ export function AppShell() {
         counters.data?.items.find(
           (c) => c.module === activeModule.code && c.section === section.key,
         ),
+        section,
       ),
     }));
 
@@ -134,7 +151,12 @@ export function AppShell() {
           {t(`modules:${activeModule.code}.action`)}
         </LinkButton>
       ) : (
-        <SoonButton type="primary" block icon={<PlusIcon />}>
+        <SoonButton
+          type="primary"
+          block
+          icon={<PlusIcon />}
+          hint={t(MODULE_ACTION_WHEN[activeModule.code] === "soon" ? "soon" : "soonPilot")}
+        >
           {t(`modules:${activeModule.code}.action`)}
         </SoonButton>
       )

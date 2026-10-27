@@ -123,12 +123,12 @@ test.describe("панели", () => {
     await page.goto("/crm/leads");
     const action = page.getByRole("button", { name: /^Создать заявку/ });
     await expect(action).toBeDisabled();
-    await expect(action).toHaveAccessibleName("Создать заявку. Появится в фазе P2");
+    await expect(action).toHaveAccessibleName("Создать заявку. Появится в ближайшем обновлении");
     await page
       .getByRole("navigation", { name: "Разделы модуля" })
       .getByText("Создать заявку")
       .hover({ force: true });
-    await expect(page.getByRole("tooltip")).toContainText("Появится в фазе P2");
+    await expect(page.getByRole("tooltip")).toContainText("Появится в ближайшем обновлении");
   });
 });
 

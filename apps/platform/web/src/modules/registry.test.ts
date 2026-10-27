@@ -158,24 +158,13 @@ describe("карта маршрутов SPEC-v3 §6.3", () => {
     expect(matchSection("/")).toBeUndefined();
   });
 
-  it("пути и ключи разделов уникальны, у каждого есть тексты заглушки на трёх языках", () => {
+  it("ключи разделов уникальны", () => {
     const seen = new Set<string>();
     for (const module of MODULES) {
       for (const section of module.sections) {
         const id = `${module.code}:${section.key}`;
         expect(seen.has(id), id).toBe(false);
         seen.add(id);
-        for (const lng of ["ru", "uz", "en"] as const) {
-          const stub = (
-            resources[lng].modules[module.code].stub as Record<
-              string,
-              { title: string; text: string; action: string } | undefined
-            >
-          )[section.key];
-          expect(stub?.title, `${lng} ${id}`).toBeTruthy();
-          expect(stub?.text, `${lng} ${id}`).toBeTruthy();
-          expect(stub?.action, `${lng} ${id}`).toBeTruthy();
-        }
       }
     }
   });

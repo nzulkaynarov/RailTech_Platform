@@ -407,7 +407,8 @@ dc logs --since 10m erp-backend | grep -E 'Кэш \(Redis\)'      # предуп
    необязательна, закомментирована в примере.
    Так же необязательны `PLATFORM_ERP_REFRESH_COOKIE` (имя refresh-cookie ERP, по умолчанию `refresh_token`) и `PLATFORM_LOGIN_RATE_PER_MINUTE`
    (неудачных попыток входа в минуту, по умолчанию 10), `PLATFORM_CRM_TIMEOUT_SECONDS` (таймаут CRM в BFF, по умолчанию 5) и
-   `PLATFORM_TRUSTED_PROXIES` (прокси, которым BFF верит в `X-Forwarded-For`; по умолчанию частные сети compose). `PLATFORM_COOKIE_SECURE` на проде не настраивается: `prod.yml` жёстко ставит `true`, на http-стенде
+   `PLATFORM_TRUSTED_PROXIES` (прокси, которым BFF верит в `X-Forwarded-For`; по умолчанию частные сети compose),
+   `PLATFORM_CRM_PUBLIC_URL` и `PLATFORM_ERP_PUBLIC_URL` (адреса старых фронтов для кнопок моста; по умолчанию BFF выводит их из `platform.<домен>`). `PLATFORM_COOKIE_SECURE` на проде не настраивается: `prod.yml` жёстко ставит `true`, на http-стенде
    `dev.yml` ставит `false`.
    Если перед Caddy появится CDN или прокси (например, Cloudflare), настройте в Caddy `trusted_proxies` (иначе весь трафик придёт с одного адреса) и сузьте
    `PLATFORM_TRUSTED_PROXIES` до подсети compose: иначе IP-лимит входа начнёт блокировать всех сотрудников разом.
