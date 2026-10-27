@@ -1,6 +1,7 @@
 {
   "subtitle": "Connections, keys and service status. Secrets are never shown: after saving, only the last 4 characters remain.",
   "readOnlySubtitle": "View mode: connections and keys are managed by the administrator.",
+  "setupLink": "Platform setup",
   "viewOnly": "View only",
   "cardsTitle": "Services",
   "open": "Open",
@@ -172,6 +173,8 @@
     }
   },
   "telegram": {
+    "configureBot": "Set up the bot",
+    "viewBot": "Open bot settings",
     "bot": "Bot",
     "running": "Bot state",
     "runningValue": {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { SetupChecklist, SetupStepState } from "../../shared/api/generated/model";
-import { STEP_TARGET, needsSetup, nextStep } from "./steps";
+import { STEP_TARGET, needsSetup, nextStep, stepAfter } from "./steps";
 
 function checklist(
   states: SetupStepState[],
@@ -19,12 +19,24 @@ function checklist(
 }
 
 describe("шаги чек-листа", () => {
-  it("каждый шаг ведёт на свой экран", () => {
-    expect(STEP_TARGET.bot).toContain("/admin/integrations?card=telegram");
-    expect(STEP_TARGET.erp).toContain("card=erp");
-    expect(STEP_TARGET.mail).toContain("card=mail");
-    expect(STEP_TARGET.models).toContain("card=models");
-    expect(STEP_TARGET.first_employee).toBe("/admin/org?invite=open&panel=open");
+  it("каждый шаг открывается внутри мастера, в его боковом окне (W15-H4)", () => {
+    expect(STEP_TARGET.bot).toBe("/admin/setup?step=bot&panel=open");
+    expect(STEP_TARGET.erp).toBe("/admin/setup?step=erp&panel=open");
+    expect(STEP_TARGET.mail).toBe("/admin/setup?step=mail&panel=open");
+    expect(STEP_TARGET.models).toBe("/admin/setup?step=models&panel=open");
+    expect(STEP_TARGET.first_employee).toBe("/admin/setup?step=first_employee&panel=open");
+  });
+
+  it("после шага — следующий несделанный, раньше стоящие несделанные тоже не теряются", () => {
+    // порядок в чек-листе: erp, bot, mail, models, first_employee
+    expect(stepAfter(checklist(["done", "todo", "todo", "done", "done"]), "bot")?.key).toBe("mail");
+    expect(stepAfter(checklist(["done", "done", "done", "done", "todo"]), "mail")?.key).toBe(
+      "first_employee",
+    );
+    expect(stepAfter(checklist(["todo", "done", "done", "done", "done"]), "models")?.key).toBe(
+      "erp",
+    );
+    expect(stepAfter(checklist(["done", "done", "done", "done", "done"]), "bot")).toBeUndefined();
   });
 
   it("следующий шаг — первый несделанный", () => {

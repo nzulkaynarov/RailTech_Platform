@@ -1,6 +1,7 @@
 {
   "subtitle": "Ulanishlar, kalitlar va xizmatlar holati. Sirlar ko‘rsatilmaydi: saqlangandan keyin faqat oxirgi 4 belgi qoladi.",
   "readOnlySubtitle": "Ko‘rish rejimi: ulanishlar va kalitlarni administrator o‘zgartiradi.",
+  "setupLink": "Platformani sozlash",
   "viewOnly": "Faqat ko‘rish",
   "cardsTitle": "Xizmatlar",
   "open": "Ochish",
@@ -172,6 +173,8 @@
     }
   },
   "telegram": {
+    "configureBot": "Botni sozlash",
+    "viewBot": "Bot sozlamalarini ochish",
     "bot": "Bot",
     "running": "Bot holati",
     "runningValue": {
