@@ -80,7 +80,7 @@ class AcceptanceCodeDelivery:
             contact = await session.get(ClientContact, payload.crm_contact_id)
             if contact is None or contact.client_id != client.id:
                 return "failed", f"Contact #{payload.crm_contact_id} not found"
-            tg_user_id = await _contact_telegram(session, client, contact)
+            tg_user_id = await contact_telegram(session, client, contact)
             if tg_user_id is None:
                 return "failed", "contact has no telegram"
             lead = await session.scalar(
@@ -104,7 +104,7 @@ class AcceptanceCodeDelivery:
         return "delivered", None
 
 
-async def _contact_telegram(
+async def contact_telegram(
     session: AsyncSession, client: Client, contact: ClientContact
 ) -> int | None:
     """Telegram контакта: его собственная привязка; у основного контакта — ещё и клиента (как при

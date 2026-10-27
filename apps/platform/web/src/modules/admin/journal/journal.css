@@ -1,0 +1,27 @@
+/* Фильтр «Журнала» (W15-H4): две кнопки-ссылки, выбранная — заливкой, как переключатель */
+.pf-journal-filter ul {
+  display: inline-flex;
+  margin: 0;
+  padding: 2px;
+  list-style: none;
+  background: #f0f0f0;
+  border-radius: 6px;
+  gap: 2px;
+  flex-wrap: wrap;
+}
+.pf-journal-filter-item {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 4px;
+  color: #1f1f1f;
+  text-decoration: none;
+  line-height: 22px;
+}
+.pf-journal-filter-item:hover {
+  color: #0958d9;
+}
+.pf-journal-filter-item[aria-current="page"] {
+  background: #fff;
+  color: #0958d9;
+  font-weight: 500;
+}

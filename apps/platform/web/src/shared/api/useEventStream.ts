@@ -8,6 +8,7 @@ import {
   getGetMenuCountersQueryKey,
   getGetQueueCardsQueryKey,
   getGetQueueQueryKey,
+  getListCrmMessagesQueryKey,
   getListNotificationsQueryKey,
 } from "./generated/platform-bff";
 import { setStreamLive } from "./streamState";
@@ -18,13 +19,25 @@ const QUERY_KEYS: Record<InvalidationTopic, readonly QueryKey[]> = {
   counters: [getGetMenuCountersQueryKey()],
   queue: [getGetQueueQueryKey(), getGetQueueCardsQueryKey()],
   activity: [getGetActivityTodayQueryKey()],
+  messages: [getListCrmMessagesQueryKey()],
 };
+
+/**
+ * Тема `messages` (D1-1): кроме очереди «Ждут ответа» — открытая переписка лида (`/crm/messages/{lead}`, лента `/thread`).
+ * Ключи с номером лида префиксом очереди не являются, поэтому — по началу адреса.
+ */
+const MESSAGES_PREFIX = "/api/v1/crm/messages/";
 
 const ALL_TOPICS = Object.keys(QUERY_KEYS) as InvalidationTopic[];
 
 export function invalidateTopics(client: QueryClient, topics: readonly InvalidationTopic[]): void {
   for (const topic of topics) {
     for (const queryKey of QUERY_KEYS[topic]) void client.invalidateQueries({ queryKey });
+  }
+  if (topics.includes("messages")) {
+    void client.invalidateQueries({
+      predicate: (query) => String(query.queryKey[0]).startsWith(MESSAGES_PREFIX),
+    });
   }
 }
 

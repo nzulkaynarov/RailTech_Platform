@@ -84,3 +84,10 @@
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 14px;
 }
+/* Шаг первого запуска в боковом окне мастера (W15-H4) */
+.pf-setup-step-heading {
+  margin: 4px 0;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 600;
+}

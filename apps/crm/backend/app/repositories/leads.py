@@ -4,12 +4,14 @@ from collections.abc import Sequence
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import func, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.clients import ServiceRequest
 from app.models.deals import Deal
+from app.models.email import EmailLog
 from app.models.leads import Conversation, Lead, LeadNote, Message, TelegramIdentity
+from app.models.notices import ClientNotice
 from app.models.qualification import Escalation
 from app.repositories import events
 
@@ -175,6 +177,17 @@ async def erase_lead(session: AsyncSession, lead: Lead, now: datetime) -> int:
 
 async def _erase_related(session: AsyncSession, lead: Lead, now: datetime) -> None:
     """Сделки и запросы клиента тоже несут ПДн лида (аудит 2026-10-12, P1-9)."""
+    # Подтверждения клиенту (D1-9): строка итога и письмо в журнале несут адрес и имя лида.
+    log_ids = (
+        await session.scalars(
+            select(ClientNotice.email_log_id).where(
+                ClientNotice.lead_id == lead.id, ClientNotice.email_log_id.is_not(None)
+            )
+        )
+    ).all()
+    await session.execute(delete(ClientNotice).where(ClientNotice.lead_id == lead.id))
+    if log_ids:
+        await session.execute(delete(EmailLog).where(EmailLog.id.in_(log_ids)))
     name = (lead.display_name or "").strip()
     if name:
         await session.execute(

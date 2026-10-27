@@ -17,11 +17,13 @@ from app.agents.mcp_client import McpToolClient
 from app.bot.runtime import build_dispatcher
 from app.bot.supervisor import BotSupervisor
 from app.container import Container
+from app.domain.start_link import link_key
 from app.integrations.telegram import TokenSource, resolve_token
 from app.security.rbac import Rbac
 from app.services.budget import BudgetedModel
 from app.services.client_bot import ClientBotService
 from app.services.conversation import ActivityHook, ConversationService, EscalationHook
+from app.services.start_links import StartLinkService
 
 logger = structlog.get_logger(__name__)
 
@@ -174,6 +176,11 @@ async def bot_lifespan(
                 rbac=rbac,
                 client_bot=build_client_bot(container, on_escalation),
                 telegram_paused=lambda: container.switch_board.is_disabled("telegram"),
+                start_links=StartLinkService(
+                    container.session_factory,
+                    link_key(container.settings.jwt_secret.get_secret_value().encode("utf-8")),
+                ),
+                staff_link=container.staff_telegram_link,
             )
 
         async def resolve() -> tuple[str, TokenSource]:

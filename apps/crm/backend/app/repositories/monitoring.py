@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import any_, func, literal, select, text
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.sandbox import SANDBOX_SOURCE
@@ -82,16 +82,6 @@ async def recovered_tasks(session: AsyncSession, tasks: set[str]) -> frozenset[s
         return frozenset()
     rows = (await session.execute(RECOVERED, {"tasks": sorted(tasks)})).all()
     return frozenset(r.task_name for r in rows)
-
-
-async def ai_failures(session: AsyncSession, since: datetime) -> int:
-    """Лиды, которым ИИ не ответил за окно (передачи со сбоем ассистента)."""
-    stmt = (
-        select(func.count(func.distinct(Escalation.lead_id)))
-        .where(Escalation.updated_at >= since)
-        .where(literal("agent_unavailable") == any_(Escalation.reason_codes))
-    )
-    return int((await session.execute(stmt)).scalar_one())
 
 
 async def alert_states(session: AsyncSession) -> dict[str, SystemAlert]:

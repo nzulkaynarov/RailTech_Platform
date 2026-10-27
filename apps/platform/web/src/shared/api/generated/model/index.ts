@@ -133,7 +133,7 @@
  * (директор читает), сброс пароля — `admin: full`; профиль доступен каждому вошедшему. Секреты из записей журнала BFF вырезает
  * (значения полей `password`, `secret`, `token`, `key`, `*_key`, `credentials`, `authorization`, `pin` и им подобных -> `***` целиком, любого типа).
  *
- * **0.22.0 (D1-4) — EDS · КП на одобрение и документы на согласовании.** Добавляющее изменение, тег `eds-approvals`: `GET /eds/quotes`
+ * **0.24.0 (D1-4) — EDS · КП на одобрение и документы на согласовании.** Добавляющее изменение, тег `eds-approvals`: `GET /eds/quotes`
  * (КП на одобрение: «на моём шаге» или все), `GET /eds/quotes/{ref}` (карточка КП по id маршрута или номеру `КП-2026/115`: шаги маршрута,
  * чек-лист с датой и автором, состав и итоги из ERP, письмо и заявка, каналы отправки по контакту клиента; **внутренний блок**
  * `internal` — себестоимость, маржа, порог, сроки — и значение маржи в чек-листе BFF вырезает у роли без группы `cost_margin`),
@@ -147,6 +147,23 @@
  * Карточка КП: `snapshot_total` (итог снимка EDS), `totals_mismatch` (итог ERP расходится со снимком), строки ERP не показываются при другой редакции КП в ERP;
  * карточка документа: `accountant_step` (шаг бухгалтера — «Принять к оплате», решает держатель `eds.payments` full). Отправки КП по `channels` пока нет (Δ ERP-11).
  *
+ *
+ * **0.23.0 (W15-H8) — Admin · Компания: шаблоны документов и лента.** Добавляющее изменение. `DocumentTemplateIn.kind` — вид
+ * шаблона при создании (`letter`, `report`, `custom`, `contract`, `invoice`, `act`, `receipt`, `delivery_note`; без поля — `custom`,
+ * как раньше); `DocumentTemplate.kind` отдаёт вид кодом. `DocumentTemplatePreviewIn.kind` — предпросмотр договора, счёта и акта идёт
+ * на каркасе своего вида и с образцами блоков (остальные виды — общий каркас и подписанные заглушки). `ActivityItem.code` — код
+ * административного события ERP (`admin.*`), по которому SPA собирает фразу на языке сотрудника; для остальных событий `null`.
+ * Журнал ручных курсов в ERP виден только с правом `settings.edit` (имена и почта коллег): `GET /admin/company/fx-rate` без
+ * этого права отдаёт текущий курс и пустой журнал с `journal_available = false` (не ошибку; директор раздел смотрит).
+ *
+ * **0.22.0 (D1-1, волна 16) — Клиенты · Ждут ответа.** Добавляющее изменение (тег `messages`): очередь передач от бота с
+ * запиской (CRM-06) и SLA — `GET /crm/messages`; карточка лида, лента диалога с подгрузкой истории и вложениями через BFF —
+ * `GET /crm/messages/{lead}`, `/thread`, `/attachments/{message}/{index}`; действия — `take`, `reply` (ключ повтора
+ * `client_message_id`: «Повторить» не дублирует сообщение; Telegram не ответил — 502 `INTEGRATION_FAILED`, `delivery_failed`),
+ * `note` (заметка команде), `assist` (подсказка ответа через CRM/LiteLLM), `return-to-bot`; шаблоны — `GET /crm/reply-templates`
+ * (раздел `crm.leads` полный). Чтение — `crm.leads` от чтения (директор), действия — полный. Новая тема подсказки потока
+ * `InvalidationTopic.messages`: событие CRM `lead.message_added` (новое сообщение в переписке) и события лида — экран
+ * перезапрашивает очередь и открытую ленту.
  * **0.19.0 (W15-H1) — мост в старые экраны.** Добавляющее изменение (тег `bridge`). Пока раздел Платформы ещё заглушка, сотрудник
  * открывает ту же работу в старой CRM или старом ERP новой вкладкой. `GET /bridge` отдаёт публичные адреса старых фронтов
  * (`crm_url`, `erp_url`): настройки `PLATFORM_CRM_PUBLIC_URL` и `PLATFORM_ERP_PUBLIC_URL`, а если они пусты — адрес выводится из
@@ -193,6 +210,16 @@
  * EDS, полученным обменом токена сотрудника CRM `aud=eds` (`docs/architecture/platform-bff.md` §3); ошибки EDS переводятся в
  * формат `Error` (`source = eds`, `details.reason` и `details.fields` EDS сохраняются).
  *
+ * **0.21.0 (W15-H6) — Профиль сотрудника.** Добавляющее изменение, тег `me`: `GET/PATCH /me/profile` (имя, телефон, язык, часовой
+ * пояс, подпись для писем; должность и роли только читаются, правит админ), `PUT/DELETE /me/avatar` и `GET /staff/{id}/avatar`
+ * (фото: клиент обрезает по кругу, CRM хранит в S3, BFF отдаёт без публичных ссылок; `Me.avatar_url` — вместо инициалов),
+ * `POST/DELETE /me/telegram-link` (сотрудник привязывает Telegram сам: ссылка `t.me/<бот>?start=staff_<одноразовый код>` на 10
+ * минут), `GET /me/deputy-candidates`, `PUT/DELETE /me/deputy` (замещение на период; заместитель видит очередь замещаемого:
+ * `QueueItem.on_behalf_of`, права на объекты — свои). Вход: `POST /auth/forgot-password` (ответ одинаков для любой учётной
+ * записи; ссылка уходит на почту или в Telegram, иначе тихо ничего) и `POST /auth/reset-password` (новый пароль по одноразовой
+ * ссылке; неверная или просроченная — 422 `VALIDATION_FAILED`, `details.reason = reset_token_invalid`). `Me.access` остаётся для
+ * совместимости, но экран «Доступ: CRM · ERP» убран: вместо него роли словами.
+ *
  * 0.2.4: `423 ACCOUNT_LOCKED` объявлен и на `POST /auth/change-password` (CRM блокирует учётную запись после неверных
  * текущих паролей).
  *
@@ -208,10 +235,10 @@
  * 0.2.1 (Q-P0-3): перечень `Error.code` дополнен `INTERNAL_ERROR` (500) и нейтральными кодами 4xx `BAD_REQUEST`,
  * `METHOD_NOT_ALLOWED`, `HTTP_<статус>` для ответов, которые не относятся ни к одному именованному коду.
  *
- * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; остальные запросы — 300 в минуту на сессию; превышение — 429
+ * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; «Забыли пароль?» — 5 запросов в час на IP и на адрес; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.22.0
+ * OpenAPI spec version: 0.24.0
  */
 
 export * from "./accessLevel";
@@ -239,6 +266,10 @@ export * from "./approvalDecision";
 export * from "./approvalRouteStatus";
 export * from "./approvalScopeParameter";
 export * from "./approvalStatusFilterParameter";
+export * from "./assistIn";
+export * from "./assistInMode";
+export * from "./assistSuggestion";
+export * from "./assistSuggestionNotice";
 export * from "./attentionItem";
 export * from "./attentionItemSeverity";
 export * from "./attentionKind";
@@ -247,6 +278,7 @@ export * from "./auditEntry";
 export * from "./auditEntryAfter";
 export * from "./auditEntryBefore";
 export * from "./auditPage";
+export * from "./avatarUpload";
 export * from "./backendUnavailableResponse";
 export * from "./backupDatabase";
 export * from "./backupItem";
@@ -308,13 +340,20 @@ export * from "./chargeTemplateUpdate";
 export * from "./chargeType";
 export * from "./chargeTypeList";
 export * from "./checklistCode";
+export * from "./colleague";
 export * from "./companyItemRef";
 export * from "./companyProfile";
 export * from "./companyProfileUpdate";
+export * from "./conversationCard";
+export * from "./conversationContacts";
+export * from "./conversationThread";
+export * from "./covering";
 export * from "./createdId";
 export * from "./csrfFailedResponse";
 export * from "./csrfTokenParameter";
 export * from "./decimalString";
+export * from "./deputyPeriod";
+export * from "./deputyUpdate";
 export * from "./documentKind";
 export * from "./documentPlaceholder";
 export * from "./documentPlaceholderGroup";
@@ -323,6 +362,7 @@ export * from "./documentPreview";
 export * from "./documentTemplate";
 export * from "./documentTemplateCopyIn";
 export * from "./documentTemplateIn";
+export * from "./documentTemplateKind";
 export * from "./documentTemplateList";
 export * from "./documentTemplatePreviewIn";
 export * from "./documentTemplateUpdate";
@@ -387,6 +427,8 @@ export * from "./externalServiceSource";
 export * from "./externalServiceStatus";
 export * from "./externalServiceSystem";
 export * from "./forbiddenResponse";
+export * from "./forgotPasswordAccepted";
+export * from "./forgotPasswordIn";
 export * from "./fxRate";
 export * from "./fxRateIn";
 export * from "./fxRateJournalEntry";
@@ -397,10 +439,18 @@ export * from "./fxRateOverviewCurrency";
 export * from "./fxRateSource";
 export * from "./getAiSpendReportGroup";
 export * from "./getAiSpendReportParams";
+export * from "./getCrmThreadParams";
 export * from "./getQueueCardsParams";
 export * from "./getQueueParams";
 export * from "./getRoleJournalParams";
 export * from "./getSpendReportParams";
+export * from "./handoffFacts";
+export * from "./handoffFactsDecisionRole";
+export * from "./handoffFactsTimeline";
+export * from "./handoffInfo";
+export * from "./handoffInfoPriority";
+export * from "./handoffInfoState";
+export * from "./handoffNote";
 export * from "./health";
 export * from "./healthChecks";
 export * from "./healthChecksCrm";
@@ -437,6 +487,7 @@ export * from "./kbSearchHit";
 export * from "./kbSearchIn";
 export * from "./kbSearchResult";
 export * from "./language";
+export * from "./leadOwnerMode";
 export * from "./letterAssignee";
 export * from "./letterCard";
 export * from "./letterClient";
@@ -489,6 +540,11 @@ export * from "./memoDecisionIn";
 export * from "./menuCounter";
 export * from "./menuCounters";
 export * from "./meResources";
+export * from "./messageChannel";
+export * from "./messageInbox";
+export * from "./messageInboxItem";
+export * from "./messageInboxItemGroup";
+export * from "./messagesConflictResponse";
 export * from "./meUpdate";
 export * from "./moduleCode";
 export * from "./notFoundResponse";
@@ -512,6 +568,8 @@ export * from "./passwordConfirm";
 export * from "./personRef";
 export * from "./platformSettings";
 export * from "./platformSettingsUpdate";
+export * from "./profile";
+export * from "./profileUpdate";
 export * from "./providerKeyIn";
 export * from "./providerKeyResult";
 export * from "./providerToday";
@@ -520,6 +578,7 @@ export * from "./queueCard";
 export * from "./queueCards";
 export * from "./queueItem";
 export * from "./queueItemKind";
+export * from "./queueOwner";
 export * from "./quoteApprovalCard";
 export * from "./quoteApprovalPage";
 export * from "./quoteApprovalRow";
@@ -542,9 +601,11 @@ export * from "./referenceItemIn";
 export * from "./referenceItemList";
 export * from "./referenceItemUpdate";
 export * from "./referenceKind";
+export * from "./replyIn";
 export * from "./replyTemplate";
 export * from "./replyTemplateIn";
 export * from "./replyTemplateList";
+export * from "./resetPasswordIn";
 export * from "./resolutionAssigneeIn";
 export * from "./resolutionAssignees";
 export * from "./resolutionAssigneesDirectory";
@@ -553,6 +614,7 @@ export * from "./resolutionIn";
 export * from "./resolutionZone";
 export * from "./resourceAccess";
 export * from "./restrictedField";
+export * from "./returnToBotIn";
 export * from "./role";
 export * from "./roleChange";
 export * from "./roleChangeAction";
@@ -577,6 +639,7 @@ export * from "./searchHit";
 export * from "./searchParams";
 export * from "./searchResult";
 export * from "./sectionLevel";
+export * from "./sentMessage";
 export * from "./serviceAction";
 export * from "./serviceCheck";
 export * from "./serviceCheckStatus";
@@ -617,9 +680,18 @@ export * from "./systemComponent";
 export * from "./systemComponentStatus";
 export * from "./systemStatus";
 export * from "./systemStatusStatus";
+export * from "./teamNote";
+export * from "./teamNoteIn";
 export * from "./telegramChannel";
 export * from "./telegramChannelList";
 export * from "./telegramConnector";
+export * from "./telegramLink";
+export * from "./telegramState";
 export * from "./telegramTokenIn";
+export * from "./threadAttachment";
+export * from "./threadMessage";
+export * from "./threadMessageAuthor";
+export * from "./threadMessageDelivery";
+export * from "./timezone";
 export * from "./tooManyRequestsResponse";
 export * from "./validationFailedResponse";

@@ -176,7 +176,7 @@ export function SettingsForm({
             className="pf-bot-alert"
             message={t("bot:channelMoved")}
             action={
-              <Link className="pf-focusable" to="/admin/integrations?card=telegram&panel=open">
+              <Link className="pf-focusable" to="/admin/bot?part=connection">
                 {t("bot:openIntegrations")}
               </Link>
             }

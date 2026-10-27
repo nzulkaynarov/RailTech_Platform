@@ -18,6 +18,10 @@ from rt_contracts.events.erp import Actor, DealRef
 
 ERP_DOMAIN_PREFIX: Final = "uz.railtech.erp."
 CODE_TYPE: Final = "uz.railtech.erp.quote.acceptance_code_requested.v1"
+#: Приглашение в кабинет через Telegram (D1-9): ERP в Telegram не пишет — доставляет бот CRM,
+#: inline.
+INVITE_TYPE: Final = "uz.railtech.erp.invite.requested.v1"
+INLINE_TYPES: Final = frozenset({CODE_TYPE, INVITE_TYPE})
 #: Типы ERP не для CRM: КП на одобрение директором адресовано EDS (EDS-03), в нём
 #: себестоимость и маржа; CRM на него не подписана (`packages/contracts/bus/subscriptions.yaml`)
 #: и обработчика не регистрирует.
@@ -33,11 +37,12 @@ def plain(value: Any) -> Any:
 
 
 def erp_types() -> list[str]:
-    """Типы событий ERP, которые CRM принимает через очередь (код акцепта — inline, отдельно)."""
+    """Типы событий ERP, которые CRM принимает через очередь (код акцепта и приглашение — inline,
+    отдельно)."""
     return sorted(
         t
         for t in TYPES
-        if t.startswith(ERP_DOMAIN_PREFIX) and t != CODE_TYPE and t not in NOT_FOR_CRM
+        if t.startswith(ERP_DOMAIN_PREFIX) and t not in INLINE_TYPES and t not in NOT_FOR_CRM
     )
 
 
@@ -60,7 +65,8 @@ class ErpEvent:
 
     @property
     def deal(self) -> DealRef | None:
-        deal: DealRef | None = self.data.deal
+        # У `invite.requested` сделки нет вовсе (поле не входит в схему типа).
+        deal: DealRef | None = getattr(self.data, "deal", None)
         return deal
 
     @property

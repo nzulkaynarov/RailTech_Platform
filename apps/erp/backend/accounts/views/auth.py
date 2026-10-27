@@ -1,6 +1,6 @@
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from drf_spectacular.utils import OpenApiResponse, extend_schema, inline_serializer
+from drf_spectacular.utils import OpenApiResponse, PolymorphicProxySerializer, extend_schema, inline_serializer
 from rest_framework import permissions, serializers, status, views
 from rest_framework.exceptions import AuthenticationFailed, PermissionDenied
 from rest_framework.generics import RetrieveAPIView
@@ -286,7 +286,27 @@ class ThrottledTokenObtainPairView(TokenObtainPairView):
         return response
 
 
-@extend_schema(request=TokenObtainPairSerializer, responses=TokenObtainPairSerializer)  # схема — как у simplejwt
+@extend_schema(
+    summary="Log in (access token in the body, refresh token in the HttpOnly cookie)",
+    request=TokenObtainPairSerializer,
+    responses={
+        200: PolymorphicProxySerializer(
+            component_name="LoginResult",
+            serializers=[
+                inline_serializer("LoginAccess", fields={"access": serializers.CharField()}),
+                inline_serializer(
+                    "Login2faRequired",
+                    fields={"2fa_required": serializers.BooleanField(), "temp_token": serializers.CharField()},
+                ),
+            ],
+            resource_type_field_name=None,
+        ),
+        401: OpenApiResponse(description="Bad credentials (`detail` is the DRF phrase) or locked account"),
+        403: OpenApiResponse(description="STAFF_ONLY and other login refusals"),
+        429: OpenApiResponse(description="Login throttled"),
+    },
+    tags=["Auth"],
+)
 class CookieTokenObtainPairView(ThrottledTokenObtainPairView):
     """Login that returns the access token in the body and the refresh token in an
     HttpOnly cookie (F2.1) — the refresh token is never exposed to JavaScript.
@@ -311,6 +331,20 @@ class CookieTokenObtainPairView(ThrottledTokenObtainPairView):
         return response
 
 
+@extend_schema(
+    summary="Refresh the access token (refresh token from the HttpOnly cookie)",
+    request=inline_serializer(
+        "TokenRefreshCookieRequest",
+        fields={"refresh": serializers.CharField(required=False, help_text="Optional: the cookie is used by default")},
+    ),
+    responses={
+        200: inline_serializer("TokenRefreshResult", fields={"access": serializers.CharField()}),
+        401: OpenApiResponse(description="NO_REFRESH_TOKEN / INVALID_REFRESH_TOKEN (the cookie is cleared)"),
+        403: OpenApiResponse(description="STAFF_ONLY (the cookie is cleared)"),
+        429: OpenApiResponse(description="Refresh throttled"),
+    },
+    tags=["Auth"],
+)
 class CookieTokenRefreshView(TokenRefreshView):
     """Refresh using the HttpOnly cookie (F2.1). Reads the refresh token from the
     cookie (body still accepted for transition), returns a fresh access token in the

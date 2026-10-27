@@ -20,6 +20,7 @@ from app.api import (
     auth,
     bridge,
     crm_kb,
+    crm_messages,
     dashboard,
     eds_approvals,
     eds_documents,
@@ -28,6 +29,7 @@ from app.api import (
     health,
     me,
     me_notifications,
+    me_profile,
     notifications,
     search,
     setup,
@@ -92,6 +94,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(me.router, prefix=API_PREFIX)
     app.include_router(bridge.router, prefix=API_PREFIX)
     app.include_router(me_notifications.router, prefix=API_PREFIX)
+    app.include_router(me_profile.router, prefix=API_PREFIX)
     app.include_router(admin_users.router, prefix=API_PREFIX)
     app.include_router(admin_passwords.router, prefix=API_PREFIX)
     app.include_router(setup.router, prefix=API_PREFIX)
@@ -102,6 +105,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(admin_bus.router, prefix=API_PREFIX)
     app.include_router(admin_bot.router, prefix=API_PREFIX)
     app.include_router(crm_kb.router, prefix=API_PREFIX)
+    app.include_router(crm_messages.router, prefix=API_PREFIX)
     app.include_router(eds_documents.router, prefix=API_PREFIX)
     app.include_router(eds_letters.router, prefix=API_PREFIX)
     app.include_router(eds_approvals.router, prefix=API_PREFIX)

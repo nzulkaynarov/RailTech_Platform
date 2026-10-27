@@ -22,6 +22,8 @@ class AccessClaims:
     user_id: int
     roles: tuple[str, ...]
     must_change_password: bool
+    # Когда токен выпущен (с точностью до секунды); None — токен собран кодом, не прочитан.
+    issued_at: datetime | None = None
 
 
 def issue_access(key: bytes, claims: AccessClaims, ttl_s: int, now: datetime | None = None) -> str:
@@ -58,6 +60,7 @@ def decode_access(key: bytes, token: str) -> AccessClaims:
         user_id=int(payload["sub"]),
         roles=tuple(str(r) for r in payload.get("roles", [])),
         must_change_password=bool(payload.get("mcp", False)),
+        issued_at=datetime.fromtimestamp(int(payload["iat"]), UTC),
     )
 
 
@@ -71,3 +74,10 @@ def hash_refresh_token(token: str) -> str:
 
 def new_family() -> str:
     return uuid.uuid4().hex
+
+
+def closed_by_password_reset(issued_at: datetime | None, changed_at: datetime | None) -> bool:
+    """Токен выпущен раньше сброса пароля (сравнение по секундам: iat в JWT целый)."""
+    if issued_at is None or changed_at is None:
+        return False
+    return issued_at < changed_at.replace(microsecond=0)

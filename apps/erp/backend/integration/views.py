@@ -1,6 +1,6 @@
 """Integration API Views (CRM → ERP, CONTRACTS §2, M3-ERP-01).
 
-Реализация всех 12 эндпоинтов по спецификации packages/contracts/openapi/erp-integration.yaml:
+Реализация интеграционных эндпоинтов по спецификации packages/contracts/openapi/erp-integration.yaml:
 - Сервисная аутентификация по Bearer SERVICE_TOKEN_CRM_TO_ERP
 - Идемпотентность по заголовку Idempotency-Key
 - Строгий формат ошибок {"detail": "<CODE>"}
@@ -13,6 +13,8 @@ import datetime
 import logging
 
 from django.conf import settings
+from parties.models import Contact
+from portal.services.invitation import invite_contact
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -25,7 +27,7 @@ from .exceptions import (
     integration_exception_handler,
 )
 from .idempotency import handle_idempotency
-from .models import CrmContactMapping
+from .models import CrmClientMapping, CrmContactMapping
 from .serializers import (
     AiUsageRowSerializer,
     CatalogItemSerializer,
@@ -41,6 +43,8 @@ from .serializers import (
     HandoffRequestSerializer,
     HandoffResponseSerializer,
     HealthSerializer,
+    InviteRequestSerializer,
+    InviteResponseSerializer,
     PairingAcceptedSerializer,
     PairingRequestSerializer,
     PairingRotatedSerializer,
@@ -49,7 +53,7 @@ from .serializers import (
 )
 from .services import bootstrap, pairing
 from .services.catalog import search_published_catalog
-from .services.handoff import process_client_handoff
+from .services.handoff import _cabinet_url, process_client_handoff
 from .services.provision import provision_crm_user, revoke_crm_user_sessions
 from .services.summary import (
     get_company_summary_data,
@@ -89,6 +93,39 @@ class HandoffClientView(BaseIntegrationView):
         out_serializer = HandoffResponseSerializer(response_data)
         status_code = status.HTTP_201_CREATED if created else status.HTTP_200_OK
         return Response(data=out_serializer.data, status=status_code)
+
+
+class InviteClientContactView(BaseIntegrationView):
+    """POST /api/integration/v1/clients/{crm_client_id}/invite (0.8.0, D1-9): менеджер CRM приглашает контакт ещё раз."""
+
+    @handle_idempotency
+    def post(self, request, crm_client_id: int, *args, **kwargs):
+        serializer = InviteRequestSerializer(data=request.data)
+        if not serializer.is_valid():
+            raise IntegrationValidationError("VALIDATION_ERROR")
+        data = serializer.validated_data
+
+        mapping = CrmClientMapping.objects.filter(crm_client_id=crm_client_id).select_related("company").first()
+        if mapping is None:
+            raise IntegrationNotFound("NOT_FOUND")
+        contacts = Contact.objects.filter(company=mapping.company, archived_at__isnull=True)
+        if data["crm_contact_id"] is not None:
+            contact = contacts.filter(crm_contact_mapping__crm_contact_id=data["crm_contact_id"]).first()
+        else:
+            contact = contacts.filter(is_primary=True).first() or contacts.order_by("id").first()
+        if contact is None:
+            # Клиент в ERP есть, а этого контакта нет (не сопоставлен или чужой): не 404 («клиента нет»), а код причины
+            # в обычном ответе — CRM показывает его словами.
+            out = InviteResponseSerializer(
+                {"sent_via": [], "cabinet_url": _cabinet_url(), "error": "CONTACT_NOT_FOUND"}
+            )
+            return Response(data=out.data, status=status.HTTP_200_OK)
+
+        outcome = invite_contact(contact, channel=data["channel"], language=contact.language)
+        out = InviteResponseSerializer(
+            {"sent_via": list(outcome.sent_via), "cabinet_url": _cabinet_url(), "error": outcome.error}
+        )
+        return Response(data=out.data, status=status.HTTP_200_OK)
 
 
 class ContactDetailView(BaseIntegrationView):

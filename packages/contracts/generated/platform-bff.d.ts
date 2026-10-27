@@ -25,6 +25,46 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/auth/forgot-password": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Забыли пароль — запросить ссылку сброса
+     * @description Без сессии. Ответ один и тот же для существующей и несуществующей учётной записи (перечислять сотрудников нельзя). Ссылка на Платформу уходит на почту (если подключён SMTP) или в Telegram (если привязан); нет ни того, ни другого — ничего не уходит, и экран заранее говорит «обратитесь к администратору». Ссылка одноразовая, живёт час; не больше трёх в час на учётную запись. Лимит BFF — 5 запросов в час на IP и на адрес, сверх него 429 `TOO_MANY_REQUESTS`.
+     */
+    post: operations["forgotPassword"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/auth/reset-password": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Задать новый пароль по ссылке сброса
+     * @description Без сессии. Токен из ссылки одноразовый; после успеха все открытые сессии сотрудника закрываются и вход идёт с новым паролем. Неверная, использованная или просроченная ссылка — 422 `VALIDATION_FAILED` с `details.reason = reset_token_invalid` (`details.fields = [token]`); слабый пароль — `weak_password` (`new_password`), ссылка остаётся действующей.
+     */
+    post: operations["resetPassword"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/auth/logout": {
     parameters: {
       query?: never;
@@ -256,6 +296,136 @@ export interface paths {
      */
     post: operations["sendTestNotification"];
     delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/me/profile": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Мой профиль для страницы /me
+     * @description Данные сотрудника из CRM (`GET /me`): имя, почта, должность, телефон, язык, часовой пояс, подпись для писем, фото, привязка Telegram и замещение. Доступно каждому вошедшему; чужой профиль этим путём не читается.
+     */
+    get: operations["getProfile"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /**
+     * Сохранить свой профиль
+     * @description Не присланное поле не меняется; пустая строка в `phone` и `email_signature` очищает поле. Должность и роли сюда не приходят (задаёт админ). Ошибка значения — 422 `VALIDATION_FAILED` с `details.fields` и `details.reason` (`phone_invalid`, `timezone_unknown`, `signature_invalid`).
+     */
+    patch: operations["updateProfile"];
+    trace?: never;
+  };
+  "/me/avatar": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Загрузить фото профиля
+     * @description `multipart/form-data`, поле `avatar`: уже обрезанная по кругу картинка (клиент режет её до 256x256), PNG, JPEG или WebP не больше 1 МБ. Тип проверяется по содержимому. Иначе 422 `VALIDATION_FAILED` с `details.reason`: `avatar_unsupported_type`, `avatar_type_mismatch`, `avatar_empty`; тело больше предела (1 МБ и запас на multipart) читается потоком и обрывается — 413 `PAYLOAD_TOO_LARGE` (`details.reason = avatar_too_large`). Ответ — обновлённый `Me` (`avatar_url` с новой версией).
+     */
+    put: operations["uploadAvatar"];
+    post?: never;
+    /** Удалить фото профиля */
+    delete: operations["deleteAvatar"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/staff/{id}/avatar": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Фото сотрудника
+     * @description Файл фото коллеги как есть (PNG, JPEG или WebP) с `X-Content-Type-Options: nosniff` и `Cache-Control: private`. Публичных ссылок на хранилище нет: картинку отдаёт только BFF вошедшему сотруднику. Нет фото или сотрудник отключён — 404 `NOT_FOUND` (рисуются инициалы).
+     */
+    get: operations["getStaffAvatar"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/me/telegram-link": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Привязать Telegram для уведомлений
+     * @description Выпускает одноразовую ссылку `https://t.me/<бот>?start=staff_<код>` на 10 минут; прежняя ссылка перестаёт работать. SPA показывает её кнопкой и QR. Бот по `/start staff_<код>` привязывает Telegram и отвечает подтверждением; клиентский путь бота от этого не меняется. Бот не подключён — 409 `NOT_CONFIGURED`; бот не запущен — 409 `CONFLICT`.
+     */
+    post: operations["createTelegramLink"];
+    /**
+     * Отвязать Telegram
+     * @description Снимает привязку и гасит неиспользованные ссылки. Без привязки — не ошибка.
+     */
+    delete: operations["deleteTelegramLink"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/me/deputy-candidates": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Кого можно назначить заместителем
+     * @description Активные коллеги с рабочей ролью CRM (менеджер или администратор), кроме самого сотрудника.
+     */
+    get: operations["listDeputyCandidates"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/me/deputy": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Назначить заместителя на период
+     * @description «На время отсутствия мои задачи видит {сотрудник} с {дата} по {дата}»: обе даты включительно, считаются по календарю замещаемого, период не в прошлом и не длиннее года. Заместитель видит очередь замещаемого строками с пометкой «за {имя}», права на объекты у него свои. 422 `VALIDATION_FAILED` с `details.reason`: `deputy_is_self`, `deputy_period_reversed`, `deputy_period_past`, `deputy_period_too_long`, `deputy_not_colleague`.
+     */
+    put: operations["setDeputy"];
+    post?: never;
+    /** Снять замещение */
+    delete: operations["clearDeputy"];
     options?: never;
     head?: never;
     patch?: never;
@@ -2823,6 +2993,206 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/crm/messages": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Клиенты · Ждут ответа: передачи от бота, мои диалоги, лиды без менеджера
+     * @description CRM `GET /inbox` с запиской передачи (CRM-06). Раздел `crm.leads` от чтения: директор видит очередь без «Забрать» и ответа. Группы: `handoff` — открытые и отложенные передачи (срочные выше, затем по времени), `mine` — мои лиды в диалоге, `unassigned` — лиды на паузе без менеджера. Лид в одной группе (первая подходящая). Таймер SLA экран считает от `handoff.created_at` до `handoff.sla_due_at`. Живые обновления — подсказка `messages` потока `/events/stream`.
+     */
+    get: operations["listCrmMessages"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/messages/{lead}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Карточка лида для переписки: контакты, каналы, факты квалификации, кто ведёт
+     * @description CRM `GET /leads/{id}` (+ открытая передача). Раздел `crm.leads` от чтения. Номер лида — `L-NNNN`.
+     */
+    get: operations["getCrmConversation"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/messages/{lead}/thread": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Лента диалога: сообщения клиента, бота и менеджера, вложения, заметки команды
+     * @description CRM `GET /leads/{id}/messages` (страница, старые выше), `GET /leads/{id}/notes` (только первая страница — без `before`) и `GET /team` (имена менеджеров). Раздел `crm.leads` от чтения. Подгрузка истории — `before` = id самого старого показанного сообщения. Вложения — ссылками BFF (`attachments[].url`): адреса и ключи хранилища наружу не уходят.
+     */
+    get: operations["getCrmThread"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/messages/{lead}/attachments/{message}/{index}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Вложение сообщения клиента (файл)
+     * @description CRM `GET /leads/{id}/messages/{message}/attachments/{index}` потоком. Раздел `crm.leads` от чтения. Ответ — `Content-Disposition: attachment` и `X-Content-Type-Options: nosniff`: файл скачивается, браузер его не исполняет. Файл не сохранён (до согласия, больше 20 МБ) — 404; хранилище CRM недоступно — 502 `INTEGRATION_FAILED`.
+     */
+    get: operations["downloadCrmAttachment"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/messages/{lead}/take": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Забрать лида: бот замолкает, диалог ведёт сотрудник
+     * @description CRM `POST /leads/{id}/actions/take`. Раздел `crm.leads` полный. Лида уже забрал другой — 409 `CONFLICT` (`details.reason = lead_taken`, `details.assigned_user_name`).
+     */
+    post: operations["takeCrmLead"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/messages/{lead}/reply": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Ответить клиенту «От себя» (уходит в Telegram)
+     * @description CRM `POST /leads/{id}/messages`. Раздел `crm.leads` полный; отвечает тот, кто забрал лида (или администратор CRM). `client_message_id` — ключ повтора, который экран создаёт на черновик: «Повторить» с тем же ключом не отправит клиенту второе сообщение. Telegram отказал — 502 `INTEGRATION_FAILED` с `details.reason = delivery_failed`, сообщение не записано, текст остаётся у экрана; Telegram не ответил вовремя — 502 `INTEGRATION_FAILED` с `delivery_unknown` (итог неизвестен: «Повторить» тем же ключом не продублирует, пока отправка идёт — 409 `reply_in_progress`); итог прежней отправки с этим ключом так и не узнали — 409 `CONFLICT` `delivery_unconfirmed` (второе сообщение не уходит, «лид отвечен» не ставится). Лид не забран — 409 `CONFLICT` (`take_first`), нет согласия клиента — 409 (`no_consent`), лид у другого — 403 `FORBIDDEN` (`not_lead_owner`).
+     */
+    post: operations["replyCrmLead"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/messages/{lead}/note": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Заметка команде (клиенту не уходит)
+     * @description CRM `POST /leads/{id}/actions/note` (`visible_to_bot = false`). Раздел `crm.leads` полный.
+     */
+    post: operations["noteCrmLead"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/messages/{lead}/assist": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Подсказать ответ (ИИ через CRM): текст для поля, клиенту ничего не уходит
+     * @description CRM `POST /leads/{id}/assist` (ИИ — только CRM через LiteLLM). Раздел `crm.leads` полный. `draft` — черновик ответа на последнее сообщение клиента, `improve` — правка текста из поля. Отправляет человек. Таймаут — как у проб (30 с). Отказы — 409 `CONFLICT` с `details.reason`: `assist_disabled`, `assist_budget`, `assist_empty`, `assist_no_history`; модель не ответила — 502 `INTEGRATION_FAILED` (`assist_unavailable`).
+     */
+    post: operations["assistCrmReply"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/messages/{lead}/return-to-bot": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Вернуть лида боту (бот снова отвечает сам)
+     * @description CRM `POST /leads/{id}/actions/return_to_bot`. Раздел `crm.leads` полный. `note` — что знать боту дальше (видна боту).
+     */
+    post: operations["returnCrmLeadToBot"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/reply-templates": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Шаблоны ответов для поля ответа (только чтение)
+     * @description CRM `GET /reply-templates` (`reply_templates:read`). Раздел `crm.leads` полный — тем, кто отвечает клиентам; правит шаблоны администратор в Admin · Настройки бота.
+     */
+    get: operations["listCrmReplyTemplates"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -3910,6 +4280,8 @@ export interface components {
       initials: string;
       /** @description Должность — текст (не роль) */
       position?: string;
+      /** @description Адрес фото на BFF (`/staff/{id}/avatar?v=…`, тот же origin); нет — рисуются инициалы */
+      avatar_url?: string;
       language: components["schemas"]["Language"];
       /** @description Роли сотрудника (названия — данные CRM) */
       roles: components["schemas"]["RoleRef"][];
@@ -4066,10 +4438,10 @@ export interface components {
       active_role?: components["schemas"]["RoleId"] | null;
     };
     /**
-     * @description Что перезапросить: `notifications` — `listNotifications`; `counters` — `getMenuCounters`; `queue` — `getQueue` и `getQueueCards`; `activity` — `getActivityToday`.
+     * @description Что перезапросить: `notifications` — `listNotifications`; `counters` — `getMenuCounters`; `queue` — `getQueue` и `getQueueCards`; `activity` — `getActivityToday`; `messages` (0.22.0) — `listCrmMessages` и открытая лента `getCrmThread` / `getCrmConversation`.
      * @enum {string}
      */
-    InvalidationTopic: "notifications" | "counters" | "queue" | "activity";
+    InvalidationTopic: "notifications" | "counters" | "queue" | "activity" | "messages";
     /** @description Данные кадра `invalidate` потока `/events/stream` — подсказка, не данные события. */
     InvalidationHint: {
       topics: components["schemas"]["InvalidationTopic"][];
@@ -4129,6 +4501,103 @@ export interface components {
      * @enum {string}
      */
     DueLabel: "overdue" | "today" | "tomorrow" | "later" | "memo";
+    ForgotPasswordIn: {
+      /** @description Почта (логин) сотрудника */
+      identifier: string;
+    };
+    ForgotPasswordAccepted: {
+      /** @enum {boolean} */
+      accepted: true;
+    };
+    ResetPasswordIn: {
+      token: string;
+      new_password: string;
+    };
+    /**
+     * @description Имя пояса IANA — `Asia/Tashkent`
+     * @example Asia/Tashkent
+     */
+    Timezone: string;
+    TelegramState: {
+      linked: boolean;
+      /** @description Ник, с которого сотрудник привязал бота («Привязан как @…»); у привязки администратором ника нет */
+      username?: string;
+    };
+    DeputyPeriod: {
+      user_id: string;
+      name: string;
+      /** Format: date */
+      date_from: string;
+      /** Format: date */
+      date_to: string;
+    };
+    /** @description За кого сотрудник сегодня заместитель — его очередь показана в «Моей очереди» строками «за {имя}» */
+    Covering: {
+      user_id: string;
+      name: string;
+      /** Format: date */
+      date_from: string;
+      /** Format: date */
+      date_to: string;
+    };
+    /** @description Профиль сотрудника для страницы /me (данные CRM) */
+    Profile: {
+      name: string;
+      /** Format: email */
+      email: string;
+      /** @description Должность — только чтение, задаёт администратор */
+      position?: string;
+      /** @description `+` и цифры без пробелов */
+      phone?: string;
+      language: components["schemas"]["Language"];
+      timezone: components["schemas"]["Timezone"];
+      /** @description Подпись для исходящих писем */
+      email_signature?: string;
+      /** @description Адрес фото на BFF (`/staff/{id}/avatar?v=…`); нет — инициалы */
+      avatar_url?: string;
+      telegram: components["schemas"]["TelegramState"];
+      deputy?: components["schemas"]["DeputyPeriod"];
+      covering: components["schemas"]["Covering"][];
+    };
+    ProfileUpdate: {
+      name?: string;
+      /** @description Пустая строка очищает */
+      phone?: string;
+      language?: components["schemas"]["Language"];
+      timezone?: components["schemas"]["Timezone"];
+      /** @description Пустая строка очищает */
+      email_signature?: string;
+    };
+    AvatarUpload: {
+      /**
+       * Format: binary
+       * @description PNG, JPEG или WebP до 1 МБ (клиент уже обрезал по кругу)
+       */
+      avatar: string;
+    };
+    TelegramLink: {
+      /** @description `https://t.me/<бот>?start=staff_<код>` — открыть в Telegram или показать QR */
+      url: string;
+      /** Format: date-time */
+      expires_at: string;
+    };
+    Colleague: {
+      id: string;
+      name: string;
+      position?: string;
+    };
+    DeputyUpdate: {
+      deputy_id: string;
+      /** Format: date */
+      date_from: string;
+      /** Format: date */
+      date_to: string;
+    };
+    /** @description Чья это очередь, если строку видит заместитель */
+    QueueOwner: {
+      id: string;
+      name: string;
+    };
     QueueItem: {
       id: string;
       role_id: components["schemas"]["RoleId"];
@@ -4141,6 +4610,7 @@ export interface components {
       /** Format: date-time */
       due_at?: string;
       object: components["schemas"]["ObjectRef"];
+      on_behalf_of?: components["schemas"]["QueueOwner"];
     };
     Queue: {
       items: components["schemas"]["QueueItem"][];
@@ -4164,6 +4634,8 @@ export interface components {
       actor: components["schemas"]["PersonRef"];
       /** @description Что сделал — «подтвердила оплату по ПР-2026-099» */
       text: string;
+      /** @description Код административного события ERP (`admin.*`), для которого SPA собирает фразу на языке сотрудника; иначе `null` */
+      code?: string | null;
       module: components["schemas"]["ModuleCode"];
       /** Format: date-time */
       at: string;
@@ -4983,9 +5455,23 @@ export interface components {
       sort_order?: number;
       is_active?: boolean;
     };
+    /**
+     * @description Вид шаблона документа
+     * @enum {string}
+     */
+    DocumentTemplateKind:
+      | "letter"
+      | "report"
+      | "custom"
+      | "contract"
+      | "invoice"
+      | "act"
+      | "receipt"
+      | "delivery_note";
     DocumentTemplate: {
       id: components["schemas"]["CompanyItemRef"];
       name: string;
+      kind: components["schemas"]["DocumentTemplateKind"];
       /** @description Вид документа словами */
       kind_name: string;
       body_html: string;
@@ -5003,6 +5489,7 @@ export interface components {
     };
     DocumentTemplateIn: {
       name: string;
+      kind?: components["schemas"]["DocumentTemplateKind"];
       body_html?: string;
       is_active?: boolean;
     };
@@ -5029,6 +5516,7 @@ export interface components {
     };
     DocumentTemplatePreviewIn: {
       body_html: string;
+      kind?: components["schemas"]["DocumentTemplateKind"];
     };
     EmailTemplate: {
       id: components["schemas"]["CompanyItemRef"];
@@ -5259,6 +5747,8 @@ export interface components {
       /** @description Допустимый возраст курса в днях (настройка компании в ERP) */
       max_age_days: number;
       journal: components["schemas"]["FxRateJournalEntry"][];
+      /** @description `false` — журнал недоступен без права `settings.edit` в ERP (имена и почта коллег); `journal` тогда пуст, SPA секцию журнала не показывает */
+      journal_available: boolean;
     };
     FxRateIn: {
       /**
@@ -5669,6 +6159,182 @@ export interface components {
        */
       directory: "ok" | "forbidden" | "unavailable";
     };
+    /**
+     * @description Кто ведёт диалог — `bot` (бот отвечает сам), `waiting` (бот передал и ждёт человека), `manager` (ведёт сотрудник)
+     * @enum {string}
+     */
+    LeadOwnerMode: "bot" | "waiting" | "manager";
+    /** @description Канал лида (`telegram`, `web`, `email`, `phone`, `referral`); подпись — у экрана */
+    MessageChannel: string;
+    /** @description Факты квалификации от бота; коды срока и роли подписывает экран */
+    HandoffFacts: {
+      /** @description Продукты по справочнику CRM (названия) */
+      interest: string[];
+      /** @enum {string|null} */
+      timeline: "<1m" | "<3m" | "<12m" | ">12m" | null;
+      /** @enum {string|null} */
+      decision_role: "decision_maker" | "influencer" | "researcher" | null;
+      budget_hint: string | null;
+      company: string | null;
+      company_size: string | null;
+      region: string | null;
+    };
+    /** @description Записка передачи (CRM-06) — что известно о запросе клиента */
+    HandoffNote: {
+      /** @description Суть запроса клиента (резюме бота) */
+      request: string | null;
+      facts: components["schemas"]["HandoffFacts"];
+      /** @description Последнее сообщение клиента (до 200 символов) */
+      last_message: string | null;
+    };
+    /** @description Открытая передача от бота */
+    HandoffInfo: {
+      /**
+       * @description `hot` — срочно, `warm` — важно, `info` — к сведению (без срока реакции)
+       * @enum {string}
+       */
+      priority: "hot" | "warm" | "info";
+      /** @enum {string} */
+      state: "open" | "taken" | "snoozed";
+      /** @description Коды причин передачи CRM (`human_requested`, `price_or_contract_asked`, …); подписи — у экрана */
+      reasons: string[];
+      /** @description Пояснение причины словами (служебные пометки CRM вида «dialog: …» BFF не отдаёт) */
+      reason_text: string | null;
+      /** @description Рекомендуемый шаг */
+      recommendation: string | null;
+      /**
+       * Format: date-time
+       * @description Когда бот передал диалог (начало таймера «ждёт»)
+       */
+      created_at: string;
+      /**
+       * Format: date-time
+       * @description Срок реакции; после него таймер красный. `null` — без срока (`info`)
+       */
+      sla_due_at: string | null;
+      /** Format: date-time */
+      snoozed_until: string | null;
+      taken_by: components["schemas"]["PersonRef"] | null;
+    };
+    MessageInboxItem: {
+      /** @description Номер лида */
+      lead: string;
+      name: string;
+      /** @enum {string} */
+      group: "handoff" | "mine" | "unassigned";
+      language: components["schemas"]["Language"];
+      channel: components["schemas"]["MessageChannel"];
+      /** @description Клиент написал после последнего ответа сотрудника */
+      unread: boolean;
+      /**
+       * Format: date-time
+       * @description Последнее сообщение клиента
+       */
+      last_message_at: string | null;
+      assigned: components["schemas"]["PersonRef"] | null;
+      handoff: components["schemas"]["HandoffInfo"] | null;
+      note: components["schemas"]["HandoffNote"];
+    };
+    MessageInbox: {
+      items: components["schemas"]["MessageInboxItem"][];
+    };
+    ConversationContacts: {
+      /** @description Имя пользователя Telegram без @ */
+      telegram: string | null;
+      /** @description E.164 */
+      phone: string | null;
+      email: string | null;
+      company: string | null;
+    };
+    ConversationCard: {
+      lead: string;
+      name: string;
+      language: components["schemas"]["Language"];
+      channel: components["schemas"]["MessageChannel"];
+      owner_mode: components["schemas"]["LeadOwnerMode"];
+      assigned: components["schemas"]["PersonRef"] | null;
+      /**
+       * Format: date-time
+       * @description Согласие на обработку данных; без него написать клиенту нельзя
+       */
+      consent_given_at: string | null;
+      contacts: components["schemas"]["ConversationContacts"];
+      facts: components["schemas"]["HandoffFacts"];
+      request: string | null;
+      handoff: components["schemas"]["HandoffInfo"] | null;
+      /** @description Лид уже стал клиентом (компания в ERP) */
+      client_in_erp: boolean;
+    };
+    ThreadAttachment: {
+      index: number;
+      name: string;
+      mime: string;
+      size: number | null;
+      /** @description Ссылка BFF на файл (`/api/v1/crm/messages/{lead}/attachments/…`); `null` — файл не сохранён */
+      url: string | null;
+    };
+    ThreadMessage: {
+      id: number;
+      /** @enum {string} */
+      author: "lead" | "bot" | "manager" | "system";
+      /** @description Имя сотрудника у ответа менеджера */
+      author_name: string | null;
+      text: string;
+      /** Format: date-time */
+      created_at: string;
+      attachments: components["schemas"]["ThreadAttachment"][];
+      /**
+       * @description Только у ответа менеджера с ключом повтора: `sending` — отправка идёт («Отправляется…»); `unconfirmed` — доставка не подтверждена (таймаут Telegram или сбой записи итога, отправка старше 2 минут — тот же срок, что у CRM): повтор этим ключом сообщение не шлёт, проверьте у клиента (B-013). `null` — доставлено или это не ответ менеджера
+       * @enum {string|null}
+       */
+      delivery: "sending" | "unconfirmed" | null;
+    };
+    TeamNote: {
+      id: number;
+      author_name: string | null;
+      text: string;
+      /** Format: date-time */
+      created_at: string;
+      /** @description Заметка при возврате боту — её видит и бот */
+      visible_to_bot: boolean;
+    };
+    ConversationThread: {
+      /** @description Сообщения, старые выше */
+      items: components["schemas"]["ThreadMessage"][];
+      /** @description Заметки команды (только на первой странице, без `before`), новые выше */
+      notes: components["schemas"]["TeamNote"][];
+      /** @description Есть сообщения старше — «Показать раньше» */
+      has_more: boolean;
+    };
+    ReplyIn: {
+      text: string;
+      /** @description Ключ повтора черновика — тот же при «Повторить» */
+      client_message_id: string;
+    };
+    SentMessage: {
+      /** @description Id сообщения в переписке */
+      id: number;
+    };
+    TeamNoteIn: {
+      text: string;
+    };
+    AssistIn: {
+      /** @enum {string} */
+      mode: "draft" | "improve";
+      /** @description Текст из поля для `improve` */
+      text?: string | null;
+    };
+    AssistSuggestion: {
+      text: string;
+      /**
+       * @description `numbers_removed` — из черновика убраны числа не из базы знаний; `new_numbers` — правка добавила числа, возвращён исходный текст
+       * @enum {string|null}
+       */
+      notice: "numbers_removed" | "new_numbers" | null;
+    };
+    ReturnToBotIn: {
+      note?: string | null;
+    };
   };
   responses: {
     /** @description `SESSION_EXPIRED` — сессии нет, истекла или сотрудник отключён */
@@ -5792,6 +6458,15 @@ export interface components {
         "application/json": components["schemas"]["Error"];
       };
     };
+    /** @description 409 `CONFLICT` — состояние лида не позволяет действие; код CRM — в `details.reason` (`lead_taken` с `details.assigned_user_name`, `take_first`, `no_consent`, `already_with_bot`, `delivery_unconfirmed`, `reply_in_progress` — ответ с этим `client_message_id` ещё отправляется, повтор безопасен, `assist_disabled`, `assist_budget`, `assist_empty`, `assist_no_history`) */
+    MessagesConflict: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["Error"];
+      };
+    };
     /** @description `BACKEND_UNAVAILABLE` — CRM не ответила за таймаут */
     BackendUnavailable: {
       headers: {
@@ -5821,6 +6496,8 @@ export interface components {
     };
   };
   parameters: {
+    /** @description Номер лида `L-NNNN` */
+    LeadNumber: string;
     /** @description `crm_user_id` — число без ведущих нулей (`07` и `007` — не адрес сотрудника) */
     EmployeeId: string;
     /** @description Id роли Платформы (CRM) */
@@ -5932,6 +6609,58 @@ export interface operations {
           "application/json": components["schemas"]["Error"];
         };
       };
+    };
+  };
+  forgotPassword: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ForgotPasswordIn"];
+      };
+    };
+    responses: {
+      /** @description Запрос принят */
+      202: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ForgotPasswordAccepted"];
+        };
+      };
+      422: components["responses"]["ValidationFailed"];
+      429: components["responses"]["TooManyRequests"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  resetPassword: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ResetPasswordIn"];
+      };
+    };
+    responses: {
+      /** @description Пароль задан */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      422: components["responses"]["ValidationFailed"];
+      429: components["responses"]["TooManyRequests"];
+      503: components["responses"]["BackendUnavailable"];
     };
   };
   logout: {
@@ -6365,6 +7094,290 @@ export interface operations {
           "application/json": components["schemas"]["Error"];
         };
       };
+    };
+  };
+  getProfile: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Профиль */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Profile"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  updateProfile: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ProfileUpdate"];
+      };
+    };
+    responses: {
+      /** @description Сохранено */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Profile"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["CsrfFailed"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  uploadAvatar: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["AvatarUpload"];
+      };
+    };
+    responses: {
+      /** @description Фото заменено */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Me"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["CsrfFailed"];
+      /** @description `PAYLOAD_TOO_LARGE` — фото больше 1 МБ */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  deleteAvatar: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Фото удалено (снова инициалы) */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Me"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["CsrfFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getStaffAvatar: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Изображение */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "image/*": string;
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  createTelegramLink: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Ссылка */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TelegramLink"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["CsrfFailed"];
+      /** @description `NOT_CONFIGURED` — бот не подключён; `CONFLICT` (`details.reason = bot_not_running`) — бот сейчас не запущен */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  deleteTelegramLink: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Отвязан; профиль без Telegram */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Profile"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["CsrfFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listDeputyCandidates: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Коллеги */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Colleague"][];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  setDeputy: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DeputyUpdate"];
+      };
+    };
+    responses: {
+      /** @description Назначен */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Profile"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["CsrfFailed"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  clearDeputy: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Замещения нет */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Profile"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["CsrfFailed"];
+      503: components["responses"]["BackendUnavailable"];
     };
   };
   getHealth: {
@@ -11153,6 +12166,315 @@ export interface operations {
       401: components["responses"]["SessionExpired"];
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listCrmMessages: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Очередь «Ждут ответа» */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["MessageInbox"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getCrmConversation: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Номер лида `L-NNNN` */
+        lead: components["parameters"]["LeadNumber"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Карточка лида */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ConversationCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getCrmThread: {
+    parameters: {
+      query?: {
+        /** @description Сообщения старше этого id (подгрузка истории) */
+        before?: number;
+        limit?: number;
+      };
+      header?: never;
+      path: {
+        /** @description Номер лида `L-NNNN` */
+        lead: components["parameters"]["LeadNumber"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Страница переписки */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ConversationThread"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  downloadCrmAttachment: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Номер лида `L-NNNN` */
+        lead: components["parameters"]["LeadNumber"];
+        message: number;
+        index: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Файл */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/octet-stream": string;
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      502: components["responses"]["IntegrationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  takeCrmLead: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер лида `L-NNNN` */
+        lead: components["parameters"]["LeadNumber"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Лид у сотрудника */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ActionOk"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["MessagesConflict"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  replyCrmLead: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер лида `L-NNNN` */
+        lead: components["parameters"]["LeadNumber"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ReplyIn"];
+      };
+    };
+    responses: {
+      /** @description Отправлено клиенту */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SentMessage"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["MessagesConflict"];
+      422: components["responses"]["ValidationFailed"];
+      502: components["responses"]["IntegrationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  noteCrmLead: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер лида `L-NNNN` */
+        lead: components["parameters"]["LeadNumber"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["TeamNoteIn"];
+      };
+    };
+    responses: {
+      /** @description Заметка записана */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CreatedId"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  assistCrmReply: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер лида `L-NNNN` */
+        lead: components["parameters"]["LeadNumber"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AssistIn"];
+      };
+    };
+    responses: {
+      /** @description Предложение для поля ответа */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AssistSuggestion"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["MessagesConflict"];
+      422: components["responses"]["ValidationFailed"];
+      502: components["responses"]["IntegrationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  returnCrmLeadToBot: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер лида `L-NNNN` */
+        lead: components["parameters"]["LeadNumber"];
+      };
+      cookie?: never;
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["ReturnToBotIn"];
+      };
+    };
+    responses: {
+      /** @description Лид снова у бота */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ActionOk"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["MessagesConflict"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listCrmReplyTemplates: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Шаблоны по названию */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ReplyTemplateList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
       503: components["responses"]["BackendUnavailable"];
     };
   };

@@ -57,6 +57,12 @@ class Reason(StrEnum):
     # Зеркальная сделка ERP: сумму, валюту, стадию, название и причину отказа ведёт бэк-офис (I-26).
     DEAL_OWNED_BY_ERP = "deal_owned_by_erp"
     NO_CONSENT = "no_consent"
+    # Ответ с этим ключом повтора ещё отправляется (D1-1): повтор не шлёт сообщение второй раз.
+    REPLY_IN_PROGRESS = "reply_in_progress"
+    # Итог отправки ответа неизвестен: Telegram не ответил вовремя (502) или так и не
+    # подтвердил доставку (409).
+    DELIVERY_UNKNOWN = "delivery_unknown"
+    DELIVERY_UNCONFIRMED = "delivery_unconfirmed"
     LITELLM_UNAVAILABLE = "litellm_unavailable"
     MODEL_KEY_REQUIRED = "model_key_required"
     MODEL_IN_CONFIG = "model_in_config"
@@ -68,6 +74,8 @@ class Reason(StrEnum):
     ERP_BAD_RESPONSE = "erp_bad_response"
     # Лимит сервисного токена ERP (429 `TOO_MANY_REQUESTS` + `Retry-After`, шов 0.3.0, FIX-60).
     ERP_RATE_LIMITED = "erp_rate_limited"
+    # Повторное приглашение в кабинет (D1-9): клиент ещё не передан в ERP — приглашать некуда.
+    CLIENT_NOT_IN_ERP = "client_not_in_erp"
     # Передача клиента (FIX-31): ИНН уже принадлежит другому клиенту CRM в ERP (409 INN_CONFLICT).
     ERP_INN_CONFLICT = "erp_inn_conflict"
     # Сопряжение с ERP по одноразовому коду (M3-CRM-10): код не принят, просрочен или уже
@@ -120,6 +128,23 @@ class Reason(StrEnum):
     HANDOFF_NO_CONSENT = "handoff_no_consent"
     # «Согласие получено» (FIX-57, D-8): лид из Telegram соглашается в боте, сотрудник не отмечает.
     CONSENT_VIA_BOT = "consent_via_bot"
+    # Профиль сотрудника (W15-H6): значения полей, фото и замещение (`domain/staff_profile.py`).
+    NAME_REQUIRED = "name_required"
+    PHONE_INVALID = "phone_invalid"
+    TIMEZONE_UNKNOWN = "timezone_unknown"
+    SIGNATURE_INVALID = "signature_invalid"
+    AVATAR_EMPTY = "avatar_empty"
+    AVATAR_TOO_LARGE = "avatar_too_large"
+    AVATAR_UNSUPPORTED_TYPE = "avatar_unsupported_type"
+    AVATAR_TYPE_MISMATCH = "avatar_type_mismatch"
+    DEPUTY_IS_SELF = "deputy_is_self"
+    DEPUTY_PERIOD_REVERSED = "deputy_period_reversed"
+    DEPUTY_PERIOD_PAST = "deputy_period_past"
+    DEPUTY_PERIOD_TOO_LONG = "deputy_period_too_long"
+    DEPUTY_NOT_COLLEAGUE = "deputy_not_colleague"
+    NOT_A_DEPUTY = "not_a_deputy"
+    # Сброс пароля по ссылке: токен неверный, использован или просрочен (один код на все случаи).
+    RESET_TOKEN_INVALID = "reset_token_invalid"  # noqa: S105 — подкод ошибки, не секрет
 
 
 class DomainError(Exception):
@@ -246,6 +271,12 @@ class MailTemplateMissingError(DomainError):
 
     def __init__(self) -> None:
         super().__init__("email template is not found; contact the administrator of the deployment")
+
+
+class PayloadTooLargeError(DomainError):
+    """Тело запроса больше допустимого (413): тело не читается дальше предела."""
+
+    code = "payload_too_large"
 
 
 class RateLimitedError(DomainError):

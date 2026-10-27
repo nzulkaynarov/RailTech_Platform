@@ -133,7 +133,7 @@
  * (директор читает), сброс пароля — `admin: full`; профиль доступен каждому вошедшему. Секреты из записей журнала BFF вырезает
  * (значения полей `password`, `secret`, `token`, `key`, `*_key`, `credentials`, `authorization`, `pin` и им подобных -> `***` целиком, любого типа).
  *
- * **0.22.0 (D1-4) — EDS · КП на одобрение и документы на согласовании.** Добавляющее изменение, тег `eds-approvals`: `GET /eds/quotes`
+ * **0.24.0 (D1-4) — EDS · КП на одобрение и документы на согласовании.** Добавляющее изменение, тег `eds-approvals`: `GET /eds/quotes`
  * (КП на одобрение: «на моём шаге» или все), `GET /eds/quotes/{ref}` (карточка КП по id маршрута или номеру `КП-2026/115`: шаги маршрута,
  * чек-лист с датой и автором, состав и итоги из ERP, письмо и заявка, каналы отправки по контакту клиента; **внутренний блок**
  * `internal` — себестоимость, маржа, порог, сроки — и значение маржи в чек-листе BFF вырезает у роли без группы `cost_margin`),
@@ -147,6 +147,23 @@
  * Карточка КП: `snapshot_total` (итог снимка EDS), `totals_mismatch` (итог ERP расходится со снимком), строки ERP не показываются при другой редакции КП в ERP;
  * карточка документа: `accountant_step` (шаг бухгалтера — «Принять к оплате», решает держатель `eds.payments` full). Отправки КП по `channels` пока нет (Δ ERP-11).
  *
+ *
+ * **0.23.0 (W15-H8) — Admin · Компания: шаблоны документов и лента.** Добавляющее изменение. `DocumentTemplateIn.kind` — вид
+ * шаблона при создании (`letter`, `report`, `custom`, `contract`, `invoice`, `act`, `receipt`, `delivery_note`; без поля — `custom`,
+ * как раньше); `DocumentTemplate.kind` отдаёт вид кодом. `DocumentTemplatePreviewIn.kind` — предпросмотр договора, счёта и акта идёт
+ * на каркасе своего вида и с образцами блоков (остальные виды — общий каркас и подписанные заглушки). `ActivityItem.code` — код
+ * административного события ERP (`admin.*`), по которому SPA собирает фразу на языке сотрудника; для остальных событий `null`.
+ * Журнал ручных курсов в ERP виден только с правом `settings.edit` (имена и почта коллег): `GET /admin/company/fx-rate` без
+ * этого права отдаёт текущий курс и пустой журнал с `journal_available = false` (не ошибку; директор раздел смотрит).
+ *
+ * **0.22.0 (D1-1, волна 16) — Клиенты · Ждут ответа.** Добавляющее изменение (тег `messages`): очередь передач от бота с
+ * запиской (CRM-06) и SLA — `GET /crm/messages`; карточка лида, лента диалога с подгрузкой истории и вложениями через BFF —
+ * `GET /crm/messages/{lead}`, `/thread`, `/attachments/{message}/{index}`; действия — `take`, `reply` (ключ повтора
+ * `client_message_id`: «Повторить» не дублирует сообщение; Telegram не ответил — 502 `INTEGRATION_FAILED`, `delivery_failed`),
+ * `note` (заметка команде), `assist` (подсказка ответа через CRM/LiteLLM), `return-to-bot`; шаблоны — `GET /crm/reply-templates`
+ * (раздел `crm.leads` полный). Чтение — `crm.leads` от чтения (директор), действия — полный. Новая тема подсказки потока
+ * `InvalidationTopic.messages`: событие CRM `lead.message_added` (новое сообщение в переписке) и события лида — экран
+ * перезапрашивает очередь и открытую ленту.
  * **0.19.0 (W15-H1) — мост в старые экраны.** Добавляющее изменение (тег `bridge`). Пока раздел Платформы ещё заглушка, сотрудник
  * открывает ту же работу в старой CRM или старом ERP новой вкладкой. `GET /bridge` отдаёт публичные адреса старых фронтов
  * (`crm_url`, `erp_url`): настройки `PLATFORM_CRM_PUBLIC_URL` и `PLATFORM_ERP_PUBLIC_URL`, а если они пусты — адрес выводится из
@@ -193,6 +210,16 @@
  * EDS, полученным обменом токена сотрудника CRM `aud=eds` (`docs/architecture/platform-bff.md` §3); ошибки EDS переводятся в
  * формат `Error` (`source = eds`, `details.reason` и `details.fields` EDS сохраняются).
  *
+ * **0.21.0 (W15-H6) — Профиль сотрудника.** Добавляющее изменение, тег `me`: `GET/PATCH /me/profile` (имя, телефон, язык, часовой
+ * пояс, подпись для писем; должность и роли только читаются, правит админ), `PUT/DELETE /me/avatar` и `GET /staff/{id}/avatar`
+ * (фото: клиент обрезает по кругу, CRM хранит в S3, BFF отдаёт без публичных ссылок; `Me.avatar_url` — вместо инициалов),
+ * `POST/DELETE /me/telegram-link` (сотрудник привязывает Telegram сам: ссылка `t.me/<бот>?start=staff_<одноразовый код>` на 10
+ * минут), `GET /me/deputy-candidates`, `PUT/DELETE /me/deputy` (замещение на период; заместитель видит очередь замещаемого:
+ * `QueueItem.on_behalf_of`, права на объекты — свои). Вход: `POST /auth/forgot-password` (ответ одинаков для любой учётной
+ * записи; ссылка уходит на почту или в Telegram, иначе тихо ничего) и `POST /auth/reset-password` (новый пароль по одноразовой
+ * ссылке; неверная или просроченная — 422 `VALIDATION_FAILED`, `details.reason = reset_token_invalid`). `Me.access` остаётся для
+ * совместимости, но экран «Доступ: CRM · ERP» убран: вместо него роли словами.
+ *
  * 0.2.4: `423 ACCOUNT_LOCKED` объявлен и на `POST /auth/change-password` (CRM блокирует учётную запись после неверных
  * текущих паролей).
  *
@@ -208,10 +235,10 @@
  * 0.2.1 (Q-P0-3): перечень `Error.code` дополнен `INTERNAL_ERROR` (500) и нейтральными кодами 4xx `BAD_REQUEST`,
  * `METHOD_NOT_ALLOWED`, `HTTP_<статус>` для ответов, которые не относятся ни к одному именованному коду.
  *
- * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; остальные запросы — 300 в минуту на сессию; превышение — 429
+ * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; «Забыли пароль?» — 5 запросов в час на IP и на адрес; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.22.0
+ * OpenAPI spec version: 0.24.0
  */
 import { useMutation, useQuery } from "@tanstack/react-query";
 import type {
@@ -239,7 +266,10 @@ import type {
   AiModelTest,
   AiSpendReport,
   ApprovalConflictResponse,
+  AssistIn,
+  AssistSuggestion,
   AuditPage,
+  AvatarUpload,
   BackendUnavailableResponse,
   BackupsStatus,
   BotProfile,
@@ -269,10 +299,14 @@ import type {
   ChargeTemplateList,
   ChargeTemplateUpdate,
   ChargeTypeList,
+  Colleague,
   CompanyProfile,
   CompanyProfileUpdate,
+  ConversationCard,
+  ConversationThread,
   CreatedId,
   CsrfFailedResponse,
+  DeputyUpdate,
   DocumentPlaceholders,
   DocumentPreview,
   DocumentTemplate,
@@ -313,9 +347,12 @@ import type {
   ExternalServiceDetail,
   ExternalServiceList,
   ForbiddenResponse,
+  ForgotPasswordAccepted,
+  ForgotPasswordIn,
   FxRateIn,
   FxRateOverview,
   GetAiSpendReportParams,
+  GetCrmThreadParams,
   GetQueueCardsParams,
   GetQueueParams,
   GetRoleJournalParams,
@@ -365,6 +402,8 @@ import type {
   MemoApprovalPage,
   MemoDecisionIn,
   MenuCounters,
+  MessageInbox,
+  MessagesConflictResponse,
   NotFoundResponse,
   NotificationPage,
   NotificationSettings,
@@ -376,6 +415,8 @@ import type {
   PasswordConfirm,
   PlatformSettings,
   PlatformSettingsUpdate,
+  Profile,
+  ProfileUpdate,
   ProviderKeyIn,
   ProviderKeyResult,
   Queue,
@@ -389,10 +430,13 @@ import type {
   ReferenceItemIn,
   ReferenceItemList,
   ReferenceItemUpdate,
+  ReplyIn,
   ReplyTemplateIn,
   ReplyTemplateList,
+  ResetPasswordIn,
   ResolutionAssignees,
   ResolutionIn,
+  ReturnToBotIn,
   Role,
   RoleCreate,
   RoleJournal,
@@ -405,6 +449,7 @@ import type {
   SaveBotSettingBody,
   SearchParams,
   SearchResult,
+  SentMessage,
   ServiceSwitchIn,
   Session,
   SessionExpiredResponse,
@@ -418,8 +463,10 @@ import type {
   SmtpSettingsIn,
   SpendReport,
   SystemStatus,
+  TeamNoteIn,
   TelegramChannelList,
   TelegramConnector,
+  TelegramLink,
   TelegramTokenIn,
   TooManyRequestsResponse,
   ValidationFailedResponse,
@@ -548,6 +595,234 @@ export const useLogin = <TError = ErrorType<Error | TooManyRequestsResponse>, TC
   TContext
 > => {
   return useMutation(getLoginMutationOptions(options), queryClient);
+};
+
+export const getForgotPasswordUrl = () => {
+  return `/api/v1/auth/forgot-password`;
+};
+
+/**
+ * Без сессии. Ответ один и тот же для существующей и несуществующей учётной записи (перечислять сотрудников нельзя). Ссылка на Платформу уходит на почту (если подключён SMTP) или в Telegram (если привязан); нет ни того, ни другого — ничего не уходит, и экран заранее говорит «обратитесь к администратору». Ссылка одноразовая, живёт час; не больше трёх в час на учётную запись. Лимит BFF — 5 запросов в час на IP и на адрес, сверх него 429 `TOO_MANY_REQUESTS`.
+ * @summary Забыли пароль — запросить ссылку сброса
+ */
+export const forgotPassword = async (
+  forgotPasswordIn: ForgotPasswordIn,
+  options?: Parameters<typeof http>[1],
+): Promise<ForgotPasswordAccepted> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<ForgotPasswordAccepted>(getForgotPasswordUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(forgotPasswordIn),
+  });
+};
+
+export const getForgotPasswordMutationKey = () => ["forgotPassword"] as const;
+
+export const getForgotPasswordMutationOptions = <
+  TError = ErrorType<
+    ValidationFailedResponse | TooManyRequestsResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof forgotPassword>>,
+    TError,
+    ForgotPasswordMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof forgotPassword>>,
+  TError,
+  ForgotPasswordMutationVariables,
+  TContext
+> => {
+  const mutationKey = getForgotPasswordMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof forgotPassword>>,
+    ForgotPasswordMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return forgotPassword(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ForgotPasswordMutationResult = NonNullable<Awaited<ReturnType<typeof forgotPassword>>>;
+export type ForgotPasswordMutationBody = ForgotPasswordIn;
+export type ForgotPasswordMutationError = ErrorType<
+  ValidationFailedResponse | TooManyRequestsResponse | BackendUnavailableResponse
+>;
+export type ForgotPasswordMutationVariables = { data: ForgotPasswordIn };
+
+/**
+ * @summary Забыли пароль — запросить ссылку сброса
+ */
+export const useForgotPassword = <
+  TError = ErrorType<
+    ValidationFailedResponse | TooManyRequestsResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof forgotPassword>>,
+      TError,
+      ForgotPasswordMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof forgotPassword>>,
+  TError,
+  ForgotPasswordMutationVariables,
+  TContext
+> => {
+  return useMutation(getForgotPasswordMutationOptions(options), queryClient);
+};
+
+export const getResetPasswordUrl = () => {
+  return `/api/v1/auth/reset-password`;
+};
+
+/**
+ * Без сессии. Токен из ссылки одноразовый; после успеха все открытые сессии сотрудника закрываются и вход идёт с новым паролем. Неверная, использованная или просроченная ссылка — 422 `VALIDATION_FAILED` с `details.reason = reset_token_invalid` (`details.fields = [token]`); слабый пароль — `weak_password` (`new_password`), ссылка остаётся действующей.
+ * @summary Задать новый пароль по ссылке сброса
+ */
+export const resetPassword = async (
+  resetPasswordIn: ResetPasswordIn,
+  options?: Parameters<typeof http>[1],
+): Promise<void> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<void>(getResetPasswordUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(resetPasswordIn),
+  });
+};
+
+export const getResetPasswordMutationKey = () => ["resetPassword"] as const;
+
+export const getResetPasswordMutationOptions = <
+  TError = ErrorType<
+    ValidationFailedResponse | TooManyRequestsResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof resetPassword>>,
+    TError,
+    ResetPasswordMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof resetPassword>>,
+  TError,
+  ResetPasswordMutationVariables,
+  TContext
+> => {
+  const mutationKey = getResetPasswordMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof resetPassword>>,
+    ResetPasswordMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return resetPassword(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ResetPasswordMutationResult = NonNullable<Awaited<ReturnType<typeof resetPassword>>>;
+export type ResetPasswordMutationBody = ResetPasswordIn;
+export type ResetPasswordMutationError = ErrorType<
+  ValidationFailedResponse | TooManyRequestsResponse | BackendUnavailableResponse
+>;
+export type ResetPasswordMutationVariables = { data: ResetPasswordIn };
+
+/**
+ * @summary Задать новый пароль по ссылке сброса
+ */
+export const useResetPassword = <
+  TError = ErrorType<
+    ValidationFailedResponse | TooManyRequestsResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof resetPassword>>,
+      TError,
+      ResetPasswordMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof resetPassword>>,
+  TError,
+  ResetPasswordMutationVariables,
+  TContext
+> => {
+  return useMutation(getResetPasswordMutationOptions(options), queryClient);
 };
 
 export const getLogoutUrl = () => {
@@ -2024,6 +2299,996 @@ export const useSendTestNotification = <
   queryClient?: QueryClient,
 ): UseMutationResult<Awaited<ReturnType<typeof sendTestNotification>>, TError, void, TContext> => {
   return useMutation(getSendTestNotificationMutationOptions(options), queryClient);
+};
+
+export const getGetProfileUrl = () => {
+  return `/api/v1/me/profile`;
+};
+
+/**
+ * Данные сотрудника из CRM (`GET /me`): имя, почта, должность, телефон, язык, часовой пояс, подпись для писем, фото, привязка Telegram и замещение. Доступно каждому вошедшему; чужой профиль этим путём не читается.
+ * @summary Мой профиль для страницы /me
+ */
+export const getProfile = async (options?: Parameters<typeof http>[1]): Promise<Profile> => {
+  return http<Profile>(getGetProfileUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetProfileQueryKey = () => {
+  return [`/api/v1/me/profile`] as const;
+};
+
+export const getGetProfileQueryOptions = <
+  TData = Awaited<ReturnType<typeof getProfile>>,
+  TError = ErrorType<SessionExpiredResponse | BackendUnavailableResponse>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getProfile>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetProfileQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getProfile>>> = ({ signal }) =>
+    getProfile({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getProfile>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetProfileQueryResult = NonNullable<Awaited<ReturnType<typeof getProfile>>>;
+export type GetProfileQueryError = ErrorType<SessionExpiredResponse | BackendUnavailableResponse>;
+
+export function useGetProfile<
+  TData = Awaited<ReturnType<typeof getProfile>>,
+  TError = ErrorType<SessionExpiredResponse | BackendUnavailableResponse>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getProfile>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getProfile>>,
+          TError,
+          Awaited<ReturnType<typeof getProfile>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetProfile<
+  TData = Awaited<ReturnType<typeof getProfile>>,
+  TError = ErrorType<SessionExpiredResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getProfile>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getProfile>>,
+          TError,
+          Awaited<ReturnType<typeof getProfile>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetProfile<
+  TData = Awaited<ReturnType<typeof getProfile>>,
+  TError = ErrorType<SessionExpiredResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getProfile>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Мой профиль для страницы /me
+ */
+
+export function useGetProfile<
+  TData = Awaited<ReturnType<typeof getProfile>>,
+  TError = ErrorType<SessionExpiredResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getProfile>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetProfileQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getUpdateProfileUrl = () => {
+  return `/api/v1/me/profile`;
+};
+
+/**
+ * Не присланное поле не меняется; пустая строка в `phone` и `email_signature` очищает поле. Должность и роли сюда не приходят (задаёт админ). Ошибка значения — 422 `VALIDATION_FAILED` с `details.fields` и `details.reason` (`phone_invalid`, `timezone_unknown`, `signature_invalid`).
+ * @summary Сохранить свой профиль
+ */
+export const updateProfile = async (
+  profileUpdate: ProfileUpdate,
+  options?: Parameters<typeof http>[1],
+): Promise<Profile> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<Profile>(getUpdateProfileUrl(), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(profileUpdate),
+  });
+};
+
+export const getUpdateProfileMutationKey = () => ["updateProfile"] as const;
+
+export const getUpdateProfileMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | CsrfFailedResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateProfile>>,
+    TError,
+    UpdateProfileMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateProfile>>,
+  TError,
+  UpdateProfileMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateProfileMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateProfile>>,
+    UpdateProfileMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return updateProfile(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateProfileMutationResult = NonNullable<Awaited<ReturnType<typeof updateProfile>>>;
+export type UpdateProfileMutationBody = ProfileUpdate;
+export type UpdateProfileMutationError = ErrorType<
+  | SessionExpiredResponse
+  | CsrfFailedResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type UpdateProfileMutationVariables = { data: ProfileUpdate };
+
+/**
+ * @summary Сохранить свой профиль
+ */
+export const useUpdateProfile = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | CsrfFailedResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateProfile>>,
+      TError,
+      UpdateProfileMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateProfile>>,
+  TError,
+  UpdateProfileMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateProfileMutationOptions(options), queryClient);
+};
+
+export const getUploadAvatarUrl = () => {
+  return `/api/v1/me/avatar`;
+};
+
+/**
+ * `multipart/form-data`, поле `avatar`: уже обрезанная по кругу картинка (клиент режет её до 256x256), PNG, JPEG или WebP не больше 1 МБ. Тип проверяется по содержимому. Иначе 422 `VALIDATION_FAILED` с `details.reason`: `avatar_unsupported_type`, `avatar_type_mismatch`, `avatar_empty`; тело больше предела (1 МБ и запас на multipart) читается потоком и обрывается — 413 `PAYLOAD_TOO_LARGE` (`details.reason = avatar_too_large`). Ответ — обновлённый `Me` (`avatar_url` с новой версией).
+ * @summary Загрузить фото профиля
+ */
+export const uploadAvatar = async (
+  avatarUpload: AvatarUpload,
+  options?: Parameters<typeof http>[1],
+): Promise<Me> => {
+  const formData = new FormData();
+  formData.append(`avatar`, avatarUpload.avatar);
+
+  return http<Me>(getUploadAvatarUrl(), {
+    ...options,
+    method: "PUT",
+    body: formData,
+  });
+};
+
+export const getUploadAvatarMutationKey = () => ["uploadAvatar"] as const;
+
+export const getUploadAvatarMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | CsrfFailedResponse
+    | Error
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof uploadAvatar>>,
+    TError,
+    UploadAvatarMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof uploadAvatar>>,
+  TError,
+  UploadAvatarMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUploadAvatarMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof uploadAvatar>>,
+    UploadAvatarMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return uploadAvatar(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UploadAvatarMutationResult = NonNullable<Awaited<ReturnType<typeof uploadAvatar>>>;
+export type UploadAvatarMutationBody = AvatarUpload;
+export type UploadAvatarMutationError = ErrorType<
+  | SessionExpiredResponse
+  | CsrfFailedResponse
+  | Error
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type UploadAvatarMutationVariables = { data: AvatarUpload };
+
+/**
+ * @summary Загрузить фото профиля
+ */
+export const useUploadAvatar = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | CsrfFailedResponse
+    | Error
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof uploadAvatar>>,
+      TError,
+      UploadAvatarMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof uploadAvatar>>,
+  TError,
+  UploadAvatarMutationVariables,
+  TContext
+> => {
+  return useMutation(getUploadAvatarMutationOptions(options), queryClient);
+};
+
+export const getDeleteAvatarUrl = () => {
+  return `/api/v1/me/avatar`;
+};
+
+/**
+ * @summary Удалить фото профиля
+ */
+export const deleteAvatar = async (options?: Parameters<typeof http>[1]): Promise<Me> => {
+  return http<Me>(getDeleteAvatarUrl(), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteAvatarMutationKey = () => ["deleteAvatar"] as const;
+
+export const getDeleteAvatarMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | CsrfFailedResponse | BackendUnavailableResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<Awaited<ReturnType<typeof deleteAvatar>>, TError, void, TContext>;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<Awaited<ReturnType<typeof deleteAvatar>>, TError, void, TContext> => {
+  const mutationKey = getDeleteAvatarMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteAvatar>>, void> = () => {
+    return deleteAvatar(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteAvatarMutationResult = NonNullable<Awaited<ReturnType<typeof deleteAvatar>>>;
+
+export type DeleteAvatarMutationError = ErrorType<
+  SessionExpiredResponse | CsrfFailedResponse | BackendUnavailableResponse
+>;
+
+/**
+ * @summary Удалить фото профиля
+ */
+export const useDeleteAvatar = <
+  TError = ErrorType<SessionExpiredResponse | CsrfFailedResponse | BackendUnavailableResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof deleteAvatar>>, TError, void, TContext>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<Awaited<ReturnType<typeof deleteAvatar>>, TError, void, TContext> => {
+  return useMutation(getDeleteAvatarMutationOptions(options), queryClient);
+};
+
+export const getGetStaffAvatarUrl = (id: string) => {
+  return `/api/v1/staff/${id}/avatar`;
+};
+
+/**
+ * Файл фото коллеги как есть (PNG, JPEG или WebP) с `X-Content-Type-Options: nosniff` и `Cache-Control: private`. Публичных ссылок на хранилище нет: картинку отдаёт только BFF вошедшему сотруднику. Нет фото или сотрудник отключён — 404 `NOT_FOUND` (рисуются инициалы).
+ * @summary Фото сотрудника
+ */
+export const getStaffAvatar = async (
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<Blob> => {
+  return http<Blob>(getGetStaffAvatarUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetStaffAvatarQueryKey = (id: string) => {
+  return [`/api/v1/staff/${id}/avatar`] as const;
+};
+
+export const getGetStaffAvatarQueryOptions = <
+  TData = Awaited<ReturnType<typeof getStaffAvatar>>,
+  TError = ErrorType<SessionExpiredResponse | NotFoundResponse | BackendUnavailableResponse>,
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getStaffAvatar>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetStaffAvatarQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getStaffAvatar>>> = ({ signal }) =>
+    getStaffAvatar(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: id !== null && id !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getStaffAvatar>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetStaffAvatarQueryResult = NonNullable<Awaited<ReturnType<typeof getStaffAvatar>>>;
+export type GetStaffAvatarQueryError = ErrorType<
+  SessionExpiredResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useGetStaffAvatar<
+  TData = Awaited<ReturnType<typeof getStaffAvatar>>,
+  TError = ErrorType<SessionExpiredResponse | NotFoundResponse | BackendUnavailableResponse>,
+>(
+  id: string,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getStaffAvatar>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getStaffAvatar>>,
+          TError,
+          Awaited<ReturnType<typeof getStaffAvatar>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetStaffAvatar<
+  TData = Awaited<ReturnType<typeof getStaffAvatar>>,
+  TError = ErrorType<SessionExpiredResponse | NotFoundResponse | BackendUnavailableResponse>,
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getStaffAvatar>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getStaffAvatar>>,
+          TError,
+          Awaited<ReturnType<typeof getStaffAvatar>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetStaffAvatar<
+  TData = Awaited<ReturnType<typeof getStaffAvatar>>,
+  TError = ErrorType<SessionExpiredResponse | NotFoundResponse | BackendUnavailableResponse>,
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getStaffAvatar>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Фото сотрудника
+ */
+
+export function useGetStaffAvatar<
+  TData = Awaited<ReturnType<typeof getStaffAvatar>>,
+  TError = ErrorType<SessionExpiredResponse | NotFoundResponse | BackendUnavailableResponse>,
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getStaffAvatar>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetStaffAvatarQueryOptions(id, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getCreateTelegramLinkUrl = () => {
+  return `/api/v1/me/telegram-link`;
+};
+
+/**
+ * Выпускает одноразовую ссылку `https://t.me/<бот>?start=staff_<код>` на 10 минут; прежняя ссылка перестаёт работать. SPA показывает её кнопкой и QR. Бот по `/start staff_<код>` привязывает Telegram и отвечает подтверждением; клиентский путь бота от этого не меняется. Бот не подключён — 409 `NOT_CONFIGURED`; бот не запущен — 409 `CONFLICT`.
+ * @summary Привязать Telegram для уведомлений
+ */
+export const createTelegramLink = async (
+  options?: Parameters<typeof http>[1],
+): Promise<TelegramLink> => {
+  return http<TelegramLink>(getCreateTelegramLinkUrl(), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getCreateTelegramLinkMutationKey = () => ["createTelegramLink"] as const;
+
+export const getCreateTelegramLinkMutationOptions = <
+  TError = ErrorType<
+    SessionExpiredResponse | CsrfFailedResponse | Error | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createTelegramLink>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<Awaited<ReturnType<typeof createTelegramLink>>, TError, void, TContext> => {
+  const mutationKey = getCreateTelegramLinkMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof createTelegramLink>>, void> = () => {
+    return createTelegramLink(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateTelegramLinkMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createTelegramLink>>
+>;
+
+export type CreateTelegramLinkMutationError = ErrorType<
+  SessionExpiredResponse | CsrfFailedResponse | Error | BackendUnavailableResponse
+>;
+
+/**
+ * @summary Привязать Telegram для уведомлений
+ */
+export const useCreateTelegramLink = <
+  TError = ErrorType<
+    SessionExpiredResponse | CsrfFailedResponse | Error | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createTelegramLink>>,
+      TError,
+      void,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<Awaited<ReturnType<typeof createTelegramLink>>, TError, void, TContext> => {
+  return useMutation(getCreateTelegramLinkMutationOptions(options), queryClient);
+};
+
+export const getDeleteTelegramLinkUrl = () => {
+  return `/api/v1/me/telegram-link`;
+};
+
+/**
+ * Снимает привязку и гасит неиспользованные ссылки. Без привязки — не ошибка.
+ * @summary Отвязать Telegram
+ */
+export const deleteTelegramLink = async (
+  options?: Parameters<typeof http>[1],
+): Promise<Profile> => {
+  return http<Profile>(getDeleteTelegramLinkUrl(), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteTelegramLinkMutationKey = () => ["deleteTelegramLink"] as const;
+
+export const getDeleteTelegramLinkMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | CsrfFailedResponse | BackendUnavailableResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteTelegramLink>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<Awaited<ReturnType<typeof deleteTelegramLink>>, TError, void, TContext> => {
+  const mutationKey = getDeleteTelegramLinkMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteTelegramLink>>, void> = () => {
+    return deleteTelegramLink(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteTelegramLinkMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteTelegramLink>>
+>;
+
+export type DeleteTelegramLinkMutationError = ErrorType<
+  SessionExpiredResponse | CsrfFailedResponse | BackendUnavailableResponse
+>;
+
+/**
+ * @summary Отвязать Telegram
+ */
+export const useDeleteTelegramLink = <
+  TError = ErrorType<SessionExpiredResponse | CsrfFailedResponse | BackendUnavailableResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteTelegramLink>>,
+      TError,
+      void,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<Awaited<ReturnType<typeof deleteTelegramLink>>, TError, void, TContext> => {
+  return useMutation(getDeleteTelegramLinkMutationOptions(options), queryClient);
+};
+
+export const getListDeputyCandidatesUrl = () => {
+  return `/api/v1/me/deputy-candidates`;
+};
+
+/**
+ * Активные коллеги с рабочей ролью CRM (менеджер или администратор), кроме самого сотрудника.
+ * @summary Кого можно назначить заместителем
+ */
+export const listDeputyCandidates = async (
+  options?: Parameters<typeof http>[1],
+): Promise<Colleague[]> => {
+  return http<Colleague[]>(getListDeputyCandidatesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListDeputyCandidatesQueryKey = () => {
+  return [`/api/v1/me/deputy-candidates`] as const;
+};
+
+export const getListDeputyCandidatesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listDeputyCandidates>>,
+  TError = ErrorType<SessionExpiredResponse | BackendUnavailableResponse>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listDeputyCandidates>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListDeputyCandidatesQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listDeputyCandidates>>> = ({ signal }) =>
+    listDeputyCandidates({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listDeputyCandidates>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListDeputyCandidatesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listDeputyCandidates>>
+>;
+export type ListDeputyCandidatesQueryError = ErrorType<
+  SessionExpiredResponse | BackendUnavailableResponse
+>;
+
+export function useListDeputyCandidates<
+  TData = Awaited<ReturnType<typeof listDeputyCandidates>>,
+  TError = ErrorType<SessionExpiredResponse | BackendUnavailableResponse>,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listDeputyCandidates>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listDeputyCandidates>>,
+          TError,
+          Awaited<ReturnType<typeof listDeputyCandidates>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListDeputyCandidates<
+  TData = Awaited<ReturnType<typeof listDeputyCandidates>>,
+  TError = ErrorType<SessionExpiredResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listDeputyCandidates>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listDeputyCandidates>>,
+          TError,
+          Awaited<ReturnType<typeof listDeputyCandidates>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListDeputyCandidates<
+  TData = Awaited<ReturnType<typeof listDeputyCandidates>>,
+  TError = ErrorType<SessionExpiredResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listDeputyCandidates>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Кого можно назначить заместителем
+ */
+
+export function useListDeputyCandidates<
+  TData = Awaited<ReturnType<typeof listDeputyCandidates>>,
+  TError = ErrorType<SessionExpiredResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listDeputyCandidates>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListDeputyCandidatesQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getSetDeputyUrl = () => {
+  return `/api/v1/me/deputy`;
+};
+
+/**
+ * «На время отсутствия мои задачи видит {сотрудник} с {дата} по {дата}»: обе даты включительно, считаются по календарю замещаемого, период не в прошлом и не длиннее года. Заместитель видит очередь замещаемого строками с пометкой «за {имя}», права на объекты у него свои. 422 `VALIDATION_FAILED` с `details.reason`: `deputy_is_self`, `deputy_period_reversed`, `deputy_period_past`, `deputy_period_too_long`, `deputy_not_colleague`.
+ * @summary Назначить заместителя на период
+ */
+export const setDeputy = async (
+  deputyUpdate: DeputyUpdate,
+  options?: Parameters<typeof http>[1],
+): Promise<Profile> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<Profile>(getSetDeputyUrl(), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(deputyUpdate),
+  });
+};
+
+export const getSetDeputyMutationKey = () => ["setDeputy"] as const;
+
+export const getSetDeputyMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | CsrfFailedResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof setDeputy>>,
+    TError,
+    SetDeputyMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof setDeputy>>,
+  TError,
+  SetDeputyMutationVariables,
+  TContext
+> => {
+  const mutationKey = getSetDeputyMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof setDeputy>>,
+    SetDeputyMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return setDeputy(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SetDeputyMutationResult = NonNullable<Awaited<ReturnType<typeof setDeputy>>>;
+export type SetDeputyMutationBody = DeputyUpdate;
+export type SetDeputyMutationError = ErrorType<
+  | SessionExpiredResponse
+  | CsrfFailedResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type SetDeputyMutationVariables = { data: DeputyUpdate };
+
+/**
+ * @summary Назначить заместителя на период
+ */
+export const useSetDeputy = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | CsrfFailedResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof setDeputy>>,
+      TError,
+      SetDeputyMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof setDeputy>>,
+  TError,
+  SetDeputyMutationVariables,
+  TContext
+> => {
+  return useMutation(getSetDeputyMutationOptions(options), queryClient);
+};
+
+export const getClearDeputyUrl = () => {
+  return `/api/v1/me/deputy`;
+};
+
+/**
+ * @summary Снять замещение
+ */
+export const clearDeputy = async (options?: Parameters<typeof http>[1]): Promise<Profile> => {
+  return http<Profile>(getClearDeputyUrl(), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getClearDeputyMutationKey = () => ["clearDeputy"] as const;
+
+export const getClearDeputyMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | CsrfFailedResponse | BackendUnavailableResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<Awaited<ReturnType<typeof clearDeputy>>, TError, void, TContext>;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<Awaited<ReturnType<typeof clearDeputy>>, TError, void, TContext> => {
+  const mutationKey = getClearDeputyMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof clearDeputy>>, void> = () => {
+    return clearDeputy(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ClearDeputyMutationResult = NonNullable<Awaited<ReturnType<typeof clearDeputy>>>;
+
+export type ClearDeputyMutationError = ErrorType<
+  SessionExpiredResponse | CsrfFailedResponse | BackendUnavailableResponse
+>;
+
+/**
+ * @summary Снять замещение
+ */
+export const useClearDeputy = <
+  TError = ErrorType<SessionExpiredResponse | CsrfFailedResponse | BackendUnavailableResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<Awaited<ReturnType<typeof clearDeputy>>, TError, void, TContext>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<Awaited<ReturnType<typeof clearDeputy>>, TError, void, TContext> => {
+  return useMutation(getClearDeputyMutationOptions(options), queryClient);
 };
 
 export const getGetHealthUrl = () => {
@@ -20524,6 +21789,1364 @@ export function useDownloadLetterFile<
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
   const queryOptions = getDownloadLetterFileQueryOptions(fileId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getListCrmMessagesUrl = () => {
+  return `/api/v1/crm/messages`;
+};
+
+/**
+ * CRM `GET /inbox` с запиской передачи (CRM-06). Раздел `crm.leads` от чтения: директор видит очередь без «Забрать» и ответа. Группы: `handoff` — открытые и отложенные передачи (срочные выше, затем по времени), `mine` — мои лиды в диалоге, `unassigned` — лиды на паузе без менеджера. Лид в одной группе (первая подходящая). Таймер SLA экран считает от `handoff.created_at` до `handoff.sla_due_at`. Живые обновления — подсказка `messages` потока `/events/stream`.
+ * @summary Клиенты · Ждут ответа: передачи от бота, мои диалоги, лиды без менеджера
+ */
+export const listCrmMessages = async (
+  options?: Parameters<typeof http>[1],
+): Promise<MessageInbox> => {
+  return http<MessageInbox>(getListCrmMessagesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListCrmMessagesQueryKey = () => {
+  return [`/api/v1/crm/messages`] as const;
+};
+
+export const getListCrmMessagesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listCrmMessages>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listCrmMessages>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListCrmMessagesQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listCrmMessages>>> = ({ signal }) =>
+    listCrmMessages({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listCrmMessages>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListCrmMessagesQueryResult = NonNullable<Awaited<ReturnType<typeof listCrmMessages>>>;
+export type ListCrmMessagesQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse
+>;
+
+export function useListCrmMessages<
+  TData = Awaited<ReturnType<typeof listCrmMessages>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listCrmMessages>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listCrmMessages>>,
+          TError,
+          Awaited<ReturnType<typeof listCrmMessages>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListCrmMessages<
+  TData = Awaited<ReturnType<typeof listCrmMessages>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listCrmMessages>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listCrmMessages>>,
+          TError,
+          Awaited<ReturnType<typeof listCrmMessages>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListCrmMessages<
+  TData = Awaited<ReturnType<typeof listCrmMessages>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listCrmMessages>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Клиенты · Ждут ответа: передачи от бота, мои диалоги, лиды без менеджера
+ */
+
+export function useListCrmMessages<
+  TData = Awaited<ReturnType<typeof listCrmMessages>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listCrmMessages>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListCrmMessagesQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getGetCrmConversationUrl = (lead: string) => {
+  return `/api/v1/crm/messages/${lead}`;
+};
+
+/**
+ * CRM `GET /leads/{id}` (+ открытая передача). Раздел `crm.leads` от чтения. Номер лида — `L-NNNN`.
+ * @summary Карточка лида для переписки: контакты, каналы, факты квалификации, кто ведёт
+ */
+export const getCrmConversation = async (
+  lead: string,
+  options?: Parameters<typeof http>[1],
+): Promise<ConversationCard> => {
+  return http<ConversationCard>(getGetCrmConversationUrl(lead), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCrmConversationQueryKey = (lead: string) => {
+  return [`/api/v1/crm/messages/${lead}`] as const;
+};
+
+export const getGetCrmConversationQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCrmConversation>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  lead: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCrmConversation>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetCrmConversationQueryKey(lead);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getCrmConversation>>> = ({ signal }) =>
+    getCrmConversation(lead, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: lead !== null && lead !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getCrmConversation>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetCrmConversationQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCrmConversation>>
+>;
+export type GetCrmConversationQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useGetCrmConversation<
+  TData = Awaited<ReturnType<typeof getCrmConversation>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  lead: string,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCrmConversation>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCrmConversation>>,
+          TError,
+          Awaited<ReturnType<typeof getCrmConversation>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetCrmConversation<
+  TData = Awaited<ReturnType<typeof getCrmConversation>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  lead: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCrmConversation>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCrmConversation>>,
+          TError,
+          Awaited<ReturnType<typeof getCrmConversation>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetCrmConversation<
+  TData = Awaited<ReturnType<typeof getCrmConversation>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  lead: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCrmConversation>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Карточка лида для переписки: контакты, каналы, факты квалификации, кто ведёт
+ */
+
+export function useGetCrmConversation<
+  TData = Awaited<ReturnType<typeof getCrmConversation>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  lead: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCrmConversation>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetCrmConversationQueryOptions(lead, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getGetCrmThreadUrl = (lead: string, params?: GetCrmThreadParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/crm/messages/${lead}/thread?${stringifiedParams}`
+    : `/api/v1/crm/messages/${lead}/thread`;
+};
+
+/**
+ * CRM `GET /leads/{id}/messages` (страница, старые выше), `GET /leads/{id}/notes` (только первая страница — без `before`) и `GET /team` (имена менеджеров). Раздел `crm.leads` от чтения. Подгрузка истории — `before` = id самого старого показанного сообщения. Вложения — ссылками BFF (`attachments[].url`): адреса и ключи хранилища наружу не уходят.
+ * @summary Лента диалога: сообщения клиента, бота и менеджера, вложения, заметки команды
+ */
+export const getCrmThread = async (
+  lead: string,
+  params?: GetCrmThreadParams,
+  options?: Parameters<typeof http>[1],
+): Promise<ConversationThread> => {
+  return http<ConversationThread>(getGetCrmThreadUrl(lead, params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCrmThreadQueryKey = (lead: string, params?: GetCrmThreadParams) => {
+  return [`/api/v1/crm/messages/${lead}/thread`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetCrmThreadQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCrmThread>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  lead: string,
+  params?: GetCrmThreadParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCrmThread>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetCrmThreadQueryKey(lead, params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getCrmThread>>> = ({ signal }) =>
+    getCrmThread(lead, params, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: lead !== null && lead !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getCrmThread>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetCrmThreadQueryResult = NonNullable<Awaited<ReturnType<typeof getCrmThread>>>;
+export type GetCrmThreadQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useGetCrmThread<
+  TData = Awaited<ReturnType<typeof getCrmThread>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  lead: string,
+  params: undefined | GetCrmThreadParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCrmThread>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCrmThread>>,
+          TError,
+          Awaited<ReturnType<typeof getCrmThread>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetCrmThread<
+  TData = Awaited<ReturnType<typeof getCrmThread>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  lead: string,
+  params?: GetCrmThreadParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCrmThread>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCrmThread>>,
+          TError,
+          Awaited<ReturnType<typeof getCrmThread>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetCrmThread<
+  TData = Awaited<ReturnType<typeof getCrmThread>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  lead: string,
+  params?: GetCrmThreadParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCrmThread>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Лента диалога: сообщения клиента, бота и менеджера, вложения, заметки команды
+ */
+
+export function useGetCrmThread<
+  TData = Awaited<ReturnType<typeof getCrmThread>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  lead: string,
+  params?: GetCrmThreadParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCrmThread>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetCrmThreadQueryOptions(lead, params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getDownloadCrmAttachmentUrl = (lead: string, message: number, index: number) => {
+  return `/api/v1/crm/messages/${lead}/attachments/${message}/${index}`;
+};
+
+/**
+ * CRM `GET /leads/{id}/messages/{message}/attachments/{index}` потоком. Раздел `crm.leads` от чтения. Ответ — `Content-Disposition: attachment` и `X-Content-Type-Options: nosniff`: файл скачивается, браузер его не исполняет. Файл не сохранён (до согласия, больше 20 МБ) — 404; хранилище CRM недоступно — 502 `INTEGRATION_FAILED`.
+ * @summary Вложение сообщения клиента (файл)
+ */
+export const downloadCrmAttachment = async (
+  lead: string,
+  message: number,
+  index: number,
+  options?: Parameters<typeof http>[1],
+): Promise<Blob> => {
+  return http<Blob>(getDownloadCrmAttachmentUrl(lead, message, index), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getDownloadCrmAttachmentQueryKey = (lead: string, message: number, index: number) => {
+  return [`/api/v1/crm/messages/${lead}/attachments/${message}/${index}`] as const;
+};
+
+export const getDownloadCrmAttachmentQueryOptions = <
+  TData = Awaited<ReturnType<typeof downloadCrmAttachment>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | IntegrationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  lead: string,
+  message: number,
+  index: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadCrmAttachment>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getDownloadCrmAttachmentQueryKey(lead, message, index);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof downloadCrmAttachment>>> = ({ signal }) =>
+    downloadCrmAttachment(lead, message, index, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled:
+      lead !== null &&
+      lead !== undefined &&
+      message !== null &&
+      message !== undefined &&
+      index !== null &&
+      index !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof downloadCrmAttachment>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type DownloadCrmAttachmentQueryResult = NonNullable<
+  Awaited<ReturnType<typeof downloadCrmAttachment>>
+>;
+export type DownloadCrmAttachmentQueryError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | IntegrationFailedResponse
+  | BackendUnavailableResponse
+>;
+
+export function useDownloadCrmAttachment<
+  TData = Awaited<ReturnType<typeof downloadCrmAttachment>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | IntegrationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  lead: string,
+  message: number,
+  index: number,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadCrmAttachment>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof downloadCrmAttachment>>,
+          TError,
+          Awaited<ReturnType<typeof downloadCrmAttachment>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useDownloadCrmAttachment<
+  TData = Awaited<ReturnType<typeof downloadCrmAttachment>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | IntegrationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  lead: string,
+  message: number,
+  index: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadCrmAttachment>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof downloadCrmAttachment>>,
+          TError,
+          Awaited<ReturnType<typeof downloadCrmAttachment>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useDownloadCrmAttachment<
+  TData = Awaited<ReturnType<typeof downloadCrmAttachment>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | IntegrationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  lead: string,
+  message: number,
+  index: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadCrmAttachment>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Вложение сообщения клиента (файл)
+ */
+
+export function useDownloadCrmAttachment<
+  TData = Awaited<ReturnType<typeof downloadCrmAttachment>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | IntegrationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  lead: string,
+  message: number,
+  index: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadCrmAttachment>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getDownloadCrmAttachmentQueryOptions(lead, message, index, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getTakeCrmLeadUrl = (lead: string) => {
+  return `/api/v1/crm/messages/${lead}/take`;
+};
+
+/**
+ * CRM `POST /leads/{id}/actions/take`. Раздел `crm.leads` полный. Лида уже забрал другой — 409 `CONFLICT` (`details.reason = lead_taken`, `details.assigned_user_name`).
+ * @summary Забрать лида: бот замолкает, диалог ведёт сотрудник
+ */
+export const takeCrmLead = async (
+  lead: string,
+  options?: Parameters<typeof http>[1],
+): Promise<ActionOk> => {
+  return http<ActionOk>(getTakeCrmLeadUrl(lead), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getTakeCrmLeadMutationKey = () => ["takeCrmLead"] as const;
+
+export const getTakeCrmLeadMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | MessagesConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof takeCrmLead>>,
+    TError,
+    TakeCrmLeadMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof takeCrmLead>>,
+  TError,
+  TakeCrmLeadMutationVariables,
+  TContext
+> => {
+  const mutationKey = getTakeCrmLeadMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof takeCrmLead>>,
+    TakeCrmLeadMutationVariables
+  > = (props) => {
+    const { lead } = props ?? {};
+
+    return takeCrmLead(lead, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type TakeCrmLeadMutationResult = NonNullable<Awaited<ReturnType<typeof takeCrmLead>>>;
+
+export type TakeCrmLeadMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | MessagesConflictResponse
+  | BackendUnavailableResponse
+>;
+export type TakeCrmLeadMutationVariables = { lead: string };
+
+/**
+ * @summary Забрать лида: бот замолкает, диалог ведёт сотрудник
+ */
+export const useTakeCrmLead = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | MessagesConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof takeCrmLead>>,
+      TError,
+      TakeCrmLeadMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof takeCrmLead>>,
+  TError,
+  TakeCrmLeadMutationVariables,
+  TContext
+> => {
+  return useMutation(getTakeCrmLeadMutationOptions(options), queryClient);
+};
+
+export const getReplyCrmLeadUrl = (lead: string) => {
+  return `/api/v1/crm/messages/${lead}/reply`;
+};
+
+/**
+ * CRM `POST /leads/{id}/messages`. Раздел `crm.leads` полный; отвечает тот, кто забрал лида (или администратор CRM). `client_message_id` — ключ повтора, который экран создаёт на черновик: «Повторить» с тем же ключом не отправит клиенту второе сообщение. Telegram отказал — 502 `INTEGRATION_FAILED` с `details.reason = delivery_failed`, сообщение не записано, текст остаётся у экрана; Telegram не ответил вовремя — 502 `INTEGRATION_FAILED` с `delivery_unknown` (итог неизвестен: «Повторить» тем же ключом не продублирует, пока отправка идёт — 409 `reply_in_progress`); итог прежней отправки с этим ключом так и не узнали — 409 `CONFLICT` `delivery_unconfirmed` (второе сообщение не уходит, «лид отвечен» не ставится). Лид не забран — 409 `CONFLICT` (`take_first`), нет согласия клиента — 409 (`no_consent`), лид у другого — 403 `FORBIDDEN` (`not_lead_owner`).
+ * @summary Ответить клиенту «От себя» (уходит в Telegram)
+ */
+export const replyCrmLead = async (
+  lead: string,
+  replyIn: ReplyIn,
+  options?: Parameters<typeof http>[1],
+): Promise<SentMessage> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<SentMessage>(getReplyCrmLeadUrl(lead), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(replyIn),
+  });
+};
+
+export const getReplyCrmLeadMutationKey = () => ["replyCrmLead"] as const;
+
+export const getReplyCrmLeadMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | MessagesConflictResponse
+    | ValidationFailedResponse
+    | IntegrationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof replyCrmLead>>,
+    TError,
+    ReplyCrmLeadMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof replyCrmLead>>,
+  TError,
+  ReplyCrmLeadMutationVariables,
+  TContext
+> => {
+  const mutationKey = getReplyCrmLeadMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof replyCrmLead>>,
+    ReplyCrmLeadMutationVariables
+  > = (props) => {
+    const { lead, data } = props ?? {};
+
+    return replyCrmLead(lead, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ReplyCrmLeadMutationResult = NonNullable<Awaited<ReturnType<typeof replyCrmLead>>>;
+export type ReplyCrmLeadMutationBody = ReplyIn;
+export type ReplyCrmLeadMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | MessagesConflictResponse
+  | ValidationFailedResponse
+  | IntegrationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type ReplyCrmLeadMutationVariables = { lead: string; data: ReplyIn };
+
+/**
+ * @summary Ответить клиенту «От себя» (уходит в Telegram)
+ */
+export const useReplyCrmLead = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | MessagesConflictResponse
+    | ValidationFailedResponse
+    | IntegrationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof replyCrmLead>>,
+      TError,
+      ReplyCrmLeadMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof replyCrmLead>>,
+  TError,
+  ReplyCrmLeadMutationVariables,
+  TContext
+> => {
+  return useMutation(getReplyCrmLeadMutationOptions(options), queryClient);
+};
+
+export const getNoteCrmLeadUrl = (lead: string) => {
+  return `/api/v1/crm/messages/${lead}/note`;
+};
+
+/**
+ * CRM `POST /leads/{id}/actions/note` (`visible_to_bot = false`). Раздел `crm.leads` полный.
+ * @summary Заметка команде (клиенту не уходит)
+ */
+export const noteCrmLead = async (
+  lead: string,
+  teamNoteIn: TeamNoteIn,
+  options?: Parameters<typeof http>[1],
+): Promise<CreatedId> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<CreatedId>(getNoteCrmLeadUrl(lead), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(teamNoteIn),
+  });
+};
+
+export const getNoteCrmLeadMutationKey = () => ["noteCrmLead"] as const;
+
+export const getNoteCrmLeadMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof noteCrmLead>>,
+    TError,
+    NoteCrmLeadMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof noteCrmLead>>,
+  TError,
+  NoteCrmLeadMutationVariables,
+  TContext
+> => {
+  const mutationKey = getNoteCrmLeadMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof noteCrmLead>>,
+    NoteCrmLeadMutationVariables
+  > = (props) => {
+    const { lead, data } = props ?? {};
+
+    return noteCrmLead(lead, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type NoteCrmLeadMutationResult = NonNullable<Awaited<ReturnType<typeof noteCrmLead>>>;
+export type NoteCrmLeadMutationBody = TeamNoteIn;
+export type NoteCrmLeadMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type NoteCrmLeadMutationVariables = { lead: string; data: TeamNoteIn };
+
+/**
+ * @summary Заметка команде (клиенту не уходит)
+ */
+export const useNoteCrmLead = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof noteCrmLead>>,
+      TError,
+      NoteCrmLeadMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof noteCrmLead>>,
+  TError,
+  NoteCrmLeadMutationVariables,
+  TContext
+> => {
+  return useMutation(getNoteCrmLeadMutationOptions(options), queryClient);
+};
+
+export const getAssistCrmReplyUrl = (lead: string) => {
+  return `/api/v1/crm/messages/${lead}/assist`;
+};
+
+/**
+ * CRM `POST /leads/{id}/assist` (ИИ — только CRM через LiteLLM). Раздел `crm.leads` полный. `draft` — черновик ответа на последнее сообщение клиента, `improve` — правка текста из поля. Отправляет человек. Таймаут — как у проб (30 с). Отказы — 409 `CONFLICT` с `details.reason`: `assist_disabled`, `assist_budget`, `assist_empty`, `assist_no_history`; модель не ответила — 502 `INTEGRATION_FAILED` (`assist_unavailable`).
+ * @summary Подсказать ответ (ИИ через CRM): текст для поля, клиенту ничего не уходит
+ */
+export const assistCrmReply = async (
+  lead: string,
+  assistIn: AssistIn,
+  options?: Parameters<typeof http>[1],
+): Promise<AssistSuggestion> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<AssistSuggestion>(getAssistCrmReplyUrl(lead), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(assistIn),
+  });
+};
+
+export const getAssistCrmReplyMutationKey = () => ["assistCrmReply"] as const;
+
+export const getAssistCrmReplyMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | MessagesConflictResponse
+    | ValidationFailedResponse
+    | IntegrationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof assistCrmReply>>,
+    TError,
+    AssistCrmReplyMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof assistCrmReply>>,
+  TError,
+  AssistCrmReplyMutationVariables,
+  TContext
+> => {
+  const mutationKey = getAssistCrmReplyMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof assistCrmReply>>,
+    AssistCrmReplyMutationVariables
+  > = (props) => {
+    const { lead, data } = props ?? {};
+
+    return assistCrmReply(lead, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AssistCrmReplyMutationResult = NonNullable<Awaited<ReturnType<typeof assistCrmReply>>>;
+export type AssistCrmReplyMutationBody = AssistIn;
+export type AssistCrmReplyMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | MessagesConflictResponse
+  | ValidationFailedResponse
+  | IntegrationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type AssistCrmReplyMutationVariables = { lead: string; data: AssistIn };
+
+/**
+ * @summary Подсказать ответ (ИИ через CRM): текст для поля, клиенту ничего не уходит
+ */
+export const useAssistCrmReply = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | MessagesConflictResponse
+    | ValidationFailedResponse
+    | IntegrationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof assistCrmReply>>,
+      TError,
+      AssistCrmReplyMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof assistCrmReply>>,
+  TError,
+  AssistCrmReplyMutationVariables,
+  TContext
+> => {
+  return useMutation(getAssistCrmReplyMutationOptions(options), queryClient);
+};
+
+export const getReturnCrmLeadToBotUrl = (lead: string) => {
+  return `/api/v1/crm/messages/${lead}/return-to-bot`;
+};
+
+/**
+ * CRM `POST /leads/{id}/actions/return_to_bot`. Раздел `crm.leads` полный. `note` — что знать боту дальше (видна боту).
+ * @summary Вернуть лида боту (бот снова отвечает сам)
+ */
+export const returnCrmLeadToBot = async (
+  lead: string,
+  returnToBotIn?: ReturnToBotIn,
+  options?: Parameters<typeof http>[1],
+): Promise<ActionOk> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<ActionOk>(getReturnCrmLeadToBotUrl(lead), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(returnToBotIn),
+  });
+};
+
+export const getReturnCrmLeadToBotMutationKey = () => ["returnCrmLeadToBot"] as const;
+
+export const getReturnCrmLeadToBotMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | MessagesConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof returnCrmLeadToBot>>,
+    TError,
+    ReturnCrmLeadToBotMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof returnCrmLeadToBot>>,
+  TError,
+  ReturnCrmLeadToBotMutationVariables,
+  TContext
+> => {
+  const mutationKey = getReturnCrmLeadToBotMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof returnCrmLeadToBot>>,
+    ReturnCrmLeadToBotMutationVariables
+  > = (props) => {
+    const { lead, data } = props ?? {};
+
+    return returnCrmLeadToBot(lead, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ReturnCrmLeadToBotMutationResult = NonNullable<
+  Awaited<ReturnType<typeof returnCrmLeadToBot>>
+>;
+export type ReturnCrmLeadToBotMutationBody = ReturnToBotIn | undefined;
+export type ReturnCrmLeadToBotMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | MessagesConflictResponse
+  | BackendUnavailableResponse
+>;
+export type ReturnCrmLeadToBotMutationVariables = { lead: string; data?: ReturnToBotIn };
+
+/**
+ * @summary Вернуть лида боту (бот снова отвечает сам)
+ */
+export const useReturnCrmLeadToBot = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | MessagesConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof returnCrmLeadToBot>>,
+      TError,
+      ReturnCrmLeadToBotMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof returnCrmLeadToBot>>,
+  TError,
+  ReturnCrmLeadToBotMutationVariables,
+  TContext
+> => {
+  return useMutation(getReturnCrmLeadToBotMutationOptions(options), queryClient);
+};
+
+export const getListCrmReplyTemplatesUrl = () => {
+  return `/api/v1/crm/reply-templates`;
+};
+
+/**
+ * CRM `GET /reply-templates` (`reply_templates:read`). Раздел `crm.leads` полный — тем, кто отвечает клиентам; правит шаблоны администратор в Admin · Настройки бота.
+ * @summary Шаблоны ответов для поля ответа (только чтение)
+ */
+export const listCrmReplyTemplates = async (
+  options?: Parameters<typeof http>[1],
+): Promise<ReplyTemplateList> => {
+  return http<ReplyTemplateList>(getListCrmReplyTemplatesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListCrmReplyTemplatesQueryKey = () => {
+  return [`/api/v1/crm/reply-templates`] as const;
+};
+
+export const getListCrmReplyTemplatesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listCrmReplyTemplates>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(options?: {
+  query?: Partial<
+    UseQueryOptions<Awaited<ReturnType<typeof listCrmReplyTemplates>>, TError, TData>
+  >;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListCrmReplyTemplatesQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listCrmReplyTemplates>>> = ({ signal }) =>
+    listCrmReplyTemplates({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listCrmReplyTemplates>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListCrmReplyTemplatesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listCrmReplyTemplates>>
+>;
+export type ListCrmReplyTemplatesQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse
+>;
+
+export function useListCrmReplyTemplates<
+  TData = Awaited<ReturnType<typeof listCrmReplyTemplates>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCrmReplyTemplates>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listCrmReplyTemplates>>,
+          TError,
+          Awaited<ReturnType<typeof listCrmReplyTemplates>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListCrmReplyTemplates<
+  TData = Awaited<ReturnType<typeof listCrmReplyTemplates>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCrmReplyTemplates>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listCrmReplyTemplates>>,
+          TError,
+          Awaited<ReturnType<typeof listCrmReplyTemplates>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListCrmReplyTemplates<
+  TData = Awaited<ReturnType<typeof listCrmReplyTemplates>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCrmReplyTemplates>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Шаблоны ответов для поля ответа (только чтение)
+ */
+
+export function useListCrmReplyTemplates<
+  TData = Awaited<ReturnType<typeof listCrmReplyTemplates>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCrmReplyTemplates>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListCrmReplyTemplatesQueryOptions(options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;

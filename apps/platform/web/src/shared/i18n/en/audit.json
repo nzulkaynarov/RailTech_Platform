@@ -134,10 +134,7 @@
     "intro": "Direct messages from the bot in Telegram: what you get and where.",
     "loadError": "Could not load notification settings. Try again later.",
     "retry": "Retry",
-    "telegram": "Telegram",
-    "linked": "Linked",
-    "notLinked": "Not linked",
-    "linkHint": "An administrator links Telegram in the employee card (Settings · Employees). Until it is linked, subscriptions do not work.",
+    "linkHint": "Link Telegram in the “Telegram for notifications” block above. Until it is linked, subscriptions do not work.",
     "failed": "The bot's last message was not delivered ({{time}}). Open the bot in Telegram, press Start, then send a test notification.",
     "leads": "Leads waiting for me",
     "leadsHint": "The bot writes when a lead is handed to a manager or a client replies.",
@@ -148,7 +145,7 @@
     "testHint": "The bot sends you a test message in Telegram, so you can check that delivery works.",
     "testSent": "Test message sent to Telegram",
     "errors": {
-      "NOT_LINKED": "Telegram is not linked: ask an administrator to link it in the employee card.",
+      "NOT_LINKED": "Telegram is not linked: link it in the “Telegram for notifications” block above.",
       "REFUSED": "Telegram did not accept the message. Open the bot, press Start and make sure it is not blocked.",
       "NOT_CONFIGURED": "The bot is not connected. An administrator connects it in Settings · Connections.",
       "BACKEND_UNAVAILABLE": "CRM is not responding. Retry later.",
@@ -200,7 +197,15 @@
       "notify": "Changed notifications",
       "bootstrap_admin": "First administrator",
       "invite": "Sent an invitation by email",
-      "hand_over": "Handed over leads and clients"
+      "hand_over": "Handed over leads and clients",
+      "password_reset_link": "Set a new password from the reset link",
+      "profile_update": "Updated their profile",
+      "avatar_set": "Uploaded a profile photo",
+      "avatar_removed": "Removed the profile photo",
+      "telegram_linked": "Linked Telegram",
+      "telegram_unlinked": "Unlinked Telegram",
+      "deputy_set": "Assigned a deputy while away",
+      "deputy_cleared": "Removed the deputy"
     },
     "setup": {
       "admin_created": "First administrator (setup wizard)"
@@ -295,7 +300,7 @@
     "reply_template": "Reply template",
     "sandbox": "Bot sandbox",
     "export": "Export",
-    "integration_secret": "Connection",
+    "integration_secret": "Connection key",
     "integration": "Connection",
     "external_service": "External service",
     "platform_role": "Platform role"

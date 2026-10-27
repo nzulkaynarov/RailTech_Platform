@@ -7,13 +7,6 @@
       "projects": "Loyihalar",
       "summary": "Kompaniya xulosasi"
     },
-    "stub": {
-      "queue": {
-        "title": "Sizdan qaror hozircha talab qilinmaydi",
-        "text": "Yangi xatlar CRMdan, TT qoralamalari ERPdan, xizmat xatlari xodimlardan keladi.",
-        "action": "Loyihalar"
-      }
-    },
     "queue": {
       "title": "Hozir nima qilish kerak",
       "cardsLabel": "Navbat hisoblagichlari",
@@ -34,13 +27,83 @@
       "loading": "Navbat yuklanmoqda…",
       "loadErrorTitle": "Navbatni yuklab bo‘lmadi",
       "loadErrorText": "Server javob bermadi. Ulanishni tekshirib, qayta urinib ko‘ring.",
-      "retry": "Qayta urinish"
+      "retry": "Qayta urinish",
+      "empty": {
+        "director": {
+          "title": "Hozircha sizdan qaror talab qilinmaydi",
+          "text": "Yangi xatlar CRMdan, TT qoralamalari ERPdan, xizmat xatlari xodimlardan keladi.",
+          "action": "Loyihalar"
+        },
+        "manager": {
+          "title": "Mijozlar hozir sizni kutmayapti",
+          "text": "Telegram va pochtadan kelgan yangi xabarlar shu yerda va qo‘ng‘iroqchada paydo bo‘ladi."
+        },
+        "supply": {
+          "title": "Hisob-kitob topshiriqlari yo‘q",
+          "text": "Ular direktor rezolyutsiyasidan keyin keladi — qo‘ng‘iroqcha va Telegramda xabar beramiz."
+        },
+        "engineer": {
+          "title": "Xizmatlar bo‘yicha topshiriqlar yo‘q",
+          "text": "Ular direktor rezolyutsiyasidan keyin keladi — qo‘ng‘iroqcha va Telegramda xabar beramiz."
+        },
+        "accountant": {
+          "title": "Tasdiqlash uchun to‘lov topshiriqnomalari va chiqariladigan hisoblar yo‘q",
+          "text": "Yangilari mijoz «To‘ladim» tugmasini bosganda paydo bo‘ladi."
+        },
+        "admin": {
+          "title": "Sizga vazifalar yo‘q",
+          "text": "Xodimlar murojaatlari va integratsiya nosozliklari shu yerda va qo‘ng‘iroqchada paydo bo‘ladi."
+        },
+        "default": {
+          "title": "Sizga vazifalar yo‘q",
+          "text": "Yangi vazifalar shu yerda va qo‘ng‘iroqchada paydo bo‘ladi."
+        }
+      },
+      "partial": {
+        "crm": "Lidlar va mijozlarga javoblar yuklanmadi: «{{crm}}» bo‘limi javob bermadi. Qolgani ko‘rsatilgan.",
+        "erp": "Tasdiqlash uchun TT va hisob-kitoblar yuklanmadi: «{{erp}}» bo‘limi javob bermadi. Qolgani ko‘rsatilgan.",
+        "both": "Lidlar, tasdiqlash uchun TT va hisob-kitoblar yuklanmadi: «{{crm}}» va «{{erp}}» bo‘limlari javob bermadi. Qolgani ko‘rsatilgan."
+      },
+      "partialEmpty": {
+        "title": "Navbat to‘liq yuklanmadi",
+        "text": "Manba javob bermagani uchun vazifalarning bir qismi ko‘rinmayapti. Birozdan keyin qayta urinib ko‘ring."
+      },
+      "onBehalf": "{{name}} uchun"
     },
     "activity": {
       "label": "Bugungi voqealar",
       "loading": "Lenta yuklanmoqda…",
       "loadErrorTitle": "Lentani yuklab bo‘lmadi",
-      "loadErrorText": "Server javob bermadi. Birozdan keyin qayta urinib ko‘ring."
+      "loadErrorText": "Server javob bermadi. Birozdan keyin qayta urinib ko‘ring.",
+      "events": {
+        "admin": {
+          "company": {
+            "own_created": "O‘z kompaniyasi yaratildi",
+            "archived": "Kompaniya arxivga o‘tkazildi",
+            "unarchived": "Kompaniya arxivdan qaytarildi"
+          },
+          "user": {
+            "created": "Xodim qo‘shildi",
+            "deactivated": "Xodim o‘chirildi",
+            "activated": "Xodim yoqildi",
+            "role_changed": "Xodim rollari o‘zgartirildi"
+          },
+          "email_template": {
+            "created": "Xat shabloni qo‘shildi",
+            "updated": "Xat shabloni o‘zgartirildi",
+            "deleted": "Xat shabloni o‘chirildi"
+          },
+          "lookup": {
+            "created": "Ma’lumotnoma to‘ldirildi",
+            "updated": "Ma’lumotnoma o‘zgartirildi",
+            "deleted": "Ma’lumotnoma qatori o‘chirildi"
+          },
+          "exchange_rate": {
+            "manual": "Valyuta kursi qo‘lda kiritildi",
+            "auto_skipped": "Markaziy bank kursi qo‘llanmadi: qo‘lda kiritilgan kurs amal qiladi"
+          }
+        }
+      }
     }
   },
   "crm": {
@@ -106,7 +169,7 @@
       "company": "Kompaniya va blankalar",
       "setup": "Birinchi ishga tushirish",
       "bot": "Telegram-bot",
-      "audit": "Harakatlar tarixi"
+      "audit": "Jurnal"
     },
     "action": "Xodimni taklif qilish",
     "setup": {
@@ -144,7 +207,7 @@
         "REQUEST_TIMEOUT": "Server o'z vaqtida javob bermadi. Kompaniya allaqachon yaratilgan bo'lishi mumkin: holat yangilanmoqda — forma yo'qolsa, kompaniya bor, aks holda takrorlang."
       },
       "connectionsTitle": "Qolgan ulanishlar",
-      "connectionsLead": "Sozlashning to'rtta qadami: har biri o'z ekraniga olib boradi.",
+      "connectionsLead": "To‘rtta qadam: har birining shakli shu yerda, yon oynada ochiladi; saqlagandan so‘ng — keyingi qadam.",
       "progress": "Tayyor: {{done}} / {{total}}",
       "allDone": "Hammasi tayyor: Platforma sozlangan.",
       "loadError": "Sozlash holatini olib bo'lmadi",
@@ -191,19 +254,26 @@
         "company": "Kompaniyangiz ERP'da hali yo'q.",
         "next": "Keyingisi: {{step}}.",
         "open": "Sozlashni davom ettirish",
-        "hide": "Yashirish",
-        "hideLabel": "Sozlash bannerini yashirish",
-        "hidden": "Banner yashirildi. Ustoz Sozlamalardagi «Birinchi ishga tushirish» sahifasida (/admin/setup) qoladi."
+        "hide": "Ertagacha yashirish",
+        "hideLabel": "Ertagacha yashirish: sozlash banneri",
+        "hidden": "Banner ertagacha yashirildi. Uni «Birinchi ishga tushirish» ustozida qaytarish mumkin."
       },
       "erpTitle": "ERP ulanishi",
       "erpLead": "Kompaniya ERP'da yaratiladi, shuning uchun ERP birinchi ulanadi. Yangi o'rnatishda juftlash kodi kerak emas — «ERP ni ulash» tugmasi yetarli.",
-      "erpDone": "ERP ulangan. Aloqani integratsiya kartochkasida tekshirish mumkin.",
+      "erpDone": "ERP ulangan. Aloqani qadam shaklida yoki Sozlamalar · Ulanishlarda tekshirish mumkin.",
       "erpUnknown": "ERP holati noma'lum: CRM javob bermadi. ERP sozlamalarini oching va aloqani tekshiring.",
       "erpOpen": "ERP sozlamalarini ochish",
       "companyNeedsErp": "Avval ERP'ni ulang",
       "companyNeedsErpText": "Kompaniya ERP'da yaratiladi, shuning uchun ulanmagan paytda uni yaratib bo'lmaydi. Ulangandan keyin forma shu yerda paydo bo'ladi.",
       "companyNeedsErpAction": "ERP ni ulash",
-      "companyAlreadyCreated": "O'z kompaniyasi allaqachon yaratilgan — natija o'sha, qolgan qadamlar bilan davom eting."
+      "companyAlreadyCreated": "O'z kompaniyasi allaqachon yaratilgan — natija o'sha, qolgan qadamlar bilan davom eting.",
+      "stepOf": "{{total}} tadan {{index}}-qadam",
+      "stepDone": "Qadam bajarildi.",
+      "nextStep": "Keyingisi: {{step}}",
+      "finish": "Yopish",
+      "stepSaved": "«{{step}}» qadami tayyor.",
+      "bannerHidden": "Sozlash banneri ertagacha yashirilgan.",
+      "bannerReturn": "Bannerni qaytarish"
     },
     "org": {
       "title": "Xodimlar",
@@ -488,6 +558,11 @@
       "change": "O'zgartirish",
       "view": "Ochish",
       "modules": "Rol modullarni ochadi: {{modules}}."
+    },
+    "journal": {
+      "filterLabel": "Jurnalda nimani ko‘rsatish",
+      "people": "Odamlar harakatlari",
+      "systems": "Tizimlararo almashinuv"
     }
   },
   "tabs": {
@@ -505,7 +580,8 @@
     "files": "Fayllar",
     "role": "Rol",
     "employees": "Xodimlar",
-    "journal": "Jurnal"
+    "journal": "Jurnal",
+    "step": "Qadam"
   },
   "panel": {
     "today": {
@@ -567,6 +643,10 @@
     "journal": {
       "title": "Yozuv tanlanmagan",
       "text": "Jurnaldan yozuvni tanlang — bu yerda tafsilotlar paydo bo'ladi: kim, qachon va nima o'zgardi."
+    },
+    "step": {
+      "title": "Qadam tanlanmagan",
+      "text": "Qadam yonidagi tugmani bosing — uning shakli ustozdan chiqmasdan shu yerda ochiladi."
     }
   }
 }

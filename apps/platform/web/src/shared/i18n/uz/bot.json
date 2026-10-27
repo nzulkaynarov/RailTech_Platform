@@ -1,5 +1,5 @@
 {
-  "subtitle": "Telegram-botning matnlari, xulq-atvori va uzatish qoidalari, tezkor javob shablonlari va CSV yuklamalar. O‘zgarishlar darhol kuchga kiradi.",
+  "subtitle": "Telegram-botning ulanishi, matnlari, xulq-atvori va bilimlar bazasi, tezkor javob shablonlari va CSV yuklamalar. O‘zgarishlar darhol kuchga kiradi.",
   "readOnlySubtitle": "Faqat ko‘rish: bot sozlamalarini administrator o‘zgartiradi.",
   "viewOnly": "Faqat ko‘rish",
   "common": {
@@ -80,8 +80,8 @@
     "stay": "Qolish"
   },
   "qualificationHint": "Lid barcha majburiy faktlar ma’lum bo‘lganda va qo‘shimcha faktlar belgilangan sondan kam bo‘lmaganda «Kvalifikatsiyalangan» bo‘ladi. Faktlarni AI ajratadi, qarorni tizim qabul qiladi.",
-  "channelMoved": "Jamoa kanali «Ulanishlar» → Telegramda tanlanadi; bu yerda — kimni tilga olish va menejerga qanchalik tez-tez yozish.",
-  "openIntegrations": "Telegramni ochish",
+  "channelMoved": "Jamoa kanali «Ulanish» yorlig‘ida tanlanadi; bu yerda — kimni tilga olish va menejerga qanchalik tez-tez yozish.",
+  "openIntegrations": "«Ulanish»ni ochish",
   "weekdays": {
     "mon": "Du",
     "tue": "Se",
@@ -729,5 +729,21 @@
     "fallback": "Shaxsiyga hech kimga yetkazilmasa",
     "always": "Doim",
     "never": "Hech qachon"
+  },
+  "parts": {
+    "label": "Telegram-bot bo‘limlari",
+    "connection": "Ulanish",
+    "texts": "Matnlar",
+    "behavior": "Xulq-atvor va uzatish",
+    "kb": "Bilimlar bazasi",
+    "templates": "Javob shablonlari",
+    "exports": "Yuklamalar",
+    "none": "CRM bu sozlamalar bo‘limini yubormadi. Sahifani keyinroq yangilang."
+  },
+  "kbEntry": {
+    "title": "Bilimlar bazasi hujjatlari",
+    "text": "Bot javob beradigan hujjatlar, «Bot nimani topadi» qidiruvi, bo‘shliqlar va qum qutisi — bilimlar bazasi ekranida. Quyida — bot bazadan qanday foydalanadi.",
+    "readOnlyText": "Hujjatlar, bo‘shliqlar va «Bot nimani topadi» qidiruvi — bilimlar bazasi ekranida, faqat o‘qish uchun.",
+    "open": "Bilimlar bazasini ochish"
   }
 }

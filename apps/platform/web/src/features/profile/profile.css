@@ -1,0 +1,77 @@
+/* Страница /me (W15-H6): карточки одной колонкой до 720 px. */
+.pf-profile {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 720px;
+}
+.pf-profile-body {
+  padding: 16px 24px 24px;
+}
+.pf-profile-identity {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+.pf-profile-photo {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+.pf-profile-photo-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.pf-profile-fields {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+.pf-profile-readonly {
+  margin: 0 0 12px;
+}
+.pf-profile-readonly dt {
+  color: #6e6e6e;
+  font-size: 12px;
+  line-height: 20px;
+}
+.pf-profile-readonly dd {
+  margin: 0 0 8px;
+}
+.pf-profile-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.pf-profile-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.pf-profile-qr {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+.pf-profile-deputy-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+.pf-profile-deputy-row > * {
+  flex: 1 1 160px;
+  min-width: 0;
+}
+@media (max-width: 480px) {
+  .pf-profile-body {
+    padding: 16px;
+  }
+}

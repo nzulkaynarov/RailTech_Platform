@@ -59,6 +59,7 @@ TABLES = (
     "telegram_chat_candidates",
     "llm_usage",
     "email_log",
+    "client_notices",
     "sso_replay_tokens",
     "erp_event_notices",
     "rt_bus_outbox",
@@ -72,6 +73,8 @@ TABLES = (
     "procrastinate_jobs",
     "platform_roles",
     "identity_catalog_state",
+    "staff_telegram_links",
+    "password_reset_tokens",
 )
 FAKE_KEY = "x" * 40  # фиктивный ключ только для тестов
 

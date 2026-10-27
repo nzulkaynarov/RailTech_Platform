@@ -9,7 +9,7 @@
 
 import asyncio
 from collections.abc import Awaitable, Callable, Collection, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Literal
@@ -18,6 +18,7 @@ import httpx
 import structlog
 
 from app.config import Settings
+from app.domain import external_ai_replies as ai_rules
 from app.domain import external_erp_events as erp_events_rules
 from app.domain import external_erp_handoff as erp_handoff_rules
 from app.domain import external_erp_reported as erp_reported_rules
@@ -168,6 +169,7 @@ class _Run:
             "backup": self.backup,
             "erp_sync": self.erp_sync,
             "erp_handoff": self.erp_handoff,
+            "ai_replies": self.ai_replies,
             "erp_events": self.erp_events,
         }
         return await handler[key]()
@@ -233,6 +235,7 @@ class _Run:
             budget_limit=budget.limit if budget else None,
             day=day,
             disabled=f"vendor.{vendor}" in self.disabled,
+            probe=data.probes.get(vendor, ()),
         )
         return vendor_rules.vendor(facts)
 
@@ -248,16 +251,30 @@ class _Run:
         except Exception as exc:  # noqa: BLE001 — бюджеты необязательны для статуса
             logger.info("provider_budgets_unavailable", error=type(exc).__name__)
             budgets = {}
+        probes = await self._probe_problems(providers)
         start = self.now - (DAY if self.heavy else WINDOW)
         try:
             logs = await self.d.spend_logs.fetch(start, self.now)
         except Exception as exc:  # noqa: BLE001 — журнал недоступен → «нет данных»
             logger.info("vendor_logs_unavailable", error=type(exc).__name__)
-            return _VendorData(None, None, budgets)
+            return _VendorData(None, None, budgets, probes)
         rows = [r for raw in logs.rows if (r := vendor_rules.to_call(raw, providers)) is not None]
         window = vendor_rules.stats(rows, self.now - WINDOW)
         day = vendor_rules.stats(rows, self.now - DAY) if self.heavy else None
-        return _VendorData(window, day, budgets)
+        return _VendorData(window, day, budgets, probes)
+
+    async def _probe_problems(
+        self, providers: Mapping[str, str | None]
+    ) -> dict[str, tuple[tuple[str, str], ...]]:
+        """Провайдер → роли, где часовая проба моделей нашла кредиты/квоту или отклонённый ключ."""
+        async with self.d.sessions() as session:
+            problems = await repo.model_probe_problems(session)
+        out: dict[str, list[tuple[str, str]]] = {}
+        for alias, detail in sorted(problems.items()):
+            provider = providers.get(alias)
+            if provider:
+                out.setdefault(provider, []).append((alias, detail))
+        return {k: tuple(v) for k, v in out.items()}
 
     async def erp_external(self, key: str) -> CheckResult:
         """Сервис ERP (M3-ERP-06): состояние передаёт ERP в `GET /health`, CRM его не пробует."""
@@ -286,6 +303,13 @@ class _Run:
                 configured, stats.failed, stats.stuck, stats.pending, stats.last_error
             )
         )
+
+    async def ai_replies(self) -> CheckResult:
+        """Ответы бота клиентам за 5 минут: сбои агента и успешные ответы (без вызова моделей)."""
+        window = timedelta(minutes=ai_rules.WINDOW_MINUTES)
+        async with self.d.sessions() as session:
+            facts = await repo.ai_reply_stats(session, self.now - window, self.now - DAY)
+        return ai_rules.ai_replies(facts, self.now)
 
     async def erp_events(self) -> CheckResult:
         """Итог обмена событиями с ERP на шине: недоставленные, упавшие, зависшие."""
@@ -403,6 +427,7 @@ class _VendorData:
     window: dict[str, vendor_rules.VendorStats] | None
     day: dict[str, vendor_rules.VendorStats] | None
     budgets: Mapping[str, ProviderBudget]
+    probes: Mapping[str, tuple[tuple[str, str], ...]] = field(default_factory=dict)
 
 
 def _with_metrics(result: CheckResult, extra: Mapping[str, Metric]) -> CheckResult:

@@ -3,7 +3,7 @@
 
 Запись проверок и переходы инцидентов — в одной транзакции под advisory-блокировкой (фоновая задача
 и «Проверить сейчас» не открывают два инцидента). Сломанное перепроверяется с затуханием
-(`external_cause.recheck_due`: 1, 2, 5, 15 мин, дальше раз в 15) и снимается само, когда проверка
+(`external_cause.recheck_due`: 1, 2, 5, 7 мин, дальше раз в 7) и снимается само, когда проверка
 проходит. Оповещения — по причине, не по сервису: одно «сломано» после 15 минут и одно
 «восстановлено»; отметка `alerted_at` ставится в транзакции до отправки, поэтому параллельный
 проход (кнопка «Проверить» рядом с минутной задачей) не пришлёт второе сообщение, а рестарт процесса
@@ -106,7 +106,7 @@ class ExternalChecks:
         """
         specs = registry(await self._collector.providers())
         heavy_only = [s.key for s in specs if "cheap" not in s.tiers]
-        due = await self._due_failed(heavy_only, now)
+        due = [*await self._due_failed(heavy_only, now), *await self._recovering(heavy_only, now)]
         if not due:
             return []
         return await self.run("heavy", now, keys=due)
@@ -124,7 +124,22 @@ class ExternalChecks:
             for k in keys
             if (row := latest.get(k)) is not None
             and row.status == "fail"
-            and cause.recheck_due(_count(streaks, k), row.checked_at, now)
+            and cause.recheck_due(_count(streaks, k), row.checked_at, now, _cause(row))
+        ]
+
+    async def _recovering(self, keys: Collection[str], now: datetime) -> list[str]:
+        """Сервис только тяжёлого уровня после сбоя: пока «Восстановлено» ждёт 5 минут `ok`,
+        проверка раз в минуту, а не раз в 15 (иначе возврат объявляется через 15–20 минут)."""
+        async with self._sessions() as session:
+            latest = await repo.latest_checks(session)
+            open_ = await repo.open_incidents(session)
+        return [
+            k
+            for k in keys
+            if k in open_
+            and (row := latest.get(k)) is not None
+            and row.status == "ok"
+            and now - row.checked_at >= timedelta(minutes=1) - cause.BACKOFF_SLACK
         ]
 
     async def _skip_backing_off(self, keys: Collection[str], now: datetime) -> list[str]:
@@ -136,7 +151,7 @@ class ExternalChecks:
             backing_off = (
                 row is not None
                 and row.status == "fail"
-                and not cause.recheck_due(_count(streaks, key), row.checked_at, now)
+                and not cause.recheck_due(_count(streaks, key), row.checked_at, now, _cause(row))
             )
             if not backing_off:
                 out.append(key)
@@ -230,7 +245,15 @@ class ExternalChecks:
                     row = rows[step.cause_key]
                     group = by_id[step.cause_key]
                     row.alerted_at = now  # «занято» до отправки: параллельный проход не повторит
-                    text = cause.broken_alert(group, row.started_at, now, tz)
+                    prev, episodes = await repo.previous_alert(session, step.cause_key, row.id)
+                    text = cause.broken_alert(
+                        group,
+                        row.started_at,
+                        now,
+                        tz,
+                        repeats=episodes,
+                        since_previous=now - prev.alerted_at if prev and prev.alerted_at else None,
+                    )
                     pending.append(
                         _Pending("alert", step.cause_key, row.id, text, list(row.service_keys))
                     )
@@ -273,6 +296,11 @@ class ExternalChecks:
         async with self._sessions() as session, session.begin():
             removed = await repo.purge(session, now - CHECKS_RETENTION, now - INCIDENTS_RETENTION)
         logger.info("external_checks_purged", removed=removed)
+
+
+def _cause(row: ExternalServiceCheck) -> str | None:
+    saved = (row.metrics or {}).get(CAUSE_METRIC)
+    return saved if isinstance(saved, str) else None
 
 
 def _count(streaks: dict[str, repo.FailStreak], key: str) -> int:

@@ -7,13 +7,6 @@
       "projects": "Projects",
       "summary": "Company summary"
     },
-    "stub": {
-      "queue": {
-        "title": "No decisions are needed from you yet",
-        "text": "New letters come from CRM, draft quotes from ERP, memos from colleagues.",
-        "action": "Projects"
-      }
-    },
     "queue": {
       "title": "What to do now",
       "cardsLabel": "Queue counters",
@@ -34,13 +27,83 @@
       "loading": "Loading the queue…",
       "loadErrorTitle": "Could not load the queue",
       "loadErrorText": "The server did not respond. Check the connection and try again.",
-      "retry": "Retry"
+      "retry": "Retry",
+      "empty": {
+        "director": {
+          "title": "No decisions needed from you yet",
+          "text": "New letters come from CRM, draft quotes from ERP, memos from employees.",
+          "action": "Projects"
+        },
+        "manager": {
+          "title": "No clients are waiting for you right now",
+          "text": "New client messages from Telegram and email will appear here and in the bell."
+        },
+        "supply": {
+          "title": "No costing tasks",
+          "text": "They arrive after the director’s resolution — we will tell you in the bell and in Telegram."
+        },
+        "engineer": {
+          "title": "No service tasks",
+          "text": "They arrive after the director’s resolution — we will tell you in the bell and in Telegram."
+        },
+        "accountant": {
+          "title": "No payments to confirm and no invoices to issue",
+          "text": "New ones appear when a client taps “I paid”."
+        },
+        "admin": {
+          "title": "No tasks for you",
+          "text": "Staff requests and integration problems will appear here and in the bell."
+        },
+        "default": {
+          "title": "No tasks for you",
+          "text": "New tasks will appear here and in the bell."
+        }
+      },
+      "partial": {
+        "crm": "Leads and client replies did not load: the “{{crm}}” section did not respond. The rest is shown.",
+        "erp": "Quotes to approve and costings did not load: the “{{erp}}” section did not respond. The rest is shown.",
+        "both": "Leads, quotes to approve and costings did not load: the “{{crm}}” and “{{erp}}” sections did not respond. The rest is shown."
+      },
+      "partialEmpty": {
+        "title": "The queue loaded only in part",
+        "text": "Some tasks are hidden because a source did not respond. Try again in a moment."
+      },
+      "onBehalf": "for {{name}}"
     },
     "activity": {
       "label": "Today's events",
       "loading": "Loading the feed…",
       "loadErrorTitle": "Could not load the feed",
-      "loadErrorText": "The server did not respond. Try again later."
+      "loadErrorText": "The server did not respond. Try again later.",
+      "events": {
+        "admin": {
+          "company": {
+            "own_created": "Own company created",
+            "archived": "Company archived",
+            "unarchived": "Company restored"
+          },
+          "user": {
+            "created": "Employee added",
+            "deactivated": "Employee disabled",
+            "activated": "Employee enabled",
+            "role_changed": "Employee roles changed"
+          },
+          "email_template": {
+            "created": "Email template added",
+            "updated": "Email template changed",
+            "deleted": "Email template deleted"
+          },
+          "lookup": {
+            "created": "Reference list extended",
+            "updated": "Reference list changed",
+            "deleted": "Reference list entry deleted"
+          },
+          "exchange_rate": {
+            "manual": "Exchange rate entered manually",
+            "auto_skipped": "Central bank rate not applied: a manual rate is in force"
+          }
+        }
+      }
     }
   },
   "crm": {
@@ -106,7 +169,7 @@
       "company": "Company & letterhead",
       "setup": "First-time setup",
       "bot": "Telegram bot",
-      "audit": "Activity log"
+      "audit": "Log"
     },
     "action": "Invite employee",
     "setup": {
@@ -144,7 +207,7 @@
         "REQUEST_TIMEOUT": "The server did not respond in time. The company may already be created: the state is refreshing — if the form disappears, the company exists; otherwise try again."
       },
       "connectionsTitle": "Other connections",
-      "connectionsLead": "Four setup steps: each leads to its own screen.",
+      "connectionsLead": "Four steps: each form opens here, in the side panel; after saving, the next step follows.",
       "progress": "Done {{done}} of {{total}}",
       "allDone": "All done: the Platform is set up.",
       "loadError": "Could not load the setup state",
@@ -191,19 +254,26 @@
         "company": "Your company is not in ERP yet.",
         "next": "Next: {{step}}.",
         "open": "Continue setup",
-        "hide": "Hide",
-        "hideLabel": "Hide the setup banner",
-        "hidden": "Banner hidden. The wizard stays on the “First-time setup” page in Settings (/admin/setup)."
+        "hide": "Hide until tomorrow",
+        "hideLabel": "Hide until tomorrow: setup banner",
+        "hidden": "The banner is hidden until tomorrow. Bring it back in the “First-time setup” wizard."
       },
       "erpTitle": "ERP connection",
       "erpLead": "The company is created in ERP, so ERP is connected first. A new installation needs no pairing code — the \"Connect ERP\" button is enough.",
-      "erpDone": "ERP is connected. You can check the link on the integration card.",
+      "erpDone": "ERP is connected. Check the connection in the step form or in Settings · Connections.",
       "erpUnknown": "ERP state is unknown: CRM did not respond. Open the ERP settings and check the link.",
       "erpOpen": "Open ERP settings",
       "companyNeedsErp": "Connect ERP first",
       "companyNeedsErpText": "The company is created in ERP, so it cannot be created before ERP is connected. The form will appear here once it is.",
       "companyNeedsErpAction": "Connect ERP",
-      "companyAlreadyCreated": "Your company already exists — that is the same result, continue with the other steps."
+      "companyAlreadyCreated": "Your company already exists — that is the same result, continue with the other steps.",
+      "stepOf": "Step {{index}} of {{total}}",
+      "stepDone": "Step done.",
+      "nextStep": "Next: {{step}}",
+      "finish": "Close",
+      "stepSaved": "Step “{{step}}” is done.",
+      "bannerHidden": "The setup banner is hidden until tomorrow.",
+      "bannerReturn": "Bring the banner back"
     },
     "org": {
       "title": "Employees",
@@ -488,6 +558,11 @@
       "change": "Change",
       "view": "Open",
       "modules": "The role opens modules: {{modules}}."
+    },
+    "journal": {
+      "filterLabel": "What the log shows",
+      "people": "People’s actions",
+      "systems": "System exchange"
     }
   },
   "tabs": {
@@ -505,7 +580,8 @@
     "files": "Files",
     "role": "Role",
     "employees": "Employees",
-    "journal": "Journal"
+    "journal": "Journal",
+    "step": "Step"
   },
   "panel": {
     "today": {
@@ -567,6 +643,10 @@
     "journal": {
       "title": "No entry selected",
       "text": "Select an entry in the log to see the details here: who, when and what changed."
+    },
+    "step": {
+      "title": "No step selected",
+      "text": "Press the button next to a step — its form opens here without leaving the wizard."
     }
   }
 }
