@@ -6,7 +6,7 @@ platform-admin viewers are refused on every mutation via the services.
 """
 
 from django.db.models import ProtectedError, Q
-from drf_spectacular.utils import OpenApiResponse, extend_schema, inline_serializer
+from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view, inline_serializer
 from rest_framework import mixins
 from rest_framework import serializers as drf_serializers
 from rest_framework import viewsets
@@ -20,7 +20,14 @@ from core.file_streaming import stream_file_field
 from core.permissions import RoleGatedViewMixin
 from crm import services as crm_services
 from crm.models import DocumentTemplate, GeneratedDocument
-from crm.serializers import DocumentTemplateSerializer, GeneratedDocumentSerializer
+from crm.serializers import (
+    DocumentTemplateCopySerializer,
+    DocumentTemplateCreateSerializer,
+    DocumentTemplateErrorSerializer,
+    DocumentTemplateSerializer,
+    DocumentTemplateWriteSerializer,
+    GeneratedDocumentSerializer,
+)
 
 
 class DocumentSendEmailThrottle(UserRateThrottle):
@@ -63,6 +70,15 @@ def _brand_preview_field():
     )
 
 
+def _as_flag(value, *, default: bool | None) -> bool | None:
+    """`is_active` из тела: не прислан или `null` — `default` (при правке `None` — «не менять»); строки `false`/`0`/`no` — ложь."""
+    if value is None:
+        return default
+    if isinstance(value, str):
+        return value.strip().lower() not in ("", "0", "false", "no", "off")
+    return bool(value)
+
+
 def _template_error(exc):
     """400 `{"detail": CODE}`; у `TEMPLATE_MISSING_REQUIRED_BLOCKS` — ещё `missing_blocks`
     (`[{code, label}]`): редактор называет недостающие блоки по именам (C2A-G-5)."""
@@ -76,6 +92,43 @@ def _template_error(exc):
     return Response(body, status=400)
 
 
+_TEMPLATE_REFUSAL = OpenApiResponse(
+    response=DocumentTemplateErrorSerializer,
+    description="TEMPLATE_NAME_REQUIRED / TEMPLATE_NAME_TOO_LONG / TEMPLATE_BODY_TOO_LARGE / "
+    "TEMPLATE_MISSING_REQUIRED_BLOCKS (with `missing_blocks`) / TEMPLATE_IN_USE (delete)",
+)
+_TEMPLATE_FORBIDDEN = OpenApiResponse(
+    description="ROLE_NOT_PERMITTED / NO_COMPANY / SETTINGS_EDIT_REQUIRED / TEMPLATE_NOT_EDITABLE"
+)
+
+
+@extend_schema_view(
+    create=extend_schema(
+        summary="Create a company template",
+        description="A new template is active unless `is_active=false` (a draft). An active legal template must carry its required blocks; a draft is saved freely.",
+        request=DocumentTemplateCreateSerializer,
+        responses={201: DocumentTemplateSerializer, 400: _TEMPLATE_REFUSAL, 403: _TEMPLATE_FORBIDDEN},
+        tags=["CRM"],
+    ),
+    update=extend_schema(
+        summary="Update a company template",
+        request=DocumentTemplateWriteSerializer,
+        responses={200: DocumentTemplateSerializer, 400: _TEMPLATE_REFUSAL, 403: _TEMPLATE_FORBIDDEN},
+        tags=["CRM"],
+    ),
+    partial_update=extend_schema(
+        summary="Partially update a company template",
+        request=DocumentTemplateWriteSerializer,
+        responses={200: DocumentTemplateSerializer, 400: _TEMPLATE_REFUSAL, 403: _TEMPLATE_FORBIDDEN},
+        tags=["CRM"],
+    ),
+    destroy=extend_schema(
+        summary="Delete a company template",
+        description="A template that already produced documents cannot be deleted (400 TEMPLATE_IN_USE) — deactivate it.",
+        responses={204: None, 400: _TEMPLATE_REFUSAL, 403: _TEMPLATE_FORBIDDEN},
+        tags=["CRM"],
+    ),
+)
 class DocumentTemplateViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
     """Company template library. Read = own templates + platform samples («скопировать
     к себе»); write is gated on the `settings.edit` CompanyRole permission and limited
@@ -139,6 +192,7 @@ class DocumentTemplateViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
                 name=request.data.get("name", ""),
                 kind_code=request.data.get("kind", "CUSTOM"),
                 body_html=request.data.get("body_html", ""),
+                is_active=_as_flag(request.data.get("is_active"), default=True),
             )
         except DjangoValidationError as exc:
             # Сервисные коды обязаны доехать как {"detail": CODE} — без перехвата Django
@@ -158,7 +212,7 @@ class DocumentTemplateViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
                 name=request.data.get("name"),
                 kind_code=request.data.get("kind"),
                 body_html=request.data.get("body_html"),
-                is_active=request.data.get("is_active"),
+                is_active=_as_flag(request.data.get("is_active"), default=None),
             )
         except DjangoValidationError as exc:
             return _template_error(exc)
@@ -180,7 +234,12 @@ class DocumentTemplateViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
             return Response({"detail": "TEMPLATE_IN_USE"}, status=400)
         return Response(status=204)
 
-    @extend_schema(summary="Copy a platform sample into the caller's company", tags=["CRM"])
+    @extend_schema(
+        summary="Copy a platform sample into the caller's company",
+        request=DocumentTemplateCopySerializer,
+        responses={201: DocumentTemplateSerializer, 400: _TEMPLATE_REFUSAL, 403: _TEMPLATE_FORBIDDEN},
+        tags=["CRM"],
+    )
     @action(detail=True, methods=["post"], url_path="copy")
     def copy(self, request, pk=None):
         from django.core.exceptions import ValidationError as DjangoValidationError
@@ -228,7 +287,7 @@ class DocumentTemplateViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
                     "document_html": drf_serializers.CharField(),
                 },
             ),
-            400: OpenApiResponse(description="Validation error"),
+            400: OpenApiResponse(description="NO_COMPANY / TEMPLATE_BODY_TOO_LARGE (error code)"),
         },
     )
     @action(detail=False, methods=["post"], url_path="preview", throttle_classes=[DocumentPreviewThrottle])
@@ -264,12 +323,16 @@ class DocumentTemplateViewSet(RoleGatedViewMixin, viewsets.ModelViewSet):
                             fields={
                                 "key": drf_serializers.CharField(),
                                 "label": drf_serializers.CharField(),
+                                "label_key": drf_serializers.CharField(help_text="i18n-ключ подписи группы для SPA"),
                                 "items": drf_serializers.ListField(
                                     child=inline_serializer(
                                         "DocumentPlaceholder",
                                         fields={
                                             "code": drf_serializers.CharField(),
                                             "label": drf_serializers.CharField(),
+                                            "label_key": drf_serializers.CharField(
+                                                help_text="i18n-ключ подписи для SPA"
+                                            ),
                                         },
                                     )
                                 ),

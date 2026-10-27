@@ -2,6 +2,7 @@
 #   - автоматически после зелёного CI на push в main (workflow_run по workflow «CI»): сборка образов, затем job deploy ждёт
 #     одобрения владельца в environment `production` (required reviewers) и выкладывает тот же sha;
 #   - вручную (workflow_dispatch): action = deploy | rollback | build. На PR и push сам по себе не запускается.
+# Автозапуск не выкладывает sha, равный или старше выложенного на VPS 1 (current_tag): откат и повтор - только ручным запуском.
 # Красный CI, ночной прогон (schedule) и ручной прогон CI (workflow_dispatch) деплой не запускают. ci.yml не трогает.
 #
 # prepare:  без environment и секретов — sha, «sha входит в main» (deploy), зелёная проверка «CI ok» на этом sha (deploy), матрица образов.
@@ -216,11 +217,12 @@ jobs:
             [ -n "${!v}" ] || { echo "::error::не задана переменная environment production: $v"; exit 1; }
           done
 
-      # Тот же sha, что собран в build (не ref: за время ожидания одобрения ветка могла уйти вперёд)
+      # Тот же sha, что собран в build (не ref: за время ожидания одобрения ветка могла уйти вперёд).
+      # fetch-depth: 0 — шагу «Проверка» нужна история, чтобы отличить более старый sha от более нового (should-deploy.sh).
       - uses: actions/checkout@v4
         with:
           ref: ${{ needs.prepare.outputs.sha }}
-          fetch-depth: 1
+          fetch-depth: 0
           persist-credentials: false
 
       - name: SSH к VPS 1
@@ -244,23 +246,43 @@ jobs:
             echo "  StrictHostKeyChecking yes"
           } > ~/.ssh/config
 
-      - name: Проверка - этот sha уже выложен?
+      - name: Проверка - этот sha уже выложен или старше выложенного?
         id: already
         env:
           TAG: ${{ needs.prepare.outputs.sha }}
           EVENT_NAME: ${{ github.event_name }}
         run: |
-          # Повторный автозапуск на тот же sha (два workflow_run подряд; concurrency их лишь выстраивает в очередь) не должен
-          # выкладывать то же самое второй раз. Пропуск только для workflow_run: ручной deploy (workflow_dispatch) выкладывает
-          # всегда — так владелец повторяет выкладку, у которой упал smoke (current_tag выставляется до smoke).
+          # Автозапуск (workflow_run) не должен выкладывать тот же sha повторно и, главное, более СТАРЫЙ коммит поверх нового
+          # (инцидент 2026-10-28: два слияния подряд дали два автодеплоя, CI старшего коммита закончился позже, и его деплой
+          # выложил старый релиз поверх нового). concurrency выстраивает запуски в очередь целиком (prepare, build, deploy),
+          # поэтому второй запуск доходит сюда уже после первого и читает его current_tag. Решение - infra/deploy/should-deploy.sh
+          # (deploy | skip-same | skip-older | skip-diverged; тест - infra/deploy/tests/should-deploy-test.sh).
+          # Ручной deploy (workflow_dispatch) выкладывает всегда: так владелец повторяет выкладку, у которой упал smoke
+          # (current_tag выставляется до smoke), или сознательно откатывается на старый sha; решение только пишется в журнал.
+          # shellcheck disable=SC2029
+          cur="$(ssh app "cat /opt/rt/state/current_tag 2>/dev/null || true")" || cur=""   # нет связи - не пропускаем, выкладываем
+          cur="$(tr -d '[:space:]' <<<"$cur")"
+          decision="$(bash infra/deploy/should-deploy.sh "$TAG" "$cur")"
+          echo "sha $TAG, current_tag на VPS 1: ${cur:-<пусто>} - решение: $decision"
           if [ "$EVENT_NAME" = workflow_run ]; then
-            # shellcheck disable=SC2029
-            cur="$(ssh app "cat /opt/rt/state/current_tag 2>/dev/null || true")" || cur=""   # нет связи - не пропускаем, выкладываем
-            if [ "$cur" = "$TAG" ]; then
-              echo "sha $TAG уже current_tag на VPS 1 - повторная выкладка пропущена"
-              echo "skip=true" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
+            case "$decision" in
+              deploy) ;;
+              skip-same)
+                echo "sha $TAG уже current_tag на VPS 1 - повторная выкладка пропущена"
+                echo "skip=true" >> "$GITHUB_OUTPUT"
+                exit 0 ;;
+              skip-older)
+                echo "sha $TAG старше или равен выложенному $cur - пропуск (автодеплой не откатывает; откат - только ручным запуском)"
+                echo "skip=true" >> "$GITHUB_OUTPUT"
+                exit 0 ;;
+              skip-diverged)
+                echo "::warning::sha $TAG и выложенный $cur не в отношении предок/потомок (или $cur не разобрать) - автодеплой пропущен; выкладка только ручным запуском"
+                echo "skip=true" >> "$GITHUB_OUTPUT"
+                exit 0 ;;
+              *) echo "::error::should-deploy.sh вернул неожиданное '$decision'"; exit 1 ;;
+            esac
+          elif [ "$decision" != deploy ]; then
+            echo "::notice::ручной запуск: решение автодеплоя было бы $decision - выкладываем по явному запросу владельца"
           fi
           echo "skip=false" >> "$GITHUB_OUTPUT"
 
