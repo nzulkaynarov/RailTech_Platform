@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.bus import runtime
 from app.bus.runtime import build_bus
 from app.domain.platform_roles import eds_catalog_fingerprint
-from app.services import identity_catalog
+from app.services import identity_catalog, identity_republish
 from app.services.identity_catalog import (
     EDS_KEY,
     ensure_eds_rights_published,
@@ -127,7 +127,7 @@ async def test_failure_keeps_old_fingerprint_and_next_start_retries(
 ) -> None:
     await _staff(sessions)
     await ensure_eds_rights_published(sessions, fingerprint="v-a")
-    real = identity_catalog.republish_identity
+    real = identity_republish.republish_identity
 
     async def broken(*args: Any, **kwargs: Any) -> Any:
         raise ConnectionError("шина недоступна")

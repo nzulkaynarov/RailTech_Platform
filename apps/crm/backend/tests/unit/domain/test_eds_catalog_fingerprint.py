@@ -2,23 +2,28 @@
 
 import copy
 import re
+from collections.abc import Mapping
+from typing import Any
 
 from app.domain import platform_roles_generated as generated
 from app.domain.platform_roles import eds_catalog_fingerprint
 
-BACKEND = {
+BACKEND: dict[str, dict[str, tuple[str, ...]]] = {
     "eds.inbox": {"read": ("letters.read",), "full": ("letters.read", "letters.register")},
     "eds.drafts": {"full": ("approvals.decide",)},
     "crm.leads": {},
 }
-ROLE_ACCESS = {
+ROLE_ACCESS: dict[str, dict[str, str]] = {
     "ADMIN": {"eds.inbox": "full", "eds.drafts": "full", "crm.leads": "full"},
     "MANAGER": {"eds.inbox": "read", "crm.leads": "full"},
 }
 SYSTEM = ("ADMIN", "MANAGER")
 
 
-def _fp(backend=BACKEND, role_access=ROLE_ACCESS) -> str:
+def _fp(
+    backend: Mapping[str, Mapping[str, tuple[str, ...]]] = BACKEND,
+    role_access: Mapping[str, Mapping[str, str]] = ROLE_ACCESS,
+) -> str:
     return eds_catalog_fingerprint(backend, role_access, SYSTEM)
 
 
@@ -36,19 +41,19 @@ def test_real_catalog_fingerprint_follows_generated_tables() -> None:
 
 
 def test_new_eds_code_in_a_section_changes_it() -> None:
-    changed = copy.deepcopy(BACKEND)
+    changed: Any = copy.deepcopy(BACKEND)
     changed["eds.drafts"] = {"full": ("approvals.decide", "bus.manage")}
     assert _fp(changed) != _fp()
 
 
 def test_new_code_on_read_level_changes_it() -> None:
-    changed = copy.deepcopy(BACKEND)
+    changed: Any = copy.deepcopy(BACKEND)
     changed["eds.inbox"]["read"] = ("letters.read", "registry.read")
     assert _fp(changed) != _fp()
 
 
 def test_new_section_with_eds_codes_changes_it() -> None:
-    changed = copy.deepcopy(BACKEND)
+    changed: Any = copy.deepcopy(BACKEND)
     changed["admin"] = {"full": ("bus.manage",)}
     assert _fp(changed) != _fp()
 
@@ -60,14 +65,14 @@ def test_eds_result_of_system_role_changes_it() -> None:
 
 
 def test_non_eds_edits_do_not_change_it() -> None:
-    reordered = {
+    reordered: dict[str, dict[str, tuple[str, ...]]] = {
         "crm.leads": {},
         "eds.drafts": {"full": ("approvals.decide",)},
         "eds.inbox": {"full": ("letters.register", "letters.read"), "read": ("letters.read",)},
     }
     assert _fp(reordered) == _fp()
     # пустые уровни и разделы без кодов EDS — не часть отпечатка
-    with_empty = copy.deepcopy(BACKEND)
+    with_empty: Any = copy.deepcopy(BACKEND)
     with_empty["eds.drafts"]["read"] = ()
     with_empty["chats.internal"] = {}
     assert _fp(with_empty) == _fp()
@@ -79,6 +84,6 @@ def test_non_eds_edits_do_not_change_it() -> None:
 
 
 def test_duplicate_code_across_levels_is_not_a_change() -> None:
-    changed = copy.deepcopy(BACKEND)
+    changed: Any = copy.deepcopy(BACKEND)
     changed["eds.inbox"]["full"] = ("letters.read", "letters.register", "letters.read")
     assert _fp(changed) == _fp()
