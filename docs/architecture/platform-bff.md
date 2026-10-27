@@ -80,6 +80,38 @@ SPA  POST /api/v1/auth/login {email, password}
 - Вход только по логину CRM. Форма входа ERP, страница `/sso/exchange` CRM, переключатель CRM ↔ ERP, ADR-0010
   «вход в ERP через страницу CRM» после T4 не нужны (T5 удаляет).
 - `platform_role_refs*` — роли Платформы сотрудника с их матрицами (R-1/R-2, §6); старое поле `platform_roles` (коды) удалено в R-1b.
+- **EDS (с W13-A2, `docs/architecture/sso-token.md`, «Токен сотрудника для EDS»).** Не при входе, а при первом обращении к EDS:
+  CRM `POST /api/v1/auth/sso/token {"aud": "eds"}` → EDS `POST /api/v1/auth/sso/exchange` → токен доступа EDS (15 минут, без
+  refresh) в сессии (`eds`); истёк или EDS ответил 401 — новый обмен. CRM не выдаёт токен (нет `permissions.eds`) или EDS не
+  знает сотрудника — 403 `FORBIDDEN` `details.reason = eds_not_granted`; сбой — 503 и пауза 15 с до следующей попытки.
+  Отказ EDS сессию Платформы не закрывает. Адрес — `PLATFORM_EDS_URL` (по умолчанию `http://eds-api:8000`, только сеть compose).
+
+### 3.1. Первый запуск и временный пароль (W13-A4, BFF 0.10.0)
+
+Пока в CRM нет активного администратора, вход ведёт на экран «Первый запуск» (`/setup`, без сессии):
+
+```
+SPA  GET  /api/v1/setup/state                    → BFF → CRM GET /setup/state          {needs_admin}
+SPA  POST /api/v1/setup/admin {code, name, email, password}
+ └► BFF → лимит входа (IP и e-mail; неверный код расходует попытку)
+        → CRM POST /setup/admin {code, email, full_name, password}   → первый администратор (роль ADMIN, ERP — провижининг)
+        → CRM POST /auth/logout (refresh, который CRM открыла сама)    → семья токенов не висит
+        → обычный вход (CRM login → /me → SSO → ERP exchange → Redis)   → cookie rt_pf_session и rt_pf_csrf
+```
+
+- Код первого запуска знает только CRM: она выдаёт его, пока администратора нет, и один раз пишет в журнал `crm-api`
+  (`setup_code_issued`); BFF его не хранит и не возвращает. Блокировку перебора (10 неверных кодов — 15 минут) держит CRM,
+  BFF добавляет лимит входа.
+- Дальше — мастер в Admin (`/admin/setup`, раздел `admin` полный): шаг «своя компания» — ERP `setup/status/` и `setup/company/`
+  токеном администратора (ERP выдаёт доступ новому администратору с задержкой провижининга: до тех пор BFF отвечает
+  503 `BACKEND_UNAVAILABLE` с `source = erp`, а экран предлагает «Проверить снова»); чек-лист из пяти шагов
+  (`GET /setup/checklist`) — бот и модели из CRM `/setup/checklist`, ERP — `/integrations/erp`, почта — `/integrations/smtp`,
+  первый сотрудник — `/users` (есть активный сотрудник кроме администратора). Чего бэкенд не сказал, то `unknown`.
+- Сотрудник без почты: `POST /admin/users` (CRM `POST /users`) и `POST /admin/users/{id}/temporary-password` (CRM
+  `POST /users/{id}/reset-password`) отдают **временный пароль один раз** в теле ответа с `Cache-Control: no-store`.
+  CRM хранит только хеш, поэтому повторно получить пароль нельзя — выдают новый, а прежний и сессии сотрудника гаснут.
+  BFF не пишет пароль в журнал и ошибки, не кладёт в Redis и сессию; SPA держит его в состоянии одного окна и убирает по «Готово».
+  Сотрудник входит с временным паролем (`must_change_password`) и обязан сменить его (`POST /auth/change-password`).
 
 ## 4. Кто владеет новыми сущностями (SPEC-v3 §10.4)
 
@@ -195,7 +227,7 @@ BFF отдаёт сам (`/admin/company/logo/image`, `/admin/company/brand/logo
 | Домен | `platform.railtech.uz` → VPS 1 (A-запись — владелец); TLS — Caddy, ACME как у остальных доменов |
 | Caddy | сайт `{$PLATFORM_DOMAIN}`: `/api/*` → `platform-bff:8000` (`flush_interval -1` для SSE), остальное → `platform-web`; заголовки безопасности и CSP как у CRM (`style-src 'unsafe-inline'` нужен Ant Design); `no_mcp` |
 | Сервисы compose | `platform-bff` (uvicorn, 2 процесса, лимит 256 МБ), `platform-web` (статика, лимит 64 МБ); образы `rt-platform-bff`, `rt-platform-web` в GHCR по тегу sha, собирает `deploy.yml` (INF-P0-5, #151). **Caddy не зависит от здоровья Платформы** (`depends_on: service_started`): сбой её образа даёт 502 только на `platform.`, остальные домены живут (INF-P1-0) |
-| Переменные | `PLATFORM_DOMAIN` (обязательна: `deploy.sh` без неё останавливается до pull — сначала DNS, потом строка в `/opt/rt/.env.prod`), `PLATFORM_SESSION_TTL_HOURS`, `PLATFORM_CRM_URL=http://crm-api:8000`, `PLATFORM_ERP_URL=http://erp-backend:8000`, `REDIS_URL`; необязательные (не секреты): `PLATFORM_LOGIN_RATE_PER_MINUTE` (10), `PLATFORM_CRM_TIMEOUT_SECONDS` (5), `PLATFORM_TRUSTED_PROXIES` (см. §8); нового секрета нет (сессия — случайный идентификатор, не подписанный токен) |
+| Переменные | `PLATFORM_DOMAIN` (обязательна: `deploy.sh` без неё останавливается до pull — сначала DNS, потом строка в `/opt/rt/.env.prod`), `PLATFORM_SESSION_TTL_HOURS`, `PLATFORM_CRM_URL=http://crm-api:8000`, `PLATFORM_ERP_URL=http://erp-backend:8000`, `PLATFORM_EDS_URL=http://eds-api:8000` (W13-A2; значение по умолчанию совпадает с compose), `REDIS_URL`; необязательные (не секреты): `PLATFORM_LOGIN_RATE_PER_MINUTE` (10), `PLATFORM_CRM_TIMEOUT_SECONDS` (5), `PLATFORM_TRUSTED_PROXIES` (см. §8); нового секрета нет (сессия — случайный идентификатор, не подписанный токен) |
 | Дев-стенд | `platform.localhost` в `Caddyfile.dev`, `make up` поднимает оба сервиса; `make check-platform` |
 | Деплой | существующий `deploy.yml` + `deploy.sh` (разрешено владельцем 2026-10-22, #151); smoke — четыре домена; smoke отката — тоже четыре (INF-P1-0) |
 | Память VPS 1 | +≈ 200 МБ к текущему стеку; после T4 −≈ 60 МБ (`crm-web`, `erp-web`) |
@@ -217,6 +249,10 @@ BFF отдаёт сам (`/admin/company/logo/image`, `/admin/company/brand/logo
   провалился из-за учётных данных: успешный вход (офис за одним NAT), нет ролей Платформы, сбой CRM. Считаются
   `INVALID_CREDENTIALS` и `ACCOUNT_LOCKED`. Успешный вход сбрасывает счётчик e-mail; счётчик IP хранит неудачи других
   пользователей этого адреса. Сверх порога — 429 `TOO_MANY_REQUESTS` с `Retry-After`, в CRM попытка не уходит.
+  Тот же лимит (те же счётчики IP и e-mail) действует на `POST /setup/admin` (W13-A4): считаются отказы `SETUP_CODE_INVALID` и
+  `SETUP_LOCKED` (перебор кода); `SETUP_CODE_EXPIRED`, `SETUP_DONE`, слабый пароль (`VALIDATION_FAILED`) и сбой CRM попытку возвращают.
+  Успешное создание администратора сбрасывает счётчик e-mail. Сверх лимита — 429 `TOO_MANY_REQUESTS`; блокировку кода на 15 минут
+  (10 неверных кодов) держит CRM — `SETUP_LOCKED`, 429 с `Retry-After: 900`.
 - **Таймаут CRM.** Клиент CRM в BFF ждёт `PLATFORM_CRM_TIMEOUT_SECONDS` (по умолчанию 5 с; было 3 — под нагрузкой вход
   давал 503, runbook r3 O-1; отдельного таймаута для входа нет). Клиент ERP, Redis и проверка health — по-прежнему 3 с.
 - **Пробы внешних сервисов (W13-A1).** «Проверить связь» ERP, SMTP и Telegram, сопряжение, ротация ключей, проверка модели и журнал

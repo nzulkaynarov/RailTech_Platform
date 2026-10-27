@@ -10,7 +10,7 @@
  * BFF не имеет своей базы: данные приходят из CRM и ERP, каждый вызов бэкенда — с токеном сотрудника.
  *
  * **Сессия.** `POST /auth/login` ставит cookie `rt_pf_session` (`HttpOnly; Secure; SameSite=Lax; Path=/`) и CSRF-cookie
- * `rt_pf_csrf` (читается скриптом). Каждый `POST`, `PUT`, `PATCH`, `DELETE`, кроме `/auth/login`, несёт заголовок
+ * `rt_pf_csrf` (читается скриптом). Каждый `POST`, `PUT`, `PATCH`, `DELETE`, кроме `/auth/login` и `/setup/admin` (оба без сессии), несёт заголовок
  * `X-CSRF-Token` со значением CSRF-cookie; без него или с другим значением — 403 `CSRF_FAILED`. Истёкшая или
  * отозванная сессия — 401 `SESSION_EXPIRED`.
  *
@@ -78,6 +78,32 @@
  * он уходит только в CRM. Коды ошибок: `WRONG_PASSWORD` (422), `NOT_CONFIGURED`, `SECRETS_KEY_MISSING`,
  * `SERVICE_NOT_SWITCHABLE` (409), `INTEGRATION_FAILED` (502, причина в `details.reason`).
  *
+ * **0.9.0 (W13-A2) — добавляющее.** Admin · Журнал интеграций (тег `bus`): шина `rt_bus` всех трёх доменов в одном журнале
+ * вместо CLI `bus status|retry` и Django admin ERP. `GET /admin/bus` — сводка по доменам (outbox, DLQ, inbox с ошибками) и
+ * подписчики с состоянием словом (`BusSubscriberState`: работает, ошибки подряд, пауза предохранителя до `paused_until`,
+ * есть DLQ, выключен, убран из подписок); `GET /admin/bus/deliveries` — доставки с фильтрами (домен, статус, подписчик,
+ * подстрока типа, период), DLQ — `status=dead`; `GET /admin/bus/inbox` — принятые события (`errors=true` — обработка упала
+ * или ждёт автоповтора); повторы `POST /admin/bus/{domain}/deliveries/{id}/retry`, `…/deliveries/retry-dead` (все `dead`
+ * подписчика), `…/inbox/{event_id}/retry`. Списки трёх доменов сливаются по времени, страница — непрозрачный `cursor` из
+ * `next_cursor`; домен, который не ответил или отказал, — `sources.<домен>`, ответ 200 с остальными. Только раздел
+ * `admin: full` (директору — 403 в BFF); в каждый домен — с токеном сотрудника: CRM и ERP — как раньше, EDS — токен
+ * сотрудника CRM `aud=eds` → `POST /api/v1/auth/sso/exchange` EDS (`docs/architecture/sso-token.md`), 15 минут, в сессии BFF.
+ * Тел событий нет — только метаданные доставки. `Error.source` дополнен `eds`.
+ *
+ * **0.10.0 (W13-A4) — добавляющее.** Первый запуск в Платформе (SPEC-v3 §7.6, тег `setup`): вместо `/setup` CRM и мастера ERP.
+ * Без сессии: `GET /setup/state` (CRM `/setup/state`: администратора ещё нет — `needs_admin`) и `POST /setup/admin` (одноразовый
+ * код первого запуска из журнала `crm-api`, имя, почта, пароль -> первый администратор; ответ — как у входа: `Session` и cookie).
+ * С сессией, раздел `admin` — полный: `GET /setup/checklist` (чек-лист из пяти шагов — бот, ERP, почта, модели ИИ, первый
+ * сотрудник — по ответам CRM; шаг мастера «своя компания» — по ERP `setup/status`) и `POST /setup/company` (ERP `setup/company`,
+ * токеном администратора). Приглашение без почты: `POST /admin/users` создаёт сотрудника и возвращает **временный пароль один
+ * раз**, `POST /admin/users/{id}/temporary-password` выдаёт новый временный пароль существующему сотруднику (CRM
+ * `/users/{id}/reset-password`; прежний пароль и сессии сотрудника перестают действовать). Пароль приходит только в этом ответе
+ * (`Cache-Control: no-store`): BFF его не пишет в журнал, не кэширует и не хранит, а повторно получить его нельзя — только выдать
+ * новый; сотрудник при входе обязан сменить его (`Session.must_change_password`, `POST /auth/change-password`). Коды ошибок:
+ * `SETUP_DONE` (409), `SETUP_CODE_INVALID`, `SETUP_CODE_EXPIRED` (422), `SETUP_LOCKED` (429, 15 минут после десяти неверных
+ * кодов), `OWN_COMPANY_ALREADY_EXISTS` (409). Право: чек-лист и мастер компании видит и выполняет только `admin: full` — CRM
+ * `/setup/checklist` требует право записи настроек; директору баннер не показывается.
+ *
  * **0.11.0 (W13-A5) — добавляющее.** CRM · База знаний и Admin · Настройки бота (теги `kb` и `bot`). **База знаний** (`/crm/kb/*`,
  * `/crm/sandbox/*`): документы (список, загрузка файла `.md` multipart, ручной ввод, включение и выключение, переиндексация,
  * фрагменты), поиск «Что найдёт бот», пробелы (закрыть привязкой к документу, игнорировать, вернуть), справочник продуктов,
@@ -118,6 +144,11 @@ import type { RequestHandlerOptions } from "msw";
 import {
   AccessLevel,
   AttentionKind,
+  BusDeliveryStatus,
+  BusDomain,
+  BusInboxStatus,
+  BusSourceState,
+  BusSubscriberState,
   CategoryRequestStatus,
   DocumentKind,
   DueLabel,
@@ -135,6 +166,8 @@ import {
   ObjectKind,
   QueueItemKind,
   RestrictedField,
+  SetupStepKey,
+  SetupStepState,
   SourceState,
   StepCode,
 } from "./model";
@@ -149,6 +182,10 @@ import type {
   BotProfileState,
   BotSettings,
   BrandProfile,
+  BusDeliveryPage,
+  BusInboxPage,
+  BusJournal,
+  BusRetryResult,
   CatalogCategory,
   CatalogCategoryList,
   CategoryRequest,
@@ -166,6 +203,7 @@ import type {
   EmailTemplateList,
   EmailTemplatePreview,
   Employee,
+  EmployeeCredentials,
   EmployeeList,
   ErpCheck,
   ErpConnector,
@@ -202,6 +240,10 @@ import type {
   SandboxTurn,
   SearchResult,
   Session,
+  SetupChecklist,
+  SetupCompanyCreated,
+  SetupCompanyStatus,
+  SetupState,
   SmtpCheck,
   SmtpConnector,
   SpendReport,
@@ -287,6 +329,81 @@ export const getGetSessionResponseMock = (
   },
   must_change_password: faker.datatype.boolean(),
   expires_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  ...overrideResponse,
+});
+
+export const getGetSetupStateResponseMock = (
+  overrideResponse: Partial<Extract<SetupState, object>> = {},
+): SetupState => ({ needs_admin: faker.datatype.boolean(), ...overrideResponse });
+
+export const getCreateFirstAdminResponseMock = (
+  overrideResponse: Partial<Extract<Session, object>> = {},
+): Session => ({
+  me: {
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    email: faker.internet.email(),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+    position: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+    language: faker.helpers.arrayElement(Object.values(Language)),
+    roles: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        id: faker.helpers.fromRegExp("^[0-9]+$"),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        system: faker.datatype.boolean(),
+        code: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          undefined,
+        ]),
+      }),
+    ),
+    active_role: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+    modules: faker.helpers.arrayElements(Object.values(ModuleCode)),
+    resources: {
+      [faker.string.alphanumeric(5)]: faker.helpers.arrayElement(Object.values(AccessLevel)),
+    },
+    restricted_fields: faker.helpers.arrayElement([
+      faker.helpers.arrayElements(Object.values(RestrictedField)),
+      undefined,
+    ]),
+    access: { crm: faker.datatype.boolean(), erp: faker.datatype.boolean() },
+  },
+  must_change_password: faker.datatype.boolean(),
+  expires_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  ...overrideResponse,
+});
+
+export const getGetSetupChecklistResponseSetupCompanyStatusMock = (
+  overrideResponse: Partial<SetupCompanyStatus> = {},
+): SetupCompanyStatus => ({
+  ...{ required: faker.datatype.boolean(), can_setup: faker.datatype.boolean() },
+  ...overrideResponse,
+});
+
+export const getGetSetupChecklistResponseMock = (
+  overrideResponse: Partial<Extract<SetupChecklist, object>> = {},
+): SetupChecklist => ({
+  steps: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    key: faker.helpers.arrayElement(Object.values(SetupStepKey)),
+    state: faker.helpers.arrayElement(Object.values(SetupStepState)),
+  })),
+  done: faker.number.int({ min: 0 }),
+  total: faker.number.int({ min: 5, max: 5 }),
+  company: faker.helpers.arrayElement([
+    { ...getGetSetupChecklistResponseSetupCompanyStatusMock() },
+    null,
+  ]),
+  ...overrideResponse,
+});
+
+export const getCreateOwnCompanyResponseMock = (
+  overrideResponse: Partial<Extract<SetupCompanyCreated, object>> = {},
+): SetupCompanyCreated => ({
+  id: faker.number.int(),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
   ...overrideResponse,
 });
 
@@ -1716,6 +1833,168 @@ export const getGetSystemStatusResponseMock = (
   ...overrideResponse,
 });
 
+export const getGetBusJournalResponseMock = (
+  overrideResponse: Partial<Extract<BusJournal, object>> = {},
+): BusJournal => ({
+  domains: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      domain: faker.helpers.arrayElement(Object.values(BusDomain)),
+      outbox_pending: faker.number.int(),
+      oldest_undelivered_age_seconds: faker.helpers.arrayElement([
+        faker.number.float({ fractionDigits: 2 }),
+        null,
+      ]),
+      dlq_size: faker.number.int(),
+      inbox_received: faker.number.int(),
+      inbox_retrying: faker.number.int(),
+      inbox_failed: faker.number.int(),
+      subscribers: Array.from(
+        { length: faker.number.int({ min: 1, max: 10 }) },
+        (_, i) => i + 1,
+      ).map(() => ({
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        state: faker.helpers.arrayElement(Object.values(BusSubscriberState)),
+        configured: faker.datatype.boolean(),
+        enabled: faker.datatype.boolean(),
+        drop: faker.datatype.boolean(),
+        endpoint: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        pending: faker.number.int(),
+        in_flight: faker.number.int(),
+        dead: faker.number.int(),
+        oldest_undelivered_age_seconds: faker.helpers.arrayElement([
+          faker.number.float({ fractionDigits: 2 }),
+          null,
+        ]),
+        consecutive_failures: faker.number.int(),
+        paused_until: faker.helpers.arrayElement([
+          faker.date.past().toISOString().slice(0, 19) + "Z",
+          null,
+        ]),
+        last_failure_at: faker.helpers.arrayElement([
+          faker.date.past().toISOString().slice(0, 19) + "Z",
+          null,
+        ]),
+        last_success_at: faker.helpers.arrayElement([
+          faker.date.past().toISOString().slice(0, 19) + "Z",
+          null,
+        ]),
+        last_error: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+      })),
+    }),
+  ),
+  sources: {
+    crm: faker.helpers.arrayElement(Object.values(BusSourceState)),
+    erp: faker.helpers.arrayElement(Object.values(BusSourceState)),
+    eds: faker.helpers.arrayElement(Object.values(BusSourceState)),
+  },
+  ...overrideResponse,
+});
+
+export const getListBusDeliveriesResponseMock = (
+  overrideResponse: Partial<Extract<BusDeliveryPage, object>> = {},
+): BusDeliveryPage => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    domain: faker.helpers.arrayElement(Object.values(BusDomain)),
+    id: faker.number.int(),
+    event_id: faker.string.uuid(),
+    event_type: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    subscriber: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement(Object.values(BusDeliveryStatus)),
+    attempts: faker.number.int(),
+    next_attempt_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    last_attempt_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    last_status_code: faker.helpers.arrayElement([faker.number.int(), null]),
+    last_error: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    delivered_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    subject: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    correlation_id: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  })),
+  next_cursor: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  sources: {
+    crm: faker.helpers.arrayElement(Object.values(BusSourceState)),
+    erp: faker.helpers.arrayElement(Object.values(BusSourceState)),
+    eds: faker.helpers.arrayElement(Object.values(BusSourceState)),
+  },
+  ...overrideResponse,
+});
+
+export const getListBusInboxResponseMock = (
+  overrideResponse: Partial<Extract<BusInboxPage, object>> = {},
+): BusInboxPage => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    domain: faker.helpers.arrayElement(Object.values(BusDomain)),
+    event_id: faker.string.uuid(),
+    type: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    publisher: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    subject: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    correlation_id: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    status: faker.helpers.arrayElement(Object.values(BusInboxStatus)),
+    attempts: faker.number.int(),
+    error: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    received_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    processed_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+  })),
+  next_cursor: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  sources: {
+    crm: faker.helpers.arrayElement(Object.values(BusSourceState)),
+    erp: faker.helpers.arrayElement(Object.values(BusSourceState)),
+    eds: faker.helpers.arrayElement(Object.values(BusSourceState)),
+  },
+  ...overrideResponse,
+});
+
+export const getRetryBusDeliveryResponseMock = (
+  overrideResponse: Partial<Extract<BusRetryResult, object>> = {},
+): BusRetryResult => ({ retried: faker.number.int({ min: 0 }), ...overrideResponse });
+
+export const getRetryBusDeadLettersResponseMock = (
+  overrideResponse: Partial<Extract<BusRetryResult, object>> = {},
+): BusRetryResult => ({ retried: faker.number.int({ min: 0 }), ...overrideResponse });
+
+export const getRetryBusInboxResponseMock = (
+  overrideResponse: Partial<Extract<BusRetryResult, object>> = {},
+): BusRetryResult => ({ retried: faker.number.int({ min: 0 }), ...overrideResponse });
+
 export const getListEmployeesResponseMock = (
   overrideResponse: Partial<Extract<EmployeeList, object>> = {},
 ): EmployeeList => ({
@@ -1748,6 +2027,42 @@ export const getListEmployeesResponseMock = (
       undefined,
     ]),
   })),
+  ...overrideResponse,
+});
+
+export const getCreateEmployeeResponseMock = (
+  overrideResponse: Partial<Extract<EmployeeCredentials, object>> = {},
+): EmployeeCredentials => ({
+  employee: {
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+    email: faker.internet.email(),
+    position: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 120 } }),
+      undefined,
+    ]),
+    roles: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        id: faker.helpers.fromRegExp("^[0-9]+$"),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        system: faker.datatype.boolean(),
+        code: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          undefined,
+        ]),
+      }),
+    ),
+    access: { crm: faker.datatype.boolean(), erp: faker.datatype.boolean() },
+    status: faker.helpers.arrayElement(Object.values(EmployeeStatus)),
+    telegram_linked: faker.datatype.boolean(),
+    erp_sync: faker.helpers.arrayElement(Object.values(ErpSyncState)),
+    erp_sync_error: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+  },
+  temporary_password: faker.string.alpha({ length: { min: 1, max: 20 } }),
   ...overrideResponse,
 });
 
@@ -1810,6 +2125,42 @@ export const getResendInviteResponseMock = (
     faker.string.alpha({ length: { min: 10, max: 20 } }),
     undefined,
   ]),
+  ...overrideResponse,
+});
+
+export const getIssueTemporaryPasswordResponseMock = (
+  overrideResponse: Partial<Extract<EmployeeCredentials, object>> = {},
+): EmployeeCredentials => ({
+  employee: {
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+    email: faker.internet.email(),
+    position: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 120 } }),
+      undefined,
+    ]),
+    roles: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        id: faker.helpers.fromRegExp("^[0-9]+$"),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        system: faker.datatype.boolean(),
+        code: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          undefined,
+        ]),
+      }),
+    ),
+    access: { crm: faker.datatype.boolean(), erp: faker.datatype.boolean() },
+    status: faker.helpers.arrayElement(Object.values(EmployeeStatus)),
+    telegram_linked: faker.datatype.boolean(),
+    erp_sync: faker.helpers.arrayElement(Object.values(ErpSyncState)),
+    erp_sync_error: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+  },
+  temporary_password: faker.string.alpha({ length: { min: 1, max: 20 } }),
   ...overrideResponse,
 });
 
@@ -3204,6 +3555,98 @@ export const getGetSessionMockHandler = (
   );
 };
 
+export const getGetSetupStateMockHandler = (
+  overrideResponse?:
+    | SetupState
+    | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<SetupState> | SetupState),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/setup/state",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetSetupStateResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getCreateFirstAdminMockHandler = (
+  overrideResponse?:
+    | Session
+    | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<Session> | Session),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/setup/admin",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCreateFirstAdminResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetSetupChecklistMockHandler = (
+  overrideResponse?:
+    | SetupChecklist
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<SetupChecklist> | SetupChecklist),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/setup/checklist",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetSetupChecklistResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getCreateOwnCompanyMockHandler = (
+  overrideResponse?:
+    | SetupCompanyCreated
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<SetupCompanyCreated> | SetupCompanyCreated),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/setup/company",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCreateOwnCompanyResponseMock(),
+        { status: 201 },
+      );
+    },
+    options,
+  );
+};
+
 export const getGetMeMockHandler = (
   overrideResponse?:
     Me | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<Me> | Me),
@@ -4190,6 +4633,148 @@ export const getGetSystemStatusMockHandler = (
   );
 };
 
+export const getGetBusJournalMockHandler = (
+  overrideResponse?:
+    | BusJournal
+    | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<BusJournal> | BusJournal),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/bus",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetBusJournalResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getListBusDeliveriesMockHandler = (
+  overrideResponse?:
+    | BusDeliveryPage
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<BusDeliveryPage> | BusDeliveryPage),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/bus/deliveries",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListBusDeliveriesResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getListBusInboxMockHandler = (
+  overrideResponse?:
+    | BusInboxPage
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<BusInboxPage> | BusInboxPage),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/bus/inbox",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListBusInboxResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getRetryBusDeliveryMockHandler = (
+  overrideResponse?:
+    | BusRetryResult
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<BusRetryResult> | BusRetryResult),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/bus/:domain/deliveries/:id/retry",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getRetryBusDeliveryResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getRetryBusDeadLettersMockHandler = (
+  overrideResponse?:
+    | BusRetryResult
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<BusRetryResult> | BusRetryResult),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/bus/:domain/deliveries/retry-dead",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getRetryBusDeadLettersResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getRetryBusInboxMockHandler = (
+  overrideResponse?:
+    | BusRetryResult
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<BusRetryResult> | BusRetryResult),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/bus/:domain/inbox/:eventId/retry",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getRetryBusInboxResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getListEmployeesMockHandler = (
   overrideResponse?:
     | EmployeeList
@@ -4208,6 +4793,30 @@ export const getListEmployeesMockHandler = (
             : overrideResponse
           : getListEmployeesResponseMock(),
         { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getCreateEmployeeMockHandler = (
+  overrideResponse?:
+    | EmployeeCredentials
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<EmployeeCredentials> | EmployeeCredentials),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/users",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCreateEmployeeResponseMock(),
+        { status: 201 },
       );
     },
     options,
@@ -4251,6 +4860,30 @@ export const getResendInviteMockHandler = (
             ? await overrideResponse(info)
             : overrideResponse
           : getResendInviteResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getIssueTemporaryPasswordMockHandler = (
+  overrideResponse?:
+    | EmployeeCredentials
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<EmployeeCredentials> | EmployeeCredentials),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/users/:id/temporary-password",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getIssueTemporaryPasswordResponseMock(),
         { status: 200 },
       );
     },
@@ -5984,6 +6617,10 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getLogoutMockHandler(),
   getChangePasswordMockHandler(),
   getGetSessionMockHandler(),
+  getGetSetupStateMockHandler(),
+  getCreateFirstAdminMockHandler(),
+  getGetSetupChecklistMockHandler(),
+  getCreateOwnCompanyMockHandler(),
   getGetMeMockHandler(),
   getUpdateMeMockHandler(),
   getGetHealthMockHandler(),
@@ -6027,9 +6664,17 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getGetBackupsMockHandler(),
   getRequestBackupMockHandler(),
   getGetSystemStatusMockHandler(),
+  getGetBusJournalMockHandler(),
+  getListBusDeliveriesMockHandler(),
+  getListBusInboxMockHandler(),
+  getRetryBusDeliveryMockHandler(),
+  getRetryBusDeadLettersMockHandler(),
+  getRetryBusInboxMockHandler(),
   getListEmployeesMockHandler(),
+  getCreateEmployeeMockHandler(),
   getInviteEmployeeMockHandler(),
   getResendInviteMockHandler(),
+  getIssueTemporaryPasswordMockHandler(),
   getGetEmployeeMockHandler(),
   getUpdateEmployeeMockHandler(),
   getListRolesMockHandler(),

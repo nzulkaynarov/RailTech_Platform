@@ -1,4 +1,4 @@
-"""Клиент бэкенда (CRM или ERP): таймаут 3 с (у CRM — 5 с, настройка), X-Request-Id из запроса.
+"""Клиент бэкенда (CRM, ERP или EDS): таймаут 3 с (у CRM — 5 с, настройка), X-Request-Id из запроса.
 
 Вызовы идут от имени сотрудника (его токен), сервисных токенов у BFF нет (ADR-0011): токен
 передаётся в каждый вызов, клиент общий на всех сотрудников и ничего о них не помнит — в том числе
@@ -21,7 +21,7 @@ PROBE_TIMEOUT_SECONDS = 30.0
 # CRM: вход (хеш пароля) под нагрузкой не укладывался в 3 с; `PLATFORM_CRM_TIMEOUT_SECONDS`.
 CRM_TIMEOUT_SECONDS = 5.0
 
-Backend = Literal["crm", "erp"]
+Backend = Literal["crm", "erp", "eds"]
 
 
 class _NoStoreJar(CookieJar):

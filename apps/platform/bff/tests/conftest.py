@@ -14,7 +14,7 @@ from app.config import Settings
 from app.cookies import CSRF_COOKIE, CSRF_HEADER
 from app.main import create_app
 from tests.backends import PASSWORD, Backends
-from tests.consts import CRM_URL, ERP_URL
+from tests.consts import CRM_URL, EDS_URL, ERP_URL
 from tests.fakes import Clock, FakeRedis
 from tests.roles import Role
 
@@ -33,6 +33,7 @@ def settings() -> Settings:
     return Settings(
         PLATFORM_CRM_URL=CRM_URL,
         PLATFORM_ERP_URL=ERP_URL,
+        PLATFORM_EDS_URL=EDS_URL,
         REDIS_URL="redis://127.0.0.1:1/0",
         LOG_LEVEL="WARNING",
     )

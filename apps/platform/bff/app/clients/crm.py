@@ -6,6 +6,7 @@ Health CRM — `/health` в корне.
 """
 
 from dataclasses import dataclass
+from typing import Literal
 
 import httpx
 
@@ -71,8 +72,10 @@ class CrmClient(BackendClient):
     async def me(self, access: str) -> httpx.Response:
         return await self.send("GET", "/api/v1/me", access=access)
 
-    async def sso_token(self, access: str) -> httpx.Response:
-        return await self.send("POST", "/api/v1/auth/sso/token", access=access)
+    async def sso_token(self, access: str, aud: Literal["erp", "eds"] = "erp") -> httpx.Response:
+        """SSO-токен сотрудника: для ERP — без тела (как раньше), для EDS — `{"aud": "eds"}`."""
+        body = {"aud": aud} if aud != "erp" else None
+        return await self.send("POST", "/api/v1/auth/sso/token", access=access, json=body)
 
     async def change_password(self, access: str, current: str, new: str) -> httpx.Response:
         return await self.send(

@@ -33,6 +33,13 @@ import type {
   BodyUploadKbDocument,
   BotProfileOut,
   BotProfileSettings,
+  BusDeliveriesParams,
+  BusDeliveryPageOut,
+  BusInboxPageOut,
+  BusInboxParams,
+  BusOverviewOut,
+  BusRetryDeadIn,
+  BusRetryOut,
   ChangePasswordRequest,
   ChatCandidateOut,
   ClientContacts,
@@ -1547,6 +1554,670 @@ export const useSsoToken = <TError = ErrorType<ErrorOut>, TContext = unknown>(
 > => {
   return useMutation(getSsoTokenMutationOptions(options), queryClient);
 };
+
+export const getBusDeliveriesUrl = (params?: BusDeliveriesParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/bus/deliveries?${stringifiedParams}`
+    : `/api/v1/bus/deliveries`;
+};
+
+/**
+ * Доставки событий CRM подписчикам, новые сверху; DLQ — `status=dead`.
+ *
+ * Страница — `before_id` (id последней строки предыдущей).
+ * @summary Deliveries
+ */
+export const busDeliveries = async (
+  params?: BusDeliveriesParams,
+  options?: Parameters<typeof http>[1],
+): Promise<BusDeliveryPageOut> => {
+  return http<BusDeliveryPageOut>(getBusDeliveriesUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getBusDeliveriesQueryKey = (params?: BusDeliveriesParams) => {
+  return [`/api/v1/bus/deliveries`, ...(params ? [params] : [])] as const;
+};
+
+export const getBusDeliveriesQueryOptions = <
+  TData = Awaited<ReturnType<typeof busDeliveries>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: BusDeliveriesParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof busDeliveries>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getBusDeliveriesQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof busDeliveries>>> = ({ signal }) =>
+    busDeliveries(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof busDeliveries>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type BusDeliveriesQueryResult = NonNullable<Awaited<ReturnType<typeof busDeliveries>>>;
+export type BusDeliveriesQueryError = ErrorType<ErrorOut>;
+
+export function useBusDeliveries<
+  TData = Awaited<ReturnType<typeof busDeliveries>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params: undefined | BusDeliveriesParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof busDeliveries>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof busDeliveries>>,
+          TError,
+          Awaited<ReturnType<typeof busDeliveries>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useBusDeliveries<
+  TData = Awaited<ReturnType<typeof busDeliveries>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: BusDeliveriesParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof busDeliveries>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof busDeliveries>>,
+          TError,
+          Awaited<ReturnType<typeof busDeliveries>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useBusDeliveries<
+  TData = Awaited<ReturnType<typeof busDeliveries>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: BusDeliveriesParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof busDeliveries>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Deliveries
+ */
+
+export function useBusDeliveries<
+  TData = Awaited<ReturnType<typeof busDeliveries>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: BusDeliveriesParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof busDeliveries>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getBusDeliveriesQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getBusRetryDeadUrl = () => {
+  return `/api/v1/bus/deliveries/retry-dead`;
+};
+
+/**
+ * «Повторить все dead подписчика» — после исправления причины (адрес, секрет, приёмник).
+ * @summary Retry Dead
+ */
+export const busRetryDead = async (
+  busRetryDeadIn: BusRetryDeadIn,
+  options?: Parameters<typeof http>[1],
+): Promise<BusRetryOut> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<BusRetryOut>(getBusRetryDeadUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(busRetryDeadIn),
+  });
+};
+
+export const getBusRetryDeadMutationKey = () => ["busRetryDead"] as const;
+
+export const getBusRetryDeadMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof busRetryDead>>,
+    TError,
+    BusRetryDeadMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof busRetryDead>>,
+  TError,
+  BusRetryDeadMutationVariables,
+  TContext
+> => {
+  const mutationKey = getBusRetryDeadMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof busRetryDead>>,
+    BusRetryDeadMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return busRetryDead(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type BusRetryDeadMutationResult = NonNullable<Awaited<ReturnType<typeof busRetryDead>>>;
+export type BusRetryDeadMutationBody = BusRetryDeadIn;
+export type BusRetryDeadMutationError = ErrorType<ErrorOut>;
+export type BusRetryDeadMutationVariables = { data: BusRetryDeadIn };
+
+/**
+ * @summary Retry Dead
+ */
+export const useBusRetryDead = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof busRetryDead>>,
+      TError,
+      BusRetryDeadMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof busRetryDead>>,
+  TError,
+  BusRetryDeadMutationVariables,
+  TContext
+> => {
+  return useMutation(getBusRetryDeadMutationOptions(options), queryClient);
+};
+
+export const getBusRetryDeliveryUrl = (deliveryId: number) => {
+  return `/api/v1/bus/deliveries/${deliveryId}/retry`;
+};
+
+/**
+ * «Повторить»: доставка `dead` или ожидающая — сейчас, попытки с нуля.
+ *
+ * Подписчик на паузе предохранителя сразу получает пробную доставку.
+ * @summary Retry Delivery
+ */
+export const busRetryDelivery = async (
+  deliveryId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<BusRetryOut> => {
+  return http<BusRetryOut>(getBusRetryDeliveryUrl(deliveryId), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getBusRetryDeliveryMutationKey = () => ["busRetryDelivery"] as const;
+
+export const getBusRetryDeliveryMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof busRetryDelivery>>,
+    TError,
+    BusRetryDeliveryMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof busRetryDelivery>>,
+  TError,
+  BusRetryDeliveryMutationVariables,
+  TContext
+> => {
+  const mutationKey = getBusRetryDeliveryMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof busRetryDelivery>>,
+    BusRetryDeliveryMutationVariables
+  > = (props) => {
+    const { deliveryId } = props ?? {};
+
+    return busRetryDelivery(deliveryId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type BusRetryDeliveryMutationResult = NonNullable<
+  Awaited<ReturnType<typeof busRetryDelivery>>
+>;
+
+export type BusRetryDeliveryMutationError = ErrorType<ErrorOut>;
+export type BusRetryDeliveryMutationVariables = { deliveryId: number };
+
+/**
+ * @summary Retry Delivery
+ */
+export const useBusRetryDelivery = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof busRetryDelivery>>,
+      TError,
+      BusRetryDeliveryMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof busRetryDelivery>>,
+  TError,
+  BusRetryDeliveryMutationVariables,
+  TContext
+> => {
+  return useMutation(getBusRetryDeliveryMutationOptions(options), queryClient);
+};
+
+export const getBusInboxUrl = (params?: BusInboxParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/bus/inbox?${stringifiedParams}`
+    : `/api/v1/bus/inbox`;
+};
+
+/**
+ * Принятые события, новые сверху.
+ *
+ * `errors=true` — обработка упала (`failed`) или ждёт автоповтора. Страница — `before` и
+ * `before_event_id` последней строки предыдущей.
+ * @summary Inbox
+ */
+export const busInbox = async (
+  params?: BusInboxParams,
+  options?: Parameters<typeof http>[1],
+): Promise<BusInboxPageOut> => {
+  return http<BusInboxPageOut>(getBusInboxUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getBusInboxQueryKey = (params?: BusInboxParams) => {
+  return [`/api/v1/bus/inbox`, ...(params ? [params] : [])] as const;
+};
+
+export const getBusInboxQueryOptions = <
+  TData = Awaited<ReturnType<typeof busInbox>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: BusInboxParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof busInbox>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getBusInboxQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof busInbox>>> = ({ signal }) =>
+    busInbox(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof busInbox>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type BusInboxQueryResult = NonNullable<Awaited<ReturnType<typeof busInbox>>>;
+export type BusInboxQueryError = ErrorType<ErrorOut>;
+
+export function useBusInbox<
+  TData = Awaited<ReturnType<typeof busInbox>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params: undefined | BusInboxParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof busInbox>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof busInbox>>,
+          TError,
+          Awaited<ReturnType<typeof busInbox>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useBusInbox<
+  TData = Awaited<ReturnType<typeof busInbox>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: BusInboxParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof busInbox>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof busInbox>>,
+          TError,
+          Awaited<ReturnType<typeof busInbox>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useBusInbox<
+  TData = Awaited<ReturnType<typeof busInbox>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: BusInboxParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof busInbox>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Inbox
+ */
+
+export function useBusInbox<
+  TData = Awaited<ReturnType<typeof busInbox>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: BusInboxParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof busInbox>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getBusInboxQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getBusRetryInboxUrl = (eventId: string) => {
+  return `/api/v1/bus/inbox/${eventId}/retry`;
+};
+
+/**
+ * «Повторить обработку» записи inbox `failed` или `skipped` (после исправления обработчика).
+ * @summary Retry Inbox
+ */
+export const busRetryInbox = async (
+  eventId: string,
+  options?: Parameters<typeof http>[1],
+): Promise<BusRetryOut> => {
+  return http<BusRetryOut>(getBusRetryInboxUrl(eventId), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getBusRetryInboxMutationKey = () => ["busRetryInbox"] as const;
+
+export const getBusRetryInboxMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof busRetryInbox>>,
+    TError,
+    BusRetryInboxMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof busRetryInbox>>,
+  TError,
+  BusRetryInboxMutationVariables,
+  TContext
+> => {
+  const mutationKey = getBusRetryInboxMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof busRetryInbox>>,
+    BusRetryInboxMutationVariables
+  > = (props) => {
+    const { eventId } = props ?? {};
+
+    return busRetryInbox(eventId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type BusRetryInboxMutationResult = NonNullable<Awaited<ReturnType<typeof busRetryInbox>>>;
+
+export type BusRetryInboxMutationError = ErrorType<ErrorOut>;
+export type BusRetryInboxMutationVariables = { eventId: string };
+
+/**
+ * @summary Retry Inbox
+ */
+export const useBusRetryInbox = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof busRetryInbox>>,
+      TError,
+      BusRetryInboxMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof busRetryInbox>>,
+  TError,
+  BusRetryInboxMutationVariables,
+  TContext
+> => {
+  return useMutation(getBusRetryInboxMutationOptions(options), queryClient);
+};
+
+export const getBusOverviewUrl = () => {
+  return `/api/v1/bus/overview`;
+};
+
+/**
+ * Сводка шины CRM: outbox, DLQ, inbox и подписчики (очередь, предохранитель, выключен ли).
+ * @summary Overview
+ */
+export const busOverview = async (
+  options?: Parameters<typeof http>[1],
+): Promise<BusOverviewOut> => {
+  return http<BusOverviewOut>(getBusOverviewUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getBusOverviewQueryKey = () => {
+  return [`/api/v1/bus/overview`] as const;
+};
+
+export const getBusOverviewQueryOptions = <
+  TData = Awaited<ReturnType<typeof busOverview>>,
+  TError = ErrorType<ErrorOut>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof busOverview>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getBusOverviewQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof busOverview>>> = ({ signal }) =>
+    busOverview({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof busOverview>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type BusOverviewQueryResult = NonNullable<Awaited<ReturnType<typeof busOverview>>>;
+export type BusOverviewQueryError = ErrorType<ErrorOut>;
+
+export function useBusOverview<
+  TData = Awaited<ReturnType<typeof busOverview>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof busOverview>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof busOverview>>,
+          TError,
+          Awaited<ReturnType<typeof busOverview>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useBusOverview<
+  TData = Awaited<ReturnType<typeof busOverview>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof busOverview>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof busOverview>>,
+          TError,
+          Awaited<ReturnType<typeof busOverview>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useBusOverview<
+  TData = Awaited<ReturnType<typeof busOverview>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof busOverview>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Overview
+ */
+
+export function useBusOverview<
+  TData = Awaited<ReturnType<typeof busOverview>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof busOverview>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getBusOverviewQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getListClientsUrl = (params?: ListClientsParams) => {
   const normalizedParams = new URLSearchParams();

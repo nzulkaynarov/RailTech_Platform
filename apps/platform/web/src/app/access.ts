@@ -22,7 +22,9 @@ export function levelForRule(me: Me, rule: AccessRule): AccessLevel | undefined 
 }
 
 export function canSee(me: Me, rule: AccessRule): boolean {
-  return levelForRule(me, rule) !== undefined;
+  const level = levelForRule(me, rule);
+  if (level === undefined) return false;
+  return rule.level === undefined || RANK[level] >= RANK[rule.level];
 }
 
 export function canEdit(me: Me, resource: string): boolean {

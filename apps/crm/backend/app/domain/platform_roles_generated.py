@@ -337,7 +337,9 @@ EDS_BACKEND: Final[dict[str, dict[str, tuple[str, ...]]]] = {
     "erp.stock": {},
     "chats.internal": {},
     "chats.external": {},
-    "admin": {},
+    "admin": {
+        "full": ("bus.manage",),
+    },
     "company.settings": {},
 }
 

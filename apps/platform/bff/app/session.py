@@ -91,6 +91,13 @@ class SessionData(BaseModel):
     erp: BackendTokens | None = None
     # Не пытаться переподключить ERP раньше этого момента (ERP недоступен при входе).
     erp_next_try: float = 0.0
+    # Токен доступа EDS (15 минут, без refresh: `refresh` пуст) — берётся при первом обращении к EDS
+    # обменом SSO-токена CRM `aud=eds` (docs/architecture/sso-token.md). Не вышло — повтор не
+    # раньше `eds_next_try`.
+    eds: BackendTokens | None = None
+    eds_next_try: float = 0.0
+    # До `eds_next_try` EDS отказал в доступе (нет прав, не заведён): 403 без нового обмена.
+    eds_denied: bool = False
 
     def sources(self) -> dict[str, str]:
         """Состояние источников для `sources` агрегирующих ответов (контракт: `Sources`)."""
@@ -145,10 +152,14 @@ class SessionStore:
         await self.redis.delete(self._key(sid))
 
     @asynccontextmanager
-    async def lock(self, sid: str) -> AsyncIterator[None]:
-        key = f"session-lock:{sid}"
+    async def lock(
+        self, sid: str, scope: str = "", wait_seconds: float | None = None
+    ) -> AsyncIterator[None]:
+        """Блокировка сессии. `scope` — отдельная блокировка для долгой операции одной системы
+        (вход в EDS): общие вызовы CRM и ERP сессии её не ждут."""
+        key = f"session-lock:{sid}" + (f":{scope}" if scope else "")
         token = new_secret()
-        deadline = time.monotonic() + LOCK_WAIT_SECONDS
+        deadline = time.monotonic() + (LOCK_WAIT_SECONDS if wait_seconds is None else wait_seconds)
         while not await self.redis.set(key, token, nx=True, px=LOCK_TTL_MS):
             if time.monotonic() >= deadline:
                 log.warning("session_lock_timeout")

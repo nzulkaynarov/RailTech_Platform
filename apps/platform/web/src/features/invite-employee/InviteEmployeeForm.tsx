@@ -1,4 +1,4 @@
-import { Alert, App, Button, Form, Input } from "antd";
+import { Alert, App, Button, Form, Input, Radio, Space } from "antd";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -6,14 +6,19 @@ import { accessOfRoleIds } from "../../entities/employee/access";
 import { backendConsequence } from "../../entities/employee/consequence";
 import { employeeErrorText } from "../../entities/employee/errors";
 import { ApiError } from "../../shared/api/errors";
-import type { Employee } from "../../shared/api/generated/model";
+import type { Employee, EmployeeCredentials } from "../../shared/api/generated/model";
 import { findModule } from "../../modules/registry";
 import { Consequence } from "../../shared/ui/Consequence";
+import { lines } from "../first-run/lines";
+import { TemporaryPasswordCard } from "../temporary-password/TemporaryPasswordCard";
+import { useCreateEmployeeWithPassword } from "../temporary-password/useTemporaryPassword";
 import { RoleCheckboxes } from "../assign-role/RoleCheckboxes";
 import { useRoles } from "../assign-role/useRoles";
 import { useEmployeeInvite } from "../assign-role/useEmployeeMutations";
 
 import "../assign-role/assign-role.css";
+
+type Delivery = "mail" | "password";
 
 interface Values {
   name: string;
@@ -34,6 +39,9 @@ export interface InviteEmployeeFormProps {
  * CRM отправить письмо с временным паролем; пароль в браузер не приходит. Главная кнопка — «Отправить приглашение»
  * с блоком «Что произойдёт». Форма не хранит прошлое приглашение: после результата она сбрасывается, а при повторном
  * открытии (`OrgPage` задаёт `key` по ключу навигации) создаётся заново.
+ *
+ * Без почты (W13-A4, BFF 0.10.0): способ «Временным паролем» создаёт сотрудника без письма и показывает пароль
+ * администратору один раз (`TemporaryPasswordCard`); после «Готово» открывается карточка сотрудника.
  */
 export function InviteEmployeeForm({ onInvited, onOpenCard, onCancel }: InviteEmployeeFormProps) {
   const { t } = useTranslation("modules");
@@ -44,6 +52,10 @@ export function InviteEmployeeForm({ onInvited, onOpenCard, onCancel }: InviteEm
   const [roles, setRoles] = useState<string[]>([]);
   const [rolesTouched, setRolesTouched] = useState(false);
   const [notSent, setNotSent] = useState<{ id: string; crmDown: boolean } | null>(null);
+  const [delivery, setDelivery] = useState<Delivery>("mail");
+  const deliveryId = useId();
+  const [credentials, setCredentials] = useState<EmployeeCredentials | null>(null);
+  const create = useCreateEmployeeWithPassword();
   const invite = useEmployeeInvite((employee) => {
     void message.success(t("admin.org.invite.sent", { email: employee.email }));
     reset();
@@ -56,21 +68,41 @@ export function InviteEmployeeForm({ onInvited, onOpenCard, onCancel }: InviteEm
     setRoles([]);
     setRolesTouched(false);
     setNotSent(null);
+    setDelivery("mail");
+    setCredentials(null);
+    create.reset();
   }
 
   const submit = (values: Values) => {
     setRolesTouched(true);
     if (roles.length === 0) return;
     setNotSent(null);
-    invite.mutate(
-      {
-        data: {
-          email: values.email.trim(),
-          name: values.name.trim(),
-          ...(values.position?.trim() ? { position: values.position.trim() } : {}),
-          role_ids: roles,
+    const data = {
+      email: values.email.trim(),
+      name: values.name.trim(),
+      ...(values.position?.trim() ? { position: values.position.trim() } : {}),
+      role_ids: roles,
+    };
+    if (delivery === "password") {
+      create.mutate(
+        { data },
+        {
+          onSuccess: (created) => {
+            // Пароль есть только здесь: в состоянии формы, пока администратор его не передал.
+            setCredentials(created);
+            create.reset();
+          },
+          onError: (error) => {
+            if (error instanceof ApiError && error.code === "EMAIL_EXISTS") {
+              form.setFields([{ name: "email", errors: [t("admin.org.errors.EMAIL_EXISTS")] }]);
+            }
+          },
         },
-      },
+      );
+      return;
+    }
+    invite.mutate(
+      { data },
       {
         onError: (error) => {
           if (error instanceof ApiError && error.code === "EMAIL_EXISTS") {
@@ -92,18 +124,38 @@ export function InviteEmployeeForm({ onInvited, onOpenCard, onCancel }: InviteEm
   const access = accessOfRoleIds(companyRoles, roles);
   const modules = access.modules.map((code) => findModule(code)?.name ?? code);
   const items = [
-    t("admin.org.invite.consequenceMail"),
+    ...(delivery === "password"
+      ? lines(t, "admin.org.invite.consequencePassword").slice(0, 2)
+      : [t("admin.org.invite.consequenceMail")]),
     ...(modules.length > 0
       ? [t("admin.org.consequence.modules", { modules: modules.join(", ") })]
       : []),
     ...(roles.length > 0 ? backendConsequence(t, access) : []),
-    t("admin.org.invite.consequenceListed"),
+    ...(delivery === "password"
+      ? lines(t, "admin.org.invite.consequencePassword").slice(2)
+      : [t("admin.org.invite.consequenceListed")]),
   ];
   const showRoleNote = rolesTouched && roles.length === 0;
+  const failed = delivery === "password" ? create : invite;
   const fieldError =
-    invite.isError &&
-    !(invite.error instanceof ApiError && invite.error.code === "EMAIL_EXISTS") &&
+    failed.isError &&
+    !(failed.error instanceof ApiError && failed.error.code === "EMAIL_EXISTS") &&
     notSent === null;
+
+  if (credentials !== null) {
+    return (
+      <TemporaryPasswordCard
+        employee={credentials.employee}
+        password={credentials.temporary_password}
+        onDone={() => {
+          const { employee } = credentials;
+          void message.success(t("admin.org.invite.created", { email: employee.email }));
+          // Форма размонтируется вместе с боковым окном: сбрасывать её поля уже не нужно.
+          onInvited(employee);
+        }}
+      />
+    );
+  }
 
   return (
     <Form<Values>
@@ -144,6 +196,22 @@ export function InviteEmployeeForm({ onInvited, onOpenCard, onCancel }: InviteEm
       >
         <Input maxLength={120} autoComplete="off" />
       </Form.Item>
+      <div role="radiogroup" aria-labelledby={deliveryId}>
+        <span id={deliveryId} style={{ display: "block", fontWeight: 600, marginBottom: 4 }}>
+          {t("admin.org.invite.delivery")}
+        </span>
+        <Radio.Group
+          value={delivery}
+          onChange={(event) => {
+            setDelivery(event.target.value as Delivery);
+          }}
+        >
+          <Space direction="vertical" size={4}>
+            <Radio value="mail">{t("admin.org.invite.deliveryMail")}</Radio>
+            <Radio value="password">{t("admin.org.invite.deliveryPassword")}</Radio>
+          </Space>
+        </Radio.Group>
+      </div>
       <RoleCheckboxes
         roles={companyRoles}
         loading={rolesQuery.isPending}
@@ -181,11 +249,13 @@ export function InviteEmployeeForm({ onInvited, onOpenCard, onCancel }: InviteEm
         />
       ) : null}
       {fieldError ? (
-        <Alert type="error" showIcon role="alert" message={employeeErrorText(t, invite.error)} />
+        <Alert type="error" showIcon role="alert" message={employeeErrorText(t, failed.error)} />
       ) : null}
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <Button type="primary" htmlType="submit" block loading={invite.isPending}>
-          {t("admin.org.invite.submit")}
+        <Button type="primary" htmlType="submit" block loading={failed.isPending}>
+          {delivery === "password"
+            ? t("admin.org.invite.submitPassword")
+            : t("admin.org.invite.submit")}
         </Button>
         <Button block onClick={onCancel}>
           {t("admin.org.invite.cancel")}

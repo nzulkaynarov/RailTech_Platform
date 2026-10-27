@@ -94,7 +94,8 @@ async def test_director_gets_an_eds_token_with_all_nine_codes(
     assert (claims["email"], claims["name"]) == ("user7@railtech.uz", "Сотрудник")
     assert claims["exp"] - claims["iat"] == 60
     assert uuid.UUID(claims["jti"]).version == 4
-    assert claims["permissions"] == sorted(EDS_PERMISSIONS)
+    # журнал шины (`bus.manage`) — раздел `admin: full`, у директора `admin: read` (W13-A2)
+    assert claims["permissions"] == sorted(set(EDS_PERMISSIONS) - {"bus.manage"})
     assert redirect_url == "", "у EDS нет внешнего маршрута"
 
 
@@ -107,7 +108,7 @@ async def test_token_is_signed_with_the_first_secret_only(
 
     token, _ = await _service(sso_settings, user).issue_token(7, aud="eds")
 
-    assert _decode(token)["permissions"] == ["memos.create"]
+    assert _decode(token)["permissions"] == ["bus.manage", "memos.create"]
     with pytest.raises(jwt.InvalidSignatureError):
         jwt.decode(token, SECRET_2, algorithms=["HS256"], audience="eds", issuer="crm")
 

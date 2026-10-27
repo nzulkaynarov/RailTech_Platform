@@ -254,6 +254,7 @@ export const MENU = {
     roles: ["admin"],
     org: ["admin"],
     integrations: ["admin"],
+    bus: ["admin"],
     tickets: ["admin"],
     company: ["company.settings"],
     bot: ["admin"],

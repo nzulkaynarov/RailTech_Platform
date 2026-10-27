@@ -251,7 +251,10 @@ resources:
           - reply_templates:write
           - sandbox:use
           - export:read
+      # Журнал шины (W13-A2): ERP — `team.manage` (код раздела `admin` в ERP, нового кода не нужно); EDS — `bus.manage`
+      # (у EDS кода раздела `admin` не было). В CRM журнал — `integrations:read`/`integrations:write`.
       erp: { full: [team.manage] }
+      eds: { full: [bus.manage] }
   # Реквизиты, шаблоны документов, нумерация, условия оплаты компании (решение архитектора по Q-R1-1):
   # у ролей из шаблонов раздела нет, у директора и администратора — full.
   - key: company.settings
@@ -299,6 +302,9 @@ menu:
     roles: [admin]
     org: [admin]
     integrations: [admin]
+    # Журнал интеграций (W13-A2): данные BFF отдаёт только при `admin: full`, поэтому SPA показывает пункт лишь с уровнем
+    # `full` (`level` раздела в apps/platform/web/src/modules/admin/module.ts); здесь, как у всех пунктов, — раздел.
+    bus: [admin]
     tickets: [admin]
     company: [company.settings]
     bot: [admin]

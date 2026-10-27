@@ -226,6 +226,7 @@ def test_menu_examples() -> None:
         "roles",
         "org",
         "integrations",
+        "bus",
         "tickets",
         "company",
         "bot",
@@ -233,7 +234,7 @@ def test_menu_examples() -> None:
     # W13-A5: у администратора из CRM открыта только «База знаний» (раздел `admin`)
     assert rbac.menu_for(admin)["crm"] == ["kb"]
     director = rbac.menu_for(rbac.merge(roles("DIRECTOR")))
-    assert director["admin"] == ["roles", "org", "integrations", "tickets", "company", "bot"]
+    assert director["admin"] == ["roles", "org", "integrations", "bus", "tickets", "company", "bot"]
     assert "kb" in director["crm"]
     assert "bot" not in rbac.menu_for(rbac.merge(roles("MANAGER")))["admin"]
     assert "kb" in rbac.menu_for(rbac.merge(roles("MANAGER")))["crm"]

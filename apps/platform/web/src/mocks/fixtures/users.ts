@@ -136,6 +136,79 @@ export const DEMO_WRONG_PASSWORD = "wrong-password";
 /** Текущий пароль, который мок смены пароля считает неверным (`WRONG_PASSWORD`). */
 export const DEMO_WRONG_CURRENT_PASSWORD = "wrong-current";
 
+/**
+ * Сотрудники, созданные в моках на лету (первый администратор мастера «Первый запуск», W13-A4): хранятся в `localStorage`
+ * рядом с сессией, без хранилища — в памяти. Демо-набор `DEMO_USERS` неизменен.
+ */
+const EXTRA_KEY = "rt-pf-mock-extra-users";
+let extraMemory: DemoUser[] = [];
+
+function readExtra(): DemoUser[] {
+  try {
+    const raw = window.localStorage.getItem(EXTRA_KEY);
+    return raw ? (JSON.parse(raw) as DemoUser[]) : extraMemory;
+  } catch {
+    return extraMemory;
+  }
+}
+
+export function registerUser(user: DemoUser): void {
+  extraMemory = [...readExtra().filter((u) => u.id !== user.id), user];
+  try {
+    window.localStorage.setItem(EXTRA_KEY, JSON.stringify(extraMemory));
+  } catch {
+    // Остаётся копия в памяти.
+  }
+}
+
+export function resetExtraUsers(): void {
+  extraMemory = [];
+  temporaryPasswords.clear();
+  try {
+    window.localStorage.removeItem(EXTRA_KEY);
+  } catch {
+    // Нечего очищать.
+  }
+}
+
+/** Меняет созданного на лету сотрудника (признак «пароль временный»); демо-набор неизменен. */
+export function updateExtraUser(id: string, patch: Partial<DemoUser>): void {
+  const current = readExtra();
+  if (!current.some((u) => u.id === id)) return;
+  extraMemory = current.map((u) => (u.id === id ? { ...u, ...patch } : u));
+  try {
+    window.localStorage.setItem(EXTRA_KEY, JSON.stringify(extraMemory));
+  } catch {
+    // Остаётся копия в памяти.
+  }
+}
+
+/**
+ * Выданные временные пароли (W13-A4): только в памяти страницы и только пока сотрудник не сменил пароль — вход мока
+ * принимает для такого адреса именно этот пароль. Как в CRM, где пароль известен лишь тому, кому его показали.
+ */
+const temporaryPasswords = new Map<string, string>();
+
+export function rememberTemporaryPassword(email: string, password: string): void {
+  temporaryPasswords.set(email.trim().toLowerCase(), password);
+}
+
+export function temporaryPasswordOf(email: string): string | undefined {
+  return temporaryPasswords.get(email.trim().toLowerCase());
+}
+
+export function forgetTemporaryPassword(email: string): void {
+  temporaryPasswords.delete(email.trim().toLowerCase());
+}
+
+export function allUsers(): readonly DemoUser[] {
+  return [...DEMO_USERS, ...readExtra()];
+}
+
+export function findUserById(id: string): DemoUser | undefined {
+  return allUsers().find((u) => u.id === id);
+}
+
 export function findUser(email: string): DemoUser | undefined {
-  return DEMO_USERS.find((u) => u.email.toLowerCase() === email.trim().toLowerCase());
+  return allUsers().find((u) => u.email.toLowerCase() === email.trim().toLowerCase());
 }

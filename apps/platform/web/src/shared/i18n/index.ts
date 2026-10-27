@@ -1,6 +1,7 @@
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 
+import enBus from "./en/bus.json";
 import enBot from "./en/bot.json";
 import enCommon from "./en/common.json";
 import enCompany from "./en/company.json";
@@ -10,6 +11,7 @@ import enKb from "./en/kb.json";
 import enModules from "./en/modules.json";
 import enShell from "./en/shell.json";
 import enUi from "./en/ui.json";
+import ruBus from "./ru/bus.json";
 import ruBot from "./ru/bot.json";
 import ruCommon from "./ru/common.json";
 import ruCompany from "./ru/company.json";
@@ -19,6 +21,7 @@ import ruKb from "./ru/kb.json";
 import ruModules from "./ru/modules.json";
 import ruShell from "./ru/shell.json";
 import ruUi from "./ru/ui.json";
+import uzBus from "./uz/bus.json";
 import uzBot from "./uz/bot.json";
 import uzCommon from "./uz/common.json";
 import uzCompany from "./uz/company.json";
@@ -39,6 +42,7 @@ export const resources = {
     modules: ruModules,
     dictionary: ruDictionary,
     integrations: ruIntegrations,
+    bus: ruBus,
     kb: ruKb,
     bot: ruBot,
     ui: ruUi,
@@ -50,6 +54,7 @@ export const resources = {
     modules: uzModules,
     dictionary: uzDictionary,
     integrations: uzIntegrations,
+    bus: uzBus,
     kb: uzKb,
     bot: uzBot,
     ui: uzUi,
@@ -61,6 +66,7 @@ export const resources = {
     modules: enModules,
     dictionary: enDictionary,
     integrations: enIntegrations,
+    bus: enBus,
     kb: enKb,
     bot: enBot,
     ui: enUi,
@@ -89,13 +95,24 @@ export function rememberLanguage(language: Language): void {
   }
 }
 
-/** ru — язык по умолчанию (SPEC-v3 §8); uz — латиница. Пространства имён: common, shell (каркас и вход), modules (меню и заглушки), dictionary (словарь SPEC-v3 §2: стадии и статусы), ui (тексты общих компонентов), integrations (Admin · Внешние интеграции), company (Admin · Компания), kb (CRM · База знаний), bot (Admin · Настройки бота). */
+/** ru — язык по умолчанию (SPEC-v3 §8); uz — латиница. Пространства имён: common, shell (каркас и вход), modules (меню и заглушки), dictionary (словарь SPEC-v3 §2: стадии и статусы), ui (тексты общих компонентов), integrations (Admin · Внешние интеграции), company (Admin · Компания), kb (CRM · База знаний), bot (Admin · Настройки бота), bus (Admin · Журнал интеграций). */
 void i18n.use(initReactI18next).init({
   resources,
   lng: storedLanguage(),
   fallbackLng: "ru",
   defaultNS: "common",
-  ns: ["common", "shell", "modules", "dictionary", "ui", "integrations", "company", "kb", "bot"],
+  ns: [
+    "common",
+    "shell",
+    "modules",
+    "dictionary",
+    "ui",
+    "integrations",
+    "company",
+    "bus",
+    "kb",
+    "bot",
+  ],
   interpolation: { escapeValue: false },
 });
 

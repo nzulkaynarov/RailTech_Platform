@@ -23,6 +23,7 @@ describe("i18n", () => {
     "ui",
     "integrations",
     "company",
+    "bus",
     "kb",
     "bot",
   ] as const)("пространство %s: uz и en — те же ключи, что ru", (ns) => {
@@ -41,6 +42,7 @@ describe("i18n", () => {
         "ui",
         "integrations",
         "company",
+        "bus",
         "kb",
         "bot",
       ] as const) {
