@@ -17,6 +17,14 @@ export function findModule(code: string): ModuleConfig | undefined {
   return MODULES.find((m) => m.code === code);
 }
 
+/**
+ * Имя модуля для людей (`modules:<code>.name`: «Клиенты», «Расчёт» — UX-оценка 2026-10-27 §6.1) в рейле, крошках, поиске
+ * и списках модулей роли. Неизвестный код — как есть.
+ */
+export function moduleName(t: (key: string) => string, code: string): string {
+  return findModule(code) ? t(`modules:${code}.name`) : code;
+}
+
 export interface SectionMatch {
   module: ModuleConfig;
   section: SectionConfig;
@@ -44,7 +52,7 @@ function queryMatches(want: URLSearchParams, have: URLSearchParams): boolean {
 }
 
 /**
- * Раздел по адресу. Сначала пункты с `?tab=` в пути (Chats · Внутренний), затем точные пути списков,
+ * Раздел по адресу. Сначала пункты с query в пути (Чаты · Команда, `?scope=internal`), затем точные пути списков,
  * затем карточки объектов (`/chats/contacts` раньше `/chats/:id`). Нет совпадения — undefined (404 внутри каркаса).
  */
 export function matchSection(pathname: string, search = ""): SectionMatch | undefined {

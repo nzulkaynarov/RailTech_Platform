@@ -1,6 +1,6 @@
 {
   "page": {
-    "title": "Audit jurnali",
+    "title": "Harakatlar tarixi",
     "subtitle": "Kim, nimani va qachon CRM va Platformada o'zgartirgan. Yozuvlar faqat o'qiladi: ularni o'zgartirib yoki o'chirib bo'lmaydi."
   },
   "filters": {
@@ -46,7 +46,7 @@
   },
   "loadError": {
     "title": "Jurnalni yuklab bo'lmadi",
-    "text": "Jurnalni CRM saqlaydi. So'rovni takrorlang; xato davom etsa, Admin · Integratsiyalarda CRM ni tekshiring.",
+    "text": "Jurnalni CRM saqlaydi. So'rovni takrorlang; xato davom etsa, Sozlamalar · Ulanishlar bo‘limida CRM ni tekshiring.",
     "retry": "Takrorlash"
   },
   "card": {
@@ -117,7 +117,7 @@
     "self": "O'z parolingizni bu yerda tiklab bo'lmaydi: avatar menyusidagi «Parolni almashtirish» ni tanlang.",
     "sent": "Yangi parolli xat {{email}} manziliga yuborildi",
     "errors": {
-      "NOT_CONFIGURED": "Pochta ulanmagan, parol o'zgarmadi. Admin · Integratsiyalarda pochtani ulang va takrorlang.",
+      "NOT_CONFIGURED": "Pochta ulanmagan, parol o'zgarmadi. Sozlamalar · Ulanishlar bo‘limida pochtani ulang va takrorlang.",
       "SECRETS_KEY_MISSING": "Serverda sirlarni shifrlash kaliti yo'q: xat yuborib bo'lmaydi. Uni server sozlamalarida belgilang.",
       "SELF_RESET": "O'z parolingizni bu yerda tiklab bo'lmaydi: avatar menyusidagi «Parolni almashtirish» ni tanlang.",
       "FORBIDDEN": "Huquq yetarli emas: parolni administrator tiklaydi.",
@@ -125,7 +125,7 @@
       "BACKEND_UNAVAILABLE": "CRM javob bermayapti. Parol o'zgarmadi, keyinroq takrorlang.",
       "DEFAULT": "Parolni tiklab bo'lmadi. Qayta urinib ko'ring."
     },
-    "integrations": "Admin · Integratsiyalarni ochish",
+    "integrations": "Sozlamalar · Ulanishlarni ochish",
     "temporaryHint": "Xatsiz: yangi parolni bir marta ko'rasiz va xodimga shaxsan yetkazasiz; avvalgisi amal qilmaydi.",
     "confirmTemporary": "Parol berish"
   },
@@ -137,7 +137,7 @@
     "telegram": "Telegram",
     "linked": "Bog'langan",
     "notLinked": "Bog'lanmagan",
-    "linkHint": "Telegramni administrator xodim kartochkasida bog'laydi (Admin · Tashkiliy tuzilma). Bog'lanmaguncha obunalar ishlamaydi.",
+    "linkHint": "Telegramni administrator xodim kartochkasida bog'laydi (Sozlamalar · Xodimlar). Bog'lanmaguncha obunalar ishlamaydi.",
     "failed": "Botning oxirgi xabari yetib bormadi ({{time}}). Telegramda botni oching, «Start» ni bosing va sinov bildirishnomasini yuboring.",
     "leads": "Meni kutayotgan lidlar",
     "leadsHint": "Lid menejerga topshirilganda yoki mijoz javob berganda bot yozadi.",
@@ -150,7 +150,7 @@
     "errors": {
       "NOT_LINKED": "Telegram bog'lanmagan: administratordan xodim kartochkasida bog'lashni so'rang.",
       "REFUSED": "Telegram xabarni qabul qilmadi. Botni oching, «Start» ni bosing va bloklanmaganiga ishonch hosil qiling.",
-      "NOT_CONFIGURED": "Bot ulanmagan. Administrator uni Admin · Integratsiyalarda ulaydi.",
+      "NOT_CONFIGURED": "Bot ulanmagan. Administrator uni Sozlamalar · Ulanishlar bo‘limida ulaydi.",
       "BACKEND_UNAVAILABLE": "CRM javob bermayapti. Keyinroq takrorlang.",
       "DEFAULT": "Amalni bajarib bo'lmadi. Qayta urinib ko'ring."
     }

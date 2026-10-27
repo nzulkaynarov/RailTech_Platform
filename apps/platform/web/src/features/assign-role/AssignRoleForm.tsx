@@ -8,7 +8,7 @@ import { employeeErrorText } from "../../entities/employee/errors";
 import { isSystemAdmin } from "../../entities/role/roles";
 import type { Employee } from "../../shared/api/generated/model";
 import { Consequence } from "../../shared/ui/Consequence";
-import { findModule } from "../../modules/registry";
+import { moduleName } from "../../modules/registry";
 import { RoleCheckboxes } from "./RoleCheckboxes";
 import { useRoles } from "./useRoles";
 import { hasActiveLeads } from "./leads";
@@ -25,8 +25,8 @@ export interface AssignRoleFormProps {
   otherActiveAdmins: number;
 }
 
-function moduleList(codes: readonly string[]): string {
-  return codes.map((code) => findModule(code)?.name ?? code).join(", ");
+function moduleList(t: (key: string) => string, codes: readonly string[]): string {
+  return codes.map((code) => moduleName(t, code)).join(", ");
 }
 
 /**
@@ -76,8 +76,8 @@ export function AssignRoleForm({ employee, selfId, otherActiveAdmins }: AssignRo
   const after = accessOfRoleIds(roles, selected);
   const lost = before.modules.filter((m) => !after.modules.includes(m));
   const items = [
-    t("admin.org.consequence.modules", { modules: moduleList(after.modules) || "—" }),
-    ...(lost.length > 0 ? [t("admin.org.consequence.lost", { modules: moduleList(lost) })] : []),
+    t("admin.org.consequence.modules", { modules: moduleList(t, after.modules) || "—" }),
+    ...(lost.length > 0 ? [t("admin.org.consequence.lost", { modules: moduleList(t, lost) })] : []),
     ...backendConsequence(t, after),
     ...(positionChanged
       ? [

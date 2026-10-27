@@ -3,7 +3,7 @@ import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type R
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 
-import { findModule } from "../../modules/registry";
+import { moduleName } from "../../modules/registry";
 import type { SearchHit } from "../../shared/api/generated/model";
 import { useSearch } from "../../shared/api/generated/platform-bff";
 import { SearchIcon } from "../../shared/ui/icons";
@@ -185,7 +185,7 @@ export function GlobalSearch({ inputRef, shortcut, mobile }: GlobalSearchProps) 
           hidden={!open || options.length === 0}
         >
           {view.map((group) => {
-            const name = findModule(group.module)?.name ?? group.module;
+            const name = moduleName(t, group.module);
             const headingId = `${listId}-h-${group.module}`;
             return (
               <div key={group.module} role="group" aria-labelledby={headingId}>

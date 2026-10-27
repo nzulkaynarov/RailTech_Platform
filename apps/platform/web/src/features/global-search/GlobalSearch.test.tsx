@@ -37,7 +37,7 @@ describe("Глобальный поиск", () => {
     type(box, "ЗВ-2026-104");
 
     const list = await screen.findByRole("listbox", { name: "Результаты поиска" });
-    const group = within(list).getByRole("group", { name: "CRM" });
+    const group = within(list).getByRole("group", { name: "Клиенты" });
     const option = within(group).getByRole("option", { name: /ЗВ-2026-104 · Стрелочные приводы/ });
     expect(option).toHaveTextContent("Заявка");
     expect(box).toHaveAttribute("aria-expanded", "true");
@@ -50,8 +50,8 @@ describe("Глобальный поиск", () => {
 
     type(box, "Демо");
     const list = await screen.findByRole("listbox", { name: "Результаты поиска" });
-    expect(within(list).getByRole("group", { name: "CRM" })).toBeVisible();
-    expect(within(list).getByRole("group", { name: "EDS" })).toBeVisible();
+    expect(within(list).getByRole("group", { name: "Клиенты" })).toBeVisible();
+    expect(within(list).getByRole("group", { name: "Документы" })).toBeVisible();
   });
 
   it("администратору матрица не открывает ни CRM, ни EDS: находить нечего", async () => {

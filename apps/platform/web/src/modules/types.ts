@@ -2,7 +2,7 @@ import type { AccessLevel, ModuleCode } from "../shared/api/generated/model";
 
 /**
  * Правило доступа к разделу: ключ ресурса матрицы `platform-rbac.yaml` или «любой из». Уровень берётся из `Me.resources`;
- * `level: "full"` — раздел только для полного доступа (Admin · Журнал интеграций: чтения уровня `read` у него нет).
+ * `level: "full"` — раздел только для полного доступа (Настройки · Обмен между системами: чтения уровня `read` у него нет).
  */
 export type AccessRule = ({ resource: string } | { anyOf: readonly string[] }) & {
   level?: AccessLevel;
@@ -38,12 +38,13 @@ export interface ModuleAction {
   to?: string;
 }
 
+/**
+ * Модуль рейла. Порядок — в `MODULES` (registry.ts). Имена переводятся (UX-оценка 2026-10-27 §6.1):
+ * `modules:<code>.name` — подпись в рейле, нижней панели и хлебных крошках (≤ 10 символов),
+ * `modules:<code>.title` — заголовок подменю без номера; код модуля (`crm`, `eds`, `erp`) остаётся только в URL и коде.
+ */
 export interface ModuleConfig {
   code: ModuleCode;
-  /** Номер в заголовке подменю: «1. Dashboard» */
-  order: number;
-  /** Подпись в рейле и заголовке подменю (названия продукта не переводятся) */
-  name: string;
   sections: readonly SectionConfig[];
   /** Главное действие модуля внизу подменю (SPEC-v3 §6.2); есть, если ресурс доступен на запись */
   action?: ModuleAction;

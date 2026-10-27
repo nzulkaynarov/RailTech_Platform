@@ -187,14 +187,14 @@ def build_cards(view: View, snap: Snapshot, queue: list[QueueItem]) -> list[Queu
             key="leads_without_answer",
             label="Лиды без ответа",
             count=answer,
-            hint="CRM · Все сообщения",
+            hint="Клиенты · Ждут ответа",
             path="/crm/messages",
         )
         cards["leads_to_take"] = QueueCard(
             key="leads_to_take",
             label="Лиды без менеджера",
             count=take,
-            hint="CRM · Все сообщения",
+            hint="Клиенты · Ждут ответа",
             path="/crm/messages",
         )
     if wants_approvals(view):
@@ -202,7 +202,7 @@ def build_cards(view: View, snap: Snapshot, queue: list[QueueItem]) -> list[Queu
             key="quotes_to_approve",
             label="КП на одобрение",
             count=snap.approvals_total,
-            hint="EDS · Черновик",
+            hint="Документы · КП на одобрение",
             path="/eds/drafts",
         )
     if wants_projects(view):
@@ -210,7 +210,7 @@ def build_cards(view: View, snap: Snapshot, queue: list[QueueItem]) -> list[Queu
             key="projects_in_work",
             label="Проекты в работе",
             count=projects_in_work(snap),
-            hint="EDS · Все проекты",
+            hint="Документы · Проекты: договоры и акты",
             path="/eds/projects",
         )
     return list(cards.values())[:MAX_CARDS]

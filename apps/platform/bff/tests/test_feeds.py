@@ -405,7 +405,7 @@ async def test_cards_for_director(web: Web, fb: FeedBackends, check: ContractChe
     assert cards["quotes_to_approve"]["count"] == 2
     assert cards["quotes_to_approve"]["path"] == "/eds/drafts"
     assert cards["projects_in_work"]["count"] == 2  # исполнение закрыто целиком у одного
-    assert cards["projects_in_work"]["hint"] == "EDS · Все проекты"
+    assert cards["projects_in_work"]["hint"] == "Документы · Проекты: договоры и акты"
 
 
 async def test_cards_for_manager_count_queue_kinds(

@@ -62,14 +62,14 @@ describe("вход и страж маршрутов", () => {
   it("при активной сессии «Вход» ведёт в очередь", async () => {
     signIn("manager@demo.example");
     const { router } = renderAt("/login");
-    expect(await screen.findByRole("heading", { level: 1, name: "Моя очередь" })).toBeVisible();
+    expect(await screen.findByRole("heading", { level: 1, name: "Мои задачи" })).toBeVisible();
     expect(router.state.location.pathname).toBe("/dashboard/queue");
   });
 
   it("сессия закончилась во время работы: экран входа с возвратом и сообщением", async () => {
     signIn("manager@demo.example");
     const { router, queryClient } = renderAt("/crm/leads");
-    await screen.findByRole("heading", { level: 1, name: "Все лиды" });
+    await screen.findByRole("heading", { level: 1, name: "Лиды" });
     endSession();
     await queryClient.invalidateQueries();
     await vi.waitFor(() => {
@@ -96,7 +96,7 @@ describe("вход и страж маршрутов", () => {
     });
     fireEvent.change(screen.getByLabelText("Пароль"), { target: { value: "anything" } });
     fireEvent.click(screen.getByRole("button", { name: "Войти" }));
-    expect(await screen.findByRole("heading", { level: 1, name: "Моя очередь" })).toBeVisible();
+    expect(await screen.findByRole("heading", { level: 1, name: "Мои задачи" })).toBeVisible();
     expect(router.state.location.pathname).toBe("/dashboard/queue");
     expect(readSession()?.userId).toBe("u-demo-director");
   });
@@ -120,7 +120,7 @@ describe("каркас на 1440", () => {
       http.get("*/me", () => HttpResponse.json({ ...me, modules: [...me.modules, "reports"] })),
     );
     renderAt("/dashboard/queue");
-    expect(await screen.findByRole("heading", { level: 1, name: "Моя очередь" })).toBeVisible();
+    expect(await screen.findByRole("heading", { level: 1, name: "Мои задачи" })).toBeVisible();
     const rail = screen.getByRole("navigation", { name: "Модули" });
     expect(within(rail).getAllByRole("link")).toHaveLength(6);
   });
@@ -135,30 +135,30 @@ describe("каркас на 1440", () => {
   it("рейл — модули роли, подменю — разделы активного модуля, главное действие неактивно", async () => {
     signIn("manager@demo.example");
     renderAt("/crm/leads");
-    expect(await screen.findByRole("heading", { level: 1, name: "Все лиды" })).toBeVisible();
+    expect(await screen.findByRole("heading", { level: 1, name: "Лиды" })).toBeVisible();
 
     const rail = screen.getByRole("navigation", { name: "Модули" });
     expect(
       within(rail)
         .getAllByRole("link")
         .map((a) => a.textContent),
-    ).toEqual(["RT", "Dashboard", "CRM", "EDS", "ERP", "Chats"]);
-    expect(within(rail).getByRole("link", { name: "CRM" })).toHaveAttribute("aria-current", "page");
+    ).toEqual(["RT", "Главная", "Клиенты", "Документы", "Расчёт", "Чаты"]);
+    expect(within(rail).getByRole("link", { name: "Клиенты" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
 
     const menu = screen.getByRole("navigation", { name: "Разделы модуля" });
-    expect(within(menu).getByText("2. CRM")).toBeVisible();
+    // Заголовок подменю — полное имя модуля без номера (UX-оценка 2026-10-27 §6.1), а не «2. CRM».
+    expect(within(menu).getByText("Клиенты и лиды")).toBeVisible();
+    expect(within(menu).queryByText(/^\d+\.\s/)).not.toBeInTheDocument();
+    const crumbs = screen.getByRole("navigation", { name: "Хлебные крошки" });
+    expect(within(crumbs).getByRole("link", { name: "Клиенты" })).toBeVisible();
     expect(
       within(menu)
         .getAllByRole("link")
         .map((a) => a.textContent.replace(/\d+, требует действия|\d+$/, "")),
-    ).toEqual([
-      "Все сообщения",
-      "Все лиды",
-      "Все клиенты",
-      "Все заявки",
-      "Каналы связи",
-      "База знаний",
-    ]);
+    ).toEqual(["Ждут ответа", "Лиды", "Клиенты", "Заявки", "Каналы связи", "База знаний бота"]);
     const action = within(menu).getByRole("button", { name: /Создать заявку/ });
     expect(action).toBeDisabled();
   });
@@ -170,20 +170,20 @@ describe("каркас на 1440", () => {
     expect(screen.queryByRole("complementary", { name: "Боковое окно" })).not.toBeInTheDocument();
     // у бухгалтера CRM виден только через «Все клиенты…» (чтение) — раздела «Все лиды» в подменю нет
     const menu = screen.getByRole("navigation", { name: "Разделы модуля" });
-    expect(within(menu).queryByText("Все лиды")).not.toBeInTheDocument();
+    expect(within(menu).queryByText("Лиды")).not.toBeInTheDocument();
   });
 
   it("Admin по прямому URL для менеджера — Forbidden, а в рейле Admin нет", async () => {
     signIn("manager@demo.example");
     renderAt("/admin/roles");
     expect(await screen.findByRole("heading", { level: 1, name: "Нет доступа" })).toBeVisible();
-    expect(screen.queryByRole("link", { name: "Admin" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Настройки" })).not.toBeInTheDocument();
   });
 
   it("умолчание CRM · Все лиды — боковое окно скрыто; «Панель» открывает его и пишет ?panel=open", async () => {
     signIn("manager@demo.example");
     const { router } = renderAt("/crm/leads");
-    await screen.findByRole("heading", { level: 1, name: "Все лиды" });
+    await screen.findByRole("heading", { level: 1, name: "Лиды" });
     expect(screen.queryByRole("complementary", { name: "Боковое окно" })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Панель" }));
@@ -195,7 +195,7 @@ describe("каркас на 1440", () => {
   it("подменю сворачивается, состояние пишется в localStorage по пользователю и разделу", async () => {
     signIn("director@demo.example");
     renderAt("/dashboard/queue");
-    await screen.findByRole("heading", { level: 1, name: "Моя очередь" });
+    await screen.findByRole("heading", { level: 1, name: "Мои задачи" });
     fireEvent.click(screen.getByRole("button", { name: "Свернуть меню" }));
     expect(screen.queryByRole("navigation", { name: "Разделы модуля" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Меню" })).toBeVisible();
@@ -210,7 +210,7 @@ describe("каркас на 1440", () => {
   it("если localStorage бросает, панели всё равно работают", async () => {
     signIn("director@demo.example");
     renderAt("/dashboard/queue");
-    await screen.findByRole("heading", { level: 1, name: "Моя очередь" });
+    await screen.findByRole("heading", { level: 1, name: "Мои задачи" });
     vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
       throw new Error("QuotaExceededError");
     });
@@ -221,7 +221,7 @@ describe("каркас на 1440", () => {
   it("смена активной роли в меню аватара пересчитывает рейл", async () => {
     signIn("all@demo.example");
     renderAt("/dashboard/queue");
-    await screen.findByRole("heading", { level: 1, name: "Моя очередь" });
+    await screen.findByRole("heading", { level: 1, name: "Мои задачи" });
     const rail = () => screen.getByRole("navigation", { name: "Модули" });
     expect(within(rail()).getAllByRole("link")).toHaveLength(7);
 
@@ -232,14 +232,14 @@ describe("каркас на 1440", () => {
         within(rail())
           .getAllByRole("link")
           .map((a) => a.textContent),
-      ).toEqual(["RT", "Dashboard", "CRM", "EDS", "Chats", "Admin"]);
+      ).toEqual(["RT", "Главная", "Клиенты", "Документы", "Чаты", "Настройки"]);
     });
   });
 
   it("Ctrl+K фокусирует поиск, но не перехватывает ввод в других полях", async () => {
     signIn("director@demo.example");
     renderAt("/dashboard/queue");
-    await screen.findByRole("heading", { level: 1, name: "Моя очередь" });
+    await screen.findByRole("heading", { level: 1, name: "Мои задачи" });
     const search = screen.getByRole("combobox", { name: "Глобальный поиск" });
 
     fireEvent.keyDown(document.body, { key: "k", ctrlKey: true });
@@ -275,7 +275,7 @@ describe("узкие экраны", () => {
     setViewportWidth(390);
     signIn("director@demo.example");
     renderAt("/dashboard/queue");
-    await screen.findByRole("heading", { level: 1, name: "Моя очередь" });
+    await screen.findByRole("heading", { level: 1, name: "Мои задачи" });
     expect(screen.getAllByRole("navigation", { name: "Модули" })).toHaveLength(1);
     expect(screen.queryByRole("navigation", { name: "Разделы модуля" })).not.toBeInTheDocument();
 
@@ -287,7 +287,7 @@ describe("узкие экраны", () => {
     setViewportWidth(1100);
     signIn("director@demo.example");
     renderAt("/dashboard/queue");
-    await screen.findByRole("heading", { level: 1, name: "Моя очередь" });
+    await screen.findByRole("heading", { level: 1, name: "Мои задачи" });
     expect(screen.queryByRole("tab", { name: "Сегодня" })).not.toBeInTheDocument();
     expect(screen.getByRole("navigation", { name: "Модули" })).toBeVisible();
   });

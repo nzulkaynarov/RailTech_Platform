@@ -313,7 +313,7 @@
       "multipart_required": "The file must be sent through the upload form.",
       "document_indexing": "The document is already queued for indexing or is being indexed. Wait a minute and try again.",
       "unknown_product": "There is no such product in the directory.",
-      "model_key_required": "The search model is unavailable: add the embeddings key in Admin · External integrations, section \"AI models\", and try again.",
+      "model_key_required": "The search model is unavailable: add the embeddings key in Settings · Connections, section \"AI models\", and try again.",
       "litellm_unavailable": "The model gateway is not responding: the bot cannot form a reply. Try again later.",
       "storage_unavailable": "File storage is not responding. Try again later."
     }
