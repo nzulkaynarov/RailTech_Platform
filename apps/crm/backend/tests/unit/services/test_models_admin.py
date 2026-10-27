@@ -50,8 +50,14 @@ def test_seed_file_defines_all_roles_with_env_keys() -> None:
     ("change", "field"),
     [
         (ModelChange("mistral", "x"), "provider"),
-        (ModelChange("anthropic", "anthropic/claude-x"), "model"),
         (ModelChange("anthropic", "bad model id"), "model"),
+        (ModelChange("anthropic", ""), "model"),
+        (ModelChange("anthropic", "anthropic/"), "model"),
+        (ModelChange("anthropic", "../etc/passwd"), "model"),
+        (ModelChange("anthropic", "claude-x;drop"), "model"),
+        (ModelChange("anthropic", "openai/gpt-x"), "model"),  # префикс другого провайдера
+        (ModelChange("openai", "anthropic/claude-x"), "model"),
+        (ModelChange("anthropic", "anthropic/openai/gpt-x"), "model"),
         (ModelChange("anthropic", "claude-x", api_base="ftp://x"), "api_base"),
         (ModelChange("anthropic", "claude-x", api_key="short"), "api_key"),
     ],
@@ -60,6 +66,32 @@ def test_validate_rejects(change: ModelChange, field: str) -> None:
     with pytest.raises(ValidationFailedError) as exc:
         validate(change)
     assert exc.value.details["field"] == field
+
+
+@pytest.mark.parametrize(
+    ("provider", "typed", "expected"),
+    [
+        ("anthropic", "claude-haiku-5-5", "claude-haiku-5-5"),
+        ("anthropic", "anthropic/claude-haiku-5-5", "claude-haiku-5-5"),  # то, что показывал экран
+        ("anthropic", "  anthropic/claude-haiku-5-5  ", "claude-haiku-5-5"),
+        ("anthropic", "Anthropic/claude-haiku-5-5", "claude-haiku-5-5"),
+        ("gemini", "gemini/gemini-3.8-flash", "gemini-3.8-flash"),
+        ("openai", "ft:gpt-x:org::id", "ft:gpt-x:org::id"),
+        ("openai", "gemini", "gemini"),  # имя, совпавшее с провайдером, без «/» — просто имя
+    ],
+)
+def test_validate_normalizes_model_in_one_place(provider: str, typed: str, expected: str) -> None:
+    checked = validate(ModelChange(provider, typed, api_key=FAKE_KEY))
+    assert checked.model == expected
+    assert checked.provider == provider
+    assert checked.api_key == FAKE_KEY
+
+
+def test_validate_error_names_model_field_without_secrets() -> None:
+    with pytest.raises(ValidationFailedError) as exc:
+        validate(ModelChange("openai", "anthropic/claude-x", api_key=FAKE_KEY))
+    assert exc.value.details == {"field": "model"}
+    assert FAKE_KEY not in str(exc.value)
 
 
 def test_build_params_same_model_keeps_flags_and_env_key() -> None:
@@ -181,6 +213,32 @@ async def test_change_creates_new_then_deletes_old(monkeypatch: pytest.MonkeyPat
     assert out.quality_check_recommended is True
     assert out.reindex_required is False
     assert (out.provider, out.model, out.key_source) == ("openai", "gpt-x", "crm")
+
+
+@respx.mock
+async def test_change_accepts_model_with_provider_prefix(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Значение `anthropic/claude-…`, с экрана принимается и не удваивает префикс."""
+    rec = _Recorder()
+    service = _service(rec, monkeypatch)
+    respx.get(f"{BASE}/model/info").mock(
+        httpx.Response(
+            200, json=_info(("rt-old", "dialog-model", "anthropic/claude-haiku-5-5", True))
+        )
+    )
+    new = respx.post(f"{BASE}/model/new").mock(httpx.Response(200, json={"model_id": "x"}))
+    respx.post(f"{BASE}/model/delete").mock(httpx.Response(200, json={}))
+
+    out = await service.change(
+        ADMIN,
+        "dialog-model",
+        ModelChange("anthropic", "anthropic/claude-haiku-5-5", api_key=FAKE_KEY),
+        "pw",
+    )
+
+    assert json.loads(new.calls.last.request.content)["litellm_params"]["model"] == (
+        "anthropic/claude-haiku-5-5"
+    )
+    assert (out.provider, out.model) == ("anthropic", "claude-haiku-5-5")
 
 
 @respx.mock

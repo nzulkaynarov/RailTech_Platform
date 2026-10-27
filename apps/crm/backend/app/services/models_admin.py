@@ -8,7 +8,7 @@
 import re
 import secrets
 from collections.abc import Awaitable, Callable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from functools import partial
 from typing import Any, Final
@@ -65,15 +65,35 @@ class ChangeOutcome:
     quality_check_recommended: bool
 
 
-def validate(change: ModelChange) -> None:
+def normalize_model(provider: str, model: str) -> str:
+    """Имя модели без префикса провайдера — единственное место, где разбирается ввод поля «Модель».
+
+    Принимает `claude-x` и `anthropic/claude-x` (ведущий `<провайдер>/` выбранного провайдера
+    снимается). Префикс другого провайдера и мусор — `ValidationFailedError(field="model")`.
+    """
+    name = model.strip()
+    head, sep, rest = name.partition("/")
+    if sep and head.lower() == provider:
+        name = rest
+        head = name.partition("/")[0]
+    if head.lower() in PROVIDERS and "/" in name:
+        # `openai/gpt-x` при выбранном `anthropic` или `anthropic/anthropic/x`.
+        raise ValidationFailedError("model id has a provider prefix", field="model")
+    if not _MODEL_RE.match(name):
+        raise ValidationFailedError("model id is invalid", field="model")
+    return name
+
+
+def validate(change: ModelChange) -> ModelChange:
+    """Проверить ввод и вернуть его в канонической форме (имя модели без префикса провайдера)."""
     if change.provider not in PROVIDERS:
         raise ValidationFailedError("unknown provider", field="provider")
-    if not _MODEL_RE.match(change.model) or change.model.startswith(f"{change.provider}/"):
-        raise ValidationFailedError("model id is invalid", field="model")
+    model = normalize_model(change.provider, change.model)
     if change.api_base is not None and not _BASE_RE.match(change.api_base):
         raise ValidationFailedError("api base is invalid", field="api_base")
     if change.api_key is not None and not 8 <= len(change.api_key) <= 512:
         raise ValidationFailedError("api key is invalid", field="api_key")
+    return replace(change, model=model)
 
 
 def build_params(
@@ -131,7 +151,7 @@ class ModelsAdminService:
         self, who: Principal, alias: str, change: ModelChange, password: str
     ) -> ChangeOutcome:
         self._known(alias)
-        validate(change)
+        change = validate(change)
         await self._reauth(who.user_id, password)
         params, info, source = build_params(alias, change, self._defaults)
         return await self._replace(who, alias, params, info, source, "model.update")

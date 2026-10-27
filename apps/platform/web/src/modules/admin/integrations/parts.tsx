@@ -42,10 +42,14 @@ export function Field({
 }
 
 /** Ошибка операции словами (`role="alert"`): подкод CRM, затем код BFF; значений секретов в ней нет. */
-export function ErrorNote({ error }: { error: unknown }) {
+export function ErrorNote({ error, id }: { error: unknown; id?: string }) {
   const { t } = useTranslation("integrations");
   if (!error) return null;
-  return <Alert type="error" showIcon role="alert" message={integrationErrorText(t, error)} />;
+  return (
+    <div id={id}>
+      <Alert type="error" showIcon role="alert" message={integrationErrorText(t, error)} />
+    </div>
+  );
 }
 
 export interface ActionFormProps {
@@ -115,7 +119,7 @@ export function ActionForm({
         </Field>
       ) : null}
       {consequence ? <Consequence items={consequence} /> : null}
-      <ErrorNote error={error} />
+      <ErrorNote error={error} id={`${id}-error`} />
       <div className="pf-int-row">
         <Button
           htmlType="submit"

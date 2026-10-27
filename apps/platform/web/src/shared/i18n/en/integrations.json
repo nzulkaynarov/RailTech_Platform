@@ -354,6 +354,12 @@
       "title": "Change model: {{alias}}",
       "provider": "Provider",
       "model": "Model",
+      "modelHint": "The provider's model name, for example {{example}}. No need to type the \"{{provider}}/\" prefix.",
+      "example": {
+        "anthropic": "claude-sonnet-5-5, claude-haiku-5-5",
+        "gemini": "gemini-3.8-flash, gemini-embedding-2",
+        "openai": "the ID from the OpenAI console"
+      },
       "key": "Provider key",
       "keyHint": "Leave empty to use the key from the server settings. The key you enter is not shown.",
       "base": "API address (optional)",
@@ -486,6 +492,11 @@
     "VALIDATION_FAILED": "Check the fields.",
     "CONFLICT": "The state has changed. Refresh the page and try again.",
     "SESSION_EXPIRED": "The session has expired. Sign in again.",
+    "fields": {
+      "model": "The model name was not accepted. Enter the provider's model name without spaces, for example claude-haiku-5-5. A \"provider/\" prefix is allowed, but only for the selected provider.",
+      "api_key": "The key was not accepted: it must be 8 to 512 characters long.",
+      "api_base": "The API address is invalid: it must start with http:// or https:// and contain no spaces."
+    },
     "reasons": {
       "erp_not_configured": "ERP is not connected yet.",
       "erp_invalid_url": "The ERP address is incorrect.",
