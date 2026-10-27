@@ -2149,6 +2149,11 @@ components:
         erp_deal_id:
           type: [integer, 'null']
           description: Связь с проектом (заявкой) ERP; `null` снимает связь
+        recipient:
+          oneOf:
+            - $ref: '#/components/schemas/LetterSender'
+            - type: 'null'
+          description: Только `letter_out` — адресат исходящего письма (другой тип — 422 `recipient`)
     DocumentDecision:
       type: object
       additionalProperties: false

@@ -216,6 +216,13 @@ async def update(
     if "erp_deal_id" in edits.model_fields_set:
         document.erp_deal_id = edits.erp_deal_id
         document.deal_number = await deal_number_for(session, edits.erp_deal_id)
+    if "recipient" in edits.model_fields_set:
+        if kind is not DocumentKind.LETTER_OUT:
+            if edits.recipient is not None:
+                raise invalid_fields("Адресат — только у исходящего письма.", recipient="letter_out_only")
+        else:
+            document.recipient_name = edits.recipient.name if edits.recipient else None
+            document.recipient_inn = edits.recipient.inn if edits.recipient else None
     document.updated_at = clock.now()
     if edits.file_ids:
         await files.attach(session, edits.file_ids, actor_id=employee.crm_user_id, document_id=document.id)

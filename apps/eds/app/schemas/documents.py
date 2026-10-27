@@ -58,6 +58,7 @@ class DocumentUpdate(DocumentSubmitIn):
     """Правка черновика (или возвращённого документа) без отправки: те же поля, что у `submit`, и связь с проектом."""
 
     erp_deal_id: int | None = None
+    recipient: LetterSender | None = None
 
 
 class DocumentDecision(BaseModel):

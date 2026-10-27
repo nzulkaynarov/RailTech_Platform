@@ -492,3 +492,20 @@ async def test_update_is_allowed_for_draft_and_returned_only(
     # письмо правит только регистратор, а менеджеру тип недоступен
     other = await create(client, staff["registrar"], kind="letter_out", recipient={"name": "Другой"})
     assert_error(await patch(client, staff["manager"], other["id"], {"subject": "x"}), 403, "FORBIDDEN")
+
+
+async def test_update_changes_recipient_only_for_outgoing_letter(
+    client: httpx.AsyncClient, staff: dict[str, Person]
+) -> None:
+    letter = await create(client, staff["registrar"], kind="letter_out", recipient={"name": "ООО «Пример»"})
+    changed = await patch(
+        client, staff["registrar"], letter["id"], {"recipient": {"name": "АО «Другое»", "inn": "123456789"}}
+    )
+    assert changed.status_code == 200, changed.text
+    assert changed.json()["recipient"] == {"name": "АО «Другое»", "inn": "123456789"}
+    memo = await create(client, staff["registrar"])
+    assert_error(
+        await patch(client, staff["registrar"], memo["id"], {"recipient": {"name": "Адресат"}}),
+        422,
+        "VALIDATION_FAILED",
+    )
