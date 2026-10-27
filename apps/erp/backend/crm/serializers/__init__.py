@@ -24,7 +24,14 @@ from .billing import (
 )
 from .charge import ChargeTemplateSerializer, ChargeTypeSerializer, QuoteChargeSerializer
 from .deal import DealDetailSerializer, DealListSerializer
-from .documents import DocumentTemplateSerializer, GeneratedDocumentSerializer
+from .documents import (
+    DocumentTemplateCopySerializer,
+    DocumentTemplateCreateSerializer,
+    DocumentTemplateErrorSerializer,
+    DocumentTemplateSerializer,
+    DocumentTemplateWriteSerializer,
+    GeneratedDocumentSerializer,
+)
 from .item import QuoteItemSerializer
 from .misc import ActivityLogSerializer
 from .numbering import (
@@ -47,7 +54,11 @@ __all__ = [
     "DealListSerializer",
     "DealDetailSerializer",
     # documents ("Документы 2.0")
+    "DocumentTemplateCopySerializer",
+    "DocumentTemplateCreateSerializer",
+    "DocumentTemplateErrorSerializer",
     "DocumentTemplateSerializer",
+    "DocumentTemplateWriteSerializer",
     "GeneratedDocumentSerializer",
     # numbering (N2 editor)
     "NumberingSchemeSerializer",

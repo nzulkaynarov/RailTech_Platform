@@ -20,7 +20,7 @@ from app.security.audit import Actor
 from app.security.passwords import hash_password, temporary_password
 from app.services.mail import EmailLogView, MailService
 from app.services.settings import SettingsService
-from app.services.users import revoke_tokens
+from app.services.users import close_sessions
 
 logger = structlog.get_logger(__name__)
 
@@ -67,7 +67,7 @@ class UserInviteService:
             if user is None:
                 raise NotFoundError("user not found")
             _rotate(user, password)
-            await revoke_tokens(session, user_id)
+            await close_sessions(session, user_id)
             email, full_name = user.email, user.full_name
             await audit.record(session, actor, _AUDIT[template], "user", user_id)
         company = (await self._settings.get()).company

@@ -30,5 +30,7 @@
     "crm": "CRM is not responding, data is incomplete",
     "both": "CRM and ERP are not responding, data is incomplete",
     "retry": "Retry"
-  }
+  },
+  "whereToDo": "Where to do it",
+  "whereToDoItem": "Where to do it: {{title}}"
 }

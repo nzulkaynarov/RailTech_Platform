@@ -84,3 +84,16 @@ class CrmClient(BackendClient):
             access=access,
             json={"current_password": current, "new_password": new},
         )
+
+    async def forgot_password(self, identifier: str) -> httpx.Response:
+        """«Забыли пароль?»: CRM выпускает ссылку и шлёт её сама; ответ 202 не зависит от записи."""
+        return await self.send(
+            "POST", "/api/v1/auth/forgot-password", json={"identifier": identifier}
+        )
+
+    async def reset_password(self, token: str, new_password: str) -> httpx.Response:
+        return await self.send(
+            "POST",
+            "/api/v1/auth/reset-password",
+            json={"token": token, "new_password": new_password},
+        )

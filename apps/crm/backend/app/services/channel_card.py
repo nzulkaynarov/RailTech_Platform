@@ -21,8 +21,10 @@ LAST_MAX: Final = 200
 PRIORITY_RANK: Final[dict[str, int]] = {"hot": 0, "warm": 1, "info": 2}
 # Info-передачи — сигналы: бот продолжает отвечать, срока реакции и упоминаний нет.
 SLA_PRIORITIES: Final = frozenset({"hot", "warm"})
-# Причины, по которым карточка в канал не публикуется: сбой ИИ сводится в один системный алерт.
-SILENT_REASONS: Final = frozenset({"agent_unavailable"})
+# Причины, по которым карточка в канал не публикуется. Сейчас таких нет: передача клиента менеджеру
+# из-за сбоя ИИ (`agent_unavailable`) — рабочая карточка (менеджер должен забрать клиента), а
+# системный сигнал о сбое — строка «Ответы ИИ клиентам» центра внешних сервисов (W15-H3b).
+SILENT_REASONS: Final[frozenset[str]] = frozenset()
 
 
 @dataclass(frozen=True, slots=True)
@@ -183,7 +185,7 @@ def parse_take(data: str) -> tuple[str, int] | None:
 
 
 def is_silent(reason_codes: Sequence[str]) -> bool:
-    """Передача только из «тихих» причин (сбой ИИ) — без карточки в канале."""
+    """Передача только из «тихих» причин — без карточки в канале (сейчас таких причин нет)."""
     return bool(reason_codes) and set(reason_codes) <= SILENT_REASONS
 
 

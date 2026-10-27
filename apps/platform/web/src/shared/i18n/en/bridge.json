@@ -62,5 +62,10 @@
   "panel": {
     "title": "The section is still moving",
     "text": "The object card and its actions will appear here once the section moves to the Platform."
+  },
+  "short": {
+    "legacy": "For now — in {{system}}: {{where}}.",
+    "none": "For now this work has no screen; it is done by {{who}}.",
+    "internal": "For now — in the Platform, in the “{{section}}” section."
   }
 }

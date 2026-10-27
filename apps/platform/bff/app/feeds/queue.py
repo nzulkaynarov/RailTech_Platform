@@ -21,9 +21,10 @@ from app.feeds.models import (
     QueueCard,
     QueueItem,
     QueueItemKind,
+    QueueOwner,
 )
 from app.feeds.numbers import deal_title, lead_number, lead_ref, quote_number, quote_ref
-from app.feeds.snapshot import Snapshot, wants_approvals, wants_inbox, wants_projects
+from app.feeds.snapshot import Covered, Snapshot, wants_approvals, wants_inbox, wants_projects
 from app.feeds.text import ago, due_label, join, money, now_utc, parse_deadline, parse_dt, short
 from app.rbac import View
 
@@ -124,6 +125,52 @@ def lead_rows(snap: Snapshot, me: int, now: datetime, view: View) -> list[Row]:
     return out
 
 
+def covered_rows(covered: Covered, now: datetime, view: View, skip: set[int]) -> list[Row]:
+    """Лиды замещаемого, которые ждут ответа, с пометкой «за {имя}». Только то, что принадлежит
+    ему лично (его «мои» с новым сообщением и эскалации, которые взял он): общие передачи и лиды без
+    менеджера заместитель и так видит в своей очереди, а чужие дела не дублируются. Права на сам
+    объект — заместителя: CRM проверит их при открытии, строка их не расширяет."""
+    if not view.wants("answer_lead"):
+        return []
+    owner = QueueOwner(id=str(covered.user_id), name=covered.name)
+    role = _role_id(view, "answer_lead")
+    seen: set[int] = set()
+    out: list[Row] = []
+
+    def add(row: Row, lead_id: int) -> None:
+        if lead_id in seen or lead_id in skip:
+            return
+        seen.add(lead_id)
+        row.item = row.item.model_copy(
+            update={"id": f"{row.item.id}:for:{covered.user_id}", "on_behalf_of": owner}
+        )
+        out.append(row)
+
+    for lead in covered.inbox["escalations"]:
+        escalation = lead.get("escalation") or {}
+        snoozed = parse_dt(escalation.get("snoozed_until"))
+        if escalation.get("taken_by_user_id") != covered.user_id:
+            continue
+        if snoozed is not None and snoozed > now:
+            continue
+        row = _lead_row(
+            lead,
+            "answer_lead",
+            role_id=role,
+            why=escalation.get("reason_text"),
+            due_at=parse_dt(escalation.get("sla_due_at")),
+            now=now,
+        )
+        add(row, int(lead["id"]))
+    for lead in covered.inbox["mine"]:
+        if lead.get("unread") is True:
+            add(
+                _lead_row(lead, "answer_lead", role_id=role, why=None, due_at=None, now=now),
+                int(lead["id"]),
+            )
+    return out
+
+
 def quote_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
     """КП, которые ждут одобрения этого сотрудника (ERP решает, чья очередь — BFF только
     показывает)."""
@@ -160,7 +207,11 @@ def build_queue(feed: Feed, view: View, snap: Snapshot) -> list[QueueItem]:
     now = now_utc()
     rows_: list[Row] = []
     if wants_inbox(view):
-        rows_ += lead_rows(snap, feed.authed.data.user_id, now, view)
+        own = lead_rows(snap, feed.authed.data.user_id, now, view)
+        rows_ += own
+        taken = {int(r.item.id.split(":")[1]) for r in own if r.item.id.startswith("lead:")}
+        for covered in snap.covered:
+            rows_ += covered_rows(covered, now, view, taken)
     if wants_approvals(view):
         rows_ += quote_rows(snap, now, view)
     rows_.sort(key=_sort_key)
@@ -181,7 +232,7 @@ def build_cards(view: View, snap: Snapshot, queue: list[QueueItem]) -> list[Queu
     показываются — ноль был бы ложью."""
     cards: dict[str, QueueCard] = {}
     if wants_inbox(view):
-        answer = sum(1 for i in queue if i.kind == "answer_lead")
+        answer = sum(1 for i in queue if i.kind == "answer_lead" and i.on_behalf_of is None)
         take = sum(1 for i in queue if i.kind == "take_lead")
         cards["leads_without_answer"] = QueueCard(
             key="leads_without_answer",
@@ -223,7 +274,9 @@ def build_counters(view: View, snap: Snapshot, queue: list[QueueItem]) -> list[M
         MenuCounter(module="dashboard", section="queue", count=len(queue), attention=bool(queue))
     ]
     if wants_inbox(view):
-        waiting = sum(1 for i in queue if i.kind in ("answer_lead", "take_lead"))
+        waiting = sum(
+            1 for i in queue if i.kind in ("answer_lead", "take_lead") and i.on_behalf_of is None
+        )
         items.append(
             MenuCounter(module="crm", section="messages", count=waiting, attention=waiting > 0)
         )

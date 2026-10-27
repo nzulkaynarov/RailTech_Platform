@@ -105,6 +105,14 @@ def _db_template(template_name: str):
         return None
 
 
+def render_bodies_from_row(db_template, context: dict) -> tuple[str, str, str]:
+    """Тема, текст и HTML письма из строки `EmailTemplate` (активность и язык строки здесь не проверяются)."""
+    subject = _render_string_plaintext(db_template.subject, context).strip()
+    text_body = _render_string_plaintext(db_template.text_body, context)
+    html_body = _render_string_html(db_template.html_body, context) if db_template.html_body else ""
+    return subject, text_body, html_body
+
+
 def _render_bodies(template_name: str, context: dict) -> tuple[str, str, str]:
     """Render subject, text body, HTML body.
 
@@ -114,10 +122,7 @@ def _render_bodies(template_name: str, context: dict) -> tuple[str, str, str]:
     """
     db_template = _db_template(template_name)
     if db_template is not None:
-        subject = _render_string_plaintext(db_template.subject, context).strip()
-        text_body = _render_string_plaintext(db_template.text_body, context)
-        html_body = _render_string_html(db_template.html_body, context) if db_template.html_body else ""
-        return subject, text_body, html_body
+        return render_bodies_from_row(db_template, context)
 
     subject = _render_plaintext(f"emails/{template_name}_subject.txt", context).strip()
     text_body = _render_plaintext(f"emails/{template_name}.txt", context)

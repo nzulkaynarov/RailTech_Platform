@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
 
 import { resources } from "../shared/i18n";
-import { BRIDGE, NATIVE_SECTIONS, bridgeEntry, legacyHref, objectIdOf } from "./bridge";
+import {
+  BRIDGE,
+  NATIVE_SECTIONS,
+  bridgeEntry,
+  isActionable,
+  legacyHref,
+  objectIdOf,
+  routeTarget,
+} from "./bridge";
 import { MODULES } from "./registry";
 
 const sectionIds = MODULES.flatMap((m) => m.sections.map((s) => `${m.code}.${s.key}`));
@@ -130,5 +138,45 @@ describe("номер объекта из адреса", () => {
     expect(objectIdOf({}, "?lead=L-2041&panel=open")).toBe("L-2041");
     expect(objectIdOf({}, "?request=ЗВ-2026-104")).toBe("ЗВ-2026-104");
     expect(objectIdOf({}, "?panel=open")).toBeUndefined();
+  });
+});
+
+describe("исполнимость адреса: есть ли экран в Платформе (одна функция на задачи, поиск и колокольчик)", () => {
+  it.each([
+    ["/eds/inbox/%D0%92%D0%A5-104%2F26?panel=open&tab=resolution", true],
+    ["/eds/inbox?letter=%D0%92%D0%A5-104%2F26", true],
+    ["/dashboard/queue?panel=open&tab=notifications", true],
+    ["/admin/org?invite=open&panel=open", true],
+    ["/crm/leads?lead=L-2041&panel=open&tab=card", false],
+    ["/eds/drafts/%D0%9A%D0%9F-2026%2F118?panel=open&tab=approve", false],
+    ["/eds/payments/%D0%A1%D0%A7-2026%2F142", false],
+    ["/erp/calc", false],
+    ["/nowhere/at-all", true],
+  ])("%s → %s", (path, expected) => {
+    expect(isActionable(path)).toBe(expected);
+  });
+
+  it("раздел с родным экраном исполним, а стоит убрать запись моста — адрес становится исполнимым сам", () => {
+    const key = "crm.leads";
+    const entry = BRIDGE[key];
+    expect(isActionable("/crm/leads?lead=L-2041")).toBe(false);
+    // имитация D1-6: запись моста удалена
+    Reflect.deleteProperty(BRIDGE, key);
+    try {
+      expect(isActionable("/crm/leads?lead=L-2041")).toBe(true);
+    } finally {
+      (BRIDGE as Record<string, unknown>)[key] = entry;
+    }
+  });
+
+  it("routeTarget: раздел, объект из пути или ?lead=, запись моста", () => {
+    expect(routeTarget("/crm/leads?lead=L-2041&panel=open")).toMatchObject({
+      module: "crm",
+      section: "leads",
+      objectId: "L-2041",
+    });
+    expect(routeTarget("/eds/drafts/%D0%9A%D0%9F-2026%2F118")?.objectId).toBe("КП-2026/118");
+    expect(routeTarget("/eds/inbox")?.entry).toBeUndefined();
+    expect(routeTarget("/nowhere")).toBeUndefined();
   });
 });

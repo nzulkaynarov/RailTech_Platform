@@ -133,7 +133,7 @@
  * (директор читает), сброс пароля — `admin: full`; профиль доступен каждому вошедшему. Секреты из записей журнала BFF вырезает
  * (значения полей `password`, `secret`, `token`, `key`, `*_key`, `credentials`, `authorization`, `pin` и им подобных -> `***` целиком, любого типа).
  *
- * **0.20.0 (D1-1, волна 16) — Клиенты · Ждут ответа.** Добавляющее изменение (тег `messages`): очередь передач от бота с
+ * **0.22.0 (D1-1, волна 16) — Клиенты · Ждут ответа.** Добавляющее изменение (тег `messages`): очередь передач от бота с
  * запиской (CRM-06) и SLA — `GET /crm/messages`; карточка лида, лента диалога с подгрузкой истории и вложениями через BFF —
  * `GET /crm/messages/{lead}`, `/thread`, `/attachments/{message}/{index}`; действия — `take`, `reply` (ключ повтора
  * `client_message_id`: «Повторить» не дублирует сообщение; Telegram не ответил — 502 `INTEGRATION_FAILED`, `delivery_failed`),
@@ -187,6 +187,16 @@
  * EDS, полученным обменом токена сотрудника CRM `aud=eds` (`docs/architecture/platform-bff.md` §3); ошибки EDS переводятся в
  * формат `Error` (`source = eds`, `details.reason` и `details.fields` EDS сохраняются).
  *
+ * **0.21.0 (W15-H6) — Профиль сотрудника.** Добавляющее изменение, тег `me`: `GET/PATCH /me/profile` (имя, телефон, язык, часовой
+ * пояс, подпись для писем; должность и роли только читаются, правит админ), `PUT/DELETE /me/avatar` и `GET /staff/{id}/avatar`
+ * (фото: клиент обрезает по кругу, CRM хранит в S3, BFF отдаёт без публичных ссылок; `Me.avatar_url` — вместо инициалов),
+ * `POST/DELETE /me/telegram-link` (сотрудник привязывает Telegram сам: ссылка `t.me/<бот>?start=staff_<одноразовый код>` на 10
+ * минут), `GET /me/deputy-candidates`, `PUT/DELETE /me/deputy` (замещение на период; заместитель видит очередь замещаемого:
+ * `QueueItem.on_behalf_of`, права на объекты — свои). Вход: `POST /auth/forgot-password` (ответ одинаков для любой учётной
+ * записи; ссылка уходит на почту или в Telegram, иначе тихо ничего) и `POST /auth/reset-password` (новый пароль по одноразовой
+ * ссылке; неверная или просроченная — 422 `VALIDATION_FAILED`, `details.reason = reset_token_invalid`). `Me.access` остаётся для
+ * совместимости, но экран «Доступ: CRM · ERP» убран: вместо него роли словами.
+ *
  * 0.2.4: `423 ACCOUNT_LOCKED` объявлен и на `POST /auth/change-password` (CRM блокирует учётную запись после неверных
  * текущих паролей).
  *
@@ -202,10 +212,10 @@
  * 0.2.1 (Q-P0-3): перечень `Error.code` дополнен `INTERNAL_ERROR` (500) и нейтральными кодами 4xx `BAD_REQUEST`,
  * `METHOD_NOT_ALLOWED`, `HTTP_<статус>` для ответов, которые не относятся ни к одному именованному коду.
  *
- * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; остальные запросы — 300 в минуту на сессию; превышение — 429
+ * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; «Забыли пароль?» — 5 запросов в час на IP и на адрес; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.20.0
+ * OpenAPI spec version: 0.22.0
  */
 import { faker } from "@faker-js/faker";
 
@@ -278,6 +288,7 @@ import type {
   ChargeTemplate,
   ChargeTemplateList,
   ChargeTypeList,
+  Colleague,
   CompanyProfile,
   ConversationCard,
   ConversationThread,
@@ -307,6 +318,7 @@ import type {
   ExternalService,
   ExternalServiceDetail,
   ExternalServiceList,
+  ForgotPasswordAccepted,
   FxRate,
   FxRateOverview,
   HandoffInfo,
@@ -334,6 +346,7 @@ import type {
   NumberingScheme,
   PersonRef,
   PlatformSettings,
+  Profile,
   ProviderKeyResult,
   Queue,
   QueueCards,
@@ -360,6 +373,7 @@ import type {
   SystemStatus,
   TelegramChannelList,
   TelegramConnector,
+  TelegramLink,
 } from "./model";
 
 export const getLoginResponseMock = (
@@ -371,6 +385,10 @@ export const getLoginResponseMock = (
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
     position: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+    avatar_url: faker.helpers.arrayElement([
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       undefined,
     ]),
@@ -402,6 +420,13 @@ export const getLoginResponseMock = (
   ...overrideResponse,
 });
 
+export const getForgotPasswordResponseMock = (
+  overrideResponse: Partial<Extract<ForgotPasswordAccepted, object>> = {},
+): ForgotPasswordAccepted => ({
+  accepted: faker.helpers.arrayElement([true] as const),
+  ...overrideResponse,
+});
+
 export const getGetSessionResponseMock = (
   overrideResponse: Partial<Extract<Session, object>> = {},
 ): Session => ({
@@ -411,6 +436,10 @@ export const getGetSessionResponseMock = (
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
     position: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+    avatar_url: faker.helpers.arrayElement([
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       undefined,
     ]),
@@ -455,6 +484,10 @@ export const getCreateFirstAdminResponseMock = (
     name: faker.string.alpha({ length: { min: 10, max: 20 } }),
     initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
     position: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+    avatar_url: faker.helpers.arrayElement([
       faker.string.alpha({ length: { min: 10, max: 20 } }),
       undefined,
     ]),
@@ -546,6 +579,10 @@ export const getGetMeResponseMock = (overrideResponse: Partial<Extract<Me, objec
     faker.string.alpha({ length: { min: 10, max: 20 } }),
     undefined,
   ]),
+  avatar_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
   language: faker.helpers.arrayElement(Object.values(Language)),
   roles: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
     id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
@@ -577,6 +614,10 @@ export const getUpdateMeResponseMock = (
   name: faker.string.alpha({ length: { min: 10, max: 20 } }),
   initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
   position: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  avatar_url: faker.helpers.arrayElement([
     faker.string.alpha({ length: { min: 10, max: 20 } }),
     undefined,
   ]),
@@ -626,6 +667,353 @@ export const getUpdateNotificationSettingsResponseMock = (
     faker.date.past().toISOString().slice(0, 19) + "Z",
     undefined,
   ]),
+  ...overrideResponse,
+});
+
+export const getGetProfileResponseMock = (
+  overrideResponse: Partial<Extract<Profile, object>> = {},
+): Profile => ({
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  email: faker.internet.email(),
+  position: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  phone: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  language: faker.helpers.arrayElement(Object.values(Language)),
+  timezone: faker.string.alpha({ length: { min: 10, max: 64 } }),
+  email_signature: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 1000 } }),
+    undefined,
+  ]),
+  avatar_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  telegram: {
+    linked: faker.datatype.boolean(),
+    username: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+  },
+  deputy: faker.helpers.arrayElement([
+    {
+      user_id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      date_from: faker.date.past().toISOString().slice(0, 10),
+      date_to: faker.date.past().toISOString().slice(0, 10),
+    },
+    undefined,
+  ]),
+  covering: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      user_id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      date_from: faker.date.past().toISOString().slice(0, 10),
+      date_to: faker.date.past().toISOString().slice(0, 10),
+    }),
+  ),
+  ...overrideResponse,
+});
+
+export const getUpdateProfileResponseMock = (
+  overrideResponse: Partial<Extract<Profile, object>> = {},
+): Profile => ({
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  email: faker.internet.email(),
+  position: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  phone: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  language: faker.helpers.arrayElement(Object.values(Language)),
+  timezone: faker.string.alpha({ length: { min: 10, max: 64 } }),
+  email_signature: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 1000 } }),
+    undefined,
+  ]),
+  avatar_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  telegram: {
+    linked: faker.datatype.boolean(),
+    username: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+  },
+  deputy: faker.helpers.arrayElement([
+    {
+      user_id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      date_from: faker.date.past().toISOString().slice(0, 10),
+      date_to: faker.date.past().toISOString().slice(0, 10),
+    },
+    undefined,
+  ]),
+  covering: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      user_id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      date_from: faker.date.past().toISOString().slice(0, 10),
+      date_to: faker.date.past().toISOString().slice(0, 10),
+    }),
+  ),
+  ...overrideResponse,
+});
+
+export const getUploadAvatarResponseMock = (
+  overrideResponse: Partial<Extract<Me, object>> = {},
+): Me => ({
+  id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  email: faker.internet.email(),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+  position: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  avatar_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  language: faker.helpers.arrayElement(Object.values(Language)),
+  roles: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    system: faker.datatype.boolean(),
+    code: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+  })),
+  active_role: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[1-9][0-9]*$"), null]),
+  modules: faker.helpers.arrayElements(Object.values(ModuleCode)),
+  resources: {
+    [faker.string.alphanumeric(5)]: faker.helpers.arrayElement(Object.values(AccessLevel)),
+  },
+  restricted_fields: faker.helpers.arrayElement([
+    faker.helpers.arrayElements(Object.values(RestrictedField)),
+    undefined,
+  ]),
+  access: { crm: faker.datatype.boolean(), erp: faker.datatype.boolean() },
+  ...overrideResponse,
+});
+
+export const getDeleteAvatarResponseMock = (
+  overrideResponse: Partial<Extract<Me, object>> = {},
+): Me => ({
+  id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  email: faker.internet.email(),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+  position: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  avatar_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  language: faker.helpers.arrayElement(Object.values(Language)),
+  roles: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    system: faker.datatype.boolean(),
+    code: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+  })),
+  active_role: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[1-9][0-9]*$"), null]),
+  modules: faker.helpers.arrayElements(Object.values(ModuleCode)),
+  resources: {
+    [faker.string.alphanumeric(5)]: faker.helpers.arrayElement(Object.values(AccessLevel)),
+  },
+  restricted_fields: faker.helpers.arrayElement([
+    faker.helpers.arrayElements(Object.values(RestrictedField)),
+    undefined,
+  ]),
+  access: { crm: faker.datatype.boolean(), erp: faker.datatype.boolean() },
+  ...overrideResponse,
+});
+
+export const getGetStaffAvatarResponseMock = (): Blob =>
+  new Blob([new Uint8Array(faker.number.int({ min: 1, max: 64 }))]);
+
+export const getCreateTelegramLinkResponseMock = (
+  overrideResponse: Partial<Extract<TelegramLink, object>> = {},
+): TelegramLink => ({
+  url: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  expires_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  ...overrideResponse,
+});
+
+export const getDeleteTelegramLinkResponseMock = (
+  overrideResponse: Partial<Extract<Profile, object>> = {},
+): Profile => ({
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  email: faker.internet.email(),
+  position: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  phone: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  language: faker.helpers.arrayElement(Object.values(Language)),
+  timezone: faker.string.alpha({ length: { min: 10, max: 64 } }),
+  email_signature: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 1000 } }),
+    undefined,
+  ]),
+  avatar_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  telegram: {
+    linked: faker.datatype.boolean(),
+    username: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+  },
+  deputy: faker.helpers.arrayElement([
+    {
+      user_id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      date_from: faker.date.past().toISOString().slice(0, 10),
+      date_to: faker.date.past().toISOString().slice(0, 10),
+    },
+    undefined,
+  ]),
+  covering: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      user_id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      date_from: faker.date.past().toISOString().slice(0, 10),
+      date_to: faker.date.past().toISOString().slice(0, 10),
+    }),
+  ),
+  ...overrideResponse,
+});
+
+export const getListDeputyCandidatesResponseMock = (): Colleague[] =>
+  Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    position: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+  }));
+
+export const getSetDeputyResponseMock = (
+  overrideResponse: Partial<Extract<Profile, object>> = {},
+): Profile => ({
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  email: faker.internet.email(),
+  position: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  phone: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  language: faker.helpers.arrayElement(Object.values(Language)),
+  timezone: faker.string.alpha({ length: { min: 10, max: 64 } }),
+  email_signature: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 1000 } }),
+    undefined,
+  ]),
+  avatar_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  telegram: {
+    linked: faker.datatype.boolean(),
+    username: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+  },
+  deputy: faker.helpers.arrayElement([
+    {
+      user_id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      date_from: faker.date.past().toISOString().slice(0, 10),
+      date_to: faker.date.past().toISOString().slice(0, 10),
+    },
+    undefined,
+  ]),
+  covering: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      user_id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      date_from: faker.date.past().toISOString().slice(0, 10),
+      date_to: faker.date.past().toISOString().slice(0, 10),
+    }),
+  ),
+  ...overrideResponse,
+});
+
+export const getClearDeputyResponseMock = (
+  overrideResponse: Partial<Extract<Profile, object>> = {},
+): Profile => ({
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  email: faker.internet.email(),
+  position: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  phone: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  language: faker.helpers.arrayElement(Object.values(Language)),
+  timezone: faker.string.alpha({ length: { min: 10, max: 64 } }),
+  email_signature: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 1000 } }),
+    undefined,
+  ]),
+  avatar_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  telegram: {
+    linked: faker.datatype.boolean(),
+    username: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+  },
+  deputy: faker.helpers.arrayElement([
+    {
+      user_id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      date_from: faker.date.past().toISOString().slice(0, 10),
+      date_to: faker.date.past().toISOString().slice(0, 10),
+    },
+    undefined,
+  ]),
+  covering: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      user_id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      date_from: faker.date.past().toISOString().slice(0, 10),
+      date_to: faker.date.past().toISOString().slice(0, 10),
+    }),
+  ),
   ...overrideResponse,
 });
 
@@ -688,6 +1076,13 @@ export const getGetQueueResponseMock = (
         undefined,
       ]),
     },
+    on_behalf_of: faker.helpers.arrayElement([
+      {
+        id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      },
+      undefined,
+    ]),
   })),
   sources: {
     crm: faker.helpers.arrayElement(Object.values(SourceState)),
@@ -5372,6 +5767,48 @@ export const getLoginMockHandler = (
   );
 };
 
+export const getForgotPasswordMockHandler = (
+  overrideResponse?:
+    | ForgotPasswordAccepted
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<ForgotPasswordAccepted> | ForgotPasswordAccepted),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/auth/forgot-password",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getForgotPasswordResponseMock(),
+        { status: 202 },
+      );
+    },
+    options,
+  );
+};
+
+export const getResetPasswordMockHandler = (
+  overrideResponse?:
+    void | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/auth/reset-password",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      if (typeof overrideResponse === "function") {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options,
+  );
+};
+
 export const getLogoutMockHandler = (
   overrideResponse?:
     void | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<void> | void),
@@ -5669,6 +6106,222 @@ export const getSendTestNotificationMockHandler = (
       }
 
       return new HttpResponse(null, { status: 204 });
+    },
+    options,
+  );
+};
+
+export const getGetProfileMockHandler = (
+  overrideResponse?:
+    Profile | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<Profile> | Profile),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/me/profile",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetProfileResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getUpdateProfileMockHandler = (
+  overrideResponse?:
+    | Profile
+    | ((info: Parameters<Parameters<typeof http.patch>[1]>[0]) => Promise<Profile> | Profile),
+  options?: RequestHandlerOptions,
+) => {
+  return http.patch(
+    "*/me/profile",
+    async (info: Parameters<Parameters<typeof http.patch>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUpdateProfileResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getUploadAvatarMockHandler = (
+  overrideResponse?:
+    Me | ((info: Parameters<Parameters<typeof http.put>[1]>[0]) => Promise<Me> | Me),
+  options?: RequestHandlerOptions,
+) => {
+  return http.put(
+    "*/me/avatar",
+    async (info: Parameters<Parameters<typeof http.put>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUploadAvatarResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getDeleteAvatarMockHandler = (
+  overrideResponse?:
+    Me | ((info: Parameters<Parameters<typeof http.delete>[1]>[0]) => Promise<Me> | Me),
+  options?: RequestHandlerOptions,
+) => {
+  return http.delete(
+    "*/me/avatar",
+    async (info: Parameters<Parameters<typeof http.delete>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getDeleteAvatarResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetStaffAvatarMockHandler = (
+  overrideResponse?:
+    Blob | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<Blob> | Blob),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/staff/:id/avatar",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      const binaryBody =
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetStaffAvatarResponseMock();
+      return new HttpResponse(binaryBody, { status: 200, headers: { "Content-Type": "image/*" } });
+    },
+    options,
+  );
+};
+
+export const getCreateTelegramLinkMockHandler = (
+  overrideResponse?:
+    | TelegramLink
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<TelegramLink> | TelegramLink),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/me/telegram-link",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCreateTelegramLinkResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getDeleteTelegramLinkMockHandler = (
+  overrideResponse?:
+    | Profile
+    | ((info: Parameters<Parameters<typeof http.delete>[1]>[0]) => Promise<Profile> | Profile),
+  options?: RequestHandlerOptions,
+) => {
+  return http.delete(
+    "*/me/telegram-link",
+    async (info: Parameters<Parameters<typeof http.delete>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getDeleteTelegramLinkResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getListDeputyCandidatesMockHandler = (
+  overrideResponse?:
+    | Colleague[]
+    | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<Colleague[]> | Colleague[]),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/me/deputy-candidates",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListDeputyCandidatesResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getSetDeputyMockHandler = (
+  overrideResponse?:
+    Profile | ((info: Parameters<Parameters<typeof http.put>[1]>[0]) => Promise<Profile> | Profile),
+  options?: RequestHandlerOptions,
+) => {
+  return http.put(
+    "*/me/deputy",
+    async (info: Parameters<Parameters<typeof http.put>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getSetDeputyResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getClearDeputyMockHandler = (
+  overrideResponse?:
+    | Profile
+    | ((info: Parameters<Parameters<typeof http.delete>[1]>[0]) => Promise<Profile> | Profile),
+  options?: RequestHandlerOptions,
+) => {
+  return http.delete(
+    "*/me/deputy",
+    async (info: Parameters<Parameters<typeof http.delete>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getClearDeputyResponseMock(),
+        { status: 200 },
+      );
     },
     options,
   );
@@ -9288,6 +9941,8 @@ export const getListCrmReplyTemplatesMockHandler = (
 };
 export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getLoginMockHandler(),
+  getForgotPasswordMockHandler(),
+  getResetPasswordMockHandler(),
   getLogoutMockHandler(),
   getChangePasswordMockHandler(),
   getGetSessionMockHandler(),
@@ -9302,6 +9957,16 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getGetNotificationSettingsMockHandler(),
   getUpdateNotificationSettingsMockHandler(),
   getSendTestNotificationMockHandler(),
+  getGetProfileMockHandler(),
+  getUpdateProfileMockHandler(),
+  getUploadAvatarMockHandler(),
+  getDeleteAvatarMockHandler(),
+  getGetStaffAvatarMockHandler(),
+  getCreateTelegramLinkMockHandler(),
+  getDeleteTelegramLinkMockHandler(),
+  getListDeputyCandidatesMockHandler(),
+  getSetDeputyMockHandler(),
+  getClearDeputyMockHandler(),
   getGetHealthMockHandler(),
   getGetMenuCountersMockHandler(),
   getGetQueueMockHandler(),

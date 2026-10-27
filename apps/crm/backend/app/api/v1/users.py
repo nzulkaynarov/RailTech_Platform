@@ -53,6 +53,14 @@ def to_out(view: UserView) -> UserOut:
         language=view.language,
         erp_sync=view.erp_sync,
         erp_sync_error=view.erp_sync_error,
+        phone=view.phone,
+        timezone=view.timezone,
+        email_signature=view.email_signature,
+        tg_username=view.tg_username,
+        avatar_version=view.avatar_version,
+        deputy_user_id=view.deputy_user_id,
+        deputy_from=view.deputy_from,
+        deputy_to=view.deputy_to,
     )
 
 

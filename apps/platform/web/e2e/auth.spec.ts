@@ -6,6 +6,7 @@ import {
   loginAndWait,
   openAvatarMenu,
   settledScreenshot,
+  spaGoto,
 } from "./support/app";
 
 // Вход и сессия на MSW (PLT-12): ошибки по Error.code, смена обязательного пароля, выход, возврат на тот же URL.
@@ -123,15 +124,14 @@ test.describe("вход", () => {
 
     await openAvatarMenu(page);
     await page.getByRole("menuitem", { name: "Профиль" }).click();
-    const dialog = page.getByRole("dialog", { name: "Профиль" });
-    await expect(dialog).toContainText("Демо Директоров");
-    await expect(dialog).toContainText("director@demo.example");
-    // фокус перешёл в диалог — Escape закрывает его с клавиатуры
-    await expect
-      .poll(() => page.evaluate("document.activeElement?.closest('[role=dialog]') !== null"))
-      .toBe(true);
-    await page.keyboard.press("Escape");
-    await expect(dialog).toBeHidden();
+    // Профиль — страница /me, не окно (W15-H6): имя, почта и роли словами, без «Доступ: CRM · ERP»
+    await expect(page).toHaveURL(/\/me$/);
+    const main = page.getByRole("main");
+    await expect(main.getByRole("heading", { level: 1, name: "Профиль" })).toBeVisible();
+    await expect(main).toContainText("director@demo.example");
+    await expect(main.getByRole("textbox", { name: "Имя" })).toHaveValue("Демо Директоров");
+    await expect(main).not.toContainText("CRM · ERP");
+    await spaGoto(page, "/dashboard/queue");
 
     await openAvatarMenu(page);
     await page.getByRole("menuitem", { name: "O‘zbekcha" }).click();

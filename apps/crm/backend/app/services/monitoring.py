@@ -24,6 +24,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.domain.alerts import (
+    RETIRED_KEYS,
     AlertState,
     Check,
     Decision,
@@ -122,7 +123,6 @@ class MonitorService:
                 daily_budget_usd=daily_usd,
                 models=models,
                 recovered_tasks=await repo.recovered_tasks(session, set(failed) | known),
-                ai_failures=await repo.ai_failures(session, now - FAILED_WINDOW),
             )
             for item in checks(snapshot, known, tx.task):
                 row = states.get(item.key)
@@ -131,6 +131,16 @@ class MonitorService:
                 if decision is not Decision.NONE:
                     outgoing.append(_Outgoing(item.key, alert_text(item, decision), decision))
                 _apply(session, row, item, now)
+            for key in RETIRED_KEYS:  # прежние алерты ушли в центр внешних сервисов — закрыть молча
+                old = states.get(key)
+                if old is not None and old.active:
+                    old.active, old.resolved_at, old.first_seen_at, old.sent_at = (
+                        False,
+                        now,
+                        None,
+                        None,
+                    )
+                    old.updated_at = now
         return outgoing
 
     async def _mark_sent(self, keys: list[str], now: datetime) -> None:
