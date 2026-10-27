@@ -9,6 +9,7 @@ from sqlalchemy import String, bindparam, delete, func, select, text
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.domain.external_ai_replies import AiFacts
 from app.domain.external_cause import ok_run_start
 from app.domain.external_erp_events import STUCK_AFTER_MINUTES as EVENTS_STUCK_AFTER_MINUTES
 from app.domain.external_erp_events import WINDOW_DAYS as EVENTS_WINDOW_DAYS
@@ -23,6 +24,8 @@ from app.models.external_services import (
     ExternalServiceIncident,
     ExternalServiceSwitch,
 )
+from app.models.leads import Message
+from app.models.system import SystemAlert
 
 LOCK_SQL = text("SELECT pg_advisory_xact_lock(hashtext('external_service_checks'))")
 LATEST_SQL = text(
@@ -427,6 +430,44 @@ async def erp_sync_stats(session: AsyncSession) -> tuple[int, int, str | None]:
         .limit(1)
     )
     return int(with_access or 0), int(failed or 0), last_error
+
+
+async def model_probe_problems(session: AsyncSession) -> dict[str, str]:
+    """Роли, где часовая проба моделей сейчас видит проблему: алиас → текст (`system_alerts`)."""
+    rows = await session.execute(
+        select(SystemAlert.key, SystemAlert.detail).where(
+            SystemAlert.key.like("model:%"), SystemAlert.active.is_(True)
+        )
+    )
+    return {key.split(":", 1)[1]: detail or "" for key, detail in rows.all()}
+
+
+async def resolve_model_probes(
+    session: AsyncSession, aliases: Collection[str], now: datetime
+) -> None:
+    """Ключ роли сменили: прежняя проблема пробы снимается (новую найдёт проба или трафик)."""
+    stmt = select(SystemAlert).where(SystemAlert.key.in_([f"model:{a}" for a in aliases]))
+    for row in await session.scalars(stmt):
+        if row.active:
+            row.active, row.resolved_at, row.first_seen_at, row.sent_at = False, now, None, None
+            row.updated_at = now
+
+
+async def ai_reply_stats(session: AsyncSession, since: datetime) -> AiFacts:
+    """Ответы бота клиентам за период: сбои агента и успешные ответы агента."""
+    failed = Message.meta["error"].astext == "agent_unavailable"
+    answered = Message.meta.has_key("action")
+    row = (
+        await session.execute(
+            select(
+                func.count().filter(failed),
+                func.count().filter(answered),
+                func.max(Message.created_at).filter(failed),
+                func.max(Message.created_at).filter(answered),
+            ).where(Message.role == "bot", Message.created_at >= since)
+        )
+    ).one()
+    return AiFacts(int(row[0]), int(row[1]), row[2], row[3])
 
 
 @dataclass(frozen=True, slots=True)

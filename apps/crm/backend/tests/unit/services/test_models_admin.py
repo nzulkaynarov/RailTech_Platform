@@ -422,6 +422,7 @@ def _provider_service(
 
     monkeypatch.setattr(service, "_reauth", reauth)
     monkeypatch.setattr(service, "_audit_provider_key", audit_provider)
+    service._retry_pause_s = 0.0
     return service, counts
 
 
@@ -543,16 +544,32 @@ async def test_provider_key_is_audited_before_the_old_deployments_go_and_delete_
 
 
 @respx.mock
-async def test_provider_key_delete_failure_after_the_retry_still_leaves_the_audit(
+async def test_provider_key_delete_failure_does_not_stop_the_other_roles_and_still_succeeds(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Ключ уже сменён: не удалившееся прежнее — хвост в журнале, остальные роли доделываются."""
     rec = _Recorder()
     service, _ = _provider_service(rec, monkeypatch)
+    service._retry_pause_s = 0.0
     respx.get(f"{BASE}/model/info").mock(httpx.Response(200, json=ROLES))
     respx.post(f"{BASE}/model/new").mock(httpx.Response(200, json={}))
-    respx.post(f"{BASE}/model/delete").mock(httpx.Response(500))
 
-    with pytest.raises(UpstreamUnavailableError):
-        await service.change_provider_key(ADMIN, "anthropic", FAKE_KEY, "pw")
+    def delete(request: httpx.Request) -> httpx.Response:
+        return (
+            httpx.Response(500)
+            if json.loads(request.content)["id"] == "rt-dialog"
+            else httpx.Response(200, json={})
+        )
 
+    deletes = respx.post(f"{BASE}/model/delete").mock(side_effect=delete)
+
+    with capture_logs() as logs:
+        out = await service.change_provider_key(ADMIN, "anthropic", FAKE_KEY, "pw")
+
+    assert sorted(o.alias for o in out) == ["dialog-model", "qualifier-model"]
+    ids = [json.loads(c.request.content)["id"] for c in deletes.calls]
+    assert ids == ["rt-dialog", "rt-dialog", "rt-qual"]  # одна неудачная + повтор, вторая роль цела
+    left = [e for e in logs if e["event"] == "provider_key_old_deployments_left"]
+    assert [e["ids"] for e in left] == [["rt-dialog"]]
+    assert FAKE_KEY not in str(logs)
     assert len(rec.audits) == 1

@@ -153,6 +153,9 @@ class VendorFacts:
     budget_limit: float | None = None
     day: Mapping[str, Metric] = field(default_factory=dict)
     disabled: bool = False
+    # Часовая проба моделей (монитор): роли этого провайдера, где проба нашла кредиты/квоту или
+    # отклонённый ключ, — (алиас, текст). Источник причины в центре; своего письма у пробы нет.
+    probe: tuple[tuple[str, str], ...] = ()
 
 
 _CAUSES: Final = {"auth": "key_rejected", "quota": "quota", "other": "provider_errors"}
@@ -179,6 +182,17 @@ def vendor(f: VendorFacts) -> CheckResult:
     if f.disabled:
         summary = "Выключен вручную — вызовы этого провайдера идут на запасную модель"
         return CheckResult(key, "off", summary, metrics=metrics, cause="intentional")
+    if f.probe:
+        alias, text = f.probe[0]
+        kind = probe_kind(text)
+        return CheckResult(
+            key,
+            "fail",
+            f"Провайдер не принимает запросы: проба роли «{alias}» — {text}",
+            hint=_HINTS[kind],
+            metrics={**metrics, "probe_roles": len(f.probe)},
+            cause=_CAUSES[kind],
+        )
     if not f.logs_available:
         return CheckResult(
             key,
@@ -217,6 +231,16 @@ def vendor(f: VendorFacts) -> CheckResult:
     if w.failures:
         summary = f"{w.calls} вызовов за 15 мин, ошибок {w.failures}"
     return CheckResult(key, "ok", summary, metrics=metrics)
+
+
+def probe_kind(text: str) -> str:
+    """Вид проблемы по тексту часовой пробы (`alerts.provider_problem`): кредиты/квота или ключ."""
+    lowered = text.lower()
+    if "кредит" in lowered or "квот" in lowered:
+        return "quota"
+    if "ключ" in lowered:
+        return "auth"
+    return "other"
 
 
 def _failing(key: str, w: VendorStats, status: Status, metrics: dict[str, Metric]) -> CheckResult:

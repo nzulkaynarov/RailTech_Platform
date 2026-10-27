@@ -53,6 +53,9 @@ class Check:
     detail: str
     grace: timedelta = timedelta(0)
     hint: str = ""  # «что делать» — для задач воркера и сбоев ИИ
+    # Без собственного сообщения: состояние пишется в `system_alerts` (его читают «Состояние
+    # системы» и чек-лист), а оповещает центр внешних сервисов (проба — причина провайдера).
+    notify: bool = True
 
 
 @dataclass(frozen=True)
@@ -106,7 +109,13 @@ def checks(
     )
     for alias, problem in sorted((snapshot.models or {}).items()):
         result.append(
-            Check(f"model:{alias}", problem is not None, f"Модель {alias}", problem or "")
+            Check(
+                f"model:{alias}",
+                problem is not None,
+                f"Модель {alias}",
+                problem or "",
+                notify=False,
+            )
         )
     for task in sorted(set(snapshot.failed_tasks) | set(known_failed)):
         count = snapshot.failed_tasks.get(task, 0)
@@ -132,6 +141,8 @@ def decide(
     check: Check, state: AlertState | None, now: datetime, repeat_after: timedelta = REPEAT_AFTER
 ) -> Decision:
     """Отправка только на переходах; активный алерт напоминается не чаще `repeat_after`."""
+    if not check.notify:
+        return Decision.NONE
     if not check.active:
         return (
             Decision.RESOLVE if state is not None and state.sent_at is not None else Decision.NONE

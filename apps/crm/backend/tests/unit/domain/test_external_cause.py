@@ -570,3 +570,51 @@ def test_a_long_gap_between_ok_checks_is_not_a_blip() -> None:
     # fail 5 минут назад, соседние ok — через 8 мин: за это время сервис мог лежать — отсчёт заново
     rows = _rows((0, "ok"), (1, "ok"), (2, "ok"), (3, "ok"), (4, "ok"), (5, "fail"), (12, "ok"))
     assert cause.ok_run_start(rows) == NOW - timedelta(minutes=4)
+
+
+# --- часовая проба моделей — источник причины в центре, а не второй отправитель ----
+
+
+def test_hourly_probe_problem_becomes_the_vendor_cause_even_without_traffic() -> None:
+    quiet = vendor_rules.VendorStats()
+    probe = (
+        ("dialog-model", "провайдер отклонил ключ — проверьте ключ API; бот не отвечает"),
+        ("qualifier-model", "провайдер отклонил ключ — проверьте ключ API; бот не отвечает"),
+    )
+    result = vendor_rules.vendor(vendor_rules.VendorFacts("anthropic", True, quiet, probe=probe))
+    assert (result.status, result.cause) == ("fail", "key_rejected")
+    d = _diagnose("vendor.anthropic", result, None, fail_for=timedelta(minutes=20))
+    assert d.state == "broken"
+    assert d.headline == "Ключ Anthropic отклонён"  # одна причина на провайдера, не по алиасу
+    assert (d.owner, d.action) == ("owner", "enter_key")
+
+
+def test_hourly_probe_credits_problem_is_the_quota_cause() -> None:
+    probe = (("dialog-model", "закончились кредиты или квота у провайдера — пополните баланс"),)
+    result = vendor_rules.vendor(
+        vendor_rules.VendorFacts("anthropic", True, vendor_rules.VendorStats(), probe=probe)
+    )
+    assert result.cause == "quota"
+
+
+def test_no_probe_problem_leaves_the_log_based_verdict_alone() -> None:
+    result = vendor_rules.vendor(
+        vendor_rules.VendorFacts("anthropic", True, vendor_rules.VendorStats())
+    )
+    assert result.status == "ok"
+
+
+# --- причины, которые сами не проходят, проверяются реже ---------------------------------------
+
+
+@pytest.mark.parametrize(
+    "slow", ["key_rejected", "quota", "token_rejected", "smtp_auth_failed", "smtp_rejected"]
+)
+def test_causes_that_do_not_heal_themselves_are_rechecked_every_fifteen_minutes(slow: str) -> None:
+    for failures in (1, 2, 3, 4, 9):
+        assert cause.recheck_interval(failures, slow) == timedelta(minutes=15)
+    assert cause.recheck_interval(1, "network") == timedelta(minutes=1)  # дешёвые сетевые — 1/2/5/7
+    assert cause.recheck_interval(4, None) == timedelta(minutes=7)
+    last = NOW
+    assert not cause.recheck_due(1, last, last + timedelta(minutes=14), "smtp_auth_failed")
+    assert cause.recheck_due(1, last, last + timedelta(minutes=15), "smtp_auth_failed")

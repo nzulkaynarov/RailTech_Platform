@@ -30,6 +30,7 @@ from app.models.external_services import (
     ExternalServiceIncident,
     ExternalServiceSwitch,
 )
+from app.models.leads import Conversation, Lead, Message
 from app.security.secrets_store import SecretCipher
 from app.services.external_services.wiring import build_checks
 from app.services.mail import MailService
@@ -1328,3 +1329,126 @@ async def test_a_short_blip_after_recovery_does_not_delay_the_restored_message(
         await run_at(client, at(minute), "docling")
     # ok с 21-й минуты; провал на 23-й между двумя ok отсчёт не сбросил: на 26-й — «Восстановлено»
     assert [a.subject.split(":")[0] for _, a in alerts.sent] == ["⚠️ Сломано", "✅ Восстановлено"]
+
+
+async def _bot_message(
+    sessions: async_sessionmaker[AsyncSession], conversation_id: int, minute: float, *, failed: bool
+) -> None:
+    meta = {"error": "agent_unavailable"} if failed else {"action": "answer"}
+    async with sessions() as session, session.begin():
+        session.add(
+            Message(
+                conversation_id=conversation_id,
+                role="bot",
+                text="x",
+                meta=meta,
+                created_at=at(minute),
+            )
+        )
+
+
+async def _conversation(sessions: async_sessionmaker[AsyncSession]) -> int:
+    async with sessions() as session, session.begin():
+        lead = Lead(display_name="Клиент", language="ru")
+        session.add(lead)
+        await session.flush()
+        conversation = Conversation(lead_id=lead.id, tg_chat_id=7)
+        session.add(conversation)
+        await session.flush()
+        return conversation.id
+
+
+async def test_ai_replies_row_alerts_after_fifteen_minutes_and_restores_after_five_ok(
+    sessions: async_sessionmaker[AsyncSession],
+    client: TestClient,
+    alerts: FakeAlerts,
+) -> None:
+    """Сбои ответов ИИ идут по общей политике, а не «Сбоем сразу» монитора (W15-H3b)."""
+    conversation = await _conversation(sessions)
+    for minute in range(0, 17):  # клиенты получают «сбой ИИ» каждую минуту
+        await _bot_message(sessions, conversation, minute, failed=True)
+        await run_at(client, at(minute), "ai_replies")
+        if minute < 15:
+            assert alerts.sent == [], minute  # «Сломано» — только от 15-й минуты непрерывного сбоя
+    assert [k for k, _ in alerts.sent] == ["ai_replies:ai_unavailable"]
+    assert alerts.sent[0][1].subject.startswith("⚠️ Сломано: ИИ не ответил клиентам")
+
+    for minute in range(17, 21):  # сбой кончился: успешные ответы
+        await _bot_message(sessions, conversation, minute, failed=False)
+    await run_at(client, at(21), "ai_replies")
+    await run_at(client, at(23), "ai_replies")
+    assert len(alerts.sent) == 1  # ok меньше 5 минут
+    await _bot_message(sessions, conversation, 24, failed=False)
+    await run_at(client, at(26), "ai_replies")
+    assert [a.subject.split(":")[0] for _, a in alerts.sent] == ["⚠️ Сломано", "✅ Восстановлено"]
+
+
+async def test_silence_after_an_ai_outage_is_not_a_recovery_and_not_a_new_failure(
+    sessions: async_sessionmaker[AsyncSession],
+    client: TestClient,
+    alerts: FakeAlerts,
+) -> None:
+    conversation = await _conversation(sessions)
+    for minute in range(0, 17):
+        await _bot_message(sessions, conversation, minute, failed=True)
+        await run_at(client, at(minute), "ai_replies")
+    assert len(alerts.sent) == 1
+    for minute in (30, 60, 600):  # обращений нет — данных нет
+        await run_at(client, at(minute), "ai_replies")
+    assert len(alerts.sent) == 1  # без «Восстановлено» и без нового «Сломано»
+
+
+class _Clocked:
+    """Оповещения с отметкой «в какую минуту прохода ушло» — для проверки времени писем."""
+
+    def __init__(self) -> None:
+        self.minute = 0
+        self.sent: list[tuple[int, str, str]] = []
+
+    async def send(self, alert: AlertText, key: str) -> bool:
+        self.sent.append((self.minute, key, alert.subject.split(":")[0]))
+        return True
+
+
+async def test_minute_passes_time_the_letters_broken_at_minute_15_restored_after_five_ok(
+    client: TestClient,
+    gateway: respx.MockRouter,
+    docling: str,
+) -> None:
+    """Сквозной прогон минутного прохода (затухание 1, 2, 5, 7): ВРЕМЯ писем."""
+    clock = _Clocked()
+    container = client.app.state.container  # type: ignore[attr-defined]
+    container.external_checks._alerts = clock
+    route = gateway.get(docling)
+    for minute in range(0, 60):
+        clock.minute = minute
+        if minute < 30:
+            route.mock(side_effect=httpx.ConnectError("down"))
+        else:
+            route.mock(return_value=httpx.Response(200, json={"status": "ok"}))
+        await container.external_checks.run("cheap", at(minute))
+    mine = [(m, label) for m, key, label in clock.sent if key.startswith("docling")]
+    # проверки сбоя: 0, 1, 3, 8, 15, 22, 29 → «Сломано» ровно на 15-й минуте полосы, не раньше
+    assert mine[0] == (15, "⚠️ Сломано")
+    # сбой кончился на 30-й; первая проверка после — 36-я (29 + 7); «Восстановлено» — 5 минут ok
+    assert mine[1] == (41, "✅ Восстановлено")
+    assert len(mine) == 2
+
+
+async def test_minute_passes_with_a_flapping_service_send_nothing_for_a_long_stretch(
+    client: TestClient,
+    gateway: respx.MockRouter,
+    docling: str,
+) -> None:
+    clock = _Clocked()
+    container = client.app.state.container  # type: ignore[attr-defined]
+    container.external_checks._alerts = clock
+    route = gateway.get(docling)
+    for minute in range(0, 75):
+        clock.minute = minute
+        if minute % 6 == 5:  # раз в 6 минут медленный запрос; повтор внутри проверки тоже падает
+            route.mock(side_effect=httpx.ConnectError("slow"))
+        else:
+            route.mock(return_value=httpx.Response(200, json={"status": "ok"}))
+        await container.external_checks.run("cheap", at(minute))
+    assert [m for m, key, _ in clock.sent if key.startswith("docling")] == []

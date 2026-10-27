@@ -6,7 +6,7 @@
   «кто исправляет» (`Owner`) и одно главное действие (`Action`) плюс запасные;
 - `build_groups` — строки с общей причиной сворачиваются в одну («Ключ Anthropic отклонён — не
   работают: диалог с клиентом, запасная модель, поиск по базе знаний»);
-- `recheck_due` — затухание повторных проверок сломанного (1, 2, 5, 15 мин, дальше каждые 15 мин);
+- `recheck_due` — затухание повторных проверок сломанного (1, 2, 5, 7 мин, дальше каждые 7 мин);
 - `plan_alerts` — одно «сломано» после 15 минут и одно «восстановлено» на причину (дедупликация по
   `cause_key`; состояние хранит БД, поэтому рестарт процесса её не обнуляет).
 
@@ -138,6 +138,7 @@ ROUTES: Final[dict[str, Route]] = {
     "erp_handoff_failed": _ADMIN_FIX,
     "erp_events_failed": _ADMIN_FIX,
     "checks_stale": _HOSTING,
+    "ai_unavailable": Route("admin", "recheck", ("open_settings",)),
     "flapping": Route(None, "recheck"),
     "intentional": Route(None, None),
     "disabled_manual": Route(None, None),
@@ -415,14 +416,35 @@ def since_for(
 # --- затухание повторных проверок ---------------------------------------------------------------
 
 
-def recheck_interval(consecutive_failures: int) -> timedelta:
+#: Причины, которые сами не проходят (ключ, пароль, квота): проверка не чаще раза в 15 минут, чтобы
+#: неудачными входами не блокировать ящик у провайдера почты и не долбить провайдера.
+SLOW_CAUSES: Final = frozenset(
+    {
+        "key_rejected",
+        "quota",
+        "budget_cap",
+        "token_rejected",
+        "smtp_auth_failed",
+        "smtp_tls_failed",
+        "smtp_invalid_host",
+        "smtp_rejected",
+    }
+)
+SLOW_RECHECK: Final = timedelta(minutes=15)
+
+
+def recheck_interval(consecutive_failures: int, cause: str | None = None) -> timedelta:
     """Через сколько перепроверять сломанное: 1, 2, 5, 7 мин по номеру сбоя подряд, дальше 7."""
+    if cause in SLOW_CAUSES:
+        return SLOW_RECHECK
     n = max(1, consecutive_failures)
     return timedelta(minutes=BACKOFF_MINUTES[min(n, len(BACKOFF_MINUTES)) - 1])
 
 
-def recheck_due(consecutive_failures: int, last_checked_at: datetime, now: datetime) -> bool:
-    return now - last_checked_at + BACKOFF_SLACK >= recheck_interval(consecutive_failures)
+def recheck_due(
+    consecutive_failures: int, last_checked_at: datetime, now: datetime, cause: str | None = None
+) -> bool:
+    return now - last_checked_at + BACKOFF_SLACK >= recheck_interval(consecutive_failures, cause)
 
 
 def ok_run_start(

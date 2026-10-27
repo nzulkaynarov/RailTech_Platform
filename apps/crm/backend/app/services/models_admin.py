@@ -5,6 +5,7 @@
 старые: запись с тем же алиасом в LiteLLM — вторая deployment группы, не замена (проверено).
 """
 
+import asyncio
 import re
 import secrets
 from collections.abc import Awaitable, Callable, Mapping
@@ -139,6 +140,7 @@ class ModelsAdminService:
         lockout: reauth.LockoutPolicy | None = None,
         new_id: Callable[[str], str] | None = None,
         settings_service: SettingsService | None = None,
+        retry_pause_s: float = 0.5,
     ) -> None:
         self._sessions = sessions
         self._admin = admin
@@ -147,6 +149,7 @@ class ModelsAdminService:
         self._lockout = lockout or reauth.LockoutPolicy()
         self._new_id = new_id or (lambda alias: f"rt-{alias}-{secrets.token_hex(4)}")
         self._settings = settings_service
+        self._retry_pause_s = retry_pause_s
 
     async def change(
         self, who: Principal, alias: str, change: ModelChange, password: str
@@ -207,9 +210,15 @@ class ModelsAdminService:
         self._invalidate()
         await self._audit_provider_key(who, provider, sorted(roles), api_key)
         await self._remember_keys(who, sorted(roles), api_key)
+        leftover: list[str] = []
         for deps in roles.values():
             for dep in deps:
-                await self._delete_with_retry(dep.id)
+                if not await self._delete_with_retry(dep.id):
+                    leftover.append(dep.id)  # остальные роли досчитываем, не обрываем на первой
+        if leftover:
+            # Ключ уже сменён (новые deployment действуют): успех с хвостом в журнале; прежние
+            # настройки снимет повторная смена ключа или ручная чистка в LiteLLM.
+            logger.warning("provider_key_old_deployments_left", provider=provider, ids=leftover)
         logger.info("provider_key_changed", provider=provider, aliases=sorted(roles))
         return [
             ChangeOutcome(
@@ -223,12 +232,17 @@ class ModelsAdminService:
             for alias in sorted(roles)
         ]
 
-    async def _delete_with_retry(self, model_id: str) -> None:
-        """Прежний deployment удаляется с одним повтором: сбой LiteLLM не оставит два ключа."""
-        try:
-            await self._admin_call(partial(self._admin.delete, model_id))
-        except UpstreamUnavailableError:
-            await self._admin_call(partial(self._admin.delete, model_id))
+    async def _delete_with_retry(self, model_id: str) -> bool:
+        """Прежний deployment удаляется с одним повтором после паузы; `False` — не удалось."""
+        for attempt in range(2):
+            try:
+                await self._admin_call(partial(self._admin.delete, model_id))
+            except UpstreamUnavailableError:
+                if attempt == 0 and self._retry_pause_s > 0:
+                    await asyncio.sleep(self._retry_pause_s)
+                continue
+            return True
+        return False
 
     async def reset(self, who: Principal, alias: str, password: str) -> ChangeOutcome:
         default = self._known(alias)

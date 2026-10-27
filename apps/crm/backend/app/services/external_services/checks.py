@@ -3,7 +3,7 @@
 
 Запись проверок и переходы инцидентов — в одной транзакции под advisory-блокировкой (фоновая задача
 и «Проверить сейчас» не открывают два инцидента). Сломанное перепроверяется с затуханием
-(`external_cause.recheck_due`: 1, 2, 5, 15 мин, дальше раз в 15) и снимается само, когда проверка
+(`external_cause.recheck_due`: 1, 2, 5, 7 мин, дальше раз в 7) и снимается само, когда проверка
 проходит. Оповещения — по причине, не по сервису: одно «сломано» после 15 минут и одно
 «восстановлено»; отметка `alerted_at` ставится в транзакции до отправки, поэтому параллельный
 проход (кнопка «Проверить» рядом с минутной задачей) не пришлёт второе сообщение, а рестарт процесса
@@ -124,7 +124,7 @@ class ExternalChecks:
             for k in keys
             if (row := latest.get(k)) is not None
             and row.status == "fail"
-            and cause.recheck_due(_count(streaks, k), row.checked_at, now)
+            and cause.recheck_due(_count(streaks, k), row.checked_at, now, _cause(row))
         ]
 
     async def _recovering(self, keys: Collection[str], now: datetime) -> list[str]:
@@ -151,7 +151,7 @@ class ExternalChecks:
             backing_off = (
                 row is not None
                 and row.status == "fail"
-                and not cause.recheck_due(_count(streaks, key), row.checked_at, now)
+                and not cause.recheck_due(_count(streaks, key), row.checked_at, now, _cause(row))
             )
             if not backing_off:
                 out.append(key)
@@ -296,6 +296,11 @@ class ExternalChecks:
         async with self._sessions() as session, session.begin():
             removed = await repo.purge(session, now - CHECKS_RETENTION, now - INCIDENTS_RETENTION)
         logger.info("external_checks_purged", removed=removed)
+
+
+def _cause(row: ExternalServiceCheck) -> str | None:
+    saved = (row.metrics or {}).get(CAUSE_METRIC)
+    return saved if isinstance(saved, str) else None
 
 
 def _count(streaks: dict[str, repo.FailStreak], key: str) -> int:

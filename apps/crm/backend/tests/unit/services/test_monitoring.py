@@ -155,6 +155,25 @@ async def test_gateway_down_is_not_a_monitor_alert_and_old_rows_close_quietly(
     assert bot.sent == []
 
 
+async def test_model_probe_problem_is_state_only_the_center_sends_the_message(
+    store: Store,
+) -> None:
+    """Проба моделей раз в час: состояние в `system_alerts` (его читают «Состояние системы» и
+    чек-лист), а письмо — только причина провайдера в центре внешних сервисов (W15-H3b)."""
+
+    async def models() -> dict[str, str | None]:
+        return {"dialog-model": "провайдер отклонил ключ — проверьте ключ API; бот не отвечает"}
+
+    bot = FlakyBot()
+    bot.down = False
+    svc = service(store, bot, [True], models)
+    assert await svc.check(NOW) == []
+    row = store.rows["model:dialog-model"]
+    assert row.active is True
+    assert "отклонил ключ" in (row.detail or "")
+    assert bot.sent == []  # второго отправителя «Сбоя сразу» (по роли, повтор раз в 6 ч) нет
+
+
 async def test_healthy_model_gets_row_with_probe_time(store: Store) -> None:
     async def models() -> dict[str, str | None]:
         return {"dialog-model": None}

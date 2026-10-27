@@ -154,7 +154,11 @@ def _mail_log(monkeypatch: pytest.MonkeyPatch) -> None:
     async def stats(session: object, since: datetime) -> MailLogStats:
         return MailLogStats(4, 0, 0, None, None, None, NOW - timedelta(hours=1))
 
+    async def no_probes(session: object) -> dict[str, str]:
+        return {}
+
     monkeypatch.setattr(repo, "mail_stats", stats)
+    monkeypatch.setattr(repo, "model_probe_problems", no_probes)
 
 
 async def collect(
@@ -415,6 +419,38 @@ async def test_vendor_from_gateway_log_and_budget_without_model_calls() -> None:
     assert heavy.metrics["p95_ms_24h"] == 800
     assert logs.windows[-1][1] - logs.windows[-1][0] == timedelta(hours=24)
     assert not any("chat/completions" in str(c.request.url) for c in respx.calls)
+
+
+@respx.mock
+async def test_hourly_probe_problem_of_a_role_fails_its_provider_with_one_cause(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Проба моделей раз в час — источник причины «Ключ <провайдер> отклонён», не письмо по роли."""
+
+    async def problems(session: object) -> dict[str, str]:
+        text = "провайдер отклонил ключ — проверьте ключ API; бот не отвечает"
+        return {"dialog-model": text, "qualifier-model": text, "fallback-model": "x"}
+
+    monkeypatch.setattr(repo, "model_probe_problems", problems)
+    respx.get(f"{LITELLM}/provider/budgets").mock(return_value=httpx.Response(200, json={}))
+    found = await collect(deps(spend_logs=FakeLogs()), ["vendor.anthropic", "vendor.gemini"])
+    assert (found["vendor.anthropic"].status, found["vendor.anthropic"].cause) == (
+        "fail",
+        "key_rejected",
+    )
+    assert found["vendor.gemini"].status != "fail" or found["vendor.gemini"].cause != "key_rejected"
+
+
+async def test_ai_replies_row_reads_bot_answers(monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.domain.external_ai_replies import AiFacts
+
+    async def stats(session: object, since: datetime) -> AiFacts:
+        assert NOW - since == timedelta(minutes=5)
+        return AiFacts(failed=2, last_failed_at=NOW)
+
+    monkeypatch.setattr(repo, "ai_reply_stats", stats)
+    found = await collect(deps(), ["ai_replies"])
+    assert (found["ai_replies"].status, found["ai_replies"].cause) == ("fail", "ai_unavailable")
 
 
 @respx.mock

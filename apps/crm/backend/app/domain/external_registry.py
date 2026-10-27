@@ -95,6 +95,16 @@ _LITELLM = ServiceSpec(
 )
 _AFTER_VENDORS: Final = (
     ServiceSpec(
+        key="ai_replies",
+        title="Ответы ИИ клиентам",
+        purpose="Ответы бота клиентам: диалог, crm-mcp, LangGraph; при сбое клиента ведёт менеджер",
+        system="crm",
+        source="crm",
+        check="ответы бота за 5 минут: сбои агента и успешные ответы (без вызова моделей)",
+        tiers=("cheap",),
+        fix_path="/models",
+    ),
+    ServiceSpec(
         key="langfuse",
         title="Langfuse (журнал работы ИИ)",
         purpose="Трейсы диалогов и квалификатора: вопрос, ответ модели и стоимость",

@@ -178,3 +178,10 @@ def test_model_probe_due_hourly() -> None:
     assert model_probe_due(NOW)  # 10:00
     assert not model_probe_due(NOW + 15 * MIN)
     assert model_probe_due(NOW + 60 * MIN)
+
+
+def test_model_probe_check_never_notifies() -> None:
+    snap = HealthSnapshot(models={"dialog-model": "нет кредитов"})
+    (probe,) = [c for c in checks(snap, set()) if c.key == "model:dialog-model"]
+    assert probe.active is True
+    assert decide(probe, None, datetime(2026, 10, 28, tzinfo=UTC)) is Decision.NONE
