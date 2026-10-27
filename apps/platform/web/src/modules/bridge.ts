@@ -96,7 +96,6 @@ export const BRIDGE: Readonly<Record<string, BridgeEntry>> = {
   },
 
   "eds.documents": { legacy: erp("#crm-quotes", "erpDocuments"), when: "pilot" },
-  "eds.inbox": { who: "resolution", when: "soon", objectKind: "letter" },
   "eds.outbox": {
     legacy: erp("#crm-quotes", "erpQuotes"),
     when: "pilot",
@@ -146,6 +145,7 @@ export const BRIDGE: Readonly<Record<string, BridgeEntry>> = {
 export const NATIVE_SECTIONS: readonly string[] = [
   "dashboard.queue",
   "crm.kb",
+  "eds.inbox",
   "admin.roles",
   "admin.org",
   "admin.integrations",

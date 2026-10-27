@@ -4,7 +4,7 @@ import type { Bridge } from "../shared/api/generated/model";
 import { buildMe, readSession } from "./mockSession";
 
 /**
- * Мост в старые экраны для MSW (W15-H1, BFF 0.16.0). По умолчанию адреса — как на стенде ансамбля (`*.localhost`), вход в
+ * Мост в старые экраны для MSW (W15-H1, BFF 0.17.0). По умолчанию адреса — как на стенде ансамбля (`*.localhost`), вход в
  * старый ERP по SSO доступен тем, у кого есть доступ к ERP. Сценарии «адреса нет» и «SSO не вышел» включает запись в
  * `localStorage` страницы до загрузки (e2e) или `setBridgeMock` (тесты).
  */

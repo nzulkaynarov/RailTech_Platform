@@ -199,6 +199,21 @@ describe("карта маршрутов SPEC-v3 §6.3", () => {
     expect(matchSection(path)?.objectId).toBeDefined();
   });
 
+  it.each([
+    ["/eds/inbox/ВХ-104/26", "inbox", "ВХ-104/26"],
+    ["/eds/drafts/КП-2026/118", "drafts", "КП-2026/118"],
+    ["/eds/approvals/СЗ-2026/031", "approvals", "СЗ-2026/031"],
+  ])("%s — номер со «/» без кодирования — одна карточка", (path, section, number) => {
+    const hit = matchSection(path);
+    expect(hit?.section.key).toBe(section);
+    expect(hit?.objectId).toBe(number);
+  });
+
+  it("лишние сегменты после карточки — не карточка", () => {
+    expect(matchSection("/eds/inbox/ВХ-104/26/лишнее")).toBeUndefined();
+    expect(matchSection("/eds/inbox/abc/def")).toBeUndefined();
+  });
+
   it("/chats/contacts — раздел, а не карточка чата", () => {
     const hit = matchSection("/chats/contacts");
     expect(hit?.section.key).toBe("contacts");

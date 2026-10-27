@@ -133,7 +133,7 @@
  * (директор читает), сброс пароля — `admin: full`; профиль доступен каждому вошедшему. Секреты из записей журнала BFF вырезает
  * (значения полей `password`, `secret`, `token`, `key`, `*_key`, `credentials`, `authorization`, `pin` и им подобных -> `***` целиком, любого типа).
  *
- * **0.16.0 (W15-H1) — мост в старые экраны.** Добавляющее изменение (тег `bridge`). Пока раздел Платформы ещё заглушка, сотрудник
+ * **0.17.0 (W15-H1) — мост в старые экраны.** Добавляющее изменение (тег `bridge`). Пока раздел Платформы ещё заглушка, сотрудник
  * открывает ту же работу в старой CRM или старом ERP новой вкладкой. `GET /bridge` отдаёт публичные адреса старых фронтов
  * (`crm_url`, `erp_url`): настройки `PLATFORM_CRM_PUBLIC_URL` и `PLATFORM_ERP_PUBLIC_URL`, а если они пусты — адрес выводится из
  * адреса, по которому открыта Платформа (`platform.<домен>` -> `crm.<домен>` и `erp.<домен>`, схема и порт те же); не задан и не
@@ -150,6 +150,17 @@
  * «своя компания» спрашивает ERP только после сопряжения; почему данных о компании нет — `SetupChecklist.company_blocker`
  * (`erp_not_connected` — сначала подключите ERP, `erp_unavailable` — ERP не ответила). `POST /setup/company` без сопряжённой ERP —
  * 409 `ERP_NOT_CONNECTED` (новый код) с текстом и `details.link` на карточку ERP; недоступная ERP — прежний 503 `BACKEND_UNAVAILABLE`.
+ *
+ * **0.16.0 (D1-3) — EDS · Входящие письма и резолюция директора.** Добавляющее изменение, тег `letters`: `GET /eds/letters`
+ * (список со статусом словами интерфейса и фильтром по статусу), `GET /eds/letters/{ref}` (карточка письма по id или по
+ * номеру `ВХ-104/26`: реквизиты, суть, вложения, связи, журнал, шаг пути заявки; данные заявки — из ERP по ссылке письма,
+ * ERP не ответил — частичный ответ `sources.erp = unavailable`), `POST /eds/letters/{id}/resolution` («Утвердить резолюцию →
+ * задание в расчёт»), `POST /eds/letters/{id}/return` («Вернуть менеджеру»), `POST /eds/letters/{id}/reject` («Отклонить»,
+ * причина обязательна), `GET /eds/resolution/assignees` (кандидаты в исполнители по трём зонам — по разделам каталога, не по
+ * кодам ролей), `GET /eds/letter-files/{file_id}` (вложение потоком). Раздел `eds.inbox`: чтение — карточка без решений
+ * (менеджер, бухгалтер), полный — резолюция, возврат, отказ (директор). EDS — отдельный домен: вызовы идут с токеном доступа
+ * EDS, полученным обменом токена сотрудника CRM `aud=eds` (`docs/architecture/platform-bff.md` §3); ошибки EDS переводятся в
+ * формат `Error` (`source = eds`, `details.reason` и `details.fields` EDS сохраняются).
  *
  * 0.2.4: `423 ACCOUNT_LOCKED` объявлен и на `POST /auth/change-password` (CRM блокирует учётную запись после неверных
  * текущих паролей).
@@ -169,7 +180,7 @@
  * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.16.0
+ * OpenAPI spec version: 0.17.0
  */
 import { useMutation, useQuery } from "@tanstack/react-query";
 import type {
@@ -283,6 +294,11 @@ import type {
   KbProductList,
   KbSearchIn,
   KbSearchResult,
+  LetterCard,
+  LetterConflictResponse,
+  LetterPage,
+  LetterRejectIn,
+  LetterReturnIn,
   ListAuditParams,
   ListBusDeliveriesParams,
   ListBusInboxParams,
@@ -290,6 +306,7 @@ import type {
   ListEmployeesParams,
   ListKbDocumentsParams,
   ListKbGapsParams,
+  ListLettersParams,
   ListMailLogParams,
   ListNotificationsParams,
   LoginIn,
@@ -320,6 +337,8 @@ import type {
   ReferenceItemUpdate,
   ReplyTemplateIn,
   ReplyTemplateList,
+  ResolutionAssignees,
+  ResolutionIn,
   Role,
   RoleCreate,
   RoleJournal,
@@ -17485,6 +17504,973 @@ export function useDownloadCsvExport<
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
   const queryOptions = getDownloadCsvExportQueryOptions(entity, params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getListLettersUrl = (params?: ListLettersParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    const explodeParameters = ["status"];
+
+    if (Array.isArray(value) && explodeParameters.includes(key)) {
+      value.forEach((v) => {
+        normalizedParams.append(key, v === null ? "null" : String(v));
+      });
+      return;
+    }
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/eds/letters?${stringifiedParams}`
+    : `/api/v1/eds/letters`;
+};
+
+/**
+ * EDS `GET /letters` (право `letters.read`). Раздел `eds.inbox` — чтение; менеджер и бухгалтер видят список, директор — тоже и решает. Порядок — от новых к старым. Страница — непрозрачный `cursor` из `next_cursor`. Клиент — название организации-отправителя из письма, заявка — бизнес-номер ЗВ из связей письма. EDS не ответил — 503 `BACKEND_UNAVAILABLE` (`source = eds`); у сотрудника нет прав в EDS — 403 `FORBIDDEN` (`details.reason = eds_not_granted`).
+ * @summary EDS · Входящие письма: список
+ */
+export const listLetters = async (
+  params?: ListLettersParams,
+  options?: Parameters<typeof http>[1],
+): Promise<LetterPage> => {
+  return http<LetterPage>(getListLettersUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListLettersQueryKey = (params?: ListLettersParams) => {
+  return [`/api/v1/eds/letters`, ...(params ? [params] : [])] as const;
+};
+
+export const getListLettersQueryOptions = <
+  TData = Awaited<ReturnType<typeof listLetters>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListLettersParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listLetters>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListLettersQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listLetters>>> = ({ signal }) =>
+    listLetters(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listLetters>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListLettersQueryResult = NonNullable<Awaited<ReturnType<typeof listLetters>>>;
+export type ListLettersQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse | BackendUnavailableResponse
+>;
+
+export function useListLetters<
+  TData = Awaited<ReturnType<typeof listLetters>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params: undefined | ListLettersParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listLetters>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listLetters>>,
+          TError,
+          Awaited<ReturnType<typeof listLetters>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListLetters<
+  TData = Awaited<ReturnType<typeof listLetters>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListLettersParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listLetters>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listLetters>>,
+          TError,
+          Awaited<ReturnType<typeof listLetters>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListLetters<
+  TData = Awaited<ReturnType<typeof listLetters>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListLettersParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listLetters>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary EDS · Входящие письма: список
+ */
+
+export function useListLetters<
+  TData = Awaited<ReturnType<typeof listLetters>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListLettersParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listLetters>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListLettersQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getGetLetterUrl = (ref: string) => {
+  return `/api/v1/eds/letters/${ref}`;
+};
+
+/**
+ * EDS `GET /letters/{id}`; по номеру — сначала `GET /registry?number=` (EDS адресует письма UUID, в номере есть «/»). `ref` — UUID письма или номер `ВХ-104/26`; косая черта номера допускается в пути как есть и как `%2F`. Номера нет в реестре или он не письмо — 404 `NOT_FOUND`. Данные заявки (шаг пути, название) BFF читает в ERP по ссылке письма (`links.erp_deal_id`); ERP не ответил — ответ 200 без данных заявки, шаг выведен по самому письму, а `sources.erp = unavailable` (плашка «ERP не отвечает, данные неполные»). Шаг пути — по правилу `docs/architecture/integration-map.md` §2: ждёт резолюции — «Резолюция», резолюция наложена — «Расчёт» (или дальше, если заявка ERP уже дальше), возвращено — «Заявка», отклонено — «Отказ». Поле `resolution.min_margin_pct` (маржа) без группы `cost_margin` у ролей сотрудника не отдаётся. Раздел `eds.inbox` — чтение.
+ * @summary EDS · Карточка входящего письма (по id или по номеру ВХ)
+ */
+export const getLetter = async (
+  ref: string,
+  options?: Parameters<typeof http>[1],
+): Promise<LetterCard> => {
+  return http<LetterCard>(getGetLetterUrl(ref), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetLetterQueryKey = (ref: string) => {
+  return [`/api/v1/eds/letters/${ref}`] as const;
+};
+
+export const getGetLetterQueryOptions = <
+  TData = Awaited<ReturnType<typeof getLetter>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  ref: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getLetter>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetLetterQueryKey(ref);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getLetter>>> = ({ signal }) =>
+    getLetter(ref, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: ref !== null && ref !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getLetter>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetLetterQueryResult = NonNullable<Awaited<ReturnType<typeof getLetter>>>;
+export type GetLetterQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useGetLetter<
+  TData = Awaited<ReturnType<typeof getLetter>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  ref: string,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getLetter>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getLetter>>,
+          TError,
+          Awaited<ReturnType<typeof getLetter>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetLetter<
+  TData = Awaited<ReturnType<typeof getLetter>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  ref: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getLetter>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getLetter>>,
+          TError,
+          Awaited<ReturnType<typeof getLetter>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetLetter<
+  TData = Awaited<ReturnType<typeof getLetter>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  ref: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getLetter>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary EDS · Карточка входящего письма (по id или по номеру ВХ)
+ */
+
+export function useGetLetter<
+  TData = Awaited<ReturnType<typeof getLetter>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  ref: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getLetter>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetLetterQueryOptions(ref, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getResolveLetterUrl = (id: string) => {
+  return `/api/v1/eds/letters/${id}/resolution`;
+};
+
+/**
+ * EDS `POST /letters/{id}/resolution` (право `letters.resolve`). Раздел `eds.inbox` — полный: роль только для чтения получает 403 в BFF до EDS. Письмо должно ждать резолюции, иначе 409 `CONFLICT` (`details.reason = invalid_state`). Срок расчёта в прошлом (по `Asia/Tashkent`) — 422 `VALIDATION_FAILED`, `details.fields = [due]`, `details.reason = due_in_past`; исполнитель не найден или отключён — `details.fields = [assignees]`, `details.reason = not_active_employee`; исполнитель дважды в одной зоне — `duplicate`; `min_margin_pct` у роли без группы `cost_margin` — 422 BFF, `details.reason = margin_forbidden`, в EDS запрос не уходит. Текст ошибки — `message` EDS на языке сотрудника. Ответ — обновлённая карточка. Решение, кого можно назначить, остаётся за EDS и ERP: BFF только передаёт сотрудников и зоны (`GET /eds/resolution/assignees` подсказывает, кого выбрать).
+ * @summary EDS · Утвердить резолюцию → задание в расчёт
+ */
+export const resolveLetter = async (
+  id: string,
+  resolutionIn: ResolutionIn,
+  options?: Parameters<typeof http>[1],
+): Promise<LetterCard> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<LetterCard>(getResolveLetterUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(resolutionIn),
+  });
+};
+
+export const getResolveLetterMutationKey = () => ["resolveLetter"] as const;
+
+export const getResolveLetterMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | LetterConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof resolveLetter>>,
+    TError,
+    ResolveLetterMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof resolveLetter>>,
+  TError,
+  ResolveLetterMutationVariables,
+  TContext
+> => {
+  const mutationKey = getResolveLetterMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof resolveLetter>>,
+    ResolveLetterMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return resolveLetter(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ResolveLetterMutationResult = NonNullable<Awaited<ReturnType<typeof resolveLetter>>>;
+export type ResolveLetterMutationBody = ResolutionIn;
+export type ResolveLetterMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | LetterConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type ResolveLetterMutationVariables = { id: string; data: ResolutionIn };
+
+/**
+ * @summary EDS · Утвердить резолюцию → задание в расчёт
+ */
+export const useResolveLetter = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | LetterConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof resolveLetter>>,
+      TError,
+      ResolveLetterMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof resolveLetter>>,
+  TError,
+  ResolveLetterMutationVariables,
+  TContext
+> => {
+  return useMutation(getResolveLetterMutationOptions(options), queryClient);
+};
+
+export const getReturnLetterUrl = (id: string) => {
+  return `/api/v1/eds/letters/${id}/return`;
+};
+
+/**
+ * EDS `POST /letters/{id}/return` (право `letters.resolve`). Раздел `eds.inbox` — полный. Комментарий обязателен (пустой — 422 `details.fields = [comment]`). Письмо уходит к регистратору (статус «Возвращено»), событие `letter.returned`. Ответ — обновлённая карточка.
+ * @summary EDS · Вернуть письмо менеджеру с комментарием
+ */
+export const returnLetter = async (
+  id: string,
+  letterReturnIn: LetterReturnIn,
+  options?: Parameters<typeof http>[1],
+): Promise<LetterCard> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<LetterCard>(getReturnLetterUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(letterReturnIn),
+  });
+};
+
+export const getReturnLetterMutationKey = () => ["returnLetter"] as const;
+
+export const getReturnLetterMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | LetterConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof returnLetter>>,
+    TError,
+    ReturnLetterMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof returnLetter>>,
+  TError,
+  ReturnLetterMutationVariables,
+  TContext
+> => {
+  const mutationKey = getReturnLetterMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof returnLetter>>,
+    ReturnLetterMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return returnLetter(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ReturnLetterMutationResult = NonNullable<Awaited<ReturnType<typeof returnLetter>>>;
+export type ReturnLetterMutationBody = LetterReturnIn;
+export type ReturnLetterMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | LetterConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type ReturnLetterMutationVariables = { id: string; data: LetterReturnIn };
+
+/**
+ * @summary EDS · Вернуть письмо менеджеру с комментарием
+ */
+export const useReturnLetter = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | LetterConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof returnLetter>>,
+      TError,
+      ReturnLetterMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof returnLetter>>,
+  TError,
+  ReturnLetterMutationVariables,
+  TContext
+> => {
+  return useMutation(getReturnLetterMutationOptions(options), queryClient);
+};
+
+export const getRejectLetterUrl = (id: string) => {
+  return `/api/v1/eds/letters/${id}/reject`;
+};
+
+/**
+ * EDS `POST /letters/{id}/reject` (право `letters.resolve`). Раздел `eds.inbox` — полный. Причина обязательна (пустая — 422 `details.fields = [reason]`). Статус «Отклонено», событие `letter.rejected`: ERP переводит заявку в «Отказ» с причиной. Ответ — обновлённая карточка.
+ * @summary EDS · Отклонить письмо с причиной
+ */
+export const rejectLetter = async (
+  id: string,
+  letterRejectIn: LetterRejectIn,
+  options?: Parameters<typeof http>[1],
+): Promise<LetterCard> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<LetterCard>(getRejectLetterUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(letterRejectIn),
+  });
+};
+
+export const getRejectLetterMutationKey = () => ["rejectLetter"] as const;
+
+export const getRejectLetterMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | LetterConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof rejectLetter>>,
+    TError,
+    RejectLetterMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof rejectLetter>>,
+  TError,
+  RejectLetterMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRejectLetterMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof rejectLetter>>,
+    RejectLetterMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return rejectLetter(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RejectLetterMutationResult = NonNullable<Awaited<ReturnType<typeof rejectLetter>>>;
+export type RejectLetterMutationBody = LetterRejectIn;
+export type RejectLetterMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | LetterConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type RejectLetterMutationVariables = { id: string; data: LetterRejectIn };
+
+/**
+ * @summary EDS · Отклонить письмо с причиной
+ */
+export const useRejectLetter = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | LetterConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof rejectLetter>>,
+      TError,
+      RejectLetterMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof rejectLetter>>,
+  TError,
+  RejectLetterMutationVariables,
+  TContext
+> => {
+  return useMutation(getRejectLetterMutationOptions(options), queryClient);
+};
+
+export const getListResolutionAssigneesUrl = () => {
+  return `/api/v1/eds/resolution/assignees`;
+};
+
+/**
+ * Кандидаты по зонам резолюции: товары (склад и цены поставщиков), услуги (ТЗ, бригада), условия оплаты. Зона даёт сотрудникам **раздел каталога**, а не код роли: товары — `erp.calc.goods`, услуги — `erp.calc.services`, условия оплаты — `eds.payments` (все — уровень «полный»). BFF читает из CRM активных сотрудников и роли с их матрицами (`GET /users`, `GET /platform-roles`; нужен раздел `admin` не ниже чтения) и сводит матрицы ролей каждого. Если роли сотрудника не дают чтения справочника CRM — 200 с пустыми списками и `directory = forbidden`: выбор исполнителей недоступен до появления операции «сотрудники по разделу» в CRM (docs/QUESTIONS.md). Раздел `eds.inbox` — полный.
+ * @summary EDS · Кого можно назначить исполнителем резолюции, по зонам
+ */
+export const listResolutionAssignees = async (
+  options?: Parameters<typeof http>[1],
+): Promise<ResolutionAssignees> => {
+  return http<ResolutionAssignees>(getListResolutionAssigneesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListResolutionAssigneesQueryKey = () => {
+  return [`/api/v1/eds/resolution/assignees`] as const;
+};
+
+export const getListResolutionAssigneesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listResolutionAssignees>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(options?: {
+  query?: Partial<
+    UseQueryOptions<Awaited<ReturnType<typeof listResolutionAssignees>>, TError, TData>
+  >;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListResolutionAssigneesQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listResolutionAssignees>>> = ({
+    signal,
+  }) => listResolutionAssignees({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listResolutionAssignees>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListResolutionAssigneesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listResolutionAssignees>>
+>;
+export type ListResolutionAssigneesQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse
+>;
+
+export function useListResolutionAssignees<
+  TData = Awaited<ReturnType<typeof listResolutionAssignees>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listResolutionAssignees>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listResolutionAssignees>>,
+          TError,
+          Awaited<ReturnType<typeof listResolutionAssignees>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListResolutionAssignees<
+  TData = Awaited<ReturnType<typeof listResolutionAssignees>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listResolutionAssignees>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listResolutionAssignees>>,
+          TError,
+          Awaited<ReturnType<typeof listResolutionAssignees>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListResolutionAssignees<
+  TData = Awaited<ReturnType<typeof listResolutionAssignees>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listResolutionAssignees>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary EDS · Кого можно назначить исполнителем резолюции, по зонам
+ */
+
+export function useListResolutionAssignees<
+  TData = Awaited<ReturnType<typeof listResolutionAssignees>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listResolutionAssignees>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListResolutionAssigneesQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getDownloadLetterFileUrl = (fileId: string) => {
+  return `/api/v1/eds/letter-files/${fileId}`;
+};
+
+/**
+ * EDS `GET /files/{id}` потоком, последняя версия. Раздел `eds.inbox` — чтение. Файл отдаётся как вложение (`Content-Disposition: attachment`), тип содержимого браузер не исполняет (`X-Content-Type-Options: nosniff`, `Content-Security-Policy: sandbox`). Файла нет или он не виден сотруднику — 404 `NOT_FOUND`.
+ * @summary EDS · Скачать вложение письма
+ */
+export const downloadLetterFile = async (
+  fileId: string,
+  options?: Parameters<typeof http>[1],
+): Promise<Blob> => {
+  return http<Blob>(getDownloadLetterFileUrl(fileId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getDownloadLetterFileQueryKey = (fileId: string) => {
+  return [`/api/v1/eds/letter-files/${fileId}`] as const;
+};
+
+export const getDownloadLetterFileQueryOptions = <
+  TData = Awaited<ReturnType<typeof downloadLetterFile>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  fileId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof downloadLetterFile>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getDownloadLetterFileQueryKey(fileId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof downloadLetterFile>>> = ({ signal }) =>
+    downloadLetterFile(fileId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: fileId !== null && fileId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof downloadLetterFile>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type DownloadLetterFileQueryResult = NonNullable<
+  Awaited<ReturnType<typeof downloadLetterFile>>
+>;
+export type DownloadLetterFileQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useDownloadLetterFile<
+  TData = Awaited<ReturnType<typeof downloadLetterFile>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  fileId: string,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof downloadLetterFile>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof downloadLetterFile>>,
+          TError,
+          Awaited<ReturnType<typeof downloadLetterFile>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useDownloadLetterFile<
+  TData = Awaited<ReturnType<typeof downloadLetterFile>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  fileId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadLetterFile>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof downloadLetterFile>>,
+          TError,
+          Awaited<ReturnType<typeof downloadLetterFile>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useDownloadLetterFile<
+  TData = Awaited<ReturnType<typeof downloadLetterFile>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  fileId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof downloadLetterFile>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary EDS · Скачать вложение письма
+ */
+
+export function useDownloadLetterFile<
+  TData = Awaited<ReturnType<typeof downloadLetterFile>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  fileId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof downloadLetterFile>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getDownloadLetterFileQueryOptions(fileId, options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;

@@ -35,15 +35,7 @@ describe("мост в старые экраны: карта разделов-з�
       .map(([id]) => id)
       .sort();
     expect(soon).toEqual(
-      [
-        "crm.clients",
-        "crm.leads",
-        "crm.messages",
-        "eds.approvals",
-        "eds.drafts",
-        "eds.inbox",
-        "eds.new",
-      ].sort(),
+      ["crm.clients", "crm.leads", "crm.messages", "eds.approvals", "eds.drafts", "eds.new"].sort(),
     );
   });
 

@@ -61,25 +61,26 @@ test.describe("Заглушки и мост", () => {
     await shoot(page, "object-from-queue-lead");
   });
 
-  test("директор: письмо из очереди — «Письмо ВХ-104/26», кто делает вне интерфейса, кнопки в старый экран нет", async ({
+  test("директор: служебка из очереди — «Служебка СЗ-2026/031», кто делает вне интерфейса, кнопки в старый экран нет", async ({
     page,
   }) => {
     await loginAndWait(page, "director@demo.example");
     const row = page
       .getByRole("region", { name: "Что сделать сейчас" })
       .getByRole("listitem")
-      .filter({ hasText: "Наложить резолюцию на письмо ВХ-104/26" });
+      .filter({ hasText: "Согласовать СЗ-2026/031" });
     await row.getByRole("link", { name: /Открыть/ }).click();
 
-    await expect(page.getByRole("heading", { level: 1, name: "Письмо ВХ-104/26" })).toBeVisible();
-    const main = page.getByRole("main");
-    await expect(main.getByText(/ООО «Демо-Депо» · заявка ЗВ-2026-104/)).toBeVisible();
     await expect(
-      main.getByText(/Сейчас этой работы в интерфейсе нет; её делает директор/),
+      page.getByRole("heading", { level: 1, name: "Служебка СЗ-2026/031" }),
+    ).toBeVisible();
+    const main = page.getByRole("main");
+    await expect(main.getByText(/от Демо Офисовой/)).toBeVisible();
+    await expect(
+      main.getByText(/Сейчас этой работы в интерфейсе нет; её делает директор и бухгалтер/),
     ).toBeVisible();
     await expect(main.getByRole("link", { name: /Открыть в/ })).toHaveCount(0);
-    await expect(main.getByText(/Входящих писем пока нет/)).toHaveCount(0);
-    await shoot(page, "object-from-queue-letter");
+    await shoot(page, "object-from-queue-memo");
   });
 
   test("менеджер: «Ждут ответа» — мост в старую CRM; бейдж меню только с подсказкой «в старой CRM: 1»", async ({
@@ -111,21 +112,21 @@ test.describe("Заглушки и мост", () => {
     await shoot(page, "stub-with-bridge");
   });
 
-  test("директор: «Входящие» — раздела нет в старых экранах, честно «её делает директор», «Когда появится»", async ({
+  test("директор: «На согласовании» — раздела нет в старых экранах, честно «её делает директор», «Когда появится»", async ({
     page,
   }) => {
     await loginAndWait(page, "director@demo.example");
-    await spaGoto(page, "/eds/inbox");
-    await expect(page.getByRole("heading", { level: 1, name: "Входящие письма" })).toBeVisible();
+    await spaGoto(page, "/eds/approvals");
+    await expect(page.getByRole("heading", { level: 1, name: "На согласовании" })).toBeVisible();
     const main = page.getByRole("main");
     await expect(
-      main.getByText(/Сейчас этой работы в интерфейсе нет; её делает директор/),
+      main.getByText(/Сейчас этой работы в интерфейсе нет; её делает директор и бухгалтер/),
     ).toBeVisible();
     await expect(main.getByText("Когда появится: в ближайшем обновлении.")).toBeVisible();
     await expect(main.getByRole("link", { name: /Открыть в/ })).toHaveCount(0);
     const menu = page.getByRole("navigation", { name: "Разделы модуля" });
-    await expect(menu.getByRole("link", { name: /Входящие/ })).toHaveAccessibleName(
-      "Входящие письма",
+    await expect(menu.getByRole("link", { name: /На согласовании/ })).toHaveAccessibleName(
+      "На согласовании",
     );
     await shoot(page, "stub-without-bridge");
   });
