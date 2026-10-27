@@ -83,31 +83,33 @@ test.describe("Заглушки и мост", () => {
     await shoot(page, "object-from-queue-memo");
   });
 
-  test("менеджер: «Ждут ответа» — мост в старую CRM; бейдж меню только с подсказкой «ещё в старой системе: 1»", async ({
+  test("менеджер: «Лиды» — мост в старую CRM; бейдж меню только с подсказкой «ещё в старой системе: 2»", async ({
     page,
   }) => {
+    // «Ждут ответа» — уже настоящий экран (D1-1, `e2e/crm-messages.spec.ts`); мост — на соседнем разделе.
     await loginAndWait(page, "manager@demo.example");
-    await spaGoto(page, "/crm/messages");
-    await expect(page.getByRole("heading", { level: 1, name: "Ждут ответа" })).toBeVisible();
+    await spaGoto(page, "/crm/leads");
+    await expect(page.getByRole("heading", { level: 1, name: "Лиды" })).toBeVisible();
     const main = page.getByRole("main");
     await expect(
       main.getByRole("heading", { level: 2, name: "Этот раздел ещё переносится в Платформу" }),
     ).toBeVisible();
     await expect(
-      main.getByText(
-        "Сейчас эта работа делается в старой CRM: раздел «Входящие». Данные не потеряны.",
-      ),
+      main.getByText("Сейчас эта работа делается в старой CRM: раздел «Лиды». Данные не потеряны."),
     ).toBeVisible();
     await expect(main.getByRole("link", { name: /Открыть в старой CRM/ })).toHaveAttribute(
       "href",
-      "http://crm.localhost:8088/inbox",
+      "http://crm.localhost:8088/leads",
     );
     await expect(main.getByText("Вход в старую CRM — теми же логином и паролем.")).toBeVisible();
-    await expect(main.getByText(/Сообщений пока нет/)).toHaveCount(0);
 
     const menu = page.getByRole("navigation", { name: "Разделы модуля" });
-    await expect(menu.getByRole("link", { name: /Ждут ответа/ })).toHaveAccessibleName(
-      /ещё в старой системе: 1/,
+    await expect(menu.getByRole("link", { name: /^Лиды/ })).toHaveAccessibleName(
+      /ещё в старой системе: 2/,
+    );
+    // настоящий экран — живой бейдж без подсказки о старой системе
+    await expect(menu.getByRole("link", { name: /Ждут ответа/ })).not.toHaveAccessibleName(
+      /ещё в старой системе/,
     );
     await shoot(page, "stub-with-bridge");
   });

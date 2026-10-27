@@ -72,7 +72,6 @@ export const BRIDGE: Readonly<Record<string, BridgeEntry>> = {
   },
   "dashboard.summary": { legacy: crm("/dashboard", "crmDashboard"), when: "pilot" },
 
-  "crm.messages": { legacy: crm("/inbox", "crmInbox"), when: "soon", legacyCount: true },
   "crm.leads": {
     legacy: crm("/leads", "crmLeads", leadPath),
     when: "soon",
@@ -144,6 +143,7 @@ export const BRIDGE: Readonly<Record<string, BridgeEntry>> = {
 /** Разделы с настоящим экраном: моста у них нет. Новый настоящий экран — сюда, а запись из `BRIDGE` — удалить. */
 export const NATIVE_SECTIONS: readonly string[] = [
   "dashboard.queue",
+  "crm.messages",
   "crm.kb",
   "eds.inbox",
   "admin.roles",
