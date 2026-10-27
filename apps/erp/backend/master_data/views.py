@@ -22,6 +22,17 @@ def _lookup_write_permissions(view):
 
 LOOKUP_CACHE_TTL = 60 * 10  # 10 min — справочники меняются редко
 
+# Описание контракта (D2-0): параметр выборки и отказ удаления одинаковы у четырёх справочников.
+_INCLUDE_INACTIVE = [
+    OpenApiParameter(
+        "include_inactive",
+        str,
+        OpenApiParameter.QUERY,
+        description="`1`/`true` — вместе с отключёнными строками; только для держателя `settings.edit` или администратора",
+    )
+]
+_IN_USE = OpenApiResponse(description="LOOKUP_IN_USE[:Модели,…] — на строку ссылаются данные; отключите её вместо удаления")
+
 
 def _lookup_snapshot(instance) -> dict:
     """Что записываем в след: только опорные поля справочника, без служебных."""
@@ -145,12 +156,12 @@ class _ActiveOnlyListMixin:
 
 
 @extend_schema_view(
-    list=extend_schema(summary="List countries", tags=["Master Data"]),
+    list=extend_schema(summary="List countries", parameters=_INCLUDE_INACTIVE, tags=["Master Data"]),
     create=extend_schema(summary="Create country", description="Admin only.", tags=["Master Data"]),
     retrieve=extend_schema(summary="Get country", tags=["Master Data"]),
     update=extend_schema(summary="Update country", description="Admin only.", tags=["Master Data"]),
     partial_update=extend_schema(summary="Partially update country", tags=["Master Data"]),
-    destroy=extend_schema(summary="Delete country", tags=["Master Data"]),
+    destroy=extend_schema(summary="Delete country", responses={204: None, 400: _IN_USE}, tags=["Master Data"]),
 )
 class CountryViewSet(
     RoleGatedViewMixin, _CachedLookupListMixin, _GuardedDestroyMixin, _ActiveOnlyListMixin, viewsets.ModelViewSet
@@ -175,12 +186,12 @@ class CountryViewSet(
 
 
 @extend_schema_view(
-    list=extend_schema(summary="List currencies", tags=["Master Data"]),
+    list=extend_schema(summary="List currencies", parameters=_INCLUDE_INACTIVE, tags=["Master Data"]),
     create=extend_schema(summary="Create currency", description="Admin only.", tags=["Master Data"]),
     retrieve=extend_schema(summary="Get currency", tags=["Master Data"]),
     update=extend_schema(summary="Update currency", description="Admin only.", tags=["Master Data"]),
     partial_update=extend_schema(summary="Partially update currency", tags=["Master Data"]),
-    destroy=extend_schema(summary="Delete currency", tags=["Master Data"]),
+    destroy=extend_schema(summary="Delete currency", responses={204: None, 400: _IN_USE}, tags=["Master Data"]),
 )
 class CurrencyViewSet(
     RoleGatedViewMixin, _CachedLookupListMixin, _GuardedDestroyMixin, _ActiveOnlyListMixin, viewsets.ModelViewSet
@@ -205,12 +216,12 @@ class CurrencyViewSet(
 
 
 @extend_schema_view(
-    list=extend_schema(summary="List units of measure", tags=["Master Data"]),
+    list=extend_schema(summary="List units of measure", parameters=_INCLUDE_INACTIVE, tags=["Master Data"]),
     create=extend_schema(summary="Create unit", description="Admin only.", tags=["Master Data"]),
     retrieve=extend_schema(summary="Get unit of measure", tags=["Master Data"]),
     update=extend_schema(summary="Update unit", description="Admin only.", tags=["Master Data"]),
     partial_update=extend_schema(summary="Partially update unit", tags=["Master Data"]),
-    destroy=extend_schema(summary="Delete unit", tags=["Master Data"]),
+    destroy=extend_schema(summary="Delete unit", responses={204: None, 400: _IN_USE}, tags=["Master Data"]),
 )
 class UnitOfMeasureViewSet(
     RoleGatedViewMixin, _CachedLookupListMixin, _GuardedDestroyMixin, _ActiveOnlyListMixin, viewsets.ModelViewSet
@@ -235,12 +246,12 @@ class UnitOfMeasureViewSet(
 
 
 @extend_schema_view(
-    list=extend_schema(summary="List delivery basis", tags=["Master Data"]),
+    list=extend_schema(summary="List delivery basis", parameters=_INCLUDE_INACTIVE, tags=["Master Data"]),
     create=extend_schema(summary="Create delivery basis", description="Admin only.", tags=["Master Data"]),
     retrieve=extend_schema(summary="Get delivery basis", tags=["Master Data"]),
     update=extend_schema(summary="Update delivery basis", description="Admin only.", tags=["Master Data"]),
     partial_update=extend_schema(summary="Partially update delivery basis", tags=["Master Data"]),
-    destroy=extend_schema(summary="Delete delivery basis", tags=["Master Data"]),
+    destroy=extend_schema(summary="Delete delivery basis", responses={204: None, 400: _IN_USE}, tags=["Master Data"]),
 )
 class DeliveryBasisViewSet(
     RoleGatedViewMixin, _CachedLookupListMixin, _GuardedDestroyMixin, _ActiveOnlyListMixin, viewsets.ModelViewSet

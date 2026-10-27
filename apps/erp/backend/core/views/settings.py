@@ -1,5 +1,5 @@
 from django.conf import settings as django_settings
-from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_field
+from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_field, inline_serializer
 from rest_framework import serializers as drf_serializers
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -99,7 +99,19 @@ class SystemSettingsView(RoleGatedViewMixin, APIView):
             "managed in CRM: a request that contains any of them is rejected with 400 `SHARED_SETTING_READ_ONLY`."
         ),
         request=SystemSettingSerializer,
-        responses={200: SystemSettingSerializer, 400: OpenApiResponse(description="SHARED_SETTING_READ_ONLY")},
+        responses={
+            200: SystemSettingSerializer,
+            400: OpenApiResponse(
+                response=inline_serializer(
+                    "SharedSettingReadOnlyError",
+                    fields={
+                        "detail": drf_serializers.CharField(),
+                        "fields": drf_serializers.ListField(child=drf_serializers.CharField()),
+                    },
+                ),
+                description="SHARED_SETTING_READ_ONLY (`fields` names the rejected shared fields) or serializer field errors",
+            ),
+        },
         tags=["System"],
     )
     def patch(self, request):

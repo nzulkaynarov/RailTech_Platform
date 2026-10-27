@@ -1,5 +1,6 @@
-from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view
+from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view, inline_serializer
 from rest_framework import permissions, viewsets
+from rest_framework import serializers as drf_serializers
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.throttling import UserRateThrottle
@@ -10,8 +11,10 @@ from core.permissions import HasRolePermission, RoleGatedViewMixin
 from . import services, services_email_templates
 from .models import EmailTemplate, Notification
 from .serializers import (
+    EmailTemplatePreviewResultSerializer,
     EmailTemplatePreviewSerializer,
     EmailTemplateSerializer,
+    EmailTemplateTestSendResultSerializer,
     EmailTemplateTestSendSerializer,
     NotificationSerializer,
 )
@@ -65,7 +68,10 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
     @extend_schema(
         summary="Mark notification as read",
         description="Mark a single notification as read by its ID.",
-        responses={200: OpenApiResponse(description="Notification marked as read")},
+        responses={
+            200: inline_serializer("NotificationMarkedRead", fields={"status": drf_serializers.CharField()}),
+            404: OpenApiResponse(description="Not found (or another user's notification)"),
+        },
         tags=["Notifications"],
     )
     @action(detail=True, methods=["patch"])
@@ -77,7 +83,12 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
     @extend_schema(
         summary="Mark all notifications as read",
         description="Mark all of the current user's notifications as read.",
-        responses={200: OpenApiResponse(description="All notifications marked as read")},
+        responses={
+            200: inline_serializer(
+                "NotificationsMarkedRead",
+                fields={"status": drf_serializers.CharField(), "count": drf_serializers.IntegerField()},
+            )
+        },
         tags=["Notifications"],
     )
     @action(detail=False, methods=["patch"])
@@ -171,7 +182,7 @@ class EmailTemplateViewSet(RoleGatedViewMixin, AuditedWriteMixin, viewsets.Model
         description="Render the template's subject/html/text against a SAMPLE context (or a "
         "provided override context). Does NOT send. Reflects DB override vs file fallback.",
         request=EmailTemplatePreviewSerializer,
-        responses={200: OpenApiResponse(description="Rendered subject/text_body/html_body")},
+        responses={200: EmailTemplatePreviewResultSerializer},
         tags=["Admin"],
     )
     @action(detail=True, methods=["post"])
@@ -189,7 +200,7 @@ class EmailTemplateViewSet(RoleGatedViewMixin, AuditedWriteMixin, viewsets.Model
         "Writes an EmailLog. Use to verify copy and transport before going live.",
         request=EmailTemplateTestSendSerializer,
         responses={
-            200: OpenApiResponse(description="Send result with EmailLog id and status"),
+            200: EmailTemplateTestSendResultSerializer,
             429: OpenApiResponse(description="Rate limit of test emails per user exceeded"),
         },
         tags=["Admin"],

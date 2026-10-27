@@ -62,3 +62,19 @@ class EmailTemplateTestSendSerializer(EmailTemplatePreviewSerializer):
     """Input for the test-send action: a single recipient email."""
 
     to_email = serializers.EmailField()
+
+
+class EmailTemplatePreviewResultSerializer(serializers.Serializer):
+    """Ответ предпросмотра: тема и тела письма, как их соберёт настоящий конвейер, и контекст, на котором собрано."""
+
+    key = serializers.CharField()
+    subject = serializers.CharField()
+    text_body = serializers.CharField()
+    html_body = serializers.CharField()
+    context_used = serializers.DictField(help_text="Контекст рендера: образцовый или присланный `context`")
+
+
+class EmailTemplateTestSendResultSerializer(serializers.Serializer):
+    status = serializers.CharField(help_text="Статус записи EmailLog или UNKNOWN")
+    email_log_id = serializers.IntegerField(allow_null=True)
+    to_email = serializers.EmailField()
