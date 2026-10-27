@@ -14,6 +14,8 @@ import type {
 const KEY = "rt-pf-mock-messages";
 /** `localStorage[...] = "1"`: Telegram «не отвечает» — ответ клиенту падает с 502 (сценарий «Повторить»). */
 export const MOCK_TELEGRAM_DOWN_KEY = "rt-pf-mock-telegram-down";
+/** `localStorage[...] = "1"`: Telegram не ответил вовремя — итог отправки неизвестен (502 `delivery_unknown`). */
+export const MOCK_TELEGRAM_UNKNOWN_KEY = "rt-pf-mock-telegram-unknown";
 /** `localStorage[...] = "1"`: очередь пуста (пустое состояние экрана). */
 export const MOCK_INBOX_EMPTY_KEY = "rt-pf-mock-inbox-empty";
 
@@ -63,7 +65,6 @@ function thread(base: number, lead: string, lines: [ThreadMessage["author"], str
     created_at: ago(base, lines.length - index + 10),
     attachments: [],
     delivery: null,
-    retry_key: null,
   }));
 }
 
@@ -336,7 +337,7 @@ function initial(): MessagesMock {
     messages: thread(base, "L-2060", [["lead", "Hello, do you ship to Kazakhstan?"]]),
     notes: [],
   };
-  // B-013: ответ, доставку которого Telegram так и не подтвердил (таймаут), — пометка и «Повторить» в ленте.
+  // B-013: ответ, доставку которого Telegram так и не подтвердил (таймаут), — пометка в ленте.
   mine.messages.push({
     id: 2_050_900,
     author: "manager",
@@ -344,8 +345,7 @@ function initial(): MessagesMock {
     text: "Счёт пришлю до конца дня.",
     created_at: ago(base, 4),
     attachments: [],
-    delivery: "sending",
-    retry_key: "draft-demo-unconfirmed",
+    delivery: "unconfirmed",
   });
   return {
     leads: [rails, overdue, mine, free],

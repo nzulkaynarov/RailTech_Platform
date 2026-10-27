@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import {
   MOCK_INBOX_EMPTY_KEY,
   MOCK_TELEGRAM_DOWN_KEY,
+  MOCK_TELEGRAM_UNKNOWN_KEY,
   readMessages,
   resetMessages,
   writeMessages,
@@ -155,19 +156,56 @@ describe("Клиенты · Ждут ответа: менеджер", () => {
     expect(field().value).toBe("");
   });
 
-  it("ответ без подтверждённой доставки: пометка и «Повторить» тем же ключом — без второго сообщения (B-013)", async () => {
+  it("итог неизвестен (B-013): «Доставка не подтверждена», текст в поле, «Повторить» без второго сообщения и без «Отправлено»", async () => {
     await open("manager@demo.example", "?lead=L-2050");
-    const mark = await screen.findByText(/Доставка не подтверждена: Telegram не ответил вовремя/);
-    const before = readMessages().leads.find((l) => l.item.lead === "L-2050")?.messages.length;
-    fireEvent.click(within(mark).getByRole("button", { name: "Повторить" }));
+    // в ленте — прежний ответ, доставку которого не подтвердили
     expect(
       await screen.findByText(
         "Доставка не подтверждена — проверьте у клиента, получил ли он ответ",
       ),
     ).toBeVisible();
-    expect(readMessages().leads.find((l) => l.item.lead === "L-2050")?.messages.length).toBe(
-      before,
-    );
+
+    window.localStorage.setItem(MOCK_TELEGRAM_UNKNOWN_KEY, "1");
+    fireEvent.change(field(), { target: { value: "Счёт в течение часа" } });
+    fireEvent.click(screen.getByRole("button", { name: "Отправить" }));
+    const alert = await screen.findByRole("alert");
+    expect(
+      within(alert).getByText(/Доставка не подтверждена: Telegram не ответил вовремя/),
+    ).toBeVisible();
+    expect(field().value).toBe("Счёт в течение часа");
+    window.localStorage.removeItem(MOCK_TELEGRAM_UNKNOWN_KEY);
+    const count = readMessages().leads.find((l) => l.item.lead === "L-2050")?.messages.length;
+
+    fireEvent.click(within(alert).getByRole("button", { name: "Повторить" }));
+    await waitFor(() => {
+      expect(
+        within(screen.getByRole("alert")).getByText(
+          "Доставка не подтверждена — проверьте у клиента, получил ли он ответ",
+        ),
+      ).toBeVisible();
+    });
+    expect(screen.queryByText("Отправлено клиенту")).toBeNull();
+    expect(field().value).toBe("Счёт в течение часа");
+    expect(readMessages().leads.find((l) => l.item.lead === "L-2050")?.messages.length).toBe(count);
+
+    fireEvent.change(field(), { target: { value: "Счёт в течение часа, извините за задержку" } });
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("правка текста после неизвестного итога — предупреждение «уйдёт новым сообщением»", async () => {
+    await open("manager@demo.example", "?lead=L-2050");
+    await screen.findByRole("heading", { level: 2, name: "Тимур Образцов" });
+    window.localStorage.setItem(MOCK_TELEGRAM_UNKNOWN_KEY, "1");
+    fireEvent.change(field(), { target: { value: "Первый вариант" } });
+    fireEvent.click(screen.getByRole("button", { name: "Отправить" }));
+    await screen.findByRole("alert");
+    window.localStorage.removeItem(MOCK_TELEGRAM_UNKNOWN_KEY);
+    fireEvent.change(field(), { target: { value: "Второй вариант" } });
+    expect(
+      screen.getByText(
+        "Текст изменён — он уйдёт новым сообщением; прежнее, возможно, уже доставлено",
+      ),
+    ).toBeVisible();
   });
 
   it("шаблон и «Подсказать ответ» вставляют текст в поле, отправляет человек", async () => {
@@ -201,7 +239,6 @@ describe("Клиенты · Ждут ответа: менеджер", () => {
       created_at: new Date().toISOString(),
       attachments: [],
       delivery: null,
-      retry_key: null,
     });
     writeMessages(state);
     expect(screen.queryByText("Новое сообщение клиента из бота")).toBeNull();
@@ -242,7 +279,6 @@ describe("лента: склейка страниц и заметок", () => {
       created_at: at,
       attachments: [],
       delivery: null,
-      retry_key: null,
     });
     const note = {
       id: 1,
@@ -285,6 +321,18 @@ describe("итог неудачной отправки", () => {
       retry: true,
     });
     expect(sendFailure(t, new ApiError(503, "BACKEND_UNAVAILABLE", "x", "crm")).retry).toBe(true);
+    expect(
+      sendFailure(
+        t,
+        new ApiError(502, "INTEGRATION_FAILED", "x", "crm", { reason: "delivery_unknown" }),
+      ),
+    ).toMatchObject({ retry: true, unknown: true });
+    expect(
+      sendFailure(t, new ApiError(409, "CONFLICT", "x", "crm", { reason: "delivery_unconfirmed" })),
+    ).toEqual({
+      text: "Доставка не подтверждена — проверьте у клиента, получил ли он ответ",
+      retry: false,
+    });
     expect(sendFailure(t, new TypeError("Failed to fetch")).retry).toBe(true);
     const busy = sendFailure(
       t,

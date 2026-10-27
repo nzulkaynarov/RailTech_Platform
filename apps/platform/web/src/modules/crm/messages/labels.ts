@@ -80,6 +80,8 @@ export function actionError(t: TFunction, error: unknown): string {
 export interface SendFailure {
   text: string;
   retry: boolean;
+  /** Итог отправки неизвестен: правка текста создаст новое сообщение (новый ключ) */
+  unknown?: boolean;
 }
 
 /**
@@ -90,8 +92,13 @@ export interface SendFailure {
 export function sendFailure(t: TFunction, error: unknown): SendFailure {
   if (!(error instanceof ApiError))
     return { text: t("messages:errors.BACKEND_UNAVAILABLE"), retry: true };
-  if (error.details["reason"] === "reply_in_progress")
+  const reason = error.details["reason"];
+  if (reason === "reply_in_progress")
     return { text: t("messages:errors.reply_in_progress"), retry: true };
+  if (reason === "delivery_unknown")
+    return { text: t("messages:errors.delivery_unknown"), retry: true, unknown: true };
+  if (reason === "delivery_unconfirmed")
+    return { text: t("messages:thread.delivery.unconfirmedFinal"), retry: false };
   if (error.code === "INTEGRATION_FAILED")
     return { text: t("messages:composer.failed"), retry: true };
   if (error.code === "BACKEND_UNAVAILABLE" || error.status >= 500)

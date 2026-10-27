@@ -8,6 +8,7 @@ import {
   type LeadMock,
   MOCK_INBOX_EMPTY_KEY,
   MOCK_TELEGRAM_DOWN_KEY,
+  MOCK_TELEGRAM_UNKNOWN_KEY,
   mockFlag,
   readMessages,
   writeMessages,
@@ -61,7 +62,6 @@ export function mockClientWrites(lead: string, text: string): void {
     created_at: now,
     attachments: [],
     delivery: null,
-    retry_key: null,
   });
   row.item.unread = true;
   row.item.last_message_at = now;
@@ -154,16 +154,37 @@ export const crmMessagesHandlers = [
     const { state, row } = found;
     const done = state.sent[body.client_message_id];
     if (done !== undefined) {
-      // Повтор тем же ключом: второго сообщения нет; «зависшая» отправка — «доставка не подтверждена» (как CRM)
+      // Повтор тем же ключом: второго сообщения нет (как CRM); итог неизвестен — «не подтверждено»
       const sent = row.messages.find((m) => m.id === done);
-      if (sent?.delivery === "sending") {
+      if (sent?.delivery === "sending" || sent?.delivery === "unconfirmed") {
         sent.delivery = "unconfirmed";
         writeMessages(state);
+        return failure(409, "CONFLICT", "Доставка не подтверждена.", "crm", {
+          reason: "delivery_unconfirmed",
+        });
       }
       return HttpResponse.json({ id: done });
     }
     if (row.card.owner_mode !== "manager") {
       return failure(409, "CONFLICT", "Сначала заберите лида.", "crm", { reason: "take_first" });
+    }
+    if (mockFlag(MOCK_TELEGRAM_UNKNOWN_KEY)) {
+      state.nextId += 1;
+      row.messages.push({
+        id: state.nextId,
+        author: "manager",
+        author_name: me().name,
+        text: body.text,
+        created_at: new Date().toISOString(),
+        attachments: [],
+        delivery: "sending",
+      });
+      state.sent[body.client_message_id] = state.nextId;
+      writeMessages(state);
+      return failure(502, "INTEGRATION_FAILED", "Внешний сервис не ответил.", "crm", {
+        reason: "delivery_unknown",
+        backend_status: 502,
+      });
     }
     if (mockFlag(MOCK_TELEGRAM_DOWN_KEY)) {
       return failure(502, "INTEGRATION_FAILED", "Внешний сервис не ответил.", "crm", {
@@ -180,7 +201,6 @@ export const crmMessagesHandlers = [
       created_at: new Date().toISOString(),
       attachments: [],
       delivery: null,
-      retry_key: null,
     });
     row.item.unread = false;
     state.sent[body.client_message_id] = state.nextId;

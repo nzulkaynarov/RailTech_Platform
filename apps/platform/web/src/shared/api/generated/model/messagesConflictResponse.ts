@@ -191,6 +191,6 @@
 import type { Error } from "./error";
 
 /**
- * 409 `CONFLICT` — состояние лида не позволяет действие; код CRM — в `details.reason` (`lead_taken` с `details.assigned_user_name`, `take_first`, `no_consent`, `already_with_bot`, `reply_in_progress` — ответ с этим `client_message_id` ещё отправляется, повтор безопасен, `assist_disabled`, `assist_budget`, `assist_empty`, `assist_no_history`)
+ * 409 `CONFLICT` — состояние лида не позволяет действие; код CRM — в `details.reason` (`lead_taken` с `details.assigned_user_name`, `take_first`, `no_consent`, `already_with_bot`, `delivery_unconfirmed`, `reply_in_progress` — ответ с этим `client_message_id` ещё отправляется, повтор безопасен, `assist_disabled`, `assist_budget`, `assist_empty`, `assist_no_history`)
  */
 export type MessagesConflictResponse = Error;

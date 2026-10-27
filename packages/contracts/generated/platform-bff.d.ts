@@ -2754,7 +2754,7 @@ export interface paths {
     put?: never;
     /**
      * Ответить клиенту «От себя» (уходит в Telegram)
-     * @description CRM `POST /leads/{id}/messages`. Раздел `crm.leads` полный; отвечает тот, кто забрал лида (или администратор CRM). `client_message_id` — ключ повтора, который экран создаёт на черновик: «Повторить» с тем же ключом не отправит клиенту второе сообщение. Telegram не ответил — 502 `INTEGRATION_FAILED` с `details.reason = delivery_failed`, сообщение не записано, текст остаётся у экрана. Лид не забран — 409 `CONFLICT` (`take_first`), нет согласия клиента — 409 (`no_consent`), лид у другого — 403 `FORBIDDEN` (`not_lead_owner`).
+     * @description CRM `POST /leads/{id}/messages`. Раздел `crm.leads` полный; отвечает тот, кто забрал лида (или администратор CRM). `client_message_id` — ключ повтора, который экран создаёт на черновик: «Повторить» с тем же ключом не отправит клиенту второе сообщение. Telegram отказал — 502 `INTEGRATION_FAILED` с `details.reason = delivery_failed`, сообщение не записано, текст остаётся у экрана; Telegram не ответил вовремя — 502 `INTEGRATION_FAILED` с `delivery_unknown` (итог неизвестен: «Повторить» тем же ключом не продублирует, пока отправка идёт — 409 `reply_in_progress`); итог прежней отправки с этим ключом так и не узнали — 409 `CONFLICT` `delivery_unconfirmed` (второе сообщение не уходит, «лид отвечен» не ставится). Лид не забран — 409 `CONFLICT` (`take_first`), нет согласия клиента — 409 (`no_consent`), лид у другого — 403 `FORBIDDEN` (`not_lead_owner`).
      */
     post: operations["replyCrmLead"];
     delete?: never;
@@ -5417,12 +5417,10 @@ export interface components {
       created_at: string;
       attachments: components["schemas"]["ThreadAttachment"][];
       /**
-       * @description Только у ответа менеджера с ключом повтора: `sending` — отправка идёт (дольше пары минут — итог неизвестен, «доставка не подтверждена», «Повторить» тем же ключом не шлёт второе сообщение); `unconfirmed` — итог так и не узнали, повтор больше не отправляет (B-013). `null` — доставлено или это не ответ менеджера
+       * @description Только у ответа менеджера с ключом повтора: `sending` — отправка идёт («Отправляется…»); `unconfirmed` — доставка не подтверждена (таймаут Telegram или сбой записи итога, отправка старше 2 минут — тот же срок, что у CRM): повтор этим ключом сообщение не шлёт, проверьте у клиента (B-013). `null` — доставлено или это не ответ менеджера
        * @enum {string|null}
        */
       delivery: "sending" | "unconfirmed" | null;
-      /** @description `client_message_id` ответа с `delivery` ≠ `null` — для «Повторить» тем же ключом */
-      retry_key: string | null;
     };
     TeamNote: {
       id: number;
@@ -5593,7 +5591,7 @@ export interface components {
         "application/json": components["schemas"]["Error"];
       };
     };
-    /** @description 409 `CONFLICT` — состояние лида не позволяет действие; код CRM — в `details.reason` (`lead_taken` с `details.assigned_user_name`, `take_first`, `no_consent`, `already_with_bot`, `reply_in_progress` — ответ с этим `client_message_id` ещё отправляется, повтор безопасен, `assist_disabled`, `assist_budget`, `assist_empty`, `assist_no_history`) */
+    /** @description 409 `CONFLICT` — состояние лида не позволяет действие; код CRM — в `details.reason` (`lead_taken` с `details.assigned_user_name`, `take_first`, `no_consent`, `already_with_bot`, `delivery_unconfirmed`, `reply_in_progress` — ответ с этим `client_message_id` ещё отправляется, повтор безопасен, `assist_disabled`, `assist_budget`, `assist_empty`, `assist_no_history`) */
     MessagesConflict: {
       headers: {
         [name: string]: unknown;

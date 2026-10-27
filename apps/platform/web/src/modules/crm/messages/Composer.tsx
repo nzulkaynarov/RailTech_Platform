@@ -39,6 +39,8 @@ export function Composer({ card }: { card: ConversationCard }) {
   const templates = useListCrmReplyTemplates({ query: { staleTime: 60_000 } });
 
   const edit = (value: string) => {
+    // Итог прежней отправки неизвестен: правленый текст уйдёт новым сообщением — говорим об этом прямо.
+    if (failed?.unknown) setNotice(t("composer.editAfterUnknown"));
     setText(value);
     setKey(newMessageKey());
     setFailed(null);

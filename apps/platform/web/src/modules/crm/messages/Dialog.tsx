@@ -128,7 +128,7 @@ export function Dialog({
       </header>
       {takeable && !mobile ? <Consequence items={[t("consequence.take")]} /> : null}
       {item ? <HandoffNoteBox note={item.note} handoff={item.handoff} /> : null}
-      <Thread lead={lead} name={card.name} canReply={canReply} />
+      <Thread lead={lead} name={card.name} />
       {canReply ? (
         <Composer card={card} />
       ) : (

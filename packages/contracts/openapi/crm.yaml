@@ -4848,6 +4848,8 @@ components:
       - deal_owned_by_erp
       - no_consent
       - reply_in_progress
+      - delivery_unknown
+      - delivery_unconfirmed
       - litellm_unavailable
       - model_key_required
       - model_in_config

@@ -7,6 +7,7 @@
 
 import re
 from collections.abc import Iterable, Mapping
+from datetime import datetime, timedelta
 from typing import Any, get_args
 
 from app.clients import crm_models as crm
@@ -43,6 +44,8 @@ _TIMELINES: tuple[str, ...] = get_args(Timeline)
 _ROLES: tuple[str, ...] = get_args(DecisionRole)
 _CHANNEL = re.compile(r"^[a-z][a-z_]{0,15}$")
 _REASON = re.compile(r"^[a-z_]{1,32}$")
+# Ответ менеджера «отправляется» дольше — итог неизвестен (как `STALE_SENDING` в CRM, B-013).
+STALE_SENDING = timedelta(minutes=2)
 # Служебная пометка CRM («dialog: no_kb_match», «qualifier: …») — не текст для сотрудника.
 _SERVICE_NOTE = re.compile(r"^[a-z_]+:\s")
 
@@ -194,12 +197,15 @@ def attachments(number: str, message_id: int, raw: list[dict[str, Any]]) -> list
     return out
 
 
-def thread_message(number: str, message: crm.MessageOut, names: Names) -> ThreadMessage:
+def thread_message(
+    number: str, message: crm.MessageOut, names: Names, now: datetime
+) -> ThreadMessage:
     author = message.role if message.role in _AUTHORS else "system"
     name = names.get(message.sent_by_user_id) if message.sent_by_user_id is not None else None
     state = message.meta.get("delivery") if author == "manager" else None
+    if state == "sending" and now - message.created_at > STALE_SENDING:
+        state = "unconfirmed"  # тот же срок, что у CRM: дольше — итог неизвестен (B-013)
     delivery = state if state in ("sending", "unconfirmed") else None
-    key = message.meta.get("client_message_id") if delivery else None
     return ThreadMessage(
         id=message.id,
         author=author,
@@ -208,7 +214,6 @@ def thread_message(number: str, message: crm.MessageOut, names: Names) -> Thread
         created_at=message.created_at,
         attachments=attachments(number, message.id, list(message.attachments)),
         delivery=delivery,
-        retry_key=key if isinstance(key, str) else None,
     )
 
 

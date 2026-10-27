@@ -8,8 +8,10 @@
 """
 
 import asyncio
+import contextlib
 from collections.abc import Iterator
 from datetime import timedelta
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -20,10 +22,11 @@ from app.bus import runtime
 from app.bus.runtime import build_bus
 from app.domain.errors import ConflictError
 from app.models.leads import Lead, Message
+from app.repositories import crm as crm_repo
 from app.security.principal import Principal
 from app.services import lead_messenger
-from app.services.lead_messenger import LeadMessenger, ReplyOnce
-from app.services.leads import DeliveryError, LeadService
+from app.services.lead_messenger import DeliveryError, LeadMessenger, ReplyOnce
+from app.services.leads import LeadService
 from app.services.settings import SettingsService
 from tests.integration.crm_helpers import escalated_lead, make_user
 
@@ -128,9 +131,11 @@ async def test_a_parallel_retry_with_the_same_key_does_not_send_twice(
 
     sender.release.set()
     message_id = await first
+    answered = await answered_at(sessions, lead_id)
     again = await service.reply(who, lead_id, TEXT, client_message_id=KEY)
 
     assert again == message_id
+    assert await answered_at(sessions, lead_id) == answered  # повтор не сдвигает «лид отвечен»
     assert sender.calls == 1
     (row,) = await keyed_rows(sessions)
     assert row.meta["delivery"] == "sent"
@@ -139,11 +144,28 @@ async def test_a_parallel_retry_with_the_same_key_does_not_send_twice(
 
 
 async def test_two_simultaneous_requests_send_one_message(
-    sessions: async_sessionmaker[AsyncSession], bus: Any
+    sessions: async_sessionmaker[AsyncSession], bus: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """Настоящая гонка: оба запроса доходят до поиска ключа при резерве одновременно (встреча до
+    1 с). С блокировкой второй ждёт её в базе и видит строку первого; без блокировки оба не нашли
+    бы ключ и отправили бы два сообщения (мутационная проверка)."""
     sender = GatedSender()
     sender.release.set()
     service, who, lead_id = await setup(sessions, sender, 7002)
+    real = crm_repo.reply_by_key
+    met = asyncio.Event()
+    arrivals = 0
+
+    async def meet_then_lookup(session: AsyncSession, lead: int, key: str) -> Message | None:
+        nonlocal arrivals
+        arrivals += 1
+        if arrivals >= 2:
+            met.set()
+        with contextlib.suppress(TimeoutError):
+            await asyncio.wait_for(met.wait(), 1.0)
+        return await real(session, lead, key)
+
+    monkeypatch.setattr(lead_messenger, "crm_repo", SimpleNamespace(reply_by_key=meet_then_lookup))
 
     results = await asyncio.gather(
         service.reply(who, lead_id, TEXT, client_message_id=KEY),
@@ -185,23 +207,31 @@ async def test_a_telegram_refusal_frees_the_key_and_the_retry_sends_once(
 async def test_an_unknown_outcome_never_sends_a_second_copy(
     sessions: async_sessionmaker[AsyncSession], bus: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Таймаут Telegram (мог принять) — ответ остаётся `sending`: повтор — 409, после срока —
-    тот же id."""
+    """Таймаут Telegram (мог принять): 502 `delivery_unknown`, ответ остаётся `sending`; повтор —
+    409 `reply_in_progress`, после срока — 409 `delivery_unconfirmed` без второй отправки и без
+    отметки «лид отвечен» (B-013)."""
     sender = GatedSender()
     sender.hang = True
     monkeypatch.setattr(lead_messenger, "REPLY_TIMEOUT_S", 0.2)
     service, who, lead_id = await setup(sessions, sender, 7004)
+    answered = await answered_at(sessions, lead_id)
 
-    with pytest.raises(DeliveryError):
+    with pytest.raises(DeliveryError) as unknown:
         await service.reply(who, lead_id, TEXT, client_message_id=KEY)
-    with pytest.raises(ConflictError):
+    assert unknown.value.details["reason"] == "delivery_unknown"
+    with pytest.raises(ConflictError) as busy:
         await service.reply(who, lead_id, TEXT, client_message_id=KEY)
+    assert busy.value.details["reason"] == "reply_in_progress"
+
     monkeypatch.setattr(lead_messenger, "STALE_SENDING", timedelta(0))
-    (row,) = await keyed_rows(sessions)
-    assert await service.reply(who, lead_id, TEXT, client_message_id=KEY) == row.id
+    for _ in range(2):  # зависшая отправка и уже помеченная — одинаково
+        with pytest.raises(ConflictError) as unconfirmed:
+            await service.reply(who, lead_id, TEXT, client_message_id=KEY)
+        assert unconfirmed.value.details["reason"] == "delivery_unconfirmed"
     assert sender.calls == 1
     (row,) = await keyed_rows(sessions)
     assert row.meta["delivery"] == "unconfirmed"  # «доставка не подтверждена» в ленте (B-013)
+    assert await answered_at(sessions, lead_id) == answered
 
 
 async def test_telegram_accepted_but_the_write_failed_keeps_one_message(
@@ -216,8 +246,9 @@ async def test_telegram_accepted_but_the_write_failed_keeps_one_message(
 
     monkeypatch.setattr(ReplyOnce, "_confirm", broken)
     message_id = await service.reply(who, lead_id, TEXT, client_message_id=KEY)
-    with pytest.raises(ConflictError):
+    with pytest.raises(ConflictError) as busy:
         await service.reply(who, lead_id, TEXT, client_message_id=KEY)
+    assert busy.value.details["reason"] == "reply_in_progress"
     (row,) = await keyed_rows(sessions)
     assert (row.id, row.meta["delivery"]) == (message_id, "sending")
     assert sender.calls == 1

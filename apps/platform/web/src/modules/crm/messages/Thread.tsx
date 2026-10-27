@@ -7,7 +7,6 @@ import { getCrmThread, useGetCrmThread } from "../../../shared/api/generated/pla
 import { useFormat } from "../../../shared/lib/useFormat";
 import { DeliveryMark } from "./DeliveryMark";
 import { type Entry, PAGE_SIZE, mergeThread } from "./logic";
-import { useNow } from "./sla";
 
 function Attachment({ file }: { file: ThreadAttachment }) {
   const { t } = useTranslation("messages");
@@ -29,17 +28,7 @@ function Attachment({ file }: { file: ThreadAttachment }) {
   );
 }
 
-function Bubble({
-  entry,
-  lead,
-  canRetry,
-  now,
-}: {
-  entry: Entry;
-  lead: string;
-  canRetry: boolean;
-  now: number;
-}) {
+function Bubble({ entry }: { entry: Entry }) {
   const { t } = useTranslation("messages");
   const fmt = useFormat();
   if (entry.kind === "note") {
@@ -64,7 +53,7 @@ function Bubble({
         <time dateTime={message.created_at}>{fmt.activity(message.created_at)}</time>
       </div>
       {message.text ? <div className="pf-msg-bubble">{message.text}</div> : null}
-      <DeliveryMark lead={lead} message={message} canRetry={canRetry} now={now} />
+      <DeliveryMark message={message} />
       {message.attachments.length ? (
         <div className="pf-msg-files">
           {message.attachments.map((file) => (
@@ -80,16 +69,7 @@ function Bubble({
  * Лента диалога: сообщения клиента, бота и менеджера с вложениями (скачивание — ссылкой BFF), заметки команды. Последняя
  * страница — запрос, который обновляет подсказка `messages` потока; более ранние страницы неизменны и хранятся здесь.
  */
-export function Thread({
-  lead,
-  name,
-  canReply = false,
-}: {
-  lead: string;
-  name: string;
-  canReply?: boolean;
-}) {
-  const now = useNow();
+export function Thread({ lead, name }: { lead: string; name: string }) {
   const { t } = useTranslation("messages");
   const latest = useGetCrmThread(lead, { limit: PAGE_SIZE });
   const [older, setOlder] = useState<ThreadMessage[]>([]);
@@ -163,9 +143,6 @@ export function Thread({
                       : `n${String(entry.note.id)}`
                   }
                   entry={entry}
-                  lead={lead}
-                  canRetry={canReply}
-                  now={now}
                 />
               ))}
             </ol>

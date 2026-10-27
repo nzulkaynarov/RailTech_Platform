@@ -129,7 +129,6 @@
     "olderFailed": "Could not load the history. Try again",
     "delivery": {
       "sending": "Sending…",
-      "unconfirmed": "Delivery not confirmed: Telegram did not respond in time",
       "unconfirmedFinal": "Delivery not confirmed — check with the client whether the reply arrived"
     }
   },
@@ -157,7 +156,8 @@
     "sent": "Sent to the client",
     "noteSaved": "Note saved",
     "takeFirst": "Take the lead to reply",
-    "readOnly": "View only: managers reply"
+    "readOnly": "View only: managers reply",
+    "editAfterUnknown": "The text was changed — it will go as a new message; the previous one may already have been delivered"
   },
   "card": {
     "title": "Lead card",
@@ -200,6 +200,7 @@
     "BACKEND_UNAVAILABLE": "CRM is not responding. Try again",
     "VALIDATION_FAILED": "Check the text: 1 to 4000 characters",
     "generic": "Something went wrong. Try again",
-    "reply_in_progress": "The message is still being sent — wait a moment and press Retry"
+    "reply_in_progress": "The message is still being sent — wait a moment and press Retry",
+    "delivery_unknown": "Delivery not confirmed: Telegram did not respond in time. Retry will not send a second message"
   }
 }

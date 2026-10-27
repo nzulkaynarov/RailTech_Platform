@@ -129,7 +129,6 @@
     "olderFailed": "Tarixni yuklab bo'lmadi. Qayta urinib ko'ring",
     "delivery": {
       "sending": "Yuborilmoqda…",
-      "unconfirmed": "Yetkazilgani tasdiqlanmadi: Telegram o'z vaqtida javob bermadi",
       "unconfirmedFinal": "Yetkazilgani tasdiqlanmadi — mijoz javobni olganini tekshiring"
     }
   },
@@ -157,7 +156,8 @@
     "sent": "Mijozga yuborildi",
     "noteSaved": "Eslatma saqlandi",
     "takeFirst": "Javob berish uchun lidni oling",
-    "readOnly": "Faqat ko'rish: menejerlar javob beradi"
+    "readOnly": "Faqat ko'rish: menejerlar javob beradi",
+    "editAfterUnknown": "Matn o'zgardi — u yangi xabar bo'lib ketadi; avvalgisi yetkazilgan bo'lishi mumkin"
   },
   "card": {
     "title": "Lid kartasi",
@@ -200,6 +200,7 @@
     "BACKEND_UNAVAILABLE": "CRM javob bermayapti. Qayta urinib ko'ring",
     "VALIDATION_FAILED": "Matnni tekshiring: 1 dan 4000 belgigacha",
     "generic": "Bo'lmadi. Qayta urinib ko'ring",
-    "reply_in_progress": "Xabar hali yuborilmoqda — biroz kuting va «Qayta urinish»ni bosing"
+    "reply_in_progress": "Xabar hali yuborilmoqda — biroz kuting va «Qayta urinish»ni bosing",
+    "delivery_unknown": "Yetkazilgani tasdiqlanmadi: Telegram o'z vaqtida javob bermadi. «Qayta urinish» ikkinchi xabar yubormaydi"
   }
 }

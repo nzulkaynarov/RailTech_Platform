@@ -10,6 +10,7 @@ CRM — на respx (`messages_support`), ответы BFF сверяются с�
 
 import json
 import time
+from datetime import UTC, datetime
 
 import pytest
 from fastapi import FastAPI
@@ -18,7 +19,7 @@ from app.cookies import CSRF_HEADER
 from tests.backends import Backends
 from tests.bus_support import CRM_SECRET, delivery, envelope
 from tests.conftest import ContractChecker, Web
-from tests.messages_support import CrmMessagesFake, escalation, lead
+from tests.messages_support import CrmMessagesFake, escalation, lead, message
 from tests.test_events_stream import Asgi, until
 
 BASE = "/api/v1/crm/messages"
@@ -168,11 +169,10 @@ async def test_thread_hides_the_storage_key_and_names_the_manager(
         (92, "manager", "Дилшод Менеджеров"),
         (94, "manager", "Дилшод Менеджеров"),
     ]
-    # B-013: ответ без подтверждённой доставки — пометка и ключ для «Повторить»
-    assert [(m["delivery"], m["retry_key"]) for m in body["items"][2:]] == [
-        (None, None),
-        ("sending", "draft-2041-zz9"),
-    ]
+    # B-013: ответ, доставка которого не подтверждена дольше срока CRM, — «unconfirmed»; ключ
+    # повтора наружу не уходит
+    assert [m["delivery"] for m in body["items"][2:]] == [None, "unconfirmed"]
+    assert "draft-2041-zz9" not in response.text
     assert body["items"][0]["attachments"] == [
         {
             "index": 0,
@@ -353,3 +353,19 @@ async def test_a_client_message_reaches_the_open_stream_as_a_messages_hint_withi
     assert elapsed < 2.0
     print(f"D1-1 замер: событие шины → подсказка SSE за {elapsed * 1000:.0f} мс")  # noqa: T201
     await conn.disconnect()
+
+
+async def test_a_fresh_reply_is_shown_as_sending(web: Web, crm: CrmMessagesFake) -> None:
+    fresh = datetime.now(UTC).isoformat()
+    crm.answer(
+        "GET",
+        "leads/2041/messages",
+        body=[
+            message(95, "manager", created_at=fresh, meta={"delivery": "sending"}),
+            message(96, "manager", meta={"delivery": "unconfirmed"}),
+            message(97, "lead", meta={"delivery": "sending"}),  # не ответ менеджера — без пометки
+        ],
+    )
+    await web.login(["MANAGER"])
+    items = (await web.client.get(f"{BASE}/L-2041/thread")).json()["items"]
+    assert [m["delivery"] for m in items] == ["sending", "unconfirmed", None]

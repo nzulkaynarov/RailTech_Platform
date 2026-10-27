@@ -16,6 +16,7 @@ BFF проксирует к CRM с токеном сотрудника и про
 
 import asyncio
 from collections.abc import AsyncIterator
+from datetime import UTC, datetime
 from typing import Annotated, Any
 
 import anyio
@@ -149,6 +150,7 @@ async def get_thread(
         api.json("GET", f"{API}/leads/{lead_id}/messages", params=params), api.names()
     )
     rows = [crm.MessageOut.model_validate(m) for m in messages_raw or []]
+    now = datetime.now(UTC)
     notes: list[crm.NoteOut] = []
     if before is None:
         notes = [
@@ -156,7 +158,7 @@ async def get_thread(
             for n in await api.json("GET", f"{API}/leads/{lead_id}/notes") or []
         ]
     return ConversationThread(
-        items=[thread_message(number, m, names) for m in rows],
+        items=[thread_message(number, m, names, now) for m in rows],
         notes=[team_note(n, names) for n in notes],
         has_more=len(rows) >= limit,
     )
