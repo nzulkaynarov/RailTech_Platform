@@ -133,6 +133,14 @@
  * (директор читает), сброс пароля — `admin: full`; профиль доступен каждому вошедшему. Секреты из записей журнала BFF вырезает
  * (значения полей `password`, `secret`, `token`, `key`, `*_key`, `credentials`, `authorization`, `pin` и им подобных -> `***` целиком, любого типа).
  *
+ * **0.17.0 (D1-5) — EDS · Создать документ и «Мои документы».** Добавляющее изменение, тег `eds-documents`: `GET/POST /eds/documents`
+ * (мои документы или реестр «Все документы»; создать и сразу отправить), `GET/PUT /eds/documents/{id}` (карточка с маршрутом и
+ * решениями; сохранить черновик), `POST /eds/document-files` и `GET /eds/document-files/{file_id}` (вложения: загрузка потоком до 25 МБ,
+ * multipart BFF не разбирает), `GET /eds/deal-options` (связь с проектом). Вызовы идут в EDS с токеном доступа, полученным
+ * обменом SSO-токена CRM `aud=eds` (`platform-bff.md` §3); нет прав EDS — 403 `FORBIDDEN`, `details.reason = eds_not_granted`. Ошибки EDS
+ * приходят в формате `Error` с `source = eds`: текст EDS сохраняется в `message`, 422 несёт `details.fields` (список полей) и
+ * `details.messages` (поле → причина). `Error.code` дополнен `PAYLOAD_TOO_LARGE` (413) и `UNSUPPORTED_MEDIA_TYPE` (415).
+ *
  * **0.15.0 (W13C-F1) — первый запуск: ERP раньше компании (дефект гейта C2A-G-1).** Добавляющее изменение. Порядок шагов чек-листа —
  * `erp`, `bot`, `mail`, `models`, `first_employee`: сначала подключается ERP, затем создаётся компания. Все пять шагов
  * `GET /setup/checklist` приносит CRM (`/setup/checklist`, ключи `erp`, `mail`, `first_employee`), BFF сам их не вычисляет. Шаг
@@ -169,7 +177,7 @@
  * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.16.0
+ * OpenAPI spec version: 0.17.0
  */
 import { useMutation, useQuery } from "@tanstack/react-query";
 import type {
@@ -237,6 +245,16 @@ import type {
   DocumentTemplatePreviewIn,
   DocumentTemplateUpdate,
   DownloadCsvExportParams,
+  EdsConflictResponse,
+  EdsDealOptions,
+  EdsDocument,
+  EdsDocumentIn,
+  EdsDocumentPage,
+  EdsDocumentUpdateIn,
+  EdsFile,
+  EdsFileUpload,
+  EdsPayloadTooLargeResponse,
+  EdsUnsupportedMediaResponse,
   EmailTemplate,
   EmailTemplateIn,
   EmailTemplateList,
@@ -290,6 +308,8 @@ import type {
   ListBusDeliveriesParams,
   ListBusInboxParams,
   ListCategoryRequestsParams,
+  ListEdsDealOptionsParams,
+  ListEdsDocumentsParams,
   ListEmployeesParams,
   ListKbDocumentsParams,
   ListKbGapsParams,
@@ -2937,6 +2957,977 @@ export function useSearch<
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
   const queryOptions = getSearchQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getListEdsDocumentsUrl = (params?: ListEdsDocumentsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    const explodeParameters = ["kind", "status"];
+
+    if (Array.isArray(value) && explodeParameters.includes(key)) {
+      value.forEach((v) => {
+        normalizedParams.append(key, v === null ? "null" : String(v));
+      });
+      return;
+    }
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/eds/documents?${stringifiedParams}`
+    : `/api/v1/eds/documents`;
+};
+
+/**
+ * EDS `GET /documents?mine=1` (`scope=mine`, по умолчанию) или `GET /registry` (`scope=all`). «Мои» — документы, где сотрудник автор: служебные записки, заявления, отчёты, письма (черновики тоже). «Все» — реестр компании (SPEC-v3 §7.3): письма, КП, служебные, заявления, отчёты; нужен раздел `eds.inbox`, `eds.projects` или `eds.payments` (в EDS это право `registry.read`; решает EDS, иначе 403 `FORBIDDEN`). Договоры, счета и акты в реестре появятся, когда EDS начнёт вести их проекции. Страницы — курсором (`next_cursor`), новые выше.
+ * @summary EDS · Документы: «Мои документы» и реестр «Все документы»
+ */
+export const listEdsDocuments = async (
+  params?: ListEdsDocumentsParams,
+  options?: Parameters<typeof http>[1],
+): Promise<EdsDocumentPage> => {
+  return http<EdsDocumentPage>(getListEdsDocumentsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListEdsDocumentsQueryKey = (params?: ListEdsDocumentsParams) => {
+  return [`/api/v1/eds/documents`, ...(params ? [params] : [])] as const;
+};
+
+export const getListEdsDocumentsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listEdsDocuments>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListEdsDocumentsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listEdsDocuments>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListEdsDocumentsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listEdsDocuments>>> = ({ signal }) =>
+    listEdsDocuments(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listEdsDocuments>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListEdsDocumentsQueryResult = NonNullable<Awaited<ReturnType<typeof listEdsDocuments>>>;
+export type ListEdsDocumentsQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse | BackendUnavailableResponse
+>;
+
+export function useListEdsDocuments<
+  TData = Awaited<ReturnType<typeof listEdsDocuments>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params: undefined | ListEdsDocumentsParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listEdsDocuments>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listEdsDocuments>>,
+          TError,
+          Awaited<ReturnType<typeof listEdsDocuments>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListEdsDocuments<
+  TData = Awaited<ReturnType<typeof listEdsDocuments>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListEdsDocumentsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listEdsDocuments>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listEdsDocuments>>,
+          TError,
+          Awaited<ReturnType<typeof listEdsDocuments>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListEdsDocuments<
+  TData = Awaited<ReturnType<typeof listEdsDocuments>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListEdsDocumentsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listEdsDocuments>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary EDS · Документы: «Мои документы» и реестр «Все документы»
+ */
+
+export function useListEdsDocuments<
+  TData = Awaited<ReturnType<typeof listEdsDocuments>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListEdsDocumentsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listEdsDocuments>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListEdsDocumentsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getCreateEdsDocumentUrl = () => {
+  return `/api/v1/eds/documents`;
+};
+
+/**
+ * EDS `POST /documents` и, если `submit = true`, `POST /documents/{id}/submit`. Необязательный `Idempotency-Key` уходит в EDS как есть: повтор с тем же ключом и телом (ответ потерялся) возвращает прежний документ, а не создаёт второй; тот же ключ с другим телом — 409 `CONFLICT` (`details.reason = idempotency_key_reused`). Раздел `eds.memo.create` (есть у всех ролей); право на тип решает EDS: `memo`, `application`, `report` — `memos.create`, `letter_out` (Письмо) — `letters.register` (нет права — 403 `FORBIDDEN`). Номер (`СЗ-`, `ЗЯ-`, `ОТ-ГГГГ/NNN`) присваивает EDS при создании; маршрут служебной записки — директор, затем бухгалтер, если указана сумма; заявления и отчёта — директор. Письмо отправка не согласует: EDS присваивает номер `ИСХ-NNN/ГГ` и переводит его в «Отправлено» (бланк, PDF и отправка адресату — волна D-DOC). Если документ создан, а отправка отклонена (например, 422), ответ — ошибка, а созданный черновик назван в `details.document_id`: введённое не теряется, экран продолжает с этим id через `PUT /eds/documents/{id}`.
+ * @summary EDS · Создать документ (и отправить на согласование)
+ */
+export const createEdsDocument = async (
+  edsDocumentIn: EdsDocumentIn,
+  options?: Parameters<typeof http>[1],
+): Promise<EdsDocument> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<EdsDocument>(getCreateEdsDocumentUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(edsDocumentIn),
+  });
+};
+
+export const getCreateEdsDocumentMutationKey = () => ["createEdsDocument"] as const;
+
+export const getCreateEdsDocumentMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | EdsConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createEdsDocument>>,
+    TError,
+    CreateEdsDocumentMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createEdsDocument>>,
+  TError,
+  CreateEdsDocumentMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateEdsDocumentMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createEdsDocument>>,
+    CreateEdsDocumentMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createEdsDocument(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateEdsDocumentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createEdsDocument>>
+>;
+export type CreateEdsDocumentMutationBody = EdsDocumentIn;
+export type CreateEdsDocumentMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | EdsConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type CreateEdsDocumentMutationVariables = { data: EdsDocumentIn };
+
+/**
+ * @summary EDS · Создать документ (и отправить на согласование)
+ */
+export const useCreateEdsDocument = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | EdsConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createEdsDocument>>,
+      TError,
+      CreateEdsDocumentMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createEdsDocument>>,
+  TError,
+  CreateEdsDocumentMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateEdsDocumentMutationOptions(options), queryClient);
+};
+
+export const getGetEdsDocumentUrl = (id: string) => {
+  return `/api/v1/eds/documents/${id}`;
+};
+
+/**
+ * EDS `GET /documents/{id}` и, если документ отправлялся, `GET /approvals/{approval_id}` (шаги маршрута). Автор, участник маршрута или сотрудник с правом реестра; иначе 404. `can_edit` — автор и статус `draft` или `returned`.
+ * @summary EDS · Документ: статус, маршрут, решения, вложения
+ */
+export const getEdsDocument = async (
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<EdsDocument> => {
+  return http<EdsDocument>(getGetEdsDocumentUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetEdsDocumentQueryKey = (id: string) => {
+  return [`/api/v1/eds/documents/${id}`] as const;
+};
+
+export const getGetEdsDocumentQueryOptions = <
+  TData = Awaited<ReturnType<typeof getEdsDocument>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getEdsDocument>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetEdsDocumentQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getEdsDocument>>> = ({ signal }) =>
+    getEdsDocument(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: id !== null && id !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getEdsDocument>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetEdsDocumentQueryResult = NonNullable<Awaited<ReturnType<typeof getEdsDocument>>>;
+export type GetEdsDocumentQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useGetEdsDocument<
+  TData = Awaited<ReturnType<typeof getEdsDocument>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getEdsDocument>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getEdsDocument>>,
+          TError,
+          Awaited<ReturnType<typeof getEdsDocument>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetEdsDocument<
+  TData = Awaited<ReturnType<typeof getEdsDocument>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getEdsDocument>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getEdsDocument>>,
+          TError,
+          Awaited<ReturnType<typeof getEdsDocument>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetEdsDocument<
+  TData = Awaited<ReturnType<typeof getEdsDocument>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getEdsDocument>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary EDS · Документ: статус, маршрут, решения, вложения
+ */
+
+export function useGetEdsDocument<
+  TData = Awaited<ReturnType<typeof getEdsDocument>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getEdsDocument>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetEdsDocumentQueryOptions(id, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getUpdateEdsDocumentUrl = (id: string) => {
+  return `/api/v1/eds/documents/${id}`;
+};
+
+/**
+ * EDS `PATCH /documents/{id}` (с `eds.yaml` 0.4.0) и, если `submit = true`, `POST /documents/{id}/submit`. Только автор; документ в статусе `draft` или `returned` (после возврата отправка открывает новый круг и версию), иначе 409 `CONFLICT` (`details.reason = invalid_state`). Передаётся форма целиком: `amount`, `due_date`, `erp_deal_id` со значением `null` очищают поле. Вложения привязываются; снять уже привязанное нельзя. Отправка отклонена — ошибка, а правки сохранены (`details.saved = true`).
+ * @summary EDS · Сохранить черновик (и отправить на согласование)
+ */
+export const updateEdsDocument = async (
+  id: string,
+  edsDocumentUpdateIn: EdsDocumentUpdateIn,
+  options?: Parameters<typeof http>[1],
+): Promise<EdsDocument> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<EdsDocument>(getUpdateEdsDocumentUrl(id), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(edsDocumentUpdateIn),
+  });
+};
+
+export const getUpdateEdsDocumentMutationKey = () => ["updateEdsDocument"] as const;
+
+export const getUpdateEdsDocumentMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | EdsConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateEdsDocument>>,
+    TError,
+    UpdateEdsDocumentMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateEdsDocument>>,
+  TError,
+  UpdateEdsDocumentMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateEdsDocumentMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateEdsDocument>>,
+    UpdateEdsDocumentMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateEdsDocument(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateEdsDocumentMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateEdsDocument>>
+>;
+export type UpdateEdsDocumentMutationBody = EdsDocumentUpdateIn;
+export type UpdateEdsDocumentMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | EdsConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type UpdateEdsDocumentMutationVariables = { id: string; data: EdsDocumentUpdateIn };
+
+/**
+ * @summary EDS · Сохранить черновик (и отправить на согласование)
+ */
+export const useUpdateEdsDocument = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | EdsConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateEdsDocument>>,
+      TError,
+      UpdateEdsDocumentMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateEdsDocument>>,
+  TError,
+  UpdateEdsDocumentMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateEdsDocumentMutationOptions(options), queryClient);
+};
+
+export const getUploadEdsDocumentFileUrl = () => {
+  return `/api/v1/eds/document-files`;
+};
+
+/**
+ * EDS `POST /files` (multipart). BFF читает тело потоком до предела (25 МБ и поля формы), multipart не разбирает и передаёт EDS как есть. Файл привязывается к документу при создании или сохранении (`file_ids`); пока не привязан, его видит только загрузивший. Больше 25 МБ — 413 `PAYLOAD_TOO_LARGE` (`details.max_bytes`); не PDF, не изображение и не документ Office — 415 `UNSUPPORTED_MEDIA_TYPE`. Раздел `eds.memo.create`.
+ * @summary EDS · Загрузить вложение документа
+ */
+export const uploadEdsDocumentFile = async (
+  edsFileUpload: EdsFileUpload,
+  options?: Parameters<typeof http>[1],
+): Promise<EdsFile> => {
+  const formData = new FormData();
+  formData.append(`file`, edsFileUpload.file);
+
+  return http<EdsFile>(getUploadEdsDocumentFileUrl(), {
+    ...options,
+    method: "POST",
+    body: formData,
+  });
+};
+
+export const getUploadEdsDocumentFileMutationKey = () => ["uploadEdsDocumentFile"] as const;
+
+export const getUploadEdsDocumentFileMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | EdsPayloadTooLargeResponse
+    | EdsUnsupportedMediaResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof uploadEdsDocumentFile>>,
+    TError,
+    UploadEdsDocumentFileMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof uploadEdsDocumentFile>>,
+  TError,
+  UploadEdsDocumentFileMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUploadEdsDocumentFileMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof uploadEdsDocumentFile>>,
+    UploadEdsDocumentFileMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return uploadEdsDocumentFile(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UploadEdsDocumentFileMutationResult = NonNullable<
+  Awaited<ReturnType<typeof uploadEdsDocumentFile>>
+>;
+export type UploadEdsDocumentFileMutationBody = EdsFileUpload;
+export type UploadEdsDocumentFileMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | EdsPayloadTooLargeResponse
+  | EdsUnsupportedMediaResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type UploadEdsDocumentFileMutationVariables = { data: EdsFileUpload };
+
+/**
+ * @summary EDS · Загрузить вложение документа
+ */
+export const useUploadEdsDocumentFile = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | EdsPayloadTooLargeResponse
+    | EdsUnsupportedMediaResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof uploadEdsDocumentFile>>,
+      TError,
+      UploadEdsDocumentFileMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof uploadEdsDocumentFile>>,
+  TError,
+  UploadEdsDocumentFileMutationVariables,
+  TContext
+> => {
+  return useMutation(getUploadEdsDocumentFileMutationOptions(options), queryClient);
+};
+
+export const getDownloadEdsDocumentFileUrl = (fileId: string) => {
+  return `/api/v1/eds/document-files/${fileId}`;
+};
+
+/**
+ * EDS `GET /files/{id}`. Файл отдаётся потоком, в памяти BFF не накапливается; видит тот, кому виден документ с этим вложением, или загрузивший. Имя файла — в `Content-Disposition`.
+ * @summary EDS · Скачать вложение документа
+ */
+export const downloadEdsDocumentFile = async (
+  fileId: string,
+  options?: Parameters<typeof http>[1],
+): Promise<Blob> => {
+  return http<Blob>(getDownloadEdsDocumentFileUrl(fileId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getDownloadEdsDocumentFileQueryKey = (fileId: string) => {
+  return [`/api/v1/eds/document-files/${fileId}`] as const;
+};
+
+export const getDownloadEdsDocumentFileQueryOptions = <
+  TData = Awaited<ReturnType<typeof downloadEdsDocumentFile>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  fileId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadEdsDocumentFile>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getDownloadEdsDocumentFileQueryKey(fileId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof downloadEdsDocumentFile>>> = ({
+    signal,
+  }) => downloadEdsDocumentFile(fileId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: fileId !== null && fileId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof downloadEdsDocumentFile>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type DownloadEdsDocumentFileQueryResult = NonNullable<
+  Awaited<ReturnType<typeof downloadEdsDocumentFile>>
+>;
+export type DownloadEdsDocumentFileQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useDownloadEdsDocumentFile<
+  TData = Awaited<ReturnType<typeof downloadEdsDocumentFile>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  fileId: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadEdsDocumentFile>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof downloadEdsDocumentFile>>,
+          TError,
+          Awaited<ReturnType<typeof downloadEdsDocumentFile>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useDownloadEdsDocumentFile<
+  TData = Awaited<ReturnType<typeof downloadEdsDocumentFile>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  fileId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadEdsDocumentFile>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof downloadEdsDocumentFile>>,
+          TError,
+          Awaited<ReturnType<typeof downloadEdsDocumentFile>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useDownloadEdsDocumentFile<
+  TData = Awaited<ReturnType<typeof downloadEdsDocumentFile>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  fileId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadEdsDocumentFile>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary EDS · Скачать вложение документа
+ */
+
+export function useDownloadEdsDocumentFile<
+  TData = Awaited<ReturnType<typeof downloadEdsDocumentFile>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  fileId: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadEdsDocumentFile>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getDownloadEdsDocumentFileQueryOptions(fileId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getListEdsDealOptionsUrl = (params?: ListEdsDealOptionsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/eds/deal-options?${stringifiedParams}`
+    : `/api/v1/eds/deal-options`;
+};
+
+/**
+ * Заявки и проекты из ERP (новейшие сделки; поиск по номеру `ЗВ-2026-104`, названию и компании, как в сквозном поиске) для поля «Связь с проектом» формы документа: возвращает `erp_deal_id`, который EDS хранит в документе. Нужен раздел `crm.clients` или `eds.projects` (чтение); у роли без них поле «Связь с проектом» не показывается. Без `q` — десять новейших. ERP не ответила — `sources.erp = unavailable`, список пуст.
+ * @summary EDS · Связь с проектом: поиск заявки или проекта по номеру
+ */
+export const listEdsDealOptions = async (
+  params?: ListEdsDealOptionsParams,
+  options?: Parameters<typeof http>[1],
+): Promise<EdsDealOptions> => {
+  return http<EdsDealOptions>(getListEdsDealOptionsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListEdsDealOptionsQueryKey = (params?: ListEdsDealOptionsParams) => {
+  return [`/api/v1/eds/deal-options`, ...(params ? [params] : [])] as const;
+};
+
+export const getListEdsDealOptionsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listEdsDealOptions>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListEdsDealOptionsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listEdsDealOptions>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListEdsDealOptionsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listEdsDealOptions>>> = ({ signal }) =>
+    listEdsDealOptions(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listEdsDealOptions>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListEdsDealOptionsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listEdsDealOptions>>
+>;
+export type ListEdsDealOptionsQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse
+>;
+
+export function useListEdsDealOptions<
+  TData = Awaited<ReturnType<typeof listEdsDealOptions>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params: undefined | ListEdsDealOptionsParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listEdsDealOptions>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listEdsDealOptions>>,
+          TError,
+          Awaited<ReturnType<typeof listEdsDealOptions>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListEdsDealOptions<
+  TData = Awaited<ReturnType<typeof listEdsDealOptions>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListEdsDealOptionsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listEdsDealOptions>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listEdsDealOptions>>,
+          TError,
+          Awaited<ReturnType<typeof listEdsDealOptions>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListEdsDealOptions<
+  TData = Awaited<ReturnType<typeof listEdsDealOptions>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListEdsDealOptionsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listEdsDealOptions>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary EDS · Связь с проектом: поиск заявки или проекта по номеру
+ */
+
+export function useListEdsDealOptions<
+  TData = Awaited<ReturnType<typeof listEdsDealOptions>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListEdsDealOptionsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listEdsDealOptions>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListEdsDealOptionsQueryOptions(params, options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;

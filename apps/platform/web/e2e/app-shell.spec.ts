@@ -161,7 +161,8 @@ test.describe("роли и доступ", () => {
       }
       for (const route of visible) {
         await spaGoto(page, route);
-        await expect(page.getByRole("heading", { level: 2 }), route).toBeVisible();
+        // у заглушки — заголовок раздела h2, у настоящего экрана (Входящие письма) — только h1 страницы
+        await expect(page.getByRole("main").getByRole("heading").first(), route).toBeVisible();
         await expect(
           page.getByRole("heading", { level: 1, name: "Нет доступа" }),
           route,

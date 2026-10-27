@@ -1,0 +1,304 @@
+{
+  "kinds": {
+    "memo": "Xizmat xati",
+    "application": "Ariza",
+    "report": "Hisobot",
+    "letter_out": "Xat",
+    "letter_in": "Kiruvchi xat",
+    "quote": "TT"
+  },
+  "status": {
+    "draft": "Qoralama",
+    "sent": "Ro‘yxatdan o‘tgan",
+    "quote": {
+      "open": "Tasdiqlashda",
+      "approved": "Tasdiqlangan",
+      "returned": "Qayta ishlashda",
+      "rejected": "Rad etilgan"
+    },
+    "filter": {
+      "draft": "Qoralama",
+      "on_approval": "Kelishuvda",
+      "returned": "Qayta ishlashga qaytarilgan",
+      "approved": "Kelishilgan",
+      "rejected": "Rad etilgan",
+      "to_accountant": "Buxgalterga topshirilgan",
+      "paid": "To‘langan",
+      "sent": "Ro‘yxatdan o‘tgan",
+      "awaiting_resolution": "Rezolyutsiya kutilmoqda",
+      "resolved": "Rezolyutsiya qo‘yilgan",
+      "open": "Tasdiqlashdagi TT"
+    }
+  },
+  "list": {
+    "subtitle": "O‘zingiz yaratgan hujjatlar: qoralamalar, kelishuvdagi va yakunlanganlar. Kompaniya reestri — «Hammasi» yorlig‘ida.",
+    "subtitleAll": "Kompaniya reestri: xatlar, TTlar, xizmat xatlari, arizalar va hisobotlar — raqami, holati va mas’ul bilan.",
+    "scope": {
+      "label": "Kimning hujjatlari",
+      "mine": "Meniki",
+      "all": "Hammasi"
+    },
+    "tabs": {
+      "label": "Hujjat turi",
+      "all": "Barcha turlar",
+      "memo": "Xizmat xatlari",
+      "application": "Arizalar",
+      "report": "Hisobotlar",
+      "letters": "Xatlar",
+      "quote": "TT"
+    },
+    "status": {
+      "label": "Holat",
+      "any": "Istalgan holat"
+    },
+    "columns": {
+      "number": "Raqam",
+      "subject": "Mavzu",
+      "kind": "Turi",
+      "status": "Holat",
+      "amount": "Summa",
+      "due": "Muddat",
+      "author": "Muallif",
+      "responsible": "Mas’ul",
+      "created": "Yaratilgan",
+      "action": "Amal"
+    },
+    "noNumber": "raqam yuborilganda beriladi",
+    "open": "Hujjatni ochish: {{subject}}",
+    "continue": "Davom ettirish",
+    "continueLabel": "Hujjatni davom ettirish: {{subject}}",
+    "inSection": "«{{section}}» bo‘limida",
+    "inSectionLabel": "«{{section}}» bo‘limida ochish: {{subject}}",
+    "empty": {
+      "mineTitle": "O‘z hujjatlaringiz hozircha yo‘q",
+      "mineText": "Xizmat xati, ariza, hisobot va xat «Hujjat yaratish» tugmasi bilan yaratiladi. Qoralamalar shu yerda saqlanadi.",
+      "allTitle": "Reestr hozircha bo‘sh",
+      "allText": "Xatlar, TTlar va xodimlar hujjatlari ro‘yxatdan o‘tishi bilan shu yerda paydo bo‘ladi.",
+      "filteredTitle": "Bu shartlar bo‘yicha hech narsa yo‘q",
+      "filteredText": "Turi yoki holatini o‘zgartiring — yoki yangi hujjat yarating."
+    },
+    "paging": {
+      "label": "Ro‘yxat sahifalari",
+      "prev": "Orqaga",
+      "next": "Keyingi",
+      "page": "{{page}}-sahifa"
+    },
+    "caption": "Hujjatlar: raqam, mavzu, tur, holat, summa va muddat",
+    "tableScroll": "Hujjatlar jadvali, gorizontal aylantiriladi",
+    "listLabel": "Hujjatlar",
+    "retry": "Qayta urinish",
+    "loadError": {
+      "title": "Hujjatlarni yuklab bo‘lmadi",
+      "text": "Server javob bermadi. Ulanishni tekshirib, qayta urinib ko‘ring."
+    },
+    "unavailable": {
+      "title": "Hujjatlar mavjud emas",
+      "text": "Hujjatlar xizmati javob bermayapti. Birozdan so‘ng qayta urinib ko‘ring."
+    },
+    "forbidden": {
+      "title": "Hujjatlar sizga ochilmagan",
+      "text": "Ro‘yxat rolingizga berilmagan yoki hujjatlar xizmatida huquqingiz yo‘q. Administratorga murojaat qiling."
+    }
+  },
+  "panel": {
+    "label": "Hujjat",
+    "fields": {
+      "kind": "Turi",
+      "author": "Kimdan",
+      "addressee": "Kimga",
+      "recipient": "Manzil",
+      "amount": "Summa",
+      "due": "Muddat",
+      "deal": "Loyiha",
+      "created": "Yaratilgan",
+      "updated": "O‘zgartirilgan",
+      "version": "Tahrir"
+    },
+    "toDirector": "Direktor",
+    "text": "Matn",
+    "files": "Ilovalar",
+    "noFiles": "Ilovalar yo‘q.",
+    "download": "Yuklab olish: {{name}}",
+    "downloadFailed": "Faylni yuklab bo‘lmadi: {{reason}}",
+    "route": "Yo‘nalish",
+    "routeAuthor": "Muallif · {{name}}",
+    "routeAuthorMeta": "yaratilgan {{date}}",
+    "routeStep": {
+      "approved": "{{label}} — kelishdi",
+      "returned": "{{label}} — qayta ishlashga qaytardi",
+      "rejected": "{{label}} — rad etdi",
+      "current": "{{label}} — qaror kutilmoqda",
+      "pending": "{{label}} — yo‘nalishda keyingi",
+      "skipped": "{{label}} — o‘tkazib yuborilgan"
+    },
+    "routePreview": "Yo‘nalish yuborilgandan so‘ng ochiladi: siz → direktor{{accountant}}.",
+    "routePreviewAccountant": " → buxgalter",
+    "decisions": "Qarorlar",
+    "decision": {
+      "approve": "Kelishilgan",
+      "return": "Qayta ishlashga qaytarilgan",
+      "reject": "Rad etilgan"
+    },
+    "decisionMeta": "{{date}} · {{name}} · {{round}}-davra",
+    "noDecisions": "Qarorlar hozircha yo‘q.",
+    "continue": "Davom ettirish",
+    "close": "Yopish",
+    "closeLabel": "Hujjatni yopish",
+    "retry": "Qayta urinish",
+    "loadError": {
+      "title": "Hujjatni ochib bo‘lmadi",
+      "text": "Server javob bermadi. Birozdan so‘ng qayta urinib ko‘ring."
+    },
+    "notFound": {
+      "title": "Hujjat topilmadi",
+      "text": "U yo‘q yoki sizga ko‘rinmaydi."
+    },
+    "forbidden": {
+      "title": "Hujjat sizga ochilmagan",
+      "text": "U rolingizga berilmagan."
+    }
+  },
+  "form": {
+    "subtitle": "Hujjat direktorga kelishish uchun yuboriladi. Qoralamani saqlab, keyinroq «Mening hujjatlarim»da davom ettirish mumkin.",
+    "subtitleLetter": "Xatga chiquvchi raqam beriladi. Blank, PDF va manzilga yuborish keyinroq paydo bo‘ladi: hozir matn saqlanadi.",
+    "subtitleContinue": "{{number}} qoralamasi: o‘zgarishlar saqlanadi, istalgan payt yuborish mumkin.",
+    "subtitleReturned": "{{number}} qayta ishlashga qaytarilgan: tuzatib, qayta yuboring.",
+    "formLabel": "Yangi hujjat",
+    "type": {
+      "label": "Hujjat turi",
+      "letterLocked": "Xatlarni kiruvchi xatlarga kirish huquqi bor rol ro‘yxatdan o‘tkazadi.",
+      "letterOption": "Xat — kiruvchi xatlarga kirish kerak",
+      "locked": "Yaratilgandan keyin turini o‘zgartirib bo‘lmaydi."
+    },
+    "subject": {
+      "label": "Mavzu",
+      "hint": "Qisqa, sarlavha kabi: 300 belgigacha."
+    },
+    "to": {
+      "label": "Kimga",
+      "director": "Direktor",
+      "hint": "Hujjatni kelishish huquqi bor istalgan xodim oladi. Aniq qabul qiluvchini tanlash keyinroq paydo bo‘ladi."
+    },
+    "recipient": {
+      "label": "Manzil (tashkilot)",
+      "inn": "Manzil STIRi",
+      "innHint": "Majburiy emas."
+    },
+    "text": {
+      "label": "Matn",
+      "hint": "Oddiy matn, 20 000 belgigacha."
+    },
+    "amount": {
+      "label": "Summa, so‘m",
+      "hint": "Majburiy emas. Summa ko‘rsatilsa, direktordan keyin hujjat buxgalterga o‘tadi."
+    },
+    "due": {
+      "label": "Muddat",
+      "hint": "Majburiy emas."
+    },
+    "files": {
+      "label": "Ilovalar",
+      "hint": "PDF, rasmlar va Office hujjatlari, har biri 25 MBgacha.",
+      "list": "Biriktirilgan fayllar",
+      "uploading": "yuklanmoqda…",
+      "uploaded": "yuklandi",
+      "attached": "hujjatda allaqachon bor",
+      "remove": "{{name}} faylini olib tashlash",
+      "tooLarge": "Fayl 25 MBdan katta.",
+      "unsupported": "PDF, rasmlar va Office hujjatlari qabul qilinadi.",
+      "failed": "Yuklanmadi: {{reason}}"
+    },
+    "deal": {
+      "label": "Loyiha bilan bog‘lash",
+      "hint": "Majburiy emas: arizani yoki loyihani raqami, nomi yoki kompaniyasi bo‘yicha toping.",
+      "placeholder": "Masalan, ZV-2026-104 yoki nomi",
+      "empty": "Hech narsa topilmadi",
+      "searching": "Qidirilmoqda…",
+      "unavailable": "Arizalar hozir mavjud emas — bog‘lashni keyinroq qo‘shish mumkin."
+    },
+    "route": {
+      "label": "Kelishish yo‘nalishi",
+      "plain": "Siz → Direktor",
+      "withAmount": "Siz → Direktor → Buxgalter (summa bor)",
+      "letter": "Kelishuvsiz: xat darhol ro‘yxatdan o‘tadi"
+    },
+    "consequence": {
+      "memo": [
+        "Hujjatga СЗ-2026/031 kabi raqam beriladi va u direktorga kelishish uchun yuboriladi.",
+        "Direktor kelishadi, qayta ishlashga qaytaradi yoki rad etadi — sizga xabar keladi.",
+        "Kelishilgan hujjat viza va sana bilan «Mening hujjatlarim»da qoladi."
+      ],
+      "memoAmount": [
+        "Hujjatga СЗ-2026/031 kabi raqam beriladi va u direktorga kelishish uchun yuboriladi.",
+        "Direktor kelishgach, hujjat to‘lov uchun buxgalterga topshiriladi.",
+        "Buxgalter to‘lovni tasdiqlaydi: holat «To‘langan» bo‘ladi."
+      ],
+      "application": [
+        "Arizaga ЗЯ-2026/012 kabi raqam beriladi va u direktorga kelishish uchun yuboriladi.",
+        "Direktor kelishadi, qayta ishlashga qaytaradi yoki rad etadi — sizga xabar keladi.",
+        "Qaror va sana «Mening hujjatlarim»da qoladi."
+      ],
+      "report": [
+        "Hisobotga ОТ-2026/007 kabi raqam beriladi va u direktorga kelishish uchun yuboriladi.",
+        "Direktor kelishadi, qayta ishlashga qaytaradi yoki rad etadi — sizga xabar keladi.",
+        "Qaror va sana «Mening hujjatlarim»da qoladi."
+      ],
+      "letter": [
+        "Xatga ИСХ-082/26 kabi chiquvchi raqam beriladi.",
+        "U «Mening hujjatlarim»da «Ro‘yxatdan o‘tgan» holatida paydo bo‘ladi.",
+        "Blank, PDF va manzilga yuborish keyinroq paydo bo‘ladi: hozir matn saqlanadi."
+      ],
+      "draft": "«Qoralamani saqlash» hech narsa yubormaydi: hujjat «Mening hujjatlarim»da «Davom ettirish» tugmasi bilan qoladi."
+    },
+    "submit": {
+      "approval": "Kelishishga yuborish",
+      "letter": "Xatni ro‘yxatdan o‘tkazish",
+      "draft": "Qoralamani saqlash",
+      "uploadWait": "Fayllar yuklanishini kuting"
+    },
+    "validation": {
+      "summary": "Belgilangan maydonlarni tuzating.",
+      "subject": "Mavzuni kiriting.",
+      "text": "Hujjat matnini yozing.",
+      "amount": "Summa noldan katta bo‘lishi kerak, masalan 1 500 000.",
+      "due": "«Muddat» o‘tmishda bo‘lishi mumkin emas.",
+      "recipient": "Xat manzilini kiriting.",
+      "deal": "Loyiha topilmadi — boshqasini tanlang yoki bog‘lashni olib tashlang."
+    },
+    "toast": {
+      "draft": "Qoralama saqlandi",
+      "sent": "Kelishishga yuborildi: {{number}}",
+      "registered": "Xat ro‘yxatdan o‘tkazildi: {{number}}"
+    },
+    "error": {
+      "send": "Yuborilmadi: {{reason}}",
+      "save": "Saqlanmadi: {{reason}}",
+      "savedNote": "Qoralama saqlandi, kiritilganlar yo‘qolmadi. Tuzatib, qayta yuboring.",
+      "reasons": {
+        "FORBIDDEN": "bu amal rolingizga berilmagan",
+        "eds_not_granted": "hujjatlar xizmatida huquqingiz yo‘q",
+        "not_author": "hujjatni faqat muallifi tahrirlay oladi",
+        "NOT_FOUND": "hujjat topilmadi",
+        "CONFLICT": "hujjat o‘zgargan, sahifani yangilang",
+        "invalid_state": "hujjat allaqachon yuborilgan yoki yopilgan, sahifani yangilang",
+        "VALIDATION_FAILED": "maydonlarni tekshiring",
+        "BACKEND_UNAVAILABLE": "hujjatlar xizmati javob bermayapti, birozdan so‘ng qayta urining",
+        "PAYLOAD_TOO_LARGE": "fayl 25 MBdan katta",
+        "UNSUPPORTED_MEDIA_TYPE": "PDF, rasmlar va Office hujjatlari qabul qilinadi",
+        "REQUEST_TIMEOUT": "server o‘z vaqtida javob bermadi",
+        "DEFAULT": "server xato qaytardi, qayta urining"
+      }
+    },
+    "loadDraft": "Qoralama yuklanmoqda…",
+    "draftLoadError": {
+      "title": "Qoralamani ochib bo‘lmadi",
+      "text": "U yo‘q, sizga ko‘rinmaydi yoki server javob bermadi."
+    },
+    "notEditable": {
+      "title": "Bu hujjatni tahrirlab bo‘lmaydi",
+      "text": "Qoralamani va qayta ishlashga qaytarilgan hujjatni tahrirlash mumkin. Yuborilgan hujjat qarorni kutmoqda."
+    },
+    "toDocuments": "Mening hujjatlarim",
+    "forbiddenTitle": "Hujjat yaratib bo‘lmaydi"
+  }
+}
