@@ -1701,7 +1701,11 @@ async def test_fx_rate_get_shows_current_rate_source_and_journal(
     assert response.status_code == 200
     check(response, "/admin/company/fx-rate", "get")
     body = response.json()
-    assert body["current"] == {"rate_to_uzs": "12650.5", "rate_date": "2026-10-27", "source": "auto"}
+    assert body["current"] == {
+        "rate_to_uzs": "12650.5",
+        "rate_date": "2026-10-27",
+        "source": "auto",
+    }
     assert body["max_age_days"] == 7
     manual, skipped = body["journal"]
     assert (manual["id"], manual["kind"], manual["entered_by"]) == ("41", "manual", "Анна Иванова")
@@ -1735,13 +1739,19 @@ async def test_fx_rate_reader_sees_but_cannot_enter(
 
     got = await web.client.get("/api/v1/admin/company/fx-rate")
     posted = await web.send(
-        "POST", "/api/v1/admin/company/fx-rate", json={"rate_date": "2026-10-27", "rate_to_uzs": "12700"}
+        "POST",
+        "/api/v1/admin/company/fx-rate",
+        json={"rate_date": "2026-10-27", "rate_to_uzs": "12700"},
     )
 
     assert got.status_code == 200
     assert posted.status_code == 403
     assert posted.json()["details"] == {"resource": "company.settings", "need": "full"}
-    assert not [c for c in erp.calls if c.request.method == "POST" and "exchange-rates" in c.request.url.path]
+    assert not [
+        c
+        for c in erp.calls
+        if c.request.method == "POST" and "exchange-rates" in c.request.url.path
+    ]
 
 
 async def test_fx_rate_post_sends_usd_to_erp_and_returns_fresh_overview(
@@ -1752,12 +1762,19 @@ async def test_fx_rate_post_sends_usd_to_erp_and_returns_fresh_overview(
     route = erp.post(f"{API}/exchange-rates/manual/").mock(
         return_value=httpx.Response(
             201,
-            json={"currency": "USD", "rate_to_uzs": "12700", "rate_date": "2026-10-27", "source": "MANUAL"},
+            json={
+                "currency": "USD",
+                "rate_to_uzs": "12700",
+                "rate_date": "2026-10-27",
+                "source": "MANUAL",
+            },
         )
     )
 
     response = await web.send(
-        "POST", "/api/v1/admin/company/fx-rate", json={"rate_date": "2026-10-27", "rate_to_uzs": "12700"}
+        "POST",
+        "/api/v1/admin/company/fx-rate",
+        json={"rate_date": "2026-10-27", "rate_to_uzs": "12700"},
     )
 
     assert response.status_code == 201
@@ -1785,7 +1802,9 @@ async def test_fx_rate_erp_refusal_points_at_the_field(
     )
 
     response = await web.send(
-        "POST", "/api/v1/admin/company/fx-rate", json={"rate_date": "2026-10-27", "rate_to_uzs": "0"}
+        "POST",
+        "/api/v1/admin/company/fx-rate",
+        json={"rate_date": "2026-10-27", "rate_to_uzs": "0"},
     )
 
     assert response.status_code == 422
@@ -1805,7 +1824,9 @@ async def test_fx_rate_erp_forbids_member_without_settings_edit(
     )
 
     response = await web.send(
-        "POST", "/api/v1/admin/company/fx-rate", json={"rate_date": "2026-10-27", "rate_to_uzs": "12700"}
+        "POST",
+        "/api/v1/admin/company/fx-rate",
+        json={"rate_date": "2026-10-27", "rate_to_uzs": "12700"},
     )
 
     assert response.status_code == 403
@@ -1827,7 +1848,9 @@ async def test_fx_rate_bad_body_is_422_and_erp_is_not_called(
     web: Web, erp: respx.MockRouter, body: dict[str, str]
 ) -> None:
     await web.login(["ADMIN"])
-    route = erp.post(f"{API}/exchange-rates/manual/").mock(return_value=httpx.Response(201, json={}))
+    route = erp.post(f"{API}/exchange-rates/manual/").mock(
+        return_value=httpx.Response(201, json={})
+    )
 
     response = await web.send("POST", "/api/v1/admin/company/fx-rate", json=body)
 

@@ -1,6 +1,7 @@
 """Модели Admin · Компания — схемы `Company*`, `Brand*`, `Numbering*`, `QuoteDefaults*`, `Charge*`,
 `DocumentTemplate*`, `EmailTemplate*`, `Reference*`, `Catalog*`, `CategoryRequest*`,
-`PlatformSettings*`, `FxRate*` из packages/contracts/openapi/platform-bff.yaml (0.8.0) и перевод ответов ERP.
+`PlatformSettings*`, `FxRate*` из packages/contracts/openapi/platform-bff.yaml (0.8.0, 0.13.0) и
+перевод ответов ERP.
 
 Поля с ограничением (правило 6 CONVENTIONS): маржа в условиях КП — группа `cost_margin`.
 """
@@ -892,7 +893,11 @@ class FxRateIn(Body):
     rate_to_uzs: str = Field(pattern=_DECIMAL)
 
     def to_erp(self) -> dict[str, Any]:
-        return {"currency": "USD", "rate_date": self.rate_date.isoformat(), "rate_to_uzs": self.rate_to_uzs}
+        return {
+            "currency": "USD",
+            "rate_date": self.rate_date.isoformat(),
+            "rate_to_uzs": self.rate_to_uzs,
+        }
 
 
 def _fx_source(value: Any) -> Literal["auto", "manual"]:
