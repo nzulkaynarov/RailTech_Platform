@@ -26,6 +26,6 @@ describe("SoonButton", () => {
     renderUi(<SoonButton>Создать заявку</SoonButton>);
     const button = screen.getByRole("button");
     expect(button).toBeDisabled();
-    expect(button).toHaveAccessibleName("Создать заявку. Появится в фазе P2");
+    expect(button).toHaveAccessibleName("Создать заявку. Появится в ближайшем обновлении");
   });
 });
