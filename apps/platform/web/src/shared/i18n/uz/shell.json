@@ -140,6 +140,47 @@
       "default": "Parolni almashtirib bo‘lmadi. Qayta urinib ko‘ring."
     }
   },
+  "setup": {
+    "title": "Birinchi ishga tushirish",
+    "lead": "Platforma administratorini yarating. Shundan so'ng siz darhol tizimga kirasiz va sozlashni davom ettirasiz.",
+    "codeHelp": "Kodni server ishga tushganda chiqaradi: crm-api jurnalidan setup_code_issued qatorini toping (docker compose logs crm-api). Kod 24 soat amal qiladi.",
+    "code": "Birinchi ishga tushirish kodi",
+    "codeRequired": "Server jurnalidagi kodni kiriting",
+    "name": "Ism va familiya",
+    "nameRequired": "Ism va familiyani kiriting",
+    "email": "Administratorning elektron pochtasi",
+    "emailRequired": "Elektron pochtani kiriting",
+    "emailInvalid": "Elektron pochta manzilini tekshiring",
+    "password": "Parol",
+    "passwordHint": "Kamida 10 ta belgi, harf va raqamlar, pochtadagi ismsiz.",
+    "passwordRequired": "Parolni kiriting",
+    "passwordTooShort": "Parol kamida 10 ta belgidan iborat bo'lishi kerak",
+    "confirm": "Parolni takrorlang",
+    "mismatch": "Parollar mos kelmadi",
+    "submit": "Administrator yaratish va kirish",
+    "consequence": [
+      "CRM'da shu pochtali administrator paydo bo'ladi, birinchi ishga tushirish kodi o'chadi.",
+      "Siz darhol shu hisob bilan Platformaga kirasiz.",
+      "Keyin ustoz kompaniyangizni yaratishni va bot, ERP, pochta hamda AI modellarini ulashni taklif qiladi."
+    ],
+    "checking": "Tizim holatini tekshirmoqdamiz",
+    "stateErrorTitle": "Tizim holatini tekshirib bo'lmadi",
+    "stateErrorText": "CRM javob bermadi. Server ishlayotganini tekshiring va takrorlang.",
+    "retry": "Takrorlash",
+    "doneTitle": "Birinchi ishga tushirish allaqachon bajarilgan",
+    "doneText": "Administrator yaratilgan. Platformaga pochta va parol bilan kiring.",
+    "doneAction": "Kirishga o'tish",
+    "errors": {
+      "SETUP_CODE_INVALID": "Kod noto'g'ri. Uni server jurnalidan o'zgartirmasdan nusxalang.",
+      "SETUP_CODE_EXPIRED": "Kod eskirgan. /setup sahifasini qayta oching: tizim server jurnalida yangi kod beradi.",
+      "SETUP_LOCKED": "Noto'g'ri kodlar juda ko'p. 15 daqiqadan keyin takrorlang.",
+      "SETUP_DONE": "Administrator allaqachon yaratilgan. Platformaga kiring.",
+      "TOO_MANY_REQUESTS": "Urinishlar juda ko'p. Bir daqiqa kuting va takrorlang.",
+      "BACKEND_UNAVAILABLE": "CRM bilan aloqa o'rnatib bo'lmadi. Birozdan keyin takrorlang.",
+      "VALIDATION_FAILED": "Maydonlarni tekshiring. Parol kamida 10 ta belgi, harf va raqamlardan iborat bo'lishi, pochtadagi ismni o'z ichiga olmasligi kerak.",
+      "default": "Administratorni yaratib bo'lmadi. Urinishni takrorlang."
+    }
+  },
   "session": {
     "errorTitle": "Platformani ochib bo‘lmadi",
     "errorText": "Server javob bermadi. Ulanishni tekshirib, qayta urinib ko‘ring.",

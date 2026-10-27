@@ -6,6 +6,7 @@ import {
 } from "../shared/api/generated/platform-bff.msw";
 import type { ChangePasswordIn, LoginIn, MeUpdate } from "../shared/api/generated/model";
 import { adminAuditHandlers } from "./adminAudit";
+import { adminBusHandlers } from "./adminBus";
 import { adminIntegrationsHandlers } from "./adminIntegrations";
 import { adminCompanyHandlers } from "./adminCompany";
 import { adminRolesHandlers } from "./adminRoles";
@@ -13,7 +14,16 @@ import { adminUsersHandlers } from "./adminUsers";
 import { eventStreamHandlers } from "./eventStream";
 import { isEmployeeDisabled } from "./fixtures/employees";
 import { feedHandlers } from "./feedHandlers";
-import { DEMO_WRONG_CURRENT_PASSWORD, DEMO_WRONG_PASSWORD, findUser } from "./fixtures/users";
+import { setupHandlers } from "./setupHandlers";
+import {
+  DEMO_WRONG_CURRENT_PASSWORD,
+  DEMO_WRONG_PASSWORD,
+  findUser,
+  findUserById,
+  forgetTemporaryPassword,
+  temporaryPasswordOf,
+  updateExtraUser,
+} from "./fixtures/users";
 import {
   buildMe,
   buildSession,
@@ -50,7 +60,13 @@ export const handlers = [
   http.post("*/auth/login", async ({ request }) => {
     const body = (await request.json()) as LoginIn;
     const user = findUser(body.email);
-    if (!user || body.password === DEMO_WRONG_PASSWORD) {
+    // Сотруднику выдан временный пароль: войти можно только с ним (до смены пароля).
+    const temporary = user ? temporaryPasswordOf(user.email) : undefined;
+    if (
+      !user ||
+      body.password === DEMO_WRONG_PASSWORD ||
+      (temporary && body.password !== temporary)
+    ) {
       return failure(401, "INVALID_CREDENTIALS", "Неверная почта или пароль", "crm");
     }
     if (user.loginError) {
@@ -82,6 +98,11 @@ export const handlers = [
       return failure(422, "WRONG_PASSWORD", "Текущий пароль неверен", "crm");
     }
     updateSession({ mustChangePassword: false });
+    const changed = findUserById(session.userId);
+    if (changed) {
+      forgetTemporaryPassword(changed.email);
+      updateExtraUser(changed.id, { mustChangePassword: false });
+    }
     return new HttpResponse(null, { status: 204 });
   }),
 
@@ -118,6 +139,8 @@ export const handlers = [
   ...adminRolesHandlers,
   ...adminIntegrationsHandlers,
   ...adminCompanyHandlers,
+  ...adminBusHandlers,
+  ...setupHandlers,
 
   getGetHealthMockHandler({
     status: "ok",

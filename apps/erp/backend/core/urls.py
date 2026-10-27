@@ -5,6 +5,14 @@ from drf_spectacular.utils import extend_schema
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 from finance.views import DealMarginDeviationView, DealPurchaseActualDetailView, DealPurchaseActualsView
 from integration.bus import get_bus
+from integration.bus_journal_views import (
+    BusDeliveriesView,
+    BusDeliveryRetryView,
+    BusInboxRetryView,
+    BusInboxView,
+    BusOverviewView,
+    BusRetryDeadView,
+)
 from integration.public_views import PublicDocumentLinkView
 from integration.staff_views import CrmPairingCodeView, CrmPairingStatusView
 from portal.exceptions import portal_not_found
@@ -175,6 +183,18 @@ urlpatterns = (
         path("bus/v1/events", bus_view(get_bus), name="rt-bus-events"),
         path("api/v1/integration/crm-pairing/", CrmPairingStatusView.as_view(), name="crm-pairing-status"),
         path("api/v1/integration/crm-pairing/code/", CrmPairingCodeView.as_view(), name="crm-pairing-code"),
+        # «Журнал интеграций» шины в Admin Платформы (W13-A2): чтение и повторы — team.manage или администратор.
+        path("api/v1/integration/bus/overview/", BusOverviewView.as_view(), name="bus-overview"),
+        path("api/v1/integration/bus/deliveries/", BusDeliveriesView.as_view(), name="bus-deliveries"),
+        path("api/v1/integration/bus/deliveries/retry-dead/", BusRetryDeadView.as_view(), name="bus-retry-dead"),
+        path(
+            "api/v1/integration/bus/deliveries/<int:delivery_id>/retry/",
+            BusDeliveryRetryView.as_view(),
+            name="bus-delivery-retry",
+        ),
+        path("api/v1/integration/bus/inbox/", BusInboxView.as_view(), name="bus-inbox"),
+        # id события — строкой: гейт права срабатывает раньше разбора UUID (неверный id — 400 после проверки права).
+        path("api/v1/integration/bus/inbox/<str:event_id>/retry/", BusInboxRetryView.as_view(), name="bus-inbox-retry"),
         path("api/v1/auth/sso/token/", SsoIssueTokenView.as_view(), name="sso-token"),
         path("api/v1/auth/sso/exchange/", SsoExchangeView.as_view(), name="sso-exchange"),
         path("api/v1/auth/setup-password/", SetupPasswordView.as_view(), name="setup-password"),

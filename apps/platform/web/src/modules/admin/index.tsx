@@ -4,14 +4,16 @@ import { RequireAccess } from "../../app/RequireAccess";
 import { ModuleRoutes } from "../ModuleRoutes";
 import { matchSection } from "../registry";
 import { AuditPage } from "./audit/AuditPage";
+import { BusJournalPage } from "./bus/BusJournalPage";
 import { IntegrationsPage } from "./integrations/IntegrationsPage";
 import { CompanyPage } from "./company/CompanyPage";
 import { OrgPage } from "./org/OrgPage";
 import { RolesPage } from "./roles/RolesPage";
+import { SetupWizardPage } from "./setup/SetupWizardPage";
 
 /**
- * Модуль Admin. Оргструктура (PLT-15), Ролевая матрица (R-2), Внешние интеграции (W13-A1) и Компания (W13-A3) — настоящие экраны;
- * остальные разделы пока заглушки каркаса.
+ * Модуль Admin. Оргструктура (PLT-15), Ролевая матрица (R-2), Внешние интеграции (W13-A1), Компания (W13-A3) и Журнал
+ * интеграций (W13-A2) — настоящие экраны; остальные разделы пока заглушки каркаса.
  */
 export function Component() {
   const location = useLocation();
@@ -48,6 +50,20 @@ export function Component() {
     return (
       <RequireAccess rule={match.section.access}>
         <CompanyPage />
+      </RequireAccess>
+    );
+  }
+  if (match?.module.code === "admin" && match.section.key === "bus") {
+    return (
+      <RequireAccess rule={match.section.access}>
+        <BusJournalPage />
+      </RequireAccess>
+    );
+  }
+  if (match?.module.code === "admin" && match.section.key === "setup") {
+    return (
+      <RequireAccess rule={match.section.access}>
+        <SetupWizardPage />
       </RequireAccess>
     );
   }

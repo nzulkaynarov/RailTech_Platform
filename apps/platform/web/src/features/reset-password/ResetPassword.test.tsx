@@ -44,7 +44,7 @@ describe("Сброс пароля сотрудника по почте (карт
       within(group).getByText(/Все его сессии в Платформе, CRM и ERP завершатся/),
     ).toBeVisible();
     expect(within(group).getByRole("radio", { name: "По почте" })).toBeChecked();
-    expect(within(group).getByRole("radio", { name: "Временным паролем" })).toBeDisabled();
+    expect(within(group).getByRole("radio", { name: "Временным паролем" })).toBeEnabled();
 
     fireEvent.click(within(group).getByRole("button", { name: "Сбросить и отправить письмо" }));
 
@@ -59,6 +59,62 @@ describe("Сброс пароля сотрудника по почте (карт
       entity_id: "u-demo-manager",
       actor_name: "Демо Админов",
     });
+  });
+
+  it("временным паролем: другие «Что произойдёт», пароль один раз, запись в журнале, пароль не в кэше", async () => {
+    signInAs("admin@demo.example");
+    const { queryClient } = renderApp("/admin/org?employee=u-demo-manager&panel=open");
+    const side = await panelEl();
+    await within(side).findByRole("heading", { level: 3, name: "Демо Менеджеров" });
+
+    fireEvent.click(within(side).getByRole("button", { name: "Сбросить пароль" }));
+    fireEvent.click(within(side).getByRole("radio", { name: "Временным паролем" }));
+
+    const group = within(side).getByRole("group", { name: "Сброс пароля" });
+    expect(within(group).getByText(/Прежний пароль перестанет действовать/)).toBeVisible();
+    expect(within(group).queryByText(/получит письмо/)).toBeNull();
+
+    fireEvent.click(within(group).getByRole("button", { name: "Выдать пароль" }));
+
+    const input = await within(side).findByLabelText<HTMLInputElement>("Временный пароль");
+    expect(input.value).toMatch(/^Tmp-/);
+    expect(readAudit()[0]).toMatchObject({
+      action: "user.reset_password",
+      entity_id: "u-demo-manager",
+      actor_name: "Демо Админов",
+    });
+    expect(
+      JSON.stringify(
+        queryClient
+          .getMutationCache()
+          .getAll()
+          .map((m) => m.state),
+      ),
+    ).not.toContain(input.value);
+    fireEvent.click(within(side).getByRole("button", { name: "Готово: пароль передан" }));
+    await waitFor(() => {
+      expect(within(side).queryByLabelText("Временный пароль")).toBeNull();
+    });
+    expect(within(side).getByRole("button", { name: "Сбросить пароль" })).toBeVisible();
+  });
+
+  it("отказ при выдаче временного пароля — ошибка словами, пароля нет", async () => {
+    server.use(
+      http.post("*/admin/users/:id/temporary-password", () =>
+        HttpResponse.json({ code: "FORBIDDEN", message: "x", source: "crm" }, { status: 403 }),
+      ),
+    );
+    signInAs("admin@demo.example");
+    renderApp("/admin/org?employee=u-demo-manager&panel=open");
+    const side = await panelEl();
+    await within(side).findByRole("heading", { level: 3, name: "Демо Менеджеров" });
+    fireEvent.click(within(side).getByRole("button", { name: "Сбросить пароль" }));
+    fireEvent.click(within(side).getByRole("radio", { name: "Временным паролем" }));
+
+    fireEvent.click(within(side).getByRole("button", { name: "Выдать пароль" }));
+
+    expect(await within(side).findByRole("alert")).toBeVisible();
+    expect(within(side).queryByLabelText("Временный пароль")).toBeNull();
   });
 
   it("себе сбросить нельзя: кнопка недоступна, причина словами", async () => {

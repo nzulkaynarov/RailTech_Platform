@@ -13,12 +13,14 @@ import {
 import { recordAudit } from "./fixtures/audit";
 import { ROLE_ID, readRoles } from "./fixtures/roles";
 import { buildMe, currentActor, readSession } from "./mockSession";
+import { rememberTemporaryPassword, registerUser, updateExtraUser } from "./fixtures/users";
+import { markStepDone } from "./setupState";
 
 export function failure(
   status: number,
   code: string,
   message: string,
-  source: "bff" | "crm" = "bff",
+  source: "bff" | "crm" | "erp" = "bff",
   details?: Record<string, unknown>,
 ) {
   return HttpResponse.json({ code, message, source, ...(details ? { details } : {}) }, { status });
@@ -68,6 +70,13 @@ function sorted(items: readonly MockEmployee[]) {
   return [...items].sort((a, b) => a.name.localeCompare(b.name, "ru"));
 }
 
+/** Временный пароль мока — случайный на каждый вызов (ни одного литерала, похожего на настоящий пароль). */
+export function randomTemporaryPassword(): string {
+  const bytes = new Uint8Array(9);
+  globalThis.crypto.getRandomValues(bytes);
+  return `Tmp-${Array.from(bytes, (b) => b.toString(36).padStart(2, "0")).join("")}`;
+}
+
 /** Моки `/admin/users*` (PLT-15, R-2): состояние в `fixtures/employees`, инварианты — как у CRM. */
 export const adminUsersHandlers = [
   http.get("*/admin/users", ({ request }) => {
@@ -83,6 +92,91 @@ export const adminUsersHandlers = [
       )
       .map(toEmployee);
     return HttpResponse.json({ items });
+  }),
+
+  http.post("*/admin/users", async ({ request }) => {
+    const denied = guard("full");
+    if (denied) return denied;
+    const body = (await request.json()) as EmployeeInvite;
+    const items = readEmployees();
+    const email = body.email.trim().toLowerCase();
+    if (items.some((e) => e.email.toLowerCase() === email)) {
+      return failure(409, "EMAIL_EXISTS", "Сотрудник с такой почтой уже есть.", "crm");
+    }
+    const known = new Set(readRoles().map((r) => r.id));
+    if (body.role_ids.some((id) => !known.has(id))) {
+      return failure(422, "VALIDATION_FAILED", "Проверьте заполнение полей.", "crm", {
+        fields: ["role_ids"],
+      });
+    }
+    const name = body.name.trim();
+    const employee: MockEmployee = {
+      id: `u-demo-new-${String(items.length + 1)}`,
+      name,
+      initials: name
+        .split(/\s+/)
+        .slice(0, 2)
+        .map((part) => part.charAt(0).toLocaleUpperCase())
+        .join(""),
+      email,
+      ...(body.position?.trim() ? { position: body.position.trim() } : {}),
+      role_ids: body.role_ids,
+      access: accessFor(body.role_ids),
+      status: "invited",
+      telegram_linked: false,
+      erp_sync: "pending",
+    };
+    writeEmployees([...items, employee]);
+    markStepDone("first_employee");
+    // Сотрудник может войти только с этим паролем и обязан сменить его (`must_change_password`).
+    const password = randomTemporaryPassword();
+    registerUser({
+      id: employee.id,
+      email,
+      name,
+      initials: employee.initials,
+      position: employee.position ?? "—",
+      roles: [],
+      language: "ru",
+      mustChangePassword: true,
+    });
+    rememberTemporaryPassword(email, password);
+    return HttpResponse.json(
+      { employee: toEmployee(employee), temporary_password: password },
+      { status: 201, headers: { "Cache-Control": "no-store" } },
+    );
+  }),
+
+  http.post("*/admin/users/:id/temporary-password", ({ params }) => {
+    const denied = guard("full");
+    if (denied) return denied;
+    const session = readSession();
+    if (session && session.userId === params["id"]) {
+      return failure(409, "CONFLICT", "Свой пароль меняется в профиле.", "bff", {
+        reason: "own_account",
+      });
+    }
+    const items = readEmployees();
+    const current = items.find((e) => e.id === params["id"]);
+    if (!current) return failure(404, "NOT_FOUND", "Не найдено.", "crm");
+    const pending = new Set(readPendingPasswordIds());
+    pending.add(current.id);
+    writePendingPasswordIds([...pending]);
+    const next: MockEmployee =
+      current.status === "disabled" ? current : { ...current, status: "invited" };
+    writeEmployees(items.map((e) => (e.id === next.id ? next : e)));
+    const password = randomTemporaryPassword();
+    rememberTemporaryPassword(next.email, password);
+    updateExtraUser(next.id, { mustChangePassword: true });
+    recordAudit(currentActor(), {
+      action: "user.reset_password",
+      entityType: "user",
+      entityId: next.id,
+    });
+    return HttpResponse.json(
+      { employee: toEmployee(next), temporary_password: password },
+      { headers: { "Cache-Control": "no-store" } },
+    );
   }),
 
   http.post("*/admin/users/invite", async ({ request }) => {
@@ -126,6 +220,7 @@ export const adminUsersHandlers = [
         reason: "smtp_not_configured",
       });
     }
+    markStepDone("first_employee");
     return HttpResponse.json(toEmployee(employee), { status: 201 });
   }),
 

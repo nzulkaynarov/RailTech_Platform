@@ -222,8 +222,10 @@
       "roles": "Role matrix (RBAC)",
       "org": "Org structure",
       "integrations": "External integrations",
+      "bus": "Integration log",
       "tickets": "Team tickets",
       "company": "Company",
+      "setup": "First run",
       "audit": "Audit log"
     },
     "stub": {
@@ -242,6 +244,11 @@
         "text": "The Telegram bot, email, file storage, backups and AI models: status, last activity, check and reconnect.",
         "action": "Team tickets"
       },
+      "bus": {
+        "title": "The integration log opens here",
+        "text": "Event bus of CRM, ERP and EDS: subscribers, deliveries, undelivered and inbox with errors.",
+        "action": "External integrations"
+      },
       "tickets": {
         "title": "No tickets yet",
         "text": "Requests from staff to the administrator: an error, access, a suggestion.",
@@ -252,6 +259,11 @@
         "text": "Company details, document templates, numbering and payment terms. The screen arrives when ERP settings move into the Platform.",
         "action": "Org chart"
       },
+      "setup": {
+        "title": "First-run wizard",
+        "text": "The administrator, your own company and five connection steps: bot, ERP, mail, AI models and the first employee.",
+        "action": "Org structure"
+      },
       "audit": {
         "title": "No entries yet",
         "text": "Every change will appear here: who granted a role, reset a password or changed settings, with date and time.",
@@ -259,6 +271,90 @@
       }
     },
     "action": "Invite employee",
+    "setup": {
+      "title": "First run",
+      "subtitle": "Three steps: administrator, your company, connections. Any step can wait.",
+      "adminTitle": "Administrator",
+      "adminDone": "Administrator created: {{name}}.",
+      "companyTitle": "Your company",
+      "companyRequired": "Create your own company: documents are issued in its name, and ERP gets its details.",
+      "companyDone": "Your company is created.",
+      "companyUnknown": "ERP has not responded yet. A new administrator gets ERP access with a delay: try again in a few seconds.",
+      "companyNoRights": "Only an ERP administrator can create the company. Sign in as an administrator.",
+      "companyRetry": "Check again",
+      "companyName": "Company name",
+      "companyNameRequired": "Enter the company name",
+      "companyInn": "Tax ID (optional)",
+      "companyAddress": "Legal address (optional)",
+      "companyPhone": "Phone (optional)",
+      "companyEmail": "Company email (optional)",
+      "companyEmailInvalid": "Check the email address",
+      "companySubmit": "Create the company",
+      "companyConsequence": [
+        "ERP gets your company with the “seller” type, and you become its owner.",
+        "Details, letterhead and numbering can be completed later in Admin · Company.",
+        "The wizard creates the company once: it cannot be created again."
+      ],
+      "companyCreated": "Company “{{name}}” created",
+      "companyErrors": {
+        "OWN_COMPANY_ALREADY_EXISTS": "Your company already exists.",
+        "FORBIDDEN": "Only an ERP administrator can create the company.",
+        "BACKEND_UNAVAILABLE": "ERP did not respond. A new administrator gets ERP access with a delay: try again in a few seconds.",
+        "VALIDATION_FAILED": "Check the form fields.",
+        "default": "Could not create the company. Try again."
+      },
+      "connectionsTitle": "Connections",
+      "connectionsLead": "Five setup steps: each leads to its own screen.",
+      "progress": "Done {{done}} of {{total}}",
+      "allDone": "All done: the Platform is set up.",
+      "loadError": "Could not load the setup state",
+      "loadErrorText": "The server did not respond. Try again.",
+      "retry": "Retry",
+      "state": {
+        "done": "Done",
+        "todo": "Not done",
+        "unknown": "No data"
+      },
+      "steps": {
+        "bot": {
+          "title": "Telegram bot",
+          "text": "Bot token and team channel: clients write to the bot, employees get notifications.",
+          "action": "Connect the bot"
+        },
+        "erp": {
+          "title": "ERP",
+          "text": "Pair CRM with ERP: requests and calculations flow between the systems.",
+          "action": "Pair ERP"
+        },
+        "mail": {
+          "title": "Mail",
+          "text": "One SMTP for all emails: invitations, quotes and invoices.",
+          "action": "Set up mail"
+        },
+        "models": {
+          "title": "AI models",
+          "text": "Model keys for the bot and suggestions.",
+          "action": "Connect models"
+        },
+        "first_employee": {
+          "title": "First employee",
+          "text": "Invite a colleague and give them a role. No mail — issue a temporary password.",
+          "action": "Invite an employee"
+        }
+      },
+      "listLabel": "Setup steps",
+      "onlyAdmin": "The first-run wizard is for the administrator. The director sees the setup read-only in Admin · External integrations.",
+      "banner": {
+        "label": "Platform setup",
+        "title": "Platform setup: {{done}} of {{total}} done",
+        "company": "Your company is not in ERP yet.",
+        "next": "Next: {{step}}.",
+        "open": "Continue setup",
+        "hide": "Hide",
+        "hideLabel": "Hide the setup banner",
+        "hidden": "Banner hidden. The wizard stays on the “First run” page in Admin (/admin/setup)."
+      }
+    },
     "org": {
       "title": "Org structure",
       "subtitle": "Employees, roles and access to CRM and ERP. Roles for both systems are granted in one card.",
@@ -376,7 +472,41 @@
         "notSentUnavailable": "The employee was added with the status “Invited”, but CRM did not respond and the email was not sent. Try again later with “Send the invitation again” in the card.",
         "resend": "Send the invitation again",
         "resendHint": "A new email with a new temporary password goes out; the previous one stops working.",
-        "resendNotSent": "The email was not sent: mail is not connected or unavailable. Connect it in Admin · Integrations and try again."
+        "resendNotSent": "The email was not sent: mail is not connected or unavailable. Connect it in Admin · Integrations and try again.",
+        "delivery": "How to hand over access",
+        "deliveryMail": "By email",
+        "deliveryPassword": "With a temporary password, no email",
+        "submitPassword": "Create and show the password",
+        "consequencePassword": [
+          "The employee appears in the list as “Invited”; no email is sent.",
+          "You see the temporary password once: give it to the employee in person or in a secure chat.",
+          "At first sign-in the employee must set their own password."
+        ],
+        "created": "Employee created: {{email}}"
+      },
+      "password": {
+        "title": "Temporary password",
+        "cardLabel": "Employee temporary password",
+        "lead": "Employee: {{name}}, {{email}}",
+        "warning": "The password is shown once. Once you close this window you cannot see it again; you would have to issue a new one.",
+        "label": "Temporary password",
+        "copy": "Copy",
+        "copied": "Password copied",
+        "copyFailed": "Could not copy. Select the password and copy it manually.",
+        "howTo": "Give it to the employee in person or in a secure chat, not by email. At first sign-in the employee must change it to their own.",
+        "done": "Done: password handed over",
+        "issue": {
+          "button": "Issue a temporary password",
+          "hint": "A new password without an email: the previous one stops working.",
+          "confirmTitle": "Issue a temporary password",
+          "confirm": "Issue password",
+          "cancel": "Cancel",
+          "consequence": [
+            "The previous password stops working and the employee is signed out of the Platform, CRM and ERP.",
+            "You see the new temporary password once and hand it to the employee.",
+            "At sign-in the employee must set their own password; in the list they show as “Invited”."
+          ]
+        }
       },
       "disable": {
         "button": "Disable employee",
@@ -400,7 +530,8 @@
         "FORBIDDEN": "Not enough rights: roles are granted by an administrator.",
         "BACKEND_UNAVAILABLE": "CRM is not responding. Try again later.",
         "VALIDATION_FAILED": "Check the fields.",
-        "DEFAULT": "The action failed. Try again."
+        "DEFAULT": "The action failed. Try again.",
+        "OWN_ACCOUNT": "Your own password is changed in the profile: temporary passwords are issued to other employees."
       },
       "transfer": {
         "label": "Who takes over the leads in progress",

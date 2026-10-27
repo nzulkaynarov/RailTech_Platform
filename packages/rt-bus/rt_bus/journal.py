@@ -7,9 +7,12 @@ import uuid
 from collections.abc import Iterable, Mapping
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
+from fnmatch import fnmatchcase
 from typing import Any
+from urllib.parse import urlsplit, urlunsplit
 
 from .sql import DEAD, FAILED, IN_FLIGHT, PENDING, RECEIVED
+from .subscriptions import Subscriber, Subscriptions
 
 logger = logging.getLogger("rt_bus.metrics")
 
@@ -86,6 +89,180 @@ class BusMetrics:
 
     def as_dict(self) -> dict[str, Any]:
         return asdict(self)
+
+
+@dataclass(frozen=True)
+class SubscriberView:
+    """Подписчик издателя для «Журнала интеграций» (W13-A2): настройка, очередь доставок, предохранитель.
+
+    `configured = False` — подписчика больше нет в файле подписок, но у него остались доставки или состояние.
+    `paused_until` — только действующая пауза предохранителя (в будущем); прошедшая — `None`.
+    """
+
+    name: str
+    configured: bool
+    enabled: bool
+    drop: bool
+    endpoint: str | None
+    pending: int
+    in_flight: int
+    dead: int
+    oldest_undelivered_age_seconds: float | None
+    consecutive_failures: int
+    paused_until: datetime | None
+    last_failure_at: datetime | None
+    last_success_at: datetime | None
+    last_error: str | None
+
+
+@dataclass(frozen=True)
+class BusOverview:
+    """Сводка издателя и приёмника сервиса для «Журнала интеграций»: метрики и подписчики."""
+
+    service: str
+    outbox_pending: int
+    oldest_undelivered_age_seconds: float | None
+    dlq_size: int
+    inbox_received: int
+    inbox_retrying: int
+    inbox_failed: int
+    subscribers: list[SubscriberView]
+
+
+def public_endpoint(url: str) -> str:
+    """Адрес приёмника для показа: только `scheme://host[:port]/path`. Учётные данные (`user:pass@`),
+    query и fragment не показываем даже администратору: в них может оказаться токен."""
+    parts = urlsplit(url)
+    host = parts.hostname or ""
+    if parts.port is not None:
+        host = f"{host}:{parts.port}"
+    return urlunsplit((parts.scheme, host, parts.path, "", ""))
+
+
+def serves(subscriber: Subscriber, service: str, domains: Iterable[str]) -> bool:
+    """Получает ли подписчик события издателя `service`: не он сам и хотя бы одна маска — на домен издателя
+    (`uz.railtech.<домен>.…`; маска домена с подстановкой сравнивается как fnmatch)."""
+    if subscriber.name == service:
+        return False
+    owned = tuple(domains)
+    for mask in subscriber.types:
+        parts = mask.split(".")
+        domain = parts[2] if len(parts) > 3 else ""
+        if any(fnmatchcase(own, domain) for own in owned):
+            return True
+    return False
+
+
+def build_subscribers(
+    now: datetime,
+    service: str,
+    domains: Iterable[str],
+    subscriptions: Subscriptions,
+    deliveries: Iterable[Mapping[str, Any]],
+    states: Iterable[Mapping[str, Any]],
+    environ: Mapping[str, str] | None = None,
+) -> list[SubscriberView]:
+    """Подписчики издателя по имени: из файла подписок (только те, кому издатель доставляет) и все, у кого есть
+    доставки `pending`/`in_flight`/`dead` или состояние предохранителя. Строки `deliveries` — `METRICS_DELIVERY`,
+    `states` — `SUBSCRIBER_STATES`."""
+    owned = tuple(domains)
+    counts: dict[str, dict[str, int]] = {}
+    oldest: dict[str, float | None] = {}
+    for row in deliveries:
+        name = row["subscriber"]
+        counts.setdefault(name, {})[row["status"]] = int(row["n"])
+        if row["status"] != DEAD:
+            oldest[name] = _older(oldest.get(name), _age(now, row["oldest"]))
+    state_by_name = {row["subscriber"]: row for row in states}
+    configured = {s.name: s for s in subscriptions.subscribers if serves(s, service, owned)}
+    names = sorted(set(configured) | set(counts) | set(state_by_name))
+    out: list[SubscriberView] = []
+    for name in names:
+        sub = configured.get(name) or subscriptions.get(name)
+        state = state_by_name.get(name) or {}
+        paused_until = state.get("paused_until")
+        by_status = counts.get(name, {})
+        out.append(
+            SubscriberView(
+                name=name,
+                configured=name in configured,
+                enabled=sub.enabled if sub is not None else True,
+                drop=sub.drop if sub is not None else False,
+                endpoint=public_endpoint(sub.url(environ)) if sub is not None else None,
+                pending=by_status.get(PENDING, 0),
+                in_flight=by_status.get(IN_FLIGHT, 0),
+                dead=by_status.get(DEAD, 0),
+                oldest_undelivered_age_seconds=oldest.get(name),
+                consecutive_failures=int(state.get("consecutive_failures") or 0),
+                paused_until=paused_until if paused_until is not None and paused_until > now else None,
+                last_failure_at=state.get("last_failure_at"),
+                last_success_at=state.get("last_success_at"),
+                last_error=state.get("last_error"),
+            )
+        )
+    return out
+
+
+def build_overview(service: str, metrics: BusMetrics, subscribers: list[SubscriberView]) -> BusOverview:
+    return BusOverview(
+        service=service,
+        outbox_pending=metrics.outbox_pending,
+        oldest_undelivered_age_seconds=metrics.oldest_undelivered_age_seconds,
+        dlq_size=metrics.dlq_size,
+        inbox_received=metrics.inbox_received,
+        inbox_retrying=metrics.inbox_retrying,
+        inbox_failed=metrics.inbox_failed,
+        subscribers=subscribers,
+    )
+
+
+def delivery_filters(
+    *,
+    status: str | None,
+    subscriber: str | None,
+    event_type: str | None,
+    event_id: str | uuid.UUID | None,
+    type_contains: str | None,
+    created_from: datetime | None,
+    created_to: datetime | None,
+    before_id: int | None,
+    limit: int,
+) -> dict[str, Any]:
+    """Параметры `LIST_DELIVERIES` (одни для обоих адаптеров)."""
+    return {
+        "status": status,
+        "subscriber": subscriber,
+        "event_type": event_type,
+        "event_id": None if event_id is None else uuid.UUID(str(event_id)),
+        "type_contains": type_contains or None,
+        "created_from": created_from,
+        "created_to": created_to,
+        "before_id": before_id,
+        "limit": limit,
+    }
+
+
+def inbox_filters(
+    *,
+    status: str | None,
+    event_type: str | None,
+    type_contains: str | None,
+    errors_only: bool,
+    before: datetime | None,
+    before_event_id: str | uuid.UUID | None,
+    limit: int,
+) -> dict[str, Any]:
+    """Параметры `LIST_INBOX`. Курсор — (`before`, `before_event_id`) последней строки страницы: порядок
+    `received_at DESC, event_id`, поэтому строки с тем же временем не теряются между страницами."""
+    return {
+        "status": status,
+        "event_type": event_type,
+        "type_contains": type_contains or None,
+        "errors_only": errors_only,
+        "before": before,
+        "before_event_id": None if before_event_id is None else uuid.UUID(str(before_event_id)),
+        "limit": limit,
+    }
 
 
 def _age(now: datetime, moment: datetime | None) -> float | None:

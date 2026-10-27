@@ -179,7 +179,7 @@ test.describe("Сброс пароля сотрудника", () => {
     const reset = side.getByRole("group", { name: "Сброс пароля" });
     await expect(reset.getByText("Что произойдёт")).toBeVisible();
     await expect(reset.getByText(/Сотрудник получит письмо на manager@demo.example/)).toBeVisible();
-    await expect(side.getByRole("radio", { name: "Временным паролем" })).toBeDisabled();
+    await expect(reset.getByRole("radio", { name: "Временным паролем" })).toBeEnabled();
     await tallScreenshot(page, "org-reset-password");
 
     await side.getByRole("button", { name: "Сбросить и отправить письмо" }).click();
@@ -206,6 +206,34 @@ test.describe("Сброс пароля сотрудника", () => {
     await expect(page.locator(PANEL).getByText(/Свой пароль здесь не сбросить/)).toBeVisible();
   });
 
+  test("админ выдаёт временный пароль без почты: пароль виден один раз, действие в журнале", async ({
+    page,
+  }) => {
+    await loginAndWait(page, "admin@demo.example");
+    await spaGoto(page, "/admin/org?employee=u-demo-manager&panel=open");
+    const side = page.locator(PANEL);
+    await expect(side.getByRole("heading", { level: 3, name: "Демо Менеджеров" })).toBeVisible();
+
+    await side.getByRole("button", { name: "Сбросить пароль" }).click();
+    const reset = side.getByRole("group", { name: "Сброс пароля" });
+    await reset.getByRole("radio", { name: "Временным паролем" }).check();
+    await expect(reset.getByText(/Прежний пароль перестанет действовать/)).toBeVisible();
+    await tallScreenshot(page, "org-temporary-password-confirm");
+    await reset.getByRole("button", { name: "Выдать пароль" }).click();
+
+    const password = side.getByRole("textbox", { name: "Временный пароль" });
+    await expect(password).toHaveValue(/^Tmp-/);
+    await settledScreenshot(page, "org-temporary-password");
+    await side.getByRole("button", { name: "Готово: пароль передан" }).click();
+    await expect(side.getByRole("textbox", { name: "Временный пароль" })).toHaveCount(0);
+    await expect(side.getByRole("button", { name: "Сбросить пароль" })).toBeVisible();
+
+    await spaGoto(page, "/admin/audit");
+    await expect(
+      page.getByRole("link", { name: /Открыть запись: Сбросил пароль, / }).first(),
+    ).toBeVisible();
+  });
+
   test("директору кнопки сброса нет", async ({ page }) => {
     await loginAndWait(page, "director@demo.example");
     await spaGoto(page, "/admin/org?employee=u-demo-manager&panel=open");
@@ -229,6 +257,12 @@ test.describe("Сброс пароля сотрудника", () => {
       ).toBeVisible();
       await expectNoViolations(page, `сброс пароля ${String(width)}`);
       await tallScreenshot(page, "org-reset-password");
+      await side
+        .getByRole("group", { name: "Сброс пароля" })
+        .getByRole("radio", { name: "Временным паролем" })
+        .check();
+      await expectNoViolations(page, `временный пароль ${String(width)}`);
+      await tallScreenshot(page, "org-temporary-password-confirm");
     });
   }
 });

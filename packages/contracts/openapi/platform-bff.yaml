@@ -12,7 +12,7 @@ info:
     BFF не имеет своей базы: данные приходят из CRM и ERP, каждый вызов бэкенда — с токеном сотрудника.
 
     **Сессия.** `POST /auth/login` ставит cookie `rt_pf_session` (`HttpOnly; Secure; SameSite=Lax; Path=/`) и CSRF-cookie
-    `rt_pf_csrf` (читается скриптом). Каждый `POST`, `PUT`, `PATCH`, `DELETE`, кроме `/auth/login`, несёт заголовок
+    `rt_pf_csrf` (читается скриптом). Каждый `POST`, `PUT`, `PATCH`, `DELETE`, кроме `/auth/login` и `/setup/admin` (оба без сессии), несёт заголовок
     `X-CSRF-Token` со значением CSRF-cookie; без него или с другим значением — 403 `CSRF_FAILED`. Истёкшая или
     отозванная сессия — 401 `SESSION_EXPIRED`.
 
@@ -89,6 +89,32 @@ info:
     он уходит только в CRM. Коды ошибок: `WRONG_PASSWORD` (422), `NOT_CONFIGURED`, `SECRETS_KEY_MISSING`,
     `SERVICE_NOT_SWITCHABLE` (409), `INTEGRATION_FAILED` (502, причина в `details.reason`).
 
+    **0.9.0 (W13-A2) — добавляющее.** Admin · Журнал интеграций (тег `bus`): шина `rt_bus` всех трёх доменов в одном журнале
+    вместо CLI `bus status|retry` и Django admin ERP. `GET /admin/bus` — сводка по доменам (outbox, DLQ, inbox с ошибками) и
+    подписчики с состоянием словом (`BusSubscriberState`: работает, ошибки подряд, пауза предохранителя до `paused_until`,
+    есть DLQ, выключен, убран из подписок); `GET /admin/bus/deliveries` — доставки с фильтрами (домен, статус, подписчик,
+    подстрока типа, период), DLQ — `status=dead`; `GET /admin/bus/inbox` — принятые события (`errors=true` — обработка упала
+    или ждёт автоповтора); повторы `POST /admin/bus/{domain}/deliveries/{id}/retry`, `…/deliveries/retry-dead` (все `dead`
+    подписчика), `…/inbox/{event_id}/retry`. Списки трёх доменов сливаются по времени, страница — непрозрачный `cursor` из
+    `next_cursor`; домен, который не ответил или отказал, — `sources.<домен>`, ответ 200 с остальными. Только раздел
+    `admin: full` (директору — 403 в BFF); в каждый домен — с токеном сотрудника: CRM и ERP — как раньше, EDS — токен
+    сотрудника CRM `aud=eds` → `POST /api/v1/auth/sso/exchange` EDS (`docs/architecture/sso-token.md`), 15 минут, в сессии BFF.
+    Тел событий нет — только метаданные доставки. `Error.source` дополнен `eds`.
+
+    **0.10.0 (W13-A4) — добавляющее.** Первый запуск в Платформе (SPEC-v3 §7.6, тег `setup`): вместо `/setup` CRM и мастера ERP.
+    Без сессии: `GET /setup/state` (CRM `/setup/state`: администратора ещё нет — `needs_admin`) и `POST /setup/admin` (одноразовый
+    код первого запуска из журнала `crm-api`, имя, почта, пароль -> первый администратор; ответ — как у входа: `Session` и cookie).
+    С сессией, раздел `admin` — полный: `GET /setup/checklist` (чек-лист из пяти шагов — бот, ERP, почта, модели ИИ, первый
+    сотрудник — по ответам CRM; шаг мастера «своя компания» — по ERP `setup/status`) и `POST /setup/company` (ERP `setup/company`,
+    токеном администратора). Приглашение без почты: `POST /admin/users` создаёт сотрудника и возвращает **временный пароль один
+    раз**, `POST /admin/users/{id}/temporary-password` выдаёт новый временный пароль существующему сотруднику (CRM
+    `/users/{id}/reset-password`; прежний пароль и сессии сотрудника перестают действовать). Пароль приходит только в этом ответе
+    (`Cache-Control: no-store`): BFF его не пишет в журнал, не кэширует и не хранит, а повторно получить его нельзя — только выдать
+    новый; сотрудник при входе обязан сменить его (`Session.must_change_password`, `POST /auth/change-password`). Коды ошибок:
+    `SETUP_DONE` (409), `SETUP_CODE_INVALID`, `SETUP_CODE_EXPIRED` (422), `SETUP_LOCKED` (429, 15 минут после десяти неверных
+    кодов), `OWN_COMPANY_ALREADY_EXISTS` (409). Право: чек-лист и мастер компании видит и выполняет только `admin: full` — CRM
+    `/setup/checklist` требует право записи настроек; директору баннер не показывается.
+
     0.2.4: `423 ACCOUNT_LOCKED` объявлен и на `POST /auth/change-password` (CRM блокирует учётную запись после неверных
     текущих паролей).
 
@@ -116,6 +142,8 @@ security:
 tags:
   - name: auth
     description: Вход логином CRM; токены CRM и ERP живут только в сессии BFF
+  - name: setup
+    description: Первый запуск — администратор (без сессии), чек-лист из пяти шагов и своя компания (раздел `admin`)
   - name: me
   - name: system
   - name: dashboard
@@ -127,6 +155,8 @@ tags:
     description: Admin · Оргструктура, Ролевая матрица (CRM — источник истины по людям и ролям) и Компания (ERP — реквизиты, бланк, нумерация, справочники)
   - name: integrations
     description: Admin · Внешние интеграции — ERP, Telegram, почта, реестр внешних сервисов, модели ИИ и расходы, бэкапы, состояние системы (прокси к CRM; раздел `admin`)
+  - name: bus
+    description: Admin · Журнал интеграций — шина rt_bus CRM, ERP и EDS (подписчики, доставки и DLQ, inbox с ошибками, повторы; раздел `admin` full)
 
 paths:
   /auth/login:
@@ -246,6 +276,146 @@ paths:
                 $ref: '#/components/schemas/Session'
         '401':
           $ref: '#/components/responses/SessionExpired'
+
+  /setup/state:
+    get:
+      tags: [setup]
+      operationId: getSetupState
+      summary: Нужен ли первый запуск (в CRM ещё нет администратора)
+      description: >-
+        Без сессии (CRM `/setup/state`). `needs_admin = true` — SPA ведёт на экран «Первый запуск» вместо входа. Пока администратора
+        нет, CRM выдаёт одноразовый код первого запуска и один раз пишет его в журнал `crm-api` (`setup_code_issued`); в ответе кода нет.
+      security: []
+      responses:
+        '200':
+          description: Состояние
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SetupState'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /setup/admin:
+    post:
+      tags: [setup]
+      operationId: createFirstAdmin
+      summary: Создать первого администратора и войти
+      description: >-
+        Без сессии, один раз (CRM `/setup/admin`). Код первого запуска — из журнала `crm-api`; регистр, пробелы и дефисы не важны.
+        Создаётся пользователь с системной ролью «Администратор»; BFF входит под ним теми же почтой и паролем и ставит `rt_pf_session` и
+        `rt_pf_csrf` — ответ как у `POST /auth/login`. Попытки считаются в том же лимите, что и вход (на IP и e-mail). Неверный код —
+        422 `SETUP_CODE_INVALID`, истёкший (24 часа) — 422 `SETUP_CODE_EXPIRED`, перебор — 429 `SETUP_LOCKED` (15 минут), администратор
+        уже есть — 409 `SETUP_DONE`. Слабый пароль — 422 `VALIDATION_FAILED`, `details.fields = [password]`.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetupAdminIn'
+      responses:
+        '200':
+          description: Администратор создан, сессия открыта
+          headers:
+            Set-Cookie:
+              description: '`rt_pf_session` и `rt_pf_csrf`'
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '409':
+          description: '`SETUP_DONE` — администратор уже создан'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: '`SETUP_CODE_INVALID`, `SETUP_CODE_EXPIRED`, `VALIDATION_FAILED` (`details.fields`)'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: '`SETUP_LOCKED` (15 минут) или `TOO_MANY_REQUESTS`'
+          headers:
+            Retry-After:
+              description: Секунды до повтора
+              schema:
+                type: integer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /setup/checklist:
+    get:
+      tags: [setup]
+      operationId: getSetupChecklist
+      summary: Чек-лист первого запуска из пяти шагов
+      description: >-
+        Раздел `admin` — полный (директору — 403: CRM отдаёт чек-лист только с правом записи настроек, а все шаги ведут на экраны
+        администратора). Состояние шагов приносят бэкенды, BFF их только сводит: бот и модели ИИ — CRM `/setup/checklist`, ERP —
+        `/integrations/erp`, почта — `/integrations/smtp`, первый сотрудник — `/users` (есть ли кроме администратора активный
+        сотрудник). Часть данных не ответила — шаг `unknown`, чек-лист не падает; не ответила ни одна — 503. `company` — шаг мастера
+        «своя компания» (ERP `setup/status`); `null`, если ERP не ответила или у администратора нет сессии ERP.
+      responses:
+        '200':
+          description: Чек-лист
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SetupChecklist'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /setup/company:
+    post:
+      tags: [setup]
+      operationId: createOwnCompany
+      summary: Создать свою компанию (шаг мастера)
+      description: >-
+        Раздел `admin` — полный. ERP `setup/company/` токеном администратора: создаёт компанию с типом «продавец» и делает его
+        владельцем; только пока своей компании нет. Повтор — 409 `OWN_COMPANY_ALREADY_EXISTS`. Поля формы — 422 `VALIDATION_FAILED`
+        (`details.fields`, тексты ERP — `details.messages`). ERP не ответила или у администратора ещё нет сессии ERP (доступ
+        выдаётся CRM с задержкой) — 503 `BACKEND_UNAVAILABLE`, повтор через несколько секунд. Тот же сотрудник уже не суперпользователь ERP — 403 `FORBIDDEN`.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetupCompanyIn'
+      responses:
+        '201':
+          description: Компания создана
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SetupCompanyCreated'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: '`OWN_COMPANY_ALREADY_EXISTS` — компания уже создана'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
 
   /me:
     get:
@@ -1559,6 +1729,202 @@ paths:
         '503':
           $ref: '#/components/responses/BackendUnavailable'
 
+  /admin/bus:
+    get:
+      tags: [bus]
+      operationId: getBusJournal
+      summary: 'Журнал интеграций: сводка шины по доменам и подписчики'
+      description: >-
+        CRM `GET /api/v1/bus/overview`, ERP `GET /api/v1/integration/bus/overview/`, EDS `GET /api/v1/bus/overview` —
+        параллельно, с токеном сотрудника. Домен, который не ответил или отказал, в `domains` не попадает, его состояние —
+        `sources`.
+      responses:
+        '200':
+          description: Сводка
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusJournal'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/bus/deliveries:
+    get:
+      tags: [bus]
+      operationId: listBusDeliveries
+      summary: 'Журнал интеграций: доставки событий (DLQ — status=dead)'
+      description: >-
+        Доставки всех доменов (или одного — `domain`), новые сверху; списки доменов сливаются по `created_at`. Страница —
+        `cursor` из `next_cursor` (`null` — дальше нет).
+      parameters:
+        - $ref: '#/components/parameters/BusDomainQuery'
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/BusDeliveryStatus'
+        - $ref: '#/components/parameters/BusSubscriberQuery'
+        - $ref: '#/components/parameters/BusTypeQuery'
+        - name: from
+          in: query
+          required: false
+          description: Создана не раньше (включительно)
+          schema: {type: string, format: date-time}
+        - name: to
+          in: query
+          required: false
+          description: Создана раньше (не включительно)
+          schema: {type: string, format: date-time}
+        - $ref: '#/components/parameters/BusCursor'
+        - $ref: '#/components/parameters/BusLimit'
+      responses:
+        '200':
+          description: Страница доставок
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusDeliveryPage'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+  /admin/bus/inbox:
+    get:
+      tags: [bus]
+      operationId: listBusInbox
+      summary: 'Журнал интеграций: принятые события (errors=true — с ошибкой обработки)'
+      description: >-
+        Принятые события всех доменов (или одного), новые сверху; `errors=true` — обработка упала (`failed`) или ждёт
+        автоповтора после ошибки. Страница — `cursor` из `next_cursor`.
+      parameters:
+        - $ref: '#/components/parameters/BusDomainQuery'
+        - name: errors
+          in: query
+          required: false
+          schema: {type: boolean, default: false}
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/BusInboxStatus'
+        - $ref: '#/components/parameters/BusTypeQuery'
+        - $ref: '#/components/parameters/BusCursor'
+        - $ref: '#/components/parameters/BusLimit'
+      responses:
+        '200':
+          description: Страница принятых событий
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusInboxPage'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
+  /admin/bus/{domain}/deliveries/{id}/retry:
+    post:
+      tags: [bus]
+      operationId: retryBusDelivery
+      summary: '«Повторить» доставку'
+      description: >-
+        Доставка `dead` или ожидающая уходит сейчас, попытки с нуля; подписчик на паузе предохранителя получает пробу.
+        Идемпотентно: доставлено, в работе или нет такой — `retried: 0`. Домен пишет повтор в свой журнал с автором.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/BusDomainPath'
+        - name: id
+          in: path
+          required: true
+          description: Id доставки в домене
+          schema: {type: integer, minimum: 1}
+      responses:
+        '200':
+          description: Поставлено на повтор
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusRetryResult'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /admin/bus/{domain}/deliveries/retry-dead:
+    post:
+      tags: [bus]
+      operationId: retryBusDeadLetters
+      summary: '«Повторить все dead подписчика»'
+      description: >-
+        Все доставки `dead` подписчика в домене уходят сейчас, попытки с нуля (после исправления причины: адрес, секрет,
+        приёмник). Повтор безопасен — приёмник гасит дубли по id события. `retried` — сколько поставлено.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/BusDomainPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BusRetryDeadIn'
+      responses:
+        '200':
+          description: Поставлено на повтор
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusRetryResult'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /admin/bus/{domain}/inbox/{event_id}/retry:
+    post:
+      tags: [bus]
+      operationId: retryBusInbox
+      summary: '«Повторить обработку» принятого события'
+      description: >-
+        Запись `failed` или `skipped` снова обрабатывается (после исправления обработчика или данных). Идемпотентно:
+        обработано или ждёт — `retried: 0`.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/BusDomainPath'
+        - name: event_id
+          in: path
+          required: true
+          schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Поставлено на повтор
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusRetryResult'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
   /admin/users:
     get:
       tags: [admin]
@@ -1588,6 +1954,50 @@ paths:
           $ref: '#/components/responses/SessionExpired'
         '403':
           $ref: '#/components/responses/Forbidden'
+
+    post:
+      tags: [admin]
+      operationId: createEmployee
+      summary: Добавить сотрудника без почты — временный пароль показывается один раз
+      description: >-
+        Раздел `admin` — полный. Для тех, кому письмо не придёт (почта ещё не подключена, у сотрудника нет почты на этом адресе).
+        BFF создаёт пользователя в CRM с ролями Платформы (CRM `/users`) и отдаёт **временный пароль в этом ответе — единственный
+        раз**: BFF не пишет его в журнал, не кэширует и не хранит; ответ — `Cache-Control: no-store`. Сотрудник при первом входе
+        обязан сменить пароль. Потерянный пароль не восстановить — выдать новый: `POST /admin/users/{id}/temporary-password`.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmployeeInvite'
+      responses:
+        '201':
+          description: Сотрудник создан, пароль показан
+          headers:
+            Cache-Control:
+              description: '`no-store`'
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployeeCredentials'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: '`EMAIL_EXISTS`'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
 
   /admin/users/invite:
     post:
@@ -1669,6 +2079,46 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+
+  /admin/users/{id}/temporary-password:
+    post:
+      tags: [admin]
+      operationId: issueTemporaryPassword
+      summary: Выдать сотруднику новый временный пароль (без почты)
+      description: >-
+        Раздел `admin` — полный (CRM `/users/{id}/reset-password`). Новый пароль показан **в этом ответе один раз**
+        (`Cache-Control: no-store`; BFF его не логирует, не кэширует и не хранит), прежний пароль и все сессии сотрудника в CRM и ERP
+        перестают действовать, при входе он обязан сменить пароль (в списке — «Приглашён»). Повторный запрос выдаёт ещё один новый
+        пароль, старый получить нельзя. Свой пароль так не меняют — 409 `CONFLICT` с `details.reason = own_account` (смена — в профиле).
+      parameters:
+        - $ref: '#/components/parameters/EmployeeId'
+        - $ref: '#/components/parameters/CsrfToken'
+      responses:
+        '200':
+          description: Пароль выдан
+          headers:
+            Cache-Control:
+              description: '`no-store`'
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmployeeCredentials'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: '`CONFLICT` с `details.reason = own_account` — свой пароль меняется в профиле'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
 
   /admin/users/{id}:
     get:
@@ -3316,6 +3766,42 @@ components:
         type: integer
         minimum: 0
         default: 0
+    BusDomainQuery:
+      name: domain
+      in: query
+      required: false
+      description: Только этот домен (по умолчанию — все три)
+      schema:
+        $ref: '#/components/schemas/BusDomain'
+    BusDomainPath:
+      name: domain
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/BusDomain'
+    BusSubscriberQuery:
+      name: subscriber
+      in: query
+      required: false
+      schema:
+        $ref: '#/components/schemas/BusSubscriberName'
+    BusTypeQuery:
+      name: type
+      in: query
+      required: false
+      description: Подстрока типа события (`quote.`, `client.updated`)
+      schema: {type: string, minLength: 1, maxLength: 200}
+    BusCursor:
+      name: cursor
+      in: query
+      required: false
+      description: Непрозрачный курсор из `next_cursor`
+      schema: {type: string, maxLength: 2000}
+    BusLimit:
+      name: limit
+      in: query
+      required: false
+      schema: {type: integer, minimum: 1, maximum: 100, default: 50}
     CsrfToken:
       name: X-CSRF-Token
       in: header
@@ -3433,18 +3919,173 @@ components:
       properties:
         code:
           type: string
-          description: Стабильный код (`INVALID_CREDENTIALS`, `SESSION_EXPIRED`, `CSRF_FAILED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_FAILED`, `TOO_MANY_REQUESTS`, `BACKEND_UNAVAILABLE`, `NO_PLATFORM_ROLE`, `USER_DISABLED`, `ACCOUNT_LOCKED`, `CONFLICT`, `WRONG_PASSWORD`, `EMAIL_EXISTS`, `LAST_ADMIN`, `LAST_DIRECTOR`, `ROLE_IN_USE`, `ROLE_SYSTEM`, `ROLES_REQUIRED`, `NOT_CONFIGURED`, `SECRETS_KEY_MISSING`, `SERVICE_NOT_SWITCHABLE`, `INTEGRATION_FAILED`, `COMPANY_NOT_SET`, `INTERNAL_ERROR`, `BAD_REQUEST`, `METHOD_NOT_ALLOWED`, `HTTP_<статус>`)
+          description: Стабильный код (`INVALID_CREDENTIALS`, `SESSION_EXPIRED`, `CSRF_FAILED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_FAILED`, `TOO_MANY_REQUESTS`, `BACKEND_UNAVAILABLE`, `NO_PLATFORM_ROLE`, `USER_DISABLED`, `ACCOUNT_LOCKED`, `CONFLICT`, `WRONG_PASSWORD`, `EMAIL_EXISTS`, `LAST_ADMIN`, `LAST_DIRECTOR`, `ROLE_IN_USE`, `ROLE_SYSTEM`, `ROLES_REQUIRED`, `NOT_CONFIGURED`, `SECRETS_KEY_MISSING`, `SERVICE_NOT_SWITCHABLE`, `INTEGRATION_FAILED`, `COMPANY_NOT_SET`, `SETUP_DONE`, `SETUP_CODE_INVALID`, `SETUP_CODE_EXPIRED`, `SETUP_LOCKED`, `OWN_COMPANY_ALREADY_EXISTS`, `INTERNAL_ERROR`, `BAD_REQUEST`, `METHOD_NOT_ALLOWED`, `HTTP_<статус>`)
           examples: [SESSION_EXPIRED]
         message:
           type: string
           description: Текст для сотрудника на его языке
         source:
           type: string
-          enum: [bff, crm, erp]
+          enum: [bff, crm, erp, eds]
         details:
           type: object
           description: Код и тело ошибки бэкенда, поля валидации — для разбора, не для показа
           additionalProperties: true
+
+    BusDomain:
+      type: string
+      enum: [crm, erp, eds]
+      description: Домен-издатель журнала шины
+    BusSourceState:
+      type: string
+      enum: [ok, unavailable, forbidden, not_applicable]
+      description: >-
+        `unavailable` — домен не ответил (сеть, таймаут, 5xx); `forbidden` — домен отказал в праве (например, права ещё не
+        дошли до EDS); `not_applicable` — у сотрудника нет доступа к домену или домен вне фильтра
+    BusSources:
+      type: object
+      additionalProperties: false
+      required: [crm, erp, eds]
+      properties:
+        crm: {$ref: '#/components/schemas/BusSourceState'}
+        erp: {$ref: '#/components/schemas/BusSourceState'}
+        eds: {$ref: '#/components/schemas/BusSourceState'}
+    BusSubscriberName:
+      type: string
+      pattern: '^[a-z][a-z0-9-]{0,63}$'
+      description: Имя подписчика шины (`crm`, `erp`, `eds`, `platform-bff`)
+    BusDeliveryStatus:
+      type: string
+      enum: [pending, in_flight, delivered, dead]
+      description: '`pending` — ждёт отправки или повтора, `in_flight` — отправляется, `delivered` — доставлено, `dead` — DLQ'
+    BusInboxStatus:
+      type: string
+      enum: [received, processed, failed, skipped]
+    BusSubscriberState:
+      type: string
+      enum: [ok, failing, paused, dead_letters, disabled, removed]
+      description: >-
+        Состояние словом (по порядку важности): `removed` — подписчика нет в файле подписок, остались доставки; `disabled` —
+        выключен (`enabled: false`), события копятся; `paused` — пауза предохранителя до `paused_until`; `dead_letters` — есть
+        доставки в DLQ; `failing` — ошибки подряд ниже порога предохранителя; `ok` — работает
+    BusSubscriber:
+      type: object
+      additionalProperties: false
+      required: [name, state, configured, enabled, drop, endpoint, pending, in_flight, dead, oldest_undelivered_age_seconds,
+                 consecutive_failures, paused_until, last_failure_at, last_success_at, last_error]
+      properties:
+        name: {type: string}
+        state: {$ref: '#/components/schemas/BusSubscriberState'}
+        configured: {type: boolean}
+        enabled: {type: boolean}
+        drop: {type: boolean, description: 'Выключен с `drop: true` — события за время остановки не копятся'}
+        endpoint: {type: [string, 'null'], description: 'Адрес приёмника: только схема, хост, порт и путь'}
+        pending: {type: integer}
+        in_flight: {type: integer}
+        dead: {type: integer}
+        oldest_undelivered_age_seconds: {type: [number, 'null'], description: Возраст самого старого недоставленного (без DLQ)}
+        consecutive_failures: {type: integer}
+        paused_until: {type: [string, 'null'], format: date-time}
+        last_failure_at: {type: [string, 'null'], format: date-time}
+        last_success_at: {type: [string, 'null'], format: date-time}
+        last_error: {type: [string, 'null']}
+    BusDomainOverview:
+      type: object
+      additionalProperties: false
+      required: [domain, outbox_pending, oldest_undelivered_age_seconds, dlq_size, inbox_received, inbox_retrying,
+                 inbox_failed, subscribers]
+      properties:
+        domain: {$ref: '#/components/schemas/BusDomain'}
+        outbox_pending: {type: integer, description: События ещё не разложены по подписчикам}
+        oldest_undelivered_age_seconds: {type: [number, 'null']}
+        dlq_size: {type: integer}
+        inbox_received: {type: integer, description: Принятые события ждут обработки}
+        inbox_retrying: {type: integer, description: 'Из них ждут автоповтора после ошибки'}
+        inbox_failed: {type: integer}
+        subscribers:
+          type: array
+          items: {$ref: '#/components/schemas/BusSubscriber'}
+    BusJournal:
+      type: object
+      additionalProperties: false
+      required: [domains, sources]
+      properties:
+        domains:
+          type: array
+          items: {$ref: '#/components/schemas/BusDomainOverview'}
+        sources: {$ref: '#/components/schemas/BusSources'}
+    BusDelivery:
+      type: object
+      additionalProperties: false
+      required: [domain, id, event_id, event_type, subscriber, status, attempts, next_attempt_at, last_attempt_at,
+                 last_status_code, last_error, delivered_at, created_at, subject, correlation_id]
+      description: Метаданные доставки; тела события нет.
+      properties:
+        domain: {$ref: '#/components/schemas/BusDomain'}
+        id: {type: integer}
+        event_id: {type: string, format: uuid}
+        event_type: {type: string}
+        subscriber: {type: string}
+        status: {$ref: '#/components/schemas/BusDeliveryStatus'}
+        attempts: {type: integer}
+        next_attempt_at: {type: [string, 'null'], format: date-time}
+        last_attempt_at: {type: [string, 'null'], format: date-time}
+        last_status_code: {type: [integer, 'null']}
+        last_error: {type: [string, 'null']}
+        delivered_at: {type: [string, 'null'], format: date-time}
+        created_at: {type: string, format: date-time}
+        subject: {type: [string, 'null']}
+        correlation_id: {type: [string, 'null']}
+    BusDeliveryPage:
+      type: object
+      additionalProperties: false
+      required: [items, next_cursor, sources]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/BusDelivery'}
+        next_cursor: {type: [string, 'null']}
+        sources: {$ref: '#/components/schemas/BusSources'}
+    BusInboxEntry:
+      type: object
+      additionalProperties: false
+      required: [domain, event_id, type, publisher, subject, correlation_id, status, attempts, error, received_at,
+                 processed_at]
+      description: Принятое доменом событие (метаданные; тела нет).
+      properties:
+        domain: {$ref: '#/components/schemas/BusDomain'}
+        event_id: {type: string, format: uuid}
+        type: {type: string}
+        publisher: {type: string}
+        subject: {type: [string, 'null']}
+        correlation_id: {type: [string, 'null']}
+        status: {$ref: '#/components/schemas/BusInboxStatus'}
+        attempts: {type: integer}
+        error: {type: [string, 'null']}
+        received_at: {type: string, format: date-time}
+        processed_at: {type: [string, 'null'], format: date-time}
+    BusInboxPage:
+      type: object
+      additionalProperties: false
+      required: [items, next_cursor, sources]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/BusInboxEntry'}
+        next_cursor: {type: [string, 'null']}
+        sources: {$ref: '#/components/schemas/BusSources'}
+    BusRetryDeadIn:
+      type: object
+      additionalProperties: false
+      required: [subscriber]
+      properties:
+        subscriber: {$ref: '#/components/schemas/BusSubscriberName'}
+    BusRetryResult:
+      type: object
+      additionalProperties: false
+      required: [retried]
+      properties:
+        retried: {type: integer, minimum: 0, description: 'Сколько поставлено на повтор; 0 — повторять нечего'}
 
     SourceState:
       type: string
@@ -4727,6 +5368,139 @@ components:
           uniqueItems: true
           items:
             $ref: '#/components/schemas/RoleId'
+
+    EmployeeCredentials:
+      type: object
+      additionalProperties: false
+      required: [employee, temporary_password]
+      description: Сотрудник и его временный пароль — показывается администратору один раз, повторно получить нельзя
+      properties:
+        employee:
+          $ref: '#/components/schemas/Employee'
+        temporary_password:
+          type: string
+          minLength: 1
+          description: Одноразовый временный пароль; сотрудник обязан сменить его при входе. Не логируется и не кэшируется
+
+    SetupState:
+      type: object
+      additionalProperties: false
+      required: [needs_admin]
+      properties:
+        needs_admin:
+          type: boolean
+          description: В CRM ещё нет активного администратора — нужен экран «Первый запуск»
+
+    SetupAdminIn:
+      type: object
+      additionalProperties: false
+      required: [code, name, email, password]
+      properties:
+        code:
+          type: string
+          minLength: 1
+          maxLength: 64
+          description: Одноразовый код первого запуска из журнала `crm-api` (`setup_code_issued`)
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        password:
+          type: string
+          minLength: 1
+          maxLength: 256
+          description: Правила пароля проверяет CRM; слабый — 422 `VALIDATION_FAILED` (`details.fields = [password]`)
+
+    SetupStepKey:
+      type: string
+      enum: [bot, erp, mail, models, first_employee]
+      description: Пять шагов чек-листа (SPEC-v3 §7.6) — бот, ERP, почта, модели ИИ, первый сотрудник
+
+    SetupStepState:
+      type: string
+      enum: [done, todo, unknown]
+      description: '`unknown` — бэкенд не ответил или не отдал данные; чек-лист при этом не падает'
+
+    SetupStep:
+      type: object
+      additionalProperties: false
+      required: [key, state]
+      properties:
+        key:
+          $ref: '#/components/schemas/SetupStepKey'
+        state:
+          $ref: '#/components/schemas/SetupStepState'
+
+    SetupCompanyStatus:
+      type: object
+      additionalProperties: false
+      required: [required, can_setup]
+      properties:
+        required:
+          type: boolean
+          description: Своей компании в ERP ещё нет
+        can_setup:
+          type: boolean
+          description: Текущий сотрудник может её создать (суперпользователь ERP)
+
+    SetupChecklist:
+      type: object
+      additionalProperties: false
+      required: [steps, done, total, company]
+      properties:
+        steps:
+          type: array
+          description: Всегда пять шагов в порядке `SetupStepKey`
+          items:
+            $ref: '#/components/schemas/SetupStep'
+        done:
+          type: integer
+          minimum: 0
+        total:
+          type: integer
+          minimum: 5
+          maximum: 5
+        company:
+          oneOf:
+            - $ref: '#/components/schemas/SetupCompanyStatus'
+            - type: 'null'
+          description: Шаг мастера «своя компания»; `null` — ERP не ответила
+
+    SetupCompanyIn:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        inn:
+          type: string
+          maxLength: 20
+        legal_address:
+          type: string
+        phone:
+          type: string
+          maxLength: 50
+        email:
+          type: string
+          maxLength: 254
+          description: Пусто или корректный адрес (проверяет ERP)
+
+    SetupCompanyCreated:
+      type: object
+      additionalProperties: false
+      required: [id, name]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
 
     EmployeeUpdate:
       type: object

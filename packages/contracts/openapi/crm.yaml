@@ -626,6 +626,331 @@ components:
           description: Краткое описание в профиле бота и при пересылке, до 120 символов
       title: BotProfileSettings
       type: object
+    BusDeliveryOut:
+      properties:
+        attempts:
+          title: Attempts
+          type: integer
+        correlation_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Correlation Id
+        created_at:
+          format: date-time
+          title: Created At
+          type: string
+        delivered_at:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          title: Delivered At
+        event_created_at:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          title: Event Created At
+        event_id:
+          format: uuid
+          title: Event Id
+          type: string
+        event_type:
+          title: Event Type
+          type: string
+        id:
+          title: Id
+          type: integer
+        last_attempt_at:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          title: Last Attempt At
+        last_error:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Last Error
+        last_status_code:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Last Status Code
+        next_attempt_at:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          title: Next Attempt At
+        status:
+          enum:
+          - pending
+          - in_flight
+          - delivered
+          - dead
+          title: Status
+          type: string
+        subject:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Subject
+        subscriber:
+          title: Subscriber
+          type: string
+      required:
+      - id
+      - event_id
+      - event_type
+      - subscriber
+      - status
+      - attempts
+      - next_attempt_at
+      - last_attempt_at
+      - last_status_code
+      - last_error
+      - delivered_at
+      - created_at
+      - subject
+      - correlation_id
+      - event_created_at
+      title: BusDeliveryOut
+      type: object
+    BusDeliveryPageOut:
+      properties:
+        has_more:
+          title: Has More
+          type: boolean
+        items:
+          items:
+            $ref: '#/components/schemas/BusDeliveryOut'
+          title: Items
+          type: array
+      required:
+      - items
+      - has_more
+      title: BusDeliveryPageOut
+      type: object
+    BusInboxEntryOut:
+      properties:
+        attempts:
+          title: Attempts
+          type: integer
+        correlation_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Correlation Id
+        error:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Error
+        event_id:
+          format: uuid
+          title: Event Id
+          type: string
+        processed_at:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          title: Processed At
+        publisher:
+          title: Publisher
+          type: string
+        received_at:
+          format: date-time
+          title: Received At
+          type: string
+        status:
+          enum:
+          - received
+          - processed
+          - failed
+          - skipped
+          title: Status
+          type: string
+        subject:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Subject
+        type:
+          title: Type
+          type: string
+      required:
+      - event_id
+      - type
+      - publisher
+      - subject
+      - correlation_id
+      - status
+      - attempts
+      - error
+      - received_at
+      - processed_at
+      title: BusInboxEntryOut
+      type: object
+    BusInboxPageOut:
+      properties:
+        has_more:
+          title: Has More
+          type: boolean
+        items:
+          items:
+            $ref: '#/components/schemas/BusInboxEntryOut'
+          title: Items
+          type: array
+      required:
+      - items
+      - has_more
+      title: BusInboxPageOut
+      type: object
+    BusOverviewOut:
+      properties:
+        dlq_size:
+          title: Dlq Size
+          type: integer
+        inbox_failed:
+          title: Inbox Failed
+          type: integer
+        inbox_received:
+          title: Inbox Received
+          type: integer
+        inbox_retrying:
+          title: Inbox Retrying
+          type: integer
+        oldest_undelivered_age_seconds:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Oldest Undelivered Age Seconds
+        outbox_pending:
+          title: Outbox Pending
+          type: integer
+        service:
+          title: Service
+          type: string
+        subscribers:
+          items:
+            $ref: '#/components/schemas/BusSubscriberOut'
+          title: Subscribers
+          type: array
+      required:
+      - service
+      - outbox_pending
+      - oldest_undelivered_age_seconds
+      - dlq_size
+      - inbox_received
+      - inbox_retrying
+      - inbox_failed
+      - subscribers
+      title: BusOverviewOut
+      type: object
+    BusRetryDeadIn:
+      additionalProperties: false
+      description: «Повторить все dead подписчика».
+      properties:
+        subscriber:
+          pattern: ^[a-z][a-z0-9-]{0,63}$
+          title: Subscriber
+          type: string
+      required:
+      - subscriber
+      title: BusRetryDeadIn
+      type: object
+    BusRetryOut:
+      description: 'Сколько поставлено на повтор.
+
+
+        0 — повторять нечего: уже доставлено, уже в работе или записи нет.'
+      properties:
+        retried:
+          title: Retried
+          type: integer
+      required:
+      - retried
+      title: BusRetryOut
+      type: object
+    BusSubscriberOut:
+      properties:
+        configured:
+          title: Configured
+          type: boolean
+        consecutive_failures:
+          title: Consecutive Failures
+          type: integer
+        dead:
+          title: Dead
+          type: integer
+        drop:
+          title: Drop
+          type: boolean
+        enabled:
+          title: Enabled
+          type: boolean
+        endpoint:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Endpoint
+        in_flight:
+          title: In Flight
+          type: integer
+        last_error:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Last Error
+        last_failure_at:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          title: Last Failure At
+        last_success_at:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          title: Last Success At
+        name:
+          title: Name
+          type: string
+        oldest_undelivered_age_seconds:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Oldest Undelivered Age Seconds
+        paused_until:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          title: Paused Until
+        pending:
+          title: Pending
+          type: integer
+      required:
+      - name
+      - configured
+      - enabled
+      - drop
+      - endpoint
+      - pending
+      - in_flight
+      - dead
+      - oldest_undelivered_age_seconds
+      - consecutive_failures
+      - paused_until
+      - last_failure_at
+      - last_success_at
+      - last_error
+      title: BusSubscriberOut
+      type: object
     ChangePasswordRequest:
       properties:
         current_password:
@@ -6481,6 +6806,298 @@ paths:
       summary: Sso Token
       tags:
       - auth
+  /api/v1/bus/deliveries:
+    get:
+      description: 'Доставки событий CRM подписчикам, новые сверху; DLQ — `status=dead`.
+
+
+        Страница — `before_id` (id последней строки предыдущей).'
+      operationId: busDeliveries
+      parameters:
+      - in: query
+        name: status
+        required: false
+        schema:
+          anyOf:
+          - enum:
+            - pending
+            - in_flight
+            - delivered
+            - dead
+            type: string
+          - type: 'null'
+          title: Status
+      - in: query
+        name: subscriber
+        required: false
+        schema:
+          anyOf:
+          - pattern: ^[a-z][a-z0-9-]{0,63}$
+            type: string
+          - type: 'null'
+          title: Subscriber
+      - in: query
+        name: type
+        required: false
+        schema:
+          anyOf:
+          - maxLength: 200
+            minLength: 1
+            type: string
+          - type: 'null'
+          title: Type
+      - in: query
+        name: created_from
+        required: false
+        schema:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          title: Created From
+      - in: query
+        name: created_to
+        required: false
+        schema:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          title: Created To
+      - in: query
+        name: before_id
+        required: false
+        schema:
+          anyOf:
+          - minimum: 1
+            type: integer
+          - type: 'null'
+          title: Before Id
+      - in: query
+        name: limit
+        required: false
+        schema:
+          default: 50
+          maximum: 100
+          minimum: 1
+          title: Limit
+          type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusDeliveryPageOut'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Deliveries
+      tags:
+      - bus
+  /api/v1/bus/deliveries/retry-dead:
+    post:
+      description: «Повторить все dead подписчика» — после исправления причины (адрес, секрет, приёмник).
+      operationId: busRetryDead
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BusRetryDeadIn'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusRetryOut'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Retry Dead
+      tags:
+      - bus
+  /api/v1/bus/deliveries/{delivery_id}/retry:
+    post:
+      description: '«Повторить»: доставка `dead` или ожидающая — сейчас, попытки с нуля.
+
+
+        Подписчик на паузе предохранителя сразу получает пробную доставку.'
+      operationId: busRetryDelivery
+      parameters:
+      - in: path
+        name: delivery_id
+        required: true
+        schema:
+          minimum: 1
+          title: Delivery Id
+          type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusRetryOut'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Retry Delivery
+      tags:
+      - bus
+  /api/v1/bus/inbox:
+    get:
+      description: 'Принятые события, новые сверху.
+
+
+        `errors=true` — обработка упала (`failed`) или ждёт автоповтора. Страница — `before` и
+
+        `before_event_id` последней строки предыдущей.'
+      operationId: busInbox
+      parameters:
+      - in: query
+        name: errors
+        required: false
+        schema:
+          default: false
+          title: Errors
+          type: boolean
+      - in: query
+        name: status
+        required: false
+        schema:
+          anyOf:
+          - enum:
+            - received
+            - processed
+            - failed
+            - skipped
+            type: string
+          - type: 'null'
+          title: Status
+      - in: query
+        name: type
+        required: false
+        schema:
+          anyOf:
+          - maxLength: 200
+            minLength: 1
+            type: string
+          - type: 'null'
+          title: Type
+      - in: query
+        name: before
+        required: false
+        schema:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          title: Before
+      - in: query
+        name: before_event_id
+        required: false
+        schema:
+          anyOf:
+          - format: uuid
+            type: string
+          - type: 'null'
+          title: Before Event Id
+      - in: query
+        name: limit
+        required: false
+        schema:
+          default: 50
+          maximum: 100
+          minimum: 1
+          title: Limit
+          type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusInboxPageOut'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Inbox
+      tags:
+      - bus
+  /api/v1/bus/inbox/{event_id}/retry:
+    post:
+      description: «Повторить обработку» записи inbox `failed` или `skipped` (после исправления обработчика).
+      operationId: busRetryInbox
+      parameters:
+      - in: path
+        name: event_id
+        required: true
+        schema:
+          format: uuid
+          title: Event Id
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusRetryOut'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Retry Inbox
+      tags:
+      - bus
+  /api/v1/bus/overview:
+    get:
+      description: 'Сводка шины CRM: outbox, DLQ, inbox и подписчики (очередь, предохранитель, выключен ли).'
+      operationId: busOverview
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BusOverviewOut'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Overview
+      tags:
+      - bus
   /api/v1/clients:
     get:
       operationId: list_clients

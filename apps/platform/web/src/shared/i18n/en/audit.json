@@ -108,7 +108,6 @@
     "method": "How to deliver the new password",
     "byEmail": "By email",
     "byTemporary": "With a temporary password",
-    "temporaryUnavailable": "Issuing a password without email is being connected separately; for now the password can only be sent by email.",
     "whatHappens": "What will happen",
     "step1": "The employee will get an email at {{email}} with a new temporary password; the old password stops working.",
     "step2": "All their sessions in the Platform, CRM and ERP will end.",
@@ -126,7 +125,9 @@
       "BACKEND_UNAVAILABLE": "CRM is not responding. The password is unchanged, retry later.",
       "DEFAULT": "Could not reset the password. Please retry."
     },
-    "integrations": "Open Admin · Integrations"
+    "integrations": "Open Admin · Integrations",
+    "temporaryHint": "No email: you see the new password once and hand it to the employee in person; the old one stops working.",
+    "confirmTemporary": "Issue password"
   },
   "profile": {
     "notifications": "Notifications",

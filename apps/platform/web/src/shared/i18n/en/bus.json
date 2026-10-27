@@ -1,0 +1,210 @@
+{
+  "subtitle": "Event bus between CRM, ERP and EDS: who delivers events to whom, what is stuck and what to retry.",
+  "views": {
+    "label": "Journal sections",
+    "subscribers": "Subscribers",
+    "deliveries": "Deliveries",
+    "dlq": "Undelivered (DLQ)",
+    "inbox": "Inbox with errors"
+  },
+  "counters": {
+    "dlq": "Undelivered (DLQ)",
+    "pending": "Waiting to be sent",
+    "paused": "Paused subscribers",
+    "inboxFailed": "Processing errors",
+    "source": "CRM, ERP and EDS"
+  },
+  "domains": {
+    "crm": "CRM",
+    "erp": "ERP",
+    "eds": "EDS"
+  },
+  "subscriberNames": {
+    "crm": "CRM",
+    "erp": "ERP",
+    "eds": "EDS",
+    "platform-bff": "Platform"
+  },
+  "sources": {
+    "unavailable": "{{domain}} is not responding — the journal is incomplete.",
+    "forbidden": "{{domain}} denied access to its journal: permissions have not reached it yet or were revoked.",
+    "not_applicable": "You have no access to {{domain}} — its journal is not shown.",
+    "retry": "Refresh"
+  },
+  "state": {
+    "ok": "Working",
+    "failing": "Errors in a row",
+    "paused": "Paused",
+    "dead_letters": "Has undelivered",
+    "disabled": "Disabled",
+    "removed": "Removed from subscriptions"
+  },
+  "delivery": {
+    "pending": "Waiting to be sent",
+    "retrying": "Waiting for retry",
+    "in_flight": "Sending",
+    "delivered": "Delivered",
+    "dead": "Not delivered"
+  },
+  "inbox": {
+    "received": "Received",
+    "retrying": "Waiting for retry",
+    "processed": "Processed",
+    "failed": "Processing error",
+    "skipped": "Skipped"
+  },
+  "subscribers": {
+    "title": "{{domain}} sends to",
+    "caption": "{{domain}} subscribers: state, queue and undelivered",
+    "empty": "{{domain}} has no subscribers yet — its events are not delivered to anyone.",
+    "columns": {
+      "subscriber": "Subscriber",
+      "state": "State",
+      "queue": "Waiting",
+      "dead": "DLQ",
+      "oldest": "Oldest",
+      "lastError": "Last error"
+    },
+    "pausedUntil": "until {{time}}",
+    "noEndpoint": "no address",
+    "retryDead": "Retry all dead",
+    "retryDeadAria": "Retry all dead: {{subscriber}} ({{domain}})",
+    "noErrors": "none",
+    "inARow": "{{n}} in a row",
+    "inFlight": "in flight: {{n}}",
+    "summary": "Waiting {{pending}} · DLQ {{dead}} · oldest {{oldest}}",
+    "retry": "Retry"
+  },
+  "filters": {
+    "label": "Journal filters",
+    "domain": "Domain",
+    "allDomains": "All domains",
+    "status": "Status",
+    "allStatuses": "All statuses",
+    "subscriber": "Subscriber",
+    "allSubscribers": "All subscribers",
+    "type": "Event type contains",
+    "typePlaceholder": "quote., client.updated",
+    "period": "Period",
+    "from": "From",
+    "to": "To",
+    "reset": "Reset filters"
+  },
+  "deliveries": {
+    "caption": "Event deliveries to subscribers",
+    "dlqCaption": "Undelivered events (DLQ)",
+    "dlqHint": "Deliveries the bus no longer retries by itself: the subscriber refused (404, 410, 422) or all 7 attempts failed. Fix the cause and retry — one by one or all of a subscriber on the “Subscribers” tab.",
+    "columns": {
+      "time": "Created",
+      "domain": "Domain",
+      "event": "Event",
+      "subscriber": "Subscriber",
+      "status": "Status",
+      "attempts": "Attempts",
+      "answer": "Response"
+    },
+    "open": "Details: {{event}} → {{subscriber}}",
+    "empty": {
+      "title": "No deliveries found",
+      "text": "Events of CRM, ERP and EDS appear here per subscriber. Change the filters or the period."
+    },
+    "dlqEmpty": {
+      "title": "Nothing undelivered",
+      "text": "All events reached their subscribers or are still being retried on the bus schedule."
+    },
+    "more": "Show more",
+    "line": "{{time}} · {{domain}} → {{subscriber}} · attempts {{attempts}}"
+  },
+  "inboxView": {
+    "caption": "Received events whose processing failed",
+    "hint": "Events the domain received but could not apply: processing is retried automatically (30 s, 2 min, 10 min), then stays with an error. After the fix — “Retry processing”.",
+    "columns": {
+      "time": "Received",
+      "domain": "Receiver",
+      "event": "Event",
+      "publisher": "From",
+      "status": "Status",
+      "attempts": "Attempts",
+      "error": "Error"
+    },
+    "open": "Details: {{event}} in {{domain}}",
+    "empty": {
+      "title": "No processing errors",
+      "text": "All received events of CRM, ERP and EDS are processed. If a handler fails, the event appears here."
+    },
+    "line": "{{time}} · from {{publisher}} to {{domain}} · attempts {{attempts}}"
+  },
+  "panel": {
+    "deliveryTitle": "Delivery {{id}} · {{domain}}",
+    "inboxTitle": "Received event · {{domain}}",
+    "fields": {
+      "domain": "Publisher",
+      "receiver": "Receiver",
+      "event": "Event type",
+      "eventId": "Event ID",
+      "subject": "Object",
+      "correlation": "Correlation",
+      "subscriber": "Subscriber",
+      "publisher": "From",
+      "status": "Status",
+      "attempts": "Attempts",
+      "lastAttempt": "Last attempt",
+      "nextAttempt": "Next attempt",
+      "code": "Response code",
+      "error": "Error",
+      "created": "Created",
+      "delivered": "Delivered",
+      "received": "Received",
+      "processed": "Processed"
+    },
+    "noBody": "The event body is not shown in the journal: it may contain client data. Type, object and event ID are enough.",
+    "retryDelivery": "Retry delivery",
+    "retryDeliveryAria": "Retry delivery {{id}}",
+    "retryInbox": "Retry processing",
+    "notRetriable": "Nothing to retry: the delivery has already gone or is being sent.",
+    "inboxNotRetriable": "Nothing to retry: the event is processed or still waits for an automatic retry.",
+    "consequence": {
+      "now": "The delivery is sent now, the attempt counter starts from zero.",
+      "probe": "If the subscriber is paused, it gets a probe delivery right away.",
+      "safe": "Retrying is safe: the receiver drops duplicates by event ID. The domain journal keeps who retried and when.",
+      "inboxNow": "The event goes to processing in {{domain}} again.",
+      "inboxFix": "If the cause was not fixed, the event comes back with the same error.",
+      "inboxSafe": "Retrying is safe: handlers apply snapshots by change time. The domain journal keeps who retried and when."
+    },
+    "retried": "Queued for retry. The journal refreshes in a few seconds.",
+    "nothing": "Nothing to retry: the record has gone, is in progress or does not exist.",
+    "deadTitle": "Retry all undelivered · {{subscriber}}",
+    "deadIntro": "Publisher — {{domain}}. In the DLQ of subscriber {{subscriber}}: {{count}}.",
+    "deadSubmit": "Retry {{count}}",
+    "deadConsequence": {
+      "now": "All DLQ deliveries of this subscriber ({{count}}) are sent now, attempts start from zero.",
+      "fix": "Fix the cause first: receiver address, pair secret or the receiver itself — otherwise the deliveries return to the DLQ.",
+      "probe": "If the subscriber is paused, it gets a probe delivery right away.",
+      "safe": "Retrying is safe: the receiver drops duplicates by event ID. The {{domain}} journal keeps who retried and when."
+    },
+    "deadDone_one": "{{count}} delivery queued for retry.",
+    "deadDone_few": "{{count}} deliveries queued for retry.",
+    "deadDone_many": "{{count}} deliveries queued for retry.",
+    "deadDone_other": "{{count}} deliveries queued for retry.",
+    "deadNone": "The subscriber has nothing undelivered anymore.",
+    "close": "Close"
+  },
+  "age": {
+    "seconds": "{{count}} s",
+    "minutes": "{{count}} min",
+    "hours": "{{count}} h",
+    "days": "{{count}} d"
+  },
+  "loadError": {
+    "title": "Could not load the journal",
+    "text": "The journal is built from CRM, ERP and EDS. Retry; if the error stays, check Admin · External integrations.",
+    "retry": "Retry"
+  },
+  "tableScroll": "{{name}}: the table scrolls horizontally",
+  "errors": {
+    "FORBIDDEN": "Not enough rights: the integration log is for the administrator.",
+    "BACKEND_UNAVAILABLE": "The domain is not responding. Try again later.",
+    "VALIDATION_FAILED": "Check the filters.",
+    "DEFAULT": "The action failed. Please try again."
+  }
+}

@@ -140,6 +140,47 @@
       "default": "Could not change the password. Please try again."
     }
   },
+  "setup": {
+    "title": "First run",
+    "lead": "Create the Platform administrator. You will be signed in right away and can continue the setup.",
+    "codeHelp": "The server prints the code at startup: find the setup_code_issued line in the crm-api log (docker compose logs crm-api). The code is valid for 24 hours.",
+    "code": "First-run code",
+    "codeRequired": "Enter the code from the server log",
+    "name": "First and last name",
+    "nameRequired": "Enter first and last name",
+    "email": "Administrator email",
+    "emailRequired": "Enter an email",
+    "emailInvalid": "Check the email address",
+    "password": "Password",
+    "passwordHint": "At least 10 characters, letters and digits, without the name from the email.",
+    "passwordRequired": "Enter a password",
+    "passwordTooShort": "The password must be at least 10 characters",
+    "confirm": "Repeat the password",
+    "mismatch": "Passwords do not match",
+    "submit": "Create administrator and sign in",
+    "consequence": [
+      "CRM gets an administrator with this email; the first-run code stops working.",
+      "You are signed in to the Platform with this account right away.",
+      "Next the wizard offers to create your company and connect the bot, ERP, mail and AI models."
+    ],
+    "checking": "Checking the system state",
+    "stateErrorTitle": "Could not check the system state",
+    "stateErrorText": "CRM did not respond. Make sure the server is running and try again.",
+    "retry": "Retry",
+    "doneTitle": "First run is already done",
+    "doneText": "The administrator exists. Sign in to the Platform with email and password.",
+    "doneAction": "Go to sign-in",
+    "errors": {
+      "SETUP_CODE_INVALID": "The code is wrong. Copy it from the server log as is.",
+      "SETUP_CODE_EXPIRED": "The code has expired. Open /setup again: the system issues a new code in the server log.",
+      "SETUP_LOCKED": "Too many wrong codes. Try again in 15 minutes.",
+      "SETUP_DONE": "The administrator already exists. Sign in to the Platform.",
+      "TOO_MANY_REQUESTS": "Too many attempts. Wait a minute and try again.",
+      "BACKEND_UNAVAILABLE": "Cannot reach CRM. Try again in a moment.",
+      "VALIDATION_FAILED": "Check the fields. The password must be at least 10 characters, with letters and digits, without the name from the email.",
+      "default": "Could not create the administrator. Try again."
+    }
+  },
   "session": {
     "errorTitle": "Could not open the Platform",
     "errorText": "The server did not respond. Check your connection and try again.",

@@ -52,7 +52,19 @@ from ..delivery import Attempt, AttemptResult, Claimed, Outcome, delivery_limits
 from ..envelope import Event
 from ..errors import NotInTransactionError
 from ..handlers import HandlerRegistry, default_registry
-from ..journal import BusMetrics, DeliveryView, InboxView, build_metrics, log_metrics
+from ..journal import (
+    BusMetrics,
+    BusOverview,
+    DeliveryView,
+    InboxView,
+    SubscriberView,
+    build_metrics,
+    build_overview,
+    build_subscribers,
+    delivery_filters,
+    inbox_filters,
+    log_metrics,
+)
 from ..masking import AsyncSecretStash
 from ..receiver import ReceiveResult, Rejection, log_rejection
 
@@ -575,25 +587,27 @@ class AsyncBus:
 
     # --- ручное и журнал -------------------------------------------------------------------------------------------
 
-    async def retry_delivery(self, delivery_id: int) -> bool:
-        """«Повторить»: доставка `dead` (или ожидающая) — сейчас, попытки с нуля; пауза предохранителя → проба."""
+    async def retry_delivery(self, delivery_id: int, *, actor: str | None = None) -> bool:
+        """«Повторить»: доставка `dead` (или ожидающая) — сейчас, попытки с нуля; пауза предохранителя → проба.
+
+        `actor` — кто нажал (журнал Admin, CLI): попадает в запись лога `rt_bus_delivery_retry_manual`."""
         now = self.core.now()
         async with self.sessions() as session, session.begin():
             row = (await _exec(session, sql.RETRY_DELIVERY, {"id": delivery_id, "now": now})).first()
             if row is not None:
                 await _exec(session, sql.PROBE_NOW, {"subscribers": [row[1]], "now": now})
         if row is not None:
-            logger.info("rt_bus_delivery_retry_manual", extra={"delivery_id": delivery_id})
+            logger.info("rt_bus_delivery_retry_manual", extra={"delivery_id": delivery_id, "actor": actor})
         return row is not None
 
-    async def retry_all_dead(self, subscriber: str | None = None) -> int:
+    async def retry_all_dead(self, subscriber: str | None = None, *, actor: str | None = None) -> int:
         """«Повторить все dead» (по подписчику или все)."""
         now = self.core.now()
         async with self.sessions() as session, session.begin():
             rows = (await _exec(session, sql.RETRY_ALL_DEAD, {"subscriber": subscriber, "now": now})).all()
             if rows:
                 await _exec(session, sql.PROBE_NOW, {"subscribers": sorted({r[1] for r in rows}), "now": now})
-        logger.info("rt_bus_dead_retry_manual", extra={"subscriber": subscriber, "count": len(rows)})
+        logger.info("rt_bus_dead_retry_manual", extra={"subscriber": subscriber, "count": len(rows), "actor": actor})
         return len(rows)
 
     async def list_deliveries(
@@ -603,20 +617,40 @@ class AsyncBus:
         subscriber: str | None = None,
         event_type: str | None = None,
         event_id: str | uuid.UUID | None = None,
+        type_contains: str | None = None,
+        created_from: datetime | None = None,
+        created_to: datetime | None = None,
         before_id: int | None = None,
         limit: int = 50,
     ) -> list[DeliveryView]:
-        params = {
-            "status": status,
-            "subscriber": subscriber,
-            "event_type": event_type,
-            "event_id": None if event_id is None else uuid.UUID(str(event_id)),
-            "before_id": before_id,
-            "limit": limit,
-        }
+        """Журнал доставок, новые сверху; страница — `before_id` (id последней строки предыдущей страницы)."""
+        params = delivery_filters(
+            status=status,
+            subscriber=subscriber,
+            event_type=event_type,
+            event_id=event_id,
+            type_contains=type_contains,
+            created_from=created_from,
+            created_to=created_to,
+            before_id=before_id,
+            limit=limit,
+        )
         async with self.sessions() as session:
             rows = (await _exec(session, sql.LIST_DELIVERIES, params)).mappings().all()
         return [DeliveryView.from_row(r) for r in rows]
+
+    async def subscribers(self) -> list[SubscriberView]:
+        """Подписчики издателя: настройка из файла, очередь доставок, состояние предохранителя (журнал Admin)."""
+        async with self.sessions() as session:
+            deliveries = (await _exec(session, sql.METRICS_DELIVERY)).mappings().all()
+            states = (await _exec(session, sql.SUBSCRIBER_STATES)).mappings().all()
+        return build_subscribers(
+            self.core.now(), self.config.service, self.core.own_domains(), self.core.subscriptions(), deliveries, states
+        )
+
+    async def overview(self) -> BusOverview:
+        """Сводка для «Журнала интеграций»: метрики шины и подписчики."""
+        return build_overview(self.config.service, await self.metrics(), await self.subscribers())
 
     # --- приёмник и inbox ----------------------------------------------------------------------------------------
 
@@ -708,13 +742,14 @@ class AsyncBus:
                     await _exec(session, sql.INBOX_FAILED, {"event_id": key})
                 return sql.FAILED
 
-    async def retry_inbox(self, event_id: str | uuid.UUID) -> bool:
+    async def retry_inbox(self, event_id: str | uuid.UUID, *, actor: str | None = None) -> bool:
         """«Повторить» запись inbox `failed`/`skipped`: снова `received` и в очередь."""
         key = uuid.UUID(str(event_id))
         async with self.sessions() as session, session.begin():
             row = (await _exec(session, sql.RETRY_INBOX, {"event_id": key, "now": self.core.now()})).first()
         if row is None:
             return False
+        logger.info("rt_bus_inbox_retry_manual", extra={"event_id": str(key), "actor": actor})
         if self.enqueue is None:
             await self.process_inbox(key)
         else:
@@ -740,10 +775,22 @@ class AsyncBus:
         *,
         status: str | None = None,
         event_type: str | None = None,
+        type_contains: str | None = None,
+        errors_only: bool = False,
         before: datetime | None = None,
+        before_event_id: str | uuid.UUID | None = None,
         limit: int = 50,
     ) -> list[InboxView]:
-        params = {"status": status, "event_type": event_type, "before": before, "limit": limit}
+        """Журнал inbox, новые сверху. `errors_only` — `failed` и ждущие автоповтора после ошибки обработчика."""
+        params = inbox_filters(
+            status=status,
+            event_type=event_type,
+            type_contains=type_contains,
+            errors_only=errors_only,
+            before=before,
+            before_event_id=before_event_id,
+            limit=limit,
+        )
         async with self.sessions() as session:
             rows = (await _exec(session, sql.LIST_INBOX, params)).mappings().all()
         return [InboxView.from_row(r) for r in rows]
