@@ -7,13 +7,14 @@ function checklist(
   states: SetupStepState[],
   company: SetupChecklist["company"] = { required: false, can_setup: false },
 ): SetupChecklist {
-  const keys = ["bot", "erp", "mail", "models", "first_employee"] as const;
+  const keys = ["erp", "bot", "mail", "models", "first_employee"] as const;
   const steps = keys.map((key, index) => ({ key, state: states[index] ?? "done" }));
   return {
     steps,
     done: steps.filter((s) => s.state === "done").length,
     total: 5,
     company,
+    company_blocker: null,
   };
 }
 
@@ -27,7 +28,8 @@ describe("шаги чек-листа", () => {
   });
 
   it("следующий шаг — первый несделанный", () => {
-    expect(nextStep(checklist(["done", "todo", "todo", "done", "done"]))?.key).toBe("erp");
+    expect(nextStep(checklist(["todo", "todo", "todo", "done", "done"]))?.key).toBe("erp");
+    expect(nextStep(checklist(["done", "todo", "todo", "done", "done"]))?.key).toBe("bot");
     expect(nextStep(checklist(["done", "unknown", "done", "done", "done"]))).toBeUndefined();
   });
 

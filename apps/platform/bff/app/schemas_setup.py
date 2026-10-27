@@ -1,5 +1,5 @@
 """Модели первого запуска и выдачи временного пароля — схемы `Setup*` и `EmployeeCredentials` из
-packages/contracts/openapi/platform-bff.yaml (0.10.0, W13-A4)."""
+packages/contracts/openapi/platform-bff.yaml (0.10.0, W13-A4; 0.15.0, W13C-F1)."""
 
 from typing import Literal
 
@@ -10,8 +10,11 @@ from app.schemas_admin import Employee
 SetupStepKey = Literal["bot", "erp", "mail", "models", "first_employee"]
 SetupStepState = Literal["done", "todo", "unknown"]
 
-# Порядок шагов — как в SPEC-v3 §7.6 и в контракте.
-STEP_KEYS: tuple[SetupStepKey, ...] = ("bot", "erp", "mail", "models", "first_employee")
+# Порядок шагов — как в контракте (W13C-F1): ERP первой, без неё не создать компанию.
+STEP_KEYS: tuple[SetupStepKey, ...] = ("erp", "bot", "mail", "models", "first_employee")
+
+# Почему о шаге «своя компания» нет данных: ERP не сопряжена / ERP не ответила.
+CompanyBlocker = Literal["erp_not_connected", "erp_unavailable"]
 
 _EMAIL = r"^[^@\s]+@[^@\s]+$"
 
@@ -52,6 +55,7 @@ class SetupChecklist(BaseModel):
     done: int = Field(ge=0)
     total: int = Field(ge=5, le=5)
     company: SetupCompanyStatus | None
+    company_blocker: CompanyBlocker | None
 
 
 class SetupCompanyIn(BaseModel):

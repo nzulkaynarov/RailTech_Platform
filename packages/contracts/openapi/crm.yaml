@@ -1005,6 +1005,9 @@ components:
           - kb
           - team
           - test_dialog
+          - erp
+          - mail
+          - first_employee
           title: Key
           type: string
         link:
@@ -6301,7 +6304,7 @@ components:
       type: http
 info:
   title: RailTech CRM API
-  version: 0.4.0
+  version: 0.5.0
 openapi: 3.1.0
 paths:
   /api/v1/admin/ai-spend:
@@ -10622,7 +10625,11 @@ paths:
       description: 'Чек-лист настройки для админа: что сделано и куда идти. Без платных вызовов моделей.
 
 
-        Бот и модели — из тех же проверок, что «Состояние системы» (бот = принимает сообщения).'
+        Бот и модели — из тех же проверок, что «Состояние системы» (бот = принимает сообщения).
+
+        Ключи `erp`, `mail`, `first_employee` (W13C-F1) — шаги чек-листа Платформы: коннектор ERP
+
+        задан, задан SMTP, есть ещё один активный сотрудник.'
       operationId: get_setup_checklist
       responses:
         '200':

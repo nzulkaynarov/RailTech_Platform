@@ -13,7 +13,13 @@ import { registerUser } from "./fixtures/users";
 import { buildSession, startSession } from "./mockSession";
 import { readSetup, writeSetup } from "./setupState";
 
-const STEPS: readonly SetupStepKey[] = ["bot", "erp", "mail", "models", "first_employee"];
+const STEPS: readonly SetupStepKey[] = ["erp", "bot", "mail", "models", "first_employee"];
+
+/** Чистая установка без шага «ERP»: ERP не сопряжена, компания невозможна (BFF 0.15.0, `ERP_NOT_CONNECTED`). */
+function erpNotConnected(): boolean {
+  const state = readSetup();
+  return state.fresh && !state.done.erp;
+}
 
 function initialsOf(name: string): string {
   return name
@@ -99,7 +105,10 @@ export const setupHandlers = [
       steps,
       done: steps.filter((s) => s.state === "done").length,
       total: 5,
-      company: { required: !state.companyCreated, can_setup: !state.companyCreated },
+      company: erpNotConnected()
+        ? null
+        : { required: !state.companyCreated, can_setup: !state.companyCreated },
+      company_blocker: erpNotConnected() ? "erp_not_connected" : null,
     };
     return HttpResponse.json(body);
   }),
@@ -109,6 +118,15 @@ export const setupHandlers = [
     if (denied) return denied;
     const body = (await request.json()) as SetupCompanyIn;
     const state = readSetup();
+    if (erpNotConnected()) {
+      return failure(
+        409,
+        "ERP_NOT_CONNECTED",
+        "ERP не подключена. Сначала подключите ERP (Администрирование — Внешние интеграции — ERP), затем создайте компанию.",
+        "bff",
+        { reason: "erp_not_connected", link: "/admin/integrations?card=erp&panel=open" },
+      );
+    }
     if (state.companyCreated) {
       return failure(409, "OWN_COMPANY_ALREADY_EXISTS", "Своя компания уже создана.", "erp");
     }

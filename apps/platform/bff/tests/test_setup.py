@@ -1,4 +1,4 @@
-"""Первый запуск (W13-A4, контракт BFF 0.10.0): администратор без сессии, чек-лист, своя компания.
+"""Первый запуск (W13-A4, BFF 0.10.0; W13C-F1, 0.15.0): администратор, чек-лист, компания.
 
 CRM и ERP — на respx; ответы BFF проверяются по схемам platform-bff.yaml. Решения (код первого
 запуска, пароль, право, «компания уже есть») за бэкендами: здесь проверяется вызов, перевод в
@@ -15,7 +15,7 @@ from app.cookies import CSRF_COOKIE
 from tests.backends import PASSWORD, Backends
 from tests.conftest import ContractChecker, Web
 from tests.consts import CRM_URL, ERP_URL
-from tests.integrations_support import erp_status, smtp_status
+from tests.integrations_support import erp_status
 from tests.test_admin_users import CrmUsers, crm_user
 
 ADMIN_ID = 7
@@ -42,6 +42,7 @@ class SetupCrm:
         self.admin_response: httpx.Response | None = None
         self.checklist_items = {"bot": True, "models": False}
         self.erp_configured = True
+        self.checklist_response: httpx.Response | None = None
         self.smtp_configured = False
         self.down: set[str] = set()
         self.erp_status: httpx.Response = httpx.Response(
@@ -57,7 +58,6 @@ class SetupCrm:
             side_effect=self._checklist
         )
         self.erp = router.get(f"{CRM_URL}/api/v1/integrations/erp").mock(side_effect=self._erp)
-        self.smtp = router.get(f"{CRM_URL}/api/v1/integrations/smtp").mock(side_effect=self._smtp)
         self.erp_setup_status = router.get(f"{ERP_URL}/api/v1/setup/status/").mock(
             side_effect=lambda request: self.erp_status
         )
@@ -83,6 +83,8 @@ class SetupCrm:
     def _checklist(self, request: httpx.Request) -> httpx.Response:
         if (early := self._guard("checklist")) is not None:
             return early
+        if self.checklist_response is not None:
+            return self.checklist_response
         keys = [
             "company",
             "business_hours",
@@ -92,10 +94,22 @@ class SetupCrm:
             "kb",
             "team",
             "test_dialog",
+            "erp",
+            "mail",
+            "first_employee",
         ]
+        # Шаги Платформы CRM считает сама (W13C-F1): коннектор ERP, SMTP, ещё один сотрудник.
+        colleague = any(
+            u.get("is_active", True) and u["id"] != ADMIN_ID for u in self.users.users.values()
+        )
+        facts = {
+            **self.checklist_items,
+            "erp": self.erp_configured,
+            "mail": self.smtp_configured,
+            "first_employee": colleague,
+        }
         items: list[dict[str, Any]] = [
-            {"key": key, "done": self.checklist_items.get(key, False), "link": f"/{key}"}
-            for key in keys
+            {"key": key, "done": facts.get(key, False), "link": f"/{key}"} for key in keys
         ]
         done = sum(1 for i in items if i["done"])
         return httpx.Response(200, json={"items": items, "done": done, "total": len(items)})
@@ -105,10 +119,17 @@ class SetupCrm:
             return early
         return httpx.Response(200, json=erp_status(configured=self.erp_configured))
 
-    def _smtp(self, request: httpx.Request) -> httpx.Response:
-        if (early := self._guard("smtp")) is not None:
-            return early
-        return httpx.Response(200, json=smtp_status(configured=self.smtp_configured))
+
+def crm_checklist_without(*missing: str) -> httpx.Response:
+    """Ответ CRM `/setup/checklist` без названных шагов (старая CRM или сбой проверки)."""
+    keys = ["bot", "erp", "mail", "models", "first_employee"]
+    items = [
+        {"key": key, "done": key in {"bot", "erp"}, "link": f"/{key}"}
+        for key in keys
+        if key not in missing
+    ]
+    done = sum(1 for i in items if i["done"])
+    return httpx.Response(200, json={"items": items, "done": done, "total": len(items)})
 
 
 @pytest.fixture
@@ -359,16 +380,19 @@ async def test_checklist_summarises_five_steps(
     assert response.status_code == 200
     check(response, "/setup/checklist", "get")
     body = response.json()
-    assert [s["key"] for s in body["steps"]] == ["bot", "erp", "mail", "models", "first_employee"]
+    assert [s["key"] for s in body["steps"]] == ["erp", "bot", "mail", "models", "first_employee"]
+    # все пять шагов приносит CRM /setup/checklist; BFF сам ничего не вычисляет
     assert steps(response) == {
-        "bot": "done",  # CRM /setup/checklist: бот принимает сообщения
-        "erp": "done",  # CRM /integrations/erp: configured
-        "mail": "todo",  # CRM /integrations/smtp: не настроена
-        "models": "todo",  # CRM /setup/checklist
+        "erp": "done",  # коннектор ERP задан
+        "bot": "done",
+        "mail": "todo",  # SMTP не настроен
+        "models": "todo",
         "first_employee": "done",  # в CRM есть активный сотрудник кроме администратора
     }
     assert (body["done"], body["total"]) == (3, 5)
     assert body["company"] == {"required": True, "can_setup": True}
+    assert body["company_blocker"] is None
+    assert crm.users.list_route.call_count == 0  # «первый сотрудник» — из чек-листа CRM
     assert response.headers["cache-control"] == "no-store"
     assert crm.checklist.calls.last.request.headers["authorization"].startswith(
         "Bearer crm-access-"
@@ -403,39 +427,79 @@ async def test_a_step_without_an_answer_is_unknown_not_an_error(
     web: Web, crm: SetupCrm, check: ContractChecker
 ) -> None:
     await web.login(["ADMIN"])
-    crm.down.update({"smtp", "checklist"})
+    crm.checklist_response = crm_checklist_without("mail", "models")
 
     response = await web.client.get("/api/v1/setup/checklist")
 
     assert response.status_code == 200
     check(response, "/setup/checklist", "get")
     states = steps(response)
-    assert states["mail"] == states["bot"] == states["models"] == "unknown"
-    assert states["erp"] == "done"
+    assert states["mail"] == states["models"] == "unknown"
+    assert states["bot"] == states["erp"] == "done"
 
 
-async def test_checklist_without_erp_has_no_company_step(web: Web, crm: SetupCrm) -> None:
+async def test_checklist_when_erp_does_not_answer_says_so(
+    web: Web, crm: SetupCrm, check: ContractChecker
+) -> None:
+    """ERP сопряжена, но молчит: компании нет, причина — «не ответила», а не «подключите»."""
     await web.login(["ADMIN"])
     crm.erp_status = httpx.Response(503, json={"detail": "down"})
 
     response = await web.client.get("/api/v1/setup/checklist")
 
     assert response.status_code == 200
+    check(response, "/setup/checklist", "get")
     assert response.json()["company"] is None
+    assert response.json()["company_blocker"] == "erp_unavailable"
     assert steps(response)["bot"] == "done"
+    assert steps(response)["erp"] == "done"
+
+
+async def test_checklist_with_hanging_erp_is_200_and_erp_unavailable(
+    web: Web, crm: SetupCrm, check: ContractChecker
+) -> None:
+    """Сопряжённая ERP висит (таймаут): чек-лист не падает, шаг компании — «ERP не ответила»."""
+    await web.login(["ADMIN"])
+    crm.erp_setup_status.mock(side_effect=httpx.ReadTimeout("erp is hanging"))
+
+    response = await web.client.get("/api/v1/setup/checklist")
+
+    assert response.status_code == 200
+    check(response, "/setup/checklist", "get")
+    assert response.json()["company"] is None
+    assert response.json()["company_blocker"] == "erp_unavailable"
+    assert steps(response)["erp"] == "done"
+
+
+async def test_checklist_without_pairing_does_not_ask_erp(
+    web: Web, crm: SetupCrm, check: ContractChecker
+) -> None:
+    """ERP не сопряжена: компания невозможна, причина — «сначала подключите ERP»; ERP не дёргаем."""
+    await web.login(["ADMIN"])
+    crm.erp_configured = False
+
+    response = await web.client.get("/api/v1/setup/checklist")
+
+    assert response.status_code == 200
+    check(response, "/setup/checklist", "get")
+    body = response.json()
+    assert body["company"] is None
+    assert body["company_blocker"] == "erp_not_connected"
+    assert steps(response)["erp"] == "todo"
+    assert crm.erp_setup_status.call_count == 0
 
 
 async def test_checklist_when_crm_answers_nothing_is_503(
     web: Web, crm: SetupCrm, check: ContractChecker
 ) -> None:
     await web.login(["ADMIN"])
-    crm.down.update({"smtp", "checklist", "erp"})
-    crm.users.down = True
+    crm.down.add("checklist")
 
     response = await web.client.get("/api/v1/setup/checklist")
 
     assert response.status_code == 503
     check(response, "/setup/checklist", "get")
+    assert response.json()["source"] == "crm"
 
 
 @pytest.mark.parametrize("role", ["DIRECTOR", "MANAGER", "SUPPLY", "ENGINEER", "ACCOUNTANT"])
@@ -549,6 +613,50 @@ async def test_company_when_erp_is_not_reachable_is_503(
     assert response.status_code == 503
     check(response, "/setup/company", "post")
     assert response.json()["source"] == "erp"
+
+
+async def test_company_without_pairing_is_409_erp_not_connected(
+    web: Web, crm: SetupCrm, check: ContractChecker
+) -> None:
+    """C2A-G-1: ERP не сопряжена -> 409 с объяснением; вызов ERP не уходит, экран не висит."""
+    await web.login(["ADMIN"])
+    crm.erp_configured = False
+
+    response = await web.send("POST", "/api/v1/setup/company", json=COMPANY)
+
+    assert response.status_code == 409
+    check(response, "/setup/company", "post")
+    body = response.json()
+    assert body["code"] == "ERP_NOT_CONNECTED"
+    assert body["source"] == "bff"
+    assert "Сначала подключите ERP" in body["message"]
+    assert body["details"]["link"] == "/admin/integrations?card=erp&panel=open"
+    assert crm.erp_company.call_count == 0
+
+
+async def test_company_with_pairing_but_erp_down_stays_503(
+    web: Web, crm: SetupCrm, check: ContractChecker
+) -> None:
+    await web.login(["ADMIN"])
+    crm.erp_configured = True
+    crm.company_response = httpx.Response(503, json={"detail": "down"})
+
+    response = await web.send("POST", "/api/v1/setup/company", json=COMPANY)
+
+    assert response.status_code == 503
+    check(response, "/setup/company", "post")
+    assert response.json()["code"] == "BACKEND_UNAVAILABLE"
+    assert crm.erp_company.call_count == 1
+
+
+async def test_company_when_crm_cannot_tell_asks_erp_anyway(web: Web, crm: SetupCrm) -> None:
+    """CRM молчит про коннектор — не блокируем: ответ даёт сама ERP."""
+    await web.login(["ADMIN"])
+    crm.down.add("erp")
+
+    response = await web.send("POST", "/api/v1/setup/company", json=COMPANY)
+
+    assert response.status_code == 201
 
 
 async def test_company_without_erp_access_is_403_from_the_session(web: Web, crm: SetupCrm) -> None:

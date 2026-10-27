@@ -38,9 +38,12 @@ async def _bot_facts(container: Container) -> BotFacts | None:
 
 
 async def collect_components(
-    container: Container, readiness: ReadinessService, now: datetime
+    container: Container, readiness: ReadinessService, now: datetime, *, probe_erp: bool = True
 ) -> list[Component]:
-    """Один источник здоровья для «Состояния», индикатора в шапке и чек-листа настройки."""
+    """Один источник здоровья для «Состояния», индикатора в шапке и чек-листа настройки.
+
+    `probe_erp=False` — без живой пробы ERP (до 5 с при устаревшем кэше): чек-листу нужны
+    только бот и модели, а зависшая ERP не должна задерживать весь ответ (W13C-F1)."""
     bot = await _bot_facts(container)
     _, source = await resolve_token(container.secrets_store, container.settings)
     has_token = source in ("db", "env")
@@ -51,7 +54,7 @@ async def collect_components(
         readiness,
         container.backup_service,
     )
-    erp = await container.erp_connector.health_facts()
+    erp = await container.erp_connector.health_facts() if probe_erp else None
     ai_budget = await container.ai_spend.today_facts()
     components = await service.collect(
         now, bot, token_configured=has_token, erp=erp, ai_budget=ai_budget

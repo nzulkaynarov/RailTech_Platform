@@ -1,8 +1,10 @@
 """Мастер первого запуска и чек-лист «Настройка CRM» (scope-аудит §3 п. 9, §4)."""
 
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
-from typing import Annotated, cast
+from typing import Annotated, Any, cast
 
+import structlog
 from fastapi import APIRouter, Depends, Request, Response
 
 from app.api.deps import ContainerDep, client_ip, require
@@ -23,6 +25,18 @@ from app.services.auth import ClientInfo
 from app.services.readiness import ReadinessService
 
 router = APIRouter(prefix="/api/v1/setup", tags=["setup"])
+logger = structlog.get_logger(__name__)
+
+
+async def _connector_set(resolve: Callable[[], Awaitable[Any]], name: str) -> bool:
+    """Коннектор задан? Сбой чтения настроек не валит чек-лист: шаг «не готов», причина в логе."""
+    try:
+        return (await resolve()).connection is not None
+    except Exception as exc:  # noqa: BLE001 — шаг чек-листа не должен ронять весь ответ
+        logger.warning(
+            "setup_checklist_connector_unavailable", connector=name, error=type(exc).__name__
+        )
+        return False
 
 
 @router.get("/state", response_model=SetupState)
@@ -62,10 +76,14 @@ async def get_setup_checklist(
     """Чек-лист настройки для админа: что сделано и куда идти. Без платных вызовов моделей.
 
     Бот и модели — из тех же проверок, что «Состояние системы» (бот = принимает сообщения).
+    Ключи `erp`, `mail`, `first_employee` (W13C-F1) — шаги чек-листа Платформы: коннектор ERP
+    задан, задан SMTP, есть ещё один активный сотрудник.
     """
     cfg = await container.settings_service.get()
-    components = await collect_components(container, readiness, datetime.now(UTC))
+    components = await collect_components(container, readiness, datetime.now(UTC), probe_erp=False)
     models_ok, bot_running = checks.health_facts(components)
+    erp_connected = await _connector_set(lambda: container.erp_connector.resolution(), "erp")
+    mail_configured = await _connector_set(lambda: container.smtp_connector.resolution(), "smtp")
     async with container.session_factory() as session:
         saved = await checks.saved_settings(session)
         facts = checks.SetupFacts(
@@ -77,6 +95,9 @@ async def get_setup_checklist(
             kb_indexed=await checks.kb_indexed(session),
             teammate_with_telegram=await checks.teammate_with_telegram(session, principal.user_id),
             lead_message_exists=await checks.lead_message_exists(session),
+            erp_connected=erp_connected,
+            mail_configured=mail_configured,
+            colleague_exists=await checks.colleague_exists(session, principal.user_id),
         )
     items = [
         ChecklistItem(key=cast(ChecklistKey, key), done=done, link=checks.LINKS[key])

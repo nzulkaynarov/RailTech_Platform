@@ -133,6 +133,13 @@
  * (директор читает), сброс пароля — `admin: full`; профиль доступен каждому вошедшему. Секреты из записей журнала BFF вырезает
  * (значения полей `password`, `secret`, `token`, `key`, `*_key`, `credentials`, `authorization`, `pin` и им подобных -> `***` целиком, любого типа).
  *
+ * **0.15.0 (W13C-F1) — первый запуск: ERP раньше компании (дефект гейта C2A-G-1).** Добавляющее изменение. Порядок шагов чек-листа —
+ * `erp`, `bot`, `mail`, `models`, `first_employee`: сначала подключается ERP, затем создаётся компания. Все пять шагов
+ * `GET /setup/checklist` приносит CRM (`/setup/checklist`, ключи `erp`, `mail`, `first_employee`), BFF сам их не вычисляет. Шаг
+ * «своя компания» спрашивает ERP только после сопряжения; почему данных о компании нет — `SetupChecklist.company_blocker`
+ * (`erp_not_connected` — сначала подключите ERP, `erp_unavailable` — ERP не ответила). `POST /setup/company` без сопряжённой ERP —
+ * 409 `ERP_NOT_CONNECTED` (новый код) с текстом и `details.link` на карточку ERP; недоступная ERP — прежний 503 `BACKEND_UNAVAILABLE`.
+ *
  * 0.2.4: `423 ACCOUNT_LOCKED` объявлен и на `POST /auth/change-password` (CRM блокирует учётную запись после неверных
  * текущих паролей).
  *
@@ -151,7 +158,7 @@
  * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.14.0
+ * OpenAPI spec version: 0.15.0
  */
 import { useMutation, useQuery } from "@tanstack/react-query";
 import type {
@@ -962,7 +969,7 @@ export const getGetSetupChecklistUrl = () => {
 };
 
 /**
- * Раздел `admin` — полный (директору — 403: CRM отдаёт чек-лист только с правом записи настроек, а все шаги ведут на экраны администратора). Состояние шагов приносят бэкенды, BFF их только сводит: бот и модели ИИ — CRM `/setup/checklist`, ERP — `/integrations/erp`, почта — `/integrations/smtp`, первый сотрудник — `/users` (есть ли кроме администратора активный сотрудник). Часть данных не ответила — шаг `unknown`, чек-лист не падает; не ответила ни одна — 503. `company` — шаг мастера «своя компания» (ERP `setup/status`); `null`, если ERP не ответила или у администратора нет сессии ERP.
+ * Раздел `admin` — полный (директору — 403: CRM отдаёт чек-лист только с правом записи настроек, а все шаги ведут на экраны администратора). Состояние шагов приносит CRM (`/setup/checklist`: бот, модели ИИ, ERP — коннектор задан, почта — SMTP задан, первый сотрудник — есть кроме администратора активный сотрудник), BFF их только сводит; шаг, которого CRM не назвала, — `unknown`; CRM не ответила — 503. `company` — шаг мастера «своя компания» (ERP `setup/status`); ERP спрашивается только после сопряжения. `null`, если ERP не сопряжена (`company_blocker = erp_not_connected`) или не ответила либо у администратора нет сессии ERP (`erp_unavailable`).
  * @summary Чек-лист первого запуска из пяти шагов
  */
 export const getSetupChecklist = async (
@@ -1080,7 +1087,7 @@ export const getCreateOwnCompanyUrl = () => {
 };
 
 /**
- * Раздел `admin` — полный. ERP `setup/company/` токеном администратора: создаёт компанию с типом «продавец» и делает его владельцем; только пока своей компании нет. Повтор — 409 `OWN_COMPANY_ALREADY_EXISTS`. Поля формы — 422 `VALIDATION_FAILED` (`details.fields`, тексты ERP — `details.messages`). ERP не ответила или у администратора ещё нет сессии ERP (доступ выдаётся CRM с задержкой) — 503 `BACKEND_UNAVAILABLE`, повтор через несколько секунд. Тот же сотрудник уже не суперпользователь ERP — 403 `FORBIDDEN`.
+ * Раздел `admin` — полный. ERP `setup/company/` токеном администратора: создаёт компанию с типом «продавец» и делает его владельцем; только пока своей компании нет. Повтор — 409 `OWN_COMPANY_ALREADY_EXISTS`. Поля формы — 422 `VALIDATION_FAILED` (`details.fields`, тексты ERP — `details.messages`). ERP не сопряжена (коннектор в CRM не задан) — 409 `ERP_NOT_CONNECTED`: сначала шаг «ERP» (`details.link` = `/admin/integrations?card=erp&panel=open`). ERP сопряжена, но не ответила или у администратора ещё нет сессии ERP (доступ выдаётся CRM с задержкой) — 503 `BACKEND_UNAVAILABLE`, повтор через несколько секунд. Тот же сотрудник уже не суперпользователь ERP — 403 `FORBIDDEN`.
  * @summary Создать свою компанию (шаг мастера)
  */
 export const createOwnCompany = async (

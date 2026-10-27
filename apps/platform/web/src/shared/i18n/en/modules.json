@@ -279,7 +279,7 @@
     "action": "Invite employee",
     "setup": {
       "title": "First run",
-      "subtitle": "Three steps: administrator, your company, connections. Any step can wait.",
+      "subtitle": "Four steps: administrator, ERP connection, your company, other connections. Any step can wait.",
       "adminTitle": "Administrator",
       "adminDone": "Administrator created: {{name}}.",
       "companyTitle": "Your company",
@@ -307,10 +307,12 @@
         "FORBIDDEN": "Only an ERP administrator can create the company.",
         "BACKEND_UNAVAILABLE": "ERP did not respond. A new administrator gets ERP access with a delay: try again in a few seconds.",
         "VALIDATION_FAILED": "Check the form fields.",
-        "default": "Could not create the company. Try again."
+        "default": "Could not create the company. Try again.",
+        "ERP_NOT_CONNECTED": "ERP is not connected. Connect ERP first, then create the company.",
+        "REQUEST_TIMEOUT": "The server did not respond in time. The company may already be created: the state is refreshing — if the form disappears, the company exists; otherwise try again."
       },
-      "connectionsTitle": "Connections",
-      "connectionsLead": "Five setup steps: each leads to its own screen.",
+      "connectionsTitle": "Other connections",
+      "connectionsLead": "Four setup steps: each leads to its own screen.",
       "progress": "Done {{done}} of {{total}}",
       "allDone": "All done: the Platform is set up.",
       "loadError": "Could not load the setup state",
@@ -319,7 +321,8 @@
       "state": {
         "done": "Done",
         "todo": "Not done",
-        "unknown": "No data"
+        "unknown": "No data",
+        "waitingErp": "Waiting for ERP"
       },
       "steps": {
         "bot": {
@@ -329,8 +332,8 @@
         },
         "erp": {
           "title": "ERP",
-          "text": "Pair CRM with ERP: requests and calculations flow between the systems.",
-          "action": "Pair ERP"
+          "text": "Pair CRM with ERP: requests and calculations flow between the systems. A new installation needs no code.",
+          "action": "Connect ERP"
         },
         "mail": {
           "title": "Mail",
@@ -359,7 +362,16 @@
         "hide": "Hide",
         "hideLabel": "Hide the setup banner",
         "hidden": "Banner hidden. The wizard stays on the “First run” page in Admin (/admin/setup)."
-      }
+      },
+      "erpTitle": "ERP connection",
+      "erpLead": "The company is created in ERP, so ERP is connected first. A new installation needs no pairing code — the \"Connect ERP\" button is enough.",
+      "erpDone": "ERP is connected. You can check the link on the integration card.",
+      "erpUnknown": "ERP state is unknown: CRM did not respond. Open the ERP settings and check the link.",
+      "erpOpen": "Open ERP settings",
+      "companyNeedsErp": "Connect ERP first",
+      "companyNeedsErpText": "The company is created in ERP, so it cannot be created before ERP is connected. The form will appear here once it is.",
+      "companyNeedsErpAction": "Connect ERP",
+      "companyAlreadyCreated": "Your company already exists — that is the same result, continue with the other steps."
     },
     "org": {
       "title": "Org structure",

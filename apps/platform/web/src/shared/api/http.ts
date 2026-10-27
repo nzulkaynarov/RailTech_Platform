@@ -44,7 +44,16 @@ async function parse(response: Response): Promise<unknown> {
  * false`), при ошибке бросает `ApiError`. Кэш TanStack Query хранит DTO как есть.
  */
 export const http = async <T>(url: string, options: RequestInit): Promise<T> => {
-  const response = await fetch(url, withSession(options));
+  let response: Response;
+  try {
+    response = await fetch(url, withSession(options));
+  } catch (error) {
+    // Сработал предел ожидания (`withTimeout`): понятная ошибка вместо вечной загрузки.
+    if (error instanceof Error && error.name === "TimeoutError") {
+      throw new ApiError(0, "REQUEST_TIMEOUT", "Сервер не ответил вовремя.");
+    }
+    throw error;
+  }
   const data = await parse(response);
   if (!response.ok) {
     const error = toApiError(response.status, data);

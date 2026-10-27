@@ -13,6 +13,7 @@ import type {
   TelegramChannel,
   TelegramConnector,
 } from "../../shared/api/generated/model";
+import { readSetup } from "../setupState";
 
 /**
  * Состояние Admin · Внешние интеграции для MSW (W13-A1). Вымышленное: домен `.example`, ни настоящих токенов, ни паролей.
@@ -417,14 +418,38 @@ export function seedIntegrations(): IntegrationsMock {
 
 let memory: IntegrationsMock | null = null;
 
+/**
+ * Чистая установка (W13C-F1): пока шаг «ERP» первого запуска не сделан, коннектор ERP не задан — ровно как у новой
+ * установки, где «Подключить ERP» ещё не нажимали. Сопряжение (`erp/pair`) отмечает шаг, и дальше работает обычное
+ * состояние.
+ */
+function withSetupGate(state: IntegrationsMock): IntegrationsMock {
+  const setup = readSetup();
+  if (!setup.fresh || setup.done.erp) return state;
+  return {
+    ...state,
+    erp: {
+      ...state.erp,
+      configured: false,
+      paired: false,
+      token_configured: false,
+      token_last4: null,
+      token_updated_at: null,
+      webhook_secret_configured: false,
+      webhook_secret_last4: null,
+      mode: "local",
+    },
+  };
+}
+
 export function readIntegrations(): IntegrationsMock {
   try {
     const raw = window.localStorage.getItem(KEY);
-    return raw ? (JSON.parse(raw) as IntegrationsMock) : seedIntegrations();
+    return withSetupGate(raw ? (JSON.parse(raw) as IntegrationsMock) : seedIntegrations());
   } catch {
     // Хранилище недоступно — состояние живёт в памяти.
     memory ??= seedIntegrations();
-    return memory;
+    return withSetupGate(memory);
   }
 }
 

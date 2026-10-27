@@ -27,6 +27,7 @@ import {
   writeIntegrations,
 } from "./fixtures/integrations";
 import { DEMO_WRONG_PASSWORD } from "./fixtures/users";
+import { markStepDone } from "./setupState";
 
 /**
  * Моки `/admin/integrations*` (W13-A1, BFF 0.7.0): раздел `admin` — чтение от `read`, изменения и пробы только `full`.
@@ -392,6 +393,7 @@ export const adminIntegrationsHandlers = [
         token_updated_at: MOCK_NOW,
       };
     });
+    markStepDone("erp"); // чистая установка: шаг первого запуска «ERP» сделан
     return HttpResponse.json({
       status: state.erp,
       check: {

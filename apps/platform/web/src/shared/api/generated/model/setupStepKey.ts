@@ -133,6 +133,13 @@
  * (директор читает), сброс пароля — `admin: full`; профиль доступен каждому вошедшему. Секреты из записей журнала BFF вырезает
  * (значения полей `password`, `secret`, `token`, `key`, `*_key`, `credentials`, `authorization`, `pin` и им подобных -> `***` целиком, любого типа).
  *
+ * **0.15.0 (W13C-F1) — первый запуск: ERP раньше компании (дефект гейта C2A-G-1).** Добавляющее изменение. Порядок шагов чек-листа —
+ * `erp`, `bot`, `mail`, `models`, `first_employee`: сначала подключается ERP, затем создаётся компания. Все пять шагов
+ * `GET /setup/checklist` приносит CRM (`/setup/checklist`, ключи `erp`, `mail`, `first_employee`), BFF сам их не вычисляет. Шаг
+ * «своя компания» спрашивает ERP только после сопряжения; почему данных о компании нет — `SetupChecklist.company_blocker`
+ * (`erp_not_connected` — сначала подключите ERP, `erp_unavailable` — ERP не ответила). `POST /setup/company` без сопряжённой ERP —
+ * 409 `ERP_NOT_CONNECTED` (новый код) с текстом и `details.link` на карточку ERP; недоступная ERP — прежний 503 `BACKEND_UNAVAILABLE`.
+ *
  * 0.2.4: `423 ACCOUNT_LOCKED` объявлен и на `POST /auth/change-password` (CRM блокирует учётную запись после неверных
  * текущих паролей).
  *
@@ -151,17 +158,17 @@
  * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.14.0
+ * OpenAPI spec version: 0.15.0
  */
 
 /**
- * Пять шагов чек-листа (SPEC-v3 §7.6) — бот, ERP, почта, модели ИИ, первый сотрудник
+ * Пять шагов чек-листа (SPEC-v3 §7.6) в порядке выполнения — ERP, бот, почта, модели ИИ, первый сотрудник
  */
 export type SetupStepKey = (typeof SetupStepKey)[keyof typeof SetupStepKey];
 
 export const SetupStepKey = {
-  bot: "bot",
   erp: "erp",
+  bot: "bot",
   mail: "mail",
   models: "models",
   first_employee: "first_employee",

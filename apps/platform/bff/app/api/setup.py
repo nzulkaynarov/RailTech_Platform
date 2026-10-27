@@ -94,7 +94,7 @@ async def create_first_admin(
 @router.get("/setup/checklist", response_model=SetupChecklist, operation_id="getSetupChecklist")
 async def get_setup_checklist(authed: Admin, response: Response) -> SetupChecklist:
     response.headers["Cache-Control"] = "no-store"
-    return await crm_setup.build_checklist(authed.call, authed.data.user_id)
+    return await crm_setup.build_checklist(authed.call)
 
 
 @router.post(

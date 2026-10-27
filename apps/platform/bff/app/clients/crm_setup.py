@@ -10,7 +10,6 @@ ERP: `setup/status/` и `setup/company/` токеном администрато
 журнал, ошибки, кэш и сессию: функции возвращают его вызывающему и ничего не запоминают.
 """
 
-import asyncio
 from collections.abc import Awaitable, Callable
 from typing import Any
 
@@ -26,7 +25,13 @@ from app.errors import (
     backend_unavailable,
     from_backend,
 )
-from app.schemas_setup import STEP_KEYS, SetupChecklist, SetupCompanyStatus, SetupStep
+from app.schemas_setup import (
+    STEP_KEYS,
+    CompanyBlocker,
+    SetupChecklist,
+    SetupCompanyStatus,
+    SetupStep,
+)
 
 Call = Callable[..., Awaitable[httpx.Response]]
 
@@ -41,6 +46,12 @@ LOCKED_MESSAGE = "Слишком много неверных кодов. Пов�
 SETUP_DONE_MESSAGE = "Администратор уже создан. Войдите в Платформу."
 COMPANY_EXISTS_MESSAGE = "Своя компания уже создана."
 COMPANY_FORBIDDEN_MESSAGE = "Создать свою компанию может только администратор ERP."
+# Куда ведёт шаг «ERP» мастера (как STEP_TARGET.erp в SPA).
+ERP_STEP_LINK = "/admin/integrations?card=erp&panel=open"
+ERP_NOT_CONNECTED_MESSAGE = (
+    "ERP не подключена. Сначала подключите ERP (Администрирование — Внешние интеграции — ERP), "
+    "затем создайте компанию."
+)
 
 # Поле CRM -> поле контракта (`details.fields`).
 _SETUP_FIELDS = {"full_name": "name", "code": "code", "email": "email", "password": "password"}
@@ -190,51 +201,37 @@ def _crm_item_done(checklist: crm.SetupChecklist | None, key: str) -> bool | Non
     return None if item is None else item.done
 
 
-def _has_colleague(users: Any | None, me: int) -> bool | None:
-    """Есть ли активный сотрудник кроме администратора (список — `/users` CRM)."""
-    if not isinstance(users, list):
-        return None
-    return any(
-        isinstance(u, dict) and u.get("is_active", True) and u.get("id") != me for u in users
-    )
+async def build_checklist(call: Call) -> SetupChecklist:
+    """Свод состояния пяти шагов и шага «своя компания». BFF не оценивает: все пять шагов приносит
+    CRM `/setup/checklist` (W13C-F1, Q-W13-A4-2: ключи `bot`, `erp`, `mail`, `models`,
+    `first_employee`). Что CRM не отдала — `unknown`; CRM не ответила совсем — 503.
 
-
-async def build_checklist(call: Call, me: int) -> SetupChecklist:
-    """Свод состояния пяти шагов и шага «своя компания». BFF не оценивает: бот и модели готовы
-    по `/setup/checklist` CRM, ERP и почта — когда коннектор настроен, первый сотрудник — когда
-    в CRM есть ещё один активный пользователь. Что не ответило — `unknown`."""
-    checklist_raw, erp_raw, smtp_raw, users_raw, company_raw = await asyncio.gather(
-        _get(call, "crm", f"{SETUP}/checklist"),
-        _get(call, "crm", "/api/v1/integrations/erp"),
-        _get(call, "crm", "/api/v1/integrations/smtp"),
-        _get(call, "crm", "/api/v1/users"),
-        _get(call, "erp", "/api/v1/setup/status/"),
-    )
+    Шаг «своя компания» спрашивает ERP только когда ERP сопряжена: без сопряжения вызов ERP
+    бесполезен (сессии ERP у администратора нет), а ожидание — тупик. Причина отсутствия данных
+    о компании — `company_blocker`: `erp_not_connected` (сначала подключите ERP) или
+    `erp_unavailable` (ERP не ответила)."""
+    checklist_raw = await _get(call, "crm", f"{SETUP}/checklist")
     checklist = _parse(crm.SetupChecklist, checklist_raw)
-    erp = _parse(crm.ErpStatusOut, erp_raw)
-    smtp = _parse(crm.SmtpStatusOut, smtp_raw)
-    status = _parse(ErpSetupStatus, company_raw)
-    facts: dict[str, bool | None] = {
-        "bot": _crm_item_done(checklist, "bot"),
-        "erp": None if erp is None else erp.configured,
-        "mail": None if smtp is None else smtp.configured,
-        "models": _crm_item_done(checklist, "models"),
-        "first_employee": _has_colleague(users_raw, me),
-    }
-    steps = [SetupStep(key=key, state=_state(facts[key])) for key in STEP_KEYS]
-    crm_answered = any(raw is not None for raw in (checklist_raw, erp_raw, smtp_raw, users_raw))
-    if not crm_answered:
+    if checklist is None:
         raise backend_unavailable("crm", "setup_checklist")
-    company = (
-        None
-        if status is None
-        else SetupCompanyStatus(required=status.setup_required, can_setup=status.can_setup)
-    )
+    facts: dict[str, bool | None] = {key: _crm_item_done(checklist, key) for key in STEP_KEYS}
+    steps = [SetupStep(key=key, state=_state(facts[key])) for key in STEP_KEYS]
+    company: SetupCompanyStatus | None = None
+    blocker: CompanyBlocker | None = None
+    if facts["erp"] is False:
+        blocker = "erp_not_connected"
+    else:
+        status = _parse(ErpSetupStatus, await _get(call, "erp", "/api/v1/setup/status/"))
+        if status is None:
+            blocker = "erp_unavailable"
+        else:
+            company = SetupCompanyStatus(required=status.setup_required, can_setup=status.can_setup)
     return SetupChecklist(
         steps=steps,
         done=sum(1 for s in steps if s.state == "done"),
         total=len(steps),
         company=company,
+        company_blocker=blocker,
     )
 
 
@@ -277,7 +274,23 @@ def company_error(response: httpx.Response) -> PlatformError:
     return base
 
 
+async def ensure_erp_connected(call: Call) -> None:
+    """409 `ERP_NOT_CONNECTED`, если CRM знает, что коннектор ERP не задан (сопряжения нет).
+
+    CRM не ответила или не отдала состояние — не блокируем: решает сама ERP (503 или ответ)."""
+    status = _parse(crm.ErpStatusOut, await _get(call, "crm", "/api/v1/integrations/erp"))
+    if status is not None and not status.configured:
+        raise PlatformError(
+            "ERP_NOT_CONNECTED",
+            ERP_NOT_CONNECTED_MESSAGE,
+            status_code=409,
+            source="bff",
+            details={"reason": "erp_not_connected", "link": ERP_STEP_LINK},
+        )
+
+
 async def create_company(call: Call, payload: dict[str, Any]) -> ErpCompanyCreated:
+    await ensure_erp_connected(call)
     response = await call("erp", "POST", "/api/v1/setup/company/", json=payload)
     if response.status_code != 201:
         raise company_error(response)
