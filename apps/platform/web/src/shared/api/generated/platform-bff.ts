@@ -133,7 +133,7 @@
  * (директор читает), сброс пароля — `admin: full`; профиль доступен каждому вошедшему. Секреты из записей журнала BFF вырезает
  * (значения полей `password`, `secret`, `token`, `key`, `*_key`, `credentials`, `authorization`, `pin` и им подобных -> `***` целиком, любого типа).
  *
- * **0.20.0 (D1-4) — EDS · КП на одобрение и документы на согласовании.** Добавляющее изменение, тег `eds-approvals`: `GET /eds/quotes`
+ * **0.22.0 (D1-4) — EDS · КП на одобрение и документы на согласовании.** Добавляющее изменение, тег `eds-approvals`: `GET /eds/quotes`
  * (КП на одобрение: «на моём шаге» или все), `GET /eds/quotes/{ref}` (карточка КП по id маршрута или номеру `КП-2026/115`: шаги маршрута,
  * чек-лист с датой и автором, состав и итоги из ERP, письмо и заявка, каналы отправки по контакту клиента; **внутренний блок**
  * `internal` — себестоимость, маржа, порог, сроки — и значение маржи в чек-листе BFF вырезает у роли без группы `cost_margin`),
@@ -142,8 +142,10 @@
  * `GET /eds/memo-approvals` и `GET /eds/memo-approvals/{ref}` (служебные записки, заявления, отчёты на согласовании; карточка по id
  * документа или номеру `СЗ-2026/014`, шаги маршрута, вложения), `POST /eds/memo-approvals/{id}/decision` («Согласовать», «Вернуть
  * на доработку», «Отклонить»). Разделы: КП — `eds.drafts` (полный — решение, чтение — менеджер); служебки — `eds.memo.approve`
- * (полный — решение), чтение также у `eds.memo.create` (автор видит свой документ). `comment` для `return` и `reject` обязателен
+ * (полный — решение директора) или `eds.payments` (полный — решение бухгалтера на его шаге), чтение также у `eds.memo.create` (автор видит свой документ). `comment` для `return` и `reject` обязателен
  * (422 в BFF до EDS). Ошибки EDS (`not_your_step`, `route_closed`, `checklist_not_green` с `details.failed`) приходят в формате `Error`.
+ * Карточка КП: `snapshot_total` (итог снимка EDS), `totals_mismatch` (итог ERP расходится со снимком), строки ERP не показываются при другой редакции КП в ERP;
+ * карточка документа: `accountant_step` (шаг бухгалтера — «Принять к оплате», решает держатель `eds.payments` full). Отправки КП по `channels` пока нет (Δ ERP-11).
  *
  * **0.19.0 (W15-H1) — мост в старые экраны.** Добавляющее изменение (тег `bridge`). Пока раздел Платформы ещё заглушка, сотрудник
  * открывает ту же работу в старой CRM или старом ERP новой вкладкой. `GET /bridge` отдаёт публичные адреса старых фронтов
@@ -209,7 +211,7 @@
  * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.20.0
+ * OpenAPI spec version: 0.22.0
  */
 import { useMutation, useQuery } from "@tanstack/react-query";
 import type {
@@ -4343,7 +4345,7 @@ export const getDecideQuoteApprovalUrl = (id: string) => {
 };
 
 /**
- * EDS `POST /approvals/{id}/decision` (право `approvals.decide`). Раздел `eds.drafts` — полный: роль только для чтения получает 403 в BFF до EDS. **Проверку чек-листа делает EDS**, не BFF: `approve` при красной блокирующей строке (визы, маржа) — 409 `CONFLICT`, `details.reason = checklist_not_green`, `details.failed` — коды красных строк; строка `due` (срок) — предупреждение, КП одобряется с отметкой `approved_late`. Маршрут уже закрыт (решил другой директор, новая версия КП) — 409 `details.reason = route_closed`; сотрудника не ждёт шаг — 403 `FORBIDDEN`, `details.reason = not_your_step`. `comment` обязателен для `return` и `reject` — пустой 422 в BFF до EDS (`details.fields = [comment]`); `channels` — только для `approve`. При одобрении EDS присваивает `ИСХ-NNN/ГГ` и публикует `approval.decided` (ERP отправляет КП по выбранным каналам). Ответ — обновлённая карточка.
+ * EDS `POST /approvals/{id}/decision` (право `approvals.decide`). Раздел `eds.drafts` — полный: роль только для чтения получает 403 в BFF до EDS. **Проверку чек-листа делает EDS**, не BFF: `approve` при красной блокирующей строке (визы, маржа) — 409 `CONFLICT`, `details.reason = checklist_not_green`, `details.failed` — коды красных строк; строка `due` (срок) — предупреждение, КП одобряется с отметкой `approved_late`. Маршрут уже закрыт (решил другой директор, новая версия КП) — 409 `details.reason = route_closed`; сотрудника не ждёт шаг — 403 `FORBIDDEN`, `details.reason = not_your_step`. `comment` обязателен для `return` и `reject` — пустой 422 в BFF до EDS (`details.fields = [comment]`); `channels` — только для `approve`. При одобрении EDS присваивает `ИСХ-NNN/ГГ` и публикует `approval.decided` с выбранными `channels`: ERP переводит КП в «Готово к отправке» и сохраняет каналы; клиенту КП отправляет менеджер заявки (`quote.send`, C1-G-4) — автоотправка по каналам делается в W16-D1-2. Ответ — обновлённая карточка.
  * @summary EDS · Одобрить КП → отправить клиенту / Вернуть на доработку / Отклонить
  */
 export const decideQuoteApproval = async (
@@ -4784,7 +4786,7 @@ export const getDecideMemoApprovalUrl = (id: string) => {
 };
 
 /**
- * EDS `POST /approvals/{id}/decision` (права `memos.approve` / `approvals.decide`). Раздел `eds.memo.approve` — полный: автор без права решения получает 403 в BFF до EDS. `comment` обязателен для `return` и `reject` — пустой 422 в BFF до EDS (`details.fields = [comment]`). Шаг не этого сотрудника — 403 EDS (`details.reason = not_your_step`); маршрут уже закрыт — 409 `CONFLICT`, `details.reason = route_closed`. Служебная записка с суммой после директора идёт бухгалтеру. `{id}` — `approval_id` из карточки. Ответ — обновлённая карточка.
+ * EDS `POST /approvals/{id}/decision` (права `memos.approve` / `approvals.decide` на шаге директора, `payments.confirm` на шаге бухгалтера). Раздел `eds.memo.approve` — полный (директор) или `eds.payments` — полный (бухгалтер на своём шаге): автор без права решения получает 403 в BFF до EDS; чей это шаг, решает EDS. Бухгалтер: «Принять к оплате» (`approve`) и «Вернуть». `comment` обязателен для `return` и `reject` — пустой 422 в BFF до EDS (`details.fields = [comment]`). Шаг не этого сотрудника — 403 EDS (`details.reason = not_your_step`); маршрут уже закрыт — 409 `CONFLICT`, `details.reason = route_closed`. Служебная записка с суммой после директора идёт бухгалтеру. `{id}` — `approval_id` из карточки. Ответ — обновлённая карточка.
  * @summary EDS · Согласовать / Вернуть на доработку / Отклонить документ
  */
 export const decideMemoApproval = async (

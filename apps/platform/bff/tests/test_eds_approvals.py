@@ -1,4 +1,4 @@
-"""EDS · КП на одобрение и документы на согласовании (контракт BFF 0.18.0, D1-4).
+"""EDS · КП на одобрение и документы на согласовании (контракт BFF 0.22.0, D1-4).
 
 EDS и ERP — на respx (`eds_approvals_support`), ответы BFF проверяются по схемам platform-bff.yaml.
 Проверяется то, что делает BFF: разделы каталога (КП — `eds.drafts`, служебки — `eds.memo.approve`
@@ -27,9 +27,11 @@ from tests.eds_approvals_support import (
     ApprovalsFake,
     checklist_green,
     erp_contact,
+    erp_quote,
     memo_doc,
     memo_route,
     quote_route,
+    step,
 )
 from tests.roles import Role, custom
 
@@ -365,13 +367,13 @@ async def test_contact_without_email_or_cabinet(web: Web, eds: ApprovalsFake) ->
 
 async def test_quote_stage_follows_the_deal(web: Web, eds: ApprovalsFake) -> None:
     await _director(web)
-    for stage, step in (
+    for stage, expected in (
         ("CONTRACT_SIGNED", "CONTRACT"),
         ("CLOSED_LOST", "LOST"),
         ("SOURCING", "QUOTE"),
     ):
         eds.deal = {**eds.deal, "stage_code": stage}  # type: ignore[dict-item]
-        assert (await web.client.get(QUOTE)).json()["stage"] == step
+        assert (await web.client.get(QUOTE)).json()["stage"] == expected
 
 
 async def test_red_blocking_rows_come_from_eds_and_the_due_row_only_warns(
@@ -388,6 +390,106 @@ async def test_red_blocking_rows_come_from_eds_and_the_due_row_only_warns(
     assert card["allowed_decisions"] == ["return", "reject"]
     red = [(c["code"], c["blocking"]) for c in card["checklist"] if not c["ok"]]
     assert red == [("visa_services", True), ("due", False)]
+
+
+async def test_card_shows_the_snapshot_total_and_no_mismatch_when_erp_agrees(
+    web: Web, eds: ApprovalsFake
+) -> None:
+    await _director(web)
+
+    card = (await web.client.get(QUOTE)).json()
+
+    assert card["snapshot_total"] == {"amount": "125000000.00", "currency": "UZS"}
+    assert card["totals_mismatch"] is False
+
+
+async def test_card_flags_a_total_that_differs_from_the_snapshot(
+    web: Web, eds: ApprovalsFake
+) -> None:
+    eds.erp_quote = erp_quote(total_incl_vat="126000000.00")
+    await _director(web)
+
+    card = (await web.client.get(QUOTE)).json()
+
+    assert card["totals"]["total"] == "126000000.00"
+    assert card["snapshot_total"]["amount"] == "125000000.00"
+    assert card["totals_mismatch"] is True
+
+
+async def test_another_erp_revision_hides_the_lines_of_a_closed_round(
+    web: Web, eds: ApprovalsFake
+) -> None:
+    """У ERP уже версия 3, а круг — версии 2: строки ERP не показываем, остаётся снимок EDS."""
+    eds.erp_quote = erp_quote(version=3)
+    eds.routes[QUOTE_ROUTE] = quote_route(status="returned", can_decide=False, allowed_decisions=[])
+    await _director(web)
+
+    card = (await web.client.get(QUOTE)).json()
+
+    assert card["lines"] is None
+    assert card["totals"] is None
+    assert card["totals_mismatch"] is False
+    assert card["snapshot_total"]["amount"] == "125000000.00"
+    assert card["sources"]["erp"] == "ok"
+
+
+async def test_same_erp_revision_keeps_the_lines(web: Web, eds: ApprovalsFake) -> None:
+    eds.erp_quote = erp_quote(version=2)
+    await _director(web)
+
+    assert (await web.client.get(QUOTE)).json()["lines"] is not None
+
+
+async def test_manager_without_erp_access_gets_a_card_without_lines(
+    web: Web, eds: ApprovalsFake, check: ContractChecker
+) -> None:
+    """ERP отказал роли в КП (403): карточка 200 без строк и итогов, снимка у менеджера нет."""
+    eds.routes[QUOTE_ROUTE] = quote_route(quote=None, can_decide=False, allowed_decisions=[])
+    eds.erp_quote = 403
+    assert (await web.login(["MANAGER"])).status_code == 200
+
+    response = await web.client.get(QUOTE)
+
+    check(response, "/eds/quotes/{ref}", "get")
+    card = response.json()
+    assert card["lines"] is None
+    assert card["totals"] is None
+    assert card["snapshot_total"] is None
+    assert card["totals_mismatch"] is False
+    assert card["checklist"][0]["code"] == "visa_goods"
+
+
+async def test_supplier_prices_from_erp_never_reach_the_card(web: Web, eds: ApprovalsFake) -> None:
+    """Негативный тест: ERP отдал цену и оффер поставщика — в карточке их нет ни у одной роли."""
+    items = erp_quote()["items"]
+    items[1].update(
+        offer=77,
+        offer_supplier_name="ООО «Секретный Поставщик»",
+        supplier_price="6500000.00",
+        purchase_price="6400000.00",
+        unit_cost="6300000.00",
+        frozen_base_price="6200000.00",
+    )
+    eds.erp_quote = erp_quote(items=items, cost_price="1", gross_profit="2", landed_cost="3")
+    cases: list[list[Role]] = [["DIRECTOR"], [custom(95, "Директор", {"eds.drafts": "full"})]]
+    for roles in cases:
+        assert (await web.login(roles)).status_code == 200
+
+        response = await web.client.get(QUOTE)
+
+        assert response.status_code == 200
+        for secret in (
+            "Секретный Поставщик",
+            "6500000",
+            "6400000",
+            "6300000",
+            "6200000",
+            '"supplier_price"',
+            "purchase_price",
+            "unit_cost",
+            '"offer"',
+        ):
+            assert secret not in response.text, secret
 
 
 # --- КП: решения ---------------------------------------------------------------------------------
@@ -738,6 +840,100 @@ async def test_memo_conflict_is_reported_in_words_of_eds(web: Web, eds: Approval
 
     assert response.status_code == 409
     assert response.json()["details"]["reason"] == "route_closed"
+
+
+async def test_memo_list_can_decide_comes_from_the_eds_route(web: Web, eds: ApprovalsFake) -> None:
+    """BFF не вычисляет `can_decide` по `scope`: слово EDS по маршруту; не прочитан — `false`."""
+    eds.routes[MEMO_ROUTE] = memo_route(can_decide=False, allowed_decisions=[])
+    await _director(web)
+
+    [row] = (await web.client.get(f"{BASE}/memo-approvals")).json()["items"]
+    assert row["can_decide"] is False
+
+    eds.answer(
+        "GET",
+        f"approvals/{MEMO_ROUTE}",
+        httpx.Response(404, json={"code": "NOT_FOUND", "message": "x"}),
+    )
+    [row] = (await web.client.get(f"{BASE}/memo-approvals")).json()["items"]
+    assert row["can_decide"] is False
+
+
+def _accountant_route(**over: Any) -> dict[str, Any]:
+    return memo_route(
+        steps=[
+            step(
+                1,
+                "Директор",
+                "approved",
+                assignee={"crm_user_id": None, "permission": "approvals.decide"},
+            ),
+            step(
+                2,
+                "Бухгалтер",
+                "current",
+                assignee={"crm_user_id": None, "permission": "payments.confirm"},
+            ),
+        ],
+        **over,
+    )
+
+
+async def test_accountant_decides_the_memo_on_his_step(
+    web: Web, eds: ApprovalsFake, check: ContractChecker
+) -> None:
+    """Шаг бухгалтера (`payments.confirm`): раздел `eds.payments` — полный; чей шаг, решает EDS."""
+    eds.routes[MEMO_ROUTE] = _accountant_route()
+    eds.documents[MEMO_DOC] = memo_doc(status="to_accountant")
+    assert (await web.login(["ACCOUNTANT"])).status_code == 200
+
+    listing = await web.client.get(f"{BASE}/memo-approvals")
+    card = await web.client.get(MEMO)
+    decision = await web.send(
+        "POST", f"{BASE}/memo-approvals/{MEMO_ROUTE}/decision", json={"decision": "approve"}
+    )
+
+    assert listing.status_code == 200
+    assert listing.json()["items"][0]["step_label"] == "Бухгалтер"
+    check(card, "/eds/memo-approvals/{ref}", "get")
+    assert card.json()["accountant_step"] is True
+    assert card.json()["can_decide"] is True
+    check(decision, "/eds/memo-approvals/{id}/decision", "post")
+    assert decision.status_code == 200
+    assert eds.made("POST", f"approvals/{MEMO_ROUTE}/decision")
+
+
+async def test_director_step_is_not_an_accountant_step(web: Web, eds: ApprovalsFake) -> None:
+    await _director(web)
+
+    assert (await web.client.get(MEMO)).json()["accountant_step"] is False
+
+
+async def test_not_your_step_for_the_accountant_comes_from_eds(
+    web: Web, eds: ApprovalsFake
+) -> None:
+    """Бухгалтер до своей очереди: раздел пропускает, EDS отвечает 403 `not_your_step`."""
+    eds.answer(
+        "POST",
+        f"approvals/{MEMO_ROUTE}/decision",
+        httpx.Response(
+            403,
+            json={
+                "code": "FORBIDDEN",
+                "message": "Не ваш шаг.",
+                "source": "eds",
+                "details": {"reason": "not_your_step"},
+            },
+        ),
+    )
+    assert (await web.login(["ACCOUNTANT"])).status_code == 200
+
+    response = await web.send(
+        "POST", f"{BASE}/memo-approvals/{MEMO_ROUTE}/decision", json={"decision": "approve"}
+    )
+
+    assert response.status_code == 403
+    assert response.json()["details"]["reason"] == "not_your_step"
 
 
 # --- общее ---------------------------------------------------------------------------------------

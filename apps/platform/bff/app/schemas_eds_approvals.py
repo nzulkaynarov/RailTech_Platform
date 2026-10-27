@@ -134,6 +134,8 @@ class QuoteApprovalCard(BaseModel):
     request: QuoteRequestRef | None
     letter: QuoteLetterRef | None
     calculated_by: list[QuoteCalculator]
+    snapshot_total: EdsMoney | None
+    totals_mismatch: bool
     lines: list[QuoteLine] | None
     totals: QuoteTotals | None
     # Внутренний блок — группа `cost_margin`: без неё поле не передаётся совсем.
@@ -184,6 +186,7 @@ class MemoApprovalCard(BaseModel):
     files: list[EdsFile]
     deal: EdsDealRef | None
     steps: list[EdsRouteStep]
+    accountant_step: bool
     decisions: list[EdsDecision]
     can_decide: bool
     allowed_decisions: list[Decision]
@@ -253,9 +256,14 @@ class RawPerson(BaseModel):
     full_name: str
 
 
+class RawAssignee(BaseModel):
+    permission: str | None = None
+
+
 class RawStep(BaseModel):
     index: int
     label: str
+    assignee: RawAssignee | None = None
     status: Literal["pending", "current", "approved", "returned", "rejected", "skipped"]
     decided_by: RawPerson | None = None
     decided_at: dt.datetime | None = None

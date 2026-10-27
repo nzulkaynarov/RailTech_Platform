@@ -71,7 +71,7 @@
     "approve": "TTni tasdiqlash",
     "lines": "TT tarkibi",
     "linesScroll": "TT qatorlari jadvali",
-    "noLines": "TT tarkibi ERPdan olinmadi. Jami summa va qaror mavjud, qatorlar yangilangandan so'ng paydo bo'ladi.",
+    "noLines": "TT tarkibi ERPdan olinmadi: ma'lumot yo'q, ruxsat yo'q yoki ERPda TTning boshqa tahriri bor. TT snimkasining jami summasi ko'rsatilgan.",
     "emptyLines": "TTda qatorlar yo'q.",
     "optional": "ixtiyoriy",
     "days": "{{count}} kun",
@@ -121,7 +121,9 @@
     "zones": {
       "goods": "tovarlar",
       "services": "xizmatlar"
-    }
+    },
+    "snapshotTotal": "TT snimkasi bo'yicha jami",
+    "mismatch": "ERPdagi jami ({{erp}}) TT snimkasi jamidan ({{snapshot}}) farq qiladi: TT tasdiqqa topshirilgandan so'ng o'zgargan. Kartani yangilang yoki hisob-kitobchidan so'rang."
   },
   "panel": {
     "sheetTitle": "{{number}} tasdiqlash",
@@ -141,7 +143,7 @@
     "decided": {
       "approved": {
         "title": "TT tasdiqlandi",
-        "text": "Qaror qabul qilindi, ISH raqami berildi. Mijozga yuborishni ERP tanlangan kanallar orqali bajaradi."
+        "text": "Qaror qabul qilindi, ISH raqami berildi, TT «Yuborishga tayyor». Mijozga uni ariza menejeri yuboradi."
       },
       "returned": {
         "title": "TT qayta ishlashga qaytarildi",
@@ -173,11 +175,12 @@
     },
     "blocked": {
       "checklist": "Tasdiqlab bo'lmaydi: {{items}}.",
-      "generic": "Tasdiqlash hozir mavjud emas."
+      "generic": "Tasdiqlash hozir mavjud emas.",
+      "noData": "ERPdan TT ma'lumotlari yo'q — kartani yangilang."
     },
     "channels": {
       "legend": "Mijozga yuborish kanali",
-      "hint": "PDF ichki maydonlarsiz qayerga ketishini tanlang.",
+      "hint": "Ichki maydonlarsiz PDF uchun kanallarni tanlang; uni ariza menejeri yuboradi.",
       "contact": "Mijoz kontakti: {{name}}.",
       "unknown": "Mijoz kontakti ERPdan olinmadi: kanallar mavjudligini xizmat yuborishda tekshiradi.",
       "telegram": {
@@ -197,10 +200,10 @@
     },
     "consequence": {
       "title": "Nima bo'ladi",
-      "step1": "TT chiquvchi ISH raqamini oladi.",
-      "step2": "Mijozga tannarx va margasiz PDF yuboriladi: {{channels}}.",
-      "step2None": "Kanal tanlanmagan: TT tasdiqlanadi, mijozga uni ariza menejeri yuboradi.",
-      "step3": "Ariza «TT · Yuborildi» bosqichiga o'tadi; mijozga amal qilish muddati eslatiladi."
+      "step1": "TT chiquvchi ISH raqamini oladi va «Yuborishga tayyor» holatiga o'tadi.",
+      "step2": "Mijozga tanlangan kanallar ({{channels}}) orqali uni ariza menejeri yuboradi. Mijoz PDFni tannarx va margasiz oladi.",
+      "step2None": "Kanal tanlanmagan: TT «Chiquvchilar»ga tushadi, mijozga uni ariza menejeri yuboradi.",
+      "step3": "TT yuborilmaguncha mijozga hech narsa ketmaydi; amal qilish muddati va eslatma — yuborilgandan so'ng."
     },
     "other": {
       "title": "Qayta ishlashga qaytarish",
@@ -228,6 +231,7 @@
       "unavailable": "hujjatlar xizmati javob bermayapti, kiritilgan matn shaklda qoldi",
       "validation": "izohni tekshiring",
       "unknown": "nimadir xato ketdi, kiritilgan matn shaklda qoldi"
-    }
+    },
+    "submitNoChannels": "TTni tasdiqlash → Chiquvchilarga"
   }
 }

@@ -2,6 +2,7 @@ import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/re
 import { HttpResponse, http } from "msw";
 import { describe, expect, it } from "vitest";
 
+import { findQuote } from "../../../mocks/fixtures/approvals";
 import { server } from "../../../test/server";
 import { panelEl, renderAt, setupApprovalTests, signIn } from "../../../test/approvalsKit";
 
@@ -65,7 +66,7 @@ describe("Одобрение КП: форма", () => {
     expect(within(form).getByText("Недоступна: у контакта не указан e-mail.")).toBeVisible();
     expect(
       within(within(form).getByRole("group", { name: "Что произойдёт" })).getByText(
-        /Telegram-бот, Кабинет\./,
+        /\(Telegram-бот, Кабинет\)/,
       ),
     ).toBeVisible();
   });
@@ -213,5 +214,70 @@ describe("Одобрение КП: форма", () => {
     const lines = screen.getByRole("table", { name: "Состав КП" });
     expect(within(lines).getAllByRole("row")).toHaveLength(1 + 2);
     expect(screen.getByText("Итого с НДС")).toBeVisible();
+  });
+
+  it("«Что произойдёт» не обещает отправку: «Готово к отправке», клиенту отправит менеджер заявки", async () => {
+    const { form } = await openForm();
+    const consequence = within(form).getByRole("group", { name: "Что произойдёт" });
+
+    expect(consequence).toHaveTextContent("станет «Готово к отправке»");
+    expect(consequence).toHaveTextContent("его отправит менеджер заявки");
+    expect(consequence).not.toHaveTextContent("КП · Отправлено");
+  });
+
+  it("без каналов главная кнопка — «Одобрить КП → в Исходящие»", async () => {
+    const { form } = await openForm();
+    for (const name of ["Telegram-бот", "Кабинет", "Почта"]) {
+      fireEvent.click(within(form).getByRole("checkbox", { name }));
+    }
+
+    expect(within(form).getByRole("button", { name: "Одобрить КП → в Исходящие" })).toBeEnabled();
+    expect(within(form).getByRole("group", { name: "Что произойдёт" })).toHaveTextContent(
+      "Каналы не выбраны",
+    );
+  });
+
+  it("состав КП из ERP не получен: «Одобрить» неактивна с подписью, виден итог снимка", async () => {
+    const { form } = await openForm(118);
+    const approve = within(form).getByRole("button", { name: APPROVE });
+
+    expect(approve).toBeDisabled();
+    expect(approve).toHaveAccessibleDescription("Нет данных КП из ERP — обновите карточку.");
+    expect(await screen.findByText("Итог по снимку КП")).toBeVisible();
+    expect(screen.getByText(/Состав КП не получен из ERP/)).toBeVisible();
+    // вернуть на доработку можно и без данных ERP
+    fireEvent.change(within(form).getByLabelText("Комментарий"), {
+      target: { value: "Обновите расчёт" },
+    });
+    expect(within(form).getByRole("button", { name: "Вернуть на доработку" })).toBeEnabled();
+  });
+
+  it("итог ERP расходится со снимком EDS — предупреждение у итогов", async () => {
+    server.use(
+      http.get("*/eds/quotes/:ref", () =>
+        HttpResponse.json({
+          ...findQuote("КП-2026/115"),
+          totals_mismatch: true,
+          totals: { ...findQuote("КП-2026/115")?.totals, total: "126000000.00" },
+        }),
+      ),
+    );
+    signIn("director@demo.example");
+    renderAt(QUOTE(115));
+
+    expect(await screen.findByText(/расходится с итогом снимка КП/)).toBeVisible();
+  });
+
+  it("список адресует КП по id маршрута, а не по номеру", async () => {
+    signIn("director@demo.example");
+    const { router } = renderAt("/eds/drafts");
+    const link = await screen.findByRole("link", { name: "Открыть карточку КП КП-2026/115" });
+    expect(link).toHaveAttribute(
+      "href",
+      expect.stringContaining("40000000-0000-4000-8000-000000000115"),
+    );
+
+    fireEvent.click(screen.getByRole("link", { name: "Показать КП КП-2026/115 в боковом окне" }));
+    expect(router.state.location.search).toContain("quote=40000000-0000-4000-8000-000000000115");
   });
 });

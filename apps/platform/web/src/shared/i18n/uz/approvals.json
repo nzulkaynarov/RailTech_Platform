@@ -178,5 +178,20 @@
       "validation": "izohni tekshiring",
       "unknown": "nimadir xato ketdi, izoh shaklda qoldi"
     }
+  },
+  "accountant": {
+    "submit": "To'lovga qabul qilish",
+    "return": "Qaytarish",
+    "consequence": {
+      "step1": "Xizmat yozuvi to'lovga qabul qilinadi va «Hisoblar va to'lovlar»da «to'lovga» sifatida paydo bo'ladi.",
+      "step2": "Muallif izohingiz bilan xabar oladi.",
+      "step3": "Hujjat reyestrda vizangiz, sanangiz va izohingiz bilan qoladi."
+    },
+    "done": {
+      "approve": "Hujjat to'lovga qabul qilindi",
+      "return": "Hujjat qaytarildi",
+      "reject": "Hujjat rad etildi"
+    },
+    "hint": "Sizning bosqichingiz — buxgalter: hujjatni to'lovga qabul qiling yoki izoh bilan qaytaring."
   }
 }

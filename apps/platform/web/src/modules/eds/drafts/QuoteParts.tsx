@@ -15,7 +15,14 @@ export function QuoteLines({ quote }: { quote: QuoteApprovalCard }) {
   const money = (value: string) => (
     <MoneyText value={value} {...(currency && currency !== "UZS" ? { currency } : {})} />
   );
-  if (quote.lines === null) return <p className="pf-hint">{t("card.noLines")}</p>;
+  if (quote.lines === null) {
+    return (
+      <>
+        <p className="pf-hint">{t("card.noLines")}</p>
+        <SnapshotTotal quote={quote} />
+      </>
+    );
+  }
   if (quote.lines.length === 0) return <p className="pf-hint">{t("card.emptyLines")}</p>;
   return (
     <>
@@ -67,7 +74,48 @@ export function QuoteLines({ quote }: { quote: QuoteApprovalCard }) {
         </table>
       </ScrollRegion>
       {quote.totals ? <Totals quote={quote} /> : null}
+      <Mismatch quote={quote} />
     </>
+  );
+}
+
+/** Итог из снимка КП в EDS — когда строк и итогов ERP нет (ERP не ответил, нет доступа, другая редакция КП). */
+function SnapshotTotal({ quote }: { quote: QuoteApprovalCard }) {
+  const { t } = useTranslation("quotes");
+  const total = quote.snapshot_total;
+  if (!total) return null;
+  return (
+    <DefinitionList
+      items={[
+        {
+          label: t("card.snapshotTotal"),
+          value: (
+            <MoneyText
+              value={total.amount}
+              strong
+              {...(total.currency === "UZS" ? {} : { currency: total.currency })}
+            />
+          ),
+        },
+      ]}
+    />
+  );
+}
+
+/** Итог ERP расходится со снимком EDS: КП менялось после передачи на одобрение — предупреждение у итогов. */
+function Mismatch({ quote }: { quote: QuoteApprovalCard }) {
+  const { t } = useTranslation("quotes");
+  const format = useFormat();
+  if (!quote.totals_mismatch || !quote.totals || !quote.snapshot_total) return null;
+  const money = (value: string, currency: string) =>
+    format.money(value, currency === "UZS" ? {} : { currency });
+  return (
+    <p className="pf-dec-warn" role="note">
+      {t("card.mismatch", {
+        erp: money(quote.totals.total, quote.totals.currency),
+        snapshot: money(quote.snapshot_total.amount, quote.snapshot_total.currency),
+      })}
+    </p>
   );
 }
 

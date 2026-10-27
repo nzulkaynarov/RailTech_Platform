@@ -7,7 +7,7 @@ import type {
 } from "../../shared/api/generated/model";
 
 /**
- * Вымышленные КП на одобрение и документы на согласовании для MSW (D1-4, BFF 0.18.0): те же формы, что вернёт BFF по
+ * Вымышленные КП на одобрение и документы на согласовании для MSW (D1-4, BFF 0.22.0): те же формы, что вернёт BFF по
  * `platform-bff.yaml`. Названия компаний и имена выдуманы (репозиторий публичный). Состояние живёт в памяти страницы: решение
  * меняет маршрут, и следующий запрос списка и карточки его видит; `resetApprovals()` возвращает исходное (тесты).
  */
@@ -16,6 +16,7 @@ export const SUPPLY_PERSON = person(31, "Демо Снабженцев");
 export const ENGINEER_PERSON = person(41, "Демо Инженеров");
 export const MANAGER_PERSON = person(2, "Демо Менеджеров");
 export const DIRECTOR_PERSON = person(1, "Демо Директоров");
+export const ACCOUNTANT_PERSON = person(51, "Демо Бухгалтеров");
 /** Сотрудник сессии мока -> `crm_user_id` автора (менеджер мока пишет служебки от своего имени). */
 export const MOCK_USER_CRM_ID: Record<string, number> = {
   "u-demo-manager": 2,
@@ -66,6 +67,8 @@ interface QuoteSeed {
   marginAmount: string;
   /** Красные строки чек-листа */
   red?: ("visa_services" | "due")[];
+  /** ERP не ответил: строк и итогов нет, остаётся снимок EDS */
+  erpDown?: boolean;
   channels: { telegram: boolean; cabinet: boolean; email: boolean };
   lines: [string, number, string, string, number][];
 }
@@ -121,6 +124,21 @@ const QUOTE_SEEDS: readonly QuoteSeed[] = [
       ["Светофор постоянного света", 8, "шт", "6000000.00", 60],
       ["Монтаж устройств автоблокировки", 1, "усл", "32000000.00", 20],
     ],
+  },
+  {
+    n: 118,
+    client: "ООО «Демо-Кабель»",
+    request: 107,
+    title: "Кабель СБ",
+    total: "42000000.00",
+    subtotal: "37500000.00",
+    vat: "4500000.00",
+    cost: "33000000.00",
+    marginPct: "21.4",
+    marginAmount: "9000000.00",
+    erpDown: true,
+    channels: { telegram: true, cabinet: true, email: true },
+    lines: [["Кабель сигнально-блокировочный", 6000, "м", "6250.00", 25]],
   },
 ];
 
@@ -178,23 +196,29 @@ function quote(seed: QuoteSeed): QuoteApprovalCard {
         ? []
         : [{ name: ENGINEER_PERSON.full_name, zone: "services" as const }]),
     ],
-    lines: seed.lines.map(([name, quantity, unit, price, lead], index) => ({
-      position: index + 1,
-      name,
-      quantity,
-      unit,
-      unit_price: price,
-      amount: (Math.round(Number(price) * quantity * 100) / 100).toFixed(2),
-      lead_time_days: lead,
-      optional: false,
-    })),
-    totals: {
-      currency: "UZS",
-      subtotal: seed.subtotal,
-      vat_rate: "12",
-      vat_amount: seed.vat,
-      total: seed.total,
-    },
+    snapshot_total: { amount: seed.total, currency: "UZS" },
+    totals_mismatch: false,
+    lines: seed.erpDown
+      ? null
+      : seed.lines.map(([name, quantity, unit, price, lead], index) => ({
+          position: index + 1,
+          name,
+          quantity,
+          unit,
+          unit_price: price,
+          amount: (Math.round(Number(price) * quantity * 100) / 100).toFixed(2),
+          lead_time_days: lead,
+          optional: false,
+        })),
+    totals: seed.erpDown
+      ? null
+      : {
+          currency: "UZS",
+          subtotal: seed.subtotal,
+          vat_rate: "12",
+          vat_amount: seed.vat,
+          total: seed.total,
+        },
     internal: {
       cost: seed.cost,
       margin_amount: seed.marginAmount,
@@ -207,7 +231,7 @@ function quote(seed: QuoteSeed): QuoteApprovalCard {
     checklist,
     steps: [step("Директор", "current")],
     channels: { contact_name: "Алия Демо", ...seed.channels },
-    sources: { crm: "ok", erp: "ok" },
+    sources: { crm: "ok", erp: seed.erpDown ? "unavailable" : "ok" },
   };
 }
 
@@ -251,6 +275,8 @@ interface MemoSeed {
   amount?: string;
   due?: string;
   file?: boolean;
+  /** Директор уже согласовал, документ ждёт бухгалтера */
+  atAccountant?: boolean;
 }
 
 const MEMO_SEEDS: readonly MemoSeed[] = [
@@ -281,6 +307,17 @@ const MEMO_SEEDS: readonly MemoSeed[] = [
     text: "Остатки на 28 октября сверены с учётом. Расхождений нет, неликвид — 3 позиции.",
     author: SUPPLY_PERSON,
   },
+  {
+    n: 15,
+    kind: "memo",
+    prefix: "СЗ",
+    subject: "Оплата командировочных расходов",
+    text: "Прошу оплатить командировочные расходы по приложенному авансовому отчёту.",
+    author: SUPPLY_PERSON,
+    amount: "4200000.00",
+    due: "2026-11-03",
+    atAccountant: true,
+  },
 ];
 
 function memo(seed: MemoSeed): MemoApprovalCard {
@@ -293,7 +330,7 @@ function memo(seed: MemoSeed): MemoApprovalCard {
     kind: seed.kind,
     subject: seed.subject,
     text: seed.text,
-    document_status: "on_approval",
+    document_status: seed.atAccountant ? "to_accountant" : "on_approval",
     status: "open",
     round: 1,
     author: seed.author,
@@ -311,9 +348,18 @@ function memo(seed: MemoSeed): MemoApprovalCard {
         ]
       : [],
     deal: null,
-    steps: seed.amount
-      ? [step("Директор", "current"), step("Бухгалтер", "pending")]
-      : [step("Директор", "current")],
+    accountant_step: seed.atAccountant ?? false,
+    steps: seed.atAccountant
+      ? [
+          step("Директор", "approved", {
+            decided_by: DIRECTOR_PERSON,
+            decided_at: "2026-10-27T12:00:00Z",
+          }),
+          step("Бухгалтер", "current"),
+        ]
+      : seed.amount
+        ? [step("Директор", "current"), step("Бухгалтер", "pending")]
+        : [step("Директор", "current")],
     decisions: [],
     can_decide: true,
     allowed_decisions: ["approve", "return", "reject"],

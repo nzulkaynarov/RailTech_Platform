@@ -3,7 +3,6 @@ import { Button, Card, Segmented, Skeleton } from "antd";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useSearchParams } from "react-router";
 
-import { canEdit } from "../../../app/access";
 import { useAuth } from "../../../app/auth/useAuth";
 import { useViewport } from "../../../app/shell/useViewport";
 import { ApiError } from "../../../shared/api/errors";
@@ -25,6 +24,7 @@ import { withParams } from "../inbox/api";
 import { AgreeSlot } from "./AgreePanel";
 import { memoPath } from "./api";
 import { useStateLabels } from "./labels";
+import { mayDecideMemos } from "./model";
 
 const PAGE = 25;
 
@@ -34,7 +34,7 @@ function useSelect() {
   // Строка открывает документ в боковом окне без перехода; на телефоне — лист на весь экран.
   return (row: MemoApprovalRow) =>
     withParams(params, {
-      memo: row.number ?? row.id,
+      memo: row.id,
       tab: "agree",
       panel: mobile ? null : "open",
       sheet: mobile ? "agree" : null,
@@ -72,7 +72,7 @@ function Rows({ items, selected }: { items: readonly MemoApprovalRow[]; selected
   const select = useSelect();
   const navigate = useNavigate();
   const label = (row: MemoApprovalRow) => row.number ?? t(`kinds.${row.kind}`);
-  const isSelected = (row: MemoApprovalRow) => selected === (row.number ?? row.id);
+  const isSelected = (row: MemoApprovalRow) => selected === row.id;
 
   if (mobile) {
     return (
@@ -191,7 +191,7 @@ function Rows({ items, selected }: { items: readonly MemoApprovalRow[]; selected
 export function MemoList() {
   const { t } = useTranslation(["approvals", "modules"]);
   const { me } = useAuth();
-  const mayDecide = canEdit(me, "eds.memo.approve");
+  const mayDecide = mayDecideMemos(me);
   const [params, setParams] = useSearchParams();
   const labels = useStateLabels();
   const scope = scopeOf(params.get("scope"), mayDecide ? "mine" : "all");

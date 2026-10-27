@@ -51,7 +51,11 @@ export function AgreeForm({ memo, variant = "panel", onDone }: AgreeFormProps) {
       onSuccess: (_card, variables) => {
         clearComment(me.id, memo.approval_id);
         void refresh();
-        void message.success(t(`form.done.${variables.data.decision}`));
+        void message.success(
+          memo.accountant_step
+            ? t(`accountant.done.${variables.data.decision}`)
+            : t(`form.done.${variables.data.decision}`),
+        );
         onDone?.();
       },
       onError: (error, variables) => {
@@ -110,11 +114,21 @@ export function AgreeForm({ memo, variant = "panel", onDone }: AgreeFormProps) {
 
       <Consequence
         title={t("form.consequence.title")}
-        items={[
-          t("form.consequence.step1"),
-          next ? t("form.consequence.step2Next", { label: next }) : t("form.consequence.step2"),
-          t("form.consequence.step3"),
-        ]}
+        items={
+          memo.accountant_step
+            ? [
+                t("accountant.consequence.step1"),
+                t("accountant.consequence.step2"),
+                t("accountant.consequence.step3"),
+              ]
+            : [
+                t("form.consequence.step1"),
+                next
+                  ? t("form.consequence.step2Next", { label: next })
+                  : t("form.consequence.step2"),
+                t("form.consequence.step3"),
+              ]
+        }
       />
 
       <ErrorNote message={failure ? failureText(failure.action, failure.error) : null} />
@@ -127,7 +141,7 @@ export function AgreeForm({ memo, variant = "panel", onDone }: AgreeFormProps) {
           loading={busy && pendingAction === "approve"}
           disabled={!may("approve") || busy}
         >
-          {t("form.submit")}
+          {memo.accountant_step ? t("accountant.submit") : t("form.submit")}
         </Button>
         <div className="pf-dec-secondary">
           <Button
@@ -139,7 +153,7 @@ export function AgreeForm({ memo, variant = "panel", onDone }: AgreeFormProps) {
               send("return");
             }}
           >
-            {t("form.return")}
+            {memo.accountant_step ? t("accountant.return") : t("form.return")}
           </Button>
           <Button
             block

@@ -1,4 +1,4 @@
-"""EDS · КП на одобрение и документы на согласовании (контракт: tag `eds-approvals`, 0.18.0; D1-4).
+"""EDS · КП на одобрение и документы на согласовании (контракт: tag `eds-approvals`, 0.22.0; D1-4).
 
 BFF не решает: маршрут, шаги, чек-лист КП (визы и маржа блокируют, срок — предупреждение, C1-G-1)
 и право решать шаг проверяет EDS. Здесь — доступ к разделам каталога (КП — `eds.drafts`: чтение
@@ -44,7 +44,11 @@ QuoteDecider = Annotated[Authed, Depends(require("eds.drafts", "full"))]
 MemoReader = Annotated[
     Authed, Depends(require_any(("eds.memo.approve", "read"), ("eds.memo.create", "read")))
 ]
-MemoDecider = Annotated[Authed, Depends(require("eds.memo.approve", "full"))]
+# Решает директор (`eds.memo.approve`) или бухгалтер на своём шаге (`eds.payments` — полный);
+# чей шаг, знает EDS.
+MemoDecider = Annotated[
+    Authed, Depends(require_any(("eds.memo.approve", "full"), ("eds.payments", "full")))
+]
 ApprovalId = Annotated[UUID, Path()]
 Scope = Literal["mine", "all"]
 Status = Annotated[list[RouteStatus] | None, Query(max_length=4)]

@@ -2,7 +2,6 @@ import { Button, Card, Skeleton } from "antd";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router";
 
-import { canEdit } from "../../../app/access";
 import { useAuth } from "../../../app/auth/useAuth";
 import { useViewport } from "../../../app/shell/useViewport";
 import { ApiError } from "../../../shared/api/errors";
@@ -27,6 +26,7 @@ import { formatFileSize } from "../documents/fileSize";
 import { AgreeSlot } from "./AgreePanel";
 import { memoRef } from "./api";
 import { useStateLabels } from "./labels";
+import { mayDecideMemos } from "./model";
 
 function stepState(status: EdsRouteStep["status"]): HistoryItem["state"] {
   if (status === "current") return "waiting";
@@ -109,7 +109,7 @@ function Content({ memo, refKey }: { memo: MemoApprovalCard; refKey: string }) {
   const { date } = useFormat();
   const { wide, mobile } = useViewport();
   const [, setParams] = useSearchParams();
-  const mayDecide = canEdit(me, "eds.memo.approve");
+  const mayDecide = mayDecideMemos(me);
   const waiting = memo.status === "open" && memo.can_decide && mayDecide;
   const number = memo.number ?? t(`kinds.${memo.kind}`);
 

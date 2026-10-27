@@ -54,7 +54,9 @@ export function ApprovalForm({ quote, variant = "panel", onDone }: ApprovalFormP
   const comment = state.comment.trim();
   const blockers = redBlockers(quote.checklist);
   const late = lateWarning(quote.checklist);
-  const canApprove = quote.allowed_decisions.includes("approve");
+  // Состав КП не получен из ERP: директор не видит, что одобряет, — «Одобрить» неактивна, пока карточка не обновлена.
+  const noData = quote.lines === null;
+  const canApprove = quote.allowed_decisions.includes("approve") && !noData;
   const canReturn = quote.allowed_decisions.includes("return");
 
   const decide = useDecideQuoteApproval({
@@ -107,9 +109,11 @@ export function ApprovalForm({ quote, variant = "panel", onDone }: ApprovalFormP
       ? t("form.blocked.checklist", {
           items: blockers.map((code) => t(`form.blockedItem.${code}`)).join(", "),
         })
-      : !canApprove
-        ? t("form.blocked.generic")
-        : null;
+      : noData
+        ? t("form.blocked.noData")
+        : !canApprove
+          ? t("form.blocked.generic")
+          : null;
 
   const channelNames = chosen.map((c) => t(`form.channels.${c}.name`)).join(", ");
   const consequence = [
@@ -214,7 +218,7 @@ export function ApprovalForm({ quote, variant = "panel", onDone }: ApprovalFormP
           disabled={!canApprove || decide.isPending}
           aria-describedby={blockedText ? id("blocked") : undefined}
         >
-          {t("form.submit")}
+          {chosen.length > 0 ? t("form.submit") : t("form.submitNoChannels")}
         </Button>
         {blockedText ? (
           <p className="pf-hint" id={id("blocked")}>

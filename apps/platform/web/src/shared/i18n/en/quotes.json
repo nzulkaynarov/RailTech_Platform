@@ -71,7 +71,7 @@
     "approve": "Approve quote",
     "lines": "Quote lines",
     "linesScroll": "Table of quote lines",
-    "noLines": "The quote lines were not received from ERP. The total and the decision are available; lines will appear after a refresh.",
+    "noLines": "The quote lines were not received from ERP: no data, no access, or ERP already has another revision of the quote. The snapshot total is shown.",
     "emptyLines": "The quote has no lines.",
     "optional": "optional",
     "days": "{{count}} d.",
@@ -121,7 +121,9 @@
     "zones": {
       "goods": "goods",
       "services": "services"
-    }
+    },
+    "snapshotTotal": "Total from the quote snapshot",
+    "mismatch": "The total in ERP ({{erp}}) differs from the snapshot total ({{snapshot}}): the quote changed after it was sent for approval. Refresh the card or ask the estimator."
   },
   "panel": {
     "sheetTitle": "Approval {{number}}",
@@ -141,7 +143,7 @@
     "decided": {
       "approved": {
         "title": "Quote approved",
-        "text": "The decision is made and the outgoing number is assigned. ERP sends it to the client through the chosen channels."
+        "text": "The decision is made, the outgoing number is assigned, the quote is \"Ready to send\". The request manager will send it to the client."
       },
       "returned": {
         "title": "Quote returned for rework",
@@ -173,11 +175,12 @@
     },
     "blocked": {
       "checklist": "Cannot approve: {{items}}.",
-      "generic": "Approval is not available right now."
+      "generic": "Approval is not available right now.",
+      "noData": "No quote data from ERP — refresh the card."
     },
     "channels": {
       "legend": "Send to the client via",
-      "hint": "Choose where the PDF without internal fields goes.",
+      "hint": "Choose channels for the PDF without internal fields; the request manager sends it.",
       "contact": "Client contact: {{name}}.",
       "unknown": "The client contact was not received from ERP: channel availability will be checked on sending.",
       "telegram": {
@@ -197,10 +200,10 @@
     },
     "consequence": {
       "title": "What will happen",
-      "step1": "The quote gets an outgoing number.",
-      "step2": "The client gets a PDF without cost and margin: {{channels}}.",
-      "step2None": "No channels chosen: the quote is approved and the request manager sends it to the client.",
-      "step3": "The request moves to \"Quote · Sent\"; we will remind the client of the validity period."
+      "step1": "The quote gets an outgoing number and becomes \"Ready to send\".",
+      "step2": "The request manager will send it to the client through the chosen channels ({{channels}}). The client gets a PDF without cost and margin.",
+      "step2None": "No channels chosen: the quote goes to \"Outgoing\" and the request manager sends it to the client.",
+      "step3": "Nothing goes to the client until the quote is sent; the validity period and the reminder start after sending."
     },
     "other": {
       "title": "Return for rework",
@@ -228,6 +231,7 @@
       "unavailable": "the documents service is not responding, what you typed stays in the form",
       "validation": "check the comment",
       "unknown": "something went wrong, what you typed stays in the form"
-    }
+    },
+    "submitNoChannels": "Approve quote → to Outgoing"
   }
 }

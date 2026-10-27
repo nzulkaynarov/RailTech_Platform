@@ -5,9 +5,12 @@ export function quoteRef(idOrNumber: string): string {
   return UUID.test(idOrNumber) ? idOrNumber.toLowerCase() : encodeURIComponent(idOrNumber);
 }
 
-/** Путь карточки КП в SPA: бизнес-номер, а не внутренний id (SPEC-v3 §2.2). */
-export function quotePath(number: string): string {
-  return `/eds/drafts/${encodeURIComponent(number)}`;
+/**
+ * Путь карточки КП в SPA из строки списка и окна: по id маршрута — он однозначен (у номера несколько версий). Адрес по номеру
+ * `КП-2026/115` тоже открывает карточку (ссылки из писем и очереди).
+ */
+export function quotePath(ref: string): string {
+  return `/eds/drafts/${encodeURIComponent(ref)}`;
 }
 
 export type Scope = "mine" | "all";

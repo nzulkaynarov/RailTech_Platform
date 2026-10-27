@@ -118,6 +118,47 @@ describe("Согласование: форма", () => {
   });
 });
 
+describe("Согласование: шаг бухгалтера", () => {
+  it("бухгалтер на своём шаге: «Принять к оплате» и «Вернуть», без текстов директора", async () => {
+    const { form } = await openForm("СЗ-2026/015", "accountant@demo.example");
+
+    expect(within(form).getByRole("button", { name: "Принять к оплате" })).toBeEnabled();
+    expect(within(form).getByRole("button", { name: "Вернуть" })).toBeDisabled();
+    expect(within(form).queryByRole("button", { name: "Согласовать" })).toBeNull();
+    expect(within(form).getByRole("group", { name: "Что произойдёт" })).toHaveTextContent(
+      "появится в «Счета и оплаты»",
+    );
+  });
+
+  it("«Принять к оплате» решает шаг и закрывает маршрут", async () => {
+    const { form, panel } = await openForm("СЗ-2026/015", "accountant@demo.example");
+
+    fireEvent.click(within(form).getByRole("button", { name: "Принять к оплате" }));
+
+    expect((await screen.findAllByText("Документ принят к оплате")).length).toBeGreaterThan(0);
+    expect(
+      await within(panel).findByRole("heading", { name: "Документ согласован" }),
+    ).toBeVisible();
+  });
+
+  it("бухгалтер до своей очереди: формы нет, шаг у директора", async () => {
+    signIn("accountant@demo.example");
+    renderAt(MEMO("СЗ-2026/014"));
+    const panel = await panelEl();
+
+    expect(
+      await within(panel).findByRole("heading", { name: "Документ на согласовании" }),
+    ).toBeVisible();
+    expect(within(panel).queryByRole("form")).toBeNull();
+  });
+
+  it("директор держит и право шага бухгалтера (`eds.payments`): на этом шаге у него тоже «Принять к оплате»", async () => {
+    const { form } = await openForm("СЗ-2026/015");
+
+    expect(within(form).getByRole("button", { name: "Принять к оплате" })).toBeEnabled();
+  });
+});
+
 describe("шаги маршрута", () => {
   const step = (label: string, status: MemoApprovalCard["steps"][number]["status"]) => ({
     label,

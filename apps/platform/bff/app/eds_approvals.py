@@ -1,4 +1,4 @@
-"""Сборка экранов «КП на одобрение» и «На согласовании» (контракт BFF 0.18.0, тег `eds-approvals`).
+"""Сборка экранов «КП на одобрение» и «На согласовании» (контракт BFF 0.22.0, тег `eds-approvals`).
 
 BFF не решает: маршрут, шаги, чек-лист КП и `allowed_decisions` приходят из EDS; здесь — вызовы с
 токеном доступа EDS, состав КП и контакт клиента из ERP (частичный ответ `sources`), вырезание
@@ -188,7 +188,7 @@ async def quote_page(
                 total=money(snap.total, snap.currency) if snap else None,
                 due=snap.due if snap else None,
                 status=item.status,
-                can_decide=full.can_decide if full else mine and item.status == "open",
+                can_decide=full.can_decide if full else False,
                 outgoing_number=full.outgoing_number if full else None,
                 created_at=item.created_at,
             )
@@ -211,9 +211,16 @@ async def memo_page(
             "document",
         )
 
+    async def detail(item: RawListItem) -> RawApproval:
+        return parse(
+            RawApproval, await proxy.request("GET", f"{API}/approvals/{item.id}"), "approval"
+        )
+
     docs = await _gather(items, document)
+    # `can_decide` — слово EDS по маршруту (`GET /approvals/{id}`), BFF его не вычисляет.
+    routes = await _gather(items, detail)
     rows: list[MemoApprovalRow] = []
-    for item, doc in zip(items, docs, strict=True):
+    for item, doc, route in zip(items, docs, routes, strict=True):
         kind: Any = item.template
         rows.append(
             MemoApprovalRow(
@@ -229,7 +236,7 @@ async def memo_page(
                 due_date=doc.due_date if doc else None,
                 status=item.status,
                 step_label=item.current_step.label if item.current_step else None,
-                can_decide=mine and item.status == "open",
+                can_decide=route.can_decide if route else False,
                 created_at=item.created_at,
             )
         )
@@ -388,6 +395,11 @@ async def quote_card(authed: Authed, proxy: EdsProxy, body: Any) -> QuoteApprova
         _letter(proxy, raw.object.deal_number),
     )
     erp_quote = erp_quote if isinstance(erp_quote, dict) else None
+    version = raw.object.quote_version
+    erp_version = erp_quote.get("version") if erp_quote else None
+    if erp_quote and isinstance(erp_version, int) and version and erp_version != version:
+        # У ERP уже другая редакция КП: строки закрытого круга не показываем — только снимок EDS.
+        erp_quote = None
     deal = deal if isinstance(deal, dict) else None
     contact: dict[str, Any] | None = None
     contact_id = deal.get("client") if deal else None
@@ -431,6 +443,13 @@ async def quote_card(authed: Authed, proxy: EdsProxy, body: Any) -> QuoteApprova
         )
     extra: dict[str, Any] = {"internal": internal} if internal is not None else {}
     totals = _totals(erp_quote) if erp_quote else None
+    snapshot_total = money(snap.total, snap.currency) if snap else None
+    mismatch = False
+    if totals is not None and snapshot_total is not None:
+        erp_total = _dec(totals.total)
+        mismatch = totals.currency != snapshot_total.currency or erp_total != _dec(
+            snapshot_total.amount
+        )
     client_name = (snap.client_name if snap else None) or (
         _text(deal.get("company_name")) if deal else None
     )
@@ -456,6 +475,8 @@ async def quote_card(authed: Authed, proxy: EdsProxy, body: Any) -> QuoteApprova
             for c in checklist
             if c.code in ("visa_goods", "visa_services") and c.by_name
         ],
+        snapshot_total=snapshot_total,
+        totals_mismatch=mismatch,
         lines=_lines(erp_quote) if erp_quote else None,
         totals=totals,
         checklist=checklist,
@@ -507,6 +528,12 @@ async def memo_card(
         if doc.erp_deal_id is not None
         else None,
         steps=[route_step(s) for s in approval.steps],
+        accountant_step=any(
+            s.status == "current"
+            and s.assignee is not None
+            and s.assignee.permission == "payments.confirm"
+            for s in approval.steps
+        ),
         decisions=[
             EdsDecision(
                 round=d.round,

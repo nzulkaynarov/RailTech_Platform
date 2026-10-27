@@ -2,6 +2,7 @@ import { HttpResponse, http } from "msw";
 
 import type {
   ApprovalDecision,
+  EdsPerson,
   ApprovalRouteStatus,
   EdsRouteStep,
   MemoApprovalCard,
@@ -14,6 +15,7 @@ import type {
   QuoteDecisionIn,
 } from "../shared/api/generated/model";
 import {
+  ACCOUNTANT_PERSON,
   DIRECTOR_PERSON,
   MOCK_USER_CRM_ID,
   findMemo,
@@ -26,7 +28,7 @@ import {
 import { buildMe, readSession } from "./mockSession";
 
 /**
- * Моки EDS · КП на одобрение и документы на согласовании (D1-4, BFF 0.18.0). Права — как в BFF: КП — `eds.drafts` (чтение —
+ * Моки EDS · КП на одобрение и документы на согласовании (D1-4, BFF 0.22.0). Права — как в BFF: КП — `eds.drafts` (чтение —
  * список и карточка, полный — решение), документы — `eds.memo.approve` (полный — решение) и чтение у `eds.memo.create`
  * (автор видит свои). Себестоимость и маржа без группы `cost_margin` не отдаются. Ошибки EDS — те же коды и подкоды
  * (`checklist_not_green`, `route_closed`), чтобы экран и e2e видели настоящее поведение.
@@ -77,7 +79,20 @@ function guard(resources: readonly string[], need: Level) {
 
 const QUOTES = ["eds.drafts"] as const;
 const MEMO_READ = ["eds.memo.approve", "eds.memo.create"] as const;
-const MEMO_DECIDE = ["eds.memo.approve"] as const;
+// Решает директор (`eds.memo.approve`) или бухгалтер на своём шаге (`eds.payments` — полный).
+const MEMO_DECIDE = ["eds.memo.approve", "eds.payments"] as const;
+
+function mayDecideAny(levels: Held): boolean {
+  return levels["eds.memo.approve"] === "full" || levels["eds.payments"] === "full";
+}
+
+/** Чей сейчас шаг, знает EDS: шаг «Бухгалтер» решают держатели `eds.payments`, остальные — `eds.memo.approve`. */
+function canDecideMemo(card: MemoApprovalCard, levels: Held): boolean {
+  const current = card.steps.find((s) => s.status === "current");
+  if (card.status !== "open" || !current) return false;
+  const resource = current.label === "Бухгалтер" ? "eds.payments" : "eds.memo.approve";
+  return levels[resource] === "full";
+}
 
 function refOf(request: Request, prefix: string): string {
   const path = new URL(request.url).pathname;
@@ -114,6 +129,10 @@ function presentQuote(
     ...card,
     can_decide: card.can_decide && mayDecide,
     allowed_decisions: mayDecide ? card.allowed_decisions : [],
+    // ERP отказывает роли без доступа к КП (403): состав и итоги не приходят, снимка EDS у неё нет
+    ...(mayDecide
+      ? {}
+      : { lines: null, totals: null, snapshot_total: null, totals_mismatch: false }),
     checklist: card.checklist.map((c) => {
       if (c.code !== "margin" || margin) return c;
       return { code: c.code, ok: c.ok, blocking: c.blocking, by_name: c.by_name, at: c.at };
@@ -174,6 +193,7 @@ function decideSteps(
   steps: readonly EdsRouteStep[],
   decision: ApprovalDecision,
   comment: string | null | undefined,
+  actor: EdsPerson = DIRECTOR_PERSON,
 ): EdsRouteStep[] {
   const now = new Date().toISOString();
   return steps.map((s, index) => {
@@ -181,7 +201,7 @@ function decideSteps(
       return {
         ...s,
         status: STEP_OF[decision],
-        decided_by: DIRECTOR_PERSON,
+        decided_by: actor,
         decided_at: now,
         comment: comment ?? null,
       };
@@ -263,13 +283,11 @@ export const edsApprovalsHandlers = [
     if (ok.error) return ok.error;
     const url = new URL(request.url);
     const mine = (url.searchParams.get("scope") ?? "mine") === "mine";
-    const mayDecide = ok.who.levels["eds.memo.approve"] === "full";
+    const mayDecide = mayDecideAny(ok.who.levels);
     const statuses = wantedStatuses(url);
     const found = readMemos()
       .filter((m) =>
-        mine
-          ? mayDecide && m.status === "open" && m.can_decide
-          : mayDecide || m.author.crm_user_id === ok.who.crmId,
+        mine ? canDecideMemo(m, ok.who.levels) : mayDecide || m.author.crm_user_id === ok.who.crmId,
       )
       .filter((m) => statuses.length === 0 || statuses.includes(m.status))
       .map((m): MemoApprovalRow => {
@@ -285,7 +303,7 @@ export const edsApprovalsHandlers = [
           due_date: m.due_date,
           status: m.status,
           step_label: current?.label ?? null,
-          can_decide: m.can_decide && mayDecide,
+          can_decide: canDecideMemo(m, ok.who.levels),
           created_at: m.created_at,
         };
       });
@@ -299,11 +317,11 @@ export const edsApprovalsHandlers = [
     const card = findMemo(refOf(request, "/eds/memo-approvals/"));
     if (!card)
       return failure(404, "NOT_FOUND", "Документ не найден.", "eds", { backend_status: 404 });
-    const mayDecide = ok.who.levels["eds.memo.approve"] === "full";
+    const can = canDecideMemo(card, ok.who.levels);
     const view: MemoApprovalCard = {
       ...card,
-      can_decide: card.can_decide && mayDecide,
-      allowed_decisions: mayDecide ? card.allowed_decisions : [],
+      can_decide: can,
+      allowed_decisions: can ? ["approve", "return", "reject"] : [],
     };
     return HttpResponse.json(view);
   }),
@@ -320,29 +338,42 @@ export const edsApprovalsHandlers = [
       });
     }
     if (card.status !== "open") return closedConflict();
+    // Чей шаг, решает EDS: директор — шаг «Директор», бухгалтер — шаг «Бухгалтер»
+    if (!canDecideMemo(card, ok.who.levels)) {
+      return failure(403, "FORBIDDEN", "Сейчас не ваш шаг.", "eds", {
+        backend_status: 403,
+        reason: "not_your_step",
+      });
+    }
+    const accountant = card.accountant_step;
+    const actor = accountant ? ACCOUNTANT_PERSON : DIRECTOR_PERSON;
     const goesOn = body.decision === "approve" && card.steps.some((s) => s.status === "pending");
+    const steps = decideSteps(card.steps, body.decision, body.comment, actor);
     const next: MemoApprovalCard = {
       ...card,
       // Служебка с суммой после директора идёт бухгалтеру — маршрут остаётся открытым
       status: goesOn ? "open" : STATUS_OF[body.decision],
       document_status: goesOn
         ? "to_accountant"
-        : body.decision === "approve"
-          ? "approved"
-          : body.decision === "return"
-            ? "returned"
-            : "rejected",
+        : accountant && body.decision === "approve"
+          ? "to_accountant"
+          : body.decision === "approve"
+            ? "approved"
+            : body.decision === "return"
+              ? "returned"
+              : "rejected",
       can_decide: false,
       allowed_decisions: [],
-      steps: decideSteps(card.steps, body.decision, body.comment),
+      accountant_step: goesOn,
+      steps,
       decisions: [
         ...card.decisions,
         {
           round: card.round,
-          step: 1,
+          step: steps.findIndex((s) => s.decided_at !== null && s.status !== "skipped") + 1 || 1,
           decision: body.decision,
           comment: body.comment ?? null,
-          by: DIRECTOR_PERSON,
+          by: actor,
           at: new Date().toISOString(),
         },
       ],

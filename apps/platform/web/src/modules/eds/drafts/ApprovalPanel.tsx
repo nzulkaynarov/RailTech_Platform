@@ -46,7 +46,7 @@ function Brief({ quote }: { quote: QuoteApprovalCard }) {
           { label: t("panel.brief.due"), value: quote.due ? date(quote.due) : null },
         ]}
       />
-      <Link className="pf-focusable pf-dec-open" to={quotePath(quote.number)}>
+      <Link className="pf-focusable pf-dec-open" to={quotePath(quote.id)}>
         {t("panel.briefOpen")}
       </Link>
     </section>

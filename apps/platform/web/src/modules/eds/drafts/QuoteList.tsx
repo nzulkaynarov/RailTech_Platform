@@ -31,9 +31,9 @@ function useSelect() {
   const [params] = useSearchParams();
   const { mobile } = useViewport();
   // Строка открывает КП в боковом окне без перехода; на телефоне — лист на весь экран.
-  return (number: string) =>
+  return (id: string) =>
     withParams(params, {
-      quote: number,
+      quote: id,
       tab: "approve",
       panel: mobile ? null : "open",
       sheet: mobile ? "approve" : null,
@@ -67,11 +67,11 @@ function Rows({
     return (
       <ul className="pf-dec-cards" aria-label={t("list.caption")}>
         {items.map((row) => (
-          <li key={row.id} data-selected={selected === row.number}>
+          <li key={row.id} data-selected={selected === row.id}>
             <div className="pf-dec-card-head">
               <Link
                 className="pf-focusable pf-dec-number"
-                to={select(row.number)}
+                to={select(row.id)}
                 aria-label={t("list.select", { number: row.number })}
               >
                 {row.number}
@@ -92,7 +92,7 @@ function Rows({
               <span className="pf-hint">{date(row.created_at, "datetime")}</span>
               <LinkButton
                 size="small"
-                to={quotePath(row.number)}
+                to={quotePath(row.id)}
                 aria-label={t("list.openLabel", { number: row.number })}
               >
                 {t("list.open")}
@@ -128,20 +128,20 @@ function Rows({
             <tr
               key={row.id}
               data-row
-              data-selected={selected === row.number}
+              data-selected={selected === row.id}
               onClick={(event) => {
                 // Клик по строке — КП в боковом окне; ссылки и кнопки внутри работают сами.
                 if ((event.target as HTMLElement).closest("a,button")) return;
-                void navigate(select(row.number), { replace: true });
+                void navigate(select(row.id), { replace: true });
               }}
             >
               <td className="pf-num">
                 <Link
                   className="pf-focusable pf-dec-number"
-                  to={select(row.number)}
+                  to={select(row.id)}
                   replace
                   aria-label={t("list.select", { number: row.number })}
-                  aria-current={selected === row.number ? "true" : undefined}
+                  aria-current={selected === row.id ? "true" : undefined}
                 >
                   {row.number}
                 </Link>
@@ -160,7 +160,7 @@ function Rows({
               <td>
                 <LinkButton
                   size="small"
-                  to={quotePath(row.number)}
+                  to={quotePath(row.id)}
                   aria-label={t("list.openLabel", { number: row.number })}
                 >
                   {t("list.open")}

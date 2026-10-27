@@ -178,5 +178,20 @@
       "validation": "check the comment",
       "unknown": "something went wrong, the comment stays in the form"
     }
+  },
+  "accountant": {
+    "submit": "Accept for payment",
+    "return": "Return",
+    "consequence": {
+      "step1": "The memo is accepted for payment and appears in \"Invoices and payments\" as \"to pay\".",
+      "step2": "The author gets a notification with your comment.",
+      "step3": "The document stays in the registry with your visa, date and comment."
+    },
+    "done": {
+      "approve": "Document accepted for payment",
+      "return": "Document returned",
+      "reject": "Document rejected"
+    },
+    "hint": "It is the accountant's step: accept the document for payment or return it with a comment."
   }
 }

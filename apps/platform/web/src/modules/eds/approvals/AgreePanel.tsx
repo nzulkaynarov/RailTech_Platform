@@ -2,7 +2,6 @@ import { type ReactNode, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
-import { canEdit } from "../../../app/access";
 import { useAuth } from "../../../app/auth/useAuth";
 import type { MemoApprovalCard } from "../../../shared/api/generated/model";
 import { useGetMemoApproval } from "../../../shared/api/generated/platform-bff";
@@ -16,6 +15,7 @@ import { DocumentStatusTag } from "../documents/status";
 import { AgreeForm } from "./AgreeForm";
 import { memoPath, memoRef } from "./api";
 import { clearComment } from "./draft";
+import { mayDecideMemos } from "./model";
 import { useStateLabels } from "./labels";
 
 function Brief({ memo }: { memo: MemoApprovalCard }) {
@@ -66,7 +66,7 @@ function PanelBody({
 }) {
   const { t } = useTranslation("approvals");
   const { me } = useAuth();
-  const mayDecide = canEdit(me, "eds.memo.approve");
+  const mayDecide = mayDecideMemos(me);
   // Документ уже решён (в том числе другим): черновик комментария ему не нужен.
   useEffect(() => {
     if (memo.status !== "open") clearComment(me.id, memo.approval_id);
