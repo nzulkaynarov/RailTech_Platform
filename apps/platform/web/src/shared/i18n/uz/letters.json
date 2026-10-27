@@ -1,0 +1,240 @@
+{
+  "list": {
+    "subtitle": "Direktor qaror qabul qiladigan mijoz xatlari",
+    "caption": "Kiruvchi xatlar",
+    "filter": {
+      "label": "Xat holati",
+      "all": "Hammasi"
+    },
+    "columns": {
+      "number": "Raqami",
+      "subject": "Mavzu",
+      "client": "Mijoz",
+      "request": "Ariza",
+      "received": "Qabul qilingan",
+      "status": "Holati",
+      "action": "Amal"
+    },
+    "select": "{{number}} xatni yon oynada ko'rsatish",
+    "open": "Ochish",
+    "openLabel": "{{number}} xat kartochkasini ochish",
+    "more": "Yana ko'rsatish",
+    "urgent": "Shoshilinch",
+    "scroll": "Xatlar jadvali, gorizontal aylantiriladi",
+    "empty": {
+      "awaiting": {
+        "title": "Sizdan hozircha qaror talab qilinmaydi",
+        "text": "Yangi xatlar ariza yaratilgach CRMdan keladi. Qarori qabul qilingan xatlar «Hammasi» filtrida.",
+        "action": "Barcha xatlarni ko'rsatish"
+      },
+      "other": {
+        "title": "Bunday holatdagi xatlar yo'q",
+        "text": "Boshqa holatni tanlang yoki barcha xatlarni oching.",
+        "action": "Barcha xatlarni ko'rsatish"
+      },
+      "all": {
+        "title": "Kiruvchi xatlar hozircha yo'q",
+        "text": "Mijoz xatlari ariza yaratilgach CRMdan keladi. Direktor bu yerda rezolyutsiya qo'yadi.",
+        "action": "Yangilash"
+      }
+    }
+  },
+  "state": {
+    "loadError": {
+      "title": "Xatlar yuklanmadi",
+      "text": "Yana urinib ko'ring. Yordam bermasa, administratorga yozing."
+    },
+    "unavailable": {
+      "title": "Hujjat aylanishi javob bermayapti",
+      "text": "Xizmat vaqtincha mavjud emas. Xatlar yo'qolmagan, bir daqiqadan keyin takrorlang."
+    },
+    "forbidden": {
+      "title": "Kiruvchi xatlar sizga ochiq emas",
+      "text": "Bo'lim kiruvchi xatlar bilan ishlaydigan rollar uchun. Ruxsat kerak bo'lsa, administratorga yozing."
+    },
+    "notGranted": {
+      "title": "Hujjat aylanishiga ruxsat yo'q",
+      "text": "Hisobingiz hujjat aylanishiga hali kiritilmagan. Administratorga yozing."
+    },
+    "notFound": {
+      "title": "Xat topilmadi",
+      "text": "Raqamni tekshiring yoki xatni kiruvchilar ro'yxatidan oching.",
+      "action": "Xatlar ro'yxatiga"
+    },
+    "retry": "Takrorlash"
+  },
+  "card": {
+    "title": "{{number}} xat",
+    "back": "Xatlar ro'yxatiga",
+    "steps": "Ariza yo'li",
+    "details": "Xat rekvizitlari",
+    "fields": {
+      "client": "Mijoz",
+      "inn": "STIR",
+      "senderRef": "Chiquvchi raqam va sana",
+      "addressee": "Kimning nomiga",
+      "contact": "Aloqa shaxsi",
+      "received": "Qabul qilingan",
+      "urgency": "Shoshilinchlik"
+    },
+    "urgent": "Shoshilinch",
+    "regular": "Oddiy",
+    "summary": "Hujjat mazmuni",
+    "files": "Ilovalar",
+    "noFiles": "Ilovalar yo'q",
+    "download": "{{name}} faylini yuklab olish",
+    "links": "Bog'lanishlar",
+    "linkFields": {
+      "request": "Ariza",
+      "client": "Mijoz",
+      "manager": "Menejer",
+      "registered": "Ro'yxatga olingan"
+    },
+    "noRequest": "Arizaga bog'lanmagan",
+    "noClient": "Mijoz aniqlanmagan",
+    "byClient": "STIR {{inn}}",
+    "bySystem": "Tizim tomonidan, CRM arizasi bo'yicha",
+    "decision": "Direktor qarori",
+    "decisionFields": {
+      "text": "Rezolyutsiya matni",
+      "assignees": "Ijrochilar",
+      "due": "Hisob-kitob muddati",
+      "margin": "Marja kamida",
+      "decidedBy": "Qaror qildi",
+      "comment": "Izoh",
+      "reason": "Rad etish sababi"
+    },
+    "returned": "Xat menejerga qaytarildi",
+    "rejected": "Xat rad etildi",
+    "journal": "Tarix",
+    "journalSystem": "Tizim",
+    "actions": {
+      "letter_registered": "Xat ro'yxatga olindi",
+      "letter_resolved": "Rezolyutsiya qo'yildi",
+      "letter_returned": "Menejerga qaytarildi",
+      "letter_rejected": "Rad etildi",
+      "letter_resubmitted": "Rezolyutsiyaga qayta topshirildi"
+    },
+    "readOnly": "Faqat ko'rish",
+    "readOnlyHint": "Xat bo'yicha qarorni direktor qabul qiladi.",
+    "resolve": "Rezolyutsiya qo'yish",
+    "partial": "Ariza ma'lumotlari mavjud emas: bosqich xatning o'zi bo'yicha ko'rsatilgan."
+  },
+  "panel": {
+    "awaitingReadOnly": {
+      "title": "Xat direktor rezolyutsiyasini kutmoqda",
+      "text": "Rezolyutsiyani direktor qo'yadi. Siz xatni va uning holatini ko'rasiz, qaror qilish shart emas."
+    },
+    "decided": {
+      "title": "Xat bo'yicha qaror qabul qilindi",
+      "text": "Nima qaror qilingani va kim qilgani xat kartochkasida, «Direktor qarori» blokida."
+    },
+    "briefOpen": "Xat kartochkasini ochish",
+    "brief": {
+      "client": "Mijoz",
+      "request": "Ariza",
+      "received": "Qabul qilingan",
+      "summary": "Hujjat mazmuni",
+      "files": "Ilovalar"
+    },
+    "sheetTitle": "{{number}} xatga rezolyutsiya",
+    "sheetClose": "Yopish",
+    "sheetLabel": "Rezolyutsiya"
+  },
+  "form": {
+    "name": "Direktor rezolyutsiyasi",
+    "text": {
+      "label": "Rezolyutsiya matni",
+      "hint": "Ijrochilar bu matnni topshiriqda oladi."
+    },
+    "assignees": {
+      "legend": "Ijrochilar",
+      "hint": "Xatni kim hisoblashini belgilang va zona xodimini tanlang.",
+      "employee": "Xodim: {{zone}}",
+      "choose": "Xodimni tanlang",
+      "none": "Bu zona uchun xodim yo'q",
+      "off": "Hisob-kitobda ishtirok etmaydi"
+    },
+    "zones": {
+      "goods": {
+        "name": "Ta'minotchi",
+        "hint": "ombor va yetkazib beruvchilar narxlari"
+      },
+      "services": {
+        "name": "Bosh muhandis",
+        "hint": "xizmatlar, TT, brigada"
+      },
+      "payment_terms": {
+        "name": "Buxgalter",
+        "hint": "to'lov shartlari"
+      }
+    },
+    "directory": {
+      "forbidden": "Ijrochilarni tanlash mavjud emas: rollaringizga xodimlar ro'yxati ochiq emas. Administratorga yozing.",
+      "unavailable": "Xodimlar ro'yxati yuklanmadi. Yana urinib ko'ring.",
+      "retry": "Takrorlash"
+    },
+    "due": {
+      "label": "Hisob-kitob muddati",
+      "hint": "Bugungi kundan oldin emas."
+    },
+    "margin": {
+      "label": "Marja kamida, %",
+      "hint": "Majburiy emas. Marjasi chegaradan past TTni direktor tasdiqlay olmaydi."
+    },
+    "submit": "Rezolyutsiyani tasdiqlash → hisob-kitobga topshiriq",
+    "consequence": {
+      "title": "Nima bo'ladi",
+      "step1": "Xat «Rezolyutsiya kutmoqda» holatidan chiqadi va «Rezolyutsiya qo'yildi» holatini oladi.",
+      "step2": "Tanlangan ijrochilarga hisob-kitob topshirig'i yuboriladi: matningiz va {{due}} muddat.",
+      "step2NoDue": "Tanlangan ijrochilarga hisob-kitob topshirig'i yuboriladi: matningiz va hisob-kitob muddati.",
+      "step3": "Ariza «Hisob-kitob» bosqichiga o'tadi. Mijozga hech narsa yuborilmaydi."
+    },
+    "other": {
+      "title": "Rezolyutsiya kerak bo'lmasa",
+      "comment": "Izoh",
+      "commentHint": "Majburiy: menejer uni ko'radi, ariza shu sababni oladi.",
+      "return": "Menejerga qaytarish",
+      "reject": "Rad etish",
+      "disabled": "Izoh yozilmaguncha tugmalar faol emas: nimani to'g'rilash kerakligini yoki nega rad etayotganingizni yozing.",
+      "returnHelp": "Qaytarish: xat izohingiz bilan menejerga qaytadi.",
+      "rejectHelp": "Rad etish: ariza shu sabab bilan «Rad etildi» holatiga o'tadi."
+    },
+    "errors": {
+      "text": "Rezolyutsiya matnini yozing.",
+      "assignees": "Kamida bitta ijrochini belgilang.",
+      "employee": "Xodimni tanlang.",
+      "due": "Hisob-kitob muddatini kiriting.",
+      "duePast": "Hisob-kitob muddati o'tmishda bo'lishi mumkin emas.",
+      "margin": "Marja 0 dan 100 gacha son, o'nlik kasrdan keyin ikkitadan ko'p bo'lmasin.",
+      "comment": "Izoh yozing."
+    },
+    "failed": {
+      "resolve": "Rezolyutsiya saqlanmadi: {{reason}}. Matn qoralamada saqlandi.",
+      "return": "Xat qaytarilmadi: {{reason}}. Izoh qoralamada saqlandi.",
+      "reject": "Xat rad etilmadi: {{reason}}. Izoh qoralamada saqlandi."
+    },
+    "reasons": {
+      "due_in_past": "hisob-kitob muddati o'tmishda",
+      "not_active_employee": "ijrochi topilmadi yoki o'chirilgan",
+      "duplicate": "bir xodim bir zonada ikki marta ko'rsatilgan",
+      "invalid_state": "xat endi rezolyutsiya kutmayapti, kartochkani yangilang",
+      "eds_not_granted": "hujjat aylanishiga ruxsatingiz yo'q",
+      "forbidden": "bu amal rolingizga ruxsat etilmagan",
+      "unavailable": "hujjat aylanishi javob bermayapti",
+      "validation": "maydonlarni tekshiring",
+      "unknown": "kutilmagan xato"
+    },
+    "done": {
+      "resolve": "Rezolyutsiya qo'yildi: topshiriq ijrochilarga yuborildi",
+      "return": "Xat menejerga qaytarildi",
+      "reject": "Xat rad etildi"
+    },
+    "draft": "Yuborilmagan qoralama tiklandi.",
+    "failedGone": {
+      "resolve": "Rezolyutsiya saqlanmadi: {{reason}}.",
+      "return": "Xat qaytarilmadi: {{reason}}.",
+      "reject": "Xat rad etilmadi: {{reason}}."
+    }
+  }
+}

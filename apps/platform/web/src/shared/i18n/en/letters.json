@@ -1,0 +1,240 @@
+{
+  "list": {
+    "subtitle": "Client letters waiting for the director's decision",
+    "caption": "Incoming letters",
+    "filter": {
+      "label": "Letter status",
+      "all": "All"
+    },
+    "columns": {
+      "number": "Number",
+      "subject": "Subject",
+      "client": "Client",
+      "request": "Request",
+      "received": "Received",
+      "status": "Status",
+      "action": "Action"
+    },
+    "select": "Show letter {{number}} in the side panel",
+    "open": "Open",
+    "openLabel": "Open the card of letter {{number}}",
+    "more": "Show more",
+    "urgent": "Urgent",
+    "scroll": "Letters table, scrolls horizontally",
+    "empty": {
+      "awaiting": {
+        "title": "Nothing needs your decision yet",
+        "text": "New letters arrive from CRM once a request is created. Letters that are already decided are under the \"All\" filter.",
+        "action": "Show all letters"
+      },
+      "other": {
+        "title": "No letters with this status",
+        "text": "Pick another status or open all letters.",
+        "action": "Show all letters"
+      },
+      "all": {
+        "title": "No incoming letters yet",
+        "text": "Client letters arrive from CRM once a request is created. This is where the director adds a resolution.",
+        "action": "Refresh"
+      }
+    }
+  },
+  "state": {
+    "loadError": {
+      "title": "Letters did not load",
+      "text": "Try again. If it keeps failing, write to the administrator."
+    },
+    "unavailable": {
+      "title": "Document flow is not responding",
+      "text": "The service is temporarily unavailable. No letters are lost, try again in a minute."
+    },
+    "forbidden": {
+      "title": "Incoming letters are not open to you",
+      "text": "The section is for roles that handle incoming letters. Need access? Write to the administrator."
+    },
+    "notGranted": {
+      "title": "No access to document flow",
+      "text": "Your account has not been added to document flow yet. Write to the administrator."
+    },
+    "notFound": {
+      "title": "Letter not found",
+      "text": "Check the number or open the letter from the incoming list.",
+      "action": "Back to letters"
+    },
+    "retry": "Retry"
+  },
+  "card": {
+    "title": "Letter {{number}}",
+    "back": "Back to letters",
+    "steps": "Request path",
+    "details": "Letter details",
+    "fields": {
+      "client": "Client",
+      "inn": "Tax ID",
+      "senderRef": "Outgoing number and date",
+      "addressee": "Addressed to",
+      "contact": "Contact person",
+      "received": "Received",
+      "urgency": "Urgency"
+    },
+    "urgent": "Urgent",
+    "regular": "Regular",
+    "summary": "Document summary",
+    "files": "Attachments",
+    "noFiles": "No attachments",
+    "download": "Download file {{name}}",
+    "links": "Links",
+    "linkFields": {
+      "request": "Request",
+      "client": "Client",
+      "manager": "Manager",
+      "registered": "Registered"
+    },
+    "noRequest": "Not linked to a request",
+    "noClient": "Client not identified",
+    "byClient": "Tax ID {{inn}}",
+    "bySystem": "By the system, from a CRM request",
+    "decision": "Director's decision",
+    "decisionFields": {
+      "text": "Resolution text",
+      "assignees": "Assignees",
+      "due": "Costing due date",
+      "margin": "Margin not below",
+      "decidedBy": "Decided by",
+      "comment": "Comment",
+      "reason": "Rejection reason"
+    },
+    "returned": "The letter was returned to the manager",
+    "rejected": "The letter was rejected",
+    "journal": "History",
+    "journalSystem": "System",
+    "actions": {
+      "letter_registered": "Letter registered",
+      "letter_resolved": "Resolution added",
+      "letter_returned": "Returned to the manager",
+      "letter_rejected": "Rejected",
+      "letter_resubmitted": "Submitted for resolution again"
+    },
+    "readOnly": "View only",
+    "readOnlyHint": "The director decides on the letter.",
+    "resolve": "Add resolution",
+    "partial": "Request data is unavailable: the step is shown from the letter itself."
+  },
+  "panel": {
+    "awaitingReadOnly": {
+      "title": "The letter is waiting for the director's resolution",
+      "text": "The director adds the resolution. You can see the letter and its status; no decision is needed from you."
+    },
+    "decided": {
+      "title": "A decision on the letter has been made",
+      "text": "What was decided and by whom is in the letter card, under \"Director's decision\"."
+    },
+    "briefOpen": "Open the letter card",
+    "brief": {
+      "client": "Client",
+      "request": "Request",
+      "received": "Received",
+      "summary": "Document summary",
+      "files": "Attachments"
+    },
+    "sheetTitle": "Resolution for letter {{number}}",
+    "sheetClose": "Close",
+    "sheetLabel": "Resolution"
+  },
+  "form": {
+    "name": "Director's resolution",
+    "text": {
+      "label": "Resolution text",
+      "hint": "Assignees receive this text in their task."
+    },
+    "assignees": {
+      "legend": "Assignees",
+      "hint": "Tick who costs the letter and pick an employee for the zone.",
+      "employee": "Employee: {{zone}}",
+      "choose": "Choose an employee",
+      "none": "No employees for this zone",
+      "off": "Not involved in costing"
+    },
+    "zones": {
+      "goods": {
+        "name": "Supply",
+        "hint": "stock and supplier prices"
+      },
+      "services": {
+        "name": "Chief engineer",
+        "hint": "services, specs, crew"
+      },
+      "payment_terms": {
+        "name": "Accountant",
+        "hint": "payment terms"
+      }
+    },
+    "directory": {
+      "forbidden": "Choosing assignees is unavailable: your roles cannot read the employee list. Write to the administrator.",
+      "unavailable": "The employee list did not load. Try again.",
+      "retry": "Retry"
+    },
+    "due": {
+      "label": "Costing due date",
+      "hint": "Not earlier than today."
+    },
+    "margin": {
+      "label": "Margin not below, %",
+      "hint": "Optional. The director will not be able to approve a quote with a margin below the threshold."
+    },
+    "submit": "Approve resolution → costing task",
+    "consequence": {
+      "title": "What will happen",
+      "step1": "The letter leaves \"Awaiting resolution\" and gets the status \"Resolution added\".",
+      "step2": "The chosen assignees get a costing task: your text and the due date {{due}}.",
+      "step2NoDue": "The chosen assignees get a costing task: your text and the costing due date.",
+      "step3": "The request moves to the \"Costing\" step. Nothing is sent to the client."
+    },
+    "other": {
+      "title": "If no resolution is needed",
+      "comment": "Comment",
+      "commentHint": "Required: the manager will see it and the request gets this reason.",
+      "return": "Return to manager",
+      "reject": "Reject",
+      "disabled": "The buttons stay inactive until there is a comment: say what to fix or why you reject.",
+      "returnHelp": "Return: the letter goes back to the manager with your comment.",
+      "rejectHelp": "Reject: the request moves to \"Lost\" with this reason."
+    },
+    "errors": {
+      "text": "Write the resolution text.",
+      "assignees": "Tick at least one assignee.",
+      "employee": "Choose an employee.",
+      "due": "Set the costing due date.",
+      "duePast": "The due date cannot be in the past.",
+      "margin": "Margin is a number from 0 to 100 with at most two decimals.",
+      "comment": "Write a comment."
+    },
+    "failed": {
+      "resolve": "Resolution not saved: {{reason}}. Your text is kept in the draft.",
+      "return": "Letter not returned: {{reason}}. Your comment is kept in the draft.",
+      "reject": "Letter not rejected: {{reason}}. Your comment is kept in the draft."
+    },
+    "reasons": {
+      "due_in_past": "the due date is in the past",
+      "not_active_employee": "the assignee is not found or disabled",
+      "duplicate": "one employee is listed twice in the same zone",
+      "invalid_state": "the letter is no longer awaiting resolution, refresh the card",
+      "eds_not_granted": "you have no access to document flow",
+      "forbidden": "this action is not allowed for your role",
+      "unavailable": "document flow is not responding",
+      "validation": "check the fields",
+      "unknown": "unexpected error"
+    },
+    "done": {
+      "resolve": "Resolution added: the task went to the assignees",
+      "return": "The letter was returned to the manager",
+      "reject": "The letter was rejected"
+    },
+    "draft": "A draft you did not send has been restored.",
+    "failedGone": {
+      "resolve": "Resolution not saved: {{reason}}.",
+      "return": "Letter not returned: {{reason}}.",
+      "reject": "Letter not rejected: {{reason}}."
+    }
+  }
+}
