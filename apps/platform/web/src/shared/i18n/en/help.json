@@ -1,0 +1,437 @@
+{
+  "button": {
+    "label": "Help",
+    "hint": "Help (key ?)"
+  },
+  "drawer": {
+    "title": "Help",
+    "close": "Close help",
+    "forSection": "About this section",
+    "noArticle": "There is no separate article for this section yet. Browse all articles or write to the administrator.",
+    "searchLabel": "Search articles",
+    "searchPlaceholder": "For example: resolution, quote, invoice",
+    "found": "Articles found: {{count}}",
+    "noResults": "No articles for “{{query}}”. Try another word or write to the administrator.",
+    "readFull": "Open on the Help page",
+    "all": "All articles",
+    "write": "Write to the administrator",
+    "myRequests": "My requests",
+    "onlyRussian": "Articles are written in Russian for now.",
+    "articlesLabel": "Articles"
+  },
+  "page": {
+    "title": "Help",
+    "subtitle": "Where to start, the request path, glossary and hotkeys",
+    "tabsLabel": "Help sections",
+    "tabs": {
+      "start": "Where to start",
+      "path": "Request path",
+      "glossary": "Glossary",
+      "articles": "Articles",
+      "keys": "Hotkeys",
+      "news": "What is new",
+      "requests": "My requests"
+    },
+    "write": "Write to the administrator",
+    "back": "All articles",
+    "notFoundTitle": "No such article",
+    "notFoundText": "The article was renamed or removed. Open the list of articles."
+  },
+  "start": {
+    "intro": "In the morning open “My tasks”: each row is one job for your role. The bell tells you about news, search (Ctrl K) finds a letter, request, client or invoice by number.",
+    "yours": "Your role: {{role}}",
+    "others": "For other roles",
+    "kinds": {
+      "director": {
+        "title": "Director",
+        "steps": [
+          "Open “My tasks”: letters without a resolution, quotes for approval and memos are waiting for you.",
+          "Incoming letters: put a resolution — choose the assignees and the costing deadline.",
+          "Quotes for approval: check the margin and sign-offs, approve or send back.",
+          "Memos: approve, return or reject; a reason is required for rejection.",
+          "Projects and the company summary: see what is stuck."
+        ]
+      },
+      "manager": {
+        "title": "Manager",
+        "steps": [
+          "“Awaiting reply”: bot handovers and client messages — answer or take into work.",
+          "Create a request from a lead: the client and the number ЗВ-YYYY-NNN appear.",
+          "Follow the request step on its card: resolution, costing, quote.",
+          "Need to buy something for work — file a memo."
+        ]
+      },
+      "supply": {
+        "title": "Supply",
+        "steps": [
+          "“My tasks”: costing tasks arrive after the director's resolution.",
+          "Select items: stock, suppliers, delivery terms.",
+          "Give the “goods and stock” sign-off. When all sign-offs are in, the quote goes to the director."
+        ]
+      },
+      "engineer": {
+        "title": "Chief engineer",
+        "steps": [
+          "“My tasks”: service tasks arrive after the director's resolution.",
+          "Cost the services: terms of reference, crew, deadlines.",
+          "Give the “services” sign-off. When all sign-offs are in, the quote goes to the director."
+        ]
+      },
+      "accountant": {
+        "title": "Accountant",
+        "steps": [
+          "“My tasks”: payment orders to confirm and invoices to issue.",
+          "Confirm payment against the statement: the invoice closes in full or in part.",
+          "Contracts and acts: record issuing and signing, attach the scan.",
+          "Overdue invoices also arrive as tasks."
+        ]
+      },
+      "admin": {
+        "title": "Administrator",
+        "steps": [
+          "“Settings”: roles, employees, connections and the journal.",
+          "For a new employee: “Invite employee” and assign a role.",
+          "“Needs attention” in connections: what is broken and who is fixing it.",
+          "“Staff requests”: answer your colleagues' questions."
+        ]
+      },
+      "default": {
+        "title": "Any role",
+        "steps": [
+          "“My tasks” are jobs for your role. One row is one action.",
+          "Search (Ctrl K) and the bell help you not to lose anything.",
+          "Something is missing — “Write to the administrator”."
+        ]
+      }
+    }
+  },
+  "path": {
+    "intro": "A request goes through seven steps, the same for everyone. The current step is always shown in the card header; every step has one owner and one main button.",
+    "owner": "Owner: {{who}}",
+    "steps": [
+      {
+        "title": "Request",
+        "who": "manager",
+        "text": "The manager creates a request from a lead: text, lines, the client's letter. The letter is registered with an ВХ number."
+      },
+      {
+        "title": "Resolution",
+        "who": "director",
+        "text": "The director puts a resolution: decision, assignees, costing deadline. Or returns it to the manager, or rejects it."
+      },
+      {
+        "title": "Costing",
+        "who": "supply and chief engineer",
+        "text": "Specialists cost prices, stock and services and give sign-offs. When all sign-offs are in, the costing is ready."
+      },
+      {
+        "title": "Quote",
+        "who": "director",
+        "text": "The director approves the quote; the client receives it through their channel and accepts or declines it."
+      },
+      {
+        "title": "Contract",
+        "who": "accountant",
+        "text": "The client agrees the wording, the contract is issued and signed with the operator outside the Platform; the scan is attached by hand."
+      },
+      {
+        "title": "Payment",
+        "who": "accountant",
+        "text": "The invoice is issued, the client attaches the payment order, the accountant confirms payment against the statement. Delivery runs in parallel."
+      },
+      {
+        "title": "Completed",
+        "who": "system",
+        "text": "The act is signed, all invoices are paid — the request is closed."
+      }
+    ],
+    "lost": "On steps 2–5 a request can be closed with a reason — “Lost”; it can be restored at the “Costing” step."
+  },
+  "glossary": {
+    "intro": "These words are the same across the whole interface.",
+    "items": [
+      {
+        "term": "Lead (L-2041)",
+        "text": "A person or company that wrote for the first time; not a client yet."
+      },
+      {
+        "term": "Client",
+        "text": "A company with contacts. Appears when the manager creates a request from a lead."
+      },
+      {
+        "term": "Request (ЗВ-2026-104)",
+        "text": "A client's need: text, lines, attachments, a letter. Goes through seven steps."
+      },
+      {
+        "term": "Project (ПР-2026-104)",
+        "text": "The same request after the client accepted the quote; inherits the request number."
+      },
+      {
+        "term": "Incoming letter (ВХ-104/26)",
+        "text": "An official client document addressed to the director; waits for a resolution."
+      },
+      {
+        "term": "Resolution",
+        "text": "The director's decision on an incoming letter: text, assignees, deadline, margin limit."
+      },
+      {
+        "term": "Costing",
+        "text": "Request lines with stock and supplier data and specialists' sign-offs."
+      },
+      {
+        "term": "Quote (КП-2026/118)",
+        "text": "A commercial offer with versions. Goes to the client only after the director approves."
+      },
+      {
+        "term": "ИСХ (ИСХ-082/26)",
+        "text": "The outgoing number a quote gets on approval."
+      },
+      {
+        "term": "Contract (ДОГ-2026/104)",
+        "text": "A draft contract from the accepted quote; signed with the operator, the scan is attached."
+      },
+      {
+        "term": "Invoice (СЧ-2026/142)",
+        "text": "An invoice for payment: prepayment, balance or stage."
+      },
+      {
+        "term": "Payment order",
+        "text": "The client's payment order (a file) that the accountant confirms."
+      },
+      {
+        "term": "Act (АКТ-2026/058)",
+        "text": "An act of completed work or delivery; the signed scan is attached."
+      },
+      {
+        "term": "Memo (СЗ-2026/031)",
+        "text": "An internal employee document addressed to the director: subject, text, amount or deadline."
+      },
+      {
+        "term": "Request to admin (ОБР-0012)",
+        "text": "Your question to the administrator: access, notifications, template, error. Not to be confused with a client's appeal on a project."
+      }
+    ]
+  },
+  "keys": {
+    "intro": "Hotkeys do not work while the cursor is in an input field.",
+    "items": [
+      {
+        "keys": "Ctrl K or ⌘ K",
+        "text": "Go to search by number, name or tax ID."
+      },
+      {
+        "keys": "?",
+        "text": "Open help for the current screen."
+      },
+      {
+        "keys": "Esc",
+        "text": "Close a window: help, notifications, the “Where to look” hint."
+      },
+      {
+        "keys": "Tab and Shift Tab",
+        "text": "Move to the next and previous element; Enter presses a button or opens a link."
+      }
+    ]
+  },
+  "news": {
+    "intro": "What has changed in the Platform.",
+    "items": [
+      {
+        "date": "October 28, 2026",
+        "title": "Help, first login and requests to the administrator",
+        "text": "The “?” button opens help for the current screen; “Write to the administrator” works from the “No access” screen and from Help; replies arrive in the bell and in Telegram."
+      },
+      {
+        "date": "October 27, 2026",
+        "title": "Honest placeholders and a queue without dead ends",
+        "text": "A section that is not in the Platform yet says where the work is done now; in “My tasks” the “Open” button becomes “Where to do it” if there is no screen yet."
+      },
+      {
+        "date": "October 27, 2026",
+        "title": "Profile",
+        "text": "Photo, phone, signature, Telegram and deputy during vacation are on the profile page."
+      }
+    ]
+  },
+  "articles": {
+    "intro": "Articles by Platform section. The “?” button in the header leads to the right one.",
+    "empty": "No articles yet.",
+    "forSection": "Article for this section"
+  },
+  "ticket": {
+    "subject": {
+      "access": "I need access to a section",
+      "notification": "A notification does not arrive",
+      "template": "I need a document template",
+      "error": "Error",
+      "other": "Other"
+    },
+    "status": {
+      "new": "New",
+      "in_progress": "In progress",
+      "resolved": "Resolved"
+    }
+  },
+  "write": {
+    "title": "Write to the administrator",
+    "lead": "Describe what happened. The administrator will reply in the Platform and in Telegram.",
+    "subject": "Subject",
+    "subjectPlaceholder": "Choose a subject",
+    "body": "What happened",
+    "bodyPlaceholder": "For example: I need access to “Costing” to see the supply tasks",
+    "bodyHint": "Up to 4000 characters.",
+    "auto": "Attached automatically: page {{page}}, role {{role}}.",
+    "autoNoPage": "Attached automatically: role {{role}}.",
+    "consequence": [
+      "The administrator gets the request in “Settings · Staff requests” and in Telegram.",
+      "The page and your role are attached automatically.",
+      "The reply arrives in the bell and in Telegram if linked; the status is in “My requests”."
+    ],
+    "consequenceTitle": "What happens next",
+    "submit": "Send",
+    "cancel": "Cancel",
+    "sending": "Sending…",
+    "doneTitle": "Request {{number}} sent",
+    "doneText": "The administrator will reply in the bell and in Telegram. The status is in “My requests”.",
+    "open": "Open the request",
+    "close": "Close",
+    "subjectRequired": "Choose a subject",
+    "bodyRequired": "Describe what happened",
+    "bodyTooLong": "The text is longer than 4000 characters: shorten it",
+    "errors": {
+      "TOO_MANY_REQUESTS": "You have sent too many requests. Wait a little and try again.",
+      "BACKEND_UNAVAILABLE": "The CRM is not responding. Try again in a minute.",
+      "default": "Could not send the request. Try again."
+    }
+  },
+  "requests": {
+    "title": "My requests",
+    "intro": "Your requests to the administrator and the replies. Other employees do not see them.",
+    "write": "Write to the administrator",
+    "empty": "No requests",
+    "emptyText": "If you have no access to a section, a notification does not arrive or something is broken, write to the administrator.",
+    "loadError": "Could not load requests",
+    "loadErrorText": "The server did not respond. Try again a bit later.",
+    "retry": "Try again",
+    "listLabel": "My requests",
+    "open": "Open request {{number}}",
+    "columns": {
+      "number": "Number",
+      "subject": "Subject",
+      "status": "Status",
+      "updated": "Changed"
+    },
+    "back": "All my requests",
+    "page": "Page",
+    "yourText": "Your text",
+    "answers": "Administrator's replies",
+    "noAnswers": "No reply yet. It will arrive in the bell and in Telegram.",
+    "answerFrom": "{{name}}, {{when}}",
+    "notFound": "No such request",
+    "notFoundText": "The number is wrong, or the request belongs to another employee.",
+    "sent": "Sent"
+  },
+  "admin": {
+    "subtitle": "What colleagues write to the administrator: access, notifications, templates, errors",
+    "filtersLabel": "Request filters",
+    "status": "Status",
+    "allStatuses": "All statuses",
+    "subject": "Subject",
+    "allSubjects": "All subjects",
+    "reset": "Reset filters",
+    "listLabel": "Staff requests",
+    "columns": {
+      "number": "Number",
+      "subject": "Subject",
+      "author": "From",
+      "status": "Status",
+      "updated": "Changed"
+    },
+    "open": "Open request {{number}}",
+    "countsNew": "New: {{count}}",
+    "countsWork": "In progress: {{count}}",
+    "countsDone": "Resolved: {{count}}",
+    "empty": "No requests",
+    "emptyText": "Employees write here from the “No access” screen and from “Help”.",
+    "noMatch": "Nothing matches the filter",
+    "noMatchText": "Reset the filters to see all requests.",
+    "loadError": "Could not load requests",
+    "loadErrorText": "The server did not respond. Try again a bit later.",
+    "retry": "Try again",
+    "pager": "Request pages",
+    "total": "Requests: {{count}}",
+    "card": {
+      "hintTitle": "No request selected",
+      "hint": "Open a request from the list — its text, page, replies and the “Reply” button appear here.",
+      "notFound": "No such request",
+      "notFoundText": "The number is wrong or the request was removed.",
+      "from": "From",
+      "role": "Role at the time",
+      "page": "Page",
+      "subject": "Subject",
+      "status": "Status",
+      "text": "Text",
+      "answers": "Replies",
+      "noAnswers": "No replies yet.",
+      "reply": "Your reply",
+      "replyPlaceholder": "What was done or what needs clarifying",
+      "send": "Send reply",
+      "sendResolve": "Reply and mark resolved",
+      "toWork": "Take into work",
+      "resolve": "Mark resolved",
+      "reopen": "Return to work",
+      "consequenceTitle": "What happens next",
+      "consequence": [
+        "The author gets the reply in the bell and in Telegram if linked.",
+        "A new request is taken “In progress” after a reply.",
+        "The status and the reply are written to the journal."
+      ],
+      "resolveConsequence": "The author learns that the request is resolved.",
+      "readOnly": "The director reads requests; the administrator replies and changes the status.",
+      "replyRequired": "Write a reply",
+      "errors": {
+        "ticket_status_transition": "The status cannot be changed this way: refresh the page.",
+        "default": "Could not save. Try again."
+      },
+      "saved": "Reply sent",
+      "statusSaved": "Status changed",
+      "openPage": "Open this page"
+    }
+  },
+  "welcome": {
+    "title": "Welcome, {{name}}",
+    "role": "Your role is {{role}}.",
+    "lead": "Here is what you will be doing in the morning:",
+    "tour": "Show me around",
+    "skip": "Skip",
+    "never": "Do not show again",
+    "close": "Close the welcome"
+  },
+  "tour": {
+    "label": "Getting to know the Platform",
+    "progress": "Step {{current}} of {{total}}",
+    "next": "Next",
+    "prev": "Back",
+    "done": "Done",
+    "skip": "Skip",
+    "never": "Do not show again",
+    "steps": {
+      "rail": {
+        "title": "Modules on the left",
+        "text": "These are the modules your role allows: Home, Clients, Documents, Costing, Chats, Settings. The rest are hidden."
+      },
+      "menu": {
+        "title": "“My tasks”",
+        "text": "The first item of Home is what to do now. One row is one job; the “Open” button leads to it."
+      },
+      "bell": {
+        "title": "The bell",
+        "text": "Decisions, client messages and the administrator's replies. If Telegram is linked they arrive there too."
+      },
+      "help": {
+        "title": "Help",
+        "text": "The “?” button opens the article for the current screen. From there you can write to the administrator."
+      }
+    }
+  }
+}

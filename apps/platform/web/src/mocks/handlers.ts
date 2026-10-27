@@ -20,6 +20,7 @@ import { isEmployeeDisabled } from "./fixtures/employees";
 import { feedHandlers } from "./feedHandlers";
 import { profileHandlers } from "./profileHandlers";
 import { setupHandlers } from "./setupHandlers";
+import { ticketsHandlers } from "./ticketsHandlers";
 import {
   DEMO_WRONG_CURRENT_PASSWORD,
   DEMO_WRONG_PASSWORD,
@@ -149,6 +150,7 @@ export const handlers = [
   ...setupHandlers,
   ...botKbHandlers,
   ...bridgeHandlers,
+  ...ticketsHandlers,
   ...edsDocumentsHandlers,
   ...edsLettersHandlers,
 

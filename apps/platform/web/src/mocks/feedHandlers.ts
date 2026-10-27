@@ -11,6 +11,7 @@ import {
 } from "./fixtures/feeds";
 import { computeAccess, type MockRole } from "./fixtures/roles";
 import { readSession, sessionRoles } from "./mockSession";
+import { crmNotificationsOf, markCrmNoteRead, ticketQueueItems } from "./ticketsHandlers";
 import { coveredQueueItems } from "./profileStore";
 
 /**
@@ -96,7 +97,10 @@ export const feedHandlers = [
     if (!roles) return expired();
     const denied = noQueue(roles);
     if (denied) return denied;
-    const own = queueForView(roles.view).filter((i) => !erpDown() || i.kind.endsWith("_lead"));
+    const own = [
+      ...queueForView(roles.view),
+      ...ticketQueueItems(roles.view), // обращения живут в CRM и не зависят от ERP
+    ].filter((i) => !erpDown() || i.kind.endsWith("_lead") || i.kind === "ticket");
     // Замещение (W15-H6): заместитель видит строки замещаемого с пометкой «за {имя}».
     const session = readSession();
     const userId = session ? sessionRoles(session)?.user.id : undefined;
@@ -110,11 +114,18 @@ export const feedHandlers = [
     if (!roles) return expired();
     const denied = noQueue(roles);
     if (denied) return denied;
+    const tickets = ticketQueueItems(roles.view).length;
     return HttpResponse.json({
       // ERP не отвечает: бейджи разделов ERP (EDS, ERP, «Все проекты») не показываются, остаются очередь и CRM
-      items: menuCountersFor(
-        queueForView(roles.view).filter((i) => !erpDown() || i.kind.endsWith("_lead")).length,
-      ).filter((c) => !erpDown() || c.module === "crm" || c.section === "queue"),
+      items: [
+        ...menuCountersFor(
+          queueForView(roles.view).filter((i) => !erpDown() || i.kind.endsWith("_lead")).length,
+        ).filter((c) => !erpDown() || c.module === "crm" || c.section === "queue"),
+        // «Настройки · Обращения сотрудников»: число новых обращений (W15-H7)
+        ...(tickets > 0
+          ? [{ module: "admin" as const, section: "tickets", count: tickets, attention: true }]
+          : []),
+      ],
       sources: sources(),
     });
   }),
@@ -135,7 +146,12 @@ export const feedHandlers = [
     if (denied) return denied;
     const params = new URL(request.url).searchParams;
     const tab = params.get("tab") ?? "all";
-    const all = erpDown() ? [] : notificationsFor(roles.view);
+    const mine = erpDown() ? [] : notificationsFor(roles.view);
+    // Лента CRM (W15-H7): ответы на обращения, привязка Telegram; не зависит от недоступности ERP.
+    const session = readSession();
+    const userId = session ? sessionRoles(session)?.user.id : undefined;
+    const crm = userId ? crmNotificationsOf(userId) : [];
+    const all = [...mine, ...crm].sort((a, b) => b.created_at.localeCompare(a.created_at));
     const items = all.filter((n) => tab === "all" || n.tab === tab);
     return HttpResponse.json({
       items,
@@ -147,11 +163,26 @@ export const feedHandlers = [
 
   http.post("*/notifications/read-all", () => {
     readAllAt = Date.now();
+    const session = readSession();
+    const user = session ? sessionRoles(session)?.user : undefined;
+    if (user) markCrmNoteRead(user.id, "all");
     return new HttpResponse(null, { status: 204 });
   }),
 
   http.post("*/notifications/:id/read", ({ params }) => {
-    readIds.add(String(params["id"]));
+    const id = String(params["id"]);
+    if (id.startsWith("crm:")) {
+      const session = readSession();
+      const user = session ? sessionRoles(session)?.user : undefined;
+      if (!user || !markCrmNoteRead(user.id, id)) {
+        return HttpResponse.json(
+          { code: "NOT_FOUND", message: "Не найдено.", source: "bff" },
+          { status: 404 },
+        );
+      }
+      return new HttpResponse(null, { status: 204 });
+    }
+    readIds.add(id);
     return new HttpResponse(null, { status: 204 });
   }),
 

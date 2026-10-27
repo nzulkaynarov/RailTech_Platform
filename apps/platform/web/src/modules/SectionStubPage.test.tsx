@@ -66,7 +66,6 @@ describe("SectionStubPage · раздел с мостом", () => {
       "/eds/payments",
       "/erp/calc",
       "/chats",
-      "/admin/tickets",
     ]) {
       renderApp(path);
       await main();
