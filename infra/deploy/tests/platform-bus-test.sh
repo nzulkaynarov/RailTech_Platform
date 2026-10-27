@@ -62,7 +62,10 @@ grep -q 'RT_BUS_SUBSCRIPTIONS=/opt/rt/contracts/bus/subscriptions.yaml' "$docker
 grep -q -- '--timeout-graceful-shutdown' "$dockerfile" || fail "Dockerfile BFF: SSE без --timeout-graceful-shutdown задерживает остановку"
 
 # 4. deploy.yml.
-step="$(awk '/name: Образ rt-platform-bff/{f=1} f&&/name: Образ rt-platform-web/{exit} f{print}' "$root/.github/workflows/deploy.yml")"
+# shellcheck source=deploy-images.sh
+source "$here/deploy-images.sh"
+step="$(deploy_image_field "$root/.github/workflows/deploy.yml" rt-platform-bff contexts)"
+[[ -n "$step" ]] || fail "deploy.yml: у образа rt-platform-bff нет build-contexts (или образа нет в таблице образов)"
 grep -q 'rtbus=packages/rt-bus' <<<"$step" || fail "deploy.yml: образ rt-platform-bff собирается без build-contexts rtbus"
 grep -q 'contracts=packages/contracts' <<<"$step" || fail "deploy.yml: образ rt-platform-bff собирается без build-contexts contracts"
 

@@ -41,7 +41,10 @@ grep -q 'RT_BUS_SUBSCRIPTIONS=/opt/rt/contracts/bus/subscriptions.yaml' "$docker
 
 # 3. deploy.yml: контексты сборки образа ERP и состав release.tgz.
 workflow="$root/.github/workflows/deploy.yml"
-erp_step="$(awk '/name: Образ rt-erp-backend/{f=1} f&&/name: Образ rt-erp-frontend/{exit} f{print}' "$workflow")"
+# shellcheck source=deploy-images.sh
+source "$(dirname "${BASH_SOURCE[0]}")/deploy-images.sh"
+erp_step="$(deploy_image_field "$workflow" rt-erp-backend contexts)"
+[[ -n "$erp_step" ]] || fail "deploy.yml: у образа rt-erp-backend нет build-contexts (или образа нет в таблице образов)"
 grep -q 'rtbus=packages/rt-bus' <<<"$erp_step" || fail "deploy.yml: образ rt-erp-backend собирается без build-contexts rtbus=packages/rt-bus"
 grep -q 'contracts=packages/contracts' <<<"$erp_step" || fail "deploy.yml: образ rt-erp-backend собирается без build-contexts contracts=packages/contracts"
 if grep -E 'tar -czf release\.tgz .*events\.schema\.json' "$workflow" >/dev/null; then
