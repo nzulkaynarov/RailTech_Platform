@@ -32,7 +32,7 @@ ERRORS = {
     400: OpenApiResponse(CalcErrorSerializer, description="Тело не прошло проверку или отказ правила строки"),
     403: OpenApiResponse(CalcErrorSerializer, description="Нет права (зона строки, роль) или не сотрудник"),
     404: OpenApiResponse(CalcErrorSerializer, description="Заявки, задания расчёта или строки нет"),
-    409: OpenApiResponse(CalcErrorSerializer, description="Состояние не позволяет (КП не черновик, нет виз)"),
+    409: OpenApiResponse(CalcErrorSerializer, description="Состояние не позволяет (КП не черновик, нет виз, ИИ выключен)"),
 }
 READ_ERRORS = {403: ERRORS[403], 404: ERRORS[404]}
 VISA_ZONES = ("quote.visa_goods", "quote.visa_services")
@@ -224,7 +224,6 @@ class CalcParseView(RoleGatedViewMixin, APIView):
         request=CalcParseInSerializer,
         responses={
             202: CalcJobSerializer,
-            503: OpenApiResponse(CalcErrorSerializer, description="ИИ выключен"),
             429: OpenApiResponse(CalcErrorSerializer, description="Дневной лимит ИИ компании"),
             500: OpenApiResponse(CalcErrorSerializer, description="Очередь ИИ недоступна"),
             **ERRORS,
@@ -243,7 +242,8 @@ class CalcParseView(RoleGatedViewMixin, APIView):
         except CalcError as exc:
             return _fail(exc)
         if not getattr(settings, "AI_IMPORT_ENABLED", False):
-            return Response({"detail": "AI_DISABLED"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+            # Выключенный ИИ — состояние настроек компании, а не сбой сервиса: 409 (BFF не путает его с «ERP недоступна»).
+            return Response({"detail": "AI_DISABLED"}, status=status.HTTP_409_CONFLICT)
         return enqueue_ai_job("calc_parse_text", payload, request.user)
 
 

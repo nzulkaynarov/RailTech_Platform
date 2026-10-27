@@ -378,10 +378,10 @@ def test_bind_free_line_to_catalog_card(world):
 # ── ИИ-разбор: предложение без записи ───────────────────────────────────────────────────────────────────────────────
 
 
-def test_parse_is_503_when_ai_is_off(world, settings):
+def test_parse_is_409_when_ai_is_off(world, settings):
     settings.AI_IMPORT_ENABLED = False
     response = _api(world["supply"]).post(_url(world, "parse/"), {}, format="json")
-    assert response.status_code == 503 and response.json() == {"detail": "AI_DISABLED"}
+    assert response.status_code == 409 and response.json() == {"detail": "AI_DISABLED"}
 
 
 def test_parse_queues_a_job_and_the_job_only_proposes(world, settings):

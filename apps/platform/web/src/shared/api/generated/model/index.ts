@@ -189,6 +189,15 @@
  * ссылке; неверная или просроченная — 422 `VALIDATION_FAILED`, `details.reason = reset_token_invalid`). `Me.access` остаётся для
  * совместимости, но экран «Доступ: CRM · ERP» убран: вместо него роли словами.
  *
+ * **0.22.0 (D2-1) — Расчёт по заявке.** Добавляющее изменение, тег `calc`: `GET /erp/calc/requests` («Заявки в расчёте»,
+ * `mine` — «Мои расчёты»), `GET /erp/calc/{number}` (экран расчёта: задание из резолюции, строки, склад, поставщик и срок,
+ * закупка и цена клиенту, наценка, визы по трём индикаторам, итоги без НДС, готовность), `POST …/start`, `POST …/lines`,
+ * `PATCH|DELETE …/lines/{line_id}`, `POST …/lines/{line_id}/visa` (виза строки по зоне: товар — `erp.calc.goods`, услуга —
+ * `erp.calc.services`), `POST …/ready` («Расчёт готов → черновик КП директору», только со всеми визами, проверка в ERP),
+ * `POST …/parse` и `GET /erp/calc-jobs/{job_id}` (ИИ-разбор текста заявки — предложение без записи), `GET /erp/calc/catalog`
+ * (сопоставление с каталогом). Себестоимость, закупка и наценка — только группе `cost_margin` (итоги — и `totals_only`),
+ * цены предложений поставщиков — `supplier_prices`; BFF вырезает поля из ответа.
+ *
  * 0.2.4: `423 ACCOUNT_LOCKED` объявлен и на `POST /auth/change-password` (CRM блокирует учётную запись после неверных
  * текущих паролей).
  *
@@ -207,7 +216,7 @@
  * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; «Забыли пароль?» — 5 запросов в час на IP и на адрес; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.21.0
+ * OpenAPI spec version: 0.22.0
  */
 
 export * from "./accessLevel";
@@ -283,6 +292,43 @@ export * from "./busSubscriberName";
 export * from "./busSubscriberQueryParameter";
 export * from "./busSubscriberState";
 export * from "./busTypeQueryParameter";
+export * from "./calcAssignee";
+export * from "./calcCatalogItem";
+export * from "./calcCatalogItemKind";
+export * from "./calcCatalogPage";
+export * from "./calcConflictResponse";
+export * from "./calcLine";
+export * from "./calcLineGroup";
+export * from "./calcLineIn";
+export * from "./calcLineInKind";
+export * from "./calcLineKind";
+export * from "./calcLinePatch";
+export * from "./calcLinePatchKind";
+export * from "./calcLinesIn";
+export * from "./calcLineVisa";
+export * from "./calcParseIn";
+export * from "./calcParseJob";
+export * from "./calcParseResult";
+export * from "./calcParseResultStatus";
+export * from "./calcProposalLine";
+export * from "./calcQuote";
+export * from "./calcReady";
+export * from "./calcReadyBlocker";
+export * from "./calcRequestList";
+export * from "./calcRequestRow";
+export * from "./calcRequestText";
+export * from "./calcRights";
+export * from "./calcSheet";
+export * from "./calcState";
+export * from "./calcStock";
+export * from "./calcSupplier";
+export * from "./calcTask";
+export * from "./calcTotals";
+export * from "./calcVisaGroup";
+export * from "./calcVisaGroups";
+export * from "./calcVisaIndicators";
+export * from "./calcVisaState";
+export * from "./calcZone";
 export * from "./catalogCategory";
 export * from "./catalogCategoryIn";
 export * from "./catalogCategoryList";
@@ -453,6 +499,7 @@ export * from "./letterZone";
 export * from "./listAuditParams";
 export * from "./listBusDeliveriesParams";
 export * from "./listBusInboxParams";
+export * from "./listCalcRequestsParams";
 export * from "./listCategoryRequestsParams";
 export * from "./listEdsDealOptionsParams";
 export * from "./listEdsDocumentsParams";
@@ -551,6 +598,7 @@ export * from "./sandboxReply";
 export * from "./sandboxTurn";
 export * from "./sandboxWhy";
 export * from "./saveBotSettingBody";
+export * from "./searchCalcCatalogParams";
 export * from "./searchGroup";
 export * from "./searchHit";
 export * from "./searchParams";
