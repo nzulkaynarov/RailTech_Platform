@@ -101,7 +101,7 @@ test.describe("Заглушки и мост", () => {
       "href",
       "http://crm.localhost:8088/inbox",
     );
-    await expect(main.getByText("Может попросить войти тем же логином.")).toBeVisible();
+    await expect(main.getByText("Вход в старую CRM — теми же логином и паролем.")).toBeVisible();
     await expect(main.getByText(/Сообщений пока нет/)).toHaveCount(0);
 
     const menu = page.getByRole("navigation", { name: "Разделы модуля" });

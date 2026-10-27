@@ -57,7 +57,8 @@ const erp = (path: string, where: string, object?: LegacyTarget["object"]): Lega
 /** `L-2041` -> `/leads/2041`: в старой CRM лид открывается по числовому id, номер лида — `L-<id>`. */
 const leadPath = (objectId: string) => {
   const hit = /^L-(\d+)$/.exec(objectId);
-  return hit ? `/leads/${hit[1] ?? ""}` : undefined;
+  // BFF форматирует номер как `L-{id:04d}`: ведущие нули в старом адресе не нужны.
+  return hit ? `/leads/${String(Number(hit[1]))}` : undefined;
 };
 const numericPath = (prefix: string) => (objectId: string) =>
   /^\d+$/.test(objectId) ? `${prefix}${objectId}` : undefined;

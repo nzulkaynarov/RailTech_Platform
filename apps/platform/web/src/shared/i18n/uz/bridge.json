@@ -15,7 +15,7 @@
   "newTab": "yangi varaqda ochiladi",
   "intro": {
     "legacy": "Hozir bu ish {{system}} bajariladi: {{where}}. Ma’lumotlar yo‘qolmagan.",
-    "none": "Hozir bu ish interfeysda yo‘q. Uni bajaradi: {{who}}. Ma’lumotlar yo‘qolmagan.",
+    "none": "Hozir bu ish interfeysda yo‘q. Uni bajaradi: {{who}}.",
     "internal": "Hozir bu ish Platformaning «{{section}}» bo‘limida bajariladi; uni administrator bajaradi. Ma’lumotlar yo‘qolmagan."
   },
   "internalOpen": "«{{section}}» bo‘limini ochish",
@@ -25,7 +25,7 @@
     "pilot": "pilotgacha"
   },
   "login": {
-    "crm": "Xuddi shu login bilan kirishni so‘rashi mumkin.",
+    "crm": "Eski CRMga kirish — xuddi shu login va parol bilan.",
     "erp": "Xuddi shu login bilan kirishni so‘rashi mumkin.",
     "erpSso": "Kirish o‘zi bajariladi. Eski ERP bosh sahifada ochiladi, keyin: {{where}}."
   },

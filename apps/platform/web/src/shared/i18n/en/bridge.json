@@ -15,7 +15,7 @@
   "newTab": "opens in a new tab",
   "intro": {
     "legacy": "For now this work is done in {{system}}: {{where}}. Your data is safe.",
-    "none": "For now this work has no screen; it is done by {{who}}. Your data is safe.",
+    "none": "For now this work has no screen; it is done by {{who}}.",
     "internal": "For now this work is done in the Platform, in the “{{section}}” section, by the administrator. Your data is safe."
   },
   "internalOpen": "Open “{{section}}”",
@@ -25,7 +25,7 @@
     "pilot": "by the pilot"
   },
   "login": {
-    "crm": "It may ask you to sign in with the same login.",
+    "crm": "Sign-in to the old CRM uses the same login and password.",
     "erp": "It may ask you to sign in with the same login.",
     "erpSso": "Sign-in happens by itself. The old ERP opens on its home page, then: {{where}}."
   },

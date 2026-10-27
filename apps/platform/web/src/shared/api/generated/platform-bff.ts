@@ -1228,7 +1228,7 @@ export const getGetBridgeUrl = () => {
 };
 
 /**
- * Адреса задают `PLATFORM_CRM_PUBLIC_URL` и `PLATFORM_ERP_PUBLIC_URL`; пусто — выводятся из адреса Платформы (`platform.X` -> `crm.X`, `erp.X`). Не задан и не выводится — `null`: SPA не показывает кнопку и честно пишет, где работа делается. Адреса не секрет; ответ не кэшируется долго (смена настройки подхватывается при следующей загрузке).
+ * Адреса задают `PLATFORM_CRM_PUBLIC_URL` и `PLATFORM_ERP_PUBLIC_URL`; пусто — выводятся из адреса Платформы (`platform.X` -> `crm.X`, `erp.X`). Не задан и не выводится — `null`: SPA не показывает кнопку и честно пишет, где работа делается. Адреса не секрет; ответ `no-store` (смена настройки подхватывается при следующей загрузке). Права раздела не нужны, но нужна сессия и хотя бы один раздел каталога: пока не сменён временный пароль — 403 `FORBIDDEN` с `details.reason = password_change_required`, у ролей нет ни одного раздела — 403 `FORBIDDEN` с `details.reason = no_sections`.
  * @summary Публичные адреса старых CRM и ERP для кнопок «Открыть в старой CRM / ERP»
  */
 export const getBridge = async (options?: Parameters<typeof http>[1]): Promise<Bridge> => {
@@ -1244,7 +1244,7 @@ export const getGetBridgeQueryKey = () => {
 
 export const getGetBridgeQueryOptions = <
   TData = Awaited<ReturnType<typeof getBridge>>,
-  TError = ErrorType<SessionExpiredResponse>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
 >(options?: {
   query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getBridge>>, TError, TData>>;
   request?: SecondParameter<typeof http>;
@@ -1264,11 +1264,11 @@ export const getGetBridgeQueryOptions = <
 };
 
 export type GetBridgeQueryResult = NonNullable<Awaited<ReturnType<typeof getBridge>>>;
-export type GetBridgeQueryError = ErrorType<SessionExpiredResponse>;
+export type GetBridgeQueryError = ErrorType<SessionExpiredResponse | ForbiddenResponse>;
 
 export function useGetBridge<
   TData = Awaited<ReturnType<typeof getBridge>>,
-  TError = ErrorType<SessionExpiredResponse>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
 >(
   options: {
     query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getBridge>>, TError, TData>> &
@@ -1286,7 +1286,7 @@ export function useGetBridge<
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetBridge<
   TData = Awaited<ReturnType<typeof getBridge>>,
-  TError = ErrorType<SessionExpiredResponse>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
 >(
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getBridge>>, TError, TData>> &
@@ -1304,7 +1304,7 @@ export function useGetBridge<
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 export function useGetBridge<
   TData = Awaited<ReturnType<typeof getBridge>>,
-  TError = ErrorType<SessionExpiredResponse>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
 >(
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getBridge>>, TError, TData>>;
@@ -1318,7 +1318,7 @@ export function useGetBridge<
 
 export function useGetBridge<
   TData = Awaited<ReturnType<typeof getBridge>>,
-  TError = ErrorType<SessionExpiredResponse>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse>,
 >(
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getBridge>>, TError, TData>>;
@@ -1340,7 +1340,7 @@ export const getCreateBridgeErpSsoUrl = () => {
 };
 
 /**
- * Тот же SSO CRM -> ERP, что у кнопки «Перейти в ERP» старой CRM (`docs/architecture/sso-token.md`): CRM выдаёт токен на 60 секунд, `url` — `{ERP}/sso/exchange#token=…`. Старый ERP после обмена открывает свою главную страницу. Токен в журнал BFF не попадает.
+ * Тот же SSO CRM -> ERP, что у кнопки «Перейти в ERP» старой CRM (`docs/architecture/sso-token.md`): CRM выдаёт токен на 60 секунд, `url` — `{ERP}/sso/exchange#token=…`. Старый ERP после обмена открывает свою главную страницу. Токен в журнал BFF не попадает. Нужна сессия и хотя бы один раздел каталога (иначе 403 `FORBIDDEN`, `details.reason`: `password_change_required` или `no_sections`); нет доступа к ERP — 403 `FORBIDDEN` с `details.reason = platform_access_denied`; CRM отказала (переход по SSO выключен) — 403 `FORBIDDEN` с `details.reason = sso_disabled`.
  * @summary Адрес входа в старый ERP без второго пароля
  */
 export const createBridgeErpSso = async (

@@ -111,6 +111,12 @@ describe("адрес кнопки", () => {
     );
   });
 
+  it("номер лида с ведущими нулями L-0042 — карточка /leads/42", () => {
+    expect(leads && legacyHref(leads, "http://crm.localhost", "L-0042")).toBe(
+      "http://crm.localhost/leads/42",
+    );
+  });
+
   it("числовой номер заявки — карточка сделки старого ERP, бизнес-номер — список сделок", () => {
     expect(deals && legacyHref(deals, "http://erp.localhost", "7")).toBe(
       "http://erp.localhost/#request-detail/7",

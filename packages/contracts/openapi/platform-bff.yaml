@@ -471,16 +471,25 @@ paths:
       description: >-
         Адреса задают `PLATFORM_CRM_PUBLIC_URL` и `PLATFORM_ERP_PUBLIC_URL`; пусто — выводятся из адреса Платформы (`platform.X` ->
         `crm.X`, `erp.X`). Не задан и не выводится — `null`: SPA не показывает кнопку и честно пишет, где работа делается. Адреса не
-        секрет; ответ не кэшируется долго (смена настройки подхватывается при следующей загрузке).
+        секрет; ответ `no-store` (смена настройки подхватывается при следующей загрузке). Права раздела не нужны, но нужна сессия и
+        хотя бы один раздел каталога: пока не сменён временный пароль — 403 `FORBIDDEN` с `details.reason = password_change_required`,
+        у ролей нет ни одного раздела — 403 `FORBIDDEN` с `details.reason = no_sections`.
       responses:
         '200':
           description: Адреса
+          headers:
+            Cache-Control:
+              description: '`no-store`'
+              schema:
+                type: string
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Bridge'
         '401':
           $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
 
   /bridge/erp-sso:
     post:
@@ -490,7 +499,9 @@ paths:
       description: >-
         Тот же SSO CRM -> ERP, что у кнопки «Перейти в ERP» старой CRM (`docs/architecture/sso-token.md`): CRM выдаёт токен
         на 60 секунд, `url` — `{ERP}/sso/exchange#token=…`. Старый ERP после обмена открывает свою главную страницу. Токен в
-        журнал BFF не попадает.
+        журнал BFF не попадает. Нужна сессия и хотя бы один раздел каталога (иначе 403 `FORBIDDEN`,
+        `details.reason`: `password_change_required` или `no_sections`); нет доступа к ERP — 403 `FORBIDDEN` с `details.reason =
+        platform_access_denied`; CRM отказала (переход по SSO выключен) — 403 `FORBIDDEN` с `details.reason = sso_disabled`.
       parameters:
         - $ref: '#/components/parameters/CsrfToken'
       responses:

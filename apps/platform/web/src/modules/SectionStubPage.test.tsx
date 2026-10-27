@@ -1,4 +1,5 @@
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
+import { HttpResponse, http } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { usePanelsStore } from "../app/shell/panelsStore";
@@ -6,6 +7,7 @@ import { endSession } from "../mocks/mockSession";
 import { setBridgeMock } from "../mocks/bridgeHandlers";
 import i18n from "../shared/i18n";
 import { renderApp, signInAs } from "../test/renderApp";
+import { server } from "../test/server";
 import { setViewportWidth } from "../test/viewport";
 import { objectTitle } from "./bridge";
 
@@ -50,7 +52,7 @@ describe("SectionStubPage · раздел с мостом", () => {
     expect(open).toHaveAttribute("href", "http://crm.localhost:8088/inbox");
     expect(open).toHaveAttribute("target", "_blank");
     expect(open.getAttribute("rel")).toContain("noopener");
-    expect(within(page).getByText("Может попросить войти тем же логином.")).toBeVisible();
+    expect(within(page).getByText("Вход в старую CRM — теми же логином и паролем.")).toBeVisible();
     expect(within(page).getByText("Когда появится: в ближайшем обновлении.")).toBeVisible();
   });
 
@@ -126,6 +128,27 @@ describe("SectionStubPage · раздел с мостом", () => {
     expect(await screen.findByText(/Вход без второго пароля не получился/)).toBeVisible();
   });
 
+  it("SSO-адрес не http(s) — в вкладку не уходит, вкладка получает обычную ссылку", async () => {
+    server.use(
+      http.post("*/bridge/erp-sso", () => HttpResponse.json({ url: "javascript:alert(1)" })),
+    );
+    signInAs("supply@demo.example");
+    renderApp("/erp/catalog");
+    const open = await screen.findByRole("link", { name: /Открыть в старом ERP/ });
+    const replace = vi.fn();
+    vi.spyOn(window, "open").mockReturnValue({
+      opener: {},
+      location: { replace },
+    } as unknown as Window);
+
+    fireEvent.click(open);
+
+    await waitFor(() => {
+      expect(replace).toHaveBeenCalledWith("http://erp.localhost:8088/#catalog-reference");
+    });
+    expect(replace).not.toHaveBeenCalledWith(expect.stringContaining("javascript:"));
+  });
+
   it("всплывающие окна закрыты — срабатывает обычная ссылка, запросов SSO нет", async () => {
     signInAs("supply@demo.example");
     renderApp("/erp/catalog");
@@ -144,7 +167,7 @@ describe("SectionStubPage · раздел без аналога в старых 
 
     expect(
       within(page).getByText(
-        "Сейчас этой работы в интерфейсе нет; её делает директор: резолюции на входящие письма пока даются устно или на бумаге. Данные не потеряны.",
+        "Сейчас этой работы в интерфейсе нет; её делает директор: резолюции на входящие письма пока даются устно или на бумаге.",
       ),
     ).toBeVisible();
     expect(within(page).queryByRole("link", { name: /Открыть в/ })).not.toBeInTheDocument();

@@ -6,6 +6,15 @@ import { useTranslation } from "react-i18next";
 import { useCreateBridgeErpSso } from "../../shared/api/generated/platform-bff";
 import type { LegacySystem } from "../bridge";
 
+function isHttpUrl(value: string): boolean {
+  try {
+    const protocol = new URL(value).protocol;
+    return protocol === "http:" || protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Кнопка «Открыть в старой CRM / старом ERP»: настоящая ссылка в новую вкладку (`target=_blank`, `rel=noopener`).
  * В ERP, если сотруднику выдан доступ, клик сначала просит у BFF одноразовый SSO-адрес (тот же путь, что у кнопки
@@ -39,6 +48,8 @@ export function LegacyLink({
     sign
       .mutateAsync()
       .then((result) => {
+        // Адрес приходит от BFF; в окно идёт только http(s) — иное не открываем.
+        if (!isHttpUrl(result.url)) throw new Error("bad scheme");
         tab.location.replace(result.url);
       })
       .catch(() => {

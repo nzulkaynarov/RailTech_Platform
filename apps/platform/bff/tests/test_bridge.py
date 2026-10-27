@@ -161,3 +161,14 @@ async def test_erp_sso_crm_down_is_503(web: Web, check: ContractChecker) -> None
     got = await web.send("POST", "/api/v1/bridge/erp-sso")
     check(got, "/bridge/erp-sso", "post")
     assert got.status_code == 503
+
+
+async def test_forbidden_until_temporary_password_is_changed(
+    web: Web, check: ContractChecker
+) -> None:
+    web.be.must_change = True
+    await web.login(["MANAGER"])
+    got = await web.client.get("/api/v1/bridge")
+    check(got, "/bridge", "get")
+    assert got.status_code == 403
+    assert got.json()["details"]["reason"] == "password_change_required"
