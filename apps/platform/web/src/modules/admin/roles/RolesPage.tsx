@@ -250,7 +250,9 @@ function RolesEditorPage({
             restricted_fields: role.restricted_fields,
           },
     ),
-    ...(creating && current
+    // Роль уже создана (ответ получен), а адрес ещё `?role=new`: столбец черновика убираем сразу, иначе пока переход
+    // не применился, в матрице на миг два столбца с одним названием (созданная роль из списка и черновик).
+    ...(creating && current && !create.isSuccess
       ? [
           {
             id: NEW_ROLE,
