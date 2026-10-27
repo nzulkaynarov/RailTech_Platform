@@ -2865,6 +2865,7 @@ components:
             - write_owner
             - write_hosting
             - disable_provider
+            - open_bus
             type: string
           - type: 'null'
           description: Главное действие по смыслу
@@ -2957,6 +2958,7 @@ components:
             - write_owner
             - write_hosting
             - disable_provider
+            - open_bus
             type: string
           title: More Actions
           type: array
@@ -5533,6 +5535,7 @@ components:
             - write_owner
             - write_hosting
             - disable_provider
+            - open_bus
             type: string
           - type: 'null'
           title: Action
@@ -5577,6 +5580,7 @@ components:
             - write_owner
             - write_hosting
             - disable_provider
+            - open_bus
             type: string
           title: More Actions
           type: array
@@ -6815,7 +6819,7 @@ components:
       type: http
 info:
   title: RailTech CRM API
-  version: 0.8.0
+  version: 0.9.0
 openapi: 3.1.0
 paths:
   /api/v1/admin/ai-spend:

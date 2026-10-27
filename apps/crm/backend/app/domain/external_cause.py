@@ -53,6 +53,7 @@ Action = Literal[
     "write_owner",
     "write_hosting",
     "disable_provider",
+    "open_bus",
 ]
 
 #: «Сломано» — только непрерывный `fail` не короче этого срока (от начала полосы); короче —
@@ -137,6 +138,8 @@ ROUTES: Final[dict[str, Route]] = {
     "erp_sync_failed": _ADMIN_FIX,
     "erp_handoff_failed": _ADMIN_FIX,
     "erp_events_failed": _ADMIN_FIX,
+    # Недоставленное на шине (кроме ERP, у него своя строка): журнал обмена открывает админ.
+    "bus_dlq": Route("admin", "open_bus", ("recheck",)),
     "checks_stale": _HOSTING,
     "ai_unavailable": Route("admin", "recheck", ("open_settings",)),
     "flapping": Route(None, "recheck"),

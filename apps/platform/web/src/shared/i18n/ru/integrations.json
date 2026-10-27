@@ -582,7 +582,8 @@
       "open_settings": "Открыть настройки",
       "write_owner": "Написать владельцу",
       "write_hosting": "Передать хостингу",
-      "disable_provider": "Выключить провайдера"
+      "disable_provider": "Выключить провайдера",
+      "open_bus": "Открыть журнал обмена"
     },
     "actionAria": "{{action}}: {{subject}}",
     "recheck": {

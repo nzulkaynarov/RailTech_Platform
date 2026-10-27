@@ -618,3 +618,53 @@ def test_causes_that_do_not_heal_themselves_are_rechecked_every_fifteen_minutes(
     last = NOW
     assert not cause.recheck_due(1, last, last + timedelta(minutes=14), "smtp_auth_failed")
     assert cause.recheck_due(1, last, last + timedelta(minutes=15), "smtp_auth_failed")
+
+
+# --- архив WAL, Redis и шина на общей политике (W15-H8b, B-004) ---------------------------------
+
+
+def test_bus_dlq_is_broken_only_after_fifteen_minutes_and_sends_the_admin_to_the_bus_journal() -> (
+    None
+):
+    from app.domain import external_infra as infra
+
+    dlq = infra.bus_dlq(infra.BusDlqFacts(dead=3, failed=0, last_error="eds/letter.created: 500"))
+    short = _diagnose("bus_dlq", dlq, NOW - timedelta(minutes=5), fail_for=timedelta(minutes=5))
+    assert short.state == "unstable"  # меньше 15 минут — ещё «Нестабильно», без оповещения
+    long = _diagnose("bus_dlq", dlq, NOW - timedelta(minutes=20), fail_for=timedelta(minutes=20))
+    assert long.state == "broken"
+    assert (long.owner, long.action, long.more) == ("admin", "open_bus", ("recheck",))
+    assert long.headline == "Шина: не доставлено: 3"
+    group = cause.build_groups([long])[0]
+    assert cause.plan_alerts([group], {}, {"bus_dlq": "broken"}, NOW)  # одно «Сломано»
+
+
+def test_bus_dlq_ok_has_no_cause() -> None:
+    from app.domain import external_infra as infra
+
+    ok = infra.bus_dlq(infra.BusDlqFacts(0, 0))
+    assert _diagnose("bus_dlq", ok).state == "ok"
+
+
+@pytest.mark.parametrize("key", ["wal_archive", "redis_broker", "redis_cache"])
+def test_infrastructure_rows_are_fixed_by_hosting(key: str) -> None:
+    from app.domain import external_infra as infra
+
+    result = (
+        infra.wal_archive(infra.WalFacts(None, NOW - timedelta(hours=2), NOW), NOW)
+        if key == "wal_archive"
+        else infra.redis(infra.RedisFacts(key, error="ConnectionRefusedError"), NOW)
+    )
+    d = _diagnose(key, result, NOW - timedelta(minutes=30), fail_for=timedelta(minutes=30))
+    assert d.state == "broken"
+    assert d.owner == "hosting"
+    assert d.action == "write_hosting"
+    assert hosting_ask(d.detail)  # готовый текст «что передать хостингу»
+
+
+def test_unreadable_wal_is_not_checked_not_broken() -> None:
+    from app.domain import external_infra as infra
+
+    d = _diagnose("wal_archive", infra.wal_archive(infra.WalFacts(error="AccessDenied"), NOW))
+    assert d.state == "not_checked"
+    assert d.owner is None

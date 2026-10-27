@@ -482,3 +482,106 @@ async def test_probe_crash_becomes_unknown_not_a_crash() -> None:
     found = await collect(deps(tls_probe=broken), ["tls.crm"], "heavy")
     assert found["tls.crm"].status == "unknown"
     assert found["tls.crm"].error == "RuntimeError"
+
+
+# --- архив WAL, Redis и шина (W15-H8b, B-004) ---------------------------------------------------
+
+
+class WalStorage:
+    def __init__(self, objects: list[Any], error: Exception | None = None) -> None:
+        self.objects, self.error = objects, error
+
+    async def list_objects(self, bucket: str, prefix: str = "", start_after: str = "") -> list[Any]:
+        if self.error is not None:
+            raise self.error
+        return [o for o in self.objects if o.key.startswith(prefix) and o.key > start_after]
+
+
+def wal_objects(segment_age_min: int) -> list[Any]:
+    from app.integrations.s3 import StoredObject
+
+    return [
+        StoredObject(
+            "pg17/wal_005/000000010000000000000001.zst", 1, NOW - timedelta(minutes=segment_age_min)
+        ),
+        StoredObject(
+            "pg17/basebackups_005/base_01_backup_stop_sentinel.json", 1, NOW - timedelta(hours=8)
+        ),
+    ]
+
+
+async def test_wal_archive_row_ok_stale_and_unreadable() -> None:
+    ok = await collect(deps(storage=WalStorage(wal_objects(2))), ["wal_archive"])
+    assert ok["wal_archive"].status == "ok"
+    assert ok["wal_archive"].metrics["last_segment_min"] == 2
+    assert ok["wal_archive"].metrics["_wal_key"] == "pg17/wal_005/000000010000000000000001.zst"
+
+    stale = await collect(deps(storage=WalStorage(wal_objects(120))), ["wal_archive"])
+    assert stale["wal_archive"].status == "fail"
+    assert stale["wal_archive"].cause == "server_down"
+
+    broken = await collect(
+        deps(storage=WalStorage([], error=PermissionError("denied"))), ["wal_archive"]
+    )
+    assert broken["wal_archive"].status == "unknown"  # честное «не проверено»
+    assert broken["wal_archive"].error == "PermissionError"
+
+
+async def test_wal_archive_remembers_the_last_key_between_passes() -> None:
+    first = await collect(deps(storage=WalStorage(wal_objects(2))), ["wal_archive"])
+    carried = dict(first["wal_archive"].metrics)
+    # Нового сегмента нет: время берётся из памяти предыдущей проверки, а не «пусто».
+    again = await collect(
+        deps(storage=WalStorage(wal_objects(2))),
+        ["wal_archive"],
+        previous={"wal_archive": carried},
+    )
+    assert again["wal_archive"].status == "ok"
+    assert again["wal_archive"].metrics["last_segment_min"] == 2
+
+
+async def test_redis_rows_use_their_own_address_and_never_print_the_password() -> None:
+    from app.integrations.redis_probe import RedisProbe
+
+    asked: list[str] = []
+
+    async def fake(url: str) -> RedisProbe:
+        asked.append(url)
+        if "broker" in url:
+            return RedisProbe(None, 2, {"used_memory": "1048576", "maxmemory": "2097152"})
+        return RedisProbe("ConnectionRefusedError")
+
+    config = CONFIG.model_copy(
+        update={
+            "redis_broker_url": SecretStr("redis://:pw-b@redis-broker:6379/0"),
+            "redis_cache_url": SecretStr("redis://:pw-c@redis-cache:6379/0"),
+        }
+    )
+    found = await collect(deps(config=config, redis_probe=fake), ["redis_broker", "redis_cache"])
+    assert found["redis_broker"].status == "ok"
+    assert found["redis_broker"].metrics["memory_pct"] == 50
+    assert found["redis_cache"].status == "fail"
+    # Сбой кэша перепроверяется один раз (транзиентная причина), брокер — один запрос.
+    assert set(asked) == {
+        "redis://:pw-b@redis-broker:6379/0",
+        "redis://:pw-c@redis-cache:6379/0",
+    }
+    for result in found.values():
+        assert "pw-" not in repr(result)
+
+
+async def test_redis_without_an_address_is_not_checked() -> None:
+    found = await collect(deps(), ["redis_broker", "redis_cache"])
+    assert {r.status for r in found.values()} == {"unknown"}
+    assert "REDIS_BROKER_URL" in (found["redis_broker"].hint or "")
+
+
+async def test_bus_dlq_row_comes_from_the_bus_tables(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def stats(session: object, now: datetime) -> Any:
+        return repo.BusDlqStats(dead=2, failed=1, last_error="eds/letter.created: 500")
+
+    monkeypatch.setattr(repo, "bus_dlq_stats", stats)
+    found = await collect(deps(), ["bus_dlq"])
+    assert found["bus_dlq"].status == "fail"
+    assert found["bus_dlq"].cause == "bus_dlq"
+    assert found["bus_dlq"].summary == "Шина: не доставлено: 2, не обработано: 1"

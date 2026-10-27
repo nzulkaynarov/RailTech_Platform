@@ -16,6 +16,7 @@ from typing import Any, Literal
 
 import httpx
 import structlog
+from pydantic import SecretStr
 
 from app.config import Settings
 from app.domain import external_ai_replies as ai_rules
@@ -23,6 +24,7 @@ from app.domain import external_erp_events as erp_events_rules
 from app.domain import external_erp_handoff as erp_handoff_rules
 from app.domain import external_erp_reported as erp_reported_rules
 from app.domain import external_erp_sync as erp_sync_rules
+from app.domain import external_infra as infra_rules
 from app.domain import external_status as rules
 from app.domain import external_vendor as vendor_rules
 from app.domain import system_status
@@ -32,6 +34,8 @@ from app.domain.system_status import ErpFacts
 from app.integrations import external_probes as probes
 from app.integrations.litellm_admin import LiteLLMAdmin, ProviderBudget
 from app.integrations.litellm_catalog import ModelCatalog
+from app.integrations.redis_probe import RedisProbe
+from app.integrations.redis_probe import probe as redis_probe_run
 from app.integrations.s3 import ObjectStorage
 from app.integrations.smtp import SmtpProbeError
 from app.integrations.telegram import resolve_token
@@ -40,6 +44,7 @@ from app.security.secrets_store import SecretsStore
 from app.services import backups as backup_rules
 from app.services.ai_spend import SpendLogSource
 from app.services.backups import BackupReader
+from app.services.external_services import wal as wal_reader
 from app.services.external_services.providers import providers as alias_providers
 from app.services.mail import MailService
 from app.services.settings import SettingsService
@@ -81,6 +86,7 @@ class Deps:
     erp_url: Callable[[], Awaitable[str]]
     transport: httpx.AsyncBaseTransport | None = None
     tls_probe: Callable[[str], Awaitable[probes.TlsProbe]] = probes.tls
+    redis_probe: Callable[[str], Awaitable[RedisProbe]] = redis_probe_run
     # Значения по умолчанию алиасов: строки вендоров есть и при недоступном шлюзе.
     defaults: Path | None = None
     # Коннектор «ERP» настроен (адрес и токен из «Подключений» или `.env`); не задан — по адресу.
@@ -171,6 +177,10 @@ class _Run:
             "erp_handoff": self.erp_handoff,
             "ai_replies": self.ai_replies,
             "erp_events": self.erp_events,
+            "wal_archive": self.wal_archive,
+            "redis_broker": self.redis_broker,
+            "redis_cache": self.redis_cache,
+            "bus_dlq": self.bus_dlq,
         }
         return await handler[key]()
 
@@ -319,6 +329,41 @@ class _Run:
             erp_events_rules.ErpEventsFacts(stats.dead, stats.failed, stats.stuck, stats.last_error)
         )
 
+    async def bus_dlq(self) -> CheckResult:
+        """Недоставленное на шине (кроме ERP): счётчик за неделю; «Сломано» — по общей политике."""
+        async with self.d.sessions() as session:
+            stats = await repo.bus_dlq_stats(session, self.now)
+        return infra_rules.bus_dlq(
+            infra_rules.BusDlqFacts(stats.dead, stats.failed, stats.last_error)
+        )
+
+    async def wal_archive(self) -> CheckResult:
+        cfg = self.d.config
+        previous = self.previous.get("wal_archive", {})
+        facts, carry = await wal_reader.read(
+            self.d.storage,
+            cfg.s3_bucket_wal,
+            cfg.wal_s3_prefix,
+            previous,
+            refresh_base=self.heavy,
+        )
+        return _with_metrics(infra_rules.wal_archive(facts, self.now), carry)
+
+    async def redis_broker(self) -> CheckResult:
+        return await self._redis(infra_rules.REDIS_BROKER, self.d.config.redis_broker_url)
+
+    async def redis_cache(self) -> CheckResult:
+        return await self._redis(infra_rules.REDIS_CACHE, self.d.config.redis_cache_url)
+
+    async def _redis(self, key: str, url: SecretStr) -> CheckResult:
+        address = url.get_secret_value()
+        if not address:
+            return infra_rules.redis(infra_rules.RedisFacts(key, configured=False), self.now)
+        found = await self.d.redis_probe(address)
+        return infra_rules.redis(
+            infra_rules.RedisFacts(key, True, found.error, found.latency_ms, found.info), self.now
+        )
+
     async def langfuse(self) -> CheckResult:
         cfg = self.d.config
         secret = cfg.langfuse_secret_key.get_secret_value()
@@ -439,6 +484,7 @@ def _with_metrics(result: CheckResult, extra: Mapping[str, Metric]) -> CheckResu
         result.hint,
         result.latency_ms,
         {**result.metrics, **extra},
+        cause=result.cause,
     )
 
 

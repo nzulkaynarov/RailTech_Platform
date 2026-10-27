@@ -587,7 +587,8 @@
       "open_settings": "Sozlamalarni ochish",
       "write_owner": "Egasiga yozish",
       "write_hosting": "Xostingga yuborish",
-      "disable_provider": "Provayderni o‘chirish"
+      "disable_provider": "Provayderni o‘chirish",
+      "open_bus": "Almashinuv jurnalini ochish"
     },
     "actionAria": "{{action}}: {{subject}}",
     "recheck": {

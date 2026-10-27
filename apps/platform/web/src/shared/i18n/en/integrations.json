@@ -577,7 +577,8 @@
       "open_settings": "Open settings",
       "write_owner": "Write to the owner",
       "write_hosting": "Send to hosting",
-      "disable_provider": "Switch the provider off"
+      "disable_provider": "Switch the provider off",
+      "open_bus": "Open the exchange log"
     },
     "actionAria": "{{action}}: {{subject}}",
     "recheck": {

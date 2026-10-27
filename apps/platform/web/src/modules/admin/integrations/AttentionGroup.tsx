@@ -15,6 +15,7 @@ import {
 } from "./HealthParts";
 
 const PATH = "/admin/integrations";
+const BUS_PATH = "/admin/bus";
 type Panel = "key" | "write" | "switch" | null;
 
 /** Какое действие раскрывает форму под строкой, а какое — открывает карточку или проверяет сразу. */
@@ -95,13 +96,11 @@ export function AttentionGroupRow({
         </Button>
       );
     }
+    // Журнал обмена — отдельный раздел Admin (`/admin/bus`), а не карточка «Внешних интеграций».
+    const to =
+      action === "open_bus" ? BUS_PATH : `${PATH}?card=${group.fix_card ?? "services"}&panel=open`;
     return (
-      <LinkButton
-        key={action}
-        type={type}
-        aria-label={aria}
-        to={`${PATH}?card=${group.fix_card ?? "services"}&panel=open`}
-      >
+      <LinkButton key={action} type={type} aria-label={aria} to={to}>
         {label}
       </LinkButton>
     );
