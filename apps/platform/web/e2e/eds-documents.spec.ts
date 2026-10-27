@@ -52,7 +52,7 @@ test.describe("Создать документ: сотрудник", () => {
     await loginAndWait(page, "manager@demo.example");
     await page
       .getByRole("navigation", { name: "Модули" })
-      .getByRole("link", { name: "EDS" })
+      .getByRole("link", { name: "Документы" })
       .click();
     await expect(page.getByRole("heading", { level: 1, name: "Все документы" })).toBeVisible();
 

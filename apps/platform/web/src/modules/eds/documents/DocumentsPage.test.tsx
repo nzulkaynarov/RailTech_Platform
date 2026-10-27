@@ -65,7 +65,7 @@ describe("EDS · Документы: список", () => {
     expect(within(letter).getByText("Ждёт резолюции")).toBeVisible();
     expect(within(letter).getByText("ВХ-104/26")).toBeVisible();
     expect(
-      within(letter).getByRole("link", { name: /Открыть в разделе «Входящие»/ }),
+      within(letter).getByRole("link", { name: /Открыть в разделе «Входящие письма»/ }),
     ).toHaveAttribute("href", "/eds/inbox");
     // письмо клиента не открывается как документ
     expect(
