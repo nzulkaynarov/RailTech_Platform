@@ -257,11 +257,21 @@ def line_payload(item: QuoteItem, ctx: _Context, *, show_cost: bool, rights: dic
 # ── заявка, КП, задание ────────────────────────────────────────────────────────────────────────────────────────────
 
 
-def _deal_or_404(deal_id: int, *, lock: bool = False) -> Deal:
-    qs = Deal.objects.select_related("company", "stage", "manager", "assigned_to")
-    if lock:
-        qs = Deal.objects.select_for_update(of=("self",)).select_related("company", "stage", "manager", "assigned_to")
-    deal = qs.filter(pk=deal_id).first()
+def _deal_or_404(deal_id: int) -> Deal:
+    deal = Deal.objects.select_related("company", "stage", "manager", "assigned_to").filter(pk=deal_id).first()
+    if deal is None:
+        raise CalcError("DEAL_NOT_FOUND", 404)
+    return deal
+
+
+def _locked_deal_or_404(deal_id: int) -> Deal:
+    """Заявка под блокировкой строки — только внутри транзакции («Расчёт готов»)."""
+    deal = (
+        Deal.objects.select_for_update(of=("self",))
+        .select_related("company", "stage", "manager", "assigned_to")
+        .filter(pk=deal_id)
+        .first()
+    )
     if deal is None:
         raise CalcError("DEAL_NOT_FOUND", 404)
     return deal
@@ -949,7 +959,7 @@ def mark_ready(deal_id: int, user) -> dict:
 
     _require_staff(user)
     _require(user, Permission.QUOTE_BUILD.value)
-    deal = _deal_or_404(deal_id, lock=True)
+    deal = _locked_deal_or_404(deal_id)
     task = _task_or_404(deal)
     quote = _draft_or_409(deal)
     items = _billable(quote)
