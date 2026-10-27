@@ -24,7 +24,12 @@ from app.domain.system_status import ErpExternal, ErpFacts
 from app.main import create_app
 from app.models.auth import AuditLog, User
 from app.models.email import EmailLog
-from app.models.external_services import ExternalServiceIncident, ExternalServiceSwitch
+from app.models.external_services import (
+    ExternalCauseAlert,
+    ExternalServiceCheck,
+    ExternalServiceIncident,
+    ExternalServiceSwitch,
+)
 from app.security.secrets_store import SecretCipher
 from app.services.external_services.wiring import build_checks
 from app.services.mail import MailService
@@ -171,7 +176,8 @@ async def test_registry_before_first_check(
         services
     )
     assert services["telegram"]["status"] == "unknown"
-    assert "Ещё не проверялся" in services["telegram"]["summary"]
+    assert "Не проверено — нажмите «Проверить»" in services["telegram"]["summary"]
+    assert services["telegram"]["state"] == "not_checked"
     erp = services["erp.cbu_rates"]
     assert (erp["status"], erp["source"], erp["switch"]["kind"]) == ("unknown", "erp", "erp")
     assert services["erp.sentry"]["switch"] is None  # Sentry выключить нельзя
@@ -181,7 +187,7 @@ async def test_registry_before_first_check(
     assert client.get(f"{URL}/nope", headers=auth).status_code == 404
 
 
-async def test_check_now_opens_and_closes_incident_with_one_alert_each(
+async def test_check_now_opens_and_closes_incident_without_alert_noise(
     sessions: async_sessionmaker[AsyncSession],
     client: TestClient,
     gateway: respx.MockRouter,
@@ -199,30 +205,245 @@ async def test_check_now_opens_and_closes_incident_with_one_alert_each(
     assert detail["service"]["incident"]["ended_at"] is None
     assert [c["tier"] for c in detail["checks"]] == ["manual"]
     assert len(detail["days"]) == 7
-    # Повторный сбой — тот же инцидент, без второго оповещения.
+    # Повторный сбой — тот же инцидент; «Сломано» меньше 15 минут — оповещения нет.
     client.post(f"{URL}/docling/check", headers=auth)
-    assert [k for k, _ in alerts.sent] == ["docling"]
-    assert alerts.sent[0][1].subject.startswith("⚠️ Сбой:")
+    assert alerts.sent == []
 
     route.mock(return_value=httpx.Response(200, json={"status": "ok"}))
     recovered = client.post(f"{URL}/docling/check", headers=auth).json()
     assert recovered["service"]["status"] == "ok"
     assert recovered["service"]["incident"] is None
     (incident,) = recovered["incidents"]
-    assert incident["ended_at"] is not None
-    assert incident["alerted"]
-    assert incident["recovery_alerted"]
-    assert [a.subject.split(":")[0] for _, a in alerts.sent] == ["⚠️ Сбой", "✅ Восстановлено"]
+    assert incident["ended_at"] is not None  # «восстановлено в …» в журнале инцидентов
+    assert not incident["alerted"]
+    assert alerts.sent == []  # о сбое не сообщали — и «восстановлено» не нужно
+    assert recovered["service"]["last_recovered_at"] is not None
     assert recovered["service"]["uptime_24h"] == pytest.approx(1 / 3, abs=0.01)
 
-    # Новый сбой в пределах часа — инцидент записан, но без оповещения (антиспам).
     route.mock(side_effect=httpx.ConnectError("refused"))
     client.post(f"{URL}/docling/check", headers=auth)
-    assert len(alerts.sent) == 2
     async with sessions() as session:
         rows = (await session.scalars(select(ExternalServiceIncident))).all()
     assert len(rows) == 2
-    assert sum(r.alerted_at is not None for r in rows) == 1
+    assert alerts.sent == []
+
+
+T0 = datetime.now(UTC) - timedelta(hours=3)  # подменённое время: все проходы — «в прошлом»
+
+
+def at(minutes: float) -> datetime:
+    return T0 + timedelta(minutes=minutes)
+
+
+async def run_at(client: TestClient, moment: datetime, *keys: str) -> None:
+    container = client.app.state.container  # type: ignore[attr-defined]
+    await container.external_checks.run("manual", moment, keys=list(keys))
+
+
+async def docling_checks(sessions: async_sessionmaker[AsyncSession]) -> list[datetime]:
+    async with sessions() as session:
+        stmt = select(ExternalServiceCheck.checked_at).where(
+            ExternalServiceCheck.service_key == "docling"
+        )
+        return sorted((await session.scalars(stmt)).all())
+
+
+async def test_cause_alert_waits_fifteen_minutes_fires_once_and_restores_once(
+    sessions: async_sessionmaker[AsyncSession],
+    client: TestClient,
+    gateway: respx.MockRouter,
+    docling: str,
+    alerts: FakeAlerts,
+) -> None:
+    route = gateway.get(docling).mock(side_effect=httpx.ConnectError("refused"))
+    for minutes in (0, 5, 14):
+        await run_at(client, at(minutes), "docling")
+    assert alerts.sent == []  # «Сломано» меньше 15 минут — тишина
+
+    await run_at(client, at(16), "docling")
+    assert [key for key, _ in alerts.sent] == ["docling:server_down"]
+    broken = alerts.sent[0][1]
+    assert broken.subject.startswith("⚠️ Сломано: ")
+    assert "хостинг" in broken.plain
+    assert "refused" not in broken.plain  # сырой ответ в оповещение не идёт
+
+    # Дальше — ни одного повтора: ни на следующих проверках, ни после рестарта процесса.
+    await run_at(client, at(30), "docling")
+    container = client.app.state.container  # type: ignore[attr-defined]
+    restarted = build_checks(container)
+    restarted._alerts = alerts  # type: ignore[assignment]
+    await restarted.run("manual", at(45), keys=["docling"])
+    await restarted.run("manual", at(120), keys=["docling"])
+    assert len(alerts.sent) == 1
+
+    route.mock(return_value=httpx.Response(200, json={"status": "ok"}))
+    await run_at(client, at(130), "docling")
+    assert [a.subject.split(":")[0] for _, a in alerts.sent] == ["⚠️ Сломано", "✅ Восстановлено"]
+    assert "Не работало 2 ч 10 мин" in alerts.sent[1][1].plain  # от первого сбоя до возврата
+    await run_at(client, at(131), "docling")
+    assert len(alerts.sent) == 2
+
+    async with sessions() as session:
+        (cause_row,) = (await session.scalars(select(ExternalCauseAlert))).all()
+        (incident,) = (await session.scalars(select(ExternalServiceIncident))).all()
+    assert cause_row.cause_key == "docling:server_down"
+    assert cause_row.ended_at is not None  # «восстановлено в …» в журнале
+    assert cause_row.alerted_at is not None
+    assert cause_row.recovery_alerted_at is not None
+    assert incident.ended_at is not None
+    assert incident.alerted_at is not None
+    assert incident.recovery_alerted_at is not None
+
+    # Снова сломалось, но меньше 15 минут и сразу починилось — без шума.
+    route.mock(side_effect=httpx.ConnectError("refused"))
+    await run_at(client, at(140), "docling")
+    await run_at(client, at(150), "docling")
+    route.mock(return_value=httpx.Response(200, json={"status": "ok"}))
+    await run_at(client, at(152), "docling")
+    assert len(alerts.sent) == 2
+
+
+async def test_failed_alert_delivery_is_retried_not_lost(
+    sessions: async_sessionmaker[AsyncSession],
+    client: TestClient,
+    gateway: respx.MockRouter,
+    docling: str,
+    alerts: FakeAlerts,
+) -> None:
+    gateway.get(docling).mock(side_effect=httpx.ConnectError("refused"))
+    deliver = False
+
+    async def send(alert: AlertText, key: str) -> bool:
+        alerts.sent.append((key, alert)) if deliver else None
+        return deliver
+
+    alerts.send = send  # type: ignore[method-assign]
+    await run_at(client, at(0), "docling")
+    await run_at(client, at(20), "docling")  # попытка есть, но ни Telegram, ни почта не доставили
+    assert alerts.sent == []
+    deliver = True
+    await run_at(client, at(21), "docling")
+    await run_at(client, at(22), "docling")
+    assert [key for key, _ in alerts.sent] == ["docling:server_down"]
+
+
+async def test_groups_name_the_cause_the_owner_and_the_action(
+    sessions: async_sessionmaker[AsyncSession],
+    client: TestClient,
+    gateway: respx.MockRouter,
+    docling: str,
+) -> None:
+    auth = await headers(sessions, client, "admin")
+    gateway.get(docling).mock(side_effect=httpx.ConnectError("refused"))
+    response = client.post(f"{URL}/docling/check", headers=auth)
+    assert response.status_code == 200, response.text
+    body = client.get(URL, headers=auth).json()
+    assert body["stand"] is False
+    (group,) = [g for g in body["groups"] if g["id"] == "docling:server_down"]
+    assert (group["state"], group["owner"], group["action"]) == (
+        "broken",
+        "hosting",
+        "write_hosting",
+    )
+    assert group["more_actions"] == ["recheck"]
+    assert group["since"] is not None
+    assert "Запустить docling вместе с ансамблем" in group["detail"]
+    assert "администратору сервера" not in group["detail"]
+    assert "Запустить docling вместе с ансамблем" in group["message"]
+    assert group["technical"]  # сырая причина — только отдельным полем, свёрнуто в интерфейсе
+    assert group["headline"] not in group["technical"]
+    service = {s["key"]: s for s in body["services"]}["docling"]
+    assert service["cause_key"] == "docling:server_down"
+    assert service["state"] == "broken"
+    assert service["since"] is not None
+
+
+@pytest.fixture
+def stand_client(
+    sessions: async_sessionmaker[AsyncSession],
+    live_settings: Settings,
+    gateway: respx.MockRouter,
+    alerts: FakeAlerts,
+) -> Iterator[TestClient]:
+    """Стенд (`APP_ENV=dev`): сбои, которые на стенде чинить некому, — «ожидаемо»."""
+    app = create_app(live_settings.model_copy(update={"app_env": "dev"}))
+    with TestClient(app) as test_client:
+        app.state.bot = None
+        container = app.state.container
+        checks = build_checks(container)
+        checks._alerts = alerts  # type: ignore[assignment]
+        container.__dict__["external_checks"] = checks
+        yield test_client
+
+
+async def test_expected_on_stand_is_grey_and_never_alerts(
+    sessions: async_sessionmaker[AsyncSession],
+    stand_client: TestClient,
+    gateway: respx.MockRouter,
+    docling: str,
+    alerts: FakeAlerts,
+) -> None:
+    auth = await headers(sessions, stand_client, "admin")
+    gateway.get(docling).mock(side_effect=httpx.ConnectError("refused"))
+    for minutes in (0, 20, 60):
+        await run_at(stand_client, at(minutes), "docling")
+    assert alerts.sent == []
+    container = stand_client.app.state.container  # type: ignore[attr-defined]
+    container.external_view.invalidate()
+    body = (await container.external_view.list(at(61))).model_dump(mode="json")
+    service = {s["key"]: s for s in body["services"]}["docling"]
+    assert (service["status"], service["state"]) == ("fail", "expected")
+    assert body["stand"] is True
+    assert body["summary"]["fail"] == 0  # не сбой — не «Требует внимания»
+    (group,) = [g for g in body["groups"] if g["id"] == "docling:server_down"]
+    assert group["state"] == "expected"
+    assert stand_client.get(URL, headers=auth).status_code == 200
+    async with sessions() as session:
+        assert (await session.scalars(select(ExternalCauseAlert))).all() == []
+
+
+async def test_broken_service_is_rechecked_with_decay_and_clears_itself(
+    sessions: async_sessionmaker[AsyncSession],
+    client: TestClient,
+    gateway: respx.MockRouter,
+    docling: str,
+) -> None:
+    route = gateway.get(docling).mock(side_effect=httpx.ConnectError("refused"))
+    container = client.app.state.container  # type: ignore[attr-defined]
+    seconds = {0: 1, 30: 1, 60: 2, 120: 2, 180: 3, 300: 3, 480: 4, 1000: 4, 1380: 5, 2000: 5}
+    # (момент в секундах от T0) -> сколько проверок docling должно быть записано к этому моменту
+    for sec, expected in seconds.items():
+        await container.external_checks.run("cheap", T0 + timedelta(seconds=sec))
+        assert len(await docling_checks(sessions)) == expected, sec
+
+    route.mock(return_value=httpx.Response(200, json={"status": "ok"}))
+    await container.external_checks.run("cheap", T0 + timedelta(seconds=2280))  # 15 мин спустя
+    assert len(await docling_checks(sessions)) == 6
+    await container.external_checks.run("cheap", T0 + timedelta(seconds=2340))
+    assert len(await docling_checks(sessions)) == 7  # снова каждую минуту
+    async with sessions() as session:
+        stmt = select(ExternalServiceIncident).where(
+            ExternalServiceIncident.service_key == "docling"
+        )
+        (incident,) = (await session.scalars(stmt)).all()
+    assert incident.ended_at is not None  # строка снялась сама
+
+
+async def test_heavy_only_service_is_rechecked_by_its_own_schedule(
+    sessions: async_sessionmaker[AsyncSession], client: TestClient
+) -> None:
+    container = client.app.state.container  # type: ignore[attr-defined]
+    async with sessions() as session, session.begin():
+        session.add(
+            ExternalServiceCheck(
+                service_key="tls.crm", checked_at=T0, tier="heavy", status="fail", summary="x"
+            )
+        )
+    assert await container.external_checks.recheck_broken(T0 + timedelta(seconds=30)) == []
+    results = await container.external_checks.recheck_broken(T0 + timedelta(minutes=1))
+    assert [r.key for r in results] == ["tls.crm"]
+    # теперь по умолчанию (localhost без TLS) — «не применимо», не fail: дальше не перепроверяется
+    assert await container.external_checks.recheck_broken(T0 + timedelta(minutes=2)) == []
 
 
 async def test_telegram_webhook_not_configured_is_an_incident_without_token_leak(
@@ -262,8 +483,10 @@ async def test_telegram_webhook_not_configured_is_an_incident_without_token_leak
     assert service["fix_path"] is None  # «Исправить» в «Подключения» здесь не помогает
     assert "_no_fix" not in service["metrics"]
     assert service["incident"]["ended_at"] is None
+    assert service["state"] == "broken"
+    assert (service["owner"], service["action"]) == ("hosting", "write_hosting")
     assert info.call_count == 1
-    assert [k for k, _ in alerts.sent] == ["telegram"]
+    assert alerts.sent == []  # оповещение — после 15 минут «Сломано» (W15-H3)
 
     listing = webhook_client.get(URL, headers=auth)
     for text in (response.text, listing.text, repr(alerts.sent), repr(logs)):
@@ -457,7 +680,7 @@ async def test_erp_sync_failures_land_in_the_feed_not_in_the_users_answer(
     assert failed["error"] == "erp_provision_user: erp_unavailable: timeout"
     assert failed["hint"]
     assert failed["fix_path"] == "/integrations?tab=erp"
-    assert [k for k, _ in alerts.sent] == ["erp_sync"]
+    assert alerts.sent == []  # «Сломано» меньше 15 минут — без оповещения (W15-H3)
 
     async with sessions() as session, session.begin():
         row = await session.get(User, manager.id)
@@ -492,7 +715,7 @@ async def test_erp_handoff_failures_land_in_the_feed_with_the_client_and_the_cod
     assert failed["error"] == "ООО Дубль: erp_inn_conflict"
     assert failed["hint"]
     assert failed["fix_path"] == "/clients"
-    assert [k for k, _ in alerts.sent] == ["erp_handoff"]
+    assert alerts.sent == []
 
     async with sessions() as session, session.begin():
         saved = await session.get(Client, client_id)
@@ -540,7 +763,7 @@ async def test_erp_events_failures_land_in_the_feed_and_heal_when_old(
     assert failed["status"] == "fail"
     assert "company mismatch" in failed["error"]
     assert failed["hint"]
-    assert [k for k, _ in alerts.sent] == ["erp_events"]
+    assert alerts.sent == []
 
     async with sessions() as session, session.begin():  # разобрано давно: в окно недели не входит
         await session.execute(
@@ -698,22 +921,18 @@ async def test_erp_service_failure_opens_one_incident_and_one_alert_then_recover
     assert first["service"]["status"] == "fail"
     assert first["service"]["error"] == "AI_GATEWAY_UNAVAILABLE"
     assert first["service"]["incident"]["ended_at"] is None
-    client.post(
-        f"{URL}/erp.litellm/check", headers=auth
-    )  # повтор — тот же инцидент, без второго оповещения
-    assert [k for k, _ in alerts.sent] == ["erp.litellm"]
-    assert "Модели ИИ в ERP" in alerts.sent[0][1].plain
+    assert (first["service"]["owner"], first["service"]["action"]) == ("owner", "write_owner")
+    client.post(f"{URL}/erp.litellm/check", headers=auth)  # повтор — тот же инцидент
+    assert alerts.sent == []  # «Сломано» меньше 15 минут
 
     connector.facts = erp_facts(erp_item("litellm"))
     healed = client.post(f"{URL}/erp.litellm/check", headers=auth).json()
     assert healed["service"]["status"] == "ok"
     assert healed["service"]["incident"] is None
-    assert [a.subject.split(":")[0] for _, a in alerts.sent] == ["⚠️ Сбой", "✅ Восстановлено"]
+    assert alerts.sent == []
 
-    # Новый сбой в пределах часа — инцидент записан, оповещения нет (антиспам).
     connector.facts = erp_facts(failing)
     client.post(f"{URL}/erp.litellm/check", headers=auth)
-    assert len(alerts.sent) == 2
     async with sessions() as session:
         rows = (await session.scalars(select(ExternalServiceIncident))).all()
     assert [r.service_key for r in rows] == ["erp.litellm", "erp.litellm"]

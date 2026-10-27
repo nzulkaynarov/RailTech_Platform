@@ -81,7 +81,7 @@ describe("Admin · Внешние интеграции: обзор", () => {
     expect(screen.queryByText("Только просмотр")).not.toBeInTheDocument();
   });
 
-  it("«Требует внимания»: сначала сбои, затем предупреждения; у строки — слово и ссылка на карточку", async () => {
+  it("«Требует внимания»: сначала сбои, затем предупреждения; одна причина — одна строка с «с …», «Кто исправляет» и действием", async () => {
     signIn("admin@demo.example");
     renderAt("/admin/integrations");
 
@@ -93,15 +93,34 @@ describe("Admin · Внешние интеграции: обзор", () => {
     const severities = rows.map((row) => row.getAttribute("data-severity"));
     expect(severities).toEqual([...severities].sort((a, b) => order(a) - order(b)));
     expect(severities[0]).toBe("fail");
-    const openai = rows.find((row) => within(row).queryByText("OpenAI"));
-    expect(openai).toBeDefined();
-    expect(within(openai as HTMLElement).getByText("Сбой")).toBeVisible();
-    expect(within(openai as HTMLElement).getByText(/Ключ отклонён провайдером/)).toBeVisible();
+
+    // OpenAI: строка вендора и две роли моделей — одна строка, а не три
+    const openai = rows.filter((row) => within(row).queryByText(/Ключ OpenAI отклонён/));
+    expect(openai).toHaveLength(1);
+    const row = openai[0] as HTMLElement;
+    expect(within(row).getByText("Сломано")).toBeVisible();
     expect(
-      within(openai as HTMLElement).getByRole("link", { name: "Открыть: OpenAI" }),
-    ).toHaveAttribute("href", "/admin/integrations?card=models&panel=open");
-    const mail = rows.find((row) => within(row).queryByText("Почтовый релей (SMTP)"));
-    expect(within(mail as HTMLElement).getByText("Внимание")).toBeVisible();
+      within(row).getByText(/не работают: поиск по базе знаний, проверка качества ответов/),
+    ).toBeVisible();
+    expect(within(row).getByText(/^с 26\.10\.2026/)).toBeVisible();
+    expect(
+      within(row).getByText("Владелец компании — ключ и оплата провайдера", { exact: false }),
+    ).toBeVisible();
+    // одно главное действие по смыслу и запасные
+    expect(
+      within(row).getByRole("button", { name: "Ввести новый ключ: Ключ OpenAI отклонён" }),
+    ).toBeVisible();
+    expect(within(row).getByRole("button", { name: /Написать владельцу/ })).toBeVisible();
+    expect(within(row).getByRole("button", { name: /Выключить провайдера/ })).toBeVisible();
+    // роли моделей отдельными строками не повторяются
+    expect(within(section).queryByText("Поиск по базе знаний", { selector: "span" })).toBeNull();
+    expect(within(section).queryByText(/401: ключ отклонён провайдером/)).not.toBeInTheDocument();
+
+    const mail = rows.find((r) => within(r).queryByText("В очереди 3 письма дольше 15 минут"));
+    expect(within(mail as HTMLElement).getByText("Работает с перебоями")).toBeVisible();
+    // «Ожидаемо на стенде» (docling) и «Выключено намеренно» (Langfuse) в «Требует внимания» не попадают
+    expect(within(section).queryByText(/Распознавание документов недоступно/)).toBeNull();
+    expect(within(section).queryByText(/Langfuse/)).toBeNull();
   });
 
   it("клик по карточке открывает её в боковом окне (?card=)", async () => {
@@ -121,7 +140,7 @@ describe("Admin · Внешние интеграции: обзор", () => {
   it("«Проверить» на карточке «Почта»: итог словами, сервис восстановлен — строка уходит из «Требует внимания»", async () => {
     signIn("admin@demo.example");
     renderAt("/admin/integrations");
-    expect(await screen.findByText("Почтовый релей (SMTP)")).toBeVisible();
+    expect(await screen.findByText("В очереди 3 письма дольше 15 минут")).toBeVisible();
 
     fireEvent.click(within(tile("Почта")).getByRole("button", { name: "Проверить: Почта" }));
 
@@ -129,7 +148,7 @@ describe("Admin · Внешние интеграции: обзор", () => {
     await waitFor(() => {
       expect(within(tile("Почта")).getByText("Работает", { selector: "span" })).toBeVisible();
     });
-    expect(screen.queryByText("Почтовый релей (SMTP)")).not.toBeInTheDocument();
+    expect(screen.queryByText("В очереди 3 письма дольше 15 минут")).not.toBeInTheDocument();
   });
 
   it("сбой проверки показан словами в карточке, а не молчанием", async () => {

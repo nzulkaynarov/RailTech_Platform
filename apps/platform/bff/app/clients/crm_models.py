@@ -9,6 +9,32 @@ from typing import Annotated, Any, Literal
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 
 
+class Action(StrEnum):
+    """
+    Главное действие по смыслу
+    """
+
+    enter_key = "enter_key"
+    enter_token = "enter_token"
+    recheck = "recheck"
+    reconnect = "reconnect"
+    open_settings = "open_settings"
+    write_owner = "write_owner"
+    write_hosting = "write_hosting"
+    disable_provider = "disable_provider"
+
+
+class Action1(StrEnum):
+    enter_key = "enter_key"
+    enter_token = "enter_token"
+    recheck = "recheck"
+    reconnect = "reconnect"
+    open_settings = "open_settings"
+    write_owner = "write_owner"
+    write_hosting = "write_hosting"
+    disable_provider = "disable_provider"
+
+
 class ActionResult(BaseModel):
     id: Annotated[int | None, Field(title="Id")] = None
     ok: Annotated[Literal[True], Field(title="Ok")] = True
@@ -196,10 +222,18 @@ class ChecklistItem(BaseModel):
     done: Annotated[bool, Field(title="Done")]
     key: Annotated[Key, Field(title="Key")]
     link: Annotated[str, Field(title="Link")]
+    unchecked: Annotated[bool | None, Field(title="Unchecked")] = False
+    """
+    Проверка не выполнялась: шаг не «Готово» и не «Не сделано» — «Не проверено»
+    """
 
 
 class ComponentStatusOut(BaseModel):
     checked_at: Annotated[AwareDatetime | None, Field(title="Checked At")]
+    expected_on_stand: Annotated[bool | None, Field(title="Expected On Stand")] = False
+    """
+    Тестовый стенд: здесь это ожидаемо (секреты сервера, адрес CRM, бот)
+    """
     key: Annotated[str, Field(title="Key")]
     reason: Annotated[str, Field(title="Reason")]
     status: Annotated[Status, Field(title="Status")]
@@ -363,6 +397,14 @@ class ExternalServiceDetailOut(BaseModel):
 
 
 class ExternalServiceOut(BaseModel):
+    action: Annotated[Action | None, Field(title="Action")]
+    """
+    Главное действие по смыслу
+    """
+    cause_key: Annotated[str, Field(title="Cause Key")]
+    """
+    Корень причины; у сервисов с общей причиной он общий
+    """
     check: Annotated[str, Field(title="Check")]
     """
     Как проверяется — словами
@@ -382,15 +424,35 @@ class ExternalServiceOut(BaseModel):
     """
     incident: IncidentOut | None
     key: Annotated[str, Field(title="Key")]
+    last_recovered_at: Annotated[AwareDatetime | None, Field(title="Last Recovered At")]
+    """
+    Когда восстановился после последнего сбоя за 30 дней (журнал инцидентов)
+    """
     latency_ms: Annotated[int | None, Field(title="Latency Ms")]
     metrics: Annotated[dict[str, float | int | str | None], Field(title="Metrics")]
+    more_actions: Annotated[list[MoreAction], Field(title="More Actions")]
+    """
+    Запасные действия
+    """
+    owner: Annotated[Owner | None, Field(title="Owner")]
+    """
+    Кто исправляет; нет — исправлять нечего
+    """
     p95_ms_24h: Annotated[int | None, Field(title="P95 Ms 24H")]
     purpose: Annotated[str, Field(title="Purpose")]
+    since: Annotated[AwareDatetime | None, Field(title="Since")]
+    """
+    Когда впервые обнаружено (не в порядке с …)
+    """
     source: Annotated[Source1, Field(title="Source")]
     """
     Кто проверяет: CRM сама или передаёт ERP
     """
     stale: Annotated[bool, Field(title="Stale")]
+    state: Annotated[State, Field(title="State")]
+    """
+    Состояние словом: сломано, работает с перебоями, не настроено, выключено намеренно, ожидаемо на стенде, не проверено, работает
+    """
     status: Annotated[Status4, Field(title="Status")]
     summary: Annotated[str, Field(title="Summary")]
     switch: ServiceSwitchOut | None
@@ -402,7 +464,15 @@ class ExternalServiceOut(BaseModel):
 
 class ExternalServicesOut(BaseModel):
     checked_at: Annotated[AwareDatetime | None, Field(title="Checked At")]
+    groups: Annotated[list[ServiceGroupOut], Field(title="Groups")]
+    """
+    Не-`ok` сервисы, свёрнутые по причине
+    """
     services: Annotated[list[ExternalServiceOut], Field(title="Services")]
+    stand: Annotated[bool, Field(title="Stand")]
+    """
+    Тестовый стенд (не прод): часть причин «ожидаема»
+    """
     summary: ExternalServicesSummary
 
 
@@ -567,6 +637,35 @@ class ModelTestResult(BaseModel):
     ok: Annotated[bool, Field(title="Ok")]
 
 
+class MoreAction(StrEnum):
+    enter_key = "enter_key"
+    enter_token = "enter_token"
+    recheck = "recheck"
+    reconnect = "reconnect"
+    open_settings = "open_settings"
+    write_owner = "write_owner"
+    write_hosting = "write_hosting"
+    disable_provider = "disable_provider"
+
+
+class Owner(StrEnum):
+    """
+    Кто исправляет; нет — исправлять нечего
+    """
+
+    admin = "admin"
+    owner = "owner"
+    hosting = "hosting"
+    provider = "provider"
+
+
+class Owner1(StrEnum):
+    admin = "admin"
+    owner = "owner"
+    hosting = "hosting"
+    provider = "provider"
+
+
 class PasswordReset(BaseModel):
     temporary_password: Annotated[str, Field(title="Temporary Password")]
 
@@ -675,6 +774,44 @@ class ServiceDayOut(BaseModel):
     unknown: Annotated[int, Field(title="Unknown")]
     uptime: Annotated[float | None, Field(title="Uptime")]
     warn: Annotated[int, Field(title="Warn")]
+
+
+class ServiceGroupOut(BaseModel):
+    """
+    Одна причина — одна строка «Требует внимания»: сервисы с общим корнем свёрнуты вместе.
+    """
+
+    action: Annotated[Action1 | None, Field(title="Action")]
+    affected: Annotated[list[str], Field(title="Affected")]
+    """
+    Что перестало работать — функции списком
+    """
+    detail: Annotated[str | None, Field(title="Detail")]
+    """
+    Что сделать и кому передать
+    """
+    headline: Annotated[str, Field(title="Headline")]
+    """
+    Что случилось одной фразой, без сырых ответов провайдера
+    """
+    id: Annotated[str, Field(title="Id")]
+    """
+    Корень причины (`cause_key`), стабильный ключ строки
+    """
+    message: Annotated[str | None, Field(title="Message")]
+    """
+    Готовый текст владельцу или хостингу — копируется, сам не отправляется
+    """
+    more_actions: Annotated[list[MoreAction], Field(title="More Actions")]
+    owner: Annotated[Owner1 | None, Field(title="Owner")]
+    service_keys: Annotated[list[str], Field(title="Service Keys")]
+    since: Annotated[AwareDatetime | None, Field(title="Since")]
+    state: Annotated[State1, Field(title="State")]
+    technical: Annotated[list[str], Field(title="Technical")]
+    """
+    Сырой текст проверки, секреты замаскированы; показывается свёрнутым
+    """
+    titles: Annotated[list[str], Field(title="Titles")]
 
 
 class ServiceSwitchOut(BaseModel):
@@ -799,6 +936,30 @@ class SpendSlice(BaseModel):
 class SsoTokenResponse(BaseModel):
     redirect_url: Annotated[str, Field(title="Redirect Url")]
     token: Annotated[str, Field(title="Token")]
+
+
+class State(StrEnum):
+    """
+    Состояние словом: сломано, работает с перебоями, не настроено, выключено намеренно, ожидаемо на стенде, не проверено, работает
+    """
+
+    ok = "ok"
+    broken = "broken"
+    degraded = "degraded"
+    not_configured = "not_configured"
+    disabled = "disabled"
+    expected = "expected"
+    not_checked = "not_checked"
+
+
+class State1(StrEnum):
+    ok = "ok"
+    broken = "broken"
+    degraded = "degraded"
+    not_configured = "not_configured"
+    disabled = "disabled"
+    expected = "expected"
+    not_checked = "not_checked"
 
 
 class Status(StrEnum):

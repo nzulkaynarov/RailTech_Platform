@@ -41,6 +41,7 @@ def erp_handoff(f: ErpHandoffFacts) -> CheckResult:
             error=f.last_error,
             hint=_hint(f),
             metrics=metrics,
+            cause="erp_not_connected" if not f.configured else "erp_handoff_failed",
         )
     if not f.configured and not f.pending:
         return CheckResult(
@@ -49,6 +50,7 @@ def erp_handoff(f: ErpHandoffFacts) -> CheckResult:
             "ERP не подключена — передавать клиентов пока некуда",
             hint=f"Подключите ERP: {ERP_TAB}",
             metrics=metrics,
+            cause="erp_not_connected",
         )
     return CheckResult(KEY, "ok", "Клиенты передаются в ERP без ошибок", metrics=metrics)
 

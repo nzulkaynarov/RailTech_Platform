@@ -8,7 +8,10 @@ BFF не проверяет сервисы и не решает, что испр
   не ухудшает, а у карточки, где все сервисы `off`, карточка `off` («не подключено»);
 - пометка карточки (`note`) — машинный код, фразу собирает интерфейс на языке сотрудника;
 - «Требует внимания» — то, что не в норме или ещё не подключено: сначала сбои, затем
-  предупреждения, затем неподключённое.
+  предупреждения, затем неподключённое. Одна причина — одна строка (W15-H3): сервисы реестра
+  CRM уже свёрнуты по корню в `groups`; здесь к ним добавляется то, что приходит из других
+  ответов CRM, только если оно не повторяет группу (роли моделей того же провайдера, компоненты
+  состояния системы, «бот не запущен»). «Ожидаемо на стенде» в список не попадает.
 
 Часть данных, которую CRM не отдала (нет права в CRM или не ответила), карточку не роняет:
 `access = forbidden | unavailable`, статус `unknown`.
@@ -33,6 +36,7 @@ from app.schemas_integrations import (
     IntegrationsOverview,
     Level,
     Note,
+    ServiceGroup,
     Severity,
     SpendReport,
     SystemStatus,
@@ -42,6 +46,7 @@ from app.schemas_integrations import (
 PartState = Literal["ok", "forbidden", "unavailable"]
 
 ERP_KEYS = frozenset({"erp_sync", "erp_handoff", "erp_events"})
+ERP_NOT_CONNECTED = "erp:erp_not_connected"  # корень «ERP не подключена» в группах CRM
 BUDGET_WARN_RATIO = (
     0.8  # как в реестре CRM: расход ≥ 80 % бюджета провайдера — предупреждение, ≥ 100 % — сбой
 )
@@ -113,6 +118,18 @@ def _access(*needed: Part[Any]) -> Access:
     return "forbidden" if any(p.state == "forbidden" for p in needed) else "unavailable"
 
 
+def _covered(parts: Parts) -> frozenset[str]:
+    """Сервисы, причина которых уже показана строкой-группой (кроме «не проверено»)."""
+    data = parts.services.data
+    if data is None:
+        return frozenset()
+    return frozenset(k for g in data.groups if g.state != "not_checked" for k in g.service_keys)
+
+
+def _provider_covered(parts: Parts, provider: str | None) -> bool:
+    return provider is not None and f"vendor.{provider}" in _covered(parts)
+
+
 def _is_model_service(service: ExternalService) -> bool:
     return service.key == "litellm" or service.key.startswith("vendor.")
 
@@ -121,8 +138,15 @@ def _by_key(services: list[ExternalService], keys: frozenset[str]) -> list[Exter
     return [s for s in services if s.key in keys]
 
 
+def _level(service: ExternalService) -> Level:
+    """Уровень сервиса для карточек: «ожидаемо на стенде» и «не настроено» — не сбой."""
+    if service.state in ("expected", "not_configured"):
+        return "off"
+    return service.status
+
+
 def _problems(services: list[ExternalService]) -> list[ExternalService]:
-    return [s for s in services if s.status in ("fail", "warn")]
+    return [s for s in services if s.state in ("broken", "degraded")]
 
 
 def _paused(service: ExternalService | None) -> bool:
@@ -176,7 +200,7 @@ def _erp_card(parts: Parts) -> IntegrationCard:
     )
     if connector is not None and not connector.configured:
         return _card("erp", "off", "not_configured", last=last)
-    status = worst([s.status for s in services]) if services else "unknown"
+    status = worst([_level(s) for s in services]) if services else "unknown"
     problems = _problems(services)
     if problems:
         return _card("erp", status, "problems", count=len(problems), last=last)
@@ -194,15 +218,17 @@ def _telegram_card(parts: Parts) -> IntegrationCard:
     last = _latest(
         service.checked_at if service else None, connector.updated_at if connector else None
     )
-    status: Level = service.status if service else "unknown"
+    status: Level = _level(service) if service else "unknown"
     if connector is not None and not connector.configured:
         return _card("telegram", "off", "not_configured", last=last)
     if service is not None and service.status == "off":
         return _card("telegram", "off", "not_configured", last=last)
     if _paused(service):
         return _card("telegram", status, "paused", last=last)
-    if service is not None and service.status in ("fail", "warn"):
+    if service is not None and service.state in ("broken", "degraded"):
         return _card("telegram", status, "problems", count=1, last=last)
+    if service is not None and service.state == "expected":
+        return _card("telegram", "off", "not_configured", last=last)
     if connector is not None and connector.configured and not connector.running:
         return _card("telegram", worst([status, "warn"]), "bot_not_running", last=last)
     return _card("telegram", status, "all_ok" if service else "no_data", last=last)
@@ -220,8 +246,10 @@ def _mail_card(parts: Parts) -> IntegrationCard:
         return _card("mail", "off", "not_configured", last=last)
     if _paused(service):
         return _card("mail", service.status, "paused", last=last)
-    if service.status in ("fail", "warn"):
+    if service.state in ("broken", "degraded"):
         return _card("mail", service.status, "problems", count=1, last=last)
+    if service.state in ("expected", "not_configured"):
+        return _card("mail", "off", "not_configured", last=last)
     return _card("mail", service.status, "all_ok", last=last)
 
 
@@ -229,7 +257,7 @@ def _services_card(parts: Parts) -> IntegrationCard:
     if not parts.services.ok or parts.services.data is None:
         return _blank("services", _access(parts.services))
     data = parts.services.data
-    status = worst([s.status for s in data.items])
+    status = worst([_level(s) for s in data.items])
     problems = _problems(data.items)
     if problems:
         return _card("services", status, "problems", count=len(problems), last=data.checked_at)
@@ -251,9 +279,13 @@ def _models_card(parts: Parts) -> IntegrationCard:
         return _blank("models", access)
     registry = [s for s in _services_of(parts) if _is_model_service(s)]
     models = parts.models.data.items if parts.models.data else []
-    levels: list[Level] = [s.status for s in registry] + [_model_level(m.health) for m in models]
+    levels: list[Level] = [_level(s) for s in registry] + [
+        _model_level(m.health) for m in models if not _provider_covered(parts, m.provider)
+    ]
     status = worst(levels) if levels else "unknown"
-    broken = [m for m in models if m.health == "problem"]
+    broken = [
+        m for m in models if m.health == "problem" and not _provider_covered(parts, m.provider)
+    ]
     count = len(broken) + len(_problems(registry))
     last = _latest(*(s.checked_at for s in registry), *(m.checked_at for m in models))
     if count:
@@ -299,7 +331,7 @@ def _storage_card(parts: Parts) -> IntegrationCard:
     if access != "ok":
         return _blank("storage", access)
     services = _by_key(_services_of(parts), STORAGE_KEYS)
-    levels: list[Level] = [s.status for s in services]
+    levels: list[Level] = [_level(s) for s in services]
     backups = parts.backups.data
     note: Note | None = None
     if backups is not None:
@@ -336,51 +368,70 @@ def _item(
     kind: AttentionKind,
     subject: str | None = None,
     detail: str | None = None,
+    *,
+    group: ServiceGroup | None = None,
+    technical: str | None = None,
 ) -> AttentionItem:
     return AttentionItem(
-        id=item_id, card=card, severity=severity, kind=kind, subject=subject, detail=detail
+        id=item_id,
+        card=card,
+        severity=severity,
+        kind=kind,
+        subject=subject,
+        detail=detail,
+        group=group,
+        technical=technical,
     )
 
 
-def _sentence(*parts: str | None) -> str | None:
-    """Итог проверки и подсказка CRM одной строкой; между предложениями — точка, если её нет."""
-    texts = [p.strip() for p in parts if p and p.strip()]
-    joined = ""
-    for text in texts:
-        if joined and joined[-1] not in ".!?…":
-            joined += "."
-        joined = f"{joined} {text}" if joined else text
-    return joined or None
+_GROUP_SEVERITY: dict[str, Severity] = {
+    "broken": "fail",
+    "degraded": "warn",
+    "not_configured": "setup",
+    "not_checked": "warn",
+}
 
 
-def _service_items(parts: Parts) -> list[AttentionItem]:
+def _group_items(parts: Parts) -> list[AttentionItem]:
+    """Одна причина — одна строка. «Ожидаемо на стенде» и «выключено намеренно» сюда не входят
+    («выключено» показывает `paused`); «не проверено» — только если это остановка проверок."""
+    data = parts.services.data
+    if data is None:
+        return []
     items: list[AttentionItem] = []
-    for service in _services_of(parts):
-        card: CardKey = fix_card_of_service(service)
-        if _paused(service):
-            items.append(
-                _item(
-                    f"paused:{service.key}",
-                    card,
-                    "warn",
-                    "paused",
-                    service.title,
-                    service.switch.reason if service.switch else None,
-                )
+    for group in data.groups:
+        severity = _GROUP_SEVERITY.get(group.state)
+        if severity is None:
+            continue
+        if group.state == "not_checked" and group.owner != "hosting":
+            continue
+        items.append(
+            _item(
+                f"group:{group.id}",
+                group.fix_card or "services",
+                severity,
+                "service",
+                group.headline,
+                group.detail,
+                group=group,
             )
-        elif service.status in ("fail", "warn"):
-            severity: Severity = "fail" if service.status == "fail" else "warn"
-            items.append(
-                _item(
-                    f"service:{service.key}",
-                    card,
-                    severity,
-                    "service",
-                    service.title,
-                    _sentence(service.summary, service.hint),
-                )
-            )
+        )
     return items
+
+
+def _paused_items(parts: Parts) -> list[AttentionItem]:
+    return [
+        _item(
+            f"paused:{service.key}",
+            fix_card_of_service(service),
+            "warn",
+            "paused",
+            service.title,
+            service.switch.reason if service.switch else None,
+        )
+        for service in _services_of(parts)
+        if _paused(service)
+    ]
 
 
 def fix_card_of_service(service: ExternalService) -> CardKey:
@@ -389,49 +440,87 @@ def fix_card_of_service(service: ExternalService) -> CardKey:
 
 
 def _setup_items(parts: Parts) -> list[AttentionItem]:
+    """«Ещё не подключено» из ответов коннекторов; что уже есть строкой-группой — не повторяем."""
     items: list[AttentionItem] = []
-    services = {s.key: s for s in _services_of(parts)}
+    covered = _covered(parts)
+    data = parts.services.data
+    erp_covered = data is not None and any(g.id == ERP_NOT_CONNECTED for g in data.groups)
     erp = parts.erp.data
     if erp is not None:
         if not erp.configured:
-            items.append(_item("setup:erp", "erp", "setup", "not_configured"))
+            if not erp_covered:
+                items.append(_item("setup:erp", "erp", "setup", "not_configured"))
         elif erp.rotation_pending:
             items.append(_item("rotation:erp", "erp", "warn", "rotation_pending"))
     telegram = parts.telegram.data
     if telegram is not None:
         if not telegram.configured:
-            items.append(_item("setup:telegram", "telegram", "setup", "not_configured"))
-        elif not telegram.running:
+            if "telegram" not in covered:
+                items.append(_item("setup:telegram", "telegram", "setup", "not_configured"))
+        elif not telegram.running and "telegram" not in covered:
             items.append(
                 _item(
                     "bot:telegram", "telegram", "warn", "bot_not_running", None, telegram.last_error
                 )
             )
-    elif services.get("telegram") is not None and services["telegram"].status == "off":
+    elif _service(parts, "telegram", "off") and "telegram" not in covered:
         items.append(_item("setup:telegram", "telegram", "setup", "not_configured"))
-    mail = services.get("mail")
-    if mail is not None and mail.status == "off":
+    if _service(parts, "mail", "off") and "mail" not in covered:
         items.append(_item("setup:mail", "mail", "setup", "not_configured"))
     return items
 
 
+def _service(parts: Parts, key: str, status: str) -> bool:
+    return any(s.key == key and s.status == status for s in _services_of(parts))
+
+
 def _model_items(parts: Parts) -> list[AttentionItem]:
+    """Роль модели с проблемой — если у её провайдера нет общей строки «ключ отклонён»."""
     models = parts.models.data.items if parts.models.data else []
     return [
-        _item(f"model:{m.alias}", "models", "fail", "model_problem", m.alias, m.health_detail)
+        _item(
+            f"model:{m.alias}",
+            "models",
+            "fail",
+            "model_problem",
+            m.alias,
+            None,
+            technical=m.health_detail,
+        )
         for m in models
-        if m.health == "problem"
+        if m.health == "problem" and not _provider_covered(parts, m.provider)
     ]
 
 
 def _storage_items(parts: Parts) -> list[AttentionItem]:
     backups = parts.backups.data
-    if backups is None:
+    if backups is None or "backup" in _covered(parts):
         return []
     level, note = _backup_state(backups)
     if level == "ok" or note is None:
         return []
     return [_item("backup:stale", "storage", "warn", "backup_stale", None, backups.error)]
+
+
+#: Компонент «Состояния системы» -> сервис реестра, который говорит о том же (строка уже есть).
+_COMPONENT_SERVICE: dict[str, str] = {
+    "bot": "telegram",
+    "backup": "backup",
+    "litellm": "litellm",
+    "s3": "s3",
+}
+
+
+def _component_covered(key: str, parts: Parts) -> bool:
+    if key == "external_services":
+        return True  # сводка реестра: каждая её строка и так в списке
+    if key.startswith("model:") or key == "models":
+        return True  # роли моделей — отдельные строки или общая строка провайдера
+    if key == "erp":
+        data = parts.services.data
+        return data is not None and any(g.id == ERP_NOT_CONNECTED for g in data.groups)
+    service = _COMPONENT_SERVICE.get(key)
+    return service is not None and service in _covered(parts)
 
 
 def _system_items(parts: Parts) -> list[AttentionItem]:
@@ -449,6 +538,8 @@ def _system_items(parts: Parts) -> list[AttentionItem]:
         )
         for c in data.components
         if c.status in ("fail", "warn")
+        and not c.expected_on_stand
+        and not _component_covered(c.key, parts)
     ]
 
 
@@ -460,6 +551,8 @@ def _spend_items(parts: Parts) -> list[AttentionItem]:
     for provider in report.providers:
         ratio = _budget_ratio(provider.spent_usd, provider.limit_usd)
         if ratio is None or ratio < BUDGET_WARN_RATIO:
+            continue
+        if _provider_covered(parts, provider.provider):
             continue
         over = ratio >= 1
         items.append(
@@ -488,7 +581,8 @@ def build_overview(parts: Parts, *, now: datetime | None = None) -> Integrations
     }
     cards = [builders[key](parts) for key in CARD_ORDER]
     attention = [
-        *_service_items(parts),
+        *_group_items(parts),
+        *_paused_items(parts),
         *_setup_items(parts),
         *_model_items(parts),
         *_storage_items(parts),

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.15.0
+  version: 0.16.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -5331,12 +5331,88 @@ components:
       type: string
       enum: [not_configured, service, model_problem, backup_stale, component, budget_over, budget_near, rotation_pending, paused, bot_not_running]
 
+    ServiceState:
+      type: string
+      enum: [ok, broken, degraded, not_configured, disabled, expected, not_checked]
+      description: >-
+        Состояние словом (W15-H3, решает CRM): `broken` Сломано, `degraded` Работает с перебоями, `not_configured`
+        Не настроено, `disabled` Выключено намеренно, `expected` Ожидаемо на стенде (серым, без оповещений и без «Требует
+        внимания»), `not_checked` Не проверено — нажмите «Проверить», `ok` Работает.
+
+    ServiceOwner:
+      type: string
+      enum: [admin, owner, hosting, provider]
+      description: >-
+        Кто исправляет: `admin` Вы (администратор); `owner` Владелец компании — ключ и оплата провайдера; `hosting` Хостинг —
+        сервер (тот, кто разворачивал Платформу); `provider` Провайдер — сбой на их стороне, ждём.
+
+    ServiceAction:
+      type: string
+      enum: [enter_key, enter_token, recheck, reconnect, open_settings, write_owner, write_hosting, disable_provider]
+      description: >-
+        Действие по смыслу: `enter_key` Ввести новый ключ (форма в карточке «Модели ИИ»), `enter_token` Ввести новый токен
+        (карточка Telegram), `recheck` Проверить снова, `reconnect` Переподключить, `open_settings` Открыть настройки,
+        `write_owner` Написать владельцу и `write_hosting` Передать хостингу (готовый текст `message` — копируется, ничего
+        не отправляется), `disable_provider` Выключить провайдера (пароль администратора).
+
+    ServiceGroup:
+      type: object
+      additionalProperties: false
+      required: [id, state, owner, action, more_actions, headline, detail, affected, service_keys, titles, since, technical, message, fix_card]
+      description: >-
+        Одна причина — одна строка «Требует внимания» (W15-H3): сервисы реестра CRM с общим корнем свёрнуты вместе
+        («Ключ Anthropic отклонён — не работают: диалог с клиентом, запасная модель, поиск по базе знаний»). Правило
+        группировки, «кто исправляет» и действие решает CRM (`external_cause`); BFF их не оценивает.
+      properties:
+        id: {type: string, description: 'Корень причины (`vendor.anthropic:key_rejected`) — стабильный ключ строки'}
+        state: {$ref: '#/components/schemas/ServiceState'}
+        owner:
+          anyOf:
+          - {$ref: '#/components/schemas/ServiceOwner'}
+          - {type: 'null'}
+        action:
+          description: Главное действие (одно); `null` — исправлять нечего
+          anyOf:
+          - {$ref: '#/components/schemas/ServiceAction'}
+          - {type: 'null'}
+        more_actions:
+          type: array
+          description: Запасные действия
+          items: {$ref: '#/components/schemas/ServiceAction'}
+        headline: {type: string, description: 'Что случилось одной фразой на русском (текст CRM), без сырых ответов провайдера'}
+        detail: {type: [string, 'null'], description: 'Что сделать и кому передать (текст CRM)'}
+        affected:
+          type: array
+          description: Что перестало работать — функции списком (текст CRM)
+          items: {type: string}
+        service_keys:
+          type: array
+          items: {type: string}
+        titles:
+          type: array
+          items: {type: string}
+        since: {type: [string, 'null'], format: date-time, description: 'Когда впервые обнаружено («с …»)'}
+        technical:
+          type: array
+          description: >-
+            Сырой текст проверки для «Технических подробностей» (свёрнуто, «Скопировать для поддержки»); секреты
+            замаскированы CRM.
+          items: {type: string}
+        message:
+          type: [string, 'null']
+          description: Готовый текст владельцу или хостингу; пользователь копирует его сам, Платформа ничего не отправляет
+        fix_card:
+          description: Карточка экрана, где действие выполняется; `null` — действие не требует карточки
+          anyOf:
+          - {$ref: '#/components/schemas/IntegrationCardKey'}
+          - {type: 'null'}
+
     AttentionItem:
       type: object
       additionalProperties: false
-      required: [id, card, severity, kind, subject, detail]
+      required: [id, card, severity, kind, subject, detail, group, technical]
       properties:
-        id: {type: string, description: 'Стабильный ключ строки (`service:telegram`, `model:dialog-model`, `setup:erp`)'}
+        id: {type: string, description: 'Стабильный ключ строки (`group:docling:server_down`, `model:dialog-model`, `setup:erp`)'}
         card: {$ref: '#/components/schemas/IntegrationCardKey'}
         severity:
           type: string
@@ -5349,6 +5425,16 @@ components:
         detail:
           type: [string, 'null']
           description: Итог проверки и подсказка «что сделать» от CRM (текст CRM, на русском)
+        group:
+          description: >-
+            Для `kind: service` — группа по причине (состояние, кто исправляет, действие, «с …»); для остальных `null`.
+            «Ожидаемо на стенде» в `attention` не попадает.
+          anyOf:
+          - {$ref: '#/components/schemas/ServiceGroup'}
+          - {type: 'null'}
+        technical:
+          type: [string, 'null']
+          description: 'Сырой ответ провайдера (секреты замаскированы) — интерфейс показывает его только свёрнутым, под «Технические подробности»'
 
     IntegrationsOverview:
       type: object
@@ -5474,9 +5560,14 @@ components:
     ExternalServiceList:
       type: object
       additionalProperties: false
-      required: [checked_at, summary, items]
+      required: [checked_at, summary, items, stand, groups]
       properties:
         checked_at: {type: [string, 'null'], format: date-time}
+        stand: {type: boolean, description: 'Тестовый стенд (не прод): часть причин «ожидаема на стенде»'}
+        groups:
+          type: array
+          description: 'Не-`ok` сервисы, свёрнутые по причине; порядок: сломано, перебои, не настроено, не проверено, ожидаемо, выключено'
+          items: {$ref: '#/components/schemas/ServiceGroup'}
         summary: {$ref: '#/components/schemas/ServicesSummary'}
         items:
           type: array
@@ -5679,8 +5770,24 @@ components:
           anyOf:
           - {$ref: '#/components/schemas/IntegrationCardKey'}
           - {type: 'null'}
+        state: {$ref: '#/components/schemas/ServiceState'}
+        cause_key: {type: string, description: 'Корень причины; у сервисов с общей причиной он общий'}
+        owner:
+          anyOf:
+          - {$ref: '#/components/schemas/ServiceOwner'}
+          - {type: 'null'}
+        action:
+          anyOf:
+          - {$ref: '#/components/schemas/ServiceAction'}
+          - {type: 'null'}
+        more_actions:
+          type: array
+          items: {$ref: '#/components/schemas/ServiceAction'}
+        since: {type: [string, 'null'], format: date-time, description: 'Когда впервые обнаружено (не в порядке с …)'}
+        last_recovered_at: {type: [string, 'null'], format: date-time, description: 'Когда восстановился после последнего сбоя за 30 дней — «восстановлено в …» из журнала инцидентов'}
       required: [check, checked_at, checks_24h, error, failures_24h, frequency, hint, incident, key, latency_ms, p95_ms_24h, purpose,
-        source, stale, status, summary, switch, system, title, uptime_24h, uptime_7d, fix_card]
+        source, stale, status, summary, switch, system, title, uptime_24h, uptime_7d, fix_card, state, cause_key, owner, action,
+        more_actions, since, last_recovered_at]
       type: object
       additionalProperties: false
     ExternalServiceDetail:
@@ -5946,8 +6053,8 @@ components:
       additionalProperties: false
     SystemComponent:
       properties: {checked_at: {format: date-time, type: [string, 'null']}, key: {type: string}, reason: {type: string}, status: {
-          enum: [ok, warn, fail, unknown], type: string}, title: {type: string}}
-      required: [checked_at, key, reason, status, title]
+          enum: [ok, warn, fail, unknown], type: string}, title: {type: string}, expected_on_stand: {type: boolean, description: 'Тестовый стенд: здесь это ожидаемо — в «Требует внимания» не попадает'}}
+      required: [checked_at, key, reason, status, title, expected_on_stand]
       type: object
       additionalProperties: false
 

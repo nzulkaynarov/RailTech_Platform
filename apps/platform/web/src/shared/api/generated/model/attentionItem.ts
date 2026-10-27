@@ -158,14 +158,15 @@
  * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.15.0
+ * OpenAPI spec version: 0.16.0
  */
 import type { AttentionItemSeverity } from "./attentionItemSeverity";
 import type { AttentionKind } from "./attentionKind";
 import type { IntegrationCardKey } from "./integrationCardKey";
+import type { ServiceGroup } from "./serviceGroup";
 
 export interface AttentionItem {
-  /** Стабильный ключ строки (`service:telegram`, `model:dialog-model`, `setup:erp`) */
+  /** Стабильный ключ строки (`group:docling:server_down`, `model:dialog-model`, `setup:erp`) */
   id: string;
   card: IntegrationCardKey;
   /** `fail` сбой, `warn` внимание, `setup` ещё не подключено */
@@ -181,4 +182,11 @@ export interface AttentionItem {
    * @nullable
    */
   detail: string | null;
+  /** Для `kind: service` — группа по причине (состояние, кто исправляет, действие, «с …»); для остальных `null`. «Ожидаемо на стенде» в `attention` не попадает. */
+  group: ServiceGroup | null;
+  /**
+   * Сырой ответ провайдера (секреты замаскированы) — интерфейс показывает его только свёрнутым, под «Технические подробности»
+   * @nullable
+   */
+  technical: string | null;
 }

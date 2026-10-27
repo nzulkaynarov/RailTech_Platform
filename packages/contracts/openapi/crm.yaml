@@ -1013,6 +1013,11 @@ components:
         link:
           title: Link
           type: string
+        unchecked:
+          default: false
+          description: 'Проверка не выполнялась: шаг не «Готово» и не «Не сделано» — «Не проверено»'
+          title: Unchecked
+          type: boolean
       required:
       - key
       - done
@@ -1330,6 +1335,11 @@ components:
             type: string
           - type: 'null'
           title: Checked At
+        expected_on_stand:
+          default: false
+          description: 'Тестовый стенд: здесь это ожидаемо (секреты сервера, адрес CRM, бот)'
+          title: Expected On Stand
+          type: boolean
         key:
           title: Key
           type: string
@@ -2781,6 +2791,25 @@ components:
       type: object
     ExternalServiceOut:
       properties:
+        action:
+          anyOf:
+          - enum:
+            - enter_key
+            - enter_token
+            - recheck
+            - reconnect
+            - open_settings
+            - write_owner
+            - write_hosting
+            - disable_provider
+            type: string
+          - type: 'null'
+          description: Главное действие по смыслу
+          title: Action
+        cause_key:
+          description: Корень причины; у сервисов с общей причиной он общий
+          title: Cause Key
+          type: string
         check:
           description: Как проверяется — словами
           title: Check
@@ -2828,6 +2857,13 @@ components:
         key:
           title: Key
           type: string
+        last_recovered_at:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          description: Когда восстановился после последнего сбоя за 30 дней (журнал инцидентов)
+          title: Last Recovered At
         latency_ms:
           anyOf:
           - type: integer
@@ -2842,6 +2878,32 @@ components:
             - type: 'null'
           title: Metrics
           type: object
+        more_actions:
+          description: Запасные действия
+          items:
+            enum:
+            - enter_key
+            - enter_token
+            - recheck
+            - reconnect
+            - open_settings
+            - write_owner
+            - write_hosting
+            - disable_provider
+            type: string
+          title: More Actions
+          type: array
+        owner:
+          anyOf:
+          - enum:
+            - admin
+            - owner
+            - hosting
+            - provider
+            type: string
+          - type: 'null'
+          description: Кто исправляет; нет — исправлять нечего
+          title: Owner
         p95_ms_24h:
           anyOf:
           - type: integer
@@ -2850,6 +2912,13 @@ components:
         purpose:
           title: Purpose
           type: string
+        since:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          description: Когда впервые обнаружено (не в порядке с …)
+          title: Since
         source:
           description: 'Кто проверяет: CRM сама или передаёт ERP'
           enum:
@@ -2860,6 +2929,19 @@ components:
         stale:
           title: Stale
           type: boolean
+        state:
+          description: 'Состояние словом: сломано, работает с перебоями, не настроено, выключено намеренно, ожидаемо на стенде,
+            не проверено, работает'
+          enum:
+          - ok
+          - broken
+          - degraded
+          - not_configured
+          - disabled
+          - expected
+          - not_checked
+          title: State
+          type: string
         status:
           enum:
           - ok
@@ -2920,6 +3002,13 @@ components:
       - p95_ms_24h
       - switch
       - incident
+      - state
+      - cause_key
+      - owner
+      - action
+      - more_actions
+      - since
+      - last_recovered_at
       title: ExternalServiceOut
       type: object
     ExternalServicesOut:
@@ -2930,17 +3019,29 @@ components:
             type: string
           - type: 'null'
           title: Checked At
+        groups:
+          description: Не-`ok` сервисы, свёрнутые по причине
+          items:
+            $ref: '#/components/schemas/ServiceGroupOut'
+          title: Groups
+          type: array
         services:
           items:
             $ref: '#/components/schemas/ExternalServiceOut'
           title: Services
           type: array
+        stand:
+          description: 'Тестовый стенд (не прод): часть причин «ожидаема»'
+          title: Stand
+          type: boolean
         summary:
           $ref: '#/components/schemas/ExternalServicesSummary'
       required:
       - checked_at
       - summary
       - services
+      - stand
+      - groups
       title: ExternalServicesOut
       type: object
     ExternalServicesSummary:
@@ -5186,6 +5287,122 @@ components:
       - password
       title: ServiceEnableIn
       type: object
+    ServiceGroupOut:
+      description: 'Одна причина — одна строка «Требует внимания»: сервисы с общим корнем свёрнуты вместе.'
+      properties:
+        action:
+          anyOf:
+          - enum:
+            - enter_key
+            - enter_token
+            - recheck
+            - reconnect
+            - open_settings
+            - write_owner
+            - write_hosting
+            - disable_provider
+            type: string
+          - type: 'null'
+          title: Action
+        affected:
+          description: Что перестало работать — функции списком
+          items:
+            type: string
+          title: Affected
+          type: array
+        detail:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Что сделать и кому передать
+          title: Detail
+        headline:
+          description: Что случилось одной фразой, без сырых ответов провайдера
+          title: Headline
+          type: string
+        id:
+          description: Корень причины (`cause_key`), стабильный ключ строки
+          title: Id
+          type: string
+        message:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Готовый текст владельцу или хостингу — копируется, сам не отправляется
+          title: Message
+        more_actions:
+          items:
+            enum:
+            - enter_key
+            - enter_token
+            - recheck
+            - reconnect
+            - open_settings
+            - write_owner
+            - write_hosting
+            - disable_provider
+            type: string
+          title: More Actions
+          type: array
+        owner:
+          anyOf:
+          - enum:
+            - admin
+            - owner
+            - hosting
+            - provider
+            type: string
+          - type: 'null'
+          title: Owner
+        service_keys:
+          items:
+            type: string
+          title: Service Keys
+          type: array
+        since:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          title: Since
+        state:
+          enum:
+          - ok
+          - broken
+          - degraded
+          - not_configured
+          - disabled
+          - expected
+          - not_checked
+          title: State
+          type: string
+        technical:
+          description: Сырой текст проверки, секреты замаскированы; показывается свёрнутым
+          items:
+            type: string
+          title: Technical
+          type: array
+        titles:
+          items:
+            type: string
+          title: Titles
+          type: array
+      required:
+      - id
+      - state
+      - owner
+      - action
+      - more_actions
+      - headline
+      - detail
+      - affected
+      - service_keys
+      - titles
+      - since
+      - technical
+      - message
+      title: ServiceGroupOut
+      type: object
     ServiceRequestClose:
       properties:
         resolution:
@@ -6304,7 +6521,7 @@ components:
       type: http
 info:
   title: RailTech CRM API
-  version: 0.5.0
+  version: 0.6.0
 openapi: 3.1.0
 paths:
   /api/v1/admin/ai-spend:

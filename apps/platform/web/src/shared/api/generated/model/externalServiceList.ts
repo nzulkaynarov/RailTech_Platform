@@ -158,14 +158,19 @@
  * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.15.0
+ * OpenAPI spec version: 0.16.0
  */
 import type { ExternalService } from "./externalService";
+import type { ServiceGroup } from "./serviceGroup";
 import type { ServicesSummary } from "./servicesSummary";
 
 export interface ExternalServiceList {
   /** @nullable */
   checked_at: string | null;
+  /** Тестовый стенд (не прод): часть причин «ожидаема на стенде» */
+  stand: boolean;
+  /** Не-`ok` сервисы, свёрнутые по причине; порядок: сломано, перебои, не настроено, не проверено, ожидаемо, выключено */
+  groups: ServiceGroup[];
   summary: ServicesSummary;
   items: ExternalService[];
 }

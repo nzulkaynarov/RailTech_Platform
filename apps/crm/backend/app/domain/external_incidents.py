@@ -1,8 +1,8 @@
 """Инциденты, оповещения и сводка внешних сервисов (M3-CRM-12, ADR-0024). Чистые функции.
 
 Инцидент открывает переход в `fail`, закрывает `ok`/`warn`; `unknown`/`off` (нет данных, не
-подключён) инцидент не меняют. Оповещение о сбое — одно на инцидент и не чаще `repeat` на сервис
-(антиспам при «мигании»); о восстановлении — только если о сбое сообщали.
+подключён) инцидент не меняют. Инцидент — журнал «с … по …» по сервису; оповещения о причинах
+(одно «сломано» после 15 минут и одно «восстановлено») — в `external_cause`.
 """
 
 from collections.abc import Iterable, Mapping
@@ -33,15 +33,6 @@ def transition(open_incident: OpenIncident | None, status: Status) -> Transition
     return "none"
 
 
-def failure_alert_due(last_alert_at: datetime | None, now: datetime, repeat: timedelta) -> bool:
-    """Сбой оповещается, если по этому сервису не оповещали последние `repeat`."""
-    return last_alert_at is None or now - last_alert_at >= repeat
-
-
-def recovery_alert_due(incident_alerted_at: datetime | None) -> bool:
-    return incident_alerted_at is not None
-
-
 def duration_text(delta: timedelta) -> str:
     """«меньше минуты», «12 мин», «2 ч 5 мин», «3 дн 4 ч»."""
     minutes = int(delta.total_seconds() // 60)
@@ -64,25 +55,6 @@ class AlertText:
     @property
     def plain(self) -> str:
         return "\n".join((self.subject, *self.lines))
-
-
-def failure_alert(
-    title: str, summary: str, error: str | None, hint: str | None, url: str
-) -> AlertText:
-    lines = [summary]
-    if error:
-        lines.append(f"Ошибка: {error}")
-    if hint:
-        lines.append(f"Что сделать: {hint}")
-    lines.append(f"Открыть: {url}")
-    return AlertText(f"⚠️ Сбой: {title}", tuple(lines))
-
-
-def recovery_alert(title: str, lasted: timedelta, url: str) -> AlertText:
-    return AlertText(
-        f"✅ Восстановлено: {title}",
-        (f"Сбой длился {duration_text(lasted)}.", f"Открыть: {url}"),
-    )
 
 
 @dataclass(frozen=True, slots=True)

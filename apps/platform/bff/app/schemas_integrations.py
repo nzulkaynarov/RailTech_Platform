@@ -41,6 +41,20 @@ AttentionKind = Literal[
     "bot_not_running",
 ]
 Severity = Literal["fail", "warn", "setup"]
+ServiceState = Literal[
+    "ok", "broken", "degraded", "not_configured", "disabled", "expected", "not_checked"
+]
+ServiceOwner = Literal["admin", "owner", "hosting", "provider"]
+ServiceAction = Literal[
+    "enter_key",
+    "enter_token",
+    "recheck",
+    "reconnect",
+    "open_settings",
+    "write_owner",
+    "write_hosting",
+    "disable_provider",
+]
 MailStatus = Literal["queued", "sent", "failed", "skipped_no_smtp"]
 
 
@@ -261,7 +275,33 @@ class ServiceSwitch(_Out):
     reason: str | None
 
 
+class ServiceGroup(_Out):
+    """Одна причина — одна строка: сервисы с общим корнем (W15-H3, CRM `ServiceGroupOut`)."""
+
+    action: ServiceAction | None
+    affected: list[str]
+    detail: str | None
+    fix_card: CardKey | None
+    headline: str
+    id: str
+    message: str | None
+    more_actions: list[ServiceAction]
+    owner: ServiceOwner | None
+    service_keys: list[str]
+    since: datetime | None
+    state: ServiceState
+    technical: list[str]
+    titles: list[str]
+
+
 class ExternalService(_Out):
+    action: ServiceAction | None
+    cause_key: str
+    last_recovered_at: datetime | None
+    more_actions: list[ServiceAction]
+    owner: ServiceOwner | None
+    since: datetime | None
+    state: ServiceState
     check: str
     checked_at: datetime | None
     checks_24h: int
@@ -297,6 +337,8 @@ class ServicesSummary(_Out):
 
 class ExternalServiceList(_Out):
     checked_at: datetime | None
+    groups: list[ServiceGroup]
+    stand: bool
     summary: ServicesSummary
     items: list[ExternalService]
 
@@ -470,6 +512,7 @@ class BackupsStatus(_Out):
 
 class SystemComponent(_Out):
     checked_at: datetime | None
+    expected_on_stand: bool = False
     key: str
     reason: str
     status: Literal["ok", "warn", "fail", "unknown"]
@@ -502,6 +545,8 @@ class AttentionItem(_Out):
     kind: AttentionKind
     subject: str | None
     detail: str | None
+    group: ServiceGroup | None = None
+    technical: str | None = None
 
 
 class IntegrationsOverview(_Out):

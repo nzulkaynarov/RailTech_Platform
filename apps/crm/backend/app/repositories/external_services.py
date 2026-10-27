@@ -15,6 +15,7 @@ from app.models.bus import TABLES
 from app.models.clients import Client
 from app.models.email import EmailLog
 from app.models.external_services import (
+    ExternalCauseAlert,
     ExternalServiceCheck,
     ExternalServiceIncident,
     ExternalServiceSwitch,
@@ -43,6 +44,34 @@ DAILY_SQL = text(
     FROM external_service_checks
     WHERE service_key = :key AND checked_at >= :since
     GROUP BY 1, 2 ORDER BY 1
+    """
+)
+
+
+# «С какого времени не в порядке»: первая не-`ok` проверка после последней `ok` (в пределах срока).
+SINCE_SQL = text(
+    """
+    SELECT c.service_key, min(c.checked_at) AS since
+    FROM external_service_checks c
+    WHERE c.status <> 'ok'
+      AND c.checked_at > COALESCE(
+        (SELECT max(o.checked_at) FROM external_service_checks o
+         WHERE o.service_key = c.service_key AND o.status = 'ok'),
+        '-infinity'::timestamptz)
+    GROUP BY c.service_key
+    """
+)
+# Сколько `fail` подряд у сервиса (после последней не-`fail` проверки) — основа затухания повторов.
+FAIL_STREAK_SQL = text(
+    """
+    SELECT c.service_key, count(*) AS n
+    FROM external_service_checks c
+    WHERE c.status = 'fail'
+      AND c.checked_at > COALESCE(
+        (SELECT max(o.checked_at) FROM external_service_checks o
+         WHERE o.service_key = c.service_key AND o.status <> 'fail'),
+        '-infinity'::timestamptz)
+    GROUP BY c.service_key
     """
 )
 
@@ -90,13 +119,66 @@ async def open_incidents(
     return {r.service_key: r for r in await session.scalars(stmt)}
 
 
-async def last_alerts(session: AsyncSession) -> dict[str, datetime]:
+async def unhealthy_since(session: AsyncSession) -> dict[str, datetime]:
+    """Сервис → когда впервые обнаружено: первая не-`ok` проверка текущей полосы."""
+    return {r.service_key: r.since for r in (await session.execute(SINCE_SQL)).all()}
+
+
+async def last_recovered(session: AsyncSession, since: datetime) -> dict[str, datetime]:
+    """Сервис → когда закрыт последний инцидент за период («восстановлено в …»)."""
     stmt = (
-        select(ExternalServiceIncident.service_key, func.max(ExternalServiceIncident.alerted_at))
-        .where(ExternalServiceIncident.alerted_at.is_not(None))
+        select(ExternalServiceIncident.service_key, func.max(ExternalServiceIncident.ended_at))
+        .where(
+            ExternalServiceIncident.ended_at.is_not(None),
+            ExternalServiceIncident.ended_at >= since,
+        )
         .group_by(ExternalServiceIncident.service_key)
     )
     return {key: at for key, at in (await session.execute(stmt)).all() if at is not None}
+
+
+async def fail_streaks(session: AsyncSession) -> dict[str, int]:
+    """Сервис → сколько проверок `fail` подряд (только сервисы с такой полосой)."""
+    return {r.service_key: int(r.n) for r in (await session.execute(FAIL_STREAK_SQL)).all()}
+
+
+async def open_causes(
+    session: AsyncSession, *, for_update: bool = False
+) -> dict[str, ExternalCauseAlert]:
+    stmt = select(ExternalCauseAlert).where(ExternalCauseAlert.ended_at.is_(None))
+    if for_update:
+        stmt = stmt.with_for_update()
+    return {r.cause_key: r for r in await session.scalars(stmt)}
+
+
+async def mark_incidents(
+    session: AsyncSession,
+    service_keys: list[str],
+    *,
+    alerted: datetime | None = None,
+    recovered: datetime | None = None,
+) -> None:
+    """Отметить оповещение в инцидентах сервисов причины (сбой — открытые, возврат — закрытые)."""
+    if not service_keys:
+        return
+    stmt = select(ExternalServiceIncident).where(
+        ExternalServiceIncident.service_key.in_(service_keys)
+    )
+    if alerted is not None:
+        stmt = stmt.where(
+            ExternalServiceIncident.ended_at.is_(None), ExternalServiceIncident.alerted_at.is_(None)
+        )
+    else:
+        stmt = stmt.where(
+            ExternalServiceIncident.ended_at.is_not(None),
+            ExternalServiceIncident.alerted_at.is_not(None),
+            ExternalServiceIncident.recovery_alerted_at.is_(None),
+        )
+    for row in await session.scalars(stmt):
+        if alerted is not None:
+            row.alerted_at = alerted
+        else:
+            row.recovery_alerted_at = recovered
 
 
 async def history(
@@ -148,6 +230,12 @@ async def purge(session: AsyncSession, checks_before: datetime, incidents_before
         delete(ExternalServiceIncident).where(
             ExternalServiceIncident.ended_at.is_not(None),
             ExternalServiceIncident.ended_at < incidents_before,
+        )
+    )
+    await session.execute(
+        delete(ExternalCauseAlert).where(
+            ExternalCauseAlert.ended_at.is_not(None),
+            ExternalCauseAlert.ended_at < incidents_before,
         )
     )
     return int(getattr(result, "rowcount", 0) or 0)

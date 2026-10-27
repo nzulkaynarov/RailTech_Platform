@@ -158,7 +158,7 @@
  * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.15.0
+ * OpenAPI spec version: 0.16.0
  */
 
 export * from "./accessLevel";
@@ -442,12 +442,16 @@ export * from "./searchHit";
 export * from "./searchParams";
 export * from "./searchResult";
 export * from "./sectionLevel";
+export * from "./serviceAction";
 export * from "./serviceCheck";
 export * from "./serviceCheckStatus";
 export * from "./serviceCheckTier";
 export * from "./serviceDay";
+export * from "./serviceGroup";
 export * from "./serviceIncident";
+export * from "./serviceOwner";
 export * from "./servicesSummary";
+export * from "./serviceState";
 export * from "./serviceSwitch";
 export * from "./serviceSwitchIn";
 export * from "./serviceSwitchKind";

@@ -158,7 +158,7 @@
  * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.15.0
+ * OpenAPI spec version: 0.16.0
  */
 import { faker } from "@faker-js/faker";
 
@@ -191,6 +191,9 @@ import {
   ObjectKind,
   QueueItemKind,
   RestrictedField,
+  ServiceAction,
+  ServiceOwner,
+  ServiceState,
   SetupCompanyBlocker,
   SetupStepKey,
   SetupStepState,
@@ -769,6 +772,59 @@ export const getGetIntegrationsOverviewResponseMock = (
         faker.string.alpha({ length: { min: 10, max: 20 } }),
         null,
       ]),
+      group: faker.helpers.arrayElement([
+        {
+          id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          state: faker.helpers.arrayElement(Object.values(ServiceState)),
+          owner: faker.helpers.arrayElement([
+            faker.helpers.arrayElement(Object.values(ServiceOwner)),
+            null,
+          ]),
+          action: faker.helpers.arrayElement([
+            faker.helpers.arrayElement(Object.values(ServiceAction)),
+            null,
+          ]),
+          more_actions: faker.helpers.arrayElements(Object.values(ServiceAction)),
+          headline: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          detail: faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
+          affected: Array.from(
+            { length: faker.number.int({ min: 1, max: 10 }) },
+            (_, i) => i + 1,
+          ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+          service_keys: Array.from(
+            { length: faker.number.int({ min: 1, max: 10 }) },
+            (_, i) => i + 1,
+          ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+          titles: Array.from(
+            { length: faker.number.int({ min: 1, max: 10 }) },
+            (_, i) => i + 1,
+          ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+          since: faker.helpers.arrayElement([
+            faker.date.past().toISOString().slice(0, 19) + "Z",
+            null,
+          ]),
+          technical: Array.from(
+            { length: faker.number.int({ min: 1, max: 10 }) },
+            (_, i) => i + 1,
+          ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+          message: faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
+          fix_card: faker.helpers.arrayElement([
+            faker.helpers.arrayElement(Object.values(IntegrationCardKey)),
+            null,
+          ]),
+        },
+        null,
+      ]),
+      technical: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
     }),
   ),
   ...overrideResponse,
@@ -1166,6 +1222,49 @@ export const getListExternalServicesResponseMock = (
     faker.date.past().toISOString().slice(0, 19) + "Z",
     null,
   ]),
+  stand: faker.datatype.boolean(),
+  groups: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      state: faker.helpers.arrayElement(Object.values(ServiceState)),
+      owner: faker.helpers.arrayElement([
+        faker.helpers.arrayElement(Object.values(ServiceOwner)),
+        null,
+      ]),
+      action: faker.helpers.arrayElement([
+        faker.helpers.arrayElement(Object.values(ServiceAction)),
+        null,
+      ]),
+      more_actions: faker.helpers.arrayElements(Object.values(ServiceAction)),
+      headline: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      detail: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      affected: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+      service_keys: Array.from(
+        { length: faker.number.int({ min: 1, max: 10 }) },
+        (_, i) => i + 1,
+      ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+      titles: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+      since: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
+      technical: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+      message: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      fix_card: faker.helpers.arrayElement([
+        faker.helpers.arrayElement(Object.values(IntegrationCardKey)),
+        null,
+      ]),
+    }),
+  ),
   summary: {
     disabled: faker.number.int(),
     fail: faker.number.int(),
@@ -1247,6 +1346,22 @@ export const getListExternalServicesResponseMock = (
     uptime_7d: faker.helpers.arrayElement([faker.number.float({ fractionDigits: 2 }), null]),
     fix_card: faker.helpers.arrayElement([
       faker.helpers.arrayElement(Object.values(IntegrationCardKey)),
+      null,
+    ]),
+    state: faker.helpers.arrayElement(Object.values(ServiceState)),
+    cause_key: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    owner: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(ServiceOwner)),
+      null,
+    ]),
+    action: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(ServiceAction)),
+      null,
+    ]),
+    more_actions: faker.helpers.arrayElements(Object.values(ServiceAction)),
+    since: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
+    last_recovered_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
       null,
     ]),
   })),
@@ -1368,6 +1483,22 @@ export const getGetExternalServiceResponseMock = (
       faker.helpers.arrayElement(Object.values(IntegrationCardKey)),
       null,
     ]),
+    state: faker.helpers.arrayElement(Object.values(ServiceState)),
+    cause_key: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    owner: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(ServiceOwner)),
+      null,
+    ]),
+    action: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(ServiceAction)),
+      null,
+    ]),
+    more_actions: faker.helpers.arrayElements(Object.values(ServiceAction)),
+    since: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
+    last_recovered_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
   },
   ...overrideResponse,
 });
@@ -1487,6 +1618,22 @@ export const getCheckExternalServiceResponseMock = (
       faker.helpers.arrayElement(Object.values(IntegrationCardKey)),
       null,
     ]),
+    state: faker.helpers.arrayElement(Object.values(ServiceState)),
+    cause_key: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    owner: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(ServiceOwner)),
+      null,
+    ]),
+    action: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(ServiceAction)),
+      null,
+    ]),
+    more_actions: faker.helpers.arrayElements(Object.values(ServiceAction)),
+    since: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
+    last_recovered_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
   },
   ...overrideResponse,
 });
@@ -1562,6 +1709,22 @@ export const getDisableExternalServiceResponseMock = (
     faker.helpers.arrayElement(Object.values(IntegrationCardKey)),
     null,
   ]),
+  state: faker.helpers.arrayElement(Object.values(ServiceState)),
+  cause_key: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  owner: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(Object.values(ServiceOwner)),
+    null,
+  ]),
+  action: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(Object.values(ServiceAction)),
+    null,
+  ]),
+  more_actions: faker.helpers.arrayElements(Object.values(ServiceAction)),
+  since: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
+  last_recovered_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
   ...overrideResponse,
 });
 
@@ -1634,6 +1797,22 @@ export const getEnableExternalServiceResponseMock = (
   uptime_7d: faker.helpers.arrayElement([faker.number.float({ fractionDigits: 2 }), null]),
   fix_card: faker.helpers.arrayElement([
     faker.helpers.arrayElement(Object.values(IntegrationCardKey)),
+    null,
+  ]),
+  state: faker.helpers.arrayElement(Object.values(ServiceState)),
+  cause_key: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  owner: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(Object.values(ServiceOwner)),
+    null,
+  ]),
+  action: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(Object.values(ServiceAction)),
+    null,
+  ]),
+  more_actions: faker.helpers.arrayElements(Object.values(ServiceAction)),
+  since: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
+  last_recovered_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
     null,
   ]),
   ...overrideResponse,
@@ -1888,6 +2067,7 @@ export const getGetSystemStatusResponseMock = (
       reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
       status: faker.helpers.arrayElement(["ok", "warn", "fail", "unknown"] as const),
       title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      expected_on_stand: faker.datatype.boolean(),
     }),
   ),
   status: faker.helpers.arrayElement(["ok", "warn", "fail", "unknown"] as const),

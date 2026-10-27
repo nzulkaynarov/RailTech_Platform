@@ -32,6 +32,7 @@ from app.schemas_integrations import (
     BackupsStatus,
     BotProfile,
     BotProfileState,
+    CardKey,
     ErpCheck,
     ErpConnector,
     ErpPairIn,
@@ -166,12 +167,28 @@ async def get_overview(authed: Reader) -> IntegrationsOverview:
     return build_overview(parts)
 
 
+def _group_card(group: crm.ServiceGroupOut, cards: dict[str, CardKey | None]) -> CardKey | None:
+    """Карточка исправления группы: ключ — «Модели», токен — «Telegram», иначе по её сервисам."""
+    action = group.action.value if group.action is not None else None
+    if action == "enter_key":
+        return "models"
+    if action == "enter_token":
+        return "telegram"
+    return next((card for key in group.service_keys if (card := cards.get(key))), None)
+
+
 def _services_list(out: crm.ExternalServicesOut) -> ExternalServiceList:
+    items = [_service(s) for s in out.services]
+    cards: dict[str, CardKey | None] = {s.key: s.fix_card for s in items}
     return ExternalServiceList.model_validate(
         {
             "checked_at": out.checked_at,
             "summary": out.summary.model_dump(mode="json"),
-            "items": [_service(s).model_dump(mode="json") for s in out.services],
+            "items": [s.model_dump(mode="json") for s in items],
+            "stand": out.stand,
+            "groups": [
+                {**g.model_dump(mode="json"), "fix_card": _group_card(g, cards)} for g in out.groups
+            ],
         }
     )
 

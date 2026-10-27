@@ -14,10 +14,12 @@ from zoneinfo import ZoneInfo
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.domain import external_cause as cause
 from app.domain import external_incidents as inc
 from app.domain import external_registry as reg
 from app.domain import external_status as rules
 from app.domain.errors import NotFoundError
+from app.domain.external_status import CAUSE_METRIC
 from app.domain.system_status import Component
 from app.integrations.litellm_catalog import ModelCatalog
 from app.models.auth import User
@@ -35,6 +37,7 @@ from app.schemas.external_services import (
     IncidentOut,
     ServiceCheckOut,
     ServiceDayOut,
+    ServiceGroupOut,
     ServiceSwitchOut,
 )
 from app.services.external_services.providers import providers as alias_providers
@@ -53,6 +56,7 @@ class ExternalServicesView:
         settings: SettingsService,
         board: SwitchBoard,
         defaults: Path | None = None,
+        stand: bool = False,
         ttl_s: float = 15.0,
         clock: Callable[[], float] = time.monotonic,
     ) -> None:
@@ -61,30 +65,46 @@ class ExternalServicesView:
         self._settings = settings
         self._board = board
         self._defaults = defaults
+        self._stand = stand
         self._ttl_s = ttl_s
         self._clock = clock
-        self._cache: tuple[float, ExternalServicesOut] | None = None
+        self._cache: tuple[float, ExternalServicesOut, list[cause.Group]] | None = None
 
     def invalidate(self) -> None:
         self._cache = None
+
+    async def causes(self, now: datetime) -> tuple[list[cause.Group], dict[str, cause.State]]:
+        """Группы по причине и состояние каждого сервиса — вход для оповещений `ExternalChecks`."""
+        out = await self.list(now)
+        assert self._cache is not None  # noqa: S101 — список только что построен или взят из кэша
+        return self._cache[2], {s.key: s.state for s in out.services}
 
     async def list(self, now: datetime) -> ExternalServicesOut:
         if self._cache is not None and self._clock() < self._cache[0]:
             return self._cache[1]
         providers = await self._providers()
         specs = reg.registry(providers)
+        cfg = await self._settings.get()
         async with self._sessions() as session:
             ctx = await _Context.load(session, now)
-        ctx.providers = providers
-        services = [ctx.service(spec, now) for spec in specs]
-        counts = inc.count((s.status, bool(s.switch and s.switch.disabled)) for s in services)
+        ctx.providers, ctx.stand = providers, self._stand
+        pairs = [ctx.service(spec, now) for spec in specs]
+        services = [service for service, _ in pairs]
+        groups = cause.build_groups(
+            (d for _, d in pairs), cfg.business_hours.timezone, cfg.company.name
+        )
+        counts = inc.count(
+            (_level(d.state), bool(sv.switch and sv.switch.disabled)) for sv, d in pairs
+        )
         checked = max((s.checked_at for s in services if s.checked_at), default=None)
         out = ExternalServicesOut(
             checked_at=checked,
             summary=_summary(counts),
             services=services,
+            stand=self._stand,
+            groups=[_group_out(g) for g in groups],
         )
-        self._cache = (self._clock() + self._ttl_s, out)
+        self._cache = (self._clock() + self._ttl_s, out, groups)
         return out
 
     async def get(self, key: str, now: datetime) -> ExternalServiceOut:
@@ -113,14 +133,42 @@ class ExternalServicesView:
     async def summary(self, now: datetime) -> Component:
         """Строка «Внешние сервисы» на «Состоянии системы»."""
         data = await self.list(now)
-        fails = [s.title for s in data.services if s.status == "fail"]
-        warns = [s.title for s in data.services if s.status == "warn"]
+        fails = [s.title for s in data.services if s.state == "broken"]
+        warns = [s.title for s in data.services if s.state == "degraded"]
         s = data.summary
         counts = inc.Counts(s.ok, s.warn, s.fail, s.unknown, s.off, s.disabled)
         return inc.summary_component(counts, fails, warns, now, checked=data.checked_at is not None)
 
     async def _providers(self) -> dict[str, str | None]:
         return await alias_providers(self._catalog, self._defaults)
+
+
+def _level(state: cause.State) -> reg.Status:
+    """Состояние словом → уровень для счётчиков; «ожидаемо» и «не настроено» — не сбой."""
+    return {
+        "ok": "ok",
+        "broken": "fail",
+        "degraded": "warn",
+        "not_checked": "unknown",
+    }.get(state, "off")  # type: ignore[return-value]
+
+
+def _group_out(g: cause.Group) -> ServiceGroupOut:
+    return ServiceGroupOut(
+        id=g.id,
+        state=g.state,
+        owner=g.owner,
+        action=g.action,
+        more_actions=list(g.more),
+        headline=g.headline,
+        detail=g.detail,
+        affected=list(g.affected),
+        service_keys=list(g.service_keys),
+        titles=list(g.titles),
+        since=g.since,
+        technical=list(g.technical),
+        message=g.message,
+    )
 
 
 def _summary(counts: inc.Counts) -> ExternalServicesSummary:
@@ -147,10 +195,14 @@ class _Context:
         switches: Mapping[str, ExternalServiceSwitch],
         names: Mapping[int, str],
         providers: Mapping[str, str | None] | None = None,
+        since: Mapping[str, datetime] | None = None,
+        recovered: Mapping[str, datetime] | None = None,
     ) -> None:
         self.latest, self.day, self.week, self.p95 = latest, day, week, p95
         self.incidents, self.switches, self.names = incidents, switches, names
         self.providers = providers or {}
+        self.since, self.recovered = since or {}, recovered or {}
+        self.stand = False
 
     @classmethod
     async def load(cls, session: AsyncSession, now: datetime) -> "_Context":
@@ -168,13 +220,50 @@ class _Context:
             incidents=await repo.open_incidents(session),
             switches=switches,
             names=names,
+            since=await repo.unhealthy_since(session),
+            recovered=await repo.last_recovered(session, now - timedelta(days=30)),
         )
 
-    def service(self, spec: reg.ServiceSpec, now: datetime) -> ExternalServiceOut:
+    def service(
+        self, spec: reg.ServiceSpec, now: datetime
+    ) -> tuple[ExternalServiceOut, cause.Diagnosis]:
         result, checked_at, is_stale = self._result(spec, now)
         day = self.day.get(spec.key, {})
         incident = self.incidents.get(spec.key)
         no_fix = bool(result.metrics.get("_no_fix"))
+        switch = self.switches.get(spec.key)
+        row = self.latest.get(spec.key)
+        since = min(
+            (t for t in (self.since.get(spec.key), incident.started_at if incident else None) if t),
+            default=None,
+        )
+        diagnosis = cause.diagnose(
+            spec,
+            result,
+            cause.Context(
+                stand=self.stand,
+                disabled=bool(switch and switch.disabled),
+                never_checked=row is None,
+                stale=is_stale,
+                providers=self.providers,
+            ),
+            since,
+        )
+        return self._out(
+            spec, result, checked_at, is_stale, no_fix, day, incident, diagnosis
+        ), diagnosis
+
+    def _out(
+        self,
+        spec: reg.ServiceSpec,
+        result: rules.CheckResult,
+        checked_at: datetime | None,
+        is_stale: bool,
+        no_fix: bool,
+        day: Mapping[str, int],
+        incident: ExternalServiceIncident | None,
+        diagnosis: cause.Diagnosis,
+    ) -> ExternalServiceOut:
         return ExternalServiceOut(
             key=spec.key,
             title=spec.title,
@@ -201,6 +290,13 @@ class _Context:
             p95_ms_24h=self.p95.get(spec.key),
             switch=self._switch(spec),
             incident=_incident_out(incident) if incident is not None else None,
+            state=diagnosis.state,
+            cause_key=diagnosis.cause_key,
+            owner=diagnosis.owner,
+            action=diagnosis.action,
+            more_actions=list(diagnosis.more),
+            since=diagnosis.since,
+            last_recovered_at=self.recovered.get(spec.key),
         )
 
     def _result(
@@ -227,6 +323,8 @@ class _Context:
                 None,
                 False,
             )
+        metrics = dict(row.metrics or {})
+        saved_cause = metrics.get(CAUSE_METRIC)
         result = rules.CheckResult(
             spec.key,
             row.status,  # type: ignore[arg-type]
@@ -234,9 +332,10 @@ class _Context:
             row.error,
             row.hint,
             row.latency_ms,
-            dict(row.metrics or {}),
+            metrics,
+            cause=saved_cause if isinstance(saved_cause, str) else None,
         )
-        if rules.stale(row.checked_at, spec.tiers, now):
+        if rules.stale(row.checked_at, spec.tiers, now, backing_off=row.status == "fail"):
             summary, hint = rules.stale_summary(row.checked_at, now)
             return (
                 rules.CheckResult(spec.key, "unknown", summary, None, hint, None, result.metrics),

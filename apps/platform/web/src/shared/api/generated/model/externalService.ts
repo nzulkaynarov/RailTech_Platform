@@ -158,14 +158,17 @@
  * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.15.0
+ * OpenAPI spec version: 0.16.0
  */
 import type { ExternalServiceFrequency } from "./externalServiceFrequency";
 import type { ExternalServiceSource } from "./externalServiceSource";
 import type { ExternalServiceStatus } from "./externalServiceStatus";
 import type { ExternalServiceSystem } from "./externalServiceSystem";
 import type { IntegrationCardKey } from "./integrationCardKey";
+import type { ServiceAction } from "./serviceAction";
 import type { ServiceIncident } from "./serviceIncident";
+import type { ServiceOwner } from "./serviceOwner";
+import type { ServiceState } from "./serviceState";
 import type { ServiceSwitch } from "./serviceSwitch";
 
 /**
@@ -207,4 +210,20 @@ export interface ExternalService {
   uptime_7d: number | null;
   /** Карточка экрана, где это исправляется (`IntegrationCardKey`); `null` — настроить негде */
   fix_card: IntegrationCardKey | null;
+  state: ServiceState;
+  /** Корень причины; у сервисов с общей причиной он общий */
+  cause_key: string;
+  owner: ServiceOwner | null;
+  action: ServiceAction | null;
+  more_actions: ServiceAction[];
+  /**
+   * Когда впервые обнаружено (не в порядке с …)
+   * @nullable
+   */
+  since: string | null;
+  /**
+   * Когда восстановился после последнего сбоя за 30 дней — «восстановлено в …» из журнала инцидентов
+   * @nullable
+   */
+  last_recovered_at: string | null;
 }

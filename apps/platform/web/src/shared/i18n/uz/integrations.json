@@ -173,11 +173,11 @@
   },
   "telegram": {
     "bot": "Bot",
-    "running": "Ishlayapti",
+    "running": "Bot holati",
     "runningValue": {
-      "yes": "ha",
-      "no": "yo‘q — bot jarayoni ishga tushirilmagan",
-      "none": "token kiritilmagan"
+      "yes": "ishlayapti",
+      "no": "ishlamayapti — bot jarayoni ishga tushirilmagan",
+      "none": "ishlamayapti — token kiritilmagan"
     },
     "updated": "Token yangilangan",
     "lastError": "Oxirgi xato",
@@ -544,5 +544,85 @@
       "backup_unavailable": "Jadvaldan tashqari nusxani bu yerdan olib bo‘lmaydi.",
       "wrong_password": "Parol noto‘g‘ri kiritilgan."
     }
+  },
+  "health": {
+    "copyFailed": "Nusxalab bo‘lmadi: matnni belgilab, qo‘lda nusxalang.",
+    "state": {
+      "ok": "Ishlayapti",
+      "broken": "Buzilgan",
+      "degraded": "Uzilishlar bilan ishlayapti",
+      "not_configured": "Sozlanmagan",
+      "disabled": "Ataylab o‘chirilgan",
+      "expected": "Sinov stendida kutilgan holat",
+      "not_checked": "Tekshirilmagan"
+    },
+    "notChecked": "Tekshirilmagan — «Tekshirish» tugmasini bosing",
+    "since": "{{date}} dan",
+    "recoveredAt": "{{date}} da tiklandi",
+    "ownerLabel": "Kim tuzatadi",
+    "owner": {
+      "admin": "Siz (administrator)",
+      "owner": "Kompaniya egasi — provayder kaliti va to‘lovi",
+      "hosting": "Xosting — server",
+      "provider": "Provayder — ularning tomonidagi nosozlik, kutamiz"
+    },
+    "affected": {
+      "broken": "ishlamayapti: {{list}}",
+      "degraded": "ta’sirlangan: {{list}}",
+      "other": "ta’sirlangan: {{list}}"
+    },
+    "expectedNote": "Sinov stendi: bu yerda bu kutilgan holat, ogohlantirishlar yuborilmaydi.",
+    "action": {
+      "enter_key": "Yangi kalit kiritish",
+      "enter_token": "Yangi token kiritish",
+      "recheck": "Qayta tekshirish",
+      "reconnect": "Qayta ulash",
+      "open_settings": "Sozlamalarni ochish",
+      "write_owner": "Egasiga yozish",
+      "write_hosting": "Xostingga yuborish",
+      "disable_provider": "Provayderni o‘chirish"
+    },
+    "actionAria": "{{action}}: {{subject}}",
+    "recheck": {
+      "fixed": "Tiklandi: {{subject}}",
+      "still": "Hali ishlamayapti. Tekshiruv o‘zi takrorlanadi: bir daqiqadan keyin, so‘ng siyrakroq.",
+      "error": "Tekshirib bo‘lmadi: {{subject}}"
+    },
+    "write": {
+      "title": "Tayyor matn: {{who}}",
+      "who": {
+        "owner": "kompaniya egasiga",
+        "hosting": "xostingga"
+      },
+      "label": "Xabar matni",
+      "copy": "Nusxalash",
+      "copied": "Matn nusxalandi",
+      "mail": "Pochtada ochish",
+      "telegram": "Telegramda ochish",
+      "mailSubject": "Platforma: {{headline}}",
+      "note": "Platforma hech narsa yubormaydi: matnni nusxalang yoki o‘z ilovangizni oching — xabarni o‘zingiz yuborasiz."
+    },
+    "technical": {
+      "summary": "Texnik tafsilotlar",
+      "copy": "Yordam xizmati uchun nusxalash",
+      "copied": "Yordam xizmati uchun nusxalandi",
+      "support": "Servis: {{services}}\nHolat: {{state}}\nSana: {{since}}\nTafsilotlar:\n{{details}}"
+    },
+    "key": {
+      "title": "{{vendor}} uchun yangi kalit",
+      "label": "Yangi kalit",
+      "hint": "Kalit shu provayderning barcha rollariga qo‘llanadi: {{roles}}. Saqlangandan keyin ko‘rsatilmaydi.",
+      "submit": "Kalitni qo‘llash",
+      "step1": "Kalit shifrlangan holda saqlanadi va qayta ko‘rsatilmaydi.",
+      "step2": "Modellar shlyuzi uni qayta ishga tushirmasdan qo‘llaydi; so‘ng provayder darhol tekshiriladi.",
+      "step3": "Amal kalitsiz jurnalga yoziladi.",
+      "done": "Kalit qabul qilindi, rollar: {{roles}}. Provayder tekshirilmoqda.",
+      "noRoles": "Bu provayderda kalit qo‘llanadigan rollar yo‘q.",
+      "failed": "«{{alias}}» roli uchun kalitni qo‘llab bo‘lmadi."
+    },
+    "model": {
+      "problem": "«{{alias}}» roli javob bermayapti: provayderdagi kalit va balansni tekshiring."
+    },
+    "setupUnchecked": "Tekshirilmagan — «Tekshirish» tugmasini bosing"
   }
 }

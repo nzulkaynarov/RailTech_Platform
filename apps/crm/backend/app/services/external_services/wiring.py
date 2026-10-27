@@ -49,4 +49,5 @@ def build_checks(c: "Container") -> ExternalChecks:
         c.switch_board,
         reconcile=c.external_switches.reconcile,
         on_recorded=c.external_view.invalidate,
+        causes=c.external_view.causes,
     )

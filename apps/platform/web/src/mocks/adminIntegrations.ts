@@ -13,6 +13,7 @@ import type {
   IntegrationStatus,
   IntegrationsOverview,
   PasswordConfirm,
+  ServiceState,
   ServiceSwitchIn,
   SmtpSettingsIn,
   TelegramTokenIn,
@@ -26,6 +27,7 @@ import {
   spendReport,
   writeIntegrations,
 } from "./fixtures/integrations";
+import { groupsOf, settleOk, withState } from "./fixtures/integrationsHealth";
 import { DEMO_WRONG_PASSWORD } from "./fixtures/users";
 import { markStepDone } from "./setupState";
 
@@ -91,10 +93,20 @@ function lastOf(...values: (string | null | undefined)[]): string | null {
   return present.length ? present.reduce((a, b) => (a > b ? a : b)) : null;
 }
 
+/** Уровень сервиса для карточек: «ожидаемо на стенде» и «не настроено» — не сбой (как в BFF). */
+function levelOf(s: ExternalService): IntegrationStatus {
+  return s.state === "expected" || s.state === "not_configured" ? "off" : s.status;
+}
+
 function overview(state: IntegrationsMock): IntegrationsOverview {
-  const by = (keys: (key: string) => boolean) => state.services.filter((s) => keys(s.key));
+  const services = state.services.map(withState);
+  const by = (keys: (key: string) => boolean) => services.filter((s) => keys(s.key));
   const problems = (list: ExternalService[]) =>
-    list.filter((s) => s.status === "fail" || s.status === "warn");
+    list.filter((s) => s.state === "broken" || s.state === "degraded");
+  const groups = groupsOf(services, state.models, MOCK_NOW);
+  const covered = new Set(
+    groups.filter((g) => g.state !== "not_checked").flatMap((g) => g.service_keys),
+  );
   const card = (
     key: IntegrationCardKey,
     status: IntegrationStatus,
@@ -113,8 +125,8 @@ function overview(state: IntegrationsMock): IntegrationsOverview {
   });
 
   const erpServices = by((k) => ["erp_sync", "erp_handoff", "erp_events"].includes(k));
-  const telegram = state.services.find((s) => s.key === "telegram");
-  const mail = state.services.find((s) => s.key === "mail");
+  const telegram = services.find((s) => s.key === "telegram");
+  const mail = services.find((s) => s.key === "mail");
   const modelServices = by((k) => k === "litellm" || k.startsWith("vendor."));
   const storageServices = by((k) => k === "s3" || k === "backup");
 
@@ -122,7 +134,7 @@ function overview(state: IntegrationsMock): IntegrationsOverview {
     ? card("erp", "off", "not_configured")
     : card(
         "erp",
-        worst(erpServices.map((s) => s.status)),
+        worst(erpServices.map(levelOf)),
         problems(erpServices).length
           ? "problems"
           : state.erp.rotation_pending
@@ -135,22 +147,26 @@ function overview(state: IntegrationsMock): IntegrationsOverview {
     ? card("telegram", "off", "not_configured")
     : telegram?.switch?.disabled
       ? card("telegram", telegram.status, "paused", null, telegram.checked_at)
-      : telegram && telegram.status !== "ok"
+      : telegram && (telegram.state === "broken" || telegram.state === "degraded")
         ? card("telegram", telegram.status, "problems", 1, telegram.checked_at)
         : card("telegram", telegram?.status ?? "unknown", "all_ok", null, telegram?.checked_at);
   const mailCard = !state.smtp.configured
     ? card("mail", "off", "not_configured")
     : mail?.switch?.disabled
       ? card("mail", mail.status, "paused", null, mail.checked_at)
-      : mail && mail.status !== "ok"
+      : mail && (mail.state === "broken" || mail.state === "degraded")
         ? card("mail", mail.status, "problems", 1, mail.checked_at)
         : card("mail", mail?.status ?? "unknown", "all_ok", null, mail?.checked_at);
-  const brokenModels = state.models.filter((m) => m.health === "problem");
+  const brokenModels = state.models.filter(
+    (m) => m.health === "problem" && !covered.has(`vendor.${m.provider ?? ""}`),
+  );
   const modelLevels: IntegrationStatus[] = [
-    ...modelServices.map((s) => s.status),
-    ...state.models.map((m): IntegrationStatus =>
-      m.health === "problem" ? "fail" : m.health === "ok" ? "ok" : "unknown",
-    ),
+    ...modelServices.map(levelOf),
+    ...state.models
+      .filter((m) => !covered.has(`vendor.${m.provider ?? ""}`))
+      .map((m): IntegrationStatus =>
+        m.health === "problem" ? "fail" : m.health === "ok" ? "ok" : "unknown",
+      ),
   ];
   const modelCount = brokenModels.length + problems(modelServices).length;
   const modelsCard = card(
@@ -160,13 +176,13 @@ function overview(state: IntegrationsMock): IntegrationsOverview {
     modelCount || null,
     lastOf(...modelServices.map((s) => s.checked_at), ...state.models.map((m) => m.checked_at)),
   );
-  const servicesProblems = problems(state.services);
+  const servicesProblems = problems(services);
   const servicesCard = card(
     "services",
-    worst(state.services.map((s) => s.status)),
+    worst(services.map(levelOf)),
     servicesProblems.length ? "problems" : "all_ok",
     servicesProblems.length || null,
-    lastOf(...state.services.map((s) => s.checked_at)),
+    lastOf(...services.map((s) => s.checked_at)),
   );
   const report = spendReport(7);
   const ratio = Math.max(
@@ -184,7 +200,7 @@ function overview(state: IntegrationsMock): IntegrationsOverview {
   const storageStale = b.stale || b.last_success_at === null || !b.available;
   const storageCard = card(
     "storage",
-    worst([...storageServices.map((s) => s.status), storageStale ? "warn" : "ok"]),
+    worst([...storageServices.map(levelOf), storageStale ? "warn" : "ok"]),
     b.last_success_at === null
       ? "no_backups"
       : b.stale
@@ -206,7 +222,27 @@ function overview(state: IntegrationsMock): IntegrationsOverview {
 
   const attention: AttentionItem[] = [];
   const push = (item: AttentionItem) => attention.push(item);
-  for (const s of state.services) {
+  const severityOf: Partial<Record<ServiceState, AttentionItem["severity"]>> = {
+    broken: "fail",
+    degraded: "warn",
+    not_configured: "setup",
+    not_checked: "warn",
+  };
+  for (const g of groups) {
+    const severity = severityOf[g.state];
+    if (severity === undefined || (g.state === "not_checked" && g.owner !== "hosting")) continue;
+    push({
+      id: `group:${g.id}`,
+      card: g.fix_card ?? "services",
+      severity,
+      kind: "service",
+      subject: g.headline,
+      detail: g.detail,
+      group: g,
+      technical: null,
+    });
+  }
+  for (const s of services) {
     if (s.switch?.disabled) {
       push({
         id: `paused:${s.key}`,
@@ -215,20 +251,8 @@ function overview(state: IntegrationsMock): IntegrationsOverview {
         kind: "paused",
         subject: s.title,
         detail: s.switch.reason,
-      });
-    } else if (s.status === "fail" || s.status === "warn") {
-      push({
-        id: `service:${s.key}`,
-        card: s.fix_card ?? "services",
-        severity: s.status === "fail" ? "fail" : "warn",
-        kind: "service",
-        subject: s.title,
-        detail: [s.summary, s.hint]
-          .filter((part): part is string => Boolean(part))
-          .map((part, index, all) =>
-            index < all.length - 1 && !/[.!?…]$/.test(part) ? `${part}.` : part,
-          )
-          .join(" "),
+        group: null,
+        technical: null,
       });
     }
   }
@@ -240,6 +264,8 @@ function overview(state: IntegrationsMock): IntegrationsOverview {
       kind: "not_configured",
       subject: null,
       detail: null,
+      group: null,
+      technical: null,
     });
   else if (state.erp.rotation_pending)
     push({
@@ -249,6 +275,8 @@ function overview(state: IntegrationsMock): IntegrationsOverview {
       kind: "rotation_pending",
       subject: null,
       detail: null,
+      group: null,
+      technical: null,
     });
   if (!state.telegram.configured)
     push({
@@ -258,6 +286,8 @@ function overview(state: IntegrationsMock): IntegrationsOverview {
       kind: "not_configured",
       subject: null,
       detail: null,
+      group: null,
+      technical: null,
     });
   if (!state.smtp.configured)
     push({
@@ -267,6 +297,8 @@ function overview(state: IntegrationsMock): IntegrationsOverview {
       kind: "not_configured",
       subject: null,
       detail: null,
+      group: null,
+      technical: null,
     });
   for (const m of brokenModels) {
     push({
@@ -275,7 +307,9 @@ function overview(state: IntegrationsMock): IntegrationsOverview {
       severity: "fail",
       kind: "model_problem",
       subject: m.alias,
-      detail: m.health_detail,
+      detail: null,
+      group: null,
+      technical: m.health_detail,
     });
   }
   if (storageStale)
@@ -286,6 +320,8 @@ function overview(state: IntegrationsMock): IntegrationsOverview {
       kind: "backup_stale",
       subject: null,
       detail: null,
+      group: null,
+      technical: null,
     });
   for (const c of badComponents) {
     push({
@@ -295,6 +331,8 @@ function overview(state: IntegrationsMock): IntegrationsOverview {
       kind: "component",
       subject: c.title,
       detail: c.reason,
+      group: null,
+      technical: null,
     });
   }
   const order = { fail: 0, warn: 1, setup: 2 } as const;
@@ -554,13 +592,7 @@ export const adminIntegrationsHandlers = [
     if (smtp.host.includes("bad")) return probeFailed("smtp_auth_failed");
     update((s) => {
       const mail = findService(s, "mail");
-      if (mail) {
-        mail.status = "ok";
-        mail.summary = "Соединение и вход в порядке";
-        mail.error = null;
-        mail.hint = null;
-        mail.checked_at = MOCK_NOW;
-      }
+      if (mail) settleOk(mail, MOCK_NOW, "Соединение и вход в порядке");
     });
     return HttpResponse.json({ server: `${smtp.host} ESMTP`, authenticated: true, latency_ms: 85 });
   }),
@@ -608,12 +640,19 @@ export const adminIntegrationsHandlers = [
     const denied = guard("read");
     if (denied) return denied;
     const state = readIntegrations();
+    const items = state.services.map(withState);
     const summary = { ok: 0, warn: 0, fail: 0, unknown: 0, off: 0, disabled: 0 };
-    for (const s of state.services) {
-      summary[s.status] += 1;
+    for (const s of items) {
+      summary[levelOf(s) === "off" || s.state === "disabled" ? "off" : s.status] += 1;
       if (s.switch?.disabled) summary.disabled += 1;
     }
-    return HttpResponse.json({ checked_at: MOCK_NOW, summary, items: state.services });
+    return HttpResponse.json({
+      checked_at: MOCK_NOW,
+      summary,
+      items,
+      stand: true,
+      groups: groupsOf(items, state.models, MOCK_NOW),
+    });
   }),
   http.get("*/admin/integrations/services/:key", ({ params }) => {
     const denied = guard("read");
@@ -632,12 +671,7 @@ export const adminIntegrationsHandlers = [
       const service = findService(s, key);
       if (!service) return;
       if (service.status !== "off") service.checked_at = MOCK_NOW;
-      if (key === "mail") {
-        service.status = "ok";
-        service.summary = "Очередь писем разобрана";
-        service.error = null;
-        service.hint = null;
-      }
+      if (key === "mail") settleOk(service, MOCK_NOW, "Очередь писем разобрана");
       result = service;
     });
     return result
@@ -727,13 +761,8 @@ export const adminIntegrationsHandlers = [
       model.key_last4 = body.api_key ? last4(body.api_key) : null;
       changed = model;
       const vendor = findService(s, `vendor.${body.provider}`);
-      if (vendor) {
-        vendor.status = "ok";
-        vendor.summary = "Ошибок за 15 минут нет";
-        vendor.error = null;
-        vendor.hint = null;
-        vendor.incident = null;
-        vendor.checked_at = MOCK_NOW;
+      if (vendor && !s.models.some((m) => m.provider === body.provider && m.health === "problem")) {
+        settleOk(vendor, MOCK_NOW, "Ошибок за 15 минут нет");
       }
     });
     if (!changed) return failure(404, "NOT_FOUND", "Не найдено.", "crm");

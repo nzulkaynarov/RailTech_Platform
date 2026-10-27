@@ -186,6 +186,11 @@ class Settings(BaseSettings):
         return [o.strip().rstrip("/") for o in self.cabinet_origin.split(",") if o.strip()]
 
     @property
+    def is_stand(self) -> bool:
+        """Тестовый стенд ансамбля (`APP_ENV=dev`, `make up`): часть сбоев «ожидаема» (W15-H3)."""
+        return self.app_env == "dev"
+
+    @property
     def cookie_secure(self) -> bool:
         return self.app_env == "prod"
 

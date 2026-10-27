@@ -14,6 +14,7 @@ import type {
   TelegramConnector,
 } from "../../shared/api/generated/model";
 import { readSetup } from "../setupState";
+import { STATE_OF_STATUS } from "./integrationsHealth";
 
 /**
  * Состояние Admin · Внешние интеграции для MSW (W13-A1). Вымышленное: домен `.example`, ни настоящих токенов, ни паролей.
@@ -50,6 +51,7 @@ function service(
   purpose: string,
   over: Partial<ExternalService> = {},
 ): ExternalService {
+  const status = over.status ?? "ok";
   return {
     key,
     title,
@@ -58,6 +60,13 @@ function service(
     source: "crm",
     check: "Проверка без платных вызовов",
     frequency: "minute",
+    state: STATE_OF_STATUS[status],
+    cause_key: `${key}:${status === "ok" ? "ok" : "status"}`,
+    owner: null,
+    action: null,
+    more_actions: [],
+    since: null,
+    last_recovered_at: null,
     status: "ok",
     summary: "Работает",
     error: null,
@@ -103,6 +112,11 @@ function seedServices(): ExternalService[] {
       "Письма сотрудникам: приглашение, сброс пароля, оповещения",
       {
         status: "warn",
+        cause_key: "mail:last_failed",
+        owner: "admin",
+        action: "recheck",
+        more_actions: ["open_settings"],
+        since: "2026-10-26T08:50:00Z",
         summary: "В очереди 3 письма дольше 15 минут",
         error: "queue_growing",
         hint: "Проверьте связь с почтовым сервером в карточке «Почта».",
@@ -120,11 +134,16 @@ function seedServices(): ExternalService[] {
       fix_card: "models",
       switch: toggle("vendor", "Диалоги перейдут на запасную модель"),
     }),
-    service("vendor.openai", "OpenAI", "Поиск по базе знаний (эмбеддинги)", {
+    service("vendor.openai", "OpenAI", "Поиск по базе знаний и проверка качества", {
       status: "fail",
+      cause_key: "vendor.openai:key_rejected",
+      owner: "owner",
+      action: "enter_key",
+      more_actions: ["write_owner", "disable_provider"],
+      since: "2026-10-26T08:40:00Z",
       summary: "Ключ отклонён провайдером (401)",
-      error: "401",
-      hint: "Смените ключ в карточке «Модели ИИ».",
+      error: "401: Error code: 401 - invalid_api_key (demo-key-0000)",
+      hint: "Ключ провайдера отклонён — введите новый ключ в «Модели ИИ».",
       fix_card: "models",
       incident: {
         id: 7,
@@ -141,6 +160,8 @@ function seedServices(): ExternalService[] {
     }),
     service("langfuse", "Langfuse (журнал работы ИИ)", "Трейсы диалогов и стоимость", {
       status: "off",
+      state: "disabled",
+      cause_key: "langfuse:disabled",
       summary: "Не подключён",
       checked_at: null,
       uptime_24h: null,
@@ -154,6 +175,23 @@ function seedServices(): ExternalService[] {
     service("s3", "Хранилище файлов (S3)", "Документы клиентов, база знаний и вложения", {
       system: "ensemble",
       summary: "Хранилище отвечает; занято 12 ГБ",
+    }),
+    service("docling", "Распознавание документов (docling)", "Текст из PDF и файлов Office", {
+      status: "fail",
+      state: "expected",
+      cause_key: "docling:server_down",
+      owner: "hosting",
+      action: "recheck",
+      more_actions: [],
+      since: "2026-10-25T09:05:00Z",
+      summary: "Распознавание документов недоступно — новые файлы базы знаний не индексируются",
+      error: "ConnectError: [Errno 111] Connection refused",
+      hint: "Сервис распознавания документов не запущен на сервере. Это настраивает тот, кто разворачивал Платформу (хостинг). Отправьте ему: «Запустить docling вместе с ансамблем»",
+      uptime_24h: 0,
+      uptime_7d: 0,
+      failures_24h: 1440,
+      latency_ms: null,
+      p95_ms_24h: null,
     }),
     service("erp_sync", "Синхронизация сотрудников с ERP", "Доступ сотрудников к ERP", {
       system: "ensemble",
@@ -183,6 +221,7 @@ function seedServices(): ExternalService[] {
       source: "erp",
       frequency: "erp",
       status: "unknown",
+      action: "recheck",
       summary: "Нет данных: эта версия ERP не передаёт состояние своих внешних сервисов",
       checked_at: null,
       uptime_24h: null,
@@ -277,6 +316,16 @@ function seedModels(): AiModel[] {
       health_detail: "401: ключ отклонён провайдером",
       checked_at: EARLIER,
       today_usd: 0.04,
+      ...crmKey,
+    },
+    {
+      alias: "judge-model",
+      provider: "openai",
+      model: "gpt-demo-mini",
+      health: "problem",
+      health_detail: "401: ключ отклонён провайдером",
+      checked_at: EARLIER,
+      today_usd: 0,
       ...crmKey,
     },
   ];
@@ -382,6 +431,7 @@ export function seedIntegrations(): IntegrationsMock {
         status: "warn",
         reason: "Очередь отстаёт на 40 секунд",
         checked_at: EARLIER,
+        expected_on_stand: false,
       },
       {
         key: "database",
@@ -389,6 +439,7 @@ export function seedIntegrations(): IntegrationsMock {
         status: "ok",
         reason: "Отвечает за 4 мс",
         checked_at: EARLIER,
+        expected_on_stand: false,
       },
       {
         key: "bot",
@@ -396,14 +447,23 @@ export function seedIntegrations(): IntegrationsMock {
         status: "ok",
         reason: "Процесс работает",
         checked_at: EARLIER,
+        expected_on_stand: false,
       },
-      { key: "litellm", title: "Шлюз моделей", status: "ok", reason: "Готов", checked_at: EARLIER },
+      {
+        key: "litellm",
+        title: "Шлюз моделей",
+        status: "ok",
+        reason: "Готов",
+        checked_at: EARLIER,
+        expected_on_stand: false,
+      },
       {
         key: "s3",
         title: "Хранилище файлов",
         status: "ok",
         reason: "Отвечает",
         checked_at: EARLIER,
+        expected_on_stand: false,
       },
       {
         key: "backup",
@@ -411,6 +471,7 @@ export function seedIntegrations(): IntegrationsMock {
         status: "ok",
         reason: "Копия свежая",
         checked_at: EARLIER,
+        expected_on_stand: false,
       },
     ],
   };
