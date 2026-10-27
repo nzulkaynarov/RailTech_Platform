@@ -65,6 +65,11 @@ CASES: dict[str, tuple[Exception, int, dict[str, Any]]] = {
             "details": {"reason": "wrong_password", "field": "current_password"},
         },
     ),
+    "template": (
+        e.MailTemplateMissingError(),
+        500,
+        {"code": "mail_template_missing", "details": {}},
+    ),
     "plain": (e.NotFoundError("lead not found"), 404, {"code": "not_found", "details": {}}),
     "http404": (HTTPException(404, "lead not found"), 404, {"code": "not_found", "details": {}}),
     "http400": (HTTPException(400), 400, {"code": "http_error", "details": {}}),
