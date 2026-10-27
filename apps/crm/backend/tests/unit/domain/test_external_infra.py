@@ -5,10 +5,13 @@ from datetime import UTC, datetime, timedelta
 import pytest
 
 from app.domain.external_infra import (
+    EDS_RIGHTS,
     REDIS_BROKER,
     REDIS_CACHE,
+    EdsRightsFacts,
     RedisFacts,
     WalFacts,
+    eds_rights,
     is_segment,
     is_sentinel,
     parse_info,
@@ -160,3 +163,37 @@ def test_redis_persistence_problems() -> None:
     assert "RDB" in stale.summary
     # Брокеру снимок RDB не нужен (AOF), возраст снимка его не тревожит.
     assert redis(RedisFacts(REDIS_BROKER, info=info(save=ago(hours=5))), NOW).status == "ok"
+
+
+# --- права EDS (B-005) -------------------------------------------------------------------------
+
+
+def test_eds_rights_published_is_ok() -> None:
+    result = eds_rights(EdsRightsFacts(stored="a" * 64, current="a" * 64, users=7))
+    assert result.key == EDS_RIGHTS
+    assert result.status == "ok"
+    assert result.metrics["published_users"] == 7
+
+
+def test_eds_rights_fingerprint_changed_and_republished_in_this_check_is_ok() -> None:
+    facts = EdsRightsFacts(stored="a" * 64, current="b" * 64, users=3, republished=True)
+    result = eds_rights(facts)
+    assert result.status == "ok"
+    assert "3" in result.summary
+
+
+def test_eds_rights_failed_republish_is_fail_with_cause_and_hosting_hint() -> None:
+    result = eds_rights(
+        EdsRightsFacts(stored="a" * 64, current="b" * 64, error="ConnectionError('bus')")
+    )
+    assert result.status == "fail"
+    assert result.cause == EDS_RIGHTS
+    assert result.error == "ConnectionError('bus')"
+    assert HOSTING_WHO in (result.hint or "")
+    assert "republish-identity" in (result.hint or "")
+
+
+def test_eds_rights_first_run_without_record_is_pending_fail_too() -> None:
+    result = eds_rights(EdsRightsFacts(stored=None, current="b" * 64))
+    assert result.status == "fail"
+    assert result.cause == EDS_RIGHTS

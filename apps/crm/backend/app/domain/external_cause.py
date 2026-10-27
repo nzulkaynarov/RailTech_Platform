@@ -140,6 +140,8 @@ ROUTES: Final[dict[str, Route]] = {
     "erp_events_failed": _ADMIN_FIX,
     # Недоставленное на шине (кроме ERP, у него своя строка): журнал обмена открывает админ.
     "bus_dlq": Route("admin", "open_bus", ("recheck",)),
+    # Права EDS не ушли на шину (B-005): проверка повторяет публикацию сама, шину чинит хостинг.
+    "eds_rights": _HOSTING,
     "checks_stale": _HOSTING,
     "ai_unavailable": Route("admin", "recheck", ("open_settings",)),
     "flapping": Route(None, "recheck"),

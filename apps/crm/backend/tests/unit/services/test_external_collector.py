@@ -585,3 +585,74 @@ async def test_bus_dlq_row_comes_from_the_bus_tables(monkeypatch: pytest.MonkeyP
     assert found["bus_dlq"].status == "fail"
     assert found["bus_dlq"].cause == "bus_dlq"
     assert found["bus_dlq"].summary == "Шина: не доставлено: 2, не обработано: 1"
+
+
+# --- права EDS (B-005) -------------------------------------------------------------------------
+
+
+class EdsRights:
+    """Подставные границы строки «Права сотрудников в EDS»: записанный отпечаток и публикация."""
+
+    def __init__(self, stored: str | None, fail: bool = False) -> None:
+        self.stored, self.fail, self.publishes = stored, fail, 0
+
+    async def read(self) -> tuple[str | None, int]:
+        return self.stored, 4
+
+    async def publish(self) -> Any:
+        from app.services.identity_catalog import CatalogSyncResult
+
+        self.publishes += 1
+        if self.fail:
+            raise ConnectionError("bus password=hunter2")
+        self.stored = current_fingerprint()
+        return CatalogSyncResult(republished=True, users=4)
+
+
+def current_fingerprint() -> str:
+    from app.domain.platform_roles import eds_catalog_fingerprint
+
+    return eds_catalog_fingerprint()
+
+
+def eds_deps(box: EdsRights) -> Deps:
+    return deps(eds_stored=box.read, eds_publish=box.publish)
+
+
+async def test_eds_rights_published_row_is_ok_and_does_not_publish() -> None:
+    box = EdsRights(current_fingerprint())
+    found = await collect(eds_deps(box), ["eds_rights"])
+    assert found["eds_rights"].status == "ok"
+    assert box.publishes == 0
+
+
+async def test_eds_rights_check_heals_a_changed_catalog_itself() -> None:
+    box = EdsRights("0" * 64)
+    found = await collect(eds_deps(box), ["eds_rights"])
+    assert found["eds_rights"].status == "ok"
+    assert box.publishes == 1
+    assert box.stored == current_fingerprint()
+
+
+async def test_eds_rights_failed_republish_is_a_cause_without_leaking_the_error_text() -> None:
+    box = EdsRights("0" * 64, fail=True)
+    found = await collect(eds_deps(box), ["eds_rights"])
+    result = found["eds_rights"]
+    assert result.status == "fail"
+    assert result.cause == "eds_rights"
+    assert result.error == "ConnectionError"
+    assert "hunter2" not in repr(result)
+
+
+async def test_eds_rights_cheap_pass_backs_off_but_heavy_and_manual_retry() -> None:
+    box = EdsRights("0" * 64, fail=True)
+    first = await collect(eds_deps(box), ["eds_rights"])
+    carry = {k: v for k, v in first["eds_rights"].metrics.items() if k.startswith("_")}
+    assert carry
+    previous = {"eds_rights": carry}
+    again = await collect(eds_deps(box), ["eds_rights"], "cheap", previous)
+    assert box.publishes == 1  # пауза между повторами: шину не долбим каждую минуту
+    assert again["eds_rights"].status == "fail"
+    assert again["eds_rights"].error == "ConnectionError"
+    await collect(eds_deps(box), ["eds_rights"], "manual", previous)
+    assert box.publishes == 2  # «Перепроверить» повторяет сразу

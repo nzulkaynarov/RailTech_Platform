@@ -234,6 +234,10 @@ function seedServices(): ExternalService[] {
       system: "ensemble",
       summary: "Шина: недоставленных событий нет",
     }),
+    service("eds_rights", "Права сотрудников в EDS", "Публикация прав EDS на шину", {
+      system: "ensemble",
+      summary: "Права EDS опубликованы",
+    }),
     service("erp.mail", "Почта ERP", "Письма клиентам и сотрудникам бэк-офиса из ERP", {
       system: "erp",
       source: "erp",

@@ -1,4 +1,5 @@
-"""Инфраструктура ансамбля в центре внешних сервисов (W15-H8b, B-004): архив WAL и Redis.
+"""Инфраструктура ансамбля в центре внешних сервисов (W15-H8b, B-004/B-005): архив WAL, Redis, шина,
+публикация прав EDS.
 
 Чистые функции: факты проверки → `CheckResult` с причиной, «кто исправляет» и подсказкой хостингу.
 Ни архив журнала БД, ни Redis CRM сама не использует, поэтому о падении было бы известно только по
@@ -305,4 +306,47 @@ def bus_dlq(f: BusDlqFacts) -> CheckResult:
         ),
         metrics=metrics,
         cause=BUS_DLQ,
+    )
+
+
+# --- права EDS сотрудников (B-005) -------------------------------------------------------------
+
+EDS_RIGHTS: Final = "eds_rights"
+
+
+@dataclass(frozen=True, slots=True)
+class EdsRightsFacts:
+    """Опубликованы ли права EDS по действующему каталогу.
+
+    `stored` — отпечаток, под которым CRM последний раз переопубликовала снимки сотрудников (нет
+    записи — публикации ещё не было); `current` — отпечаток действующего каталога. Различаются —
+    сотрудники не получили новые права EDS и молча видят «нет доступа». `republished` — проверка
+    сама повторила публикацию и она удалась; `error` — повтор не удался (или ещё не пробовался)."""
+
+    stored: str | None
+    current: str
+    users: int = 0
+    republished: bool = False
+    error: str | None = None
+
+
+def eds_rights(f: EdsRightsFacts) -> CheckResult:
+    metrics: dict[str, Metric] = {"published_users": f.users}
+    if f.republished or f.stored == f.current:
+        done = f" (переопубликовано сотрудников: {f.users})" if f.republished else ""
+        return CheckResult(EDS_RIGHTS, "ok", f"Права EDS опубликованы{done}", metrics=metrics)
+    return CheckResult(
+        EDS_RIGHTS,
+        "fail",
+        "Права EDS не опубликованы: сотрудники не получили новые права",
+        error=f.error,
+        hint=hosting_hint(
+            "После смены каталога ролей права EDS сотрудников не ушли на шину, и они получают "
+            "«нет доступа» в EDS. Проверка повторяет публикацию сама; пока не удалось — шина или "
+            "база недоступны",
+            "выполнить на сервере CRM команду python -m app republish-identity и проверить шину "
+            "и доступность EDS",
+        ),
+        metrics=metrics,
+        cause=EDS_RIGHTS,
     )

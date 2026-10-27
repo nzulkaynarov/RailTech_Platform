@@ -42,6 +42,7 @@ def test_registry_lists_every_external_service_of_the_ensemble() -> None:
         "redis_broker",
         "redis_cache",
         "bus_dlq",
+        "eds_rights",
         "tls.crm",
         "tls.erp",
         "tls.cabinet",

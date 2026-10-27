@@ -226,6 +226,16 @@ _AFTER_VENDORS: Final = (
         tiers=("cheap",),
         fix_path=None,
     ),
+    ServiceSpec(
+        key="eds_rights",
+        title="Права сотрудников в EDS",
+        purpose="Публикация прав EDS на шину после смены каталога ролей (иначе «нет доступа»)",
+        system="ensemble",
+        source="crm",
+        check="отпечаток каталога против записанного; при расхождении повторяет публикацию",
+        tiers=("cheap",),
+        fix_path=None,
+    ),
 )
 #: Сервисы ERP (M3-ERP-06): код = `Health.externals[].code` контракта; последнее поле — выключатель
 #: (Sentry выключить нельзя — перехватчик ошибок не вызывается «по требованию»).

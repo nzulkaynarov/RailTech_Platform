@@ -668,3 +668,20 @@ def test_unreadable_wal_is_not_checked_not_broken() -> None:
     d = _diagnose("wal_archive", infra.wal_archive(infra.WalFacts(error="AccessDenied"), NOW))
     assert d.state == "not_checked"
     assert d.owner is None
+
+
+def test_eds_rights_failure_is_one_broken_alert_after_fifteen_minutes_then_recovered() -> None:
+    """B-005: сбой автопереопубликации прав EDS — причина в центре, а не строка лога."""
+    from app.domain import external_infra as infra
+
+    failed = infra.eds_rights(infra.EdsRightsFacts("a" * 64, "b" * 64, error="ConnectionError"))
+    five, twenty = timedelta(minutes=5), timedelta(minutes=20)
+    short = _diagnose("eds_rights", failed, NOW - five, fail_for=five)
+    assert short.state == "unstable"
+    long = _diagnose("eds_rights", failed, NOW - twenty, fail_for=twenty)
+    assert long.state == "broken"
+    assert (long.owner, long.action) == ("hosting", "write_hosting")
+    group = cause.build_groups([long])[0]
+    assert cause.plan_alerts([group], {}, {"eds_rights": "broken"}, NOW)  # одно «Сломано»
+    healed = _diagnose("eds_rights", infra.eds_rights(infra.EdsRightsFacts("b" * 64, "b" * 64)))
+    assert healed.state == "ok"
