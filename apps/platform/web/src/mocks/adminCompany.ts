@@ -252,6 +252,7 @@ function fxOverview(state: CompanyMock) {
     current: fx.current,
     max_age_days: 7,
     journal: fx.journal.slice(0, 20),
+    journal_available: true,
   };
 }
 

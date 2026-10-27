@@ -74,6 +74,14 @@ ROOTS = (
     "SettingsResponse",
     "DryRunResponse",
     "ReplyTemplateOut",
+    # Клиенты · Ждут ответа (D1-1): очередь с запиской передачи (CRM-06), карточка лида, переписка, заметки, команда,
+    # подсказка ответа.
+    "InboxResponse",
+    "LeadDetail",
+    "MessageOut",
+    "NoteOut",
+    "TeamMember",
+    "AssistOut",
 )
 
 HEADER = (

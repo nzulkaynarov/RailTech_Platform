@@ -21769,7 +21769,7 @@ export interface operations {
                     "application/json": components["schemas"]["DocumentTemplatePreview"];
                 };
             };
-            /** @description NO_COMPANY / TEMPLATE_BODY_TOO_LARGE (error code) */
+            /** @description NO_COMPANY / TEMPLATE_BODY_TOO_LARGE / TEMPLATE_KIND_INVALID (error code) */
             400: {
                 headers: {
                     [name: string]: unknown;

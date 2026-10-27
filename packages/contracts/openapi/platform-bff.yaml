@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.22.0
+  version: 0.23.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -135,6 +135,22 @@ info:
     (директор читает), сброс пароля — `admin: full`; профиль доступен каждому вошедшему. Секреты из записей журнала BFF вырезает
     (значения полей `password`, `secret`, `token`, `key`, `*_key`, `credentials`, `authorization`, `pin` и им подобных -> `***` целиком, любого типа).
 
+    **0.23.0 (W15-H8) — Admin · Компания: шаблоны документов и лента.** Добавляющее изменение. `DocumentTemplateIn.kind` — вид
+    шаблона при создании (`letter`, `report`, `custom`, `contract`, `invoice`, `act`, `receipt`, `delivery_note`; без поля — `custom`,
+    как раньше); `DocumentTemplate.kind` отдаёт вид кодом. `DocumentTemplatePreviewIn.kind` — предпросмотр договора, счёта и акта идёт
+    на каркасе своего вида и с образцами блоков (остальные виды — общий каркас и подписанные заглушки). `ActivityItem.code` — код
+    административного события ERP (`admin.*`), по которому SPA собирает фразу на языке сотрудника; для остальных событий `null`.
+    Журнал ручных курсов в ERP виден только с правом `settings.edit` (имена и почта коллег): `GET /admin/company/fx-rate` без
+    этого права отдаёт текущий курс и пустой журнал с `journal_available = false` (не ошибку; директор раздел смотрит).
+
+    **0.22.0 (D1-1, волна 16) — Клиенты · Ждут ответа.** Добавляющее изменение (тег `messages`): очередь передач от бота с
+    запиской (CRM-06) и SLA — `GET /crm/messages`; карточка лида, лента диалога с подгрузкой истории и вложениями через BFF —
+    `GET /crm/messages/{lead}`, `/thread`, `/attachments/{message}/{index}`; действия — `take`, `reply` (ключ повтора
+    `client_message_id`: «Повторить» не дублирует сообщение; Telegram не ответил — 502 `INTEGRATION_FAILED`, `delivery_failed`),
+    `note` (заметка команде), `assist` (подсказка ответа через CRM/LiteLLM), `return-to-bot`; шаблоны — `GET /crm/reply-templates`
+    (раздел `crm.leads` полный). Чтение — `crm.leads` от чтения (директор), действия — полный. Новая тема подсказки потока
+    `InvalidationTopic.messages`: событие CRM `lead.message_added` (новое сообщение в переписке) и события лида — экран
+    перезапрашивает очередь и открытую ленту.
     **0.19.0 (W15-H1) — мост в старые экраны.** Добавляющее изменение (тег `bridge`). Пока раздел Платформы ещё заглушка, сотрудник
     открывает ту же работу в старой CRM или старом ERP новой вкладкой. `GET /bridge` отдаёт публичные адреса старых фронтов
     (`crm_url`, `erp_url`): настройки `PLATFORM_CRM_PUBLIC_URL` и `PLATFORM_ERP_PUBLIC_URL`, а если они пусты — адрес выводится из
@@ -180,14 +196,6 @@ info:
     (менеджер, бухгалтер), полный — резолюция, возврат, отказ (директор). EDS — отдельный домен: вызовы идут с токеном доступа
     EDS, полученным обменом токена сотрудника CRM `aud=eds` (`docs/architecture/platform-bff.md` §3); ошибки EDS переводятся в
     формат `Error` (`source = eds`, `details.reason` и `details.fields` EDS сохраняются).
-
-    **0.22.0 (W15-H8) — Admin · Компания: шаблоны документов и лента.** Добавляющее изменение. `DocumentTemplateIn.kind` — вид
-    шаблона при создании (`letter`, `report`, `custom`, `contract`, `invoice`, `act`, `receipt`, `delivery_note`; без поля — `custom`,
-    как раньше); `DocumentTemplate.kind` отдаёт вид кодом. `DocumentTemplatePreviewIn.kind` — предпросмотр договора, счёта и акта идёт
-    на каркасе своего вида и с образцами блоков (остальные виды — общий каркас и подписанные заглушки). `ActivityItem.code` — код
-    административного события ERP (`admin.*`), по которому SPA собирает фразу на языке сотрудника; для остальных событий `null`.
-    Журнал ручных курсов (`GET /admin/company/fx-rate`) в ERP виден только с правом `settings.edit` (имена и почта коллег): отказ ERP
-    доходит как 403 с `source = erp`.
 
     **0.21.0 (W15-H6) — Профиль сотрудника.** Добавляющее изменение, тег `me`: `GET/PATCH /me/profile` (имя, телефон, язык, часовой
     пояс, подпись для писем; должность и роли только читаются, правит админ), `PUT/DELETE /me/avatar` и `GET /staff/{id}/avatar`
@@ -247,6 +255,8 @@ tags:
     description: Admin · Журнал интеграций — шина rt_bus CRM, ERP и EDS (подписчики, доставки и DLQ, inbox с ошибками, повторы; раздел `admin` full)
   - name: kb
     description: CRM · База знаний — документы, поиск, пробелы, песочница бота (прокси к CRM; разделы `crm.leads` и `admin`)
+  - name: messages
+    description: Клиенты · Ждут ответа — передачи от бота, переписка с клиентом, ответ, заметка, подсказка (прокси к CRM; раздел `crm.leads`)
   - name: bot
     description: Admin · Настройки бота — разделы настроек CRM, шаблоны ответов, выгрузки CSV (прокси к CRM; раздел `admin`)
   - name: letters
@@ -5547,6 +5557,332 @@ paths:
         '503':
           $ref: '#/components/responses/BackendUnavailable'
 
+  /crm/messages:
+    get:
+      tags: [messages]
+      operationId: listCrmMessages
+      summary: 'Клиенты · Ждут ответа: передачи от бота, мои диалоги, лиды без менеджера'
+      description: >-
+        CRM `GET /inbox` с запиской передачи (CRM-06). Раздел `crm.leads` от чтения: директор видит очередь без «Забрать» и
+        ответа. Группы: `handoff` — открытые и отложенные передачи (срочные выше, затем по времени), `mine` — мои лиды в
+        диалоге, `unassigned` — лиды на паузе без менеджера. Лид в одной группе (первая подходящая). Таймер SLA экран считает
+        от `handoff.created_at` до `handoff.sla_due_at`. Живые обновления — подсказка `messages` потока `/events/stream`.
+      responses:
+        '200':
+          description: Очередь «Ждут ответа»
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageInbox'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /crm/messages/{lead}:
+    get:
+      tags: [messages]
+      operationId: getCrmConversation
+      summary: 'Карточка лида для переписки: контакты, каналы, факты квалификации, кто ведёт'
+      description: >-
+        CRM `GET /leads/{id}` (+ открытая передача). Раздел `crm.leads` от чтения. Номер лида — `L-NNNN`.
+      parameters:
+        - $ref: '#/components/parameters/LeadNumber'
+      responses:
+        '200':
+          description: Карточка лида
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationCard'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /crm/messages/{lead}/thread:
+    get:
+      tags: [messages]
+      operationId: getCrmThread
+      summary: 'Лента диалога: сообщения клиента, бота и менеджера, вложения, заметки команды'
+      description: >-
+        CRM `GET /leads/{id}/messages` (страница, старые выше), `GET /leads/{id}/notes` (только первая страница — без `before`)
+        и `GET /team` (имена менеджеров). Раздел `crm.leads` от чтения. Подгрузка истории — `before` = id самого старого
+        показанного сообщения. Вложения — ссылками BFF (`attachments[].url`): адреса и ключи хранилища наружу не уходят.
+      parameters:
+        - $ref: '#/components/parameters/LeadNumber'
+        - name: before
+          in: query
+          required: false
+          description: Сообщения старше этого id (подгрузка истории)
+          schema: {type: integer, minimum: 1}
+        - name: limit
+          in: query
+          required: false
+          schema: {type: integer, minimum: 1, maximum: 200, default: 50}
+      responses:
+        '200':
+          description: Страница переписки
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConversationThread'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /crm/messages/{lead}/attachments/{message}/{index}:
+    get:
+      tags: [messages]
+      operationId: downloadCrmAttachment
+      summary: 'Вложение сообщения клиента (файл)'
+      description: >-
+        CRM `GET /leads/{id}/messages/{message}/attachments/{index}` потоком. Раздел `crm.leads` от чтения. Ответ —
+        `Content-Disposition: attachment` и `X-Content-Type-Options: nosniff`: файл скачивается, браузер его не исполняет.
+        Файл не сохранён (до согласия, больше 20 МБ) — 404; хранилище CRM недоступно — 502 `INTEGRATION_FAILED`.
+      parameters:
+        - $ref: '#/components/parameters/LeadNumber'
+        - name: message
+          in: path
+          required: true
+          schema: {type: integer, minimum: 1}
+        - name: index
+          in: path
+          required: true
+          schema: {type: integer, minimum: 0, maximum: 19}
+      responses:
+        '200':
+          description: Файл
+          content:
+            application/octet-stream:
+              schema: {type: string, format: binary}
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '502':
+          $ref: '#/components/responses/IntegrationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /crm/messages/{lead}/take:
+    post:
+      tags: [messages]
+      operationId: takeCrmLead
+      summary: 'Забрать лида: бот замолкает, диалог ведёт сотрудник'
+      description: >-
+        CRM `POST /leads/{id}/actions/take`. Раздел `crm.leads` полный. Лида уже забрал другой — 409 `CONFLICT`
+        (`details.reason = lead_taken`, `details.assigned_user_name`).
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/LeadNumber'
+      responses:
+        '200':
+          description: Лид у сотрудника
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionOk'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/MessagesConflict'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /crm/messages/{lead}/reply:
+    post:
+      tags: [messages]
+      operationId: replyCrmLead
+      summary: 'Ответить клиенту «От себя» (уходит в Telegram)'
+      description: >-
+        CRM `POST /leads/{id}/messages`. Раздел `crm.leads` полный; отвечает тот, кто забрал лида (или администратор CRM).
+        `client_message_id` — ключ повтора, который экран создаёт на черновик: «Повторить» с тем же ключом не отправит клиенту
+        второе сообщение. Telegram отказал — 502 `INTEGRATION_FAILED` с `details.reason = delivery_failed`, сообщение не
+        записано, текст остаётся у экрана; Telegram не ответил вовремя — 502 `INTEGRATION_FAILED` с `delivery_unknown` (итог
+        неизвестен: «Повторить» тем же ключом не продублирует, пока отправка идёт — 409 `reply_in_progress`); итог прежней
+        отправки с этим ключом так и не узнали — 409 `CONFLICT` `delivery_unconfirmed` (второе сообщение не уходит, «лид
+        отвечен» не ставится). Лид не забран — 409 `CONFLICT` (`take_first`), нет согласия клиента — 409
+        (`no_consent`), лид у другого — 403 `FORBIDDEN` (`not_lead_owner`).
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/LeadNumber'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReplyIn'
+      responses:
+        '200':
+          description: Отправлено клиенту
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SentMessage'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/MessagesConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '502':
+          $ref: '#/components/responses/IntegrationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /crm/messages/{lead}/note:
+    post:
+      tags: [messages]
+      operationId: noteCrmLead
+      summary: 'Заметка команде (клиенту не уходит)'
+      description: >-
+        CRM `POST /leads/{id}/actions/note` (`visible_to_bot = false`). Раздел `crm.leads` полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/LeadNumber'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TeamNoteIn'
+      responses:
+        '201':
+          description: Заметка записана
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreatedId'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /crm/messages/{lead}/assist:
+    post:
+      tags: [messages]
+      operationId: assistCrmReply
+      summary: 'Подсказать ответ (ИИ через CRM): текст для поля, клиенту ничего не уходит'
+      description: >-
+        CRM `POST /leads/{id}/assist` (ИИ — только CRM через LiteLLM). Раздел `crm.leads` полный. `draft` — черновик ответа на
+        последнее сообщение клиента, `improve` — правка текста из поля. Отправляет человек. Таймаут — как у проб (30 с).
+        Отказы — 409 `CONFLICT` с `details.reason`: `assist_disabled`, `assist_budget`, `assist_empty`, `assist_no_history`;
+        модель не ответила — 502 `INTEGRATION_FAILED` (`assist_unavailable`).
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/LeadNumber'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssistIn'
+      responses:
+        '200':
+          description: Предложение для поля ответа
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssistSuggestion'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/MessagesConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '502':
+          $ref: '#/components/responses/IntegrationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /crm/messages/{lead}/return-to-bot:
+    post:
+      tags: [messages]
+      operationId: returnCrmLeadToBot
+      summary: 'Вернуть лида боту (бот снова отвечает сам)'
+      description: >-
+        CRM `POST /leads/{id}/actions/return_to_bot`. Раздел `crm.leads` полный. `note` — что знать боту дальше (видна боту).
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/LeadNumber'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReturnToBotIn'
+      responses:
+        '200':
+          description: Лид снова у бота
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionOk'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/MessagesConflict'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /crm/reply-templates:
+    get:
+      tags: [messages]
+      operationId: listCrmReplyTemplates
+      summary: 'Шаблоны ответов для поля ответа (только чтение)'
+      description: >-
+        CRM `GET /reply-templates` (`reply_templates:read`). Раздел `crm.leads` полный — тем, кто отвечает клиентам; правит
+        шаблоны администратор в Admin · Настройки бота.
+      responses:
+        '200':
+          description: Шаблоны по названию
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReplyTemplateList'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
 components:
   securitySchemes:
     platformSession:
@@ -5555,6 +5891,14 @@ components:
       name: rt_pf_session
 
   parameters:
+    LeadNumber:
+      name: lead
+      in: path
+      required: true
+      description: Номер лида `L-NNNN`
+      schema:
+        type: string
+        pattern: '^[Ll]-?\d{1,9}$'
     EmployeeId:
       name: id
       in: path
@@ -5795,6 +6139,16 @@ components:
       description: >-
         502 `INTEGRATION_FAILED` — CRM не достучалась до внешнего сервиса (ERP, SMTP, Telegram, LiteLLM) или он отказал; причина —
         `details.reason` (`erp_unavailable`, `smtp_auth_failed`, `litellm_unavailable`, …)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    MessagesConflict:
+      description: >-
+        409 `CONFLICT` — состояние лида не позволяет действие; код CRM — в `details.reason` (`lead_taken` с
+        `details.assigned_user_name`, `take_first`, `no_consent`, `already_with_bot`, `delivery_unconfirmed`, `reply_in_progress` — ответ с этим
+        `client_message_id` ещё отправляется, повтор безопасен, `assist_disabled`, `assist_budget`,
+        `assist_empty`, `assist_no_history`)
       content:
         application/json:
           schema:
@@ -7615,10 +7969,11 @@ components:
 
     InvalidationTopic:
       type: string
-      enum: [notifications, counters, queue, activity]
+      enum: [notifications, counters, queue, activity, messages]
       description: >-
         Что перезапросить: `notifications` — `listNotifications`; `counters` — `getMenuCounters`; `queue` — `getQueue`
-        и `getQueueCards`; `activity` — `getActivityToday`.
+        и `getQueueCards`; `activity` — `getActivityToday`; `messages` (0.22.0) — `listCrmMessages` и открытая лента
+        `getCrmThread` / `getCrmConversation`.
 
     InvalidationHint:
       type: object
@@ -9690,7 +10045,7 @@ components:
     FxRateOverview:
       type: object
       additionalProperties: false
-      required: [currency, current, max_age_days, journal]
+      required: [currency, current, max_age_days, journal, journal_available]
       properties:
         currency:
           type: string
@@ -9707,6 +10062,9 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/FxRateJournalEntry'
+        journal_available:
+          type: boolean
+          description: '`false` — журнал недоступен без права `settings.edit` в ERP (имена и почта коллег); `journal` тогда пуст, SPA секцию журнала не показывает'
     FxRateIn:
       type: object
       additionalProperties: false
@@ -10362,3 +10720,295 @@ components:
           description: >-
             `ok` — справочник сотрудников прочитан; `forbidden` — роли сотрудника не дают чтения справочника CRM (кандидатов
             нет); `unavailable` — CRM не ответила
+
+    # --- Клиенты · Ждут ответа (D1-1, 0.22.0) -----------------------------------------------------------------------
+
+    LeadOwnerMode:
+      type: string
+      enum: [bot, waiting, manager]
+      description: Кто ведёт диалог — `bot` (бот отвечает сам), `waiting` (бот передал и ждёт человека), `manager` (ведёт сотрудник)
+
+    MessageChannel:
+      type: string
+      description: Канал лида (`telegram`, `web`, `email`, `phone`, `referral`); подпись — у экрана
+      pattern: '^[a-z][a-z_]{0,15}$'
+
+    HandoffFacts:
+      type: object
+      additionalProperties: false
+      description: Факты квалификации от бота; коды срока и роли подписывает экран
+      required: [interest, timeline, decision_role, budget_hint, company, company_size, region]
+      properties:
+        interest:
+          type: array
+          items: {type: string}
+          description: Продукты по справочнику CRM (названия)
+        timeline:
+          type: [string, 'null']
+          enum: ['<1m', '<3m', '<12m', '>12m', null]
+        decision_role:
+          type: [string, 'null']
+          enum: [decision_maker, influencer, researcher, null]
+        budget_hint: {type: [string, 'null']}
+        company: {type: [string, 'null']}
+        company_size: {type: [string, 'null']}
+        region: {type: [string, 'null']}
+
+    HandoffNote:
+      type: object
+      additionalProperties: false
+      description: Записка передачи (CRM-06) — что известно о запросе клиента
+      required: [request, facts, last_message]
+      properties:
+        request:
+          type: [string, 'null']
+          description: Суть запроса клиента (резюме бота)
+        facts:
+          $ref: '#/components/schemas/HandoffFacts'
+        last_message:
+          type: [string, 'null']
+          description: Последнее сообщение клиента (до 200 символов)
+
+    HandoffInfo:
+      type: object
+      additionalProperties: false
+      description: Открытая передача от бота
+      required: [priority, state, reasons, reason_text, recommendation, created_at, sla_due_at, snoozed_until, taken_by]
+      properties:
+        priority:
+          type: string
+          enum: [hot, warm, info]
+          description: '`hot` — срочно, `warm` — важно, `info` — к сведению (без срока реакции)'
+        state:
+          type: string
+          enum: [open, taken, snoozed]
+        reasons:
+          type: array
+          items: {type: string, pattern: '^[a-z_]{1,32}$'}
+          description: Коды причин передачи CRM (`human_requested`, `price_or_contract_asked`, …); подписи — у экрана
+        reason_text:
+          type: [string, 'null']
+          description: 'Пояснение причины словами (служебные пометки CRM вида «dialog: …» BFF не отдаёт)'
+        recommendation:
+          type: [string, 'null']
+          description: Рекомендуемый шаг
+        created_at:
+          type: string
+          format: date-time
+          description: Когда бот передал диалог (начало таймера «ждёт»)
+        sla_due_at:
+          type: [string, 'null']
+          format: date-time
+          description: Срок реакции; после него таймер красный. `null` — без срока (`info`)
+        snoozed_until:
+          type: [string, 'null']
+          format: date-time
+        taken_by:
+          oneOf:
+            - $ref: '#/components/schemas/PersonRef'
+            - type: 'null'
+
+    MessageInboxItem:
+      type: object
+      additionalProperties: false
+      required: [lead, name, group, language, channel, unread, last_message_at, assigned, handoff, note]
+      properties:
+        lead:
+          type: string
+          pattern: '^L-\d{4,}$'
+          description: Номер лида
+        name: {type: string}
+        group:
+          type: string
+          enum: [handoff, mine, unassigned]
+        language:
+          $ref: '#/components/schemas/Language'
+        channel:
+          $ref: '#/components/schemas/MessageChannel'
+        unread:
+          type: boolean
+          description: Клиент написал после последнего ответа сотрудника
+        last_message_at:
+          type: [string, 'null']
+          format: date-time
+          description: Последнее сообщение клиента
+        assigned:
+          oneOf:
+            - $ref: '#/components/schemas/PersonRef'
+            - type: 'null'
+        handoff:
+          oneOf:
+            - $ref: '#/components/schemas/HandoffInfo'
+            - type: 'null'
+        note:
+          $ref: '#/components/schemas/HandoffNote'
+
+    MessageInbox:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/MessageInboxItem'}
+
+    ConversationContacts:
+      type: object
+      additionalProperties: false
+      required: [telegram, phone, email, company]
+      properties:
+        telegram:
+          type: [string, 'null']
+          description: Имя пользователя Telegram без @
+        phone: {type: [string, 'null'], description: 'E.164'}
+        email: {type: [string, 'null']}
+        company: {type: [string, 'null']}
+
+    ConversationCard:
+      type: object
+      additionalProperties: false
+      required: [lead, name, language, channel, owner_mode, assigned, consent_given_at, contacts, facts, request, handoff, client_in_erp]
+      properties:
+        lead: {type: string, pattern: '^L-\d{4,}$'}
+        name: {type: string}
+        language: {$ref: '#/components/schemas/Language'}
+        channel: {$ref: '#/components/schemas/MessageChannel'}
+        owner_mode: {$ref: '#/components/schemas/LeadOwnerMode'}
+        assigned:
+          oneOf:
+            - $ref: '#/components/schemas/PersonRef'
+            - type: 'null'
+        consent_given_at:
+          type: [string, 'null']
+          format: date-time
+          description: Согласие на обработку данных; без него написать клиенту нельзя
+        contacts: {$ref: '#/components/schemas/ConversationContacts'}
+        facts: {$ref: '#/components/schemas/HandoffFacts'}
+        request: {type: [string, 'null']}
+        handoff:
+          oneOf:
+            - $ref: '#/components/schemas/HandoffInfo'
+            - type: 'null'
+        client_in_erp:
+          type: boolean
+          description: Лид уже стал клиентом (компания в ERP)
+
+    ThreadAttachment:
+      type: object
+      additionalProperties: false
+      required: [index, name, mime, size, url]
+      properties:
+        index: {type: integer, minimum: 0}
+        name: {type: string}
+        mime: {type: string}
+        size: {type: [integer, 'null']}
+        url:
+          type: [string, 'null']
+          description: Ссылка BFF на файл (`/api/v1/crm/messages/{lead}/attachments/…`); `null` — файл не сохранён
+
+    ThreadMessage:
+      type: object
+      additionalProperties: false
+      required: [id, author, author_name, text, created_at, attachments, delivery]
+      properties:
+        id: {type: integer}
+        author:
+          type: string
+          enum: [lead, bot, manager, system]
+        author_name:
+          type: [string, 'null']
+          description: Имя сотрудника у ответа менеджера
+        text: {type: string}
+        created_at: {type: string, format: date-time}
+        attachments:
+          type: array
+          items: {$ref: '#/components/schemas/ThreadAttachment'}
+        delivery:
+          type: [string, 'null']
+          enum: [sending, unconfirmed, null]
+          description: >-
+            Только у ответа менеджера с ключом повтора: `sending` — отправка идёт («Отправляется…»); `unconfirmed` — доставка
+            не подтверждена (таймаут Telegram или сбой записи итога, отправка старше 2 минут — тот же срок, что у CRM): повтор
+            этим ключом сообщение не шлёт, проверьте у клиента (B-013). `null` — доставлено или это не ответ менеджера
+
+    TeamNote:
+      type: object
+      additionalProperties: false
+      required: [id, author_name, text, created_at, visible_to_bot]
+      properties:
+        id: {type: integer}
+        author_name: {type: [string, 'null']}
+        text: {type: string}
+        created_at: {type: string, format: date-time}
+        visible_to_bot:
+          type: boolean
+          description: Заметка при возврате боту — её видит и бот
+
+    ConversationThread:
+      type: object
+      additionalProperties: false
+      required: [items, notes, has_more]
+      properties:
+        items:
+          type: array
+          description: Сообщения, старые выше
+          items: {$ref: '#/components/schemas/ThreadMessage'}
+        notes:
+          type: array
+          description: Заметки команды (только на первой странице, без `before`), новые выше
+          items: {$ref: '#/components/schemas/TeamNote'}
+        has_more:
+          type: boolean
+          description: Есть сообщения старше — «Показать раньше»
+
+    ReplyIn:
+      type: object
+      additionalProperties: false
+      required: [text, client_message_id]
+      properties:
+        text: {type: string, minLength: 1, maxLength: 4000}
+        client_message_id:
+          type: string
+          pattern: '^[A-Za-z0-9_-]{8,64}$'
+          description: Ключ повтора черновика — тот же при «Повторить»
+
+    SentMessage:
+      type: object
+      additionalProperties: false
+      required: [id]
+      properties:
+        id: {type: integer, description: 'Id сообщения в переписке'}
+
+    TeamNoteIn:
+      type: object
+      additionalProperties: false
+      required: [text]
+      properties:
+        text: {type: string, minLength: 1, maxLength: 4000}
+
+    AssistIn:
+      type: object
+      additionalProperties: false
+      required: [mode]
+      properties:
+        mode:
+          type: string
+          enum: [draft, improve]
+        text: {type: [string, 'null'], maxLength: 4000, description: 'Текст из поля для `improve`'}
+
+    AssistSuggestion:
+      type: object
+      additionalProperties: false
+      required: [text, notice]
+      properties:
+        text: {type: string}
+        notice:
+          type: [string, 'null']
+          enum: [numbers_removed, new_numbers, null]
+          description: '`numbers_removed` — из черновика убраны числа не из базы знаний; `new_numbers` — правка добавила числа, возвращён исходный текст'
+
+    ReturnToBotIn:
+      type: object
+      additionalProperties: false
+      properties:
+        note: {type: [string, 'null'], maxLength: 4000}

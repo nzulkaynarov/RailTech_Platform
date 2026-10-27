@@ -754,12 +754,22 @@ FX_JOURNAL_LIMIT = 20
 
 async def _fx_overview(erp: ErpCompany) -> FxRateOverview:
     current = await erp.data("GET", "exchange-rates/current/", params={"currency": "USD"})
-    journal = await erp.data(
-        "GET", "exchange-rates/journal/", params={"currency": "USD", "limit": FX_JOURNAL_LIMIT}
-    )
+    journal: Any = []
+    available = True
+    try:
+        journal = await erp.data(
+            "GET", "exchange-rates/journal/", params={"currency": "USD", "limit": FX_JOURNAL_LIMIT}
+        )
+    except PlatformError as error:
+        # Журнал с именами и почтой коллег ERP отдаёт только с `settings.edit` (W15-H8).
+        # Директор читает раздел «Компания» без этого права: курс виден, журнала нет.
+        if error.status_code != 403:
+            raise
+        available = False
     return to_fx_overview(
         current if isinstance(current, dict) else {},
         [row for row in journal if isinstance(row, dict)] if isinstance(journal, list) else [],
+        journal_available=available,
     )
 
 

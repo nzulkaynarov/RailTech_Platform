@@ -133,6 +133,22 @@
  * (директор читает), сброс пароля — `admin: full`; профиль доступен каждому вошедшему. Секреты из записей журнала BFF вырезает
  * (значения полей `password`, `secret`, `token`, `key`, `*_key`, `credentials`, `authorization`, `pin` и им подобных -> `***` целиком, любого типа).
  *
+ * **0.23.0 (W15-H8) — Admin · Компания: шаблоны документов и лента.** Добавляющее изменение. `DocumentTemplateIn.kind` — вид
+ * шаблона при создании (`letter`, `report`, `custom`, `contract`, `invoice`, `act`, `receipt`, `delivery_note`; без поля — `custom`,
+ * как раньше); `DocumentTemplate.kind` отдаёт вид кодом. `DocumentTemplatePreviewIn.kind` — предпросмотр договора, счёта и акта идёт
+ * на каркасе своего вида и с образцами блоков (остальные виды — общий каркас и подписанные заглушки). `ActivityItem.code` — код
+ * административного события ERP (`admin.*`), по которому SPA собирает фразу на языке сотрудника; для остальных событий `null`.
+ * Журнал ручных курсов в ERP виден только с правом `settings.edit` (имена и почта коллег): `GET /admin/company/fx-rate` без
+ * этого права отдаёт текущий курс и пустой журнал с `journal_available = false` (не ошибку; директор раздел смотрит).
+ *
+ * **0.22.0 (D1-1, волна 16) — Клиенты · Ждут ответа.** Добавляющее изменение (тег `messages`): очередь передач от бота с
+ * запиской (CRM-06) и SLA — `GET /crm/messages`; карточка лида, лента диалога с подгрузкой истории и вложениями через BFF —
+ * `GET /crm/messages/{lead}`, `/thread`, `/attachments/{message}/{index}`; действия — `take`, `reply` (ключ повтора
+ * `client_message_id`: «Повторить» не дублирует сообщение; Telegram не ответил — 502 `INTEGRATION_FAILED`, `delivery_failed`),
+ * `note` (заметка команде), `assist` (подсказка ответа через CRM/LiteLLM), `return-to-bot`; шаблоны — `GET /crm/reply-templates`
+ * (раздел `crm.leads` полный). Чтение — `crm.leads` от чтения (директор), действия — полный. Новая тема подсказки потока
+ * `InvalidationTopic.messages`: событие CRM `lead.message_added` (новое сообщение в переписке) и события лида — экран
+ * перезапрашивает очередь и открытую ленту.
  * **0.19.0 (W15-H1) — мост в старые экраны.** Добавляющее изменение (тег `bridge`). Пока раздел Платформы ещё заглушка, сотрудник
  * открывает ту же работу в старой CRM или старом ERP новой вкладкой. `GET /bridge` отдаёт публичные адреса старых фронтов
  * (`crm_url`, `erp_url`): настройки `PLATFORM_CRM_PUBLIC_URL` и `PLATFORM_ERP_PUBLIC_URL`, а если они пусты — адрес выводится из
@@ -179,14 +195,6 @@
  * EDS, полученным обменом токена сотрудника CRM `aud=eds` (`docs/architecture/platform-bff.md` §3); ошибки EDS переводятся в
  * формат `Error` (`source = eds`, `details.reason` и `details.fields` EDS сохраняются).
  *
- * **0.22.0 (W15-H8) — Admin · Компания: шаблоны документов и лента.** Добавляющее изменение. `DocumentTemplateIn.kind` — вид
- * шаблона при создании (`letter`, `report`, `custom`, `contract`, `invoice`, `act`, `receipt`, `delivery_note`; без поля — `custom`,
- * как раньше); `DocumentTemplate.kind` отдаёт вид кодом. `DocumentTemplatePreviewIn.kind` — предпросмотр договора, счёта и акта идёт
- * на каркасе своего вида и с образцами блоков (остальные виды — общий каркас и подписанные заглушки). `ActivityItem.code` — код
- * административного события ERP (`admin.*`), по которому SPA собирает фразу на языке сотрудника; для остальных событий `null`.
- * Журнал ручных курсов (`GET /admin/company/fx-rate`) в ERP виден только с правом `settings.edit` (имена и почта коллег): отказ ERP
- * доходит как 403 с `source = erp`.
- *
  * **0.21.0 (W15-H6) — Профиль сотрудника.** Добавляющее изменение, тег `me`: `GET/PATCH /me/profile` (имя, телефон, язык, часовой
  * пояс, подпись для писем; должность и роли только читаются, правит админ), `PUT/DELETE /me/avatar` и `GET /staff/{id}/avatar`
  * (фото: клиент обрезает по кругу, CRM хранит в S3, BFF отдаёт без публичных ссылок; `Me.avatar_url` — вместо инициалов),
@@ -215,7 +223,7 @@
  * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; «Забыли пароль?» — 5 запросов в час на IP и на адрес; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.22.0
+ * OpenAPI spec version: 0.23.0
  */
 import { faker } from "@faker-js/faker";
 
@@ -245,6 +253,7 @@ import {
   IntegrationStatus,
   KbGapStatus,
   Language,
+  LeadOwnerMode,
   LetterStatus,
   LetterZone,
   ModuleCode,
@@ -269,6 +278,7 @@ import type {
   AiModelList,
   AiModelTest,
   AiSpendReport,
+  AssistSuggestion,
   AuditPage,
   BackupsStatus,
   BotProfileState,
@@ -289,6 +299,8 @@ import type {
   ChargeTypeList,
   Colleague,
   CompanyProfile,
+  ConversationCard,
+  ConversationThread,
   CreatedId,
   DocumentPlaceholders,
   DocumentPreview,
@@ -318,6 +330,7 @@ import type {
   ForgotPasswordAccepted,
   FxRate,
   FxRateOverview,
+  HandoffInfo,
   Health,
   IntegrationsOverview,
   KbChunkList,
@@ -335,6 +348,7 @@ import type {
   MailQueued,
   Me,
   MenuCounters,
+  MessageInbox,
   NotificationPage,
   NotificationSettings,
   NumberingPreview,
@@ -356,6 +370,7 @@ import type {
   RolePreview,
   SandboxTurn,
   SearchResult,
+  SentMessage,
   Session,
   SetupChecklist,
   SetupCompanyCreated,
@@ -4502,6 +4517,7 @@ export const getGetFxRateResponseMock = (
       entered_at: faker.date.past().toISOString().slice(0, 19) + "Z",
     }),
   ),
+  journal_available: faker.datatype.boolean(),
   ...overrideResponse,
 });
 
@@ -4543,6 +4559,7 @@ export const getCreateFxRateResponseMock = (
       entered_at: faker.date.past().toISOString().slice(0, 19) + "Z",
     }),
   ),
+  journal_available: faker.datatype.boolean(),
   ...overrideResponse,
 });
 
@@ -5436,6 +5453,313 @@ export const getListResolutionAssigneesResponseMock = (
 
 export const getDownloadLetterFileResponseMock = (): Blob =>
   new Blob([new Uint8Array(faker.number.int({ min: 1, max: 64 }))]);
+
+export const getListCrmMessagesResponsePersonRefMock = (
+  overrideResponse: Partial<PersonRef> = {},
+): PersonRef => ({
+  ...{
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getListCrmMessagesResponseHandoffInfoMock = (
+  overrideResponse: Partial<HandoffInfo> = {},
+): HandoffInfo => ({
+  ...{
+    priority: faker.helpers.arrayElement(["hot", "warm", "info"] as const),
+    state: faker.helpers.arrayElement(["open", "taken", "snoozed"] as const),
+    reasons: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => faker.helpers.fromRegExp("^[a-z_]{1,32}$"),
+    ),
+    reason_text: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    recommendation: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    sla_due_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    snoozed_until: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    taken_by: faker.helpers.arrayElement([{ ...getListCrmMessagesResponsePersonRefMock() }, null]),
+  },
+  ...overrideResponse,
+});
+
+export const getListCrmMessagesResponseMock = (
+  overrideResponse: Partial<Extract<MessageInbox, object>> = {},
+): MessageInbox => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    lead: faker.helpers.fromRegExp("^L-\\d{4,}$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    group: faker.helpers.arrayElement(["handoff", "mine", "unassigned"] as const),
+    language: faker.helpers.arrayElement(Object.values(Language)),
+    channel: faker.helpers.fromRegExp("^[a-z][a-z_]{0,15}$"),
+    unread: faker.datatype.boolean(),
+    last_message_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    assigned: faker.helpers.arrayElement([{ ...getListCrmMessagesResponsePersonRefMock() }, null]),
+    handoff: faker.helpers.arrayElement([{ ...getListCrmMessagesResponseHandoffInfoMock() }, null]),
+    note: {
+      request: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      facts: {
+        interest: Array.from(
+          { length: faker.number.int({ min: 1, max: 10 }) },
+          (_, i) => i + 1,
+        ).map(() => faker.string.alpha({ length: { min: 10, max: 20 } })),
+        timeline: faker.helpers.arrayElement([
+          faker.helpers.arrayElement(["<1m", "<3m", "<12m", ">12m"] as const),
+          null,
+        ]),
+        decision_role: faker.helpers.arrayElement([
+          faker.helpers.arrayElement(["decision_maker", "influencer", "researcher"] as const),
+          null,
+        ]),
+        budget_hint: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        company: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        company_size: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        region: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+      },
+      last_message: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+    },
+  })),
+  ...overrideResponse,
+});
+
+export const getGetCrmConversationResponsePersonRefMock = (
+  overrideResponse: Partial<PersonRef> = {},
+): PersonRef => ({
+  ...{
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getGetCrmConversationResponseHandoffInfoMock = (
+  overrideResponse: Partial<HandoffInfo> = {},
+): HandoffInfo => ({
+  ...{
+    priority: faker.helpers.arrayElement(["hot", "warm", "info"] as const),
+    state: faker.helpers.arrayElement(["open", "taken", "snoozed"] as const),
+    reasons: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => faker.helpers.fromRegExp("^[a-z_]{1,32}$"),
+    ),
+    reason_text: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    recommendation: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    sla_due_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    snoozed_until: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    taken_by: faker.helpers.arrayElement([
+      { ...getGetCrmConversationResponsePersonRefMock() },
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getGetCrmConversationResponseMock = (
+  overrideResponse: Partial<Extract<ConversationCard, object>> = {},
+): ConversationCard => ({
+  lead: faker.helpers.fromRegExp("^L-\\d{4,}$"),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  language: faker.helpers.arrayElement(Object.values(Language)),
+  channel: faker.helpers.fromRegExp("^[a-z][a-z_]{0,15}$"),
+  owner_mode: faker.helpers.arrayElement(Object.values(LeadOwnerMode)),
+  assigned: faker.helpers.arrayElement([{ ...getGetCrmConversationResponsePersonRefMock() }, null]),
+  consent_given_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  contacts: {
+    telegram: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    phone: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    email: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    company: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  facts: {
+    interest: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => faker.string.alpha({ length: { min: 10, max: 20 } }),
+    ),
+    timeline: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(["<1m", "<3m", "<12m", ">12m"] as const),
+      null,
+    ]),
+    decision_role: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(["decision_maker", "influencer", "researcher"] as const),
+      null,
+    ]),
+    budget_hint: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    company: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    company_size: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    region: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  request: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  handoff: faker.helpers.arrayElement([
+    { ...getGetCrmConversationResponseHandoffInfoMock() },
+    null,
+  ]),
+  client_in_erp: faker.datatype.boolean(),
+  ...overrideResponse,
+});
+
+export const getGetCrmThreadResponseMock = (
+  overrideResponse: Partial<Extract<ConversationThread, object>> = {},
+): ConversationThread => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.number.int(),
+    author: faker.helpers.arrayElement(["lead", "bot", "manager", "system"] as const),
+    author_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    attachments: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        index: faker.number.int({ min: 0 }),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        mime: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        size: faker.helpers.arrayElement([faker.number.int(), null]),
+        url: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+      }),
+    ),
+    delivery: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(["sending", "unconfirmed"] as const),
+      null,
+    ]),
+  })),
+  notes: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.number.int(),
+    author_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    visible_to_bot: faker.datatype.boolean(),
+  })),
+  has_more: faker.datatype.boolean(),
+  ...overrideResponse,
+});
+
+export const getDownloadCrmAttachmentResponseMock = (): Blob =>
+  new Blob([new Uint8Array(faker.number.int({ min: 1, max: 64 }))]);
+
+export const getTakeCrmLeadResponseMock = (
+  overrideResponse: Partial<Extract<ActionOk, object>> = {},
+): ActionOk => ({
+  id: faker.helpers.arrayElement([faker.number.int(), null]),
+  ok: true,
+  ...overrideResponse,
+});
+
+export const getReplyCrmLeadResponseMock = (
+  overrideResponse: Partial<Extract<SentMessage, object>> = {},
+): SentMessage => ({ id: faker.number.int(), ...overrideResponse });
+
+export const getNoteCrmLeadResponseMock = (
+  overrideResponse: Partial<Extract<CreatedId, object>> = {},
+): CreatedId => ({ id: faker.number.int(), ...overrideResponse });
+
+export const getAssistCrmReplyResponseMock = (
+  overrideResponse: Partial<Extract<AssistSuggestion, object>> = {},
+): AssistSuggestion => ({
+  text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  notice: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(["numbers_removed", "new_numbers"] as const),
+    null,
+  ]),
+  ...overrideResponse,
+});
+
+export const getReturnCrmLeadToBotResponseMock = (
+  overrideResponse: Partial<Extract<ActionOk, object>> = {},
+): ActionOk => ({
+  id: faker.helpers.arrayElement([faker.number.int(), null]),
+  ok: true,
+  ...overrideResponse,
+});
+
+export const getListCrmReplyTemplatesResponseMock = (
+  overrideResponse: Partial<Extract<ReplyTemplateList, object>> = {},
+): ReplyTemplateList => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.number.int(),
+    title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    text: {
+      en: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ru: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      uz: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    },
+    updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  })),
+  ...overrideResponse,
+});
 
 export const getLoginMockHandler = (
   overrideResponse?:
@@ -9398,6 +9722,239 @@ export const getDownloadLetterFileMockHandler = (
     options,
   );
 };
+
+export const getListCrmMessagesMockHandler = (
+  overrideResponse?:
+    | MessageInbox
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<MessageInbox> | MessageInbox),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/crm/messages",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListCrmMessagesResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetCrmConversationMockHandler = (
+  overrideResponse?:
+    | ConversationCard
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<ConversationCard> | ConversationCard),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/crm/messages/:lead",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetCrmConversationResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetCrmThreadMockHandler = (
+  overrideResponse?:
+    | ConversationThread
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<ConversationThread> | ConversationThread),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/crm/messages/:lead/thread",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetCrmThreadResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getDownloadCrmAttachmentMockHandler = (
+  overrideResponse?:
+    Blob | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<Blob> | Blob),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/crm/messages/:lead/attachments/:message/:index",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      const binaryBody =
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getDownloadCrmAttachmentResponseMock();
+      return new HttpResponse(binaryBody, {
+        status: 200,
+        headers: { "Content-Type": "application/octet-stream" },
+      });
+    },
+    options,
+  );
+};
+
+export const getTakeCrmLeadMockHandler = (
+  overrideResponse?:
+    | ActionOk
+    | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ActionOk> | ActionOk),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/crm/messages/:lead/take",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getTakeCrmLeadResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getReplyCrmLeadMockHandler = (
+  overrideResponse?:
+    | SentMessage
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<SentMessage> | SentMessage),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/crm/messages/:lead/reply",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getReplyCrmLeadResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getNoteCrmLeadMockHandler = (
+  overrideResponse?:
+    | CreatedId
+    | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<CreatedId> | CreatedId),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/crm/messages/:lead/note",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getNoteCrmLeadResponseMock(),
+        { status: 201 },
+      );
+    },
+    options,
+  );
+};
+
+export const getAssistCrmReplyMockHandler = (
+  overrideResponse?:
+    | AssistSuggestion
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<AssistSuggestion> | AssistSuggestion),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/crm/messages/:lead/assist",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getAssistCrmReplyResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getReturnCrmLeadToBotMockHandler = (
+  overrideResponse?:
+    | ActionOk
+    | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<ActionOk> | ActionOk),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/crm/messages/:lead/return-to-bot",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getReturnCrmLeadToBotResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getListCrmReplyTemplatesMockHandler = (
+  overrideResponse?:
+    | ReplyTemplateList
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<ReplyTemplateList> | ReplyTemplateList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/crm/reply-templates",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListCrmReplyTemplatesResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
 export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getLoginMockHandler(),
   getForgotPasswordMockHandler(),
@@ -9574,4 +10131,14 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getRejectLetterMockHandler(),
   getListResolutionAssigneesMockHandler(),
   getDownloadLetterFileMockHandler(),
+  getListCrmMessagesMockHandler(),
+  getGetCrmConversationMockHandler(),
+  getGetCrmThreadMockHandler(),
+  getDownloadCrmAttachmentMockHandler(),
+  getTakeCrmLeadMockHandler(),
+  getReplyCrmLeadMockHandler(),
+  getNoteCrmLeadMockHandler(),
+  getAssistCrmReplyMockHandler(),
+  getReturnCrmLeadToBotMockHandler(),
+  getListCrmReplyTemplatesMockHandler(),
 ];

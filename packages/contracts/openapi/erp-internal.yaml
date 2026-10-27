@@ -7288,7 +7288,7 @@ paths:
                 $ref: '#/components/schemas/DocumentTemplatePreview'
           description: ''
         '400':
-          description: NO_COMPANY / TEMPLATE_BODY_TOO_LARGE (error code)
+          description: NO_COMPANY / TEMPLATE_BODY_TOO_LARGE / TEMPLATE_KIND_INVALID (error code)
           content:
             application/json:
               schema:

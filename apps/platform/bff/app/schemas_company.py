@@ -923,6 +923,7 @@ class FxRateOverview(BaseModel):
     current: FxRate | None
     max_age_days: int
     journal: list[FxRateJournalEntry]
+    journal_available: bool = True
 
 
 class FxRateIn(Body):
@@ -941,7 +942,9 @@ def _fx_source(value: Any) -> Literal["auto", "manual"]:
     return "manual" if str(value or "").upper() == "MANUAL" else "auto"
 
 
-def to_fx_overview(current: Mapping[str, Any], journal: list[Mapping[str, Any]]) -> FxRateOverview:
+def to_fx_overview(
+    current: Mapping[str, Any], journal: list[Mapping[str, Any]], *, journal_available: bool = True
+) -> FxRateOverview:
     """Ответы ERP `exchange-rates/current/` и `exchange-rates/journal/` -> `FxRateOverview`."""
     row = current.get("current")
     entries = [
@@ -971,4 +974,5 @@ def to_fx_overview(current: Mapping[str, Any], journal: list[Mapping[str, Any]])
         ),
         max_age_days=int(current.get("max_age_days") or 0),
         journal=entries,
+        journal_available=journal_available,
     )

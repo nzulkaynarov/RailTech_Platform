@@ -921,6 +921,25 @@ describe("Курс USD → UZS: ручной ввод", () => {
     expect(await screen.findByText(/1 USD = 12\s650,50 сум/)).toBeInTheDocument();
   });
 
+  it("журнал недоступен без права ERP: курс виден, секции журнала нет (W15-H8)", async () => {
+    server.use(
+      http.get("*/admin/company/fx-rate", () =>
+        HttpResponse.json({
+          currency: "USD",
+          current: { rate_to_uzs: "12650.5", rate_date: "2026-10-27", source: "auto" },
+          max_age_days: 7,
+          journal: [],
+          journal_available: false,
+        }),
+      ),
+    );
+    await openTab("platform", "director@demo.example");
+    expect(await screen.findByText(/1 USD = 12\s650,50 сум/)).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Журнал курса" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Журнал курса" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Ручных вводов пока не было")).not.toBeInTheDocument();
+  });
+
   it("нет свежего курса — предупреждение со сроком и приглашением ввести курс", async () => {
     updateCompanyMock((state) => {
       state.fx.current = null;

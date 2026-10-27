@@ -1809,6 +1809,7 @@ async def test_fx_rate_get_shows_current_rate_source_and_journal(
         "source": "auto",
     }
     assert body["max_age_days"] == 7
+    assert body["journal_available"] is True
     manual, skipped = body["journal"]
     assert (manual["id"], manual["kind"], manual["entered_by"]) == ("41", "manual", "Анна Иванова")
     assert (manual["previous_rate_to_uzs"], manual["previous_source"]) == ("12600", "auto")
@@ -1821,10 +1822,10 @@ async def test_fx_rate_get_shows_current_rate_source_and_journal(
     assert routes["current"].calls.last.request.url.params["currency"] == "USD"
 
 
-async def test_fx_rate_journal_erp_403_is_not_shown_to_the_caller(
-    web: Web, erp: respx.MockRouter
+async def test_fx_rate_without_erp_settings_edit_shows_the_rate_but_no_journal(
+    web: Web, erp: respx.MockRouter, check: ContractChecker
 ) -> None:
-    """Журнал курсов — только `settings.edit` в ERP (W15-H8): отказ ERP доходит 403, без имён."""
+    """Журнал курсов — только с `settings.edit` в ERP (W15-H8): без него курс виден, журнала нет."""
     await web.login(["DIRECTOR"])
     erp.get(f"{API}/exchange-rates/current/").mock(
         return_value=httpx.Response(200, json=FX_CURRENT)
@@ -1835,9 +1836,29 @@ async def test_fx_rate_journal_erp_403_is_not_shown_to_the_caller(
 
     response = await web.client.get("/api/v1/admin/company/fx-rate")
 
-    assert response.status_code == 403
-    assert response.json()["source"] == "erp"
+    assert response.status_code == 200
+    check(response, "/admin/company/fx-rate", "get")
+    body = response.json()
+    assert body["current"]["rate_to_uzs"] == "12650.5"
+    assert body["journal"] == []
+    assert body["journal_available"] is False
     assert "Иванова" not in response.text
+
+
+async def test_fx_rate_journal_other_erp_failures_are_not_swallowed(
+    web: Web, erp: respx.MockRouter
+) -> None:
+    await web.login(["DIRECTOR"])
+    erp.get(f"{API}/exchange-rates/current/").mock(
+        return_value=httpx.Response(200, json=FX_CURRENT)
+    )
+    erp.get(f"{API}/exchange-rates/journal/").mock(return_value=httpx.Response(500))
+
+    response = await web.client.get("/api/v1/admin/company/fx-rate")
+
+    assert (
+        response.status_code == 503
+    )  # ERP недоступна — как у остальных экранов, а не «журнала нет»
 
 
 async def test_fx_rate_without_a_rate_is_null_not_zero(

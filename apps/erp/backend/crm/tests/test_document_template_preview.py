@@ -286,3 +286,11 @@ def test_letter_and_unknown_kind_keep_the_generic_frame_and_stubs(lookups):
         result = _preview(user, "<p>Текст</p>{{doc.items_table}}", kind)
         assert "Образец документа" in result["document_html"], kind
         assert "Блок: таблица позиций" in result["rendered_html"], kind
+
+
+def test_preview_kind_that_is_not_a_string_is_400_not_500(lookups):
+    user = _member(_company("ООО Продавец", "S1"), "s@t.uz")
+    for bad in (["CONTRACT"], {"a": 1}, 5):
+        resp = _api(user).post(_PREVIEW, {"body_html": "<p>x</p>", "kind": bad}, format="json")
+        assert resp.status_code == 400, bad
+        assert resp.json() == {"detail": "TEMPLATE_KIND_INVALID"}

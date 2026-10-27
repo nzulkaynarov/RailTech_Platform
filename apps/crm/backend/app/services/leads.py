@@ -18,7 +18,6 @@ from app.bus import events as bus_events
 from app.domain.backoffice import BackofficeMode, may_close_locally
 from app.domain.errors import (
     ConflictError,
-    DomainError,
     ForbiddenError,
     InvalidTransitionError,
     NotFoundError,
@@ -31,6 +30,7 @@ from app.domain.stages import OwnerMode, Stage, TransitionSource
 from app.domain.text import staff_name
 from app.models.leads import Lead
 from app.models.qualification import Escalation
+from app.repositories import crm as crm_repo
 from app.repositories import events
 from app.repositories import leads as repo
 from app.repositories import users as users_repo
@@ -39,7 +39,7 @@ from app.security import audit
 from app.security.principal import Principal
 from app.services import deals, lead_parts, lead_snooze, stages
 from app.services.escalation import OPEN_STATUSES
-from app.services.lead_messenger import LeadMessenger
+from app.services.lead_messenger import DeliveryError, LeadMessenger
 from app.services.settings import SettingsService
 
 logger = structlog.get_logger(__name__)
@@ -52,10 +52,6 @@ BackofficeModeProvider = Callable[[], Awaitable[BackofficeMode]]
 Outcome = Literal["won", "lost"]
 _active_escalation = lead_parts.active_escalation
 LANGUAGES: Final[dict[str, Language]] = {"ru": "ru", "uz": "uz", "en": "en"}
-
-
-class DeliveryError(DomainError):
-    code = "delivery_failed"
 
 
 @dataclass(frozen=True, slots=True)
@@ -318,10 +314,20 @@ class LeadService:
             await events.publish(session, "lead.updated", lead_id=lead_id)
             return note.id
 
-    async def reply(self, who: Principal, lead_id: int, text: str) -> int:
+    async def reply(
+        self, who: Principal, lead_id: int, text: str, *, client_message_id: str | None = None
+    ) -> int:
         body = text.strip()
         if not body or len(body) > 4000:
             raise ValidationFailedError("message must be 1..4000 characters", field="text")
+        if client_message_id is not None:  # «Повторить» после обрыва: ответ уже ушёл — не дублируем
+            async with self._sessions() as session:
+                done = await crm_repo.reply_by_key(session, lead_id, client_message_id)
+            state = (done.meta or {}).get("delivery") if done is not None else None
+            if done is not None and state == "unconfirmed":
+                raise ConflictError("delivery is not confirmed", reason=Reason.DELIVERY_UNCONFIRMED)
+            if done is not None and state != "sending":
+                return done.id  # уже доставлен раньше: «лид отвечен» не сдвигаем
         async with self._sessions() as session, session.begin():
             lead = await _lead(session, lead_id)
             if lead.owner_mode != OwnerMode.HUMAN:
@@ -330,13 +336,25 @@ class LeadService:
             if lead.consent_given_at is None:
                 # Без согласия на обработку данных писать лиду нельзя (аудит P2).
                 raise ConflictError("lead has not given consent", reason=Reason.NO_CONSENT)
-            lead.last_human_msg_at = datetime.now(UTC)
             await audit.record(session, who.actor, "lead.reply", "lead", lead_id)
-        message_id = await self._messenger.send(
-            lead_id, body, {"mode": "manager"}, role="manager", sent_by_user_id=who.user_id
-        )
+        if client_message_id is not None:
+            reply = await self._messenger.send_once(
+                lead_id, body, client_message_id, sent_by_user_id=who.user_id
+            )
+            message_id = reply.message_id if reply is not None else None
+            delivered_now = reply is not None and reply.delivered_now
+        else:
+            message_id = await self._messenger.send(
+                lead_id, body, {"mode": "manager"}, role="manager", sent_by_user_id=who.user_id
+            )
+            delivered_now = message_id is not None
         if message_id is None:
             raise DeliveryError("telegram delivery failed")
+        if delivered_now:
+            # «Лид отвечен» — только после доставки (B-013): при отказе Telegram он «ждёт ответа».
+            async with self._sessions() as session, session.begin():
+                lead = await _lead(session, lead_id)
+                lead.last_human_msg_at = datetime.now(UTC)
         return message_id
 
     async def _finish(
