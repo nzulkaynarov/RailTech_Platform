@@ -12,9 +12,7 @@ FORBIDDEN = re.compile(r"\bлид|сделк|\bcrm\b|\blead\b|\bdeal\b|\bL-\d|es
 
 
 def everything(language: str) -> list[str]:
-    mail = t.web_confirmation_mail(
-        language, "Алишер", "Нужен расчёт", "RailTech", "https://t.me/b?start=x"
-    )
+    mail = t.web_confirmation_mail(language, "Алишер", "RailTech", "https://t.me/b?start=x")
     accepted = t.request_accepted_mail(
         language, "Алишер", "ЗВ-2026-001", "https://cabinet.example.com"
     )
@@ -51,26 +49,21 @@ def test_unknown_language_falls_back_to_russian() -> None:
 
 
 @pytest.mark.parametrize("language", LANGS)
-def test_web_confirmation_mail_carries_name_need_and_bot_link(language: str) -> None:
-    mail = t.web_confirmation_mail(
-        language, "Алишер", "Нужна интеграция", "RailTech", "https://t.me/b?start=x"
-    )
+def test_web_confirmation_mail_carries_name_and_bot_link_but_never_the_request_text(
+    language: str,
+) -> None:
+    """Письмо уходит на любой указанный адрес: чужой текст запроса оно не пересылает."""
+    mail = t.web_confirmation_mail(language, "Алишер", "RailTech", "https://t.me/b?start=x")
     assert "Алишер" in mail.body
-    assert "Нужна интеграция" in mail.body
     assert "https://t.me/b?start=x" in mail.body
     assert mail.body.rstrip().endswith("RailTech")
+    assert "«" not in mail.body
 
 
-def test_web_confirmation_mail_without_bot_or_need_is_still_whole() -> None:
-    mail = t.web_confirmation_mail("ru", "", None, "", None)
+def test_web_confirmation_mail_without_bot_is_still_whole() -> None:
+    mail = t.web_confirmation_mail("ru", "", "", None)
     assert mail.body.startswith("Здравствуйте!")
     assert "t.me" not in mail.body
-    assert "Ваш запрос" not in mail.body
-
-
-def test_long_need_is_clipped() -> None:
-    mail = t.web_confirmation_mail("en", "Ann", "x" * 1000, "Co", None)
-    assert len(mail.body) < 700
 
 
 @pytest.mark.parametrize("language", LANGS)

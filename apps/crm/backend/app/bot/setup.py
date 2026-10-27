@@ -17,6 +17,7 @@ from app.agents.mcp_client import McpToolClient
 from app.bot.runtime import build_dispatcher
 from app.bot.supervisor import BotSupervisor
 from app.container import Container
+from app.domain.start_link import link_key
 from app.integrations.telegram import TokenSource, resolve_token
 from app.security.rbac import Rbac
 from app.services.budget import BudgetedModel
@@ -177,7 +178,7 @@ async def bot_lifespan(
                 telegram_paused=lambda: container.switch_board.is_disabled("telegram"),
                 start_links=StartLinkService(
                     container.session_factory,
-                    container.settings.jwt_secret.get_secret_value().encode("utf-8"),
+                    link_key(container.settings.jwt_secret.get_secret_value().encode("utf-8")),
                 ),
             )
 

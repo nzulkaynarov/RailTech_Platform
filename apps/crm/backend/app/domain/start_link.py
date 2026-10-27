@@ -5,14 +5,12 @@
 * `web` — клиент нажал «Написать в Telegram» на сайте; метка источника нового лида, привязывать
   нечего;
 * `deal_<id>` — «Написать менеджеру» из кабинета (`id` — заявка ERP). Ссылку собирает кабинет без
-  подписи, поэтому
-  привязка проверяется по аккаунту: заявка должна принадлежать клиенту, к которому уже привязан этот
-  Telegram;
-* `lead_<…>` — ссылка из письма-подтверждения, выданная самой системой: `lead_<id>_<срок>_<подпись>`
-  (base36 и HMAC), живёт
-  `LEAD_LINK_TTL`. Привязывает Telegram-аккаунт к запросу с сайта; одноразовость — состоянием: у
-  запроса уже есть Telegram
-  или аккаунт уже ведёт другой лид с историей — ссылка не срабатывает.
+  подписи, поэтому привязка проверяется по аккаунту: заявка должна принадлежать клиенту, к
+  которому уже привязан и которого проверил менеджер этот Telegram;
+* `lead_<id>_<срок>_<подпись>` — ссылка из письма-подтверждения, выданная самой системой (id и
+  срок в base36, подпись HMAC на отдельном ключе `link_key`), живёт `LEAD_LINK_TTL`. Склеивает
+  чат с запросом с сайта. Одноразовость — состоянием: если у запроса уже есть Telegram-аккаунт,
+  он обезличен, а чат принадлежит клиенту (`client_id`), ссылка не срабатывает.
 
 Всё остальное — `unknown`: бот просто здоровается. Чистые функции без I/O.
 """
@@ -28,7 +26,7 @@ LEAD_LINK_TTL: Final = timedelta(days=14)
 _SIG_LEN: Final = 16
 _DEAL: Final = re.compile(r"^deal_(\d{1,12})$")
 _LEAD: Final = re.compile(r"^lead_([0-9a-z]{1,12})_([0-9a-z]{1,12})_([0-9a-f]{16})$")
-_DOMAIN: Final = b"start-link:"
+_INFO: Final = b"rt-crm/start-link/v1"
 
 Kind = Literal["none", "web", "deal", "lead", "unknown"]
 
@@ -57,8 +55,17 @@ def parse_start_payload(raw: str | None) -> StartLink:
     return StartLink("unknown")
 
 
+def link_key(secret: bytes) -> bytes:
+    """Ключ подписи ссылок: HKDF-SHA256 (RFC 5869) от секрета приложения с контекстом `start-link`.
+
+    Свой ключ, а не сам `JWT_SECRET`: подпись ссылки бота не должна совпадать с подписями токенов
+    других назначений, даже если их формат когда-нибудь совпадёт."""
+    prk = hmac.new(b"\x00" * hashlib.sha256().digest_size, secret, hashlib.sha256).digest()
+    return hmac.new(prk, _INFO + b"\x01", hashlib.sha256).digest()
+
+
 def _sign(key: bytes, payload: str) -> str:
-    return hmac.new(_DOMAIN + key, payload.encode("ascii"), hashlib.sha256).hexdigest()[:_SIG_LEN]
+    return hmac.new(key, payload.encode("ascii"), hashlib.sha256).hexdigest()[:_SIG_LEN]
 
 
 def _b36(value: int) -> str:

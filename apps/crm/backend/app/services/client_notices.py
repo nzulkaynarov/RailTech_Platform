@@ -217,7 +217,7 @@ class ClientNoticeService:
         start = issue_lead_link(self._key, lead.id, datetime.now(UTC))
         link = f"https://t.me/{username}?start={start}" if username else None
         mail = client_texts.web_confirmation_mail(
-            lead.language, lead.display_name, lead.need_summary, cfg.company.name, link
+            lead.language, lead.display_name, cfg.company.name, link
         )
         try:
             logged = await self._mail.send_rendered(

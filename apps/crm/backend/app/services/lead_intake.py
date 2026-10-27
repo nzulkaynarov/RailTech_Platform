@@ -30,7 +30,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.bus import events as bus_events
 from app.domain.contacts import contact_email
 from app.domain.errors import ConflictError, RateLimitedError, Reason, ValidationFailedError
-from app.domain.lead_sources import LeadSource, normalize_phone_e164
+from app.domain.lead_sources import WEB_NOTE_MARK, LeadSource, normalize_phone_e164
 from app.domain.stages import OwnerMode, Stage, TransitionSource
 from app.domain.web_form import (
     SlidingWindowLimiter,
@@ -54,8 +54,6 @@ logger = structlog.get_logger(__name__)
 
 _HOUR_S = 3600
 _SUMMARY_MAX = 2000
-# Пометка заметки с повторным запросом с сайта (текст запроса — после неё).
-WEB_NOTE_MARK = "[web] "
 # Версия согласия из формы «Запрос» — не версия текста бота (`settings.texts.consent_version`):
 # согласие формы — на обработку ПДн для связи, согласие бота — ещё и на обработку диалога ИИ.
 WEB_CONSENT_VERSION = "web-form"

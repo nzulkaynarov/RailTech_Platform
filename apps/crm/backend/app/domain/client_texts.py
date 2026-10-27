@@ -40,22 +40,6 @@ def _greet(language: str, name: str) -> str:
     return table[language]
 
 
-def _need_line(language: str, need: str | None) -> str:
-    text = " ".join((need or "").split())
-    if not text:
-        return ""
-    if len(text) > 300:
-        text = text[:299].rstrip() + "…"
-    return _pick(
-        {
-            "ru": f"Ваш запрос: «{text}»",
-            "uz": f"Soʻrovingiz: «{text}»",
-            "en": f"Your request: “{text}”",
-        },
-        language,
-    )
-
-
 # ── Подтверждение запроса с сайта ────────────────────────────────────────────────────────────────
 
 _CONFIRM_LEAD: Final = {
@@ -82,14 +66,12 @@ def web_confirmation_bot(language: str | None, name: str) -> str:
 
 
 def web_confirmation_mail(
-    language: str | None, name: str, need: str | None, company: str, bot_link: str | None
+    language: str | None, name: str, company: str, bot_link: str | None
 ) -> Mail:
-    """Письмо-подтверждение; ссылка на бота — подписанная, выдана системой (`start_link.issue_lead_link`)."""
+    """Письмо-подтверждение без цитаты запроса (на указанный адрес его может написать кто угодно: письмо не
+    должно пересылать чужой текст); ссылка на бота — подписанная, выдана системой (`start_link.issue_lead_link`)."""
     code = lang(language)
     parts = [_greet(code, name), _pick(_CONFIRM_LEAD, code)]
-    need_line = _need_line(code, need)
-    if need_line:
-        parts.append(need_line)
     if bot_link:
         parts.append(f"{_pick(_CONFIRM_BOT, code)}\n{bot_link}")
     parts.append(f"— {company}" if company else "")

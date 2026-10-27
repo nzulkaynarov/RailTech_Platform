@@ -50,12 +50,12 @@ function problemOf(error: unknown): LeadFormProblem {
 export function NewClientPage() {
   const { t } = useTranslation();
   const telegramLink = botLink('web');
-  const [sent, setSent] = useState<{ email: string } | null>(null);
+  const [sent, setSent] = useState(false);
   const formAvailable = crmBaseUrl() !== null;
 
   let body;
-  if (sent) body = <SentCard telegramLink={telegramLink} email={sent.email} />;
-  else if (formAvailable) body = <LeadForm telegramLink={telegramLink} onSent={(email) => setSent({ email })} />;
+  if (sent) body = <SentCard telegramLink={telegramLink} />;
+  else if (formAvailable) body = <LeadForm telegramLink={telegramLink} onSent={() => setSent(true)} />;
   else {
     body = (
       <>
@@ -82,7 +82,7 @@ export function NewClientPage() {
   );
 }
 
-function LeadForm({ telegramLink, onSent }: { telegramLink: string | null; onSent: (email: string) => void }) {
+function LeadForm({ telegramLink, onSent }: { telegramLink: string | null; onSent: () => void }) {
   const { t } = useTranslation();
   const queryClient = useQueryClient();
   const baseId = useId();
@@ -111,7 +111,7 @@ function LeadForm({ telegramLink, onSent }: { telegramLink: string | null; onSen
         submit: submitWebLead,
       });
     },
-    onSuccess: (_data, form) => onSent(form.email.trim()),
+    onSuccess: onSent,
     onError: (error) => setProblem(problemOf(error)),
   });
 
@@ -289,14 +289,13 @@ function LeadForm({ telegramLink, onSent }: { telegramLink: string | null; onSen
   );
 }
 
-function SentCard({ telegramLink, email }: { telegramLink: string | null; email: string }) {
+function SentCard({ telegramLink }: { telegramLink: string | null }) {
   const { t } = useTranslation();
   return (
     <section className="flex flex-col items-center gap-3 rounded-lg border bg-card px-4 py-8 text-center" aria-live="polite">
       <CheckCircle2 className="size-10 text-success" aria-hidden="true" />
       <h1 className="text-xl font-semibold">{t('newClient.sentTitle')}</h1>
       <p className="max-w-md text-sm text-muted-foreground">{t('newClient.sentText')}</p>
-      {email ? <p className="max-w-md break-words text-sm text-muted-foreground">{t('newClient.sentEmail', { email })}</p> : null}
       {telegramLink ? (
         <TelegramLinkButton href={telegramLink}>
           <Send aria-hidden="true" />

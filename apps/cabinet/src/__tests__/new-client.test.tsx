@@ -60,7 +60,6 @@ describe('«Я новый клиент»: форма запроса → лид C
 
     expect(await heading('Спасибо! Запрос отправлен')).toBeInTheDocument();
     expect(screen.getByText(/Менеджер свяжется с вами/)).toBeInTheDocument();
-    expect(screen.getByText('Мы отправим подтверждение запроса на a@rail.uz.')).toBeInTheDocument();
     const telegram = screen.getByRole('link', { name: 'Написать в Telegram' });
     expect(telegram).toHaveAttribute('href', 'https://t.me/railtech_test_bot?start=web');
 

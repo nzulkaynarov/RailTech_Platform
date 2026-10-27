@@ -12,9 +12,11 @@
 from datetime import datetime
 
 import structlog
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.domain.business_hours import add_business_minutes
+from app.models.leads import Lead
 from app.repositories import events
 from app.repositories import leads as repo
 from app.schemas.settings import AppSettings
@@ -59,3 +61,28 @@ async def mark_overdue(
         await events.publish(session, "lead.updated", lead_id=lead_id)
     logger.info("web_lead_sla_overdue", lead_id=lead_id)
     return True
+
+
+async def overdue_ids(
+    sessions: async_sessionmaker[AsyncSession], now: datetime, limit: int = 100
+) -> list[int]:
+    """Запросы с просроченным сроком, о которых ещё не писали и которые никто не взял.
+
+    Страховка к отложенной задаче на конкретного лида: склейка карточек удаляет поглощённого лида,
+    а срок переходит к выжившему (`lead_merge`), и задача, поставленная на старый id, ничего не
+    находит. Периодический проход (`tasks/client_notices.py`) подхватывает такой срок.
+    """
+    async with sessions() as session:
+        rows = await session.scalars(
+            select(Lead.id)
+            .where(
+                Lead.first_response_due_at.is_not(None),
+                Lead.first_response_due_at <= now,
+                Lead.first_response_notified_at.is_(None),
+                Lead.assigned_user_id.is_(None),
+                Lead.erased_at.is_(None),
+            )
+            .order_by(Lead.id)
+            .limit(limit)
+        )
+        return list(rows.all())

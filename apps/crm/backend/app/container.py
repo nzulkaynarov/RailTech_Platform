@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from app import db
 from app.config import Settings, get_settings
 from app.domain.errors import ConflictError, Reason
+from app.domain.start_link import link_key
 from app.integrations.docling import DoclingClient
 from app.integrations.litellm import Embedder, make_client
 from app.integrations.litellm_admin import LiteLLMAdmin
@@ -320,7 +321,7 @@ class Container:
             self.mail_service,
             self.telegram_bot,
             self._bot_username,
-            self.settings.jwt_secret.get_secret_value().encode("utf-8"),
+            link_key(self.settings.jwt_secret.get_secret_value().encode("utf-8")),
             self.settings,
         )
 

@@ -120,13 +120,16 @@ def test_both_channels_unavailable_reports_channel_required(api):
 
 
 @pytest.mark.django_db
-def test_unknown_client_and_foreign_contact_are_404(api):
+def test_unknown_client_is_404_and_foreign_contact_is_a_reason_code(api):
     handed_off(api)
     handoff(api, payload(crm_client_id=2002, inn="987654321", email="other@client.uz"))
 
     assert invite(api, 999999, {"channel": "email"}).status_code == 404
-    # контакт другого клиента CRM по этому пути не находится
-    assert invite(api, 1001, {"channel": "email", "crm_contact_id": 20021}).status_code == 404
+    # контакт другого клиента CRM по этому пути не находится: не 404 («клиента нет»), а код причины
+    foreign = invite(api, 1001, {"channel": "email", "crm_contact_id": 20021})
+    assert foreign.status_code == 200
+    assert foreign.json()["error"] == "CONTACT_NOT_FOUND"
+    assert foreign.json()["sent_via"] == []
     assert invite(api, 1001, {"channel": "sms"}).status_code == 422
 
 

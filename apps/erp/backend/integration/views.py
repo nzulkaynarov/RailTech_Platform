@@ -114,7 +114,12 @@ class InviteClientContactView(BaseIntegrationView):
         else:
             contact = contacts.filter(is_primary=True).first() or contacts.order_by("id").first()
         if contact is None:
-            raise IntegrationNotFound("NOT_FOUND")
+            # Клиент в ERP есть, а этого контакта нет (не сопоставлен или чужой): не 404 («клиента нет»), а код причины
+            # в обычном ответе — CRM показывает его словами.
+            out = InviteResponseSerializer(
+                {"sent_via": [], "cabinet_url": _cabinet_url(), "error": "CONTACT_NOT_FOUND"}
+            )
+            return Response(data=out.data, status=status.HTTP_200_OK)
 
         outcome = invite_contact(contact, channel=data["channel"], language=contact.language)
         out = InviteResponseSerializer(

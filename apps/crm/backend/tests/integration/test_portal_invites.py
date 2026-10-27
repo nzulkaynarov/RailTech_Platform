@@ -6,7 +6,7 @@
 """
 
 from collections.abc import Iterator
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pytest
@@ -14,7 +14,7 @@ from aiogram.exceptions import TelegramForbiddenError
 from aiogram.methods import SendMessage
 from fastapi.testclient import TestClient
 from rt_bus import Event
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.bus.snapshots import contact_snapshot
@@ -565,3 +565,89 @@ async def test_contact_preferred_channel_is_saved_validated_and_goes_into_the_er
         contact = await session.get(ClientContact, ids[2])
         assert contact is not None
         assert "preferred_channel" not in await contact_snapshot(session, contact)
+
+
+# ── событие ERP раньше HTTP-ответа ERP ──────────────────────────────────────────────────────────
+
+
+async def test_bot_result_that_beats_the_handoff_answer_is_not_lost(
+    sessions: async_sessionmaker[AsyncSession], live_settings: Settings
+) -> None:
+    """`invite.requested` доходит до CRM раньше ответа ERP: итог не теряется, строка одна."""
+    ids = await seed(sessions, email=None)
+    erp = FakeErp(sent_via=["telegram"])
+    await set_cabinet(sessions, CABINET)
+    bot = FakeBot()
+
+    await delivery(sessions, bot, live_settings, erp).deliver(
+        "evt-r1", invite_event(ids[0], ids[2])
+    )
+    [orphan] = await notices(sessions)
+    assert orphan.detail["orphan"] is True
+    assert orphan.status == "sent"
+
+    await hand_off(sessions, erp, ids)
+
+    [row] = await notices(sessions)
+    assert (row.status, row.error, row.detail["telegram"]) == ("sent", None, "sent")
+    assert "orphan" not in row.detail
+
+
+async def test_failed_bot_result_that_came_first_is_shown_with_its_reason(
+    sessions: async_sessionmaker[AsyncSession], live_settings: Settings
+) -> None:
+    ids = await seed(sessions, email=None)
+    erp = FakeErp(sent_via=["telegram"])
+    # адрес кабинета не задан: бот не пишет и называет причину
+    await delivery(sessions, FakeBot(), live_settings, erp).deliver(
+        "evt-r2", invite_event(ids[0], ids[2])
+    )
+
+    await hand_off(sessions, erp, ids)
+
+    [row] = await notices(sessions)
+    assert (row.status, row.error) == ("failed", "cabinet_not_configured")
+
+
+async def test_bot_result_that_beats_a_resend_answer_is_adopted_too(
+    sessions: async_sessionmaker[AsyncSession], live_settings: Settings, client: TestClient
+) -> None:
+    ids = await seed(sessions, in_erp=True)
+    erp = FakeErp(sent_via=["email"])
+    await hand_off(sessions, erp, ids)
+    await set_cabinet(sessions, CABINET)
+    await delivery(sessions, FakeBot(), live_settings, erp).deliver(
+        "evt-r3", invite_event(ids[0], ids[2])
+    )
+    erp.invite = InviteResult(["telegram"], None)
+    use_erp(client, erp)
+    auth = await manager(sessions, client)
+
+    body = client.post(
+        f"/api/v1/clients/{ids[0]}/invitation", json={"channel": "telegram"}, headers=auth
+    ).json()
+
+    assert body["status"] == "sent"
+    rows = await notices(sessions)
+    assert len(rows) == 2, "первая попытка и повтор; сирота подставлена и удалена"
+    assert all("orphan" not in row.detail for row in rows)
+
+
+async def test_a_stale_pending_invite_is_not_resolved_by_a_new_event(
+    sessions: async_sessionmaker[AsyncSession], live_settings: Settings
+) -> None:
+    ids = await seed(sessions, email=None)
+    erp = FakeErp(sent_via=["telegram"])
+    await hand_off(sessions, erp, ids)
+    async with sessions() as session, session.begin():
+        await session.execute(
+            update(ClientNotice).values(created_at=datetime.now(UTC) - timedelta(hours=2))
+        )
+    await set_cabinet(sessions, CABINET)
+
+    await delivery(sessions, FakeBot(), live_settings, erp).deliver(
+        "evt-r4", invite_event(ids[0], ids[2])
+    )
+
+    rows = await notices(sessions)
+    assert [r.detail["telegram"] for r in rows] == ["pending", "sent"]

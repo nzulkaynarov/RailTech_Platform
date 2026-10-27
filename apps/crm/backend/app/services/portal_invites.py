@@ -17,7 +17,7 @@ Q-FIX23-1).
 """
 
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any, Final, Literal
 
 import structlog
@@ -44,6 +44,8 @@ from app.services.erp_acceptance_code import contact_telegram
 logger = structlog.get_logger(__name__)
 
 KIND: Final = "portal_invite"
+#: Как долго итог бота, обогнавший ответ ERP, ждёт свою попытку (и как долго «ждёт бота» попытка).
+ORPHAN_WINDOW: Final = timedelta(minutes=10)
 Channel = Literal["email", "telegram"]
 
 
@@ -134,7 +136,9 @@ async def record_handoff(session: AsyncSession, client: Client, result: HandoffR
     sent = [c for c in result.invite_sent_via if c in ("email", "telegram")]
     requested = requested_channel(contact, reach)
     error = None if sent else _error_code(result.invite_error, reach)
-    session.add(_notice(client.id, contact, sent, requested, error, None))
+    notice = _notice(client.id, contact, sent, requested, error, None)
+    await _adopt_orphan(session, notice)
+    session.add(notice)
 
 
 def _error_code(erp_error: str | None, reach: Reach) -> str:
@@ -226,6 +230,7 @@ class PortalInviteService:
             sent, error = await self._ask_erp(client_id, channel, contact)
         async with self._sessions() as session, session.begin():
             notice = _notice(client_id, contact, sent, channel, error, who.user_id)
+            await _adopt_orphan(session, notice)
             session.add(notice)
             await session.flush()
             await session.refresh(notice)  # created_at — серверное значение
@@ -274,7 +279,14 @@ class PortalInviteService:
     async def resolve_telegram(
         self, client_id: int, contact_id: int | None, error: str | None
     ) -> None:
-        """Итог доставки приглашения ботом: `error=None` — сообщение ушло."""
+        """Итог доставки приглашения ботом: `error=None` — сообщение ушло.
+
+        Событие ERP может прийти раньше HTTP-ответа ERP, и строки попытки ещё нет: итог пишется
+        строкой-сиротой (`detail.orphan`), а `record_handoff` / `resend` подставляют его в свою
+        строку и удаляют сироту (`_adopt_orphan`). Сирота без своей попытки (приглашение из самой
+        ERP) остаётся обычной записью истории.
+        """
+        cutoff = datetime.now(UTC) - ORPHAN_WINDOW
         async with self._sessions() as session, session.begin():
             notice = await session.scalar(
                 select(ClientNotice)
@@ -282,6 +294,7 @@ class PortalInviteService:
                     ClientNotice.client_id == client_id,
                     ClientNotice.kind == KIND,
                     ClientNotice.detail["telegram"].astext == "pending",
+                    ClientNotice.created_at >= cutoff,
                 )
                 .order_by(ClientNotice.id.desc())
                 .limit(1)
@@ -290,16 +303,49 @@ class PortalInviteService:
             if notice is None:
                 contact = await session.get(ClientContact, contact_id) if contact_id else None
                 notice = _notice(client_id, contact, ["telegram"], "telegram", None, None)
+                notice.detail = {**notice.detail, "orphan": True}
                 session.add(notice)
-            email_went = "email" in (notice.detail.get("sent_via") or [])
-            notice.detail = {**notice.detail, "telegram": "failed" if error else "sent"}
-            if error is None:
-                notice.status, notice.error, notice.sent_at = "sent", None, datetime.now(UTC)
-            elif email_went:
-                notice.status, notice.sent_at = "sent", notice.sent_at or datetime.now(UTC)
-                notice.detail = {**notice.detail, "telegram_error": error}
-            else:
-                notice.status, notice.error = "failed", error
+            _apply_telegram_result(notice, error)
+
+
+def _apply_telegram_result(notice: ClientNotice, error: str | None) -> None:
+    """Итог доставки ботом в строку попытки: ушло — `sent`; не ушло — `failed`, если письмо тоже не
+    ушло."""
+    email_went = "email" in (notice.detail.get("sent_via") or [])
+    notice.detail = {**notice.detail, "telegram": "failed" if error else "sent"}
+    if error is None:
+        notice.status, notice.error, notice.sent_at = "sent", None, datetime.now(UTC)
+    elif email_went:
+        notice.status, notice.sent_at = "sent", notice.sent_at or datetime.now(UTC)
+        notice.detail = {**notice.detail, "telegram_error": error}
+    else:
+        notice.status, notice.error = "failed", error
+
+
+async def _adopt_orphan(session: AsyncSession, notice: ClientNotice) -> None:
+    """Итог бота уже записан сиротой (событие обогнало ответ ERP): подставить в новую попытку."""
+    if notice.detail.get("telegram") != "pending":
+        return
+    conditions = [
+        ClientNotice.client_id == notice.client_id,
+        ClientNotice.kind == KIND,
+        ClientNotice.detail["orphan"].astext == "true",
+        ClientNotice.created_at >= datetime.now(UTC) - ORPHAN_WINDOW,
+    ]
+    if notice.contact_id is not None:
+        conditions.append(ClientNotice.contact_id == notice.contact_id)
+    orphan = await session.scalar(
+        select(ClientNotice)
+        .where(*conditions)
+        .order_by(ClientNotice.id.desc())
+        .limit(1)
+        .with_for_update()
+    )
+    if orphan is None:
+        return
+    failed = orphan.detail.get("telegram") == "failed"
+    _apply_telegram_result(notice, orphan.error if failed else None)
+    await session.delete(orphan)
 
 
 _EMAIL_ERRORS: Final = frozenset(

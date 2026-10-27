@@ -19,7 +19,7 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.config import Settings
-from app.domain.start_link import verify_lead_link
+from app.domain.start_link import link_key, verify_lead_link
 from app.integrations.smtp import SmtpCheck, SmtpConnection
 from app.main import create_app
 from app.models.auth import User
@@ -31,6 +31,7 @@ from app.security.secrets_store import SecretCipher
 from app.services import web_lead_sla
 from app.services.client_notices import MAX_TELEGRAM_ATTEMPTS, ClientNoticeService
 from app.services.lead_intake import LeadIntakeService, WebLeadFollowUp
+from app.services.lead_merge import merge_with_lead
 from app.services.mail import MailService
 from app.services.staff_notifier import StaffNotifier
 from tests.integration.crm_helpers import FakeSender, login, make_user
@@ -123,7 +124,7 @@ def client(
             mail,
             bot_provider,
             username,
-            settings.jwt_secret.get_secret_value().encode("utf-8"),
+            link_key(settings.jwt_secret.get_secret_value().encode("utf-8")),
             settings,
         )
         harness.notices = notices
@@ -209,12 +210,12 @@ async def test_web_request_with_email_gets_a_confirmation_letter_visible_in_the_
     assert to == "a@rail.uz"
     assert subject == "Soʻrovingizni qabul qildik"  # язык формы — uz
     assert "Алишер" in body
-    assert "Нужна интеграция POS с 1С" in body
+    assert "Нужна интеграция POS с 1С" not in body, "письмо не цитирует текст запроса"
     for internal in ("лид", "сделк", "CRM", "crm"):
         assert internal not in body
     link = next(line for line in body.splitlines() if line.startswith("https://t.me/"))
     param = link.split("?start=")[1]
-    key = live_settings.jwt_secret.get_secret_value().encode("utf-8")
+    key = link_key(live_settings.jwt_secret.get_secret_value().encode("utf-8"))
     assert verify_lead_link(key, param, datetime.now(UTC)) == lead_id
 
     auth = await manager_headers(sessions, client)
@@ -561,7 +562,7 @@ async def test_repeat_request_notifies_only_the_owner_when_a_human_leads_the_lea
     post_web(client, live_settings, text="Ещё вопрос")
     bot = FakeSender()
 
-    await StaffNotifier(sessions, bot).web_lead(lead_id, "https://crm.example.com", 15)
+    await StaffNotifier(sessions, bot).web_lead(lead_id, "https://crm.example.com", 15, repeat=True)
 
     assert [chat for chat, _ in bot.sent] == [8201]
     async with sessions() as session:
@@ -591,3 +592,61 @@ async def test_erasing_the_lead_removes_the_confirmation_and_its_letter(
         assert (
             await session.scalars(select(EmailLog).where(EmailLog.to_email == "a@rail.uz"))
         ).all() == []
+
+
+async def test_repeat_request_of_an_unowned_lead_notifies_nobody_and_quotes_the_new_text(
+    client: TestClient,
+    sessions: async_sessionmaker[AsyncSession],
+    live_settings: Settings,
+) -> None:
+    lead_id = post_web(client, live_settings)
+    manager_a, _ = await make_user(sessions, "ua@railtech.uz", ["manager"])
+    async with sessions() as session, session.begin():
+        await session.execute(update(User).where(User.id == manager_a.id).values(tg_user_id=8301))
+    post_web(client, live_settings, text="Ещё вопрос")
+    bot = FakeSender()
+    notifier = StaffNotifier(sessions, bot)
+
+    assert await notifier.web_lead(lead_id, "https://crm.example.com", 15, repeat=True) == 0
+    assert bot.sent == []
+
+    async with sessions() as session, session.begin():
+        await session.execute(
+            update(Lead).where(Lead.id == lead_id).values(assigned_user_id=manager_a.id)
+        )
+    assert await notifier.web_lead(lead_id, "https://crm.example.com", 15, repeat=True) == 1
+    assert "Ещё вопрос" in bot.sent[0][1], "повторный запрос — его текст, а не первый"
+
+
+async def test_overdue_sweep_finds_a_deadline_that_moved_to_the_surviving_card(
+    client: TestClient,
+    sessions: async_sessionmaker[AsyncSession],
+    live_settings: Settings,
+) -> None:
+    """Склейка с Telegram-карточкой удаляет лида, на которого поставлена отложенная задача."""
+    web_id = post_web(client, live_settings)
+    async with sessions() as session, session.begin():
+        tg, _, _ = await repo.create_lead_with_identity(
+            session,
+            tg_user_id=7790,
+            username=None,
+            first_name="Т",
+            chat_id=7790,
+            language="ru",
+            identity=None,
+        )
+        tg.created_at = datetime.now(UTC) - timedelta(days=1)  # Telegram-карточка старше — выживет
+        identity = await repo.get_identity(session, 7790)
+        assert identity is not None
+        outcome = await merge_with_lead(session, identity, web_id)
+        assert outcome is not None
+        survivor = outcome.survivor_id
+        lead = await session.get(Lead, survivor)
+        assert lead is not None
+        lead.first_response_due_at = datetime.now(UTC) - timedelta(minutes=1)
+        lead.assigned_user_id = None
+
+    assert await web_lead_sla.overdue_ids(sessions, datetime.now(UTC)) == [survivor]
+    assert await web_lead_sla.mark_overdue(sessions, web_id, datetime.now(UTC)) is False
+    assert await web_lead_sla.mark_overdue(sessions, survivor, datetime.now(UTC)) is True
+    assert await web_lead_sla.overdue_ids(sessions, datetime.now(UTC)) == []

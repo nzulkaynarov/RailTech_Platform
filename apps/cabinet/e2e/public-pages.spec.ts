@@ -4,7 +4,7 @@
  * Идёт по dev-сборке с моком портального API и формы CRM (MSW), без стенда: `npm run test:e2e:public`.
  * Что проверяет: нейтральный текст безопасности после ввода любого адреса, ссылка «Вы новый клиент? Оставьте запрос»
  * ведёт к форме, у «Войти через Telegram» подпись «откроется бот, вход по приглашению», после отправки запроса —
- * «Спасибо» с обещанием подтверждения на e-mail. На каждом экране — снимки 1440 и 390 px, axe (serious/critical = 0)
+ * «Спасибо» (подтверждение клиенту шлёт CRM по любому каналу существующей карточки, поэтому текст нейтральный). На каждом экране — снимки 1440 и 390 px, axe (serious/critical = 0)
  * и отсутствие горизонтальной прокрутки (`snap`, как в гейте M2).
  */
 import { expect, test } from '@playwright/test';
@@ -31,7 +31,7 @@ test.describe('публичные экраны кабинета', () => {
     await snap(page, '03-new-client');
   });
 
-  test('«Я новый клиент»: заявка отправлена — «Спасибо» и подтверждение на e-mail', async ({ page }) => {
+  test('«Я новый клиент»: заявка отправлена — «Спасибо»', async ({ page }) => {
     await page.goto('/new-client');
     await expect(page.getByRole('button', { name: 'Отправить запрос' })).toBeEnabled();
     await page.getByLabel('Как к вам обращаться').fill('Алишер');
@@ -44,7 +44,6 @@ test.describe('публичные экраны кабинета', () => {
 
     await page.getByRole('button', { name: 'Отправить запрос' }).click();
     await expect(page.getByRole('heading', { level: 1, name: 'Спасибо! Запрос отправлен' })).toBeVisible();
-    await expect(page.getByText('Мы отправим подтверждение запроса на alisher@example.com.')).toBeVisible();
     await snap(page, '05-new-client-sent');
   });
 

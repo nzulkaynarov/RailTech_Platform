@@ -8,6 +8,7 @@ import pytest
 from app.domain.start_link import (
     LEAD_LINK_TTL,
     issue_lead_link,
+    link_key,
     parse_start_payload,
     verify_lead_link,
 )
@@ -84,3 +85,15 @@ def test_prolonged_expiry_is_rejected() -> None:
 )
 def test_garbage_is_not_a_lead_link(raw: str) -> None:
     assert verify_lead_link(KEY, raw, NOW) is None
+
+
+def test_link_key_is_a_separate_derived_key() -> None:
+    secret = b"application-secret-0123456789abcdef"
+    derived = link_key(secret)
+    assert derived != secret
+    assert len(derived) == 32
+    assert link_key(secret) == derived, "детерминирован"
+    assert link_key(b"another-application-secret-0123456789") != derived
+    # Ссылка, подписанная самим секретом приложения (как токен другого назначения), не принимается.
+    assert verify_lead_link(derived, issue_lead_link(secret, 7, NOW), NOW) is None
+    assert verify_lead_link(derived, issue_lead_link(derived, 7, NOW), NOW) == 7

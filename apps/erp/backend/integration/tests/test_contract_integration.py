@@ -440,7 +440,10 @@ def exercise_all(client, world):
     invite = "/clients/{crm_client_id}/invite"
     sent = hit("POST", invite, "/clients/8101/invite", 200, body={"channel": "telegram"})
     assert sent["sent_via"] == ["telegram"] and sent["error"] is None
-    hit("POST", invite, "/clients/8101/invite", 404, body={"channel": "telegram", "crm_contact_id": 999999})
+    unknown_contact = hit(
+        "POST", invite, "/clients/8101/invite", 200, body={"channel": "telegram", "crm_contact_id": 999999}
+    )
+    assert unknown_contact["error"] == "CONTACT_NOT_FOUND"
     hit("POST", invite, "/clients/999999/invite", 404, body={"channel": "email"})
     hit("POST", invite, "/clients/8101/invite", 422, body={"channel": "sms"})
     hit("POST", invite, "/clients/8101/invite", 401, api=anonymous, body={"channel": "email"})

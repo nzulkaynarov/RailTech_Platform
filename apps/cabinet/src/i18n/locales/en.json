@@ -174,7 +174,6 @@
     "unavailableText": "Message us in Telegram and a manager will reply and invite you to the cabinet.",
     "sentTitle": "Thank you! Your request has been sent",
     "sentText": "A manager will contact you by phone or e-mail during business hours. If you prefer chatting, message us in Telegram.",
-    "sentEmail": "We will send a confirmation of your request to {{email}}.",
     "form": {
       "name": "Your name",
       "company": "Company (optional)",
