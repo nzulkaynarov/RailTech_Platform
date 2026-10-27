@@ -225,6 +225,10 @@ class BusCore:
         masked, secrets = mask_data(event.data, paths)
         return OutboxRecord(event, event.with_data(masked).to_dict(), secrets)
 
+    def own_domains(self) -> frozenset[str]:
+        """Домены типов, которые публикует этот сервис (`publisher_domains`; нет в таблице — домен с его именем)."""
+        return self.config.publisher_domains.get(self.service, frozenset({self.service}))
+
     def disabled_subscribers(self) -> list[str]:
         """Выключенные подписчики (`enabled: false`), по имени: их доставки ждут и не берутся в аренду."""
         return sorted(s.name for s in self.subscriptions().subscribers if not s.enabled)

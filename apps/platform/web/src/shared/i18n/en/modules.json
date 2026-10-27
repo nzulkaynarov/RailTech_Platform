@@ -222,6 +222,7 @@
       "roles": "Role matrix (RBAC)",
       "org": "Org structure",
       "integrations": "External integrations",
+      "bus": "Integration log",
       "tickets": "Team tickets",
       "company": "Company"
     },
@@ -240,6 +241,11 @@
         "title": "No integrations connected yet",
         "text": "The Telegram bot, email, file storage, backups and AI models: status, last activity, check and reconnect.",
         "action": "Team tickets"
+      },
+      "bus": {
+        "title": "The integration log opens here",
+        "text": "Event bus of CRM, ERP and EDS: subscribers, deliveries, undelivered and inbox with errors.",
+        "action": "External integrations"
       },
       "tickets": {
         "title": "No tickets yet",

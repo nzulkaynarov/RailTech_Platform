@@ -180,6 +180,9 @@ WHERE (CAST(:status AS varchar) IS NULL OR d.status = CAST(:status AS varchar))
   AND (CAST(:subscriber AS varchar) IS NULL OR d.subscriber = CAST(:subscriber AS varchar))
   AND (CAST(:event_type AS varchar) IS NULL OR d.event_type = CAST(:event_type AS varchar))
   AND (CAST(:event_id AS uuid) IS NULL OR d.event_id = CAST(:event_id AS uuid))
+  AND (CAST(:type_contains AS varchar) IS NULL OR strpos(d.event_type, CAST(:type_contains AS varchar)) > 0)
+  AND (CAST(:created_from AS timestamptz) IS NULL OR d.created_at >= CAST(:created_from AS timestamptz))
+  AND (CAST(:created_to AS timestamptz) IS NULL OR d.created_at < CAST(:created_to AS timestamptz))
   AND (CAST(:before_id AS bigint) IS NULL OR d.id < CAST(:before_id AS bigint))
 ORDER BY d.id DESC
 LIMIT :limit
@@ -244,7 +247,12 @@ SELECT event_id, type, source, publisher, subject, correlation_id, status, attem
 FROM {INBOX}
 WHERE (CAST(:status AS varchar) IS NULL OR status = CAST(:status AS varchar))
   AND (CAST(:event_type AS varchar) IS NULL OR type = CAST(:event_type AS varchar))
-  AND (CAST(:before AS timestamptz) IS NULL OR received_at < CAST(:before AS timestamptz))
+  AND (CAST(:type_contains AS varchar) IS NULL OR strpos(type, CAST(:type_contains AS varchar)) > 0)
+  AND (NOT CAST(:errors_only AS boolean)
+       OR status = '{FAILED}' OR (status = '{RECEIVED}' AND error IS NOT NULL))
+  AND (CAST(:before AS timestamptz) IS NULL OR received_at < CAST(:before AS timestamptz)
+       OR (CAST(:before_event_id AS uuid) IS NOT NULL AND received_at = CAST(:before AS timestamptz)
+           AND event_id > CAST(:before_event_id AS uuid)))
 ORDER BY received_at DESC, event_id
 LIMIT :limit
 """
@@ -259,6 +267,11 @@ GROUP BY d.subscriber, d.status
 """
 
 METRICS_STATE = f"SELECT subscriber, consecutive_failures, paused_until FROM {STATE}"
+
+# Журнал в Admin (W13-A2): состояние предохранителя подписчиков с последним успехом и ошибкой.
+SUBSCRIBER_STATES = f"""
+SELECT subscriber, consecutive_failures, paused_until, last_failure_at, last_success_at, last_error FROM {STATE}
+"""
 
 METRICS_INBOX = f"""
 SELECT status, count(*) AS n, count(next_attempt_at) AS retrying, min(received_at) AS oldest FROM {INBOX}

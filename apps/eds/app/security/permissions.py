@@ -1,4 +1,5 @@
-"""Коды прав EDS v1 — девять (runbook волны 12 §2.2; `EdsPermission` в packages/contracts/openapi/eds.yaml).
+"""Коды прав EDS v1 (runbook волны 12 §2.2; `EdsPermission` в packages/contracts/openapi/eds.yaml): девять доменных и
+`bus.manage` — «Журнал интеграций» шины (W13-A2, раздел `admin` каталога Платформы).
 
 Права — данные: их вычисляет CRM из ролей Платформы по каталогу и публикует в `identity.user.*`
 (`user.permissions.eds`); EDS хранит проекцию (`employees.permissions_eds`) и проверяет право на каждый запрос.
@@ -17,6 +18,7 @@ class EdsPermission(StrEnum):
     REGISTRY_READ = "registry.read"
     REGISTRY_EXPORT = "registry.export"
     PAYMENTS_CONFIRM = "payments.confirm"  # eds.payments full (решение архитектора, волна 12)
+    BUS_MANAGE = "bus.manage"  # admin full: журнал шины и повторы (W13-A2)
 
 
 KNOWN = frozenset(p.value for p in EdsPermission)

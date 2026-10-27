@@ -78,6 +78,18 @@
  * он уходит только в CRM. Коды ошибок: `WRONG_PASSWORD` (422), `NOT_CONFIGURED`, `SECRETS_KEY_MISSING`,
  * `SERVICE_NOT_SWITCHABLE` (409), `INTEGRATION_FAILED` (502, причина в `details.reason`).
  *
+ * **0.9.0 (W13-A2) — добавляющее.** Admin · Журнал интеграций (тег `bus`): шина `rt_bus` всех трёх доменов в одном журнале
+ * вместо CLI `bus status|retry` и Django admin ERP. `GET /admin/bus` — сводка по доменам (outbox, DLQ, inbox с ошибками) и
+ * подписчики с состоянием словом (`BusSubscriberState`: работает, ошибки подряд, пауза предохранителя до `paused_until`,
+ * есть DLQ, выключен, убран из подписок); `GET /admin/bus/deliveries` — доставки с фильтрами (домен, статус, подписчик,
+ * подстрока типа, период), DLQ — `status=dead`; `GET /admin/bus/inbox` — принятые события (`errors=true` — обработка упала
+ * или ждёт автоповтора); повторы `POST /admin/bus/{domain}/deliveries/{id}/retry`, `…/deliveries/retry-dead` (все `dead`
+ * подписчика), `…/inbox/{event_id}/retry`. Списки трёх доменов сливаются по времени, страница — непрозрачный `cursor` из
+ * `next_cursor`; домен, который не ответил или отказал, — `sources.<домен>`, ответ 200 с остальными. Только раздел
+ * `admin: full` (директору — 403 в BFF); в каждый домен — с токеном сотрудника: CRM и ERP — как раньше, EDS — токен
+ * сотрудника CRM `aud=eds` → `POST /api/v1/auth/sso/exchange` EDS (`docs/architecture/sso-token.md`), 15 минут, в сессии BFF.
+ * Тел событий нет — только метаданные доставки. `Error.source` дополнен `eds`.
+ *
  * 0.2.4: `423 ACCOUNT_LOCKED` объявлен и на `POST /auth/change-password` (CRM блокирует учётную запись после неверных
  * текущих паролей).
  *
@@ -96,7 +108,7 @@
  * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.8.0
+ * OpenAPI spec version: 0.9.0
  */
 
 export interface DocumentTemplateCopyIn {
