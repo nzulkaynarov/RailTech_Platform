@@ -234,7 +234,7 @@ async def test_avatar_body_is_cut_off_at_the_limit(
     assert response.json()["details"]["reason"] == "avatar_too_large"
 
     # Без Content-Length (chunked) предел действует так же: тело читается потоком.
-    def chunks():  # type: ignore[no-untyped-def]
+    def chunks() -> Iterator[bytes]:
         boundary_open = b'--xyz\r\nContent-Disposition: form-data; name="avatar"; filename="a"\r\n'
         yield boundary_open + b"Content-Type: image/png\r\n\r\n"
         for _ in range(40):
