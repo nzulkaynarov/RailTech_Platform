@@ -63,3 +63,14 @@ describe("scalarText", () => {
     expect(scalarText("x".repeat(200))).toHaveLength(160);
   });
 });
+
+describe("фильтр «Объект» журнала (O-6 гейта C2a, W15-H4)", () => {
+  it.each(["ru", "uz", "en"] as const)(
+    "%s: у каждого объекта своё слово — без двух одинаковых вариантов",
+    (lng) => {
+      const entities = resources[lng].audit.entities as Record<string, string>;
+      const words = AUDIT_ENTITIES.map((type) => entities[type] ?? type);
+      expect(new Set(words).size).toBe(words.length);
+    },
+  );
+});

@@ -32,6 +32,11 @@ export interface InviteEmployeeFormProps {
   /** Сотрудник создан, но письмо не ушло: карточка по id из ошибки */
   onOpenCard: (employeeId: string) => void;
   onCancel: () => void;
+  /**
+   * Временный пароль на экране (`true`) или передан — «Готово» (`false`). Мастер первого запуска прячет «Дальше», пока пароль
+   * не передан: иначе он пропал бы вместе с формой (W15-H4).
+   */
+  onPasswordShown?: (shown: boolean) => void;
 }
 
 /**
@@ -43,7 +48,12 @@ export interface InviteEmployeeFormProps {
  * Без почты (W13-A4, BFF 0.10.0): способ «Временным паролем» создаёт сотрудника без письма и показывает пароль
  * администратору один раз (`TemporaryPasswordCard`); после «Готово» открывается карточка сотрудника.
  */
-export function InviteEmployeeForm({ onInvited, onOpenCard, onCancel }: InviteEmployeeFormProps) {
+export function InviteEmployeeForm({
+  onInvited,
+  onOpenCard,
+  onCancel,
+  onPasswordShown,
+}: InviteEmployeeFormProps) {
   const { t } = useTranslation("modules");
   const { message } = App.useApp();
   const [form] = Form.useForm<Values>();
@@ -90,6 +100,7 @@ export function InviteEmployeeForm({ onInvited, onOpenCard, onCancel }: InviteEm
           onSuccess: (created) => {
             // Пароль есть только здесь: в состоянии формы, пока администратор его не передал.
             setCredentials(created);
+            onPasswordShown?.(true);
             create.reset();
           },
           onError: (error) => {
@@ -149,6 +160,7 @@ export function InviteEmployeeForm({ onInvited, onOpenCard, onCancel }: InviteEm
         password={credentials.temporary_password}
         onDone={() => {
           const { employee } = credentials;
+          onPasswordShown?.(false);
           void message.success(t("admin.org.invite.created", { email: employee.email }));
           // Форма размонтируется вместе с боковым окном: сбрасывать её поля уже не нужно.
           onInvited(employee);
@@ -159,6 +171,8 @@ export function InviteEmployeeForm({ onInvited, onOpenCard, onCancel }: InviteEm
 
   return (
     <Form<Values>
+      // Своё имя формы — свои id полей: в мастере первого запуска рядом бывает форма компании с теми же полями
+      name="invite-employee"
       form={form}
       layout="vertical"
       onFinish={submit}
