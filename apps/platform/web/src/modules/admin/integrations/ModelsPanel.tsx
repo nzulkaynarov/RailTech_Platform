@@ -12,6 +12,8 @@ import {
 import { useFormat } from "../../../shared/lib/useFormat";
 import { type StatusTone } from "../../../shared/lib/statuses";
 import { StatusTag } from "../../../shared/ui/StatusTag";
+import { hasFailedField } from "./errors";
+import { bareModelName } from "./modelName";
 import { ActionForm, ErrorNote, Field, Masked, PanelState, PanelTitle } from "./parts";
 import { useRefreshIntegrations } from "./refresh";
 
@@ -51,7 +53,8 @@ function ChangeForm({ model, onDone }: { model: AiModel; onDone: () => void }) {
   const [provider, setProvider] = useState<Provider>(
     known ? (model.provider as Provider) : "anthropic",
   );
-  const [name, setName] = useState(model.model ?? "");
+  // Имя у провайдера без префикса «провайдер/»: в поле не показываем то, что CRM пришлось бы нормализовать.
+  const [name, setName] = useState(bareModelName(model.provider, model.model));
   const [apiKey, setApiKey] = useState("");
   const [apiBase, setApiBase] = useState("");
   const change = useChangeAiModel({
@@ -62,6 +65,15 @@ function ChangeForm({ model, onDone }: { model: AiModel; onDone: () => void }) {
     },
   });
   const id = `model-${model.alias}`;
+  // Поля, названные в 422: подсвечиваем и связываем с текстом ошибки (`${id}-error`), чтобы скринридер его прочёл.
+  const failed = (field: string, hint: string) =>
+    hasFailedField(change.error, field)
+      ? {
+          status: "error" as const,
+          "aria-invalid": true,
+          "aria-describedby": `${id}-${hint}-hint ${id}-error`,
+        }
+      : {};
   return (
     <div className="pf-int-form">
       <ActionForm
@@ -100,11 +112,19 @@ function ChangeForm({ model, onDone }: { model: AiModel; onDone: () => void }) {
             onChange={setProvider}
           />
         </Field>
-        <Field id={`${id}-name`} label={t("models.change.model")}>
+        <Field
+          id={`${id}-name`}
+          label={t("models.change.model")}
+          hint={t("models.change.modelHint", {
+            provider,
+            example: t(`models.change.example.${provider}`),
+          })}
+        >
           <Input
             id={`${id}-name`}
             value={name}
             autoComplete="off"
+            {...failed("model", "name")}
             onChange={(event) => {
               setName(event.target.value);
             }}
@@ -116,6 +136,7 @@ function ChangeForm({ model, onDone }: { model: AiModel; onDone: () => void }) {
             type="password"
             autoComplete="off"
             value={apiKey}
+            {...failed("api_key", "key")}
             onChange={(event) => {
               setApiKey(event.target.value);
             }}
@@ -126,6 +147,7 @@ function ChangeForm({ model, onDone }: { model: AiModel; onDone: () => void }) {
             id={`${id}-base`}
             value={apiBase}
             autoComplete="off"
+            {...failed("api_base", "base")}
             onChange={(event) => {
               setApiBase(event.target.value);
             }}
@@ -189,7 +211,9 @@ function ModelRow({ model, editable }: { model: AiModel; editable: boolean }) {
         <StatusTag tone={HEALTH_TONE[model.health]}>{t(`models.health.${model.health}`)}</StatusTag>
       </div>
       <p className="pf-int-sub">
-        {model.provider ? `${model.provider} · ${model.model ?? "—"}` : t("models.notSet")}
+        {model.provider
+          ? `${model.provider} · ${bareModelName(model.provider, model.model) || "—"}`
+          : t("models.notSet")}
         {" · "}
         {t("models.today", {
           amount: money(model.today_usd, { currency: "USD", fractionDigits: 2 }),
