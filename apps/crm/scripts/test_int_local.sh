@@ -31,12 +31,16 @@ Integration-тесты на одноразовых контейнерах (ск�
   scripts/test_int_local.sh --help
 
 Примеры:
-  scripts/test_int_local.sh                        все integration-тесты
+  scripts/test_int_local.sh                        все integration-тесты (параллельно: до 4 воркеров xdist, у каждого своя база)
+  ITEST_WORKERS=1 scripts/test_int_local.sh        то же одним процессом (отладка; ITEST_WORKERS=<N> — своё число воркеров)
   scripts/test_int_local.sh -k crm_actions         только тесты по маске
   scripts/test_int_local.sh tests/integration/test_migrations.py
 
+Параллельность включает tests/conftest.py сама (как и в CI) — только для целого прогона: отдельный файл, тест
+или -k идут одним процессом, пока не задан ITEST_WORKERS.
+
 Переменные: ITEST_NS (пространство имён: контейнеры rt-itest-<ns>-*, порты выдаёт Docker; для параллельных
-прогонов), ITEST_PG_PORT (55432) и ITEST_S3_PORT (59000) — только без ITEST_NS, ITEST_PG_IMAGE, ITEST_S3_IMAGE.
+прогонов), ITEST_WORKERS (число воркеров xdist; 0 или 1 — один процесс), ITEST_PG_PORT (55432) и ITEST_S3_PORT (59000) — только без ITEST_NS, ITEST_PG_IMAGE, ITEST_S3_IMAGE.
 Порты слушают только 127.0.0.1. После работы: [ITEST_NS=<ns>] scripts/test_int_local.sh --down
 EOF
 }
@@ -86,7 +90,8 @@ cd "$ROOT/backend"
 for f in "$ROOT/backend/.env" "$ROOT/.env"; do
   [ ! -e "$f" ] || { echo "Найден $f: настройки CRM прочитают его, а в CI такого файла нет. Уберите файл и повторите."; exit 1; }
 done
-env -i PATH="$PATH" HOME="$HOME" \
+# ITEST_WORKERS (если задан) пробрасывается: на результат не влияет, только на число процессов pytest.
+env -i PATH="$PATH" HOME="$HOME" ${ITEST_WORKERS:+ITEST_WORKERS="$ITEST_WORKERS"} \
   APP_ENV=test \
   POSTGRES_HOST=127.0.0.1 POSTGRES_PORT="$PG_PORT" POSTGRES_DB=railtech_test \
   POSTGRES_USER=railtech POSTGRES_PASSWORD="$PASS" \
