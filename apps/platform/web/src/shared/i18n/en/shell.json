@@ -84,15 +84,6 @@
     "rolesMany": "All roles",
     "selected": "Selected"
   },
-  "profile": {
-    "title": "Profile",
-    "name": "Name",
-    "email": "Email",
-    "position": "Position",
-    "roles": "Roles",
-    "access": "Access",
-    "noPosition": "not set"
-  },
   "languages": {
     "ru": "Русский",
     "uz": "O‘zbekcha",

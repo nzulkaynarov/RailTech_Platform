@@ -16,6 +16,7 @@ import { adminUsersHandlers } from "./adminUsers";
 import { eventStreamHandlers } from "./eventStream";
 import { isEmployeeDisabled } from "./fixtures/employees";
 import { feedHandlers } from "./feedHandlers";
+import { profileHandlers } from "./profileHandlers";
 import { setupHandlers } from "./setupHandlers";
 import {
   DEMO_WRONG_CURRENT_PASSWORD,
@@ -136,6 +137,7 @@ export const handlers = [
     return me ? HttpResponse.json(me) : sessionExpired();
   }),
 
+  ...profileHandlers,
   ...adminUsersHandlers,
   ...adminAuditHandlers,
   ...adminRolesHandlers,

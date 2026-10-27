@@ -44,7 +44,8 @@
       "loading": "Navbat yuklanmoqda…",
       "loadErrorTitle": "Navbatni yuklab bo‘lmadi",
       "loadErrorText": "Server javob bermadi. Ulanishni tekshirib, qayta urinib ko‘ring.",
-      "retry": "Qayta urinish"
+      "retry": "Qayta urinish",
+      "onBehalf": "{{name}} uchun"
     },
     "activity": {
       "label": "Bugungi voqealar",

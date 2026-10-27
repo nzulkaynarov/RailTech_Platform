@@ -84,15 +84,6 @@
     "rolesMany": "Все роли",
     "selected": "Выбрано"
   },
-  "profile": {
-    "title": "Профиль",
-    "name": "Имя",
-    "email": "Электронная почта",
-    "position": "Должность",
-    "roles": "Роли",
-    "access": "Доступ",
-    "noPosition": "не указана"
-  },
   "languages": {
     "ru": "Русский",
     "uz": "O‘zbekcha",
