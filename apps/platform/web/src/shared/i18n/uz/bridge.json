@@ -31,7 +31,7 @@
   },
   "erpFallback": "Ikkinchi parolsiz kirish bo‘lmadi: eski ERP xuddi shu login bilan kirishni so‘rashi mumkin.",
   "noAddress": "Manzil aniqlanmadi: {{name}} qayerda ochilishini administratordan so‘rang.",
-  "badgeHint": "{{system}}: {{count}}",
+  "badgeHint": "hali eski tizimda: {{count}}",
   "objectKnown": "«Mening navbatim»dan ma’lum bo‘lgani",
   "object": {
     "task": "Nima qilish kerak",

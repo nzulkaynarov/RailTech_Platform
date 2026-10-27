@@ -133,7 +133,7 @@
  * (директор читает), сброс пароля — `admin: full`; профиль доступен каждому вошедшему. Секреты из записей журнала BFF вырезает
  * (значения полей `password`, `secret`, `token`, `key`, `*_key`, `credentials`, `authorization`, `pin` и им подобных -> `***` целиком, любого типа).
  *
- * **0.17.0 (W15-H1) — мост в старые экраны.** Добавляющее изменение (тег `bridge`). Пока раздел Платформы ещё заглушка, сотрудник
+ * **0.18.0 (W15-H1) — мост в старые экраны.** Добавляющее изменение (тег `bridge`). Пока раздел Платформы ещё заглушка, сотрудник
  * открывает ту же работу в старой CRM или старом ERP новой вкладкой. `GET /bridge` отдаёт публичные адреса старых фронтов
  * (`crm_url`, `erp_url`): настройки `PLATFORM_CRM_PUBLIC_URL` и `PLATFORM_ERP_PUBLIC_URL`, а если они пусты — адрес выводится из
  * адреса, по которому открыта Платформа (`platform.<домен>` -> `crm.<домен>` и `erp.<домен>`, схема и порт те же); не задан и не
@@ -143,6 +143,14 @@
  * ERP берёт сама CRM (`ERP_FRONTEND_URL`). Токен в журнал не пишется, ответ — `Cache-Control: no-store`. Права раздела не нужны:
  * достаточно сессии и доступа к ERP (CRM не выдала токен — 403 `FORBIDDEN`, `details.reason`: `platform_access_denied` или
  * `sso_disabled`).
+ *
+ * **0.17.0 (D1-5) — EDS · Создать документ и «Мои документы».** Добавляющее изменение, тег `eds-documents`: `GET/POST /eds/documents`
+ * (мои документы или реестр «Все документы»; создать и сразу отправить), `GET/PUT /eds/documents/{id}` (карточка с маршрутом и
+ * решениями; сохранить черновик), `POST /eds/document-files` и `GET /eds/document-files/{file_id}` (вложения: загрузка потоком до 25 МБ,
+ * multipart BFF не разбирает), `GET /eds/deal-options` (связь с проектом). Вызовы идут в EDS с токеном доступа, полученным
+ * обменом SSO-токена CRM `aud=eds` (`platform-bff.md` §3); нет прав EDS — 403 `FORBIDDEN`, `details.reason = eds_not_granted`. Ошибки EDS
+ * приходят в формате `Error` с `source = eds`: текст EDS сохраняется в `message`, 422 несёт `details.fields` (список полей) и
+ * `details.messages` (поле → причина). `Error.code` дополнен `PAYLOAD_TOO_LARGE` (413) и `UNSUPPORTED_MEDIA_TYPE` (415).
  *
  * **0.15.0 (W13C-F1) — первый запуск: ERP раньше компании (дефект гейта C2A-G-1).** Добавляющее изменение. Порядок шагов чек-листа —
  * `erp`, `bot`, `mail`, `models`, `first_employee`: сначала подключается ERP, затем создаётся компания. Все пять шагов
@@ -180,7 +188,7 @@
  * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.17.0
+ * OpenAPI spec version: 0.18.0
  */
 
 export * from "./accessLevel";
@@ -291,6 +299,30 @@ export * from "./documentTemplatePreviewIn";
 export * from "./documentTemplateUpdate";
 export * from "./downloadCsvExportParams";
 export * from "./dueLabel";
+export * from "./edsConflictResponse";
+export * from "./edsDealOption";
+export * from "./edsDealOptions";
+export * from "./edsDealRef";
+export * from "./edsDecision";
+export * from "./edsDecisionDecision";
+export * from "./edsDocument";
+export * from "./edsDocumentIn";
+export * from "./edsDocumentKind";
+export * from "./edsDocumentPage";
+export * from "./edsDocumentRow";
+export * from "./edsDocumentStatus";
+export * from "./edsDocumentUpdateIn";
+export * from "./edsFile";
+export * from "./edsFileUpload";
+export * from "./edsIdempotencyKeyParameter";
+export * from "./edsMoney";
+export * from "./edsPayloadTooLargeResponse";
+export * from "./edsPerson";
+export * from "./edsRecipient";
+export * from "./edsRegistryKind";
+export * from "./edsRouteStep";
+export * from "./edsRouteStepStatus";
+export * from "./edsUnsupportedMediaResponse";
 export * from "./emailTemplate";
 export * from "./emailTemplateIn";
 export * from "./emailTemplateList";
@@ -396,6 +428,9 @@ export * from "./listAuditParams";
 export * from "./listBusDeliveriesParams";
 export * from "./listBusInboxParams";
 export * from "./listCategoryRequestsParams";
+export * from "./listEdsDealOptionsParams";
+export * from "./listEdsDocumentsParams";
+export * from "./listEdsDocumentsScope";
 export * from "./listEmployeesParams";
 export * from "./listKbDocumentsParams";
 export * from "./listKbGapsParams";

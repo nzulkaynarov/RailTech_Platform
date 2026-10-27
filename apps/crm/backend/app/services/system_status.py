@@ -104,7 +104,10 @@ class SystemStatusService:
             components.append(rules.budget(alerts, now))
             components.append(rules.queue(facts, now))
             components.append(rules.channel(cfg.notifications.channel_id, now))
-            components.append(rules.crm_url(cfg.company.crm_base_url, now))
+            platform = rules.PlatformUrlFacts(
+                self._config.platform_base_url, self._config.app_env == "prod"
+            )
+            components.append(rules.crm_url(cfg.company.crm_base_url, now, platform))
         components.append(rules.bot(bot, self._config.telegram_mode, now))
         components.append(await self._backup(now))
         components.append(rules.erp(erp or ErpFacts(configured=False), now))

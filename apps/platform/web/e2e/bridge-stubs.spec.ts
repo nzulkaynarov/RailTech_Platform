@@ -83,7 +83,7 @@ test.describe("Заглушки и мост", () => {
     await shoot(page, "object-from-queue-memo");
   });
 
-  test("менеджер: «Ждут ответа» — мост в старую CRM; бейдж меню только с подсказкой «в старой CRM: 1»", async ({
+  test("менеджер: «Ждут ответа» — мост в старую CRM; бейдж меню только с подсказкой «ещё в старой системе: 1»", async ({
     page,
   }) => {
     await loginAndWait(page, "manager@demo.example");
@@ -107,7 +107,7 @@ test.describe("Заглушки и мост", () => {
 
     const menu = page.getByRole("navigation", { name: "Разделы модуля" });
     await expect(menu.getByRole("link", { name: /Ждут ответа/ })).toHaveAccessibleName(
-      /в старой CRM: 1/,
+      /ещё в старой системе: 1/,
     );
     await shoot(page, "stub-with-bridge");
   });

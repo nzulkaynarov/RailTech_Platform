@@ -261,14 +261,16 @@ describe("SectionStubPage · карточка объекта по прямой �
 });
 
 describe("Бейджи меню у заглушек", () => {
-  it("«Ждут ответа»: бейдж 1 только с подсказкой «в старой CRM: 1», а текст раздела не говорит «пока нет»", async () => {
+  it("«Ждут ответа»: бейдж 1 только с подсказкой «ещё в старой системе: 1», а текст раздела не говорит «пока нет»", async () => {
     signInAs("manager@demo.example");
     renderApp("/crm/messages");
     const page = await main();
     const menu = screen.getByRole("navigation", { name: "Разделы модуля" });
 
-    const item = await within(menu).findByRole("link", { name: /Ждут ответа.*в старой CRM: 1/ });
-    expect(item.querySelector("[title='в старой CRM: 1']")).not.toBeNull();
+    const item = await within(menu).findByRole("link", {
+      name: /Ждут ответа.*ещё в старой системе: 1/,
+    });
+    expect(item.querySelector("[title='ещё в старой системе: 1']")).not.toBeNull();
     expect(within(page).queryByText(/пока нет/)).not.toBeInTheDocument();
   });
 

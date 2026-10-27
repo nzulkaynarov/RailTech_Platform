@@ -14,6 +14,7 @@ from app.services import user_invites as svc
 
 OLD_PASSWORD = "Old-password-42"
 ACTOR = Actor(user_id=1)
+PLATFORM = "https://platform.example.com"
 
 
 class FakeSession:
@@ -49,6 +50,15 @@ class FakeSettings:
         return SimpleNamespace(
             company=SimpleNamespace(name="RailTech", crm_base_url="https://crm.example.com/")
         )
+
+
+def make_service(mail: FakeMail, platform_url: str | None = PLATFORM) -> svc.UserInviteService:
+    return svc.UserInviteService(
+        fake_sessions(),
+        mail,  # type: ignore[arg-type]
+        FakeSettings(),  # type: ignore[arg-type]
+        platform_url,
+    )
 
 
 @pytest.fixture
@@ -94,7 +104,7 @@ async def test_rotates_password_and_sends_letter(
     user: Any, method: str, template: str, action: str
 ) -> None:
     mail = FakeMail()
-    service = svc.UserInviteService(fake_sessions(), mail, FakeSettings())  # type: ignore[arg-type]
+    service = make_service(mail)
     view = await getattr(service, method)(ACTOR, 7)
     assert view.id == 9
     (letter,) = mail.sent
@@ -105,7 +115,9 @@ async def test_rotates_password_and_sends_letter(
         1,
     )
     context = letter["context"]
-    assert context["crm_url"] == "https://crm.example.com"
+    # Письмо ведёт в Платформу, а не в старый фронт CRM (`company.crm_base_url`), W15-H8a.
+    assert context["platform_url"] == PLATFORM
+    assert "crm_url" not in context
     assert context["company"] == "RailTech"
     assert verify_password(user.password_hash, context["temporary_password"])
     assert not verify_password(user.password_hash, OLD_PASSWORD)
@@ -115,7 +127,7 @@ async def test_rotates_password_and_sends_letter(
 
 
 async def test_without_smtp_password_is_untouched_and_error_is_clear(user: Any) -> None:
-    service = svc.UserInviteService(fake_sessions(), FakeMail(configured=False), FakeSettings())  # type: ignore[arg-type]
+    service = make_service(FakeMail(configured=False))
     with pytest.raises(ConflictError) as info:
         await service.invite(ACTOR, 7)
     assert info.value.details["reason"] == Reason.SMTP_NOT_CONFIGURED.value
@@ -125,6 +137,24 @@ async def test_without_smtp_password_is_untouched_and_error_is_clear(user: Any) 
 
 
 async def test_unknown_user_is_404(user: Any) -> None:
-    service = svc.UserInviteService(fake_sessions(), FakeMail(), FakeSettings())  # type: ignore[arg-type]
+    service = make_service(FakeMail())
     with pytest.raises(NotFoundError):
         await service.invite(ACTOR, 404)
+
+
+@pytest.mark.parametrize("method", ["invite", "reset_password_email"])
+@pytest.mark.parametrize("platform_url", [None, ""])
+async def test_without_platform_url_nothing_is_sent_and_password_is_untouched(
+    user: Any, method: str, platform_url: str | None
+) -> None:
+    """Адреса Платформы нет: честная 409, а не письмо со ссылкой на localhost (W15-H8a)."""
+    mail = FakeMail()
+    service = make_service(mail, platform_url)
+    with pytest.raises(ConflictError) as info:
+        await getattr(service, method)(ACTOR, 7)
+    assert "PLATFORM_DOMAIN" not in info.value.message  # админу — человеческий текст
+    assert "хостинг" in info.value.message
+    assert "PLATFORM_DOMAIN" in str(info.value.details["hint"])
+    assert mail.sent == []
+    assert verify_password(user.password_hash, OLD_PASSWORD)
+    assert (user.audits, user.revoked) == ([], [])

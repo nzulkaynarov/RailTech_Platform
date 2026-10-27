@@ -188,7 +188,9 @@ class Container:
 
     @cached_property
     def settings_service(self) -> SettingsService:
-        return SettingsService(self.session_factory)
+        return SettingsService(
+            self.session_factory, crm_base_url_default=self.settings.crm_base_url_default
+        )
 
     @cached_property
     def docling(self) -> DoclingClient:
@@ -515,7 +517,12 @@ class Container:
     def user_invites(self) -> "UserInviteService":
         from app.services.user_invites import UserInviteService
 
-        return UserInviteService(self.session_factory, self.mail_service, self.settings_service)
+        return UserInviteService(
+            self.session_factory,
+            self.mail_service,
+            self.settings_service,
+            self.settings.platform_base_url,
+        )
 
     async def backoffice_mode(self) -> "BackofficeMode":
         """Режим жизненного цикла (ADR-0022): `erp`, когда коннектор настроен, иначе `local`."""

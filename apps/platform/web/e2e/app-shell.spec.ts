@@ -112,7 +112,9 @@ test.describe("панели", () => {
       "page",
     );
     await expect(menu.getByRole("link", { name: "Мои задачи 3, требует действия" })).toBeVisible();
-    await expect(menu.getByRole("link", { name: "Проекты 4, в старом ERP: 4" })).toBeVisible();
+    await expect(
+      menu.getByRole("link", { name: "Проекты 4, ещё в старой системе: 4" }),
+    ).toBeVisible();
     await expect(page.getByRole("button", { name: /^Центр уведомлений, 3 новых/ })).toBeVisible();
   });
 

@@ -114,17 +114,15 @@ export function AppShell() {
 
   const badgeFor = (item: MenuCounter | undefined, section: SectionConfig) => {
     if (!item || item.count <= 0) return undefined;
-    // Раздел-заглушка (W15-H1): бейдж только с подсказкой «в старой CRM: N», если то же число видно в старой системе;
+    // Раздел-заглушка (W15-H1): бейдж только с нейтральной подсказкой «ещё в старой системе: N» (названия систем — на самой заглушке), если то же число видно в старой системе;
     // иначе бейджа нет — рядом с честной заглушкой число без дела только путает.
     if (isStubSection(activeModule.code, section.key)) {
       const entry = bridgeEntry(activeModule.code, section.key);
-      const legacy = entry?.legacyCount ? entry.legacy : undefined;
-      if (!legacy) return undefined;
-      const system = t(`bridge:system.${legacy.system}.in`);
+      if (!entry?.legacyCount || !entry.legacy) return undefined;
       return {
         count: item.count,
         attention: false,
-        hint: t("bridge:badgeHint", { system, count: item.count }),
+        hint: t("bridge:badgeHint", { count: item.count }),
       };
     }
     return { count: item.count, attention: item.attention };

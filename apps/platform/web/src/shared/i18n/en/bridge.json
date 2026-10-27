@@ -31,7 +31,7 @@
   },
   "erpFallback": "Signing in without a second password did not work: the old ERP may ask you to sign in with the same login.",
   "noAddress": "The address is unknown: ask the administrator where {{name}} is opened.",
-  "badgeHint": "in {{system}}: {{count}}",
+  "badgeHint": "still in the old system: {{count}}",
   "objectKnown": "What “My queue” knows",
   "object": {
     "task": "What to do",

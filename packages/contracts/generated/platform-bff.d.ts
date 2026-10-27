@@ -455,6 +455,114 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/eds/documents": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * EDS · Документы: «Мои документы» и реестр «Все документы»
+     * @description EDS `GET /documents?mine=1` (`scope=mine`, по умолчанию) или `GET /registry` (`scope=all`). «Мои» — документы, где сотрудник автор: служебные записки, заявления, отчёты, письма (черновики тоже). «Все» — реестр компании (SPEC-v3 §7.3): письма, КП, служебные, заявления, отчёты; нужен раздел `eds.inbox`, `eds.projects` или `eds.payments` (в EDS это право `registry.read`; решает EDS, иначе 403 `FORBIDDEN`). Договоры, счета и акты в реестре появятся, когда EDS начнёт вести их проекции. Страницы — курсором (`next_cursor`), новые выше.
+     */
+    get: operations["listEdsDocuments"];
+    put?: never;
+    /**
+     * EDS · Создать документ (и отправить на согласование)
+     * @description EDS `POST /documents` и, если `submit = true`, `POST /documents/{id}/submit`. Необязательный `Idempotency-Key` уходит в EDS как есть: повтор с тем же ключом и телом (ответ потерялся) возвращает прежний документ, а не создаёт второй; тот же ключ с другим телом — 409 `CONFLICT` (`details.reason = idempotency_key_reused`). Раздел `eds.memo.create` (есть у всех ролей); право на тип решает EDS: `memo`, `application`, `report` — `memos.create`, `letter_out` (Письмо) — `letters.register` (нет права — 403 `FORBIDDEN`). Номер (`СЗ-`, `ЗЯ-`, `ОТ-ГГГГ/NNN`) присваивает EDS при создании; маршрут служебной записки — директор, затем бухгалтер, если указана сумма; заявления и отчёта — директор. Письмо отправка не согласует: EDS присваивает номер `ИСХ-NNN/ГГ` и переводит его в «Отправлено» (бланк, PDF и отправка адресату — волна D-DOC). Если документ создан, а отправка отклонена (например, 422), ответ — ошибка, а созданный черновик назван в `details.document_id`: введённое не теряется, экран продолжает с этим id через `PUT /eds/documents/{id}`.
+     */
+    post: operations["createEdsDocument"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/documents/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * EDS · Документ: статус, маршрут, решения, вложения
+     * @description EDS `GET /documents/{id}` и, если документ отправлялся, `GET /approvals/{approval_id}` (шаги маршрута). Автор, участник маршрута или сотрудник с правом реестра; иначе 404. `can_edit` — автор и статус `draft` или `returned`.
+     */
+    get: operations["getEdsDocument"];
+    /**
+     * EDS · Сохранить черновик (и отправить на согласование)
+     * @description EDS `PATCH /documents/{id}` (с `eds.yaml` 0.4.0) и, если `submit = true`, `POST /documents/{id}/submit`. Только автор; документ в статусе `draft` или `returned` (после возврата отправка открывает новый круг и версию), иначе 409 `CONFLICT` (`details.reason = invalid_state`). Передаётся форма целиком: `amount`, `due_date`, `erp_deal_id` со значением `null` очищают поле. Вложения привязываются; снять уже привязанное нельзя. Отправка отклонена — ошибка, а правки сохранены (`details.saved = true`).
+     */
+    put: operations["updateEdsDocument"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/document-files": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * EDS · Загрузить вложение документа
+     * @description EDS `POST /files` (multipart). BFF читает тело потоком до предела (25 МБ и поля формы), multipart не разбирает и передаёт EDS как есть. Файл привязывается к документу при создании или сохранении (`file_ids`); пока не привязан, его видит только загрузивший. Больше 25 МБ — 413 `PAYLOAD_TOO_LARGE` (`details.max_bytes`); не PDF, не изображение и не документ Office — 415 `UNSUPPORTED_MEDIA_TYPE`. Раздел `eds.memo.create`.
+     */
+    post: operations["uploadEdsDocumentFile"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/document-files/{file_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * EDS · Скачать вложение документа
+     * @description EDS `GET /files/{id}`. Файл отдаётся потоком, в памяти BFF не накапливается; видит тот, кому виден документ с этим вложением, или загрузивший. Имя файла — в `Content-Disposition`.
+     */
+    get: operations["downloadEdsDocumentFile"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/deal-options": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * EDS · Связь с проектом: поиск заявки или проекта по номеру
+     * @description Заявки и проекты из ERP (новейшие сделки; поиск по номеру `ЗВ-2026-104`, названию и компании, как в сквозном поиске) для поля «Связь с проектом» формы документа: возвращает `erp_deal_id`, который EDS хранит в документе. Нужен раздел `crm.clients` или `eds.projects` (чтение); у роли без них поле «Связь с проектом» не показывается. Без `q` — десять новейших. ERP не ответила — `sources.erp = unavailable`, список пуст.
+     */
+    get: operations["listEdsDealOptions"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/admin/integrations": {
     parameters: {
       query?: never;
@@ -2581,7 +2689,7 @@ export interface components {
   schemas: {
     Error: {
       /**
-       * @description Стабильный код (`INVALID_CREDENTIALS`, `SESSION_EXPIRED`, `CSRF_FAILED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_FAILED`, `TOO_MANY_REQUESTS`, `BACKEND_UNAVAILABLE`, `NO_PLATFORM_ROLE`, `USER_DISABLED`, `ACCOUNT_LOCKED`, `CONFLICT`, `WRONG_PASSWORD`, `EMAIL_EXISTS`, `LAST_ADMIN`, `LAST_DIRECTOR`, `ROLE_IN_USE`, `ROLE_SYSTEM`, `ROLES_REQUIRED`, `NOT_CONFIGURED`, `SECRETS_KEY_MISSING`, `SERVICE_NOT_SWITCHABLE`, `INTEGRATION_FAILED`, `COMPANY_NOT_SET`, `SETUP_DONE`, `SETUP_CODE_INVALID`, `SETUP_CODE_EXPIRED`, `SETUP_LOCKED`, `OWN_COMPANY_ALREADY_EXISTS`, `ERP_NOT_CONNECTED`, `INTERNAL_ERROR`, `BAD_REQUEST`, `METHOD_NOT_ALLOWED`, `HTTP_<статус>`)
+       * @description Стабильный код (`INVALID_CREDENTIALS`, `SESSION_EXPIRED`, `CSRF_FAILED`, `FORBIDDEN`, `NOT_FOUND`, `VALIDATION_FAILED`, `TOO_MANY_REQUESTS`, `BACKEND_UNAVAILABLE`, `NO_PLATFORM_ROLE`, `USER_DISABLED`, `ACCOUNT_LOCKED`, `CONFLICT`, `WRONG_PASSWORD`, `EMAIL_EXISTS`, `LAST_ADMIN`, `LAST_DIRECTOR`, `ROLE_IN_USE`, `ROLE_SYSTEM`, `ROLES_REQUIRED`, `NOT_CONFIGURED`, `SECRETS_KEY_MISSING`, `SERVICE_NOT_SWITCHABLE`, `INTEGRATION_FAILED`, `PAYLOAD_TOO_LARGE`, `UNSUPPORTED_MEDIA_TYPE`, `COMPANY_NOT_SET`, `SETUP_DONE`, `SETUP_CODE_INVALID`, `SETUP_CODE_EXPIRED`, `SETUP_LOCKED`, `OWN_COMPANY_ALREADY_EXISTS`, `ERP_NOT_CONNECTED`, `INTERNAL_ERROR`, `BAD_REQUEST`, `METHOD_NOT_ALLOWED`, `HTTP_<статус>`)
        * @example SESSION_EXPIRED
        */
       code: string;
@@ -3854,6 +3962,184 @@ export interface components {
       groups: components["schemas"]["SearchGroup"][];
       sources: components["schemas"]["Sources"];
     };
+    /**
+     * @description Служебная записка (СЗ), заявление (ЗЯ), отчёт (ОТ), письмо (ИСХ)
+     * @enum {string}
+     */
+    EdsDocumentKind: "memo" | "application" | "report" | "letter_out";
+    /**
+     * @description Вкладки реестра «Все документы»: письма (входящие и исходящие), КП, служебные, заявления, отчёты
+     * @enum {string}
+     */
+    EdsRegistryKind: "letter_in" | "letter_out" | "quote" | "memo" | "application" | "report";
+    EdsPerson: {
+      crm_user_id: number;
+      full_name: string;
+    };
+    EdsMoney: {
+      /** @description Деньги строкой с двумя знаками, больше нуля: `1500000.00` */
+      amount: string;
+      /** @example UZS */
+      currency: string;
+    };
+    /** @description Адресат письма (организация) — только тип `letter_out` */
+    EdsRecipient: {
+      name: string;
+      inn?: string | null;
+    };
+    EdsDocumentRow: {
+      kind: components["schemas"]["EdsRegistryKind"];
+      /** Format: uuid */
+      id: string;
+      /** @description Номер реестра EDS или КП ERP; `null` — письмо до отправки */
+      number: string | null;
+      subject: string;
+      /** @description Статус словом по типу. Документ — `draft`, `on_approval`, `returned`, `rejected`, `approved`, `to_accountant`, `paid`, `sent`; входящее письмо — `awaiting_resolution`, `resolved`, `returned`, `rejected`; КП (маршрут) — `open`, `approved`, `returned`, `rejected` */
+      status: string;
+      /** @description Автор документа; у письма и КП — ответственный */
+      author: components["schemas"]["EdsPerson"] | null;
+      /** @description Только «Мои»; в реестре `null` */
+      amount: components["schemas"]["EdsMoney"] | null;
+      /**
+       * Format: date
+       * @description Только «Мои»; в реестре `null`
+       */
+      due_date: string | null;
+      /**
+       * Format: date-time
+       * @description Создан (в реестре — зарегистрирован)
+       */
+      created_at: string;
+      /** @description Документ (`memo`, `application`, `report`, `letter_out`) открывается в боковом окне; письма и КП — в своих разделах */
+      openable: boolean;
+    };
+    EdsDocumentPage: {
+      items: components["schemas"]["EdsDocumentRow"][];
+      next_cursor: string | null;
+    };
+    EdsFile: {
+      /** Format: uuid */
+      id: string;
+      name: string;
+      content_type: string;
+      size: number;
+    };
+    EdsFileUpload: {
+      /** Format: binary */
+      file: string;
+    };
+    EdsRouteStep: {
+      /** @description «Директор», «Бухгалтер» */
+      label: string;
+      /** @enum {string} */
+      status: "pending" | "current" | "approved" | "returned" | "rejected" | "skipped";
+      decided_by: components["schemas"]["EdsPerson"] | null;
+      /** Format: date-time */
+      decided_at: string | null;
+      comment: string | null;
+    };
+    EdsDecision: {
+      /** @description Круг маршрута (растёт после возврата) */
+      round: number;
+      step: number;
+      /** @enum {string} */
+      decision: "approve" | "return" | "reject";
+      comment: string | null;
+      by: components["schemas"]["EdsPerson"];
+      /** Format: date-time */
+      at: string;
+    };
+    EdsDealRef: {
+      erp_deal_id: number;
+      /** @description Бизнес-номер заявки или проекта, если EDS его знает */
+      number: string | null;
+    };
+    EdsDocument: {
+      /** Format: uuid */
+      id: string;
+      kind: components["schemas"]["EdsDocumentKind"];
+      number: string | null;
+      /** @enum {string} */
+      status:
+        | "draft"
+        | "on_approval"
+        | "returned"
+        | "rejected"
+        | "approved"
+        | "to_accountant"
+        | "paid"
+        | "sent";
+      version: number;
+      subject: string;
+      text: string;
+      author: components["schemas"]["EdsPerson"];
+      /** @description `null` — директор (любой, кто согласует служебные записки) */
+      addressee: components["schemas"]["EdsPerson"] | null;
+      amount: components["schemas"]["EdsMoney"] | null;
+      /** Format: date */
+      due_date: string | null;
+      files: components["schemas"]["EdsFile"][];
+      /** @description Связь с проектом */
+      deal: components["schemas"]["EdsDealRef"] | null;
+      recipient: components["schemas"]["EdsRecipient"] | null;
+      /** @description Шаги маршрута текущего круга; пусто, пока документ не отправлялся */
+      route: components["schemas"]["EdsRouteStep"][];
+      /** @description Решения всех кругов по порядку — кто, что и когда решил */
+      decisions: components["schemas"]["EdsDecision"][];
+      /** @description Автор, статус `draft` или `returned`: экран открывает форму «Продолжить» */
+      can_edit: boolean;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      updated_at: string;
+    };
+    EdsDocumentIn: {
+      kind: components["schemas"]["EdsDocumentKind"];
+      subject: string;
+      text: string;
+      /** @description Сумма: служебная записка с суммой после директора идёт бухгалтеру */
+      amount?: components["schemas"]["EdsMoney"] | null;
+      /**
+       * Format: date
+       * @description «Нужно до» — не в прошлом
+       */
+      due_date?: string | null;
+      file_ids?: string[];
+      /** @description Связь с проектом (`GET /eds/deal-options`) */
+      erp_deal_id?: number | null;
+      /** @description Только `letter_out` */
+      recipient?: components["schemas"]["EdsRecipient"] | null;
+      /**
+       * @description `true` — сразу отправить (на согласование; письмо — зарегистрировать); `false` — сохранить черновик
+       * @default false
+       */
+      submit: boolean;
+    };
+    /** @description Форма черновика целиком; `amount`, `due_date`, `erp_deal_id` со значением `null` очищают поле */
+    EdsDocumentUpdateIn: {
+      subject: string;
+      text: string;
+      amount?: components["schemas"]["EdsMoney"] | null;
+      /** Format: date */
+      due_date?: string | null;
+      file_ids?: string[];
+      erp_deal_id?: number | null;
+      /** @description Только `letter_out` */
+      recipient?: components["schemas"]["EdsRecipient"] | null;
+      /** @default false */
+      submit: boolean;
+    };
+    EdsDealOption: {
+      erp_deal_id: number;
+      /** @example ЗВ-2026-104 */
+      number: string;
+      title: string;
+      company: string | null;
+    };
+    EdsDealOptions: {
+      items: components["schemas"]["EdsDealOption"][];
+      sources: components["schemas"]["Sources"];
+    };
     /** @description Десятичное число строкой (как в ERP): `"20.00"` */
     DecimalString: string;
     /** @description Id объекта ERP строкой */
@@ -4922,6 +5208,33 @@ export interface components {
         "application/json": components["schemas"]["Error"];
       };
     };
+    /** @description 409 `CONFLICT` — документ не в том статусе для действия (`details.reason = invalid_state`) или объект изменился */
+    EdsConflict: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["Error"];
+      };
+    };
+    /** @description 413 `PAYLOAD_TOO_LARGE` — файл больше 25 МБ (`details.max_bytes`) */
+    EdsPayloadTooLarge: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["Error"];
+      };
+    };
+    /** @description 415 `UNSUPPORTED_MEDIA_TYPE` — допустимы PDF, изображения и документы Office */
+    EdsUnsupportedMedia: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["Error"];
+      };
+    };
     /** @description 409: `NOT_CONFIGURED` (коннектор или сервис не настроен), `SECRETS_KEY_MISSING` (на сервере нет ключа шифрования), `SERVICE_NOT_SWITCHABLE` (у сервиса нет выключателя), `CONFLICT` (состояние не позволяет действие); код CRM — в `details.reason` */
     IntegrationConflict: {
       headers: {
@@ -4999,6 +5312,10 @@ export interface components {
     /** @description Непрозрачный курсор из `next_cursor` */
     BusCursor: string;
     BusLimit: number;
+    /** @description Ключ повтора создания (8–128 знаков, на экземпляр формы и тело запроса); EDS хранит его 24 часа */
+    EdsIdempotencyKey: string;
+    /** @description Id документа EDS (UUID); номер `СЗ-2026/031` содержит «/» и в адресе не используется */
+    EdsDocumentId: string;
     /** @description Значение cookie `rt_pf_csrf` */
     CsrfToken: string;
     /** @description Id документа базы знаний (CRM) */
@@ -5748,6 +6065,223 @@ export interface operations {
       };
       401: components["responses"]["SessionExpired"];
       422: components["responses"]["ValidationFailed"];
+    };
+  };
+  listEdsDocuments: {
+    parameters: {
+      query?: {
+        scope?: "mine" | "all";
+        /** @description Вкладки по типу (повтором параметра); в «Мои» письма-входящие и КП игнорируются */
+        kind?: components["schemas"]["EdsRegistryKind"][];
+        /** @description Статусы (повтором); значения — статусы документа, письма или маршрута КП */
+        status?: string[];
+        /** @description Поиск по номеру и теме (только `scope=all`) */
+        q?: string;
+        cursor?: string;
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Страница документов */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EdsDocumentPage"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  createEdsDocument: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+        /** @description Ключ повтора создания (8–128 знаков, на экземпляр формы и тело запроса); EDS хранит его 24 часа */
+        "Idempotency-Key"?: components["parameters"]["EdsIdempotencyKey"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["EdsDocumentIn"];
+      };
+    };
+    responses: {
+      /** @description Документ создан (черновик или на согласовании) */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EdsDocument"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      409: components["responses"]["EdsConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getEdsDocument: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Id документа EDS (UUID); номер `СЗ-2026/031` содержит «/» и в адресе не используется */
+        id: components["parameters"]["EdsDocumentId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Документ */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EdsDocument"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  updateEdsDocument: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id документа EDS (UUID); номер `СЗ-2026/031` содержит «/» и в адресе не используется */
+        id: components["parameters"]["EdsDocumentId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["EdsDocumentUpdateIn"];
+      };
+    };
+    responses: {
+      /** @description Документ с правками */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EdsDocument"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["EdsConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  uploadEdsDocumentFile: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["EdsFileUpload"];
+      };
+    };
+    responses: {
+      /** @description Файл сохранён */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EdsFile"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      413: components["responses"]["EdsPayloadTooLarge"];
+      415: components["responses"]["EdsUnsupportedMedia"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  downloadEdsDocumentFile: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        file_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Содержимое файла */
+      200: {
+        headers: {
+          /** @description `attachment; filename*=UTF-8''…` */
+          "Content-Disposition"?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          "application/octet-stream": string;
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listEdsDealOptions: {
+    parameters: {
+      query?: {
+        q?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Заявки и проекты */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EdsDealOptions"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
     };
   };
   getIntegrationsOverview: {
