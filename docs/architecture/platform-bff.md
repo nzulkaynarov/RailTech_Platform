@@ -1,5 +1,5 @@
 # Архитектура Платформы: BFF, вход, сущности, события, развёртывание
-Статус: действует · Владелец: архитектор · Обновлено: 2026-10-23
+Статус: действует · Владелец: архитектор · Обновлено: 2026-10-27
 
 Версия 1.1 · 2026-10-23 · Решение уровня ансамбля — ADR-0011 с поправками ADR-0014 и ADR-0015. Термины — SPEC-v3 §2.
 
@@ -147,7 +147,7 @@ SPA  POST /api/v1/setup/admin {code, name, email, password}
   `rt_bus.fastapi.bus_router` + `MemoryReceiver`, без базы; секреты пар `RT_BUS_SECRET_ERP_PLATFORM_BFF`,
   `RT_BUS_SECRET_CRM_PLATFORM_BFF`, с волны 12 `RT_BUS_SECRET_EDS_PLATFORM_BFF` — события EDS подписаны, но до этапа D
   подсказок не дают, приёмник отвечает `skipped`; Caddy `/bus/*` на домене Платформы не отдаёт). Событие превращается в подсказку
-  `{"topics": ["notifications"|"counters"|"queue"|"activity"], "reason": "<тип события>"}` и уходит в браузер по
+  `{"topics": ["notifications"|"counters"|"queue"|"activity"|"messages"], "reason": "<тип события>"}` и уходит в браузер по
   `GET /api/v1/events/stream` (SSE, только вошедшему сотруднику с разделом «Моя очередь»). **В потоке нет данных**:
   браузер перезапрашивает обычные API (с RBAC), поэтому чужое в поток не попадает. Устройство:
   - обработчик приёмника публикует подсказку в канал Redis `platform:hints`; каждый процесс BFF (`--workers 2`) слушает
@@ -167,6 +167,17 @@ SPA  POST /api/v1/setup/admin {code, name, email, password}
   (2) логи `platform-bff`: `POST /bus/v1/events` — 200 (401 — не совпал секрет пары `RT_BUS_SECRET_<ИЗДАТЕЛЬ>_PLATFORM_BFF`
   у издателя и BFF; 503 — Redis); (3) журнал издателя (`rt_bus_delivered`, DLQ) — доставка до BFF; (4) опрос работает
   всегда: при обрыве потока данные догоняются за 30 с.
+- **Тема `messages` (D1-1, BFF 0.16.0) — «Клиенты · Ждут ответа» без опроса.** CRM публикует
+  `uz.railtech.crm.lead.message_added.v1` на каждое сообщение переписки (входящее и исходящее; сигнал без текста, outbox в той же
+  транзакции, что и строка сообщения) и `lead.updated` с `changed_fields = ["handoff"]` на новую передачу от бота. Темы: ERP —
+  `notifications`, `counters`, `queue`, `activity`; события лида — `counters`, `queue`, `activity`, `messages`;
+  `lead.message_added` — `counters`, `queue`, `messages` (лента «Сегодня» от сообщения не меняется). SPA на `messages`
+  перезапрашивает `listCrmMessages` и открытую переписку (`/crm/messages/{lead}`, `/thread`), на `counters` — бейдж «Ждут ответа»
+  в меню (`getMenuCounters` → CRM `/inbox`). Путь сообщения клиента до экрана: бот пишет сообщение и строку outbox одной
+  транзакцией → после коммита `wakeup` ставит `rt_bus.pump` (без ожидания тика 5 с) → доставка `POST /bus/v1/events` в BFF →
+  Redis `platform:hints` → кадр SSE после окна слияния 300 мс → перезапрос ленты. Замер в тестах: запись сообщения и события в
+  CRM — одна транзакция (`tests/integration/test_d1_messages.py`); приём события BFF → кадр SSE ≈ 0,4 с с боевым окном 300 мс
+  (`tests/test_crm_messages.py`); цель «сообщение клиента в Платформе ≤ 2 с» сквозь стенд проверяет гейт D1-7.
 - **Telegram сотруднику** (SPEC-v3 §9): по-прежнему бот CRM. ERP-события, которые должны дойти сотруднику в
   Telegram, идут в CRM существующим вебхуком шва; адресата и настройку «дублировать в Telegram» CRM берёт из
   карточки сотрудника.
@@ -229,6 +240,14 @@ credential, authorization, passphrase, passcode, cookie, bearer, signature, hmac
 пишется CRM как `user.update` (`platform_role_names`) и видна в общем журнале. Вкладка «Журнал» вернулась в боковое окно роли.
 (4) `GET/PATCH /me/notification-settings` и `POST /me/test-notification` — личные уведомления бота (CRM `/me`): доступны каждому
 вошедшему, это его собственные настройки; идентификатор Telegram наружу не отдаётся (только «привязан»).
+
+**D1-1 (BFF 0.16.0): Клиенты · Ждут ответа.** `/crm/messages*` — прокси к CRM с токеном сотрудника: очередь (`/inbox` с
+запиской передачи CRM-06), карточка лида, лента (`/leads/{id}/messages` с `before_id`, заметки, имена `/team`), вложение потоком
+(`Content-Disposition: attachment`, `nosniff`, ключ хранилища наружу не уходит), «Забрать», ответ «От себя» с ключом повтора
+`client_message_id` (CRM не шлёт второе сообщение с тем же ключом; Telegram не ответил — 502 `INTEGRATION_FAILED`,
+`delivery_failed`), «Заметка команде», «Подсказать ответ» (ИИ — только CRM/LiteLLM, таймаут пробы), «Вернуть боту»; шаблоны —
+`GET /crm/reply-templates`. Раздел `crm.leads`: чтение — `read` (директор видит очередь без действий; CRM `/inbox` с D1-1 —
+`leads:read`), действия и шаблоны — `full`. Служебные пометки причины CRM (`dialog: …`) и неизвестные коды экрану не отдаются.
 
 **W13-A3 (BFF 0.8.0): Admin · Компания.** `/admin/company*` проксирует к ERP настройки своей компании (реквизиты и логотип, бланк и бренд,
 нумерация, условия КП, статьи расхода, шаблоны документов и писем, справочники, категории и запросы на них, НДС). Раздел
