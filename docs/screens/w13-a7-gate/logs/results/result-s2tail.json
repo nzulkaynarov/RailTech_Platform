@@ -1,0 +1,110 @@
+{
+  "rows": [
+    {
+      "desc": "ротация ключей ERP: «Что произойдёт»",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "ротация ключей ERP: «Ключи обновлены»",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "карточка ERP после ротации",
+      "ok": null,
+      "detail": "Карточка | ERP | Состояние | Сопряжена | Адрес | http://erp-backend:8000 | Токен CRM → ERP | •••• h_Ho | задан, последние символы h_Ho | Секрет событий | •••• Lsc0 | задан, последние символы Lsc0 | Ключи обновлены | 27.10.2026 10:53 | Проверить связь | Подключить заново | Ротация ключа | Ключи обновлены. | ERP отвечает | версия 0.1.0 · 54 мс"
+    },
+    {
+      "desc": "после ротации «Проверить связь» зелёное (шина и сопряжение живы)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "SMTP: настройки сохранены, пароль показан маской",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "SMTP · «Проверить связь» на недоступный сервер",
+      "ok": null,
+      "detail": "Карточка | Почта | Состояние | Настроена | Сервер | smtp.invalid.example:587 | Шифрование | STARTTLS | Адрес отправителя | noreply@demo.example | Имя отправителя | RailTech Демо | Логин | demo-user | Пароль SMTP | •••• -Aa1 | задан, последние символы -Aa1 | Проверить связь | Тестовое письмо | Почтовый сервер не отвечает. | Настроить SMTP | Журнал отправок | Показать | Все письма | ✅ Восстановлено: Почтовый релей (SMTP) | Ошибка | universal.demo@demo.example · 27.10.2026 10:50 | Причина: unavailable: gaierror | ✅ Восстановлено: Почтовый релей (SMTP) | Ошибка | admin.demo@demo.example · 27.10.2026 10:50 | Причина: unavailable: gaierror | ⚠️ Сбой: Почтовый релей (SMTP) | Ошибка | universal.demo"
+    },
+    {
+      "desc": "SMTP · «Тестовое письмо» на недоступный сервер",
+      "ok": null,
+      "detail": "lable: gaierror | ⚠️ Сбой: Почтовый релей (SMTP) | Ошибка | universal.demo@demo.example · 27.10.2026 10:49 | Причина: unavailable: gaierror | ⚠️ Сбой: Почтовый релей (SMTP) | Ошибка | admin.demo@demo.example · 27.10.2026 10:49 | Причина: unavailable: gaierror | Приглашение в CRM RailTech | Ошибка | mailtest2.demo@demo.example · 27.10.2026 10:49 | Причина: unavailable: gaierror | Проверка коннектора «Почта» CRM | Ошибка | admin.demo@demo.example · 27.10.2026 10:48 | Причина: unavailable: gaierror"
+    },
+    {
+      "desc": "mail-smtp-after-test @1440: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=1440, innerWidth=1440"
+    },
+    {
+      "desc": "mail-smtp-after-test @1440: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "mail-smtp-after-test @390: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=390, innerWidth=390"
+    },
+    {
+      "desc": "mail-smtp-after-test @390: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "приглашение по почте при недоступном SMTP — понятная ошибка",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "текст ошибки приглашения (SMTP настроен, сервер недоступен)",
+      "ok": null,
+      "detail": "Доступ в ERP ещё выдаётся."
+    },
+    {
+      "desc": "страница не вернула 5xx (кроме честного 502 «сервер почты не отвечает»)",
+      "ok": true,
+      "detail": "502 POST /api/v1/admin/integrations/smtp/check"
+    }
+  ],
+  "screens": [
+    {
+      "name": "erp-rotate-form",
+      "width": 1440,
+      "file": "s2tail-erp-rotate-form-1440.png"
+    },
+    {
+      "name": "mail-smtp-saved",
+      "width": 1440,
+      "file": "s2tail-mail-smtp-saved-1440.png"
+    },
+    {
+      "name": "mail-smtp-check-fails",
+      "width": 1440,
+      "file": "s2tail-mail-smtp-check-fails-1440.png"
+    },
+    {
+      "name": "mail-smtp-after-test",
+      "width": 1440,
+      "file": "s2tail-mail-smtp-after-test-1440.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "mail-smtp-after-test",
+      "width": 390,
+      "file": "s2tail-mail-smtp-after-test-390.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "invite-mail-smtp-down",
+      "width": 1440,
+      "file": "s2tail-invite-mail-smtp-down-1440.png"
+    }
+  ]
+}

@@ -1,0 +1,125 @@
+{
+  "rows": [
+    {
+      "desc": "у Менеджера в рейле нет «Admin»",
+      "ok": true,
+      "detail": "Dashboard, CRM, EDS, ERP, Chats"
+    },
+    {
+      "desc": "прямой URL /admin/org -> экран «Нет доступа»",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "прямой URL /admin/roles -> экран «Нет доступа»",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "прямой URL /admin/integrations -> экран «Нет доступа»",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "прямой URL /admin/company -> экран «Нет доступа»",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "прямой URL /admin/bot -> экран «Нет доступа»",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "прямой URL /admin/audit -> экран «Нет доступа»",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "прямой URL /admin/bus -> экран «Нет доступа»",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "прямой URL /admin/setup -> экран «Нет доступа»",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "no-access-screen @1440: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=1440, innerWidth=1440"
+    },
+    {
+      "desc": "no-access-screen @1440: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "no-access-screen @390: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=390, innerWidth=390"
+    },
+    {
+      "desc": "no-access-screen @390: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "BFF GET /api/v1/admin/integrations от Менеджера -> 403",
+      "ok": true,
+      "detail": "HTTP 403"
+    },
+    {
+      "desc": "BFF GET /api/v1/admin/audit от Менеджера -> 403",
+      "ok": true,
+      "detail": "HTTP 403"
+    },
+    {
+      "desc": "BFF GET /api/v1/admin/bus от Менеджера -> 403",
+      "ok": true,
+      "detail": "HTTP 403"
+    },
+    {
+      "desc": "BFF GET /api/v1/admin/company от Менеджера -> 403",
+      "ok": true,
+      "detail": "HTTP 403"
+    },
+    {
+      "desc": "BFF POST /api/v1/admin/integrations/erp/rotate от Менеджера -> 403",
+      "ok": true,
+      "detail": "HTTP 403"
+    },
+    {
+      "desc": "в меню нет ссылок на /admin",
+      "ok": true,
+      "detail": "0"
+    },
+    {
+      "desc": "ошибки консоли / 5xx",
+      "ok": null,
+      "detail": "Failed to load resource: the server responded with a status of 401 (Unauthorized) | Failed to load resource: the server responded with a status of 403 (Forbidden) | Failed to load resource: the server responded with a status of 403 (Forbidden) | Failed to load resource: the server responded with a status of 403 (Forbidden) | Failed to load resource: the server responded with a status of 403 (Forbidden) | Failed to load resource: the server responded with a status of 403 (Forbidden) ;; "
+    }
+  ],
+  "screens": [
+    {
+      "name": "no-access",
+      "width": 1440,
+      "file": "s8-no-access-1440.png"
+    },
+    {
+      "name": "no-access-screen",
+      "width": 1440,
+      "file": "s8-no-access-screen-1440.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "no-access-screen",
+      "width": 390,
+      "file": "s8-no-access-screen-390.png",
+      "noHScroll": true,
+      "axe": []
+    }
+  ]
+}

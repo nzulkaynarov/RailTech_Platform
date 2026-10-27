@@ -22,7 +22,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.config import Settings
-from app.domain.errors import ConflictError, Reason
+from app.domain.errors import ConflictError, MailTemplateMissingError, Reason
 from app.integrations.smtp import SmtpProbeError, SmtpResolution, SmtpTransport, resolve_smtp
 from app.models.email import EMAIL_STATUSES, EmailLog
 from app.security.secrets_store import SecretCipher, SecretsKeyError, SecretsStore
@@ -114,7 +114,12 @@ class MailService:
 
         Без коннектора: строка `skipped_no_smtp` и 409 `smtp_not_configured`.
         """
-        rendered = mail_templates.render(template, lang, **context)
+        try:
+            rendered = mail_templates.render(template, lang, **context)
+        except mail_templates.TemplateMissingError as exc:
+            # Ошибка развёртывания (нет каталога шаблонов): понятный ответ API, детали — в лог.
+            logger.error("mail_template_missing", template=template, lang=lang, error=str(exc))
+            raise MailTemplateMissingError from exc
         row = EmailLog(
             to_email=to.strip().lower(),
             subject=rendered.subject,

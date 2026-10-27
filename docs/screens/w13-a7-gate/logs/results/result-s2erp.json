@@ -1,0 +1,90 @@
+{
+  "rows": [
+    {
+      "desc": "форма сопряжения с блоком «Что произойдёт»",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "неверный пароль администратора — понятная ошибка, не 500",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "сопряжение выполнено (без кода), ключи в маске",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "карточка ERP после сопряжения",
+      "ok": null,
+      "detail": "Карточка | ERP | Состояние | Сопряжена | Адрес | http://erp-backend:8000 | Токен CRM → ERP | •••• 1UYN | задан, последние символы 1UYN | Секрет событий | •••• vi8p | задан, последние символы vi8p | Ключи обновлены | 27.10.2026 09:20 | Проверить связь | Подключить заново | Ротация ключа | Сопряжение выполнено. | ERP отвечает | версия 0.1.0 · 171 мс"
+    },
+    {
+      "desc": "erp-paired @1440: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=1440, innerWidth=1440"
+    },
+    {
+      "desc": "erp-paired @1440: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "erp-paired @390: без горизонтальной прокрутки",
+      "ok": true,
+      "detail": "scrollWidth=390, innerWidth=390"
+    },
+    {
+      "desc": "erp-paired @390: axe без нарушений",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "«Проверить связь»: ERP отвечает",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "desc": "плитка ERP: статус «Работает»",
+      "ok": false,
+      "detail": "locator.waitFor: Timeout 15000ms exceeded. / Call log: /   - waiting for locator('article[data-card=\"erp\"]').getByText('Работает', { exact: true }) to be visible"
+    },
+    {
+      "desc": "ошибки консоли / ответы 5xx",
+      "ok": null,
+      "detail": "Failed to load resource: the server responded with a status of 401 (Unauthorized) | Failed to load resource: the server responded with a status of 422 (Unprocessable Entity) "
+    }
+  ],
+  "screens": [
+    {
+      "name": "erp-before",
+      "width": 1440,
+      "file": "s2erp-erp-before-1440.png"
+    },
+    {
+      "name": "erp-pair-wrong-password",
+      "width": 1440,
+      "file": "s2erp-erp-pair-wrong-password-1440.png"
+    },
+    {
+      "name": "erp-paired",
+      "width": 1440,
+      "file": "s2erp-erp-paired-1440.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "erp-paired",
+      "width": 390,
+      "file": "s2erp-erp-paired-390.png",
+      "noHScroll": true,
+      "axe": []
+    },
+    {
+      "name": "FAIL-10",
+      "width": 1440,
+      "file": "s2erp-FAIL-10-1440.png"
+    }
+  ]
+}
