@@ -229,6 +229,7 @@ class PortalInviteService:
         else:
             sent, error = await self._ask_erp(client_id, channel, contact)
         async with self._sessions() as session, session.begin():
+            await _lock_client(session, client_id)
             notice = _notice(client_id, contact, sent, channel, error, who.user_id)
             await _adopt_orphan(session, notice)
             session.add(notice)
@@ -288,6 +289,7 @@ class PortalInviteService:
         """
         cutoff = datetime.now(UTC) - ORPHAN_WINDOW
         async with self._sessions() as session, session.begin():
+            await _lock_client(session, client_id)
             notice = await session.scalar(
                 select(ClientNotice)
                 .where(
@@ -306,6 +308,13 @@ class PortalInviteService:
                 notice.detail = {**notice.detail, "orphan": True}
                 session.add(notice)
             _apply_telegram_result(notice, error)
+
+
+async def _lock_client(session: AsyncSession, client_id: int) -> None:
+    """Блокировка клиента — та же, что у `ErpHandoffService._complete`: запись попытки и итог бота
+    идут по очереди (порядок везде «клиент → строки»), иначе при READ COMMITTED сирота и ожидающая
+    попытка не увидят друг друга."""
+    await session.get(Client, client_id, with_for_update=True)
 
 
 def _apply_telegram_result(notice: ClientNotice, error: str | None) -> None:
@@ -339,7 +348,7 @@ async def _adopt_orphan(session: AsyncSession, notice: ClientNotice) -> None:
         .where(*conditions)
         .order_by(ClientNotice.id.desc())
         .limit(1)
-        .with_for_update()
+        .with_for_update(skip_locked=True)
     )
     if orphan is None:
         return

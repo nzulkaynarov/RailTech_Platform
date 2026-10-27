@@ -5,6 +5,7 @@
 молчание в логе.
 """
 
+import asyncio
 from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -25,9 +26,10 @@ from app.main import create_app
 from app.models.clients import Client, ClientContact
 from app.models.leads import Lead, TelegramIdentity
 from app.models.notices import ClientNotice
+from app.security.principal import Principal
 from app.services.erp_handoff import ErpHandoffService
 from app.services.erp_invite_delivery import InviteDelivery
-from app.services.portal_invites import PortalInviteService
+from app.services.portal_invites import PortalInviteService, record_handoff
 from app.services.settings import SettingsService
 from tests.bus_events import example_envelope
 from tests.integration.crm_helpers import login, make_user
@@ -651,3 +653,56 @@ async def test_a_stale_pending_invite_is_not_resolved_by_a_new_event(
 
     rows = await notices(sessions)
     assert [r.detail["telegram"] for r in rows] == ["pending", "sent"]
+
+
+async def test_bot_result_waits_for_the_open_handoff_transaction_and_is_not_split(
+    sessions: async_sessionmaker[AsyncSession], live_settings: Settings
+) -> None:
+    """Событие приходит, пока `_complete` держит клиента: итог ждёт блокировку, а не пишет сироту
+    мимо незакоммиченной попытки (READ COMMITTED не видит чужую вставку)."""
+    ids = await seed(sessions, email=None)
+    service = PortalInviteService(sessions, FakeErp())
+    result = HandoffResult(7001, None, ["telegram"], CABINET, invite_error=None)
+
+    async def complete() -> None:
+        async with sessions() as session, session.begin():
+            client = await session.get(Client, ids[0], with_for_update=True)
+            assert client is not None
+            await asyncio.sleep(0.6)  # окно, в котором приходит событие бота
+            await record_handoff(session, client, result)
+
+    async def event() -> None:
+        await asyncio.sleep(0.2)
+        await service.resolve_telegram(ids[0], ids[2], None)
+
+    await asyncio.gather(complete(), event())
+
+    [row] = await notices(sessions)
+    assert (row.status, row.detail["telegram"]) == ("sent", "sent")
+    assert "orphan" not in row.detail
+
+
+async def test_resend_and_bot_result_are_serialized_by_the_client_lock(
+    sessions: async_sessionmaker[AsyncSession], live_settings: Settings
+) -> None:
+    ids = await seed(sessions, in_erp=True)
+    erp = FakeErp(sent_via=["email"])
+    await hand_off(sessions, erp, ids)
+    erp.invite = InviteResult(["telegram"], None)
+    service = PortalInviteService(sessions, erp)
+    manager_account, _ = await make_user(sessions, "ser@railtech.uz", ["manager"])
+    who = Principal(manager_account.id, "Менеджер", ("manager",))
+
+    async def resend() -> None:
+        await service.resend(who, ids[0], "telegram", None)
+
+    async def event() -> None:
+        await asyncio.sleep(0.05)
+        await service.resolve_telegram(ids[0], ids[2], None)
+
+    await asyncio.gather(resend(), event())
+
+    rows = await notices(sessions)
+    assert len(rows) == 2
+    assert all(r.status == "sent" for r in rows)
+    assert all("orphan" not in r.detail for r in rows)

@@ -91,7 +91,7 @@ class ClientNoticeService:
         mail: MailService,
         bot_provider: BotProvider,
         bot_username: BotUsername,
-        form_key: bytes,
+        link_key: bytes,
         config: Settings,
     ) -> None:
         self._sessions = sessions
@@ -99,7 +99,7 @@ class ClientNoticeService:
         self._mail = mail
         self._bot_provider = bot_provider
         self._bot_username = bot_username
-        self._key = form_key
+        self._key = link_key
         self._config = config
 
     # --- планирование: в транзакции приёма запроса -------------------------------------------
