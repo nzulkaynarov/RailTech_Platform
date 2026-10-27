@@ -150,21 +150,21 @@ function cardsFor(preset: PresetCode): QueueCard[] {
           key: "letters_without_resolution",
           label: "Входящие без резолюции",
           count: 1,
-          hint: "EDS · Входящие",
+          hint: "Документы · Входящие письма",
           path: "/eds/inbox",
         },
         {
           key: "quotes_to_approve",
           label: "КП на одобрение",
           count: 1,
-          hint: "EDS · Черновик",
+          hint: "Документы · КП на одобрение",
           path: "/eds/drafts",
         },
         {
           key: "memos_to_approve",
           label: "Служебные записки",
           count: 1,
-          hint: "EDS · На согласовании",
+          hint: "Документы · На согласовании",
           path: "/eds/approvals",
         },
         PROJECTS_CARD,
@@ -175,22 +175,22 @@ function cardsFor(preset: PresetCode): QueueCard[] {
           key: "leads_without_answer",
           label: "Лиды без ответа",
           count: 1,
-          hint: "CRM · Все сообщения",
+          hint: "Клиенты · Ждут ответа",
           path: "/crm/messages",
         },
         {
           key: "leads_to_take",
           label: "Лиды без менеджера",
           count: 1,
-          hint: "CRM · Все сообщения",
+          hint: "Клиенты · Ждут ответа",
           path: "/crm/messages",
         },
-        { ...PROJECTS_CARD, hint: "EDS · Все проекты" },
+        { ...PROJECTS_CARD, hint: "Документы · Проекты: договоры и акты" },
       ];
     case "ADMIN":
       return [];
     default:
-      return [{ ...PROJECTS_CARD, hint: "EDS · Все проекты" }];
+      return [{ ...PROJECTS_CARD, hint: "Документы · Проекты: договоры и акты" }];
   }
 }
 
@@ -371,7 +371,7 @@ export function notificationSeed(preset: PresetCode | undefined): SeedNotificati
           5,
           "system",
           "Почта: DKIM не настроен — письма клиентам могут попадать в спам",
-          "Admin · Внешние интеграции",
+          "Настройки · Подключения",
           20 * HOUR,
           true,
         ),
@@ -415,7 +415,7 @@ export function notificationSeed(preset: PresetCode | undefined): SeedNotificati
           31,
           "system",
           "Почта: DKIM не настроен — письма клиентам могут попадать в спам",
-          "Admin · Внешние интеграции",
+          "Настройки · Подключения",
           20 * HOUR,
           false,
         ),

@@ -1,0 +1,282 @@
+/* EDS · Входящие письма и резолюция (D1-3). Значения — макет v3 и docs/architecture/platform-frontend.md §5: рамка #f0f0f0,
+   радиус 8, без теней и градиентов; второстепенный текст #595959 и #6e6e6e (контраст ≥ 4.5:1 на белом). */
+.pf-letters {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.pf-letters-title {
+  margin: 0;
+  font-size: 14px;
+  line-height: 22px;
+  font-weight: 600;
+}
+.pf-letters-steps {
+  padding: 16px 24px;
+  overflow-x: auto;
+}
+.pf-letters-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 16px;
+  align-items: start;
+}
+.pf-letters-main,
+.pf-letters-side {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.pf-letters-summary,
+.pf-letters-note {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.pf-letters-note {
+  margin-top: 4px;
+  color: #595959;
+}
+.pf-letters-journal {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.pf-letters-lock {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.pf-letters-pager {
+  padding: 12px 24px;
+}
+
+/* Список: таблица на десктопе, карточки на телефоне */
+.pf-letters-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.pf-letters-table th,
+.pf-letters-table td {
+  padding: 10px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  text-align: left;
+  vertical-align: top;
+}
+.pf-letters-table th {
+  background: #fafafa;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.pf-letters-table tbody tr {
+  cursor: pointer;
+}
+.pf-letters-table tr[data-selected="true"] td {
+  background: #e6f4ff;
+}
+.pf-letters-number {
+  color: #0958d9;
+  white-space: nowrap;
+}
+.pf-letters-cards {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pf-letters-cards > li {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+.pf-letters-cards > li[data-selected="true"] {
+  background: #e6f4ff;
+}
+.pf-letters-card-head,
+.pf-letters-card-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.pf-letters-card-subject {
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+}
+.pf-letters-cards p.pf-hint {
+  margin: 0;
+}
+
+/* Вложения */
+.pf-res-files {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pf-res-files li {
+  display: flex;
+  flex-direction: column;
+}
+.pf-res-file {
+  color: #0958d9;
+  overflow-wrap: anywhere;
+}
+.pf-res-assignees {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Боковое окно «Резолюция» */
+.pf-res-panel {
+  gap: 16px;
+}
+.pf-res-brief {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+.pf-res-brief-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.pf-res-subject {
+  margin: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.pf-res-subhead {
+  margin: 8px 0 0;
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: 600;
+}
+.pf-res-summary {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.pf-res-open {
+  color: #0958d9;
+}
+.pf-res {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.pf-res-fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.pf-res-fieldset > legend {
+  padding: 0;
+  margin-bottom: 4px;
+  font-size: 14px;
+  line-height: 22px;
+  font-weight: 600;
+}
+.pf-res-fieldset p {
+  margin: 0;
+}
+.pf-res-zone {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.pf-res-zone-name {
+  font-weight: 500;
+}
+.pf-res-pick {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-left: 24px;
+}
+.pf-res-select {
+  width: 100%;
+  min-height: 32px;
+  padding: 4px 8px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  background: #fff;
+  color: #1f1f1f;
+  font: inherit;
+}
+.pf-res-select[aria-invalid="true"] {
+  border-color: #cf1322;
+}
+.pf-res-error {
+  color: #cf1322;
+  font-size: 13px;
+  line-height: 20px;
+}
+.pf-res-note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid #ffe58f;
+  border-radius: 6px;
+  background: #fffbe6;
+  font-size: 13px;
+}
+.pf-res-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pf-res-actions p {
+  margin: 0;
+}
+.pf-res-secondary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.pf-res-close {
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  background: #fff;
+  color: #1f1f1f;
+  font: inherit;
+  cursor: pointer;
+}
+
+/* Телефон: лист на весь экран, кнопки решения закреплены внизу */
+.pf-res--sheet .pf-res-actions {
+  position: sticky;
+  bottom: -16px;
+  margin: 0 -16px -16px;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  background: #fff;
+  border-top: 1px solid #f0f0f0;
+}
+
+@media (max-width: 1199px) {
+  .pf-letters-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 767px) {
+  .pf-letters-steps {
+    padding: 12px 16px;
+  }
+}

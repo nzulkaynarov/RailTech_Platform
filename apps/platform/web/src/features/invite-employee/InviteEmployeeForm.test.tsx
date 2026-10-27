@@ -83,7 +83,7 @@ describe("InviteEmployeeForm: приглашение по почте", () => {
 
     expect(screen.getByText(/уйдёт письмо с временным паролем/)).toBeVisible();
     expect(
-      screen.getByText("Сотрудник увидит модули: Dashboard, CRM, EDS, Chats, Admin."),
+      screen.getByText("Сотрудник увидит модули: Главная, Клиенты, Документы, Чаты, Настройки."),
     ).toBeVisible();
     expect(screen.getByText(/появится в списке со статусом «Приглашён»/)).toBeVisible();
   });

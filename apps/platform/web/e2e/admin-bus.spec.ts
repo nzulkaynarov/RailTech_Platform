@@ -22,7 +22,9 @@ async function expectNoViolations(page: Page, context: string): Promise<void> {
 
 async function openJournal(page: Page, view?: string): Promise<void> {
   await spaGoto(page, view ? `/admin/bus?view=${view}` : "/admin/bus");
-  await expect(page.getByRole("heading", { level: 1, name: "Журнал интеграций" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "Обмен между системами" }),
+  ).toBeVisible();
 }
 
 function side(page: Page): Locator {
@@ -152,7 +154,7 @@ test.describe("Журнал интеграций: права", () => {
       await loginAndWait(page, email);
       await page.goto("/admin/bus");
       await expect(page.getByRole("heading", { level: 1, name: "Нет доступа" })).toBeVisible();
-      await expect(page.getByRole("link", { name: "Журнал интеграций" })).toHaveCount(0);
+      await expect(page.getByRole("link", { name: "Обмен между системами" })).toHaveCount(0);
       const status = await page.evaluate<number>(`(async () => {
         const response = await fetch("/api/v1/admin/bus");
         return response.status;

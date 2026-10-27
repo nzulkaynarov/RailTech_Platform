@@ -197,7 +197,7 @@
   },
   "loadError": {
     "title": "Jurnalni yuklab bo'lmadi",
-    "text": "Jurnal CRM, ERP va EDS dan yig'iladi. So'rovni takrorlang; xato qolsa, Admin · Tashqi integratsiyalarni tekshiring.",
+    "text": "Jurnal CRM, ERP va EDS dan yig'iladi. So'rovni takrorlang; xato qolsa, Sozlamalar · Ulanishlarni tekshiring.",
     "retry": "Takrorlash"
   },
   "tableScroll": "{{name}}: jadval gorizontal aylantiriladi",

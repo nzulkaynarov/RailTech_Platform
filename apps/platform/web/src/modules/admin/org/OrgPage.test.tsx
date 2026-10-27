@@ -56,7 +56,7 @@ describe("Admin · Оргструктура (экран целиком на MSW)
     signIn("admin@demo.example");
     renderAt("/admin/org");
 
-    expect(await screen.findByRole("heading", { level: 1, name: "Оргструктура" })).toBeVisible();
+    expect(await screen.findByRole("heading", { level: 1, name: "Сотрудники" })).toBeVisible();
     expect(
       await screen.findByRole("link", { name: "Открыть карточку: Демо Менеджеров" }),
     ).toBeVisible();

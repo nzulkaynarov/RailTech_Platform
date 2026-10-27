@@ -6,6 +6,7 @@ import { crm } from "./crm/module";
 import { dashboard } from "./dashboard/module";
 import { eds } from "./eds/module";
 import { erp } from "./erp/module";
+import { isDocNumber } from "../shared/lib/docNumber";
 import type { ModuleConfig, SectionConfig } from "./types";
 
 /** Шесть модулей в порядке рейла (SPEC-v3 §6.1). Конфигурация без кода страниц: страницы модулей грузятся лениво. */
@@ -14,6 +15,14 @@ export const MODULES: readonly ModuleConfig[] = [dashboard, crm, eds, erp, chats
 /** Модуль по коду; неизвестный код из `Me.modules` (новый модуль на BFF, старая сборка SPA) — undefined, а не ошибка. */
 export function findModule(code: string): ModuleConfig | undefined {
   return MODULES.find((m) => m.code === code);
+}
+
+/**
+ * Имя модуля для людей (`modules:<code>.name`: «Клиенты», «Расчёт» — UX-оценка 2026-10-27 §6.1) в рейле, крошках, поиске
+ * и списках модулей роли. Неизвестный код — как есть.
+ */
+export function moduleName(t: (key: string) => string, code: string): string {
+  return findModule(code) ? t(`modules:${code}.name`) : code;
 }
 
 export interface SectionMatch {
@@ -43,7 +52,7 @@ function queryMatches(want: URLSearchParams, have: URLSearchParams): boolean {
 }
 
 /**
- * Раздел по адресу. Сначала пункты с `?tab=` в пути (Chats · Внутренний), затем точные пути списков,
+ * Раздел по адресу. Сначала пункты с query в пути (Чаты · Команда, `?scope=internal`), затем точные пути списков,
  * затем карточки объектов (`/chats/contacts` раньше `/chats/:id`). Нет совпадения — undefined (404 внутри каркаса).
  */
 export function matchSection(pathname: string, search = ""): SectionMatch | undefined {
@@ -65,6 +74,14 @@ export function matchSection(pathname: string, search = ""): SectionMatch | unde
       const id = hit.params["id"] ?? hit.params["userId"];
       return id === undefined ? { module, section } : { module, section, objectId: decoded(id) };
     }
+  }
+  // Номер документа со «/» без кодирования (`/eds/inbox/ВХ-104/26`): react-router видит два сегмента, но это одна карточка.
+  for (const { module, section } of all) {
+    if (!section.detail) continue;
+    const prefix = section.detail.replace(/:[A-Za-z]+$/, "");
+    if (prefix === section.detail || !pathname.startsWith(prefix)) continue;
+    const rest = decoded(pathname.slice(prefix.length));
+    if (rest.includes("/") && isDocNumber(rest)) return { module, section, objectId: rest };
   }
   return undefined;
 }

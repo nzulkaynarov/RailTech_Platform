@@ -12,6 +12,7 @@ import { adminCompanyHandlers } from "./adminCompany";
 import { adminRolesHandlers } from "./adminRoles";
 import { botKbHandlers } from "./botKb";
 import { crmMessagesHandlers } from "./crmMessages";
+import { edsLettersHandlers } from "./edsLetters";
 import { adminUsersHandlers } from "./adminUsers";
 import { eventStreamHandlers } from "./eventStream";
 import { isEmployeeDisabled } from "./fixtures/employees";
@@ -145,6 +146,7 @@ export const handlers = [
   ...setupHandlers,
   ...botKbHandlers,
   ...crmMessagesHandlers,
+  ...edsLettersHandlers,
 
   getGetHealthMockHandler({
     status: "ok",

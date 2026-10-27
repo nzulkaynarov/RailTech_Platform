@@ -34,7 +34,7 @@ async function expectNoViolations(page: Page, context: string): Promise<void> {
 
 async function openIntegrations(page: Page, card?: string): Promise<void> {
   await spaGoto(page, card ? `/admin/integrations?card=${card}&panel=open` : "/admin/integrations");
-  await expect(page.getByRole("heading", { level: 1, name: "Внешние интеграции" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Подключения" })).toBeVisible();
   await expect(page.getByRole("heading", { level: 2, name: "Сервисы" })).toBeVisible();
 }
 
@@ -325,7 +325,7 @@ test.describe("Внешние интеграции: директор и прав
     await loginAndWait(page, "manager@demo.example");
     await page.goto("/admin/integrations");
     await expect(page.getByRole("heading", { level: 1, name: "Нет доступа" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Admin" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Настройки" })).toHaveCount(0);
   });
 });
 

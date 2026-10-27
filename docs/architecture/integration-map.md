@@ -60,8 +60,8 @@
 
 | Экран / действие | BFF | ERP (если не указано) | Статус |
 |---|---|---|---|
-| Входящие, карточка письма | `GET /letters`, `GET /letters/{ВХ}` | сервис EDS | Δ EDS-01 |
-| **Утвердить резолюцию** / Вернуть менеджеру / Отклонить | `POST /requests/{ЗВ}/resolution {text, assignees[], due, min_margin}`; `/return`; `/reject {reason}` | сервис EDS; отклонение — `POST /crm/deals/{id}/change-stage/` в `CLOSED_LOST` | Δ EDS-01 |
+| Входящие, карточка письма | `GET /eds/letters`, `GET /eds/letters/{id или ВХ}`, вложение `GET /eds/letter-files/{id}` (BFF 0.16.0) | сервис EDS (`GET /letters`, `GET /letters/{id}`, по номеру — `GET /registry?number=`, файлы `GET /files/{id}`); шаг и название заявки — ERP `GET /crm/deals/{erp_deal_id}/` по ссылке письма, ERP не ответил — `sources.erp = unavailable` | ✓ **D1-3 (волна 16)** |
+| **Утвердить резолюцию** / Вернуть менеджеру / Отклонить | `POST /eds/letters/{id}/resolution {text, assignees[{id, zone}], due, min_margin_pct}`; `/return {comment}`; `/reject {reason}`; кандидаты — `GET /eds/resolution/assignees` (по разделам каталога, не по кодам ролей) | сервис EDS (`POST /letters/{id}/resolution|return|reject`); ERP узнаёт о решении по шине (`letter.resolved/rejected` → задание расчёта, `CLOSED_LOST`); BFF в ERP за решением не ходит | ✓ **D1-3 (волна 16)**; список кандидатов — разрыв, см. Q-D1-3-1 |
 | Черновик КП, карточка | `GET /quotes/{КП}` (себестоимость и маржа — только DIRECTOR, SUPPLY) | `GET /crm/quotes/{id}/`, `/approval-preview/`, `/download-pdf/` | ✓ |
 | **Одобрить КП → Исходящие** (каналы) | `POST /quotes/{КП}/approve {channels[]}` | сейчас два шага: `POST /crm/quotes/{id}/approval-act/` + `POST /crm/quotes/{id}/send-to-client/`; нужно атомарно с ИСХ-номером и выбором каналов | Δ ERP-11 |
 | Вернуть на доработку | `POST /quotes/{КП}/return {comment}` | `POST /crm/quotes/{id}/approval-act/` (reject) → `DRAFT`, новая версия | ✓ |

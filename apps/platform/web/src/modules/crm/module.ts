@@ -2,8 +2,6 @@ import type { ModuleConfig } from "../types";
 
 export const crm: ModuleConfig = {
   code: "crm",
-  order: 2,
-  name: "CRM",
   action: { access: "crm.clients" },
   sections: [
     {

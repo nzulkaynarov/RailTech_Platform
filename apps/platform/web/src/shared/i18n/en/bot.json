@@ -80,7 +80,7 @@
     "stay": "Stay"
   },
   "qualificationHint": "A lead becomes \"Qualified\" when all required facts are known and at least the set number of additional ones. The AI extracts the facts, the system decides.",
-  "channelMoved": "The team channel is chosen in \"External integrations\" → Telegram; here — whom to mention and how often to write to a manager.",
+  "channelMoved": "The team channel is chosen in \"Connections\" → Telegram; here — whom to mention and how often to write to a manager.",
   "openIntegrations": "Open Telegram",
   "weekdays": {
     "mon": "Mon",
@@ -195,8 +195,8 @@
     },
     "sections": {
       "crm": {
-        "leads": "CRM · All leads",
-        "clients": "CRM · All customers"
+        "leads": "Clients · Leads",
+        "clients": "Clients · Clients"
       }
     }
   },
