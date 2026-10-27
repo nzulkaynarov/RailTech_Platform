@@ -1178,7 +1178,7 @@ BFF (`SetupChecklist`) при этом не меняется.
 
 **Что сделано.** `SectionStubPage` вместо «пока нет»: где работа делается сейчас (кнопка «Открыть в старой CRM / старом ERP» в
 новую вкладку) или кто делает её вне интерфейса, «Когда появится» словами; карта — `apps/platform/web/src/modules/bridge.ts`;
-BFF 0.18.0: `GET /bridge`, `POST /bridge/erp-sso` ([`platform-bff.md`](architecture/platform-bff.md) §3.2).
+BFF 0.19.0: `GET /bridge`, `POST /bridge/erp-sso` ([`platform-bff.md`](architecture/platform-bff.md) §3.2).
 
 1. **Старый ERP после SSO открывает главную, а не нужный раздел.** `SsoExchangePage` старого ERP после обмена делает
    `location.replace('/')` и теряет хэш-маршрут. Фронты заморожены (CONVENTIONS §2 п. 12), поэтому под кнопкой написан путь в меню

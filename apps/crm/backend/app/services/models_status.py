@@ -21,6 +21,7 @@ from app.integrations.llm_usage import COST_HEADER, UsageEvent, UsageSink, gatew
 from app.models.system import SystemAlert
 from app.schemas.settings import ModelKeyMask
 from app.schemas.spend import ModelStatus, ModelTestResult
+from app.security.log_mask import mask_secrets
 
 ALIASES: Final = ("dialog-model", "qualifier-model", "fallback-model", "embed-model", "judge-model")
 
@@ -44,7 +45,11 @@ def statuses(
                 provider=entry.provider if entry else None,
                 model=entry.model if entry else None,
                 health=health,
-                health_detail=alert.detail if alert is not None and alert.active else None,
+                health_detail=(
+                    mask_secrets(alert.detail)
+                    if alert is not None and alert.active and alert.detail
+                    else None
+                ),
                 checked_at=alert.updated_at if alert is not None else None,
                 today_usd=round(today.get(alias, 0.0), 4),
                 key_source=mask.source if mask else None,
@@ -60,7 +65,9 @@ async def probe(client: AsyncOpenAI, alias: str, usage: UsageSink | None) -> Mod
     try:
         cost = await ping(client, alias, usage)
     except APIError as exc:
-        detail = f"{getattr(exc, 'status_code', '') or type(exc).__name__}: {exc.message}"[:200]
+        detail = mask_secrets(
+            f"{getattr(exc, 'status_code', '') or type(exc).__name__}: {exc.message}"
+        )[:200]
         return ModelTestResult(
             alias=alias, ok=False, detail=detail, latency_ms=_ms(started), cost_usd=None
         )

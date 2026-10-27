@@ -70,8 +70,8 @@ test.describe("Внешние интеграции: администратор",
     const attention = page
       .getByRole("heading", { level: 2, name: "Требует внимания" })
       .locator("xpath=ancestor::section[1]");
-    await expect(attention.getByText("OpenAI")).toBeVisible();
-    await expect(attention.getByText("Почтовый релей (SMTP)")).toBeVisible();
+    await expect(attention.getByText(/Ключ OpenAI отклонён/)).toBeVisible();
+    await expect(attention.getByText("В очереди 3 письма дольше 15 минут")).toBeVisible();
     await expect(tile(page, "erp").getByText("Работает", { exact: true })).toBeVisible();
     await expect(tile(page, "mail").getByText("Внимание", { exact: true })).toBeVisible();
     await expect(tile(page, "models").getByText("Сбой", { exact: true })).toBeVisible();
@@ -79,7 +79,7 @@ test.describe("Внешние интеграции: администратор",
 
     await tile(page, "mail").getByRole("button", { name: "Проверить: Почта" }).click();
     await expect(tile(page, "mail").getByText("Проверено: Работает")).toBeVisible();
-    await expect(attention.getByText("Почтовый релей (SMTP)")).toHaveCount(0);
+    await expect(attention.getByText("В очереди 3 письма дольше 15 минут")).toHaveCount(0);
     await settledScreenshot(page, "overview-after-check");
   });
 
@@ -223,7 +223,7 @@ test.describe("Внешние интеграции: администратор",
     await loginAndWait(page, "admin@demo.example");
     await openIntegrations(page, "models");
     const panel = side(page);
-    await expect(panel.getByText("Поиск по базе знаний")).toBeVisible();
+    await expect(panel.getByText("Поиск по базе знаний", { exact: true })).toBeVisible();
     await settledScreenshot(page, "models-panel");
 
     await panel.getByRole("button", { name: "Проверить модель: Поиск по базе знаний" }).click();
@@ -378,6 +378,67 @@ test.describe("Внешние интеграции: axe и снимки", () => 
       await openIntegrations(page, "services");
       await side(page).getByRole("button", { name: "Выключить сервис: Telegram Bot API" }).click();
       await expectNoViolations(page, `services form ${String(width)}`);
+    });
+
+    test(`здоровье интеграций на ${String(width)}: группа, подробности, готовый текст, ключ, состояния (W15-H3)`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
+      await loginAndWait(page, "admin@demo.example");
+      await openIntegrations(page);
+      const attention = page
+        .getByRole("heading", { level: 2, name: "Требует внимания" })
+        .locator("xpath=ancestor::section[1]");
+      const row = attention.locator("li[data-group]").filter({ hasText: "Ключ OpenAI отклонён" });
+
+      // одна причина — одна строка: состояние, что не работает, «с …», «Кто исправляет», одно главное действие
+      await expect(row).toHaveCount(1);
+      await expect(row.getByText("Сломано", { exact: true })).toBeVisible();
+      await expect(row).toContainText(
+        "не работают: поиск по базе знаний, проверка качества ответов",
+      );
+      await expect(row).toContainText("Кто исправляет:");
+      await expect(row).toContainText("ключ и оплата — у владельца компании");
+      await expect(row.getByRole("button", { name: /Ввести новый ключ/ })).toBeVisible();
+      await expect(page.locator("body")).not.toContainText("invalid_api_key");
+      await expectNoViolations(page, `h3 group ${String(width)}`);
+      await tallScreenshot(page, "h3-attention-group");
+
+      // сырой ответ — только под «Техническими подробностями» (свёрнуто)
+      await row.getByRole("button", { name: "Технические подробности" }).click();
+      await expect(row.getByText(/invalid_api_key/)).toBeVisible();
+      await expect(row.getByRole("button", { name: "Скопировать для поддержки" })).toBeVisible();
+      await row.getByRole("button", { name: /Написать владельцу/ }).click();
+      await expect(
+        row.getByRole("group", { name: "Готовый текст: владельцу компании" }),
+      ).toBeVisible();
+      await expectNoViolations(page, `h3 technical ${String(width)}`);
+      await tallScreenshot(page, "h3-technical-open");
+
+      // «Ввести новый ключ» — форма в самой строке, без ухода на другой экран
+      await row.getByRole("button", { name: /Ввести новый ключ/ }).click();
+      await expect(row.getByRole("form", { name: "Новый ключ OpenAI" })).toBeVisible();
+      await expect(page).toHaveURL(/\/admin\/integrations$/);
+      await expectNoViolations(page, `h3 key form ${String(width)}`);
+      await tallScreenshot(page, "h3-key-form");
+
+      // «Ожидаемо на стенде» — серым, «Не проверено — нажмите «Проверить»», «Выключено намеренно»
+      await openIntegrations(page, "services");
+      const panel = side(page);
+      await expect(panel.getByText("Ожидаемо на стенде")).toBeVisible();
+      await expect(panel.getByText("Не проверено — нажмите «Проверить»").first()).toBeVisible();
+      await expect(panel.getByText("Выключено намеренно").first()).toBeVisible();
+      await expect(attention.getByText(/Распознавание документов недоступно/)).toHaveCount(0);
+      await expectNoViolations(page, `h3 states ${String(width)}`);
+      // карточка «Внешние сервисы» целиком: высокое окно, снимок только боковой панели
+      const wide = page.viewportSize()?.width ?? 1440;
+      await page.setViewportSize({ width: wide, height: 3000 });
+      const dir = process.env["E2E_SCREENSHOT_DIR"];
+      if (dir) {
+        await page.waitForTimeout(500);
+        await panel.screenshot({ path: `${dir}/h3-states-${String(wide)}.png` });
+      }
+      await page.setViewportSize({ width: wide, height: wide === 390 ? 844 : 900 });
     });
 
     test(`директор на ${String(width)}: просмотр без нарушений axe`, async ({ page }) => {

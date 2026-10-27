@@ -1,4 +1,4 @@
-"""Модели моста в старые экраны: схемы `Bridge` и `BridgeErpSso` контракта BFF (0.18.0)."""
+"""Модели моста в старые экраны: схемы `Bridge` и `BridgeErpSso` контракта BFF (0.19.0)."""
 
 from pydantic import BaseModel, Field
 

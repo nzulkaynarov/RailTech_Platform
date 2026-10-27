@@ -32,6 +32,7 @@ from app.schemas_integrations import (
     BackupsStatus,
     BotProfile,
     BotProfileState,
+    CardKey,
     ErpCheck,
     ErpConnector,
     ErpPairIn,
@@ -44,6 +45,8 @@ from app.schemas_integrations import (
     MailQueued,
     MailStatus,
     PasswordConfirm,
+    ProviderKeyIn,
+    ProviderKeyResult,
     ServiceSwitchIn,
     SmtpCheck,
     SmtpConnector,
@@ -166,12 +169,28 @@ async def get_overview(authed: Reader) -> IntegrationsOverview:
     return build_overview(parts)
 
 
+def _group_card(group: crm.ServiceGroupOut, cards: dict[str, CardKey | None]) -> CardKey | None:
+    """Карточка исправления группы: ключ — «Модели», токен — «Telegram», иначе по её сервисам."""
+    action = group.action.value if group.action is not None else None
+    if action == "enter_key":
+        return "models"
+    if action == "enter_token":
+        return "telegram"
+    return next((card for key in group.service_keys if (card := cards.get(key))), None)
+
+
 def _services_list(out: crm.ExternalServicesOut) -> ExternalServiceList:
+    items = [_service(s) for s in out.services]
+    cards: dict[str, CardKey | None] = {s.key: s.fix_card for s in items}
     return ExternalServiceList.model_validate(
         {
             "checked_at": out.checked_at,
             "summary": out.summary.model_dump(mode="json"),
-            "items": [_service(s).model_dump(mode="json") for s in out.services],
+            "items": [s.model_dump(mode="json") for s in items],
+            "stand": out.stand,
+            "groups": [
+                {**g.model_dump(mode="json"), "fix_card": _group_card(g, cards)} for g in out.groups
+            ],
         }
     )
 
@@ -448,6 +467,26 @@ async def change_model(alias: Alias, body: AiModelChangeIn, authed: Admin) -> Ai
         probe=True,
     )
     return _to(AiModelChange, out)
+
+
+@router.put(
+    "/models/providers/{provider}/key",
+    response_model=ProviderKeyResult,
+    operation_id="changeProviderKey",
+)
+async def change_provider_key(
+    provider: Annotated[Literal["anthropic", "gemini", "openai"], Path()],
+    body: ProviderKeyIn,
+    authed: Admin,
+) -> ProviderKeyResult:
+    out = await _crm(authed).get_model(
+        crm.ProviderKeyResult,
+        "PUT",
+        f"{API}/models/providers/{provider}/key",
+        json={"api_key": secret(body.api_key), "password": secret(body.password)},
+        probe=True,
+    )
+    return _to(ProviderKeyResult, out)
 
 
 @router.post("/models/{alias}/reset", response_model=AiModelChange, operation_id="resetAiModel")

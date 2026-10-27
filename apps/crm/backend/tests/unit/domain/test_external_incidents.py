@@ -12,41 +12,31 @@ OPEN = OpenIncident(1, NOW - timedelta(minutes=5), None)
 
 
 @pytest.mark.parametrize(
-    ("open_incident", "status", "step"),
+    ("open_incident", "status", "kwargs", "step"),
     [
-        (None, "ok", "none"),
-        (None, "warn", "none"),
-        (None, "unknown", "none"),
-        (None, "off", "none"),
-        (None, "fail", "open"),
-        (OPEN, "fail", "update"),
-        (OPEN, "ok", "close"),
-        (OPEN, "warn", "close"),
-        (OPEN, "unknown", "none"),  # нет данных — инцидент не закрывается и не открывается заново
-        (OPEN, "off", "none"),
+        (None, "ok", {}, "none"),
+        (None, "warn", {}, "none"),
+        (None, "unknown", {}, "none"),
+        (None, "off", {}, "none"),
+        (None, "fail", {}, "open"),
+        (None, "fail", {"sustained": False}, "none"),  # короткий провал — дребезг, не инцидент
+        (OPEN, "fail", {"sustained": False}, "update"),
+        (OPEN, "ok", {}, "close"),
+        (OPEN, "ok", {"recovered": False}, "none"),  # ok короче 5 мин — инцидент ещё открыт
+        (OPEN, "warn", {}, "none"),
+        (
+            OPEN,
+            "unknown",
+            {},
+            "none",
+        ),  # нет данных — инцидент не закрывается и не открывается заново
+        (OPEN, "off", {}, "none"),
     ],
 )
-def test_transition(open_incident: OpenIncident | None, status: str, step: str) -> None:
-    assert inc.transition(open_incident, status) == step  # type: ignore[arg-type]
-
-
-@pytest.mark.parametrize(
-    ("last", "due"),
-    [
-        (None, True),
-        (NOW - timedelta(minutes=61), True),
-        (NOW - timedelta(minutes=60), True),
-        (NOW - timedelta(minutes=59), False),
-        (NOW - timedelta(minutes=1), False),
-    ],
-)
-def test_failure_alert_antispam(last: datetime | None, due: bool) -> None:
-    assert inc.failure_alert_due(last, NOW, timedelta(minutes=60)) is due
-
-
-def test_recovery_alert_only_if_failure_was_alerted() -> None:
-    assert inc.recovery_alert_due(NOW) is True
-    assert inc.recovery_alert_due(None) is False
+def test_transition(
+    open_incident: OpenIncident | None, status: str, kwargs: dict[str, bool], step: str
+) -> None:
+    assert inc.transition(open_incident, status, **kwargs) == step  # type: ignore[arg-type]
 
 
 @pytest.mark.parametrize(
@@ -62,22 +52,6 @@ def test_recovery_alert_only_if_failure_was_alerted() -> None:
 )
 def test_duration_text(delta: timedelta, text: str) -> None:
     assert inc.duration_text(delta) == text
-
-
-def test_alert_texts_have_what_to_do_and_link() -> None:
-    failure = inc.failure_alert(
-        "Telegram Bot API", "Нет связи", "ConnectError", "Проверьте сеть", "https://crm/x"
-    )
-    assert failure.subject == "⚠️ Сбой: Telegram Bot API"
-    assert failure.plain.splitlines()[1:] == [
-        "Нет связи",
-        "Ошибка: ConnectError",
-        "Что сделать: Проверьте сеть",
-        "Открыть: https://crm/x",
-    ]
-    recovery = inc.recovery_alert("Почтовый релей", timedelta(minutes=7), "https://crm/y")
-    assert recovery.subject == "✅ Восстановлено: Почтовый релей"
-    assert "Сбой длился 7 мин." in recovery.plain
 
 
 def test_count_and_uptime() -> None:
