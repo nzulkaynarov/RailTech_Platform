@@ -11,6 +11,7 @@ from typing import Final, Literal
 from urllib.parse import urlsplit
 
 from app.domain.alerts import QUEUE_LIMIT
+from app.domain.public_urls import is_local_url
 
 Status = Literal["ok", "warn", "fail", "unknown"]
 STALLED_MINUTES: Final = 15
@@ -238,12 +239,43 @@ def crm_url_problem(url: str) -> str | None:
     return None
 
 
-def crm_url(url: str, now: datetime) -> Component:
-    problem = crm_url_problem(url)
-    title = "Адрес CRM"
-    if problem is None:
-        return Component("crm_url", title, "ok", url, now)
-    return Component("crm_url", title, "warn", f"{problem} — «Настройки» → «Компания»", now)
+@dataclass(frozen=True, slots=True)
+class PlatformUrlFacts:
+    """Адрес Платформы из окружения (`PLATFORM_PUBLIC_URL` / `PLATFORM_DOMAIN`) и режим стенда."""
+
+    url: str | None
+    prod: bool
+
+
+_PLATFORM_HOSTING: Final = "задаётся при развёртывании (хостинг: PLATFORM_DOMAIN в .env сервера)"
+
+
+def platform_url_problem(facts: PlatformUrlFacts) -> str | None:
+    """Почему ссылка «Вход» в письмах сотрудникам не откроется; None — адрес годится."""
+    if not facts.url:
+        return f"Адрес Платформы не задан — приглашения по почте не уходят; {_PLATFORM_HOSTING}"
+    if facts.prod and is_local_url(facts.url):
+        return (
+            "Адрес Платформы указывает на localhost — ссылка «Вход» в письмах сотрудникам "
+            f"не откроется; {_PLATFORM_HOSTING}"
+        )
+    return None
+
+
+def crm_url(url: str, now: datetime, platform: PlatformUrlFacts | None = None) -> Component:
+    """Адреса для ссылок: CRM (Telegram, «Настройки» → «Компания») и Платформа (письма)."""
+    title = "Адреса для ссылок"
+    problems: list[str] = []
+    crm_problem = crm_url_problem(url)
+    if crm_problem is not None:
+        problems.append(f"{crm_problem} — укажите адрес CRM в «Настройки» → «Компания»")
+    platform_problem = platform_url_problem(platform) if platform is not None else None
+    if platform_problem is not None:
+        problems.append(platform_problem)
+    if problems:
+        return Component("crm_url", title, "warn", ". ".join(problems), now)
+    shown = [url, *([platform.url] if platform is not None and platform.url else [])]
+    return Component("crm_url", title, "ok", " · ".join(shown), now)
 
 
 def channel(channel_id: int | None, now: datetime) -> Component:

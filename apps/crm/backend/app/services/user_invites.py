@@ -3,6 +3,8 @@
 Оба сценария — новый временный пароль (как у ручного сброса, Q-010) и письмо через коннектор
 «Почта». Проверка коннектора идёт до смены пароля: без SMTP сотрудник не остаётся с неизвестным
 паролем, а админ получает 409 `smtp_not_configured` и может выдать пароль вручную, как раньше.
+Ссылка «Вход» в письме — адрес Платформы (`PLATFORM_PUBLIC_URL` / `PLATFORM_DOMAIN`) + `/login`;
+адреса нет — 409 до смены пароля, а не письмо со ссылкой на localhost (W15-H8a).
 """
 
 from typing import Final
@@ -10,7 +12,7 @@ from typing import Final
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.domain.errors import NotFoundError
+from app.domain.errors import ConflictError, NotFoundError
 from app.models.auth import User
 from app.repositories import users as repo
 from app.security import audit
@@ -24,6 +26,10 @@ logger = structlog.get_logger(__name__)
 
 INVITE: Final = "invite"
 PASSWORD_RESET: Final = "password_reset"  # noqa: S105 — имя шаблона письма, не секрет
+PLATFORM_URL_MISSING: Final = (
+    "Адрес Платформы не задан, поэтому письмо со ссылкой для входа не отправлено, "
+    "а пароль не менялся. Адрес задаётся при развёртывании (PLATFORM_DOMAIN в .env сервера)."
+)
 _AUDIT: Final = {INVITE: "user.invite", PASSWORD_RESET: "user.reset_password_email"}
 
 
@@ -33,10 +39,12 @@ class UserInviteService:
         sessions: async_sessionmaker[AsyncSession],
         mail: MailService,
         settings: SettingsService,
+        platform_url: str | None = None,
     ) -> None:
         self._sessions = sessions
         self._mail = mail
         self._settings = settings
+        self._platform_url = platform_url
 
     async def invite(self, actor: Actor, user_id: int) -> EmailLogView:
         return await self._send_temporary_password(actor, user_id, INVITE)
@@ -48,6 +56,9 @@ class UserInviteService:
         self, actor: Actor, user_id: int, template: str
     ) -> EmailLogView:
         await self._mail.ensure_configured()
+        platform_url = self._platform_url
+        if not platform_url:
+            raise ConflictError(PLATFORM_URL_MISSING)
         password = temporary_password()
         async with self._sessions() as session, session.begin():
             user = await repo.get(session, user_id, for_update=True)
@@ -65,7 +76,7 @@ class UserInviteService:
                 "full_name": full_name,
                 "email": email,
                 "temporary_password": password,
-                "crm_url": company.crm_base_url.rstrip("/"),
+                "platform_url": platform_url,
                 "company": company.name,
             },
             user_id=user_id,

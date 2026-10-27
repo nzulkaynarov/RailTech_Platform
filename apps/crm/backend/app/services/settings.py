@@ -15,6 +15,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.domain.public_urls import is_schema_default
 from app.models.leads import Setting
 from app.schemas.settings import SETTINGS_MODELS, AppSettings
 from app.security import audit
@@ -33,8 +34,10 @@ class SettingsService:
         session_factory: async_sessionmaker[AsyncSession],
         ttl_s: float = 30.0,
         clock: Callable[[], float] = time.monotonic,
+        crm_base_url_default: str | None = None,
     ) -> None:
         self._sessions = session_factory
+        self._crm_base_url_default = crm_base_url_default
         self._ttl = ttl_s
         self._clock = clock
         self._cached: AppSettings | None = None
@@ -45,7 +48,9 @@ class SettingsService:
             return self._cached
         async with self._sessions() as session:
             rows = (await session.scalars(select(Setting))).all()
-        self._cached = _merge({row.key: row.value for row in rows})
+        self._cached = _with_env_defaults(
+            _merge({row.key: row.value for row in rows}), self._crm_base_url_default
+        )
         self._loaded_at = self._clock()
         return self._cached
 
@@ -138,6 +143,18 @@ class SettingsService:
 
     def invalidate(self) -> None:
         self._cached = None
+
+
+def _with_env_defaults(cfg: AppSettings, crm_base_url: str | None) -> AppSettings:
+    """`company.crm_base_url` по умолчанию — публичный адрес CRM из окружения, а не `localhost`.
+
+    Подменяется только заводское значение (ключа нет в БД или в нём `http://localhost`); адрес,
+    заданный админом в «Настройки» → «Компания», остаётся как есть. В БД ничего не пишется.
+    """
+    if not crm_base_url or not is_schema_default(cfg.company.crm_base_url):
+        return cfg
+    company = cfg.company.model_copy(update={"crm_base_url": crm_base_url})
+    return cfg.model_copy(update={"company": company})
 
 
 def _merge(rows: dict[str, dict[str, Any]]) -> AppSettings:
