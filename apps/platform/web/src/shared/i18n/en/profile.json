@@ -66,7 +66,6 @@
     "linked": "Linked",
     "notLinked": "Not linked",
     "link": "Link Telegram",
-    "relink": "Link another Telegram",
     "unlink": "Unlink",
     "unlinkTitle": "Unlink Telegram?",
     "unlinkText": "Personal notifications will stop until you link Telegram again.",
