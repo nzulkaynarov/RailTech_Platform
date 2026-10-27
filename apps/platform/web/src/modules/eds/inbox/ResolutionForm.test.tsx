@@ -25,7 +25,7 @@ async function openForm(path = LETTER, directoryReady = true) {
 }
 
 function draftKeys(): string[] {
-  return Object.keys(window.localStorage).filter((k) => k.startsWith("rt-pf-letter-draft-v1"));
+  return Object.keys(window.sessionStorage).filter((k) => k.startsWith("rt-pf-letter-draft-v1"));
 }
 
 function fillValid(form: HTMLElement) {
@@ -225,7 +225,7 @@ describe("Резолюция: ошибки и черновик", () => {
     expect(within(form).getByText("Срок расчёта не может быть в прошлом.")).toBeVisible();
     const [key] = draftKeys();
     expect(key).toBeDefined();
-    expect(JSON.parse(window.localStorage.getItem(key ?? "") ?? "{}")).toMatchObject({
+    expect(JSON.parse(window.sessionStorage.getItem(key ?? "") ?? "{}")).toMatchObject({
       text: "Посчитать с запасом по складу.",
     });
   });
@@ -284,10 +284,30 @@ describe("Резолюция: ошибки и черновик", () => {
 
     expect(
       await within(form).findByText(
-        "Письмо не возвращено: письмо уже не ждёт резолюции, обновите карточку. Комментарий сохранён в черновике.",
+        "Письмо не возвращено: письмо уже не ждёт резолюции, обновите карточку.",
       ),
     ).toBeVisible();
     expect(within(form).getByLabelText("Комментарий")).toHaveValue("Нужен объём");
+    // 409: черновик не нужен — письмо уже решено другим
+    expect(draftKeys()).toHaveLength(0);
+  });
+
+  it("письмо не ждёт резолюции — старый черновик стирается, формы нет", async () => {
+    signIn("director@demo.example");
+    const key = `rt-pf-letter-draft-v1:u-demo-director:20000000-0000-4000-8000-000000000101`;
+    window.sessionStorage.setItem(
+      key,
+      JSON.stringify({ text: "старый", picks: {}, due: "2026-11-01", margin: "", comment: "" }),
+    );
+    renderAt("/eds/inbox/%D0%92%D0%A5-101%2F26");
+    const panel = await panelEl();
+
+    expect(
+      await within(panel).findByRole("heading", { name: "Решение по письму принято" }),
+    ).toBeVisible();
+    await waitFor(() => {
+      expect(window.sessionStorage.getItem(key)).toBeNull();
+    });
   });
 
   it("исполнитель отключён (422 по полю assignees) — подсвечена зона исполнителей", async () => {

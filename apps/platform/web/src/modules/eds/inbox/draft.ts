@@ -6,7 +6,10 @@ export interface ZonePick {
   userId: string;
 }
 
-/** Введённое директором: сохраняется в браузере, пока письмо не решено, — ошибка отправки ничего не стирает. */
+/**
+ * Введённое директором: сохраняется в `sessionStorage` вкладки (переживает перезагрузку, но не закрытие вкладки и не остаётся на общем
+ * компьютере), пока письмо не решено, — ошибка отправки ничего не стирает. Стирается после решения, при 409 и когда письмо уже не ждёт резолюции.
+ */
 export interface ResolutionDraft {
   text: string;
   picks: Record<LetterZone, ZonePick>;
@@ -37,7 +40,7 @@ function isDraft(value: unknown): value is ResolutionDraft {
 /** Хранилище может быть недоступно (приватное окно, заблокированные данные сайта): тогда черновика просто нет. */
 export function readDraft(userId: string, letterId: string): ResolutionDraft | null {
   try {
-    const raw = window.localStorage.getItem(key(userId, letterId));
+    const raw = window.sessionStorage.getItem(key(userId, letterId));
     if (!raw) return null;
     const parsed: unknown = JSON.parse(raw);
     return isDraft(parsed) ? parsed : null;
@@ -49,10 +52,10 @@ export function readDraft(userId: string, letterId: string): ResolutionDraft | n
 export function writeDraft(userId: string, letterId: string, draft: ResolutionDraft): void {
   try {
     if (draft.text.trim() === "" && draft.comment.trim() === "") {
-      window.localStorage.removeItem(key(userId, letterId));
+      window.sessionStorage.removeItem(key(userId, letterId));
       return;
     }
-    window.localStorage.setItem(key(userId, letterId), JSON.stringify(draft));
+    window.sessionStorage.setItem(key(userId, letterId), JSON.stringify(draft));
   } catch {
     // Не критично: без хранилища введённое живёт, пока открыта страница.
   }
@@ -60,7 +63,7 @@ export function writeDraft(userId: string, letterId: string, draft: ResolutionDr
 
 export function clearDraft(userId: string, letterId: string): void {
   try {
-    window.localStorage.removeItem(key(userId, letterId));
+    window.sessionStorage.removeItem(key(userId, letterId));
   } catch {
     // Не критично.
   }

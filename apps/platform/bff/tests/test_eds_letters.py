@@ -236,7 +236,9 @@ async def test_unknown_id_is_404_from_eds(web: Web, eds: EdsFake) -> None:
     ("status", "erp_stage", "expected"),
     [
         ("awaiting_resolution", "DRAFT", ("RESOLUTION", None)),
+        ("awaiting_resolution", "CLOSED_LOST", ("LOST", None)),
         ("returned", "DRAFT", ("REQUEST", None)),
+        ("returned", "CLOSED_LOST", ("LOST", None)),
         ("rejected", "CLOSED_LOST", ("LOST", 2)),
         ("resolved", "DRAFT", ("CALCULATION", None)),
         ("resolved", "CALCULATING", ("CALCULATION", None)),
@@ -397,6 +399,27 @@ async def test_resolution_without_margin_sends_null(web: Web, eds: EdsFake) -> N
 
     assert (await web.send("POST", f"{CARD}/resolution", json=body)).status_code == 200
 
+    [call] = eds.made("POST", f"letters/{LETTER_ID}/resolution")
+    assert json.loads(call.content)["min_margin_pct"] is None
+
+
+async def test_margin_threshold_needs_the_cost_margin_group(web: Web, eds: EdsFake) -> None:
+    """Порог маржи задаёт роль с группой `cost_margin`; остальным — 422 до EDS."""
+    role = custom(91, "Директор без маржи", {"eds.inbox": "full", "admin": "read"})
+    assert (await web.login([role])).status_code == 200
+
+    response = await web.send("POST", f"{CARD}/resolution", json=RESOLUTION)
+
+    assert response.status_code == 422
+    assert response.json()["code"] == "VALIDATION_FAILED"
+    assert response.json()["details"] == {
+        "fields": ["min_margin_pct"],
+        "reason": "margin_forbidden",
+    }
+    assert eds.made("POST", f"letters/{LETTER_ID}/resolution") == []
+
+    without = {k: v for k, v in RESOLUTION.items() if k != "min_margin_pct"}
+    assert (await web.send("POST", f"{CARD}/resolution", json=without)).status_code == 200
     [call] = eds.made("POST", f"letters/{LETTER_ID}/resolution")
     assert json.loads(call.content)["min_margin_pct"] is None
 

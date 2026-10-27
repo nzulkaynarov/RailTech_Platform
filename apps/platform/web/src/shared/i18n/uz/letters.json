@@ -230,6 +230,11 @@
       "return": "Xat menejerga qaytarildi",
       "reject": "Xat rad etildi"
     },
-    "draft": "Yuborilmagan qoralama tiklandi."
+    "draft": "Yuborilmagan qoralama tiklandi.",
+    "failedGone": {
+      "resolve": "Rezolyutsiya saqlanmadi: {{reason}}.",
+      "return": "Xat qaytarilmadi: {{reason}}.",
+      "reject": "Xat rad etilmadi: {{reason}}."
+    }
   }
 }

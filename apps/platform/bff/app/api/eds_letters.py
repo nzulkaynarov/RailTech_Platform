@@ -158,6 +158,14 @@ async def get_letter(ref: str, authed: Reader) -> LetterCard:
     operation_id="resolveLetter",
 )
 async def resolve_letter(id: LetterId, body: ResolutionIn, authed: Resolver) -> LetterCard:
+    if body.min_margin_pct is not None and "cost_margin" not in authed.fields:
+        # Порог маржи — внутренняя экономика: без группы `cost_margin` его не читают и не задают.
+        raise PlatformError(
+            "VALIDATION_FAILED",
+            "Порог маржи задаёт роль с доступом к марже.",
+            status_code=422,
+            details={"fields": ["min_margin_pct"], "reason": "margin_forbidden"},
+        )
     return await _card(authed, await _letters(authed).resolve(str(id), body.for_eds()))
 
 
@@ -212,7 +220,9 @@ def _has_full(role_access: dict[str, Any] | None, section: str) -> bool:
     return isinstance(role_access, dict) and role_access.get(section) == "full"
 
 
-def _candidates(users: list[dict[str, Any]], roles: list[dict[str, Any]]) -> list[ResolutionZone]:
+def _candidates(
+    users: list[dict[str, Any]], roles: list[dict[str, Any]], author_id: str
+) -> list[ResolutionZone]:
     access_by_role = {int(r["id"]): r.get("access") for r in roles if isinstance(r.get("id"), int)}
     zones: list[ResolutionZone] = []
     for zone in ZONES:
@@ -221,6 +231,8 @@ def _candidates(users: list[dict[str, Any]], roles: list[dict[str, Any]]) -> lis
         for user in users:
             if user.get("is_active") is False or not isinstance(user.get("id"), int):
                 continue
+            if str(user["id"]) == author_id:
+                continue  # автор резолюции не исполнитель собственного задания (по id, не по роли)
             role_ids = user.get("platform_role_ids") or []
             if not any(_has_full(access_by_role.get(rid), section) for rid in role_ids):
                 continue
@@ -255,7 +267,8 @@ async def list_resolution_assignees(authed: Resolver) -> ResolutionAssignees:
             )
     assert not isinstance(users, str)  # noqa: S101 — отказы разобраны выше
     assert not isinstance(roles, str)  # noqa: S101
-    return ResolutionAssignees(zones=_candidates(users, roles), directory="ok")
+    zones = _candidates(users, roles, str(authed.data.user_id))
+    return ResolutionAssignees(zones=zones, directory="ok")
 
 
 # --- вложения ------------------------------------------------------------------------------------

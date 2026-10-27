@@ -344,21 +344,24 @@ def person(p: _Person) -> PersonRef:
 def letter_stage(status: LetterStatus, deal: dict[str, Any] | None) -> tuple[StepCode, int | None]:
     """Шаг пути заявки по письму (integration-map §2, процесс v3) и данным заявки ERP.
 
-    Ждёт резолюции — «Резолюция»; возвращено — письмо у менеджера, «Заявка»; отклонено — «Отказ» на
-    шаге 2. Резолюция наложена — «Расчёт», а если заявка в ERP уже дальше (КП, договор, оплата,
+    Закрытая заявка ERP (`CLOSED_LOST`) — «Отказ» при любом статусе письма; отклонено — «Отказ» на
+    шаге 2. Иначе: ждёт резолюции — «Резолюция»; возвращено — письмо у менеджера, «Заявка».
+    Резолюция наложена — «Расчёт», а если заявка в ERP уже дальше (КП, договор, оплата,
     выполнено) — её шаг; закрытая заявка — «Отказ». ERP не ответил (`deal` нет) — «Расчёт»: так
     письмо видно по его собственному статусу.
     """
+    # Отказ — первым (integration-map §2): закрытая заявка — «Отказ» при любом статусе письма.
+    deal_lost = deal is not None and deal_step(deal) == "LOST"
+    if status == "rejected":
+        return "LOST", RESOLUTION_STEP
+    if deal_lost:
+        return "LOST", None
     if status == "awaiting_resolution":
         return "RESOLUTION", None
     if status == "returned":
         return "REQUEST", None
-    if status == "rejected":
-        return "LOST", RESOLUTION_STEP
     if deal is not None:
         step = deal_step(deal)
-        if step == "LOST":
-            return "LOST", None
         if step in _ORDER and _ORDER.index(step) > _ORDER.index("CALCULATION"):
             return step, None
     return "CALCULATION", None

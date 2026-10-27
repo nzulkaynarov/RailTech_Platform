@@ -230,6 +230,11 @@
       "return": "The letter was returned to the manager",
       "reject": "The letter was rejected"
     },
-    "draft": "A draft you did not send has been restored."
+    "draft": "A draft you did not send has been restored.",
+    "failedGone": {
+      "resolve": "Resolution not saved: {{reason}}.",
+      "return": "Letter not returned: {{reason}}.",
+      "reject": "Letter not rejected: {{reason}}."
+    }
   }
 }

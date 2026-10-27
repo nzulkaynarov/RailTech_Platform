@@ -16,6 +16,7 @@ import { QueryState } from "../../../shared/ui/FormParts";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { Attachments } from "./Parts";
 import { letterPath, letterRef } from "./api";
+import { clearDraft } from "./draft";
 import { ResolutionForm } from "./ResolutionForm";
 import { useStateLabels } from "./labels";
 
@@ -65,6 +66,10 @@ function PanelBody({
   const { t } = useTranslation("letters");
   const { me } = useAuth();
   const canResolve = canEdit(me, "eds.inbox");
+  // Письмо уже решено, возвращено или отклонено (в том числе другим): черновик ему не нужен.
+  useEffect(() => {
+    if (letter.status !== "awaiting_resolution") clearDraft(me.id, letter.id);
+  }, [letter.status, letter.id, me.id]);
   let body: ReactNode;
   if (letter.status === "awaiting_resolution" && canResolve) {
     body = <ResolutionForm letter={letter} variant={variant} {...(onDone ? { onDone } : {})} />;

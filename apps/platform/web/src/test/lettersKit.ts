@@ -15,6 +15,7 @@ const missing: string[] = [];
 export function setupLetterTests(width = 1440): void {
   beforeEach(() => {
     window.localStorage.clear();
+    window.sessionStorage.clear();
     resetLetters();
     usePanelsStore.setState({ entries: {} });
     setViewportWidth(width);

@@ -3,6 +3,7 @@ import { type FormEvent, useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAuth } from "../../../app/auth/useAuth";
+import { ApiError } from "../../../shared/api/errors";
 import type { LetterCard, LetterZone } from "../../../shared/api/generated/model";
 import {
   useListResolutionAssignees,
@@ -97,6 +98,8 @@ export function ResolutionForm({ letter, variant = "panel", onDone }: Resolution
     onDone?.();
   };
   const failed = (action: Action) => (error: unknown) => {
+    // 409: письмо уже решено или возвращено другим — вводить больше нечего, черновик не нужен.
+    if (error instanceof ApiError && error.status === 409) clearDraft(me.id, letter.id);
     setFailure({ action, error });
     const named = fieldsOf(error);
     setErrors((prev) => ({
@@ -190,10 +193,12 @@ export function ResolutionForm({ letter, variant = "panel", onDone }: Resolution
     });
   };
 
+  // 409 («письмо уже не ждёт резолюции»): черновик стёрт, поэтому фразы «сохранён в черновике» нет.
   const failureText = failure
-    ? t(`form.failed.${failure.action}`, {
-        reason: t(`form.reasons.${reasonOf(failure.error)}`),
-      })
+    ? t(
+        `form.${reasonOf(failure.error) === "invalid_state" ? "failedGone" : "failed"}.${failure.action}`,
+        { reason: t(`form.reasons.${reasonOf(failure.error)}`) },
+      )
     : null;
 
   return (
