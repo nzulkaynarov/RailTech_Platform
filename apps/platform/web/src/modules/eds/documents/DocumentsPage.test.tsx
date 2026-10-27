@@ -188,6 +188,38 @@ describe("EDS · Документы: список", () => {
   });
 });
 
+describe("EDS · Документы: «Продолжить» только у своих", () => {
+  it("в реестре у чужого черновика кнопки «Продолжить» нет", async () => {
+    server.use(
+      http.get("*/eds/documents", () =>
+        HttpResponse.json({
+          items: [
+            {
+              kind: "memo",
+              id: "00000000-0000-4000-8000-0000000000c1",
+              number: "СЗ-2026/040",
+              subject: "Чужой черновик",
+              status: "draft",
+              author: { crm_user_id: 99, full_name: "Демо Другой" },
+              amount: null,
+              due_date: null,
+              created_at: "2026-10-26T08:30:00Z",
+              openable: true,
+            },
+          ],
+          next_cursor: null,
+        }),
+      ),
+    );
+    await openDocuments("manager@demo.example", "?scope=all");
+
+    await screen.findByRole("link", { name: "Открыть документ: Чужой черновик" });
+    const tr = row("Чужой черновик");
+    expect(within(tr).getByText("Черновик")).toBeVisible();
+    expect(within(tr).queryByRole("link", { name: /Продолжить/ })).toBeNull();
+  });
+});
+
 describe("EDS · Документы: карточка в боковом окне", () => {
   it("клик по документу: статус словами, реквизиты, текст, вложение, маршрут и решения с датой и автором", async () => {
     await openDocuments("manager@demo.example", "?scope=mine");

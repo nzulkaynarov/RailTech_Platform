@@ -63,10 +63,18 @@ function tabOf(value: string | null, scope: Scope): KindTab {
   return found;
 }
 
-function RowAction({ row }: { row: EdsDocumentRow }) {
+/** Строка — документ самого сотрудника: в «Мои» все такие, в реестре — по автору (`crm_user_id` = id сотрудника). */
+function useIsOwn(scope: Scope): (row: EdsDocumentRow) => boolean {
+  const { me } = useAuth();
+  return (row) =>
+    scope === "mine" || (row.author !== null && String(row.author.crm_user_id) === me.id);
+}
+
+function RowAction({ row, own }: { row: EdsDocumentRow; own: boolean }) {
   const { t } = useTranslation(["documents", "modules"]);
   if (row.openable) {
-    if (row.status !== "draft" && row.status !== "returned") return null;
+    // «Продолжить» — только у своих черновиков и возвращённых: чужой документ править нельзя (EDS ответит 403).
+    if (!own || (row.status !== "draft" && row.status !== "returned")) return null;
     return (
       <LinkButton
         size="small"
@@ -139,6 +147,7 @@ function DocumentsTable({
 }) {
   const { t } = useTranslation("documents");
   const { date } = useFormat();
+  const isOwn = useIsOwn(scope);
   return (
     <ScrollRegion label={t("list.tableScroll")}>
       <table className="pf-docs-table">
@@ -182,7 +191,7 @@ function DocumentsTable({
               {scope === "all" ? <td>{row.author?.full_name ?? "—"}</td> : null}
               <td>{date(row.created_at)}</td>
               <td>
-                <RowAction row={row} />
+                <RowAction row={row} own={isOwn(row)} />
               </td>
             </tr>
           ))}
@@ -205,6 +214,7 @@ function DocumentsList({
 }) {
   const { t } = useTranslation("documents");
   const { date } = useFormat();
+  const isOwn = useIsOwn(scope);
   return (
     <ul className="pf-docs-list" aria-label={t("list.listLabel")}>
       {items.map((row) => (
@@ -232,7 +242,7 @@ function DocumentsList({
             <span>{date(row.created_at)}</span>
           </div>
           <div>
-            <RowAction row={row} />
+            <RowAction row={row} own={isOwn(row)} />
           </div>
         </li>
       ))}

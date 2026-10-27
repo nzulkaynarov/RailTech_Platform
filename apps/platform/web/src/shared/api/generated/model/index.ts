@@ -290,6 +290,7 @@ export * from "./edsDocumentStatus";
 export * from "./edsDocumentUpdateIn";
 export * from "./edsFile";
 export * from "./edsFileUpload";
+export * from "./edsIdempotencyKeyParameter";
 export * from "./edsMoney";
 export * from "./edsPayloadTooLargeResponse";
 export * from "./edsPerson";

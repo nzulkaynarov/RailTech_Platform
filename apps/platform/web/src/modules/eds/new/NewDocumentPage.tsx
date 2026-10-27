@@ -1,5 +1,5 @@
 import { App, Button, Card, Input, Select, Skeleton } from "antd";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router";
 
@@ -9,7 +9,7 @@ import { useViewport } from "../../../app/shell/useViewport";
 import { ApiError } from "../../../shared/api/errors";
 import type { EdsDocument, EdsDocumentKind } from "../../../shared/api/generated/model";
 import {
-  useCreateEdsDocument,
+  createEdsDocument,
   useGetEdsDocument,
   useUpdateEdsDocument,
 } from "../../../shared/api/generated/platform-bff";
@@ -83,6 +83,12 @@ function Field({
   );
 }
 
+/** Случайный ключ повтора; `crypto.randomUUID` есть не везде (небезопасный контекст, старый движок) — запасной путь. */
+function newKey(): string {
+  if (typeof crypto.randomUUID === "function") return crypto.randomUUID();
+  return `${Date.now().toString(16)}-${Math.random().toString(16).slice(2)}-${Math.random().toString(16).slice(2)}`;
+}
+
 function describedBy(id: string, hasHint: boolean, hasError: boolean): string | undefined {
   const parts = [hasError ? `${id}-error` : "", hasHint ? `${id}-hint` : ""].filter(Boolean);
   return parts.length > 0 ? parts.join(" ") : undefined;
@@ -120,9 +126,11 @@ function DocumentForm({ initial, draft }: { initial: FormValues; draft: EdsDocum
   const [errors, setErrors] = useState<FormErrors>({});
   const [note, setNote] = useState<ServerNote | null>(null);
   const [savedId, setSavedId] = useState<string | null>(draft?.id ?? null);
-  const create = useCreateEdsDocument();
+  const [creating, setCreating] = useState(false);
+  // Ключ повтора создания: на экземпляр формы и тело запроса — потерянный ответ не заведёт второй документ.
+  const idempotency = useRef<{ body: string; key: string } | null>(null);
   const update = useUpdateEdsDocument();
-  const pending = create.isPending || update.isPending;
+  const pending = creating || update.isPending;
   const uploading = values.attachments.some((a) => a.status === "uploading");
   const letter = isLetter(values.kind);
   const today = todayInCompanyZone();
@@ -144,9 +152,22 @@ function DocumentForm({ initial, draft }: { initial: FormValues; draft: EdsDocum
       return;
     }
     try {
-      const doc = savedId
-        ? await update.mutateAsync({ id: savedId, data: toUpdateBody(values, submit) })
-        : await create.mutateAsync({ data: toCreateBody(values, submit) });
+      let doc: EdsDocument;
+      if (savedId) {
+        doc = await update.mutateAsync({ id: savedId, data: toUpdateBody(values, submit) });
+      } else {
+        const body = toCreateBody(values, submit);
+        const json = JSON.stringify(body);
+        if (idempotency.current?.body !== json) idempotency.current = { body: json, key: newKey() };
+        setCreating(true);
+        try {
+          doc = await createEdsDocument(body, {
+            headers: { "Idempotency-Key": idempotency.current.key },
+          });
+        } finally {
+          setCreating(false);
+        }
+      }
       refresh();
       void message.success(
         !submit
@@ -217,7 +238,7 @@ function DocumentForm({ initial, draft }: { initial: FormValues; draft: EdsDocum
               id={ids.kind}
               label={t("documents:form.type.label")}
               hint={
-                draft
+                draft || savedId
                   ? t("documents:form.type.locked")
                   : canLetter
                     ? undefined
@@ -227,7 +248,7 @@ function DocumentForm({ initial, draft }: { initial: FormValues; draft: EdsDocum
               <Select
                 id={ids.kind}
                 value={values.kind}
-                disabled={draft !== null}
+                disabled={draft !== null || savedId !== null}
                 options={KINDS.map((kind) => ({
                   value: kind,
                   disabled: kind === "letter_out" && !canLetter,

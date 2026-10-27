@@ -17,7 +17,7 @@ from uuid import UUID
 
 import anyio
 import httpx
-from fastapi import APIRouter, Depends, Path, Query, Request, Response, status
+from fastapi import APIRouter, Depends, Header, Path, Query, Request, Response, status
 from fastapi.responses import StreamingResponse
 from starlette.types import Send
 
@@ -179,10 +179,20 @@ async def _submit(proxy: EdsProxy, document_id: str) -> Any:
     status_code=status.HTTP_201_CREATED,
     operation_id="createEdsDocument",
 )
-async def create_document(body: EdsDocumentIn, authed: Writer) -> EdsDocument:
+async def create_document(
+    body: EdsDocumentIn,
+    authed: Writer,
+    idempotency_key: Annotated[
+        str | None, Header(alias="Idempotency-Key", min_length=8, max_length=128)
+    ] = None,
+) -> EdsDocument:
     proxy = _proxy(authed)
     payload = {"kind": body.kind, **_edits(body)}
-    created = await proxy.request("POST", f"{API}/documents", expected=201, json=payload)
+    # Повтор с тем же ключом и телом (ответ потерялся): EDS отдаёт прежний документ, а не второй.
+    headers = {"Idempotency-Key": idempotency_key} if idempotency_key else None
+    created = await proxy.request(
+        "POST", f"{API}/documents", expected=201, json=payload, headers=headers
+    )
     result = created
     if body.submit:
         document_id = str(created.get("id", ""))

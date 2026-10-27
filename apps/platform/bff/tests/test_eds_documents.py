@@ -362,6 +362,29 @@ async def test_create_saves_a_draft(web: Web, eds: EdsFake, check: ContractCheck
     assert eds.last("POST", "documents").headers["authorization"].startswith(f"Bearer {TOKEN}")
 
 
+async def test_idempotency_key_goes_to_eds_only_when_given(web: Web, eds: EdsFake) -> None:
+    await web.login(["MANAGER"])
+    key = "form-key-0001-abcdef"
+
+    keyed = await web.client.post(
+        f"{BASE}/documents",
+        json=FORM,
+        headers={CSRF_HEADER: web.csrf, "Idempotency-Key": key},
+    )
+    plain = await web.send("POST", f"{BASE}/documents", json=FORM)
+    short = await web.client.post(
+        f"{BASE}/documents",
+        json=FORM,
+        headers={CSRF_HEADER: web.csrf, "Idempotency-Key": "short"},
+    )
+
+    assert (keyed.status_code, plain.status_code) == (201, 201)
+    sent = eds.requests("POST", "documents")
+    assert [r.headers.get("idempotency-key") for r in sent] == [key, None]
+    assert short.status_code == 422  # ключ короче 8 знаков — до EDS
+    assert len(sent) == 2
+
+
 async def test_create_with_submit_opens_the_route(
     web: Web, eds: EdsFake, check: ContractChecker
 ) -> None:

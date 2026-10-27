@@ -509,3 +509,14 @@ async def test_update_changes_recipient_only_for_outgoing_letter(
         422,
         "VALIDATION_FAILED",
     )
+
+
+async def test_update_and_submit_reject_explicit_null_for_subject_and_text(
+    client: httpx.AsyncClient, staff: dict[str, Person]
+) -> None:
+    doc = await create(client, staff["manager"])
+    for field in ("subject", "text"):
+        assert_error(await patch(client, staff["manager"], doc["id"], {field: None}), 422, "VALIDATION_FAILED")
+        assert_error(await submit(client, staff["manager"], doc["id"], {field: None}), 422, "VALIDATION_FAILED")
+    still = (await client.get(f"/api/v1/documents/{doc['id']}", headers=staff["manager"].headers)).json()
+    assert (still["subject"], still["status"]) == (MEMO["subject"], "draft")

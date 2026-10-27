@@ -117,6 +117,7 @@ class EdsProxy:
         content: bytes | None = None,
         content_type: str | None = None,
         stream: bool = False,
+        headers: dict[str, str] | None = None,
     ) -> httpx.Response:
         backend: Backend = "eds"
         return await self._call(
@@ -128,6 +129,7 @@ class EdsProxy:
             content=content,
             content_type=content_type,
             stream=stream,
+            headers=headers,
         )
 
     async def request(
@@ -140,9 +142,16 @@ class EdsProxy:
         json: Any = None,
         content: bytes | None = None,
         content_type: str | None = None,
+        headers: dict[str, str] | None = None,
     ) -> Any:
         response = await self.raw(
-            method, path, params=params, json=json, content=content, content_type=content_type
+            method,
+            path,
+            params=params,
+            json=json,
+            content=content,
+            content_type=content_type,
+            headers=headers,
         )
         if response.status_code != expected:
             raise eds_error(response)

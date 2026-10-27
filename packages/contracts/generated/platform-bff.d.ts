@@ -430,7 +430,7 @@ export interface paths {
     put?: never;
     /**
      * EDS · Создать документ (и отправить на согласование)
-     * @description EDS `POST /documents` и, если `submit = true`, `POST /documents/{id}/submit`. Раздел `eds.memo.create` (есть у всех ролей); право на тип решает EDS: `memo`, `application`, `report` — `memos.create`, `letter_out` (Письмо) — `letters.register` (нет права — 403 `FORBIDDEN`). Номер (`СЗ-`, `ЗЯ-`, `ОТ-ГГГГ/NNN`) присваивает EDS при создании; маршрут служебной записки — директор, затем бухгалтер, если указана сумма; заявления и отчёта — директор. Письмо отправка не согласует: EDS присваивает номер `ИСХ-NNN/ГГ` и переводит его в «Отправлено» (бланк, PDF и отправка адресату — волна D-DOC). Если документ создан, а отправка отклонена (например, 422), ответ — ошибка, а созданный черновик назван в `details.document_id`: введённое не теряется, экран продолжает с этим id через `PUT /eds/documents/{id}`.
+     * @description EDS `POST /documents` и, если `submit = true`, `POST /documents/{id}/submit`. Необязательный `Idempotency-Key` уходит в EDS как есть: повтор с тем же ключом и телом (ответ потерялся) возвращает прежний документ, а не создаёт второй; тот же ключ с другим телом — 409 `CONFLICT` (`details.reason = idempotency_key_reused`). Раздел `eds.memo.create` (есть у всех ролей); право на тип решает EDS: `memo`, `application`, `report` — `memos.create`, `letter_out` (Письмо) — `letters.register` (нет права — 403 `FORBIDDEN`). Номер (`СЗ-`, `ЗЯ-`, `ОТ-ГГГГ/NNN`) присваивает EDS при создании; маршрут служебной записки — директор, затем бухгалтер, если указана сумма; заявления и отчёта — директор. Письмо отправка не согласует: EDS присваивает номер `ИСХ-NNN/ГГ` и переводит его в «Отправлено» (бланк, PDF и отправка адресату — волна D-DOC). Если документ создан, а отправка отклонена (например, 422), ответ — ошибка, а созданный черновик назван в `details.document_id`: введённое не теряется, экран продолжает с этим id через `PUT /eds/documents/{id}`.
      */
     post: operations["createEdsDocument"];
     delete?: never;
@@ -4928,6 +4928,8 @@ export interface components {
     /** @description Непрозрачный курсор из `next_cursor` */
     BusCursor: string;
     BusLimit: number;
+    /** @description Ключ повтора создания (8–128 знаков, на экземпляр формы и тело запроса); EDS хранит его 24 часа */
+    EdsIdempotencyKey: string;
     /** @description Id документа EDS (UUID); номер `СЗ-2026/031` содержит «/» и в адресе не используется */
     EdsDocumentId: string;
     /** @description Значение cookie `rt_pf_csrf` */
@@ -5667,6 +5669,8 @@ export interface operations {
       header: {
         /** @description Значение cookie `rt_pf_csrf` */
         "X-CSRF-Token": components["parameters"]["CsrfToken"];
+        /** @description Ключ повтора создания (8–128 знаков, на экземпляр формы и тело запроса); EDS хранит его 24 часа */
+        "Idempotency-Key"?: components["parameters"]["EdsIdempotencyKey"];
       };
       path?: never;
       cookie?: never;

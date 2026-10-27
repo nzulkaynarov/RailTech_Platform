@@ -5,7 +5,7 @@ import uuid
 from enum import StrEnum
 from typing import Annotated
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from app.schemas.approvals import Decision
 from app.schemas.common import FileRef, JournalEntry, LetterSender, Money, PersonRef, Strict
@@ -52,6 +52,14 @@ class DocumentSubmitIn(Strict):
     amount: Money | None = None
     due_date: dt.date | None = None
     file_ids: FileIds | None = None
+
+    @model_validator(mode="after")
+    def _no_null_text(self) -> "DocumentSubmitIn":
+        """`subject` и `text` в eds.yaml — строки без `null`: явный `null` не «пропуск поля», а 422."""
+        for name in ("subject", "text"):
+            if name in self.model_fields_set and getattr(self, name) is None:
+                raise ValueError(f"{name} must not be null")
+        return self
 
 
 class DocumentUpdate(DocumentSubmitIn):

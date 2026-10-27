@@ -1,6 +1,9 @@
 import { cleanup, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
+import { HttpResponse, http } from "msw";
+
+import { server } from "../../../test/server";
 import { renderAt, setupEdsTests, signIn } from "../../../test/edsKit";
 
 setupEdsTests();
@@ -143,6 +146,8 @@ describe("EDS · Создать документ: форма", () => {
     expect(screen.getByLabelText("Текст")).toHaveValue("Нужна командировка. [сбой]");
     expect(screen.getByLabelText("Сумма, сум")).toHaveValue("500 000");
     expect(router.state.location.pathname).toBe("/eds/new");
+    // документ уже создан: тип менять нельзя, иначе повтор ушёл бы в другой документ
+    expect(screen.getByLabelText("Тип документа")).toBeDisabled();
 
     type("Текст", "Нужна командировка.");
     // Значок загрузки уходит с анимацией, которой в jsdom нет: имя кнопки на миг содержит «loading».
@@ -244,5 +249,38 @@ describe("EDS · Создать документ: форма", () => {
 
     expect(await screen.findByRole("heading", { level: 1, name: "Нет доступа" })).toBeVisible();
     expect(screen.queryByLabelText("Тема")).toBeNull();
+  });
+
+  it("ключ повтора создания: тот же при повторе с тем же телом, новый — если форму изменили", async () => {
+    const keys: (string | null)[] = [];
+    server.use(
+      http.post("*/eds/documents", ({ request }) => {
+        keys.push(request.headers.get("Idempotency-Key"));
+        return HttpResponse.json(
+          { code: "BACKEND_UNAVAILABLE", message: "x", source: "eds" },
+          { status: 503 },
+        );
+      }),
+    );
+    await openForm("manager@demo.example");
+    fillMemo("Командировка", "Нужна командировка.");
+
+    const send = async () => {
+      fireEvent.click(await screen.findByRole("button", { name: /Отправить на согласование/ }));
+      await waitFor(() => {
+        expect(keys.length).toBeGreaterThan(sent);
+      });
+      sent = keys.length;
+      await screen.findByRole("alert");
+    };
+    let sent = 0;
+    await send();
+    await send();
+    type("Текст", "Нужна командировка на два дня.");
+    await send();
+
+    expect(keys[0]).toMatch(/.{8,}/);
+    expect(keys[1]).toBe(keys[0]);
+    expect(keys[2]).not.toBe(keys[0]);
   });
 });

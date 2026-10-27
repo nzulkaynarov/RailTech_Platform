@@ -61,6 +61,8 @@ export interface EdsMock {
   documents: MockDocument[];
   registry: MockRegistryRow[];
   files: Record<string, EdsFile>;
+  /** Ключ повтора создания -> id созданного документа (как у EDS: повтор отдаёт прежний ответ) */
+  idempotency?: Record<string, string>;
   next: { doc: number; memo: number; application: number; report: number; outgoing: number };
 }
 

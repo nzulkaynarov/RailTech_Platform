@@ -380,6 +380,9 @@ export const edsDocumentsHandlers = [
     const invalid = validationError(body, body.kind === "letter_out");
     if (invalid) return invalid;
     const state = readEds();
+    const key = request.headers.get("Idempotency-Key");
+    const replay = key ? state.documents.find((d) => d.id === state.idempotency?.[key]) : undefined;
+    if (replay) return HttpResponse.json(detail(replay, state, ownerId()), { status: 201 });
     const now = new Date().toISOString();
     state.next.doc += 1;
     const doc: MockDocument = {
@@ -402,6 +405,7 @@ export const edsDocumentsHandlers = [
     };
     applyForm(doc, body);
     state.documents.push(doc);
+    if (key) state.idempotency = { ...state.idempotency, [key]: doc.id };
     if (body.submit) {
       if (doc.text.includes(SERVER_DOWN)) {
         writeEds(state);
