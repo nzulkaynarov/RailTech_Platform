@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.15.0
+  version: 0.16.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -142,6 +142,17 @@ info:
     (`erp_not_connected` — сначала подключите ERP, `erp_unavailable` — ERP не ответила). `POST /setup/company` без сопряжённой ERP —
     409 `ERP_NOT_CONNECTED` (новый код) с текстом и `details.link` на карточку ERP; недоступная ERP — прежний 503 `BACKEND_UNAVAILABLE`.
 
+    **0.16.0 (D1-3) — EDS · Входящие письма и резолюция директора.** Добавляющее изменение, тег `letters`: `GET /eds/letters`
+    (список со статусом словами интерфейса и фильтром по статусу), `GET /eds/letters/{ref}` (карточка письма по id или по
+    номеру `ВХ-104/26`: реквизиты, суть, вложения, связи, журнал, шаг пути заявки; данные заявки — из ERP по ссылке письма,
+    ERP не ответил — частичный ответ `sources.erp = unavailable`), `POST /eds/letters/{id}/resolution` («Утвердить резолюцию →
+    задание в расчёт»), `POST /eds/letters/{id}/return` («Вернуть менеджеру»), `POST /eds/letters/{id}/reject` («Отклонить»,
+    причина обязательна), `GET /eds/resolution/assignees` (кандидаты в исполнители по трём зонам — по разделам каталога, не по
+    кодам ролей), `GET /eds/letter-files/{file_id}` (вложение потоком). Раздел `eds.inbox`: чтение — карточка без решений
+    (менеджер, бухгалтер), полный — резолюция, возврат, отказ (директор). EDS — отдельный домен: вызовы идут с токеном доступа
+    EDS, полученным обменом токена сотрудника CRM `aud=eds` (`docs/architecture/platform-bff.md` §3); ошибки EDS переводятся в
+    формат `Error` (`source = eds`, `details.reason` и `details.fields` EDS сохраняются).
+
     0.2.4: `423 ACCOUNT_LOCKED` объявлен и на `POST /auth/change-password` (CRM блокирует учётную запись после неверных
     текущих паролей).
 
@@ -188,6 +199,8 @@ tags:
     description: CRM · База знаний — документы, поиск, пробелы, песочница бота (прокси к CRM; разделы `crm.leads` и `admin`)
   - name: bot
     description: Admin · Настройки бота — разделы настроек CRM, шаблоны ответов, выгрузки CSV (прокси к CRM; раздел `admin`)
+  - name: letters
+    description: EDS · Входящие письма — список, карточка, резолюция директора, возврат менеджеру, отказ, вложения (сервис EDS; раздел `eds.inbox`)
 
 paths:
   /auth/login:
@@ -4522,6 +4535,270 @@ paths:
         '503':
           $ref: '#/components/responses/BackendUnavailable'
 
+  /eds/letters:
+    get:
+      tags: [letters]
+      operationId: listLetters
+      summary: 'EDS · Входящие письма: список'
+      description: >-
+        EDS `GET /letters` (право `letters.read`). Раздел `eds.inbox` — чтение; менеджер и бухгалтер видят список, директор
+        — тоже и решает. Порядок — от новых к старым. Страница — непрозрачный `cursor` из `next_cursor`. Клиент — название
+        организации-отправителя из письма, заявка — бизнес-номер ЗВ из связей письма. EDS не ответил — 503
+        `BACKEND_UNAVAILABLE` (`source = eds`); у сотрудника нет прав в EDS — 403 `FORBIDDEN` (`details.reason = eds_not_granted`).
+      parameters:
+        - name: status
+          in: query
+          required: false
+          description: Только письма в этих статусах (параметр повторяется); без параметра — все
+          schema:
+            type: array
+            uniqueItems: true
+            items: {$ref: '#/components/schemas/LetterStatus'}
+          style: form
+          explode: true
+        - name: q
+          in: query
+          required: false
+          description: Поиск по номеру, теме, отправителю и номеру заявки
+          schema: {type: string, maxLength: 200}
+        - name: cursor
+          in: query
+          required: false
+          description: Непрозрачный курсор из `next_cursor`
+          schema: {type: string, maxLength: 500}
+        - $ref: '#/components/parameters/PageLimit'
+      responses:
+        '200':
+          description: Страница писем
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LetterPage'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /eds/letters/{ref}:
+    get:
+      tags: [letters]
+      operationId: getLetter
+      summary: 'EDS · Карточка входящего письма (по id или по номеру ВХ)'
+      description: >-
+        EDS `GET /letters/{id}`; по номеру — сначала `GET /registry?number=` (EDS адресует письма UUID, в номере есть «/»).
+        `ref` — UUID письма или номер `ВХ-104/26`; косая черта номера допускается в пути как есть и как `%2F`. Номера нет в
+        реестре или он не письмо — 404 `NOT_FOUND`. Данные заявки (шаг пути, название) BFF читает в ERP по ссылке письма
+        (`links.erp_deal_id`); ERP не ответил — ответ 200 без данных заявки, шаг выведен по самому письму, а
+        `sources.erp = unavailable` (плашка «ERP не отвечает, данные неполные»). Шаг пути — по правилу
+        `docs/architecture/integration-map.md` §2: ждёт резолюции — «Резолюция», резолюция наложена — «Расчёт» (или дальше, если
+        заявка ERP уже дальше), возвращено — «Заявка», отклонено — «Отказ». Поле `resolution.min_margin_pct` (маржа) без группы
+        `cost_margin` у ролей сотрудника не отдаётся. Раздел `eds.inbox` — чтение.
+      parameters:
+        - name: ref
+          in: path
+          required: true
+          description: UUID письма или номер `ВХ-NNN/ГГ`
+          schema: {type: string, minLength: 1, maxLength: 64}
+      responses:
+        '200':
+          description: Карточка письма
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LetterCard'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /eds/letters/{id}/resolution:
+    post:
+      tags: [letters]
+      operationId: resolveLetter
+      summary: 'EDS · Утвердить резолюцию → задание в расчёт'
+      description: >-
+        EDS `POST /letters/{id}/resolution` (право `letters.resolve`). Раздел `eds.inbox` — полный: роль только для чтения
+        получает 403 в BFF до EDS. Письмо должно ждать резолюции, иначе 409 `CONFLICT` (`details.reason = invalid_state`).
+        Срок расчёта в прошлом (по `Asia/Tashkent`) — 422 `VALIDATION_FAILED`, `details.fields = [due]`, `details.reason =
+        due_in_past`; исполнитель не найден или отключён — `details.fields = [assignees]`, `details.reason =
+        not_active_employee`; исполнитель дважды в одной зоне — `duplicate`. Текст ошибки — `message` EDS на языке
+        сотрудника. Ответ — обновлённая карточка. Решение, кого можно назначить, остаётся за EDS и ERP: BFF только передаёт
+        сотрудников и зоны (`GET /eds/resolution/assignees` подсказывает, кого выбрать).
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/LetterIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResolutionIn'
+      responses:
+        '200':
+          description: Резолюция наложена, задание в расчёт поставлено событием шины
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LetterCard'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/LetterConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /eds/letters/{id}/return:
+    post:
+      tags: [letters]
+      operationId: returnLetter
+      summary: 'EDS · Вернуть письмо менеджеру с комментарием'
+      description: >-
+        EDS `POST /letters/{id}/return` (право `letters.resolve`). Раздел `eds.inbox` — полный. Комментарий обязателен
+        (пустой — 422 `details.fields = [comment]`). Письмо уходит к регистратору (статус «Возвращено»), событие
+        `letter.returned`. Ответ — обновлённая карточка.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/LetterIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LetterReturnIn'
+      responses:
+        '200':
+          description: Возвращено менеджеру
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LetterCard'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/LetterConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /eds/letters/{id}/reject:
+    post:
+      tags: [letters]
+      operationId: rejectLetter
+      summary: 'EDS · Отклонить письмо с причиной'
+      description: >-
+        EDS `POST /letters/{id}/reject` (право `letters.resolve`). Раздел `eds.inbox` — полный. Причина обязательна (пустая —
+        422 `details.fields = [reason]`). Статус «Отклонено», событие `letter.rejected`: ERP переводит заявку в «Отказ» с
+        причиной. Ответ — обновлённая карточка.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/LetterIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LetterRejectIn'
+      responses:
+        '200':
+          description: Отклонено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LetterCard'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/LetterConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /eds/resolution/assignees:
+    get:
+      tags: [letters]
+      operationId: listResolutionAssignees
+      summary: 'EDS · Кого можно назначить исполнителем резолюции, по зонам'
+      description: >-
+        Кандидаты по зонам резолюции: товары (склад и цены поставщиков), услуги (ТЗ, бригада), условия оплаты. Зона даёт
+        сотрудникам **раздел каталога**, а не код роли: товары — `erp.calc.goods`, услуги — `erp.calc.services`, условия оплаты —
+        `eds.payments` (все — уровень «полный»). BFF читает из CRM активных сотрудников и роли с их матрицами
+        (`GET /users`, `GET /platform-roles`; нужен раздел `admin` не ниже чтения) и сводит матрицы ролей каждого. Если роли
+        сотрудника не дают чтения справочника CRM — 200 с пустыми списками и `directory = forbidden`: выбор исполнителей
+        недоступен до появления операции «сотрудники по разделу» в CRM (docs/QUESTIONS.md). Раздел `eds.inbox` — полный.
+      responses:
+        '200':
+          description: Кандидаты по трём зонам
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResolutionAssignees'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /eds/letter-files/{file_id}:
+    get:
+      tags: [letters]
+      operationId: downloadLetterFile
+      summary: 'EDS · Скачать вложение письма'
+      description: >-
+        EDS `GET /files/{id}` потоком, последняя версия. Раздел `eds.inbox` — чтение. Файл отдаётся как вложение
+        (`Content-Disposition: attachment`), тип содержимого браузер не исполняет (`X-Content-Type-Options: nosniff`,
+        `Content-Security-Policy: sandbox`). Файла нет или он не виден сотруднику — 404 `NOT_FOUND`.
+      parameters:
+        - name: file_id
+          in: path
+          required: true
+          schema: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Содержимое файла
+          headers:
+            Content-Disposition:
+              description: '`attachment; filename*=UTF-8''''…`'
+              schema:
+                type: string
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
 components:
   securitySchemes:
     platformSession:
@@ -4655,6 +4932,15 @@ components:
       schema:
         $ref: '#/components/schemas/ReferenceKind'
 
+    LetterIdPath:
+      name: id
+      in: path
+      required: true
+      description: UUID входящего письма (EDS)
+      schema:
+        type: string
+        format: uuid
+
   responses:
     SessionExpired:
       description: '`SESSION_EXPIRED` — сессии нет, истекла или сотрудник отключён'
@@ -4735,6 +5021,15 @@ components:
             $ref: '#/components/schemas/Error'
     BackendUnavailable:
       description: '`BACKEND_UNAVAILABLE` — CRM не ответила за таймаут'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    LetterConflict:
+      description: >-
+        409 `CONFLICT` — письмо уже не ждёт резолюции (решил другой директор, вернули, отклонили): `details.reason =
+        invalid_state`; обновите карточку
       content:
         application/json:
           schema:
@@ -8407,3 +8702,303 @@ components:
       properties:
         title: {type: string, minLength: 1, maxLength: 120}
         text: {$ref: '#/components/schemas/LocalizedText'}
+
+    LetterStatus:
+      type: string
+      enum: [awaiting_resolution, resolved, returned, rejected]
+      description: >-
+        Статус входящего письма (SPEC-v3 §2.4; EDS `LetterStatus`): `awaiting_resolution` — «Ждёт резолюции» (зарегистрировано),
+        `resolved` — «Резолюция наложена», `returned` — «Возвращено» менеджеру, `rejected` — «Отклонено». Слова — в словаре
+        интерфейса, не в API.
+
+    LetterZone:
+      type: string
+      enum: [goods, services, payment_terms]
+      description: >-
+        Зона исполнителя резолюции: `goods` — товары, склад, цены поставщиков (снабженец), `services` — услуги, ТЗ, бригада
+        (гл. инженер), `payment_terms` — условия оплаты (бухгалтер).
+
+    LetterSender:
+      type: object
+      additionalProperties: false
+      required: [name, inn, contact]
+      description: Организация-отправитель; `null` — письмо по заявке ERP без этого поля
+      properties:
+        name: {type: [string, 'null']}
+        inn: {type: [string, 'null']}
+        contact: {type: [string, 'null'], description: Контактное лицо}
+
+    LetterSenderRef:
+      type: object
+      additionalProperties: false
+      required: [number, date]
+      description: Исходящий номер и дата письма у отправителя
+      properties:
+        number: {type: [string, 'null']}
+        date: {type: [string, 'null'], format: date}
+
+    LetterRow:
+      type: object
+      additionalProperties: false
+      required: [id, number, subject, client_name, request_number, received_at, status, urgent, due]
+      properties:
+        id: {type: string, format: uuid}
+        number:
+          type: string
+          description: Номер ВХ-NNN/ГГ
+          examples: [ВХ-104/26]
+        subject: {type: string}
+        client_name: {type: [string, 'null'], description: Название организации-отправителя}
+        request_number:
+          type: [string, 'null']
+          description: Бизнес-номер заявки ЗВ из связей письма; `null` — письмо ещё не связано с заявкой
+        received_at: {type: string, format: date}
+        status: {$ref: '#/components/schemas/LetterStatus'}
+        urgent: {type: boolean}
+        due:
+          type: [string, 'null']
+          format: date
+          description: Срок расчёта из резолюции
+
+    LetterPage:
+      type: object
+      additionalProperties: false
+      required: [items, next_cursor]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/LetterRow'}
+        next_cursor:
+          type: [string, 'null']
+
+    LetterFile:
+      type: object
+      additionalProperties: false
+      required: [id, name, content_type, size, uploaded_at]
+      properties:
+        id: {type: string, format: uuid}
+        name: {type: string}
+        content_type: {type: string}
+        size: {type: integer, minimum: 0, description: Байт}
+        uploaded_at: {type: string, format: date-time}
+
+    LetterClient:
+      type: object
+      additionalProperties: false
+      required: [id, name, inn, path]
+      description: Клиент письма из связей (CRM); без связи с клиентом в карточке блока нет
+      properties:
+        id: {type: string, description: '`crm_client_id`'}
+        name: {type: [string, 'null']}
+        inn: {type: [string, 'null']}
+        path: {type: string, description: 'Путь карточки клиента в SPA, `/crm/clients/{id}`'}
+
+    LetterRequest:
+      type: object
+      additionalProperties: false
+      required: [number, title, path]
+      description: >-
+        Заявка письма. Номер EDS знает из связей письма; название и путь — из ERP (сделка по `erp_deal_id`): ERP не ответил —
+        `title = null`, путь ведёт в список заявок по номеру.
+      properties:
+        number: {type: string, examples: [ЗВ-2026-104]}
+        title: {type: [string, 'null']}
+        path: {type: string}
+
+    LetterAssignee:
+      type: object
+      additionalProperties: false
+      required: [person, zone]
+      properties:
+        person: {$ref: '#/components/schemas/PersonRef'}
+        zone: {$ref: '#/components/schemas/LetterZone'}
+
+    LetterResolution:
+      type: object
+      additionalProperties: false
+      required: [text, assignees, due, decided_by, decided_at]
+      properties:
+        text: {type: string}
+        assignees:
+          type: array
+          items: {$ref: '#/components/schemas/LetterAssignee'}
+        due: {type: string, format: date, description: Срок расчёта}
+        min_margin_pct:
+          type: [string, 'null']
+          description: >-
+            «Маржа не ниже, %» строкой (`15`, `12.5`); `null` — без ограничения. Поля нет в ответе, если ни у одной роли
+            сотрудника нет группы `cost_margin` (правило 6 CONVENTIONS Платформы).
+        decided_by: {$ref: '#/components/schemas/PersonRef'}
+        decided_at: {type: string, format: date-time}
+
+    LetterJournalEntry:
+      type: object
+      additionalProperties: false
+      required: [at, action, by, comment]
+      properties:
+        at: {type: string, format: date-time}
+        action:
+          type: string
+          description: Код действия EDS (`letter.registered`, `letter.resolved`, `letter.returned`, `letter.rejected`, …)
+        by:
+          oneOf:
+            - $ref: '#/components/schemas/PersonRef'
+            - type: 'null'
+          description: '`null` — система'
+        comment: {type: [string, 'null']}
+
+    LetterCard:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - number
+        - status
+        - subject
+        - summary
+        - urgent
+        - received_at
+        - registered_at
+        - registered_by
+        - addressee
+        - manager
+        - sender
+        - sender_ref
+        - client
+        - request
+        - stage
+        - lost_at_step
+        - files
+        - resolution
+        - return_comment
+        - reject_reason
+        - journal
+        - sources
+      properties:
+        id: {type: string, format: uuid}
+        number: {type: string, examples: [ВХ-104/26]}
+        status: {$ref: '#/components/schemas/LetterStatus'}
+        subject: {type: string}
+        summary: {type: string, description: Суть документа}
+        urgent: {type: boolean}
+        received_at: {type: string, format: date}
+        registered_at: {type: string, format: date-time}
+        registered_by:
+          oneOf:
+            - $ref: '#/components/schemas/PersonRef'
+            - type: 'null'
+          description: '`null` — зарегистрировано системой по заявке ERP'
+        addressee: {$ref: '#/components/schemas/PersonRef'}
+        manager:
+          oneOf:
+            - $ref: '#/components/schemas/PersonRef'
+            - type: 'null'
+        sender: {$ref: '#/components/schemas/LetterSender'}
+        sender_ref: {$ref: '#/components/schemas/LetterSenderRef'}
+        client:
+          oneOf:
+            - $ref: '#/components/schemas/LetterClient'
+            - type: 'null'
+        request:
+          oneOf:
+            - $ref: '#/components/schemas/LetterRequest'
+            - type: 'null'
+        stage:
+          $ref: '#/components/schemas/StepCode'
+        lost_at_step:
+          type: [integer, 'null']
+          minimum: 1
+          maximum: 7
+          description: Для `stage = LOST` — номер шага, на котором закрыли заявку (2 — резолюция); иначе `null`
+        files:
+          type: array
+          items: {$ref: '#/components/schemas/LetterFile'}
+        resolution:
+          oneOf:
+            - $ref: '#/components/schemas/LetterResolution'
+            - type: 'null'
+        return_comment: {type: [string, 'null']}
+        reject_reason: {type: [string, 'null']}
+        journal:
+          type: array
+          items: {$ref: '#/components/schemas/LetterJournalEntry'}
+        sources:
+          $ref: '#/components/schemas/Sources'
+
+    ResolutionAssigneeIn:
+      type: object
+      additionalProperties: false
+      required: [id, zone]
+      properties:
+        id:
+          type: string
+          pattern: '^[1-9][0-9]*$'
+          description: '`crm_user_id` сотрудника'
+        zone: {$ref: '#/components/schemas/LetterZone'}
+
+    ResolutionIn:
+      type: object
+      additionalProperties: false
+      required: [text, assignees, due]
+      properties:
+        text: {type: string, minLength: 1, maxLength: 4000}
+        assignees:
+          type: array
+          minItems: 1
+          maxItems: 12
+          items: {$ref: '#/components/schemas/ResolutionAssigneeIn'}
+        due: {type: string, format: date, description: Срок расчёта — не раньше сегодняшней даты по Asia/Tashkent}
+        min_margin_pct:
+          type: [string, 'null']
+          pattern: '^(100(\.0{1,2})?|\d{1,2}(\.\d{1,2})?)$'
+          description: '«Маржа не ниже, %»; нет или `null` — без ограничения'
+
+    LetterReturnIn:
+      type: object
+      additionalProperties: false
+      required: [comment]
+      properties:
+        comment: {type: string, minLength: 1, maxLength: 4000}
+
+    LetterRejectIn:
+      type: object
+      additionalProperties: false
+      required: [reason]
+      properties:
+        reason: {type: string, minLength: 1, maxLength: 4000}
+
+    ResolutionCandidate:
+      type: object
+      additionalProperties: false
+      required: [id, name, initials, position]
+      properties:
+        id: {type: string, description: '`crm_user_id`'}
+        name: {type: string}
+        initials: {type: string, maxLength: 3}
+        position: {type: [string, 'null']}
+
+    ResolutionZone:
+      type: object
+      additionalProperties: false
+      required: [zone, candidates]
+      properties:
+        zone: {$ref: '#/components/schemas/LetterZone'}
+        candidates:
+          type: array
+          items: {$ref: '#/components/schemas/ResolutionCandidate'}
+
+    ResolutionAssignees:
+      type: object
+      additionalProperties: false
+      required: [zones, directory]
+      properties:
+        zones:
+          type: array
+          description: Всегда три зоны в порядке товары, услуги, условия оплаты
+          items: {$ref: '#/components/schemas/ResolutionZone'}
+        directory:
+          type: string
+          enum: [ok, forbidden, unavailable]
+          description: >-
+            `ok` — справочник сотрудников прочитан; `forbidden` — роли сотрудника не дают чтения справочника CRM (кандидатов
+            нет); `unavailable` — CRM не ответила
