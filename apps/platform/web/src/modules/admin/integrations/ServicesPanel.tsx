@@ -1,76 +1,17 @@
-import { Button, Input } from "antd";
+import { Button } from "antd";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { ExternalService } from "../../../shared/api/generated/model";
 import {
   useCheckExternalService,
-  useDisableExternalService,
-  useEnableExternalService,
   useListExternalServices,
 } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
-import { ActionForm, ErrorNote, Field, LevelTag, PanelState, PanelTitle } from "./parts";
+import { OwnerLine, StateTag } from "./HealthParts";
+import { ErrorNote, PanelState, PanelTitle } from "./parts";
 import { useRefreshIntegrations } from "./refresh";
-
-function SwitchForm({ service, onDone }: { service: ExternalService; onDone: () => void }) {
-  const { t } = useTranslation("integrations");
-  const refresh = useRefreshIntegrations();
-  const [reason, setReason] = useState("");
-  const disabled = service.switch?.disabled ?? false;
-  const onSuccess = () => {
-    refresh();
-    onDone();
-  };
-  const disable = useDisableExternalService({ mutation: { onSuccess } });
-  const enable = useEnableExternalService({ mutation: { onSuccess } });
-  const active = disabled ? enable : disable;
-  const effect = service.switch?.effect;
-  return (
-    <ActionForm
-      id={`svc-${service.key}`}
-      title={t(disabled ? "services.enable.title" : "services.disable.title", {
-        title: service.title,
-      })}
-      submitLabel={t(disabled ? "services.enable.submit" : "services.disable.submit")}
-      danger={!disabled}
-      pending={active.isPending}
-      error={active.error}
-      consequence={
-        disabled
-          ? [t("services.enable.step1"), t("services.enable.step2")]
-          : [
-              effect ?? t("services.disable.step1"),
-              t("services.disable.step2"),
-              t("services.disable.step3"),
-            ]
-      }
-      onCancel={onDone}
-      onSubmit={(password) => {
-        if (disabled) enable.mutate({ key: service.key, data: { password } });
-        else
-          disable.mutate({
-            key: service.key,
-            data: { password, ...(reason.trim() ? { reason: reason.trim() } : {}) },
-          });
-      }}
-    >
-      {disabled ? null : (
-        <Field id={`svc-${service.key}-reason`} label={t("services.disable.reason")}>
-          <Input
-            id={`svc-${service.key}-reason`}
-            value={reason}
-            maxLength={200}
-            autoComplete="off"
-            onChange={(event) => {
-              setReason(event.target.value);
-            }}
-          />
-        </Field>
-      )}
-    </ActionForm>
-  );
-}
+import { SwitchForm } from "./SwitchForm";
 
 function ServiceRow({ service, editable }: { service: ExternalService; editable: boolean }) {
   const { t } = useTranslation("integrations");
@@ -91,14 +32,37 @@ function ServiceRow({ service, editable }: { service: ExternalService; editable:
       <div className="pf-int-item-head">
         <span className="pf-int-item-title">{service.title}</span>
         <span className="pf-int-row">
-          {paused ? <LevelTag level="off" /> : <LevelTag level={service.status} />}
+          <StateTag state={paused ? "disabled" : service.state} />
           {paused ? <span className="pf-hint">{t("services.pausedTag")}</span> : null}
         </span>
       </div>
       <p className="pf-int-sub">{service.purpose}</p>
-      <p className="pf-int-sub">{service.summary}</p>
-      {service.status !== "ok" && service.hint ? (
+      <p className="pf-int-sub">
+        {service.state === "not_checked" ? t("health.notChecked") : service.summary}
+      </p>
+      {service.state === "broken" ||
+      service.state === "unstable" ||
+      service.state === "degraded" ? (
+        <p className="pf-health-meta">
+          {service.since ? (
+            <span>{t("health.since", { date: date(service.since, "datetime") })}</span>
+          ) : null}
+          <OwnerLine owner={service.owner} action={service.action} />
+          {service.flaps_24h > 0 ? (
+            <span>{t("health.flaps", { count: service.flaps_24h })}</span>
+          ) : null}
+        </p>
+      ) : null}
+      {service.state === "expected" ? (
+        <p className="pf-int-sub">{t("health.expectedNote")}</p>
+      ) : null}
+      {service.state !== "ok" && service.state !== "expected" && service.hint ? (
         <p className="pf-int-sub">{t("services.hint", { hint: service.hint })}</p>
+      ) : null}
+      {service.state === "ok" && service.last_recovered_at ? (
+        <p className="pf-int-sub">
+          {t("health.recoveredAt", { date: date(service.last_recovered_at, "datetime") })}
+        </p>
       ) : null}
       <p className="pf-int-sub">
         {service.checked_at

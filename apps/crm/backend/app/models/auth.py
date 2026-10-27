@@ -49,11 +49,12 @@ class User(TimestampMixin, Base):
         ),
         # Язык интерфейса сотрудника (CRM-01b, Q-PLT-10-1 п. 6).
         CheckConstraint("language IN ('ru', 'uz', 'en')", name="language"),
-        # Замещение (W15-H6): заместитель и обе даты заданы вместе, период не пустой, не сам себе.
+        # Замещение (W15-H6): обе даты вместе, период не пуст, не сам себе. Заместитель может стать
+        # NULL при заполненных датах (FK ON DELETE SET NULL): это «замещения нет».
         CheckConstraint(
             "(deputy_user_id IS NULL AND deputy_from IS NULL AND deputy_to IS NULL) OR "
-            "(deputy_user_id IS NOT NULL AND deputy_from IS NOT NULL AND deputy_to IS NOT NULL "
-            "AND deputy_from <= deputy_to AND deputy_user_id <> id)",
+            "(deputy_from IS NOT NULL AND deputy_to IS NOT NULL AND deputy_from <= deputy_to "
+            "AND (deputy_user_id IS NULL OR deputy_user_id <> id))",
             name="deputy_period",
         ),
         Index("ix_users_deputy_user_id", "deputy_user_id"),
@@ -99,6 +100,8 @@ class User(TimestampMixin, Base):
     email_signature: Mapped[str | None] = mapped_column(Text)
     # Ник Telegram, с которого сотрудник привязал бота («Привязан как @…»); у привязки админом NULL.
     tg_username: Mapped[str | None] = mapped_column(String(64))
+    # Когда сотрудник привязал Telegram сам; NULL — привязал администратор или Telegram не привязан.
+    tg_linked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # Фото: ключ объекта в бакете файлов CRM (`domain/staff_profile.avatar_key`) и время замены
     # (версия адреса картинки). Файл отдаёт только API, публичных ссылок на S3 нет.
     avatar_key: Mapped[str | None] = mapped_column(String(255))
@@ -109,6 +112,9 @@ class User(TimestampMixin, Base):
     )
     deputy_from: Mapped[date | None] = mapped_column(Date)
     deputy_to: Mapped[date | None] = mapped_column(Date)
+    # Когда пароль сброшен (ссылкой, админом, приглашением): выпущенные раньше access-токены не
+    # принимаются: сессии сотрудника, в том числе живые в BFF, закрываются сразу, не через 15 минут.
+    password_changed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class Role(Base):

@@ -59,9 +59,18 @@ def clean_username(username: str | None) -> str | None:
 
 
 LINKED: Final = {
-    "ru": "Telegram привязан к вашему профилю. Сюда будут приходить личные уведомления CRM.",
-    "uz": "Telegram profilingizga ulandi. CRM shaxsiy bildirishnomalari shu yerga keladi.",
-    "en": "Telegram is linked to your profile. Personal CRM notifications will arrive here.",
+    "ru": (
+        "Telegram привязан к вашему профилю. Сюда будут приходить личные уведомления CRM. "
+        "Если это сделали не вы, отвяжите Telegram в профиле Платформы."
+    ),
+    "uz": (
+        "Telegram profilingizga ulandi. CRM shaxsiy bildirishnomalari shu yerga keladi. "
+        "Agar buni siz qilmagan boʻlsangiz, Platforma profilida Telegramni uzing."
+    ),
+    "en": (
+        "Telegram is linked to your profile. Personal CRM notifications will arrive here. "
+        "If this was not you, unlink Telegram in your Platform profile."
+    ),
 }
 INVALID: Final = {
     "ru": (
@@ -86,3 +95,13 @@ TAKEN: Final = {
 
 def text(table: dict[str, str], language: str | None) -> str:
     return table.get(language or "ru", table["ru"])
+
+
+# Telegram, привязанный сотрудником только что, не принимает ссылку сброса пароля: захваченная
+# сессия не должна позволять привязать «свой» Telegram и сразу забрать учётную запись.
+TRUST_AFTER: Final = timedelta(hours=24)
+
+
+def telegram_trusted(linked_at: datetime | None, now: datetime) -> bool:
+    """`None` — привязал администратор или привязка старая (самопривязка всегда ставит время)."""
+    return linked_at is None or now - linked_at >= TRUST_AFTER

@@ -155,6 +155,7 @@ class VendorFacts:
     disabled: bool = False
 
 
+_CAUSES: Final = {"auth": "key_rejected", "quota": "quota", "other": "provider_errors"}
 _HINTS: Final = {
     "auth": "Ключ провайдера отклонён — введите новый ключ в «Модели ИИ»",
     "quota": "У провайдера кончились кредиты или квота — пополните баланс в его консоли",
@@ -177,7 +178,7 @@ def vendor(f: VendorFacts) -> CheckResult:
     }
     if f.disabled:
         summary = "Выключен вручную — вызовы этого провайдера идут на запасную модель"
-        return CheckResult(key, "off", summary, metrics=metrics)
+        return CheckResult(key, "off", summary, metrics=metrics, cause="intentional")
     if not f.logs_available:
         return CheckResult(
             key,
@@ -196,6 +197,7 @@ def vendor(f: VendorFacts) -> CheckResult:
             error=f"{f.budget_spend:.2f} из {f.budget_limit:.2f} USD",
             hint="Посмотрите, что тратит, в «Расходах»; потолок сбросится через сутки",
             metrics=metrics,
+            cause="budget_cap",
         )
     auth_now = bool(w.failures) and w.last_error_kind == "auth" and _last_is_error(w)
     if auth_now or (w.calls >= MIN_CALLS and share >= FAIL_SHARE):
@@ -209,6 +211,7 @@ def vendor(f: VendorFacts) -> CheckResult:
             f"Израсходовано {used:.0%} дневного потолка провайдера",
             hint="Посмотрите, что тратит, в «Расходах»",
             metrics=metrics,
+            cause="budget_near",
         )
     summary = f"{w.calls} вызовов за 15 мин без ошибок" if w.calls else "Вызовов за 15 мин не было"
     if w.failures:
@@ -225,6 +228,7 @@ def _failing(key: str, w: VendorStats, status: Status, metrics: dict[str, Metric
         error=w.last_error,
         hint=_HINTS.get(kind, _HINTS["other"]),
         metrics=metrics,
+        cause=_CAUSES.get(kind, "provider_errors"),
     )
 
 

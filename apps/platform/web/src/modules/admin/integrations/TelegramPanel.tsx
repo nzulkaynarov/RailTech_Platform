@@ -29,6 +29,7 @@ import {
   PanelState,
   PanelTitle,
 } from "./parts";
+import { TechnicalDetails } from "./HealthParts";
 import { useRefreshIntegrations } from "./refresh";
 
 const LANGS = ["ru", "uz", "en"] as const;
@@ -303,7 +304,22 @@ function TelegramBody({ bot, editable }: { bot: TelegramConnector; editable: boo
             label: t("telegram.updated"),
             value: bot.updated_at ? date(bot.updated_at, "datetime") : null,
           },
-          { label: t("telegram.lastError"), value: bot.last_error },
+          {
+            label: t("telegram.lastError"),
+            value: bot.last_error ? (
+              <>
+                {t(`telegram.lastErrorCode.${bot.last_error}`, { defaultValue: "" })}
+                <TechnicalDetails
+                  lines={[bot.last_error]}
+                  context={{
+                    services: t("cards.telegram.title"),
+                    state: t("telegram.lastError"),
+                    since: "",
+                  }}
+                />
+              </>
+            ) : null,
+          },
         ]}
       />
       {!bot.secrets_enabled ? (

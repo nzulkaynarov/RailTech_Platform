@@ -1,4 +1,4 @@
-"""Профиль сотрудника: страница /me — поля, фото, Telegram сам, замещение (tag `me`, 0.18.0).
+"""Профиль сотрудника: страница /me — поля, фото, Telegram сам, замещение (tag `me`, 0.21.0).
 
 Доступно каждому вошедшему и только про себя: решения и данные — в CRM (ADR-0015), токеном самого
 сотрудника; BFF переводит поля и ошибки в формат `Error` и отдаёт фото без публичных ссылок на S3.
@@ -72,6 +72,8 @@ def _translate(response: httpx.Response) -> PlatformError:
             source="crm",
             details={"fields": [field] if field else [], "reason": reason},
         )
+    if response.status_code == status.HTTP_413_CONTENT_TOO_LARGE:
+        return _too_large()
     if response.status_code == status.HTTP_409_CONFLICT and reason == "bot_not_configured":
         return PlatformError(
             "NOT_CONFIGURED",
@@ -137,21 +139,34 @@ async def update_profile(body: ProfileUpdate, authed: AuthedDep) -> Profile:
 
 
 async def _avatar_body(request: Request) -> tuple[bytes, str]:
+    """Тело загрузки потоком: на пределе чтение обрывается (413), в памяти — не больше предела."""
     content_type = request.headers.get("content-type", "")
     if not content_type.lower().startswith("multipart/form-data"):
         raise _bad_avatar("avatar_unsupported_type")
     limit = MAX_AVATAR_BYTES + _MULTIPART_OVERHEAD
     declared = request.headers.get("content-length", "")
     if declared.isdigit() and int(declared) > limit:
-        raise _bad_avatar("avatar_too_large")
-    body = await request.body()
-    if len(body) > limit:
-        raise _bad_avatar("avatar_too_large")
-    found = _AVATAR_PART.search(body[:_PART_HEADERS_WINDOW])
+        raise _too_large()
+    body = bytearray()
+    async for chunk in request.stream():
+        body.extend(chunk)
+        if len(body) > limit:
+            raise _too_large()
+    # Тип части `avatar` — из её заголовков (начало тела); содержимое проверяет CRM.
+    found = _AVATAR_PART.search(bytes(body[:_PART_HEADERS_WINDOW]))
     mime = found.group(1).strip().lower().decode("ascii", "ignore") if found else ""
     if mime not in AVATAR_TYPES:
         raise _bad_avatar("avatar_unsupported_type")
-    return body, content_type
+    return bytes(body), content_type
+
+
+def _too_large() -> PlatformError:
+    return PlatformError(
+        "PAYLOAD_TOO_LARGE",
+        _MESSAGES["avatar_too_large"],
+        status_code=413,
+        details={"fields": ["avatar"], "reason": "avatar_too_large", "max_bytes": MAX_AVATAR_BYTES},
+    )
 
 
 def _bad_avatar(reason: str) -> PlatformError:

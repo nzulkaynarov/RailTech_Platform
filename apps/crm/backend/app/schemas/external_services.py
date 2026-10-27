@@ -6,6 +6,20 @@ from typing import Literal
 from pydantic import BaseModel, Field, SecretStr
 
 ServiceStatus = Literal["ok", "warn", "fail", "unknown", "off"]
+ServiceState = Literal[
+    "ok", "broken", "unstable", "degraded", "not_configured", "disabled", "expected", "not_checked"
+]
+ServiceOwner = Literal["admin", "owner", "hosting", "provider"]
+ServiceAction = Literal[
+    "enter_key",
+    "enter_token",
+    "recheck",
+    "reconnect",
+    "open_settings",
+    "write_owner",
+    "write_hosting",
+    "disable_provider",
+]
 MetricValue = float | int | str | None
 
 
@@ -57,6 +71,44 @@ class ExternalServiceOut(BaseModel):
     p95_ms_24h: int | None
     switch: ServiceSwitchOut | None
     incident: IncidentOut | None
+    state: ServiceState = Field(
+        description="Состояние словом: сломано, работает с перебоями, не настроено, выключено "
+        "намеренно, ожидаемо на стенде, не проверено, работает"
+    )
+    cause_key: str = Field(description="Корень причины; у сервисов с общей причиной он общий")
+    owner: ServiceOwner | None = Field(description="Кто исправляет; нет — исправлять нечего")
+    action: ServiceAction | None = Field(description="Главное действие по смыслу")
+    more_actions: list[ServiceAction] = Field(description="Запасные действия")
+    since: datetime | None = Field(description="Когда впервые обнаружено (не в порядке с …)")
+    flaps_24h: int = Field(
+        description="Провалов (полос сбоя) за сутки: «Нестабильно», когда их много"
+    )
+    last_recovered_at: datetime | None = Field(
+        description="Когда восстановился после последнего сбоя за 30 дней (журнал инцидентов)"
+    )
+
+
+class ServiceGroupOut(BaseModel):
+    """Одна причина — одна строка «Требует внимания»: сервисы с общим корнем свёрнуты вместе."""
+
+    id: str = Field(description="Корень причины (`cause_key`), стабильный ключ строки")
+    state: ServiceState
+    owner: ServiceOwner | None
+    action: ServiceAction | None
+    more_actions: list[ServiceAction]
+    headline: str = Field(description="Что случилось одной фразой, без сырых ответов провайдера")
+    detail: str | None = Field(description="Что сделать и кому передать")
+    affected: list[str] = Field(description="Что перестало работать — функции списком")
+    service_keys: list[str]
+    titles: list[str]
+    since: datetime | None
+    technical: list[str] = Field(
+        description="Сырой текст проверки, секреты замаскированы; показывается свёрнутым"
+    )
+    message: str | None = Field(
+        description="Готовый текст владельцу или хостингу — копируется, сам не отправляется"
+    )
+    flaps_24h: int = Field(description="Провалов за сутки по сервисам причины (наибольшее)")
 
 
 class ExternalServicesSummary(BaseModel):
@@ -72,6 +124,8 @@ class ExternalServicesOut(BaseModel):
     checked_at: datetime | None
     summary: ExternalServicesSummary
     services: list[ExternalServiceOut]
+    stand: bool = Field(description="Тестовый стенд (не прод): часть причин «ожидаема»")
+    groups: list[ServiceGroupOut] = Field(description="Не-`ok` сервисы, свёрнутые по причине")
 
 
 class ServiceCheckOut(BaseModel):

@@ -67,21 +67,36 @@ class StaffProfileService:
         email_signature: str | None = None,
     ) -> UserView:
         """Поля профиля; `None` — не менять, пустая строка в телефоне и подписи — очистить."""
-        try:
-            new_phone = None if phone is None else rules.normalize_phone(phone)
-            new_zone = None if timezone is None else rules.checked_timezone(timezone)
-            new_signature = (
-                None if email_signature is None else rules.checked_signature(email_signature)
-            )
-        except rules.ProfileValueError as exc:
-            raise invalid(exc) from exc
+        new_phone, new_zone, new_signature = self.validate(
+            full_name=full_name, phone=phone, timezone=timezone, email_signature=email_signature
+        )
         if any(v is not None for v in (phone, timezone, email_signature)):
             await self._save_private(
                 actor, user_id, phone, new_phone, new_zone, email_signature, new_signature
             )
-        if full_name is not None and full_name.strip():
+        if full_name is not None:
             await self._users.update(actor, user_id, UserPatch(full_name=full_name))
         return await self._users.get(user_id)
+
+    @staticmethod
+    def validate(
+        *,
+        full_name: str | None = None,
+        phone: str | None = None,
+        timezone: str | None = None,
+        email_signature: str | None = None,
+    ) -> tuple[str | None, str | None, str | None]:
+        """Поля проверяются до записи: телефон, пояс и подпись нормализуются; пустое имя — 422."""
+        try:
+            if full_name is not None and not full_name.strip():
+                raise rules.ProfileValueError("name_required", "full_name")
+            return (
+                None if phone is None else rules.normalize_phone(phone),
+                None if timezone is None else rules.checked_timezone(timezone),
+                None if email_signature is None else rules.checked_signature(email_signature),
+            )
+        except rules.ProfileValueError as exc:
+            raise invalid(exc) from exc
 
     async def _save_private(
         self,

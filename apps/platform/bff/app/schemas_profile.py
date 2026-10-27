@@ -1,12 +1,12 @@
 """Профиль сотрудника для страницы /me (W15-H6) — схемы `Profile`, `ProfileUpdate`, `TelegramLink`,
-`DeputyUpdate`, `Colleague`, `ForgotPasswordIn`, `ResetPasswordIn` из platform-bff.yaml (0.18.0).
+`DeputyUpdate`, `Colleague`, `ForgotPasswordIn`, `ResetPasswordIn` из platform-bff.yaml (0.21.0).
 
 Данные приносит CRM (`GET /api/v1/me`, ADR-0015); BFF переводит поля и прячет числовой id Telegram.
 """
 
 from typing import Annotated, Any
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from app.session import Language
 
@@ -52,6 +52,13 @@ class ProfileUpdate(BaseModel):
     language: Language | None = None
     timezone: str | None = Field(default=None, max_length=64)
     email_signature: str | None = Field(default=None, max_length=1000)
+
+    @field_validator("name")
+    @classmethod
+    def _name_not_blank(cls, value: str | None) -> str | None:
+        if value is not None and not value.strip():
+            raise ValueError("имя не может состоять из пробелов")
+        return value
 
     @model_validator(mode="after")
     def _not_empty(self) -> "ProfileUpdate":
@@ -102,7 +109,8 @@ class ResetPasswordIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     token: str = Field(min_length=20, max_length=128)
-    new_password: str = Field(min_length=8, max_length=256)
+    # Как политика CRM (`MIN_LENGTH` паролей): короче 10 символов CRM всё равно не примет.
+    new_password: str = Field(min_length=10, max_length=256)
 
 
 def avatar_url(user_id: int | str, version: int | None) -> str | None:

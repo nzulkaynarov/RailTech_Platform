@@ -262,6 +262,9 @@ test.describe("«Забыли пароль?»", () => {
   }) => {
     await page.goto(RESET_URL);
     await expect(page.getByRole("heading", { level: 1, name: "Новый пароль" })).toBeVisible();
+    // Токен сразу уходит из адреса (история, журналы прокси, Referer), а страница не отдаёт Referer
+    await expect(page).toHaveURL(/\/reset-password$/);
+    await expect(page.locator('meta[name="referrer"]')).toHaveAttribute("content", "no-referrer");
     await settledScreenshot(page, "reset-password");
     await expectNoViolations(page, "новый пароль");
     await page.getByLabel("Новый пароль").fill("Brand-new-secret-77");

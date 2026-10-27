@@ -137,7 +137,7 @@ def test_every_profile_reason_is_a_known_error_reason() -> None:
 
     known = {r.value for r in Reason}
     produced = {
-        "phone_invalid", "timezone_unknown", "signature_invalid", "avatar_empty",
+        "name_required", "phone_invalid", "timezone_unknown", "signature_invalid", "avatar_empty",
         "avatar_too_large", "avatar_unsupported_type", "avatar_type_mismatch",
         "deputy_is_self", "deputy_period_reversed", "deputy_period_past", "deputy_period_too_long",
     }  # fmt: skip
@@ -155,3 +155,10 @@ def test_every_profile_reason_is_a_known_error_reason() -> None:
 )
 def test_local_today_uses_employee_calendar(tz: str, expected: date) -> None:
     assert local_today(tz, datetime(2026, 10, 31, 20, 0, tzinfo=UTC)) == expected
+
+
+def test_timezone_list_is_read_once() -> None:
+    from app.domain import staff_profile as module
+
+    assert checked_timezone("Asia/Tashkent") == "Asia/Tashkent"
+    assert module._known_zones() is module._known_zones()

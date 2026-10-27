@@ -38,10 +38,11 @@ class FakeBotState:
 
 
 def make(
-    sessions: async_sessionmaker[AsyncSession], bot: Any = None
+    sessions: async_sessionmaker[AsyncSession], bot: Any = None, on_linked: Any = None
 ) -> tuple[StaffTelegramLinkService, Clock]:
     clock = Clock()
-    return StaffTelegramLinkService(sessions, bot or FakeBotState(), clock), clock  # type: ignore[arg-type]
+    service = StaffTelegramLinkService(sessions, bot or FakeBotState(), clock, on_linked)  # type: ignore[arg-type]
+    return service, clock
 
 
 def code_of(url: str) -> str:
@@ -165,3 +166,33 @@ async def test_no_link_without_a_running_bot(
     with pytest.raises(ConflictError) as caught:
         await svc.begin(manager.id)
     assert caught.value.details["reason"] == reason
+
+
+async def test_owner_is_told_about_the_link_and_a_failing_notice_does_not_undo_it(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    told: list[tuple[int, str | None]] = []
+
+    async def notice(user_id: int, nick: str | None) -> None:
+        told.append((user_id, nick))
+
+    svc, clock = make(sessions, on_linked=notice)
+    manager, _ = await make_user(sessions, "dilshod@railtech.uz", ["manager"])
+    assert (
+        await svc.confirm(code_of((await svc.begin(manager.id)).url), 5001, "@intruder")
+    ).status == "linked"
+    assert told == [(manager.id, "intruder")]
+    assert (await user_row(sessions, manager.id)).tg_linked_at == clock.now
+
+    async def broken(user_id: int, nick: str | None) -> None:
+        raise RuntimeError("smtp down")
+
+    other, _ = await make_user(sessions, "other@railtech.uz", ["manager"])
+    svc2, _ = make(sessions, on_linked=broken)
+    assert (
+        await svc2.confirm(code_of((await svc2.begin(other.id)).url), 5002, None)
+    ).status == "linked"
+    assert (await user_row(sessions, other.id)).tg_user_id == 5002
+
+    await svc.unlink(Actor(manager.id), manager.id)
+    assert (await user_row(sessions, manager.id)).tg_linked_at is None

@@ -19,7 +19,7 @@ const TONE: Record<SetupStepState, StatusTone> = {
  * в списке — ссылка ведёт на тот же экран, чтобы проверить или изменить настройку.
  */
 export function ConnectionsStep({ steps }: { steps: readonly SetupStep[] }) {
-  const { t } = useTranslation("modules");
+  const { t } = useTranslation(["modules", "integrations"]);
   return (
     <ul className="pf-setup-steps" aria-label={t("admin.setup.listLabel")}>
       {steps.map((step) => (
@@ -27,7 +27,12 @@ export function ConnectionsStep({ steps }: { steps: readonly SetupStep[] }) {
           <div className="pf-setup-step-text">
             <span className="pf-setup-step-title">
               {t(`admin.setup.steps.${step.key}.title`)}
-              <StatusTag tone={TONE[step.state]}>{t(`admin.setup.state.${step.state}`)}</StatusTag>
+              <StatusTag tone={TONE[step.state]}>
+                {/* Проверка не выполнялась — не «Готово» и не «Нет данных» (O-4, W15-H3) */}
+                {step.state === "unknown"
+                  ? t("integrations:health.setupUnchecked")
+                  : t(`admin.setup.state.${step.state}`)}
+              </StatusTag>
             </span>
             <span className="pf-hint">{t(`admin.setup.steps.${step.key}.text`)}</span>
           </div>

@@ -140,7 +140,7 @@
     "new": "New password",
     "confirm": "Repeat the password",
     "newRequired": "Enter a new password",
-    "tooShort": "At least 8 characters",
+    "tooShort": "At least 10 characters",
     "mismatch": "Passwords do not match",
     "submit": "Save password",
     "done": "Password changed. Sign in with the new password.",

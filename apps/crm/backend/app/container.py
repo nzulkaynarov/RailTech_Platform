@@ -66,6 +66,7 @@ if TYPE_CHECKING:
     from app.services.smtp_connector import SmtpConnectorService
     from app.services.sso import SsoService
     from app.services.staff_deputy import StaffDeputyService
+    from app.services.staff_link_notice import StaffLinkNotice
     from app.services.staff_profile import StaffProfileService
     from app.services.staff_telegram_link import StaffTelegramLinkService
     from app.services.user_invites import UserInviteService
@@ -150,6 +151,7 @@ class Container:
             self.settings_service,
             self.switch_board,
             defaults=self.settings.litellm_models_path,
+            stand=self.settings.is_stand,
         )
 
     @cached_property
@@ -544,7 +546,20 @@ class Container:
     def staff_telegram_link(self) -> "StaffTelegramLinkService":
         from app.services.staff_telegram_link import StaffTelegramLinkService
 
-        return StaffTelegramLinkService(self.session_factory, self.bot_state)
+        return StaffTelegramLinkService(
+            self.session_factory, self.bot_state, on_linked=self.staff_link_notice.linked
+        )
+
+    @cached_property
+    def staff_link_notice(self) -> "StaffLinkNotice":
+        from app.services.staff_link_notice import StaffLinkNotice
+
+        return StaffLinkNotice(
+            self.session_factory,
+            self.mail_service,
+            self.settings_service,
+            self.settings.platform_base_url,
+        )
 
     @cached_property
     def staff_deputy(self) -> "StaffDeputyService":

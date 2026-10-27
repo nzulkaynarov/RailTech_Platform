@@ -6,7 +6,7 @@
 привязке админом (`users.tg_user_id`, ею пользуется `StaffNotifier`). Новая ссылка отменяет прежнюю.
 """
 
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Literal
@@ -26,6 +26,8 @@ from app.services.bot_state import BotStateService
 
 logger = structlog.get_logger(__name__)
 Status = Literal["linked", "invalid", "taken"]
+# Что сделать после успешной привязки (письмо владельцу): (id сотрудника, ник или None).
+OnLinked = Callable[[int, str | None], Awaitable[None]]
 
 
 @dataclass(frozen=True, slots=True)
@@ -50,10 +52,12 @@ class StaffTelegramLinkService:
         sessions: async_sessionmaker[AsyncSession],
         bot_state: BotStateService,
         clock: Callable[[], datetime] = _utcnow,
+        on_linked: OnLinked | None = None,
     ) -> None:
         self._sessions = sessions
         self._bot_state = bot_state
         self._clock = clock
+        self._on_linked = on_linked
 
     async def begin(self, user_id: int) -> LinkTicket:
         """Новая ссылка привязки; прежние неиспользованные коды сотрудника гасятся."""
@@ -99,6 +103,7 @@ class StaffTelegramLinkService:
                 async with session.begin_nested():
                     user.tg_user_id = tg_user_id
                     user.tg_username = rules.clean_username(tg_username)
+                    user.tg_linked_at = now
                     user.tg_dm_failed_at = None  # человек только что написал боту
                     await session.flush()
             except IntegrityError:
@@ -107,7 +112,18 @@ class StaffTelegramLinkService:
                 session, Actor(user_id, "user"), "user.telegram_linked", "user", user_id,
                 after={"tg_user_id": tg_user_id},
             )  # fmt: skip
-            return LinkOutcome("linked", language)
+            nick = user.tg_username
+        await self._announce(user_id, nick)
+        return LinkOutcome("linked", language)
+
+    async def _announce(self, user_id: int, nick: str | None) -> None:
+        """Письмо владельцу «Telegram привязан…»; сбой письма привязку не отменяет."""
+        if self._on_linked is None:
+            return
+        try:
+            await self._on_linked(user_id, nick)
+        except Exception:
+            logger.warning("staff_telegram_link_notice_failed", user_id=user_id, exc_info=True)
 
     async def unlink(self, actor: Actor, user_id: int) -> None:
         async with self._sessions() as session, session.begin():
@@ -121,6 +137,7 @@ class StaffTelegramLinkService:
                 before = {"tg_user_id": user.tg_user_id}
                 user.tg_user_id = None
                 user.tg_username = None
+                user.tg_linked_at = None
                 user.tg_dm_failed_at = None
                 await audit.record(
                     session, actor, "user.telegram_unlinked", "user", user_id, before=before

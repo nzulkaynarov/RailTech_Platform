@@ -7,6 +7,7 @@
 import re
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
+from functools import lru_cache
 from typing import Final
 from zoneinfo import ZoneInfo, available_timezones
 
@@ -47,10 +48,16 @@ def normalize_phone(raw: str) -> str | None:
     return ("+" if text.startswith("+") else "") + digits
 
 
+@lru_cache(maxsize=1)
+def _known_zones() -> frozenset[str]:
+    """`available_timezones()` читает диск: список строится один раз на процесс."""
+    return frozenset(available_timezones())
+
+
 def checked_timezone(name: str) -> str:
     """Имя пояса IANA из базы zoneinfo (регистр важен: `Asia/Tashkent`)."""
     value = name.strip()
-    if value not in available_timezones():
+    if value not in _known_zones():
         raise ProfileValueError("timezone_unknown", "timezone")
     return value
 

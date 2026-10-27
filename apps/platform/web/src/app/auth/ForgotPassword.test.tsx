@@ -101,9 +101,14 @@ describe("Новый пароль по ссылке", () => {
   });
 
   it("слабый пароль: ссылка остаётся рабочей, форма на месте", async () => {
-    await submit(DEMO_RESET_TOKEN, "short1abc");
+    await submit(DEMO_RESET_TOKEN, "onlyletterspassword");
     expect(await screen.findByRole("alert")).toHaveTextContent("Пароль слишком простой");
     expect(screen.getByRole("button", { name: /Сохранить пароль/ })).toBeVisible();
+  });
+
+  it("короче 10 символов — до отправки, как политика CRM", async () => {
+    await submit(DEMO_RESET_TOKEN, "short1abc");
+    expect(await screen.findByText("Не короче 10 символов")).toBeInTheDocument();
   });
 
   it("пароли не совпадают — до отправки", async () => {

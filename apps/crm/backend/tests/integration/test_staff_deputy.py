@@ -5,7 +5,7 @@ from datetime import UTC, date, datetime, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import update
+from sqlalchemy import delete, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.config import Settings
@@ -215,3 +215,27 @@ async def test_deputy_api_roundtrip(
     cleared = client.delete("/api/v1/me/deputy", headers=headers).json()
     assert cleared["deputy_user_id"] is None
     assert cleared["deputy_name"] is None
+
+
+async def test_deleting_the_deputy_record_leaves_no_cover_and_no_error(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    """FK `ON DELETE SET NULL` согласован с CHECK: даты остаются, заместителя нет."""
+    me, _ = await make_user(sessions, "me@railtech.uz", ["manager"])
+    deputy, _ = await make_user(sessions, "deputy@railtech.uz", ["manager"])
+    service = svc(sessions)
+    await service.set(Actor(me.id), me.id, deputy.id, TODAY, TODAY + timedelta(days=3))
+    async with sessions() as session, session.begin():
+        await session.execute(delete(User).where(User.id == deputy.id))
+    async with sessions() as session:
+        user = await session.get(User, me.id)
+    assert user is not None
+    assert user.deputy_user_id is None
+    assert user.deputy_from == TODAY
+    assert await service.covering(deputy.id) == []
+    await service.clear(Actor(me.id), me.id)  # остаток дат убирается
+    async with sessions() as session:
+        user = await session.get(User, me.id)
+    assert user is not None
+    assert user.deputy_from is None
+    assert user.deputy_to is None

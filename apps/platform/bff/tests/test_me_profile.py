@@ -1,10 +1,11 @@
-"""Профиль /me (W15-H6, контракт 0.18.0): поля, фото, Telegram сам, замещение — только про себя.
+"""Профиль /me (W15-H6, контракт 0.21.0): поля, фото, Telegram сам, замещение — только про себя.
 
 CRM на respx: решения (значения, лимиты, срок кода) за CRM, здесь — перевод, права «только свой
 профиль» и отдача фото без публичных ссылок на S3.
 """
 
 import json
+from collections.abc import AsyncIterator
 from typing import Any
 
 import httpx
@@ -232,7 +233,15 @@ async def test_update_maps_name_and_refreshes_the_session(
 
 @pytest.mark.parametrize(
     "payload",
-    [{}, {"name": None}, {"name": ""}, {"position": "Директор"}, {"user_id": "9"}, {"roles": []}],
+    [
+        {},
+        {"name": None},
+        {"name": ""},
+        {"name": "   "},
+        {"position": "Директор"},
+        {"user_id": "9"},
+        {"roles": []},
+    ],
 )
 async def test_update_accepts_only_own_editable_fields(
     web: Web, crm: CrmProfile, check: ContractChecker, payload: dict[str, Any]
@@ -313,22 +322,55 @@ async def test_avatar_upload_goes_to_crm_and_shows_in_me(
     assert "avatar_url" not in removed.json()
 
 
-@pytest.mark.parametrize(
-    ("mime", "size", "reason"),
-    [
-        ("image/svg+xml", 10, "avatar_unsupported_type"),
-        ("image/png", 1024 * 1024 + 70000, "avatar_too_large"),
-    ],
-)
-async def test_bad_avatar_never_reaches_crm(
-    web: Web, crm: CrmProfile, check: ContractChecker, mime: str, size: int, reason: str
+async def test_unsupported_avatar_type_never_reaches_crm(
+    web: Web, crm: CrmProfile, check: ContractChecker
 ) -> None:
     await web.login(["MANAGER"])
-    response = await upload(web, b"\x00" * size, mime)
+    response = await upload(web, b"\x00" * 10, "image/svg+xml")
     assert response.status_code == 422
     check(response, "/me/avatar", "put")
-    assert response.json()["details"] == {"fields": ["avatar"], "reason": reason}
+    assert response.json()["details"] == {"fields": ["avatar"], "reason": "avatar_unsupported_type"}
     assert crm.uploads == []
+
+
+async def test_oversized_avatar_is_cut_off_with_413(
+    web: Web, crm: CrmProfile, check: ContractChecker
+) -> None:
+    await web.login(["MANAGER"])
+    response = await upload(web, b"\x00" * (1024 * 1024 + 70000), "image/png")
+    assert response.status_code == 413
+    check(response, "/me/avatar", "put")
+    assert response.json()["code"] == "PAYLOAD_TOO_LARGE"
+    assert response.json()["details"]["reason"] == "avatar_too_large"
+    assert crm.uploads == []
+
+
+async def test_oversized_avatar_without_content_length_is_cut_off_while_streaming(
+    web: Web, crm: CrmProfile
+) -> None:
+    await web.login(["MANAGER"])
+
+    async def body() -> AsyncIterator[bytes]:
+        yield part(b"", "image/png")[: -len(b"\r\n--xyz--\r\n")]
+        for _ in range(30):
+            yield b"\x00" * 65536
+
+    response = await web.client.request(
+        "PUT",
+        "/api/v1/me/avatar",
+        content=body(),
+        headers={"content-type": MULTIPART, "x-csrf-token": web.csrf},
+    )
+    assert response.status_code == 413
+    assert crm.uploads == []
+
+
+async def test_crm_413_is_translated(web: Web, crm: CrmProfile) -> None:
+    await web.login(["MANAGER"])
+    crm.refuse = (413, {"code": "payload_too_large", "message": "x", "details": {}})
+    response = await upload(web, PNG, "image/png")
+    assert response.status_code == 413
+    assert response.json()["code"] == "PAYLOAD_TOO_LARGE"
 
 
 async def test_avatar_must_be_multipart(web: Web, crm: CrmProfile) -> None:

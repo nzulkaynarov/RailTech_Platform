@@ -1,5 +1,6 @@
 import { Alert, Button, Form, Input } from "antd";
 import { useTranslation } from "react-i18next";
+import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router";
 
 import { profileErrorText } from "../../features/profile/errors";
@@ -21,7 +22,21 @@ export function ResetPasswordPage() {
   useDocumentTitle(t("reset.title"));
   const navigate = useNavigate();
   const [params] = useSearchParams();
-  const token = params.get("token") ?? "";
+  // Токен — в состояние, а из адреса он уходит сразу: не остаётся в истории браузера, журналах прокси и заголовке Referer.
+  const [token] = useState(() => params.get("token") ?? "");
+  useEffect(() => {
+    if (window.location.search.includes("token=")) {
+      window.history.replaceState(window.history.state, "", window.location.pathname);
+    }
+    // Ни одна страница, на которую уйдёт сотрудник, не должна получить адрес со ссылкой сброса.
+    const meta = document.createElement("meta");
+    meta.name = "referrer";
+    meta.content = "no-referrer";
+    document.head.appendChild(meta);
+    return () => {
+      meta.remove();
+    };
+  }, []);
   const reset = useResetPassword({
     mutation: {
       gcTime: 0,
@@ -72,7 +87,7 @@ export function ResetPasswordPage() {
             label={t("reset.new")}
             rules={[
               { required: true, message: t("reset.newRequired") },
-              { min: 8, message: t("reset.tooShort") },
+              { min: 10, message: t("reset.tooShort") },
             ]}
           >
             <Input.Password autoComplete="new-password" autoFocus />

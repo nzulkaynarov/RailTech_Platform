@@ -121,6 +121,7 @@ class Reason(StrEnum):
     # «Согласие получено» (FIX-57, D-8): лид из Telegram соглашается в боте, сотрудник не отмечает.
     CONSENT_VIA_BOT = "consent_via_bot"
     # Профиль сотрудника (W15-H6): значения полей, фото и замещение (`domain/staff_profile.py`).
+    NAME_REQUIRED = "name_required"
     PHONE_INVALID = "phone_invalid"
     TIMEZONE_UNKNOWN = "timezone_unknown"
     SIGNATURE_INVALID = "signature_invalid"
@@ -262,6 +263,12 @@ class MailTemplateMissingError(DomainError):
 
     def __init__(self) -> None:
         super().__init__("email template is not found; contact the administrator of the deployment")
+
+
+class PayloadTooLargeError(DomainError):
+    """Тело запроса больше допустимого (413): тело не читается дальше предела."""
+
+    code = "payload_too_large"
 
 
 class RateLimitedError(DomainError):

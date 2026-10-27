@@ -272,3 +272,62 @@ async def test_background_failure_never_reaches_the_caller(
     await make_user(sessions, "dilshod@railtech.uz", ["manager"])
     await service.request("dilshod@railtech.uz")
     assert await tokens(sessions) == []
+
+
+async def test_reset_by_link_closes_sessions_issued_before_it(
+    sessions: async_sessionmaker[AsyncSession], live_settings: Settings
+) -> None:
+    """Живой access-токен (и сессия в BFF) после сброса не принимается; новый вход работает."""
+    import asyncio
+
+    service, mail, _, _ = make(sessions)
+    manager, _ = await make_user(sessions, "dilshod@railtech.uz", ["manager"])
+    with TestClient(create_app(live_settings)) as client:
+        old = login(client, manager.email, PASSWORD)
+        assert client.get("/api/v1/me", headers=old).status_code == 200
+        await service.request("dilshod@railtech.uz")
+        await asyncio.sleep(1.1)  # токены считаются с точностью до секунды
+        await service.reset(token_in(mail.sent[0]["context"]["reset_url"]), NEW_PASSWORD)
+        assert client.get("/api/v1/me", headers=old).status_code == 401
+        fresh = login(client, manager.email, NEW_PASSWORD)
+        assert client.get("/api/v1/me", headers=fresh).status_code == 200
+
+
+async def test_young_self_linked_telegram_gets_no_reset_link(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    """Захваченная сессия не должна привязать «свой» Telegram и сразу забрать пароль."""
+    bot = FakeSender()
+    service, mail, _, clock = make(sessions, FakeMail(ready=False), bot)
+    manager, _ = await make_user(sessions, "dilshod@railtech.uz", ["manager"])
+    async with sessions() as session, session.begin():
+        await session.execute(
+            update(User)
+            .where(User.id == manager.id)
+            .values(tg_user_id=9001, tg_linked_at=NOW - timedelta(hours=2))
+        )
+    await service.request("dilshod@railtech.uz")
+    assert bot.sent == []
+    assert await tokens(sessions) == []
+
+    clock.now = NOW + timedelta(hours=23)  # привязке исполнились сутки
+    await service.request("dilshod@railtech.uz")
+    assert len(bot.sent) == 1
+    assert mail.sent == []
+
+
+async def test_young_telegram_is_not_a_fallback_when_mail_fails(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    bot = FakeSender()
+    service, _, _, _ = make(sessions, FakeMail(fails=True), bot)
+    manager, _ = await make_user(sessions, "dilshod@railtech.uz", ["manager"])
+    async with sessions() as session, session.begin():
+        await session.execute(
+            update(User)
+            .where(User.id == manager.id)
+            .values(tg_user_id=9001, tg_linked_at=NOW - timedelta(hours=1))
+        )
+    await service.request("dilshod@railtech.uz")
+    assert bot.sent == []
+    assert await tokens(sessions) == []

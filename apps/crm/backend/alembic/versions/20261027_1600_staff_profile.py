@@ -7,7 +7,7 @@
 пароля, 60 минут). Данных для переноса нет.
 
 Revision ID: 0042_staff_profile
-Revises: 0040_identity_catalog_state
+Revises: 0041_external_cause_alerts
 Create Date: 2026-10-27 16:00:00+00:00
 """
 
@@ -17,14 +17,14 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "0042_staff_profile"
-down_revision: str | None = "0040_identity_catalog_state"
+down_revision: str | None = "0041_external_cause_alerts"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 _DEPUTY_CHECK = (
     "(deputy_user_id IS NULL AND deputy_from IS NULL AND deputy_to IS NULL) OR "
-    "(deputy_user_id IS NOT NULL AND deputy_from IS NOT NULL AND deputy_to IS NOT NULL "
-    "AND deputy_from <= deputy_to AND deputy_user_id <> id)"
+    "(deputy_from IS NOT NULL AND deputy_to IS NOT NULL AND deputy_from <= deputy_to "
+    "AND (deputy_user_id IS NULL OR deputy_user_id <> id))"
 )
 
 
@@ -41,6 +41,7 @@ def upgrade() -> None:
     )
     op.add_column("users", sa.Column("email_signature", sa.Text(), nullable=True))
     op.add_column("users", sa.Column("tg_username", sa.String(length=64), nullable=True))
+    op.add_column("users", sa.Column("tg_linked_at", sa.DateTime(timezone=True), nullable=True))
     op.add_column("users", sa.Column("avatar_key", sa.String(length=255), nullable=True))
     op.add_column(
         "users", sa.Column("avatar_updated_at", sa.DateTime(timezone=True), nullable=True)
@@ -48,6 +49,9 @@ def upgrade() -> None:
     op.add_column("users", sa.Column("deputy_user_id", sa.BigInteger(), nullable=True))
     op.add_column("users", sa.Column("deputy_from", sa.Date(), nullable=True))
     op.add_column("users", sa.Column("deputy_to", sa.Date(), nullable=True))
+    op.add_column(
+        "users", sa.Column("password_changed_at", sa.DateTime(timezone=True), nullable=True)
+    )
     op.create_foreign_key(
         op.f("fk_users_deputy_user_id_users"),
         "users",
@@ -117,11 +121,13 @@ def downgrade() -> None:
     op.drop_constraint(op.f("ck_users_deputy_period"), "users", type_="check")
     op.drop_constraint(op.f("fk_users_deputy_user_id_users"), "users", type_="foreignkey")
     for column in (
+        "password_changed_at",
         "deputy_to",
         "deputy_from",
         "deputy_user_id",
         "avatar_updated_at",
         "avatar_key",
+        "tg_linked_at",
         "tg_username",
         "email_signature",
         "timezone",

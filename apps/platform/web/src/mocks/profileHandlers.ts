@@ -341,7 +341,7 @@ export const profileHandlers = [
     if (body.token !== DEMO_RESET_TOKEN) {
       return invalid("token", "reset_token_invalid", "Ссылка недействительна или устарела.");
     }
-    if (body.new_password.length < 10) {
+    if (body.new_password.length < 10 || !/\d/.test(body.new_password)) {
       return invalid("new_password", "weak_password", "Пароль слишком простой.");
     }
     return new HttpResponse(null, { status: 204 });

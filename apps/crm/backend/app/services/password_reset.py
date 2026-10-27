@@ -16,6 +16,7 @@ from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.domain import password_reset as rules
+from app.domain import staff_telegram
 from app.domain.errors import ConflictError, Reason, ValidationFailedError
 from app.models.auth import PasswordResetToken, User
 from app.repositories import users as repo
@@ -24,7 +25,7 @@ from app.security.audit import Actor
 from app.security.passwords import WeakPasswordError, hash_password, validate_new_password
 from app.services.mail import MailService
 from app.services.settings import SettingsService
-from app.services.users import revoke_tokens
+from app.services.users import close_sessions
 
 logger = structlog.get_logger(__name__)
 TEMPLATE = "password_reset_link"
@@ -95,7 +96,12 @@ class PasswordResetService:
             if rules.rate_exceeded(recent or 0):
                 logger.info("password_reset_skipped", why="rate_limited", user_id=user.id)
                 return
-            telegram_ready = user.tg_user_id is not None and bot is not None
+            # Привязанный самим сотрудником меньше суток назад Telegram ссылку сброса не получает.
+            telegram_ready = (
+                user.tg_user_id is not None
+                and bot is not None
+                and staff_telegram.telegram_trusted(user.tg_linked_at, now)
+            )
             channel = rules.delivery_channel(mail_ready=mail_ready, telegram_ready=telegram_ready)
             if channel is None:
                 logger.info("password_reset_skipped", why="no_channel", user_id=user.id)
@@ -108,7 +114,13 @@ class PasswordResetService:
                 created_at=now,
             )
             session.add(row)
-            snapshot = (user.id, user.email, user.full_name, user.language, user.tg_user_id)
+            snapshot = (
+                user.id,
+                user.email,
+                user.full_name,
+                user.language,
+                user.tg_user_id if telegram_ready else None,
+            )
         user_id, to, name, language, tg_user_id = snapshot
         link = rules.reset_link(self._platform_url, token)
         delivered = False
@@ -212,7 +224,7 @@ class PasswordResetService:
                 .where(PasswordResetToken.user_id == user.id, PasswordResetToken.used_at.is_(None))
                 .values(used_at=now)
             )
-            await revoke_tokens(session, user.id)
+            await close_sessions(session, user.id)
             await audit.record(
                 session, Actor(user.id, "user"), "user.password_reset_link", "user", user.id
             )

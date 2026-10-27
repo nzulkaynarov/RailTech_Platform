@@ -35,6 +35,10 @@ class ChecklistItem(BaseModel):
     key: ChecklistKey
     done: bool
     link: str
+    unchecked: bool = Field(
+        default=False,
+        description="Проверка не выполнялась: шаг не «Готово» и не «Не сделано» — «Не проверено»",
+    )
 
 
 class SetupChecklist(BaseModel):

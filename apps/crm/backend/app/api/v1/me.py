@@ -2,13 +2,13 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, UploadFile
+from fastapi import APIRouter, Depends, Request
 
+from app.api.avatar_upload import read_avatar
 from app.api.deps import ContainerDep, PrincipalDep, get_rbac
 from app.api.v1.users import to_out
 from app.container import Container
-from app.domain.errors import PasswordChangeRequiredError
-from app.domain.staff_profile import AVATAR_MAX_BYTES
+from app.domain.errors import PasswordChangeRequiredError, ValidationFailedError
 from app.schemas.auth import (
     CoveredOut,
     DeputyCandidate,
@@ -65,8 +65,18 @@ async def me(principal: PrincipalDep, container: ContainerDep) -> MeOut:
 
 
 @router.patch("", response_model=MeOut)
-async def update_me(body: MePatch, principal: PrincipalDep, container: ContainerDep) -> MeOut:
+async def update_me(body: MePatch, principal: Settled, container: ContainerDep) -> MeOut:
+    """Атомарно: всё тело проверяется до первого изменения, иначе 422 и ничего не сохранено."""
     svc = container.user_service
+    profile = {
+        k: getattr(body, k)
+        for k in ("full_name", "phone", "timezone", "email_signature")
+        if getattr(body, k) is not None
+    }
+    if body.ui_mode == "admin" and "admin" not in principal.roles:
+        raise ValidationFailedError("admin mode requires the admin role", field="ui_mode")
+    if profile:
+        container.staff_profile.validate(**profile)
     view = await svc.get(principal.user_id)
     if body.ui_mode is not None:
         view = await svc.set_ui_mode(principal.actor, principal.user_id, body.ui_mode)
@@ -79,25 +89,37 @@ async def update_me(body: MePatch, principal: PrincipalDep, container: Container
             system=body.notify_system,
             leads=body.notify_leads,
         )
-    profile = {
-        k: getattr(body, k)
-        for k in ("full_name", "phone", "timezone", "email_signature")
-        if getattr(body, k) is not None
-    }
     if profile:
         # Только свой профиль: `user_id` — из токена, должность и роли в тело не принимаются.
         view = await container.staff_profile.update(principal.actor, principal.user_id, **profile)
     return await _me_out(view, container)
 
 
-@router.put("/avatar", response_model=MeOut)
-async def put_avatar(
-    principal: Settled, container: ContainerDep, avatar: Annotated[UploadFile, File()]
-) -> MeOut:
-    """Фото профиля (клиент уже обрезал по кругу): PNG/JPEG/WebP до 1 МБ, тип — по содержимому."""
-    data = await avatar.read(AVATAR_MAX_BYTES + 1)
+@router.put(
+    "/avatar",
+    response_model=MeOut,
+    openapi_extra={
+        "requestBody": {
+            "required": True,
+            "content": {
+                "multipart/form-data": {
+                    "schema": {
+                        "type": "object",
+                        "required": ["avatar"],
+                        "properties": {"avatar": {"type": "string", "format": "binary"}},
+                    }
+                }
+            },
+        }
+    },
+)
+async def put_avatar(request: Request, principal: Settled, container: ContainerDep) -> MeOut:
+    """Фото профиля (клиент уже обрезал по кругу): PNG/JPEG/WebP до 1 МБ, тип — по содержимому.
+
+    Тело читается потоком с отсечкой: больше 1 МБ + запас на multipart — 413 `payload_too_large`."""
+    data, content_type = await read_avatar(request)
     view = await container.staff_profile.set_avatar(
-        principal.actor, principal.user_id, data, avatar.content_type
+        principal.actor, principal.user_id, data, content_type
     )
     return await _me_out(view, container)
 

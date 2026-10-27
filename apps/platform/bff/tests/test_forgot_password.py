@@ -153,6 +153,7 @@ async def test_reset_errors_keep_reason_and_field(
     [
         {"token": "short", "new_password": "Brand-new-secret-77"},
         {"token": TOKEN, "new_password": "short"},
+        {"token": TOKEN, "new_password": "Short1abc"},  # 9 символов: политика CRM — от 10
         {"token": TOKEN},
     ],
 )

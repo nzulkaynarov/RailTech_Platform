@@ -254,7 +254,8 @@
     "model": {
       "test": "Tested an AI model",
       "update": "Changed an AI model",
-      "reset": "Reset an AI model to default"
+      "reset": "Reset an AI model to default",
+      "provider_key": "Changed the AI provider key"
     },
     "reply_template": {
       "create": "Created a reply template",
@@ -294,6 +295,7 @@
     "service_request": "Service request",
     "system": "System",
     "model": "AI model",
+    "provider": "AI provider",
     "deal": "Deal",
     "reply_template": "Reply template",
     "sandbox": "Bot sandbox",

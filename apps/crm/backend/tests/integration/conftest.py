@@ -67,6 +67,7 @@ TABLES = (
     "rt_bus_subscriber_state",
     "external_service_checks",
     "external_service_incidents",
+    "external_cause_alerts",
     "external_service_switches",
     "procrastinate_jobs",
     "platform_roles",

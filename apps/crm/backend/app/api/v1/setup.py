@@ -98,9 +98,16 @@ async def get_setup_checklist(
             erp_connected=erp_connected,
             mail_configured=mail_configured,
             colleague_exists=await checks.colleague_exists(session, principal.user_id),
+            models_checked=checks.models_checked(components),
         )
+    unchecked = checks.unchecked_keys(facts)
     items = [
-        ChecklistItem(key=cast(ChecklistKey, key), done=done, link=checks.LINKS[key])
+        ChecklistItem(
+            key=cast(ChecklistKey, key),
+            done=done and key not in unchecked,
+            link=checks.LINKS[key],
+            unchecked=key in unchecked,
+        )
         for key, done in checks.checklist(facts)
     ]
     return SetupChecklist(items=items, done=sum(i.done for i in items), total=len(items))

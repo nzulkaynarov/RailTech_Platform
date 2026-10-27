@@ -66,3 +66,16 @@ def test_texts_fall_back_to_russian() -> None:
     assert tg.text(tg.LINKED, "uz") != tg.text(tg.LINKED, "ru")
     assert tg.text(tg.LINKED, "de") == tg.LINKED["ru"]
     assert tg.text(tg.INVALID, None) == tg.INVALID["ru"]
+
+
+def test_freshly_self_linked_telegram_is_not_trusted_for_24_hours() -> None:
+    assert tg.telegram_trusted(None, NOW)  # привязал админ или привязка старая
+    assert not tg.telegram_trusted(NOW - timedelta(hours=23, minutes=59), NOW)
+    assert tg.telegram_trusted(NOW - tg.TRUST_AFTER, NOW)
+    assert tg.telegram_trusted(NOW - timedelta(days=3), NOW)
+
+
+def test_bot_confirmation_tells_how_to_undo() -> None:
+    assert "отвяжите" in tg.LINKED["ru"]
+    assert "Telegramni uzing" in tg.LINKED["uz"]
+    assert "unlink" in tg.LINKED["en"]

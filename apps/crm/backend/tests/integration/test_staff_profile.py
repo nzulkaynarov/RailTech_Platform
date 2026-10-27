@@ -219,3 +219,77 @@ async def test_avatar_api_guards(
     response = client.put("/api/v1/me/avatar", headers=headers, files=svg)
     assert response.status_code == 422
     assert response.json()["details"]["reason"] == "avatar_unsupported_type"
+
+
+async def test_avatar_body_is_cut_off_at_the_limit(
+    client: TestClient, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    """Тело больше 1 МБ + запас не дочитывается: 413 до разбора формы и до S3."""
+    manager, password = await make_user(sessions, "dilshod@railtech.uz", ["manager"])
+    headers = login(client, manager.email, password)
+    huge = {"avatar": ("a.png", PNG + b"\x00" * (1024 * 1024 + 70_000), "image/png")}
+    response = client.put("/api/v1/me/avatar", headers=headers, files=huge)
+    assert response.status_code == 413
+    assert response.json()["code"] == "payload_too_large"
+    assert response.json()["details"]["reason"] == "avatar_too_large"
+
+    # Без Content-Length (chunked) предел действует так же: тело читается потоком.
+    def chunks():  # type: ignore[no-untyped-def]
+        boundary_open = b'--xyz\r\nContent-Disposition: form-data; name="avatar"; filename="a"\r\n'
+        yield boundary_open + b"Content-Type: image/png\r\n\r\n"
+        for _ in range(40):
+            yield b"\x00" * 65_536
+        yield b"\r\n--xyz--\r\n"
+
+    streamed = client.put(
+        "/api/v1/me/avatar",
+        headers={**headers, "Content-Type": "multipart/form-data; boundary=xyz"},
+        content=chunks(),
+    )
+    assert streamed.status_code == 413
+
+
+async def test_avatar_without_the_field_or_not_multipart_is_422(
+    client: TestClient, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    manager, password = await make_user(sessions, "dilshod@railtech.uz", ["manager"])
+    headers = login(client, manager.email, password)
+    other = client.put(
+        "/api/v1/me/avatar", headers=headers, files={"file": ("a.png", PNG, "image/png")}
+    )
+    assert other.status_code == 422
+    assert other.json()["details"]["reason"] == "avatar_empty"
+    plain = client.put(
+        "/api/v1/me/avatar", headers={**headers, "Content-Type": "image/png"}, content=PNG
+    )
+    assert plain.status_code == 422
+    assert plain.json()["details"]["reason"] == "avatar_unsupported_type"
+
+
+async def test_patch_me_is_atomic_and_rejects_a_blank_name(
+    client: TestClient, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    """Одна ошибка в теле — ничего не сохранено (язык и подписки тоже)."""
+    manager, password = await make_user(sessions, "dilshod@railtech.uz", ["manager"])
+    headers = login(client, manager.email, password)
+    for body, field in (
+        ({"language": "uz", "notify_leads": False, "phone": "abc"}, "phone"),
+        ({"language": "uz", "full_name": "   "}, "full_name"),
+        ({"language": "uz", "ui_mode": "admin"}, "ui_mode"),
+    ):
+        response = client.patch("/api/v1/me", headers=headers, json=body)
+        assert response.status_code == 422, body
+        assert response.json()["details"]["field"] == field
+    me = client.get("/api/v1/me", headers=headers).json()
+    assert me["language"] == "ru"
+    assert me["notify_leads"] is True
+    assert me["full_name"] == "dilshod"
+
+
+async def test_patch_me_waits_for_the_temporary_password_to_be_changed(
+    client: TestClient, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    employee, temporary = await make_user(sessions, "new@railtech.uz", ["manager"], ready=False)
+    headers = login(client, employee.email, temporary)
+    response = client.patch("/api/v1/me", headers=headers, json={"language": "uz"})
+    assert response.status_code == 403

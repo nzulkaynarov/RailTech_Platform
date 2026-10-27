@@ -98,7 +98,7 @@ class StaffDeputyService:
             user = await repo.get(session, user_id, for_update=True)
             if user is None:
                 raise NotFoundError("user not found")
-            if user.deputy_user_id is not None:
+            if user.deputy_from is not None:
                 before = _audit_of(user)
                 user.deputy_user_id = user.deputy_from = user.deputy_to = None
                 await audit.record(

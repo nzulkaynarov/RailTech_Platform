@@ -140,7 +140,7 @@
     "new": "Yangi parol",
     "confirm": "Parolni takrorlang",
     "newRequired": "Yangi parolni kiriting",
-    "tooShort": "Kamida 8 belgi",
+    "tooShort": "Kamida 10 belgi",
     "mismatch": "Parollar mos kelmaydi",
     "submit": "Parolni saqlash",
     "done": "Parol o‘zgartirildi. Yangi parol bilan kiring.",

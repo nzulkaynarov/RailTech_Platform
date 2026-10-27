@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends
 from app.api.deps import ContainerDep, require
 from app.api.health import get_readiness
 from app.container import Container
-from app.domain.system_status import BotFacts, Component, ordered
+from app.domain.system_status import STAND_EXPECTED, BotFacts, Component, ordered
 from app.integrations.telegram import resolve_token
 from app.schemas.system import ComponentStatusOut, SystemStatusOut
 from app.security.principal import Principal
@@ -79,9 +79,21 @@ async def system_status(
     """
     now = datetime.now(UTC)
     components = await collect_components(container, readiness, now)
-    worst = max((c.status for c in components), key=_SEVERITY.index, default="unknown")
+    stand = container.settings.is_stand
+    expected = {
+        c.key
+        for c in components
+        if stand and c.key in STAND_EXPECTED and c.status in ("warn", "fail")
+    }
+    worst = max(
+        (c.status for c in components if c.key not in expected),
+        key=_SEVERITY.index,
+        default="unknown",
+    )
     return SystemStatusOut(
         status=worst,
         checked_at=now,
-        components=[ComponentStatusOut(**asdict(c)) for c in components],
+        components=[
+            ComponentStatusOut(**asdict(c), expected_on_stand=c.key in expected) for c in components
+        ],
     )

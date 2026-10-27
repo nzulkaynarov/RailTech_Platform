@@ -233,6 +233,7 @@ def test_reason_values_are_a_stable_contract() -> None:
         "won_decided_by_erp",
         "handoff_no_consent",
         "consent_via_bot",
+        "name_required",
         "phone_invalid",
         "timezone_unknown",
         "signature_invalid",

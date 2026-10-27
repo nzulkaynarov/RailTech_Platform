@@ -148,6 +148,15 @@
  * (`erp_not_connected` — сначала подключите ERP, `erp_unavailable` — ERP не ответила). `POST /setup/company` без сопряжённой ERP —
  * 409 `ERP_NOT_CONNECTED` (новый код) с текстом и `details.link` на карточку ERP; недоступная ERP — прежний 503 `BACKEND_UNAVAILABLE`.
  *
+ * **0.17.0 (W15-H3) — здоровье интеграций: одна причина, одна строка, одно действие.** Добавляющее изменение. `GET
+ * /admin/integrations` и `GET /admin/integrations/services` отдают группы по причине (`ServiceGroup`: состояние `ServiceState`
+ * — «Сломано» только после 15 минут непрерывного сбоя, «Нестабильно» для дребезга, «Ожидаемо на стенде», «Не проверено»;
+ * «кто исправляет» `ServiceOwner`, действия `ServiceAction`, «с …», `flaps_24h`, готовый текст `message`, замаскированный
+ * `technical`), у сервисов — `state`, `cause_key`, `owner`, `action`, `since`, `flaps_24h`, `last_recovered_at`, у
+ * `AttentionItem` — `group` и `technical`, у компонентов состояния — `expected_on_stand`. Новый `PUT
+ * /admin/integrations/models/providers/{provider}/key` — ключ провайдера на все его роли одной операцией (один пароль, без
+ * частичного применения).
+ *
  * **0.16.0 (D1-3) — EDS · Входящие письма и резолюция директора.** Добавляющее изменение, тег `letters`: `GET /eds/letters`
  * (список со статусом словами интерфейса и фильтром по статусу), `GET /eds/letters/{ref}` (карточка письма по id или по
  * номеру `ВХ-104/26`: реквизиты, суть, вложения, связи, журнал, шаг пути заявки; данные заявки — из ERP по ссылке письма,
@@ -159,7 +168,7 @@
  * EDS, полученным обменом токена сотрудника CRM `aud=eds` (`docs/architecture/platform-bff.md` §3); ошибки EDS переводятся в
  * формат `Error` (`source = eds`, `details.reason` и `details.fields` EDS сохраняются).
  *
- * **0.18.0 (W15-H6) — Профиль сотрудника.** Добавляющее изменение, тег `me`: `GET/PATCH /me/profile` (имя, телефон, язык, часовой
+ * **0.21.0 (W15-H6) — Профиль сотрудника.** Добавляющее изменение, тег `me`: `GET/PATCH /me/profile` (имя, телефон, язык, часовой
  * пояс, подпись для писем; должность и роли только читаются, правит админ), `PUT/DELETE /me/avatar` и `GET /staff/{id}/avatar`
  * (фото: клиент обрезает по кругу, CRM хранит в S3, BFF отдаёт без публичных ссылок; `Me.avatar_url` — вместо инициалов),
  * `POST/DELETE /me/telegram-link` (сотрудник привязывает Telegram сам: ссылка `t.me/<бот>?start=staff_<одноразовый код>` на 10
@@ -187,7 +196,7 @@
  * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; «Забыли пароль?» — 5 запросов в час на IP и на адрес; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.18.0
+ * OpenAPI spec version: 0.21.0
  */
 import { useMutation, useQuery } from "@tanstack/react-query";
 import type {
@@ -351,6 +360,8 @@ import type {
   PlatformSettingsUpdate,
   Profile,
   ProfileUpdate,
+  ProviderKeyIn,
+  ProviderKeyResult,
   Queue,
   QueueCards,
   QuoteDefaults,
@@ -2280,7 +2291,7 @@ export const getUploadAvatarUrl = () => {
 };
 
 /**
- * `multipart/form-data`, поле `avatar`: уже обрезанная по кругу картинка (клиент режет её до 256x256), PNG, JPEG или WebP не больше 1 МБ. Тип проверяется по содержимому. Иначе 422 `VALIDATION_FAILED` с `details.reason`: `avatar_unsupported_type`, `avatar_type_mismatch`, `avatar_too_large`, `avatar_empty`. Ответ — обновлённый `Me` (`avatar_url` с новой версией).
+ * `multipart/form-data`, поле `avatar`: уже обрезанная по кругу картинка (клиент режет её до 256x256), PNG, JPEG или WebP не больше 1 МБ. Тип проверяется по содержимому. Иначе 422 `VALIDATION_FAILED` с `details.reason`: `avatar_unsupported_type`, `avatar_type_mismatch`, `avatar_empty`; тело больше предела (1 МБ и запас на multipart) читается потоком и обрывается — 413 `PAYLOAD_TOO_LARGE` (`details.reason = avatar_too_large`). Ответ — обновлённый `Me` (`avatar_url` с новой версией).
  * @summary Загрузить фото профиля
  */
 export const uploadAvatar = async (
@@ -2303,6 +2314,7 @@ export const getUploadAvatarMutationOptions = <
   TError = ErrorType<
     | SessionExpiredResponse
     | CsrfFailedResponse
+    | Error
     | ValidationFailedResponse
     | BackendUnavailableResponse
   >,
@@ -2345,6 +2357,7 @@ export type UploadAvatarMutationBody = AvatarUpload;
 export type UploadAvatarMutationError = ErrorType<
   | SessionExpiredResponse
   | CsrfFailedResponse
+  | Error
   | ValidationFailedResponse
   | BackendUnavailableResponse
 >;
@@ -2357,6 +2370,7 @@ export const useUploadAvatar = <
   TError = ErrorType<
     | SessionExpiredResponse
     | CsrfFailedResponse
+    | Error
     | ValidationFailedResponse
     | BackendUnavailableResponse
   >,
@@ -8056,6 +8070,150 @@ export const useChangeAiModel = <
   TContext
 > => {
   return useMutation(getChangeAiModelMutationOptions(options), queryClient);
+};
+
+export const getChangeProviderKeyUrl = (provider: "anthropic" | "gemini" | "openai") => {
+  return `/api/v1/admin/integrations/models/providers/${provider}/key`;
+};
+
+/**
+ * CRM `PUT /models/providers/{provider}/key` (W15-H3): один пароль администратора, один аудит. Новые deployment всех ролей провайдера создаются первыми, прежние удаляются, когда все созданы; сбой посередине откатывает созданное — частичного применения нет. Модели ролей не меняются. После смены провайдер сразу проверяется. Ключ и пароль уходят только в CRM, в ответ не попадают.
+ * @summary Новый ключ провайдера для всех его ролей разом
+ */
+export const changeProviderKey = async (
+  provider: "anthropic" | "gemini" | "openai",
+  providerKeyIn: ProviderKeyIn,
+  options?: Parameters<typeof http>[1],
+): Promise<ProviderKeyResult> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<ProviderKeyResult>(getChangeProviderKeyUrl(provider), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(providerKeyIn),
+  });
+};
+
+export const getChangeProviderKeyMutationKey = () => ["changeProviderKey"] as const;
+
+export const getChangeProviderKeyMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | IntegrationConflictResponse
+    | IntegrationInvalidResponse
+    | AccountLockedResponse
+    | TooManyRequestsResponse
+    | IntegrationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof changeProviderKey>>,
+    TError,
+    ChangeProviderKeyMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof changeProviderKey>>,
+  TError,
+  ChangeProviderKeyMutationVariables,
+  TContext
+> => {
+  const mutationKey = getChangeProviderKeyMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof changeProviderKey>>,
+    ChangeProviderKeyMutationVariables
+  > = (props) => {
+    const { provider, data } = props ?? {};
+
+    return changeProviderKey(provider, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ChangeProviderKeyMutationResult = NonNullable<
+  Awaited<ReturnType<typeof changeProviderKey>>
+>;
+export type ChangeProviderKeyMutationBody = ProviderKeyIn;
+export type ChangeProviderKeyMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | IntegrationConflictResponse
+  | IntegrationInvalidResponse
+  | AccountLockedResponse
+  | TooManyRequestsResponse
+  | IntegrationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type ChangeProviderKeyMutationVariables = {
+  provider: "anthropic" | "gemini" | "openai";
+  data: ProviderKeyIn;
+};
+
+/**
+ * @summary Новый ключ провайдера для всех его ролей разом
+ */
+export const useChangeProviderKey = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | IntegrationConflictResponse
+    | IntegrationInvalidResponse
+    | AccountLockedResponse
+    | TooManyRequestsResponse
+    | IntegrationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof changeProviderKey>>,
+      TError,
+      ChangeProviderKeyMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof changeProviderKey>>,
+  TError,
+  ChangeProviderKeyMutationVariables,
+  TContext
+> => {
+  return useMutation(getChangeProviderKeyMutationOptions(options), queryClient);
 };
 
 export const getResetAiModelUrl = (alias: string) => {

@@ -518,16 +518,6 @@ components:
       - items
       title: BackupsOut
       type: object
-    Body_put_avatar:
-      properties:
-        avatar:
-          contentMediaType: application/octet-stream
-          title: Avatar
-          type: string
-      required:
-      - avatar
-      title: Body_put_avatar
-      type: object
     Body_upload_document:
       properties:
         client_id:
@@ -1023,6 +1013,11 @@ components:
         link:
           title: Link
           type: string
+        unchecked:
+          default: false
+          description: 'Проверка не выполнялась: шаг не «Готово» и не «Не сделано» — «Не проверено»'
+          title: Unchecked
+          type: boolean
       required:
       - key
       - done
@@ -1340,6 +1335,11 @@ components:
             type: string
           - type: 'null'
           title: Checked At
+        expected_on_stand:
+          default: false
+          description: 'Тестовый стенд: здесь это ожидаемо (секреты сервера, адрес CRM, бот)'
+          title: Expected On Stand
+          type: boolean
         key:
           title: Key
           type: string
@@ -2854,6 +2854,25 @@ components:
       type: object
     ExternalServiceOut:
       properties:
+        action:
+          anyOf:
+          - enum:
+            - enter_key
+            - enter_token
+            - recheck
+            - reconnect
+            - open_settings
+            - write_owner
+            - write_hosting
+            - disable_provider
+            type: string
+          - type: 'null'
+          description: Главное действие по смыслу
+          title: Action
+        cause_key:
+          description: Корень причины; у сервисов с общей причиной он общий
+          title: Cause Key
+          type: string
         check:
           description: Как проверяется — словами
           title: Check
@@ -2881,6 +2900,10 @@ components:
           - type: 'null'
           description: Путь в CRM, где это исправляется
           title: Fix Path
+        flaps_24h:
+          description: 'Провалов (полос сбоя) за сутки: «Нестабильно», когда их много'
+          title: Flaps 24H
+          type: integer
         frequency:
           enum:
           - minute
@@ -2901,6 +2924,13 @@ components:
         key:
           title: Key
           type: string
+        last_recovered_at:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          description: Когда восстановился после последнего сбоя за 30 дней (журнал инцидентов)
+          title: Last Recovered At
         latency_ms:
           anyOf:
           - type: integer
@@ -2915,6 +2945,32 @@ components:
             - type: 'null'
           title: Metrics
           type: object
+        more_actions:
+          description: Запасные действия
+          items:
+            enum:
+            - enter_key
+            - enter_token
+            - recheck
+            - reconnect
+            - open_settings
+            - write_owner
+            - write_hosting
+            - disable_provider
+            type: string
+          title: More Actions
+          type: array
+        owner:
+          anyOf:
+          - enum:
+            - admin
+            - owner
+            - hosting
+            - provider
+            type: string
+          - type: 'null'
+          description: Кто исправляет; нет — исправлять нечего
+          title: Owner
         p95_ms_24h:
           anyOf:
           - type: integer
@@ -2923,6 +2979,13 @@ components:
         purpose:
           title: Purpose
           type: string
+        since:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          description: Когда впервые обнаружено (не в порядке с …)
+          title: Since
         source:
           description: 'Кто проверяет: CRM сама или передаёт ERP'
           enum:
@@ -2933,6 +2996,20 @@ components:
         stale:
           title: Stale
           type: boolean
+        state:
+          description: 'Состояние словом: сломано, работает с перебоями, не настроено, выключено намеренно, ожидаемо на стенде,
+            не проверено, работает'
+          enum:
+          - ok
+          - broken
+          - unstable
+          - degraded
+          - not_configured
+          - disabled
+          - expected
+          - not_checked
+          title: State
+          type: string
         status:
           enum:
           - ok
@@ -2993,6 +3070,14 @@ components:
       - p95_ms_24h
       - switch
       - incident
+      - state
+      - cause_key
+      - owner
+      - action
+      - more_actions
+      - since
+      - flaps_24h
+      - last_recovered_at
       title: ExternalServiceOut
       type: object
     ExternalServicesOut:
@@ -3003,17 +3088,29 @@ components:
             type: string
           - type: 'null'
           title: Checked At
+        groups:
+          description: Не-`ok` сервисы, свёрнутые по причине
+          items:
+            $ref: '#/components/schemas/ServiceGroupOut'
+          title: Groups
+          type: array
         services:
           items:
             $ref: '#/components/schemas/ExternalServiceOut'
           title: Services
           type: array
+        stand:
+          description: 'Тестовый стенд (не прод): часть причин «ожидаема»'
+          title: Stand
+          type: boolean
         summary:
           $ref: '#/components/schemas/ExternalServicesSummary'
       required:
       - checked_at
       - summary
       - services
+      - stand
+      - groups
       title: ExternalServicesOut
       type: object
     ExternalServicesSummary:
@@ -4741,6 +4838,49 @@ components:
       - retry_after
       title: ProfilePublishOut
       type: object
+    ProviderKeyIn:
+      additionalProperties: false
+      description: 'Новый ключ провайдера для всех его ролей разом (W15-H3): модели ролей не меняются.'
+      properties:
+        api_key:
+          format: password
+          maxLength: 512
+          minLength: 8
+          title: Api Key
+          type: string
+          writeOnly: true
+        password:
+          format: password
+          maxLength: 256
+          minLength: 1
+          title: Password
+          type: string
+          writeOnly: true
+      required:
+      - api_key
+      - password
+      title: ProviderKeyIn
+      type: object
+    ProviderKeyResult:
+      properties:
+        checked:
+          description: Провайдер сразу проверен после смены ключа
+          title: Checked
+          type: boolean
+        provider:
+          title: Provider
+          type: string
+        roles:
+          items:
+            $ref: '#/components/schemas/ModelChangeResult'
+          title: Roles
+          type: array
+      required:
+      - provider
+      - roles
+      - checked
+      title: ProviderKeyResult
+      type: object
     ProviderToday:
       properties:
         limit_usd:
@@ -4968,6 +5108,7 @@ components:
       - won_decided_by_erp
       - handoff_no_consent
       - consent_via_bot
+      - name_required
       - phone_invalid
       - timezone_unknown
       - signature_invalid
@@ -5377,6 +5518,128 @@ components:
       required:
       - password
       title: ServiceEnableIn
+      type: object
+    ServiceGroupOut:
+      description: 'Одна причина — одна строка «Требует внимания»: сервисы с общим корнем свёрнуты вместе.'
+      properties:
+        action:
+          anyOf:
+          - enum:
+            - enter_key
+            - enter_token
+            - recheck
+            - reconnect
+            - open_settings
+            - write_owner
+            - write_hosting
+            - disable_provider
+            type: string
+          - type: 'null'
+          title: Action
+        affected:
+          description: Что перестало работать — функции списком
+          items:
+            type: string
+          title: Affected
+          type: array
+        detail:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Что сделать и кому передать
+          title: Detail
+        flaps_24h:
+          description: Провалов за сутки по сервисам причины (наибольшее)
+          title: Flaps 24H
+          type: integer
+        headline:
+          description: Что случилось одной фразой, без сырых ответов провайдера
+          title: Headline
+          type: string
+        id:
+          description: Корень причины (`cause_key`), стабильный ключ строки
+          title: Id
+          type: string
+        message:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: Готовый текст владельцу или хостингу — копируется, сам не отправляется
+          title: Message
+        more_actions:
+          items:
+            enum:
+            - enter_key
+            - enter_token
+            - recheck
+            - reconnect
+            - open_settings
+            - write_owner
+            - write_hosting
+            - disable_provider
+            type: string
+          title: More Actions
+          type: array
+        owner:
+          anyOf:
+          - enum:
+            - admin
+            - owner
+            - hosting
+            - provider
+            type: string
+          - type: 'null'
+          title: Owner
+        service_keys:
+          items:
+            type: string
+          title: Service Keys
+          type: array
+        since:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          title: Since
+        state:
+          enum:
+          - ok
+          - broken
+          - unstable
+          - degraded
+          - not_configured
+          - disabled
+          - expected
+          - not_checked
+          title: State
+          type: string
+        technical:
+          description: Сырой текст проверки, секреты замаскированы; показывается свёрнутым
+          items:
+            type: string
+          title: Technical
+          type: array
+        titles:
+          items:
+            type: string
+          title: Titles
+          type: array
+      required:
+      - id
+      - state
+      - owner
+      - action
+      - more_actions
+      - headline
+      - detail
+      - affected
+      - service_keys
+      - titles
+      - since
+      - technical
+      - message
+      - flaps_24h
+      title: ServiceGroupOut
       type: object
     ServiceRequestClose:
       properties:
@@ -6552,7 +6815,7 @@ components:
       type: http
 info:
   title: RailTech CRM API
-  version: 0.6.0
+  version: 0.8.0
 openapi: 3.1.0
 paths:
   /api/v1/admin/ai-spend:
@@ -10235,6 +10498,7 @@ paths:
       tags:
       - me
     patch:
+      description: 'Атомарно: всё тело проверяется до первого изменения, иначе 422 и ничего не сохранено.'
       operationId: update_me
       requestBody:
         content:
@@ -10282,13 +10546,22 @@ paths:
       tags:
       - me
     put:
-      description: 'Фото профиля (клиент уже обрезал по кругу): PNG/JPEG/WebP до 1 МБ, тип — по содержимому.'
+      description: 'Фото профиля (клиент уже обрезал по кругу): PNG/JPEG/WebP до 1 МБ, тип — по содержимому.
+
+
+        Тело читается потоком с отсечкой: больше 1 МБ + запас на multipart — 413 `payload_too_large`.'
       operationId: put_avatar
       requestBody:
         content:
           multipart/form-data:
             schema:
-              $ref: '#/components/schemas/Body_put_avatar'
+              properties:
+                avatar:
+                  format: binary
+                  type: string
+              required:
+              - avatar
+              type: object
         required: true
       responses:
         '200':
@@ -10512,6 +10785,49 @@ paths:
       security:
       - HTTPBearer: []
       summary: List Models
+      tags:
+      - spend
+  /api/v1/models/providers/{provider}/key:
+    put:
+      description: 'Новый ключ провайдера для всех его ролей разом (W15-H3): один пароль, один аудит.
+
+
+        Сначала создаются новые deployment всех ролей, потом удаляются прежние; сбой посередине
+
+        откатывает созданное. После смены провайдер сразу проверяется (журнал шлюза, без платных
+
+        вызовов моделей). Ключ уходит только в LiteLLM, в ответах и аудите — только последние 4 символа.'
+      operationId: change_provider_key
+      parameters:
+      - in: path
+        name: provider
+        required: true
+        schema:
+          maxLength: 32
+          title: Provider
+          type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProviderKeyIn'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProviderKeyResult'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Change Provider Key
       tags:
       - spend
   /api/v1/models/{alias}:
