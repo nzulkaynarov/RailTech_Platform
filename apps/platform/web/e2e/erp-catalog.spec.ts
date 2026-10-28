@@ -1,3 +1,5 @@
+import { appendFileSync } from "node:fs";
+
 import AxeBuilder from "@axe-core/playwright";
 import { type Page, expect, test } from "@playwright/test";
 
@@ -19,16 +21,32 @@ async function expectNoViolations(page: Page, context: string): Promise<void> {
   const results = await new AxeBuilder({ page })
     .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
     .analyze();
-  expect(
-    results.violations.map((v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ")).join(" | ")}`),
-    context,
-  ).toEqual([]);
+  const found = results.violations.map(
+    (v) => `${v.id}: ${v.nodes.map((n) => n.target.join(" ")).join(" | ")}`,
+  );
+  // Журнал проверок для PR (docs/screens/D2-3/axe-results.txt): E2E_AXE_LOG=<файл>.
+  const log = process.env["E2E_AXE_LOG"];
+  if (log) {
+    const width = page.viewportSize()?.width ?? 0;
+    appendFileSync(log, `${context} · ${String(width)} px: нарушений ${String(found.length)}\n`);
+  }
+  expect(found, context).toEqual([]);
 }
 
 async function signOut(page: Page): Promise<void> {
   await openAvatarMenu(page);
   await page.getByRole("menuitem", { name: "Выйти" }).click();
   await expect(page).toHaveURL(/\/login/);
+}
+
+/** Вариант раскрытого списка antd: настоящие строки — `.ant-select-item-option` (роль `option` у виртуального списка скрыта). */
+async function pickOption(page: Page, text: string | RegExp): Promise<void> {
+  await page.locator(".ant-select-item-option").filter({ hasText: text }).first().click();
+}
+
+/** Переключатель `Segmented`: радио скрыто, нажимается подпись. */
+async function pickPart(page: Page, name: string): Promise<void> {
+  await page.locator("label.ant-segmented-item").filter({ hasText: name }).click();
 }
 
 async function openCatalog(page: Page, query = ""): Promise<void> {
@@ -67,6 +85,15 @@ function samplePdf(): Buffer {
   return Buffer.from(out, "latin1");
 }
 
+/** Часть интерфейса canvas, которую читает проверка (в tsconfig e2e нет типов DOM). */
+interface CanvasLike {
+  width: number;
+  height: number;
+  getContext(kind: "2d"): {
+    getImageData(x: number, y: number, w: number, h: number): { data: Uint8ClampedArray };
+  } | null;
+}
+
 /** На canvas первой страницы есть тёмные пиксели: PDF действительно нарисован, а не пустой лист. */
 async function expectPdfDrawn(page: Page): Promise<void> {
   const pages = page.getByTestId("pdf-pages");
@@ -78,7 +105,7 @@ async function expectPdfDrawn(page: Page): Promise<void> {
           .locator("canvas")
           .first()
           .evaluate((node) => {
-            const canvas = node as HTMLCanvasElement;
+            const canvas = node as unknown as CanvasLike;
             const data = canvas
               .getContext("2d")
               ?.getImageData(0, 0, canvas.width, canvas.height).data;
@@ -132,7 +159,7 @@ test.describe("Номенклатура и поставщики", () => {
     await card.getByRole("button", { name: "Открыть поставщика ООО «Поставщик Север»" }).click();
     const supplier = page.getByRole("dialog", { name: "ООО «Поставщик Север»" });
     await expect(supplier.getByText(/310\s*USD/)).toBeVisible();
-    await expect(supplier.getByText("Цена действует")).toBeVisible();
+    await expect(supplier.getByText("Цена действует", { exact: true }).first()).toBeVisible();
     await expectNoViolations(page, "поставщик");
     await settledScreenshot(page, "catalog-supplier");
     await supplier
@@ -148,7 +175,7 @@ test.describe("Номенклатура и поставщики", () => {
     await form.getByLabel("Зачем нужна").fill("Кабельные лотки не попадают ни в одну категорию");
     await expect(form.getByText("Что произойдёт")).toBeVisible();
     await form.getByRole("button", { name: "Отправить запрос" }).click();
-    await expect(page.getByRole("cell", { name: "Кабельные лотки" })).toBeVisible();
+    await expect(page.getByRole("cell", { name: "Кабельные лотки", exact: true })).toBeVisible();
     // снабженец решения не принимает
     await expect(page.getByRole("button", { name: /Одобрить запрос/ })).toHaveCount(0);
     await settledScreenshot(page, "catalog-requests");
@@ -159,8 +186,8 @@ test.describe("Номенклатура и поставщики", () => {
     await openCatalog(page, "?part=requests");
     await page.getByRole("button", { name: "Одобрить запрос «Кабельные лотки»" }).click();
     const decision = page.getByRole("dialog", { name: /Одобрить запрос/ });
-    await decision.getByLabel(/Какую категорию привязать|категорию/i).click();
-    await page.getByRole("option", { name: "Электрооборудование" }).click();
+    await decision.getByLabel("Категория, которую вы завели для запроса").click();
+    await pickOption(page, "Электрооборудование");
     await decision.getByRole("button", { name: /Одобрить$/ }).click();
     await expect(page.getByText("Одобрен").first()).toBeVisible();
   });
@@ -190,9 +217,9 @@ test.describe("Номенклатура и поставщики", () => {
     await expect(page.getByRole("cell", { name: "12650.5" })).toBeVisible();
     await expectNoViolations(page, "справочники: курсы");
     await settledScreenshot(page, "catalog-refs");
-    await page.getByRole("radio", { name: "Коды ТН ВЭД" }).click();
+    await pickPart(page, "Коды ТН ВЭД");
     await expect(page.getByRole("cell", { name: "Провода и кабели изолированные" })).toBeVisible();
-    await page.getByRole("radio", { name: "Производители" }).click();
+    await pickPart(page, "Производители");
     await expect(page.getByRole("cell", { name: "Электрокабель-Тест" })).toBeVisible();
     await expectNoViolations(page, "справочники: производители");
   });
@@ -229,7 +256,7 @@ test.describe("Техдокументация", () => {
       .setInputFiles({ name: "wiring.pdf", mimeType: "application/pdf", buffer: samplePdf() });
     await form.getByLabel("Название").fill("Схема подключения реле РЗ-1");
     await form.getByLabel("Позиция номенклатуры").click();
-    await page.getByRole("option", { name: /Реле защиты РЗ-1/ }).click();
+    await pickOption(page, /Реле защиты РЗ-1/);
     await expect(form.getByRole("button", { name: "Загрузить" })).toBeEnabled();
     await form.getByRole("button", { name: "Загрузить" }).click();
 

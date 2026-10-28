@@ -45,7 +45,7 @@ import { readCompanyMock, updateCompanyMock } from "./fixtures/company";
 import { buildMe, readSession } from "./mockSession";
 
 /**
- * Моки «Расчёт · Номенклатура и поставщики» и «Техдокументация» (D2-3, BFF 0.25.0). Права — как в BFF: раздел `erp.stock`
+ * Моки «Расчёт · Номенклатура и поставщики» и «Техдокументация» (D2-3, BFF 0.26.0). Права — как в BFF: раздел `erp.stock`
  * (чтение — `read`, изменения — `full`); цена закупки — поле `supplier_prices`; ставка бригады — `cost_margin` или раздел
  * `erp.calc.services`. Отказы и коды причин — те же, что у настоящего ERP, чтобы экран и e2e видели настоящее поведение.
  * Запросы на категории и курс делят состояние с Admin · Компания (`fixtures/company.ts`).

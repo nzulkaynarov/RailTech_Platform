@@ -1,5 +1,5 @@
 """Расчёт · Номенклатура и поставщики, бригады, запросы на категории и справочники (контракт: тег
-`erp-catalog`, 0.25.0; D2-3).
+`erp-catalog`, 0.26.0; D2-3).
 
 BFF проксирует к ERP с токеном сотрудника (`catalog/items|suppliers|brigades`, `catalog/category-
 requests`, `master-data/hs-codes`, `catalog/manufacturers`, `exchange-rates`) и проверяет раздел

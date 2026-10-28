@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { App, Button, Drawer, Input, Select, Skeleton } from "antd";
+import type { TFunction } from "i18next";
 import { Suspense, lazy, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router";
@@ -41,11 +42,13 @@ const KINDS: readonly TechDocKind[] = ["tz", "drawing", "certificate", "pnr", "o
 const MAX_BYTES = 20 * 1024 * 1024;
 const ACCEPT = ".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx";
 
-function sizeLabel(bytes: number, language: string): string {
+function sizeLabel(t: TFunction, bytes: number, language: string): string {
   const mb = bytes / (1024 * 1024);
   const kb = bytes / 1024;
   const fmt = new Intl.NumberFormat(language, { maximumFractionDigits: 1 });
-  return mb >= 1 ? `${fmt.format(mb)} МБ` : `${fmt.format(Math.max(kb, 0.1))} КБ`;
+  return mb >= 1
+    ? t("docs.size.mb", { value: fmt.format(mb) })
+    : t("docs.size.kb", { value: fmt.format(Math.max(kb, 0.1)) });
 }
 
 /**
@@ -140,7 +143,7 @@ export function DocsScreen() {
       key: "size",
       title: t("catalog:docs.columns.size"),
       num: true,
-      render: (row) => sizeLabel(row.size_bytes, i18n.language),
+      render: (row) => sizeLabel(t, row.size_bytes, i18n.language),
     },
     {
       key: "who",
@@ -314,7 +317,7 @@ function DocDrawer({
               { label: t("docs.fields.kind"), value: t(`docKinds.${doc.kind}`) },
               {
                 label: t("docs.fields.file"),
-                value: `${doc.original_name} · ${sizeLabel(doc.size_bytes, i18n.language)}`,
+                value: `${doc.original_name} · ${sizeLabel(t, doc.size_bytes, i18n.language)}`,
               },
               {
                 label: t("docs.fields.product"),

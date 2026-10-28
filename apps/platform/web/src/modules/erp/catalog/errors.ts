@@ -2,7 +2,7 @@ import type { TFunction } from "i18next";
 
 import { ApiError } from "../../../shared/api/errors";
 
-/** Причины (`details.reason`) контракта BFF 0.25.0 с собственным текстом (`catalog:errors.reason.*`). */
+/** Причины (`details.reason`) контракта BFF 0.26.0 с собственным текстом (`catalog:errors.reason.*`). */
 const REASONS = new Set([
   "item_name_required",
   "item_kind_invalid",

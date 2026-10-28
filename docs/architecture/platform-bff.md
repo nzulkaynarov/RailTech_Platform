@@ -413,6 +413,15 @@ BFF отдаёт сам (`/admin/company/logo/image`, `/admin/company/brand/logo
   Создание с `submit` — два вызова EDS (`POST /documents`, `POST …/submit`): если отправка отклонена, ошибка называет сохранённый черновик
   (`details.document_id`, `saved`). Ошибки EDS переводятся в `Error` с `source = eds` (текст EDS сохраняется; 422 — `details.fields`, `messages`).
   Загрузка файла — как W13-A5 (поток до 25 МБ и поля формы, multipart не разбирается; сверх предела — 413), скачивание — потоком как `attachment`.
+- **ERP · Номенклатура и поставщики, бригады, справочники, Техдокументация (D2-3, 0.26.0).** `/erp/catalog/*` и `/erp/docs/*` (тег `erp-catalog`) — прокси к ERP
+  `catalog/items|suppliers|brigades|tech-docs|category-requests`, `master-data/hs-codes`, `exchange-rates`, `catalog/manufacturers` токеном сотрудника; раздел
+  `erp.stock` (чтение — `read`, изменения — `full`), право на операцию решает ERP (`catalog.manage`, `supply.manage`, ввод курса — `settings.edit` через прежний
+  `/admin/company/fx-rate`). **Закрытые поля режут оба**: цена закупки в предложениях — без поля `supplier_prices` (`price = null`, `prices_visible = false`), ставка
+  бригады — без `cost_margin` и без раздела `erp.calc.services`; ERP отдаёт `null` по своим правам, BFF вырезает ещё раз (администратор ERP видит всё, роль
+  «Администратор» Платформы — нет). Загрузка файла техдокументации — поток до 21 МБ без разбора multipart; скачивание — потоком, всегда вложением (`nosniff`):
+  просмотр PDF строит интерфейс сам (pdf.js в `canvas`), потому что CSP Платформы запрещает встроенные просмотрщики. Номер заявки у файла — составной `ЗВ/ПР-ГГГГ-NNN`
+  (как у EDS, до ERP-09). Ошибки ERP: `{detail: КОД}` -> 422 `VALIDATION_FAILED` с `details.reason` (код в нижнем регистре) и `details.fields`; повтор кода ТН ВЭД,
+  производителя или запроса на категорию — 409 `CONFLICT` (`details.reason`).
 - **EDS · КП на одобрение и «На согласовании» (D1-4, 0.24.0).** `/eds/quotes*` (раздел `eds.drafts`: чтение — менеджер, решение — директор) и
   `/eds/memo-approvals*` (раздел `eds.memo.approve` для решений, чтение также у `eds.memo.create`: автор видит свой документ) — тем же токеном доступа EDS.
   Маршрут, шаги, чек-лист КП и `allowed_decisions` отдаёт EDS, **BFF чек-лист не проверяет** (409 `checklist_not_green` с `details.failed`; 409

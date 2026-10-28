@@ -263,7 +263,7 @@ export function ItemsPanel() {
 
 function ItemDrawer({ id, onClose }: { id: string; onClose: () => void }) {
   const { t } = useTranslation("catalog");
-  const { date } = useFormat();
+  const { date, number } = useFormat();
   const { me } = useAuth();
   const { mobile } = useViewport();
   const query = useGetCatalogItem(id);
@@ -292,9 +292,9 @@ function ItemDrawer({ id, onClose }: { id: string; onClose: () => void }) {
                   label: t("items.fields.vat"),
                   value:
                     card.vat_rate !== null
-                      ? `${card.vat_rate} %`
+                      ? `${number(card.vat_rate)} %`
                       : card.vat_effective !== null
-                        ? t("items.vatCompany", { rate: card.vat_effective })
+                        ? t("items.vatCompany", { rate: number(card.vat_effective) })
                         : t("items.vatNone"),
                 },
                 { label: t("items.fields.category"), value: card.category?.name },
