@@ -76,7 +76,7 @@ async def create_first_admin(
         try:
             opened = await service.login(email, body.password.get_secret_value(), client_ip)
         except PlatformError:
-            await limiter.refund(attempt)
+            # Неверный пароль после позднего ответа — обычная неудачная попытка: лимит расходуется.
             raise exc from None
     except Exception:
         await limiter.refund(attempt)

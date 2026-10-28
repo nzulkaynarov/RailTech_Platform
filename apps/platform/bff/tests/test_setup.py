@@ -378,6 +378,21 @@ async def test_wrong_codes_count_against_the_login_limit(web: Web, crm: SetupCrm
     assert crm.admin.call_count == 10
 
 
+async def test_wrong_password_after_a_late_reply_burns_the_login_limit(
+    web: Web, crm: SetupCrm
+) -> None:
+    """Подбор пароля через «ответ опоздал» не обходит лимит входа: 11-я попытка в минуту — 429."""
+    crm.down.add("admin")
+    crm.needs_setup = False
+    body = {**payload(), "password": "Другой-пароль-123"}
+
+    statuses = [
+        (await web.client.post("/api/v1/setup/admin", json=body)).status_code for _ in range(12)
+    ]
+
+    assert statuses == [409] * 10 + [429] * 2
+
+
 async def test_weak_password_attempts_do_not_burn_the_limit(web: Web, crm: SetupCrm) -> None:
     crm.admin_response = crm_error(422, "validation_failed", "weak_password", field="password")
 
