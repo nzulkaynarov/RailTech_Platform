@@ -442,6 +442,114 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/help/company-articles": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Статьи компании для Помощи (только опубликованные)
+     * @description Опубликованные статьи компании целиком (заголовок, Markdown, язык) — для раздела «Как у нас принято» в окне и на странице Помощи и для общего поиска по статьям. Черновиков здесь нет ни у кого, в том числе у администратора (он видит их в `GET /admin/company-articles`). Нужна сессия и хотя бы один раздел каталога; прав раздела не требуется. Новые выше.
+     */
+    get: operations["listCompanyArticles"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/company-articles": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Все статьи компании с черновиками (Настройки · Статьи компании)
+     * @description Раздел `admin` от чтения (директор читает, администратор правит). Недавно правленные выше; в каждой статье — полный текст для редактора.
+     */
+    get: operations["listAdminCompanyArticles"];
+    put?: never;
+    /**
+     * Создать статью компании (черновик)
+     * @description Раздел `admin` — полный. Новая статья всегда черновик; опубликовать — `POST /admin/company-articles/{id}/publish`. Ошибка значения — 422 `VALIDATION_FAILED` (`details.fields`: `title`, `body`, `language`; `details.reason`: `article_title_empty`, `article_title_too_long`, `article_body_empty`, `article_body_too_long`, `article_language_unknown`). Создание пишется в журнал действий.
+     */
+    post: operations["createCompanyArticle"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/company-articles/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /**
+     * Удалить статью компании
+     * @description Раздел `admin` — полный. Удаляет статью насовсем (SPA просит подтверждение); удаление пишется в журнал действий без текста статьи.
+     */
+    delete: operations["deleteCompanyArticle"];
+    options?: never;
+    head?: never;
+    /**
+     * Править статью компании
+     * @description Раздел `admin` — полный. Меняются присланные поля (`title`, `body`, `language`); статус не меняется — для него `publish` и `unpublish`. Правка опубликованной статьи сразу видна в Помощи. Ошибки значений — как у создания; правка пишется в журнал действий.
+     */
+    patch: operations["updateCompanyArticle"];
+    trace?: never;
+  };
+  "/admin/company-articles/{id}/publish": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Опубликовать статью компании
+     * @description Раздел `admin` — полный. Статья появляется в «Как у нас принято» у всех сотрудников. Повтор для уже опубликованной статьи ничего не меняет и в журнал второй раз не пишется.
+     */
+    post: operations["publishCompanyArticle"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/company-articles/{id}/unpublish": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Вернуть статью компании в черновики
+     * @description Раздел `admin` — полный. Статья исчезает из Помощи у всех, кроме тех, кто правит раздел.
+     */
+    post: operations["unpublishCompanyArticle"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/me/profile": {
     parameters: {
       query?: never;
@@ -4747,6 +4855,52 @@ export interface components {
       total: number;
       counts: components["schemas"]["TicketCounts"];
     };
+    /**
+     * @description Язык статьи. Сейчас в Помощи показываются статьи на любом языке, перевод по языку интерфейса — B-080
+     * @enum {string}
+     */
+    CompanyArticleLanguage: "ru" | "uz" | "en";
+    /**
+     * @description «Черновик» (видят те, кто правит раздел) или «Опубликовано» (видят все сотрудники)
+     * @enum {string}
+     */
+    CompanyArticleStatus: "draft" | "published";
+    CompanyArticleCreate: {
+      /** @description Заголовок — до 200 символов после сжатия пробелов (длиннее — 422 `article_title_too_long`) */
+      title: string;
+      /** @description Текст в простом Markdown (`##`-заголовки, абзацы, списки, **жирный**, `код`) — до 20000 символов после обрезки пробелов (длиннее — 422 `article_body_too_long`). HTML не интерпретируется: Помощь показывает его как текст. */
+      body: string;
+      language?: components["schemas"]["CompanyArticleLanguage"];
+    };
+    CompanyArticleUpdate: {
+      title?: string;
+      body?: string;
+      language?: components["schemas"]["CompanyArticleLanguage"];
+    };
+    CompanyArticle: {
+      id: number;
+      title: string;
+      /** @description Markdown статьи */
+      body: string;
+      language: components["schemas"]["CompanyArticleLanguage"];
+      status: components["schemas"]["CompanyArticleStatus"];
+      /** @description Кто создал; пусто, если сотрудник удалён */
+      created_by_name?: string;
+      /** @description Кто правил последним; пусто, если сотрудник удалён */
+      updated_by_name?: string;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      updated_at: string;
+      /**
+       * Format: date-time
+       * @description Когда опубликована; у черновика поля нет
+       */
+      published_at?: string;
+    };
+    CompanyArticleList: {
+      items: components["schemas"]["CompanyArticle"][];
+    };
     ChangePasswordIn: {
       current_password: string;
       new_password: string;
@@ -7232,6 +7386,8 @@ export interface components {
     };
   };
   parameters: {
+    /** @description Идентификатор статьи компании */
+    CompanyArticleIdPath: number;
     /** @description Номер обращения `ОБР-0012` (в адресе — закодированный) */
     TicketNumberPath: string;
     /** @description Номер лида `L-NNNN` */
@@ -8086,6 +8242,206 @@ export interface operations {
         };
       };
       422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listCompanyArticles: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Опубликованные статьи */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CompanyArticleList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listAdminCompanyArticles: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Все статьи */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CompanyArticleList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  createCompanyArticle: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CompanyArticleCreate"];
+      };
+    };
+    responses: {
+      /** @description Статья создана (черновик) */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CompanyArticle"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  deleteCompanyArticle: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Идентификатор статьи компании */
+        id: components["parameters"]["CompanyArticleIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Удалена */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  updateCompanyArticle: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Идентификатор статьи компании */
+        id: components["parameters"]["CompanyArticleIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CompanyArticleUpdate"];
+      };
+    };
+    responses: {
+      /** @description Обновлённая статья */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CompanyArticle"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  publishCompanyArticle: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Идентификатор статьи компании */
+        id: components["parameters"]["CompanyArticleIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Опубликованная статья */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CompanyArticle"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  unpublishCompanyArticle: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Идентификатор статьи компании */
+        id: components["parameters"]["CompanyArticleIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Статья-черновик */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CompanyArticle"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
       503: components["responses"]["BackendUnavailable"];
     };
   };
