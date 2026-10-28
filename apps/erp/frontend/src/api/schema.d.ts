@@ -2750,6 +2750,211 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/calc/{deal_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Расчёт по заявке
+         * @description GET /api/v1/calc/<deal_id>/ — экран расчёта по заявке.
+         */
+        get: operations["calc_sheet"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/calc/{deal_id}/lines/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Добавить строки в расчёт
+         * @description POST /api/v1/calc/<deal_id>/lines/ — добавить строки (вручную или подтверждённое предложение ИИ-разбора).
+         */
+        post: operations["calc_lines_add"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/calc/{deal_id}/lines/{item_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Удалить строку расчёта
+         * @description PATCH/DELETE /api/v1/calc/<deal_id>/lines/<item_id>/ — правка и удаление строки (зона строки — в сервисе).
+         */
+        delete: operations["calc_line_delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Изменить строку расчёта (виза строки снимается)
+         * @description PATCH/DELETE /api/v1/calc/<deal_id>/lines/<item_id>/ — правка и удаление строки (зона строки — в сервисе).
+         */
+        patch: operations["calc_line_update"];
+        trace?: never;
+    };
+    "/api/v1/calc/{deal_id}/lines/{item_id}/visa/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Виза строки расчёта по её зоне
+         * @description POST /api/v1/calc/<deal_id>/lines/<item_id>/visa/ — «Подтвердить» строку (право зоны строки).
+         */
+        post: operations["calc_line_sign"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/calc/{deal_id}/parse/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * ИИ-разбор текста заявки в строки (предложение)
+         * @description POST /api/v1/calc/<deal_id>/parse/ — ИИ-разбор текста заявки в строки: задание в очереди ИИ, ответ — предложение
+         *     (`GET /api/v1/sourcing/ai-status/<task_id>/`, результат `{proposal: [...]}`); строки не пишутся.
+         */
+        post: operations["calc_parse"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/calc/{deal_id}/ready/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Расчёт готов: КП на одобрение директору (все строки завизированы)
+         * @description POST /api/v1/calc/<deal_id>/ready/ — «Расчёт готов → черновик КП директору».
+         */
+        post: operations["calc_ready"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/calc/{deal_id}/start/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Начать расчёт: черновик КП из строк заявки
+         * @description POST /api/v1/calc/<deal_id>/start/ — черновик КП расчёта из строк заявки (повтор — без изменений).
+         */
+        post: operations["calc_start"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/calc/catalog/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Каталог для сопоставления строки расчёта
+         * @description GET /api/v1/calc/catalog/?q= — карточки каталога для сопоставления строки (без ИИ).
+         */
+        get: operations["calc_catalog_search"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/calc/deals/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Заявки с заданием расчёта: id, номер, дата создания, стадия
+         * @description GET /api/v1/calc/deals/[?number=] — лёгкий справочник заявок с заданием расчёта (id, номер, создана, стадия).
+         */
+        get: operations["calc_deal_refs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/calc/tasks/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Заявки с заданием расчёта
+         * @description GET /api/v1/calc/tasks/ — «Заявки в расчёте» (и «Мои расчёты» с `mine=1`).
+         */
+        get: operations["calc_tasks_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/catalog/categories/": {
         parameters: {
             query?: never;
@@ -7605,6 +7810,15 @@ export interface components {
         AvailabilityEnum: "in_stock" | "on_order" | "expected";
         /** @enum {unknown} */
         BlankEnum: "";
+        /**
+         * @description * `not_started` - not_started
+         *     * `not_in_calculation` - not_in_calculation
+         *     * `not_draft` - not_draft
+         *     * `no_lines` - no_lines
+         *     * `visas_missing` - visas_missing
+         * @enum {string}
+         */
+        BlockerEnum: "not_started" | "not_in_calculation" | "not_draft" | "no_lines" | "visas_missing";
         BulkCreateQuoteItemsRequestRequest: {
             quote: number;
             items: {
@@ -7719,6 +7933,268 @@ export interface components {
             /** Format: date-time */
             last_success_at: string | null;
             last_error: string | null;
+        };
+        CalcAssignee: {
+            crm_user_id: number;
+            zone: components["schemas"]["CalcAssigneeZoneEnum"];
+            name: string | null;
+        };
+        /**
+         * @description * `goods` - goods
+         *     * `services` - services
+         *     * `payment_terms` - payment_terms
+         * @enum {string}
+         */
+        CalcAssigneeZoneEnum: "goods" | "services" | "payment_terms";
+        CalcCatalog: {
+            results: components["schemas"]["CalcCatalogItem"][];
+        };
+        CalcCatalogItem: {
+            id: number;
+            name: string;
+            article: string;
+            kind: components["schemas"]["CalcItemKindEnum"];
+            on_hand: number;
+            supplier_name: string | null;
+            lead_days: number | null;
+        };
+        CalcDeal: {
+            id: number;
+            /** @description Номер ЗВ-ГГГГ-NNN или ПР-ГГГГ-NNN (`Deal.number`, ERP-09) */
+            number: string | null;
+            title: string;
+            /** Format: date-time */
+            created_at: string;
+            stage_code: string;
+            client_name: string | null;
+            manager_name: string | null;
+        };
+        CalcDealRef: {
+            id: number;
+            /** @description Номер ЗВ-ГГГГ-NNN или ПР-ГГГГ-NNN (`Deal.number`, ERP-09) */
+            number: string | null;
+            /** Format: date-time */
+            created_at: string;
+            stage_code: string;
+        };
+        CalcDealRefList: {
+            results: components["schemas"]["CalcDealRef"][];
+        };
+        CalcError: {
+            detail: string;
+            missing?: number;
+            zone?: string;
+            stage?: string;
+        };
+        /**
+         * @description * `goods` - goods
+         *     * `service` - service
+         * @enum {string}
+         */
+        CalcItemKindEnum: "goods" | "service";
+        CalcJob: {
+            task_id: string;
+        };
+        CalcLine: {
+            id: number;
+            position: number;
+            name: string;
+            article: string;
+            product_id: number | null;
+            product_name: string | null;
+            kind: components["schemas"]["CalcLineKindEnum"];
+            zone: components["schemas"]["CalcLineZoneEnum"];
+            quantity: number;
+            unit: string;
+            stock: components["schemas"]["CalcStock"];
+            supplier: components["schemas"]["CalcSupplier"] | null;
+            lead_days: number | null;
+            /** Format: decimal */
+            purchase_price: string | null;
+            purchase_currency: string | null;
+            /** Format: decimal */
+            crew_rate: string | null;
+            /** Format: decimal */
+            crew_days: string | null;
+            /** Format: decimal */
+            cost: string | null;
+            /** Format: decimal */
+            client_price: string;
+            /** Format: decimal */
+            markup_pct: string | null;
+            visa: components["schemas"]["CalcVisa"] | null;
+            group: components["schemas"]["GroupEnum"];
+            can_edit: boolean;
+        };
+        CalcLineInRequest: {
+            /** @default  */
+            name: string;
+            /** @default 1 */
+            quantity: number;
+            /** @default  */
+            unit: string;
+            /** @default goods */
+            kind: components["schemas"]["CalcItemKindEnum"];
+            product_id?: number | null;
+            /** @default  */
+            article: string;
+            /** @default  */
+            note: string;
+        };
+        /**
+         * @description * `goods` - goods
+         *     * `goods_to_order` - goods_to_order
+         *     * `service` - service
+         * @enum {string}
+         */
+        CalcLineKindEnum: "goods" | "goods_to_order" | "service";
+        /**
+         * @description * `goods` - goods
+         *     * `services` - services
+         * @enum {string}
+         */
+        CalcLineZoneEnum: "goods" | "services";
+        CalcLinesCreated: {
+            deal: components["schemas"]["CalcDeal"];
+            task: components["schemas"]["CalcTaskBrief"];
+            request: components["schemas"]["CalcRequest"];
+            quote: components["schemas"]["CalcQuote"] | null;
+            lines: components["schemas"]["CalcLine"][];
+            totals: components["schemas"]["CalcTotals"];
+            visas: components["schemas"]["CalcVisaGroups"];
+            ready: components["schemas"]["CalcReady"];
+            rights: components["schemas"]["CalcRights"];
+            created: number[];
+        };
+        CalcLinesInRequest: {
+            lines: components["schemas"]["CalcLineInRequest"][];
+        };
+        CalcParseInRequest: {
+            /** @default  */
+            text: string;
+        };
+        CalcQuote: {
+            id: number;
+            version: number;
+            number: string | null;
+            state: components["schemas"]["CalcStateEnum"];
+            director_comment: string | null;
+            /** Format: decimal */
+            vat_rate: string;
+        };
+        CalcReady: {
+            allowed: boolean;
+            blocker: (components["schemas"]["BlockerEnum"] | components["schemas"]["NullEnum"]) | null;
+            missing: number;
+        };
+        CalcRequest: {
+            text: string;
+            lines: number;
+        };
+        CalcRights: {
+            goods: boolean;
+            services: boolean;
+            build: boolean;
+            cost: boolean;
+        };
+        CalcSheet: {
+            deal: components["schemas"]["CalcDeal"];
+            task: components["schemas"]["CalcTaskBrief"];
+            request: components["schemas"]["CalcRequest"];
+            quote: components["schemas"]["CalcQuote"] | null;
+            lines: components["schemas"]["CalcLine"][];
+            totals: components["schemas"]["CalcTotals"];
+            visas: components["schemas"]["CalcVisaGroups"];
+            ready: components["schemas"]["CalcReady"];
+            rights: components["schemas"]["CalcRights"];
+        };
+        /**
+         * @description * `not_started` - not_started
+         *     * `in_progress` - in_progress
+         *     * `returned` - returned
+         *     * `at_director` - at_director
+         *     * `rejected` - rejected
+         *     * `approved` - approved
+         * @enum {string}
+         */
+        CalcStateEnum: "not_started" | "in_progress" | "returned" | "at_director" | "rejected" | "approved";
+        CalcStock: {
+            on_hand: number | null;
+            cell: string | null;
+            reserved: number | null;
+        };
+        CalcSupplier: {
+            name: string;
+            lead_days: number | null;
+            min_order_qty: number;
+            /** Format: date */
+            price_valid_until: string | null;
+            /** Format: decimal */
+            offer_price: string | null;
+            offer_currency: string | null;
+        };
+        CalcTaskBrief: {
+            letter_number: string;
+            letter_subject: string;
+            resolution_text: string;
+            /** Format: date-time */
+            decided_at: string;
+            decided_by_name: string | null;
+            /** Format: date */
+            due: string;
+            /** Format: decimal */
+            min_margin_pct: string | null;
+            assignees: components["schemas"]["CalcAssignee"][];
+        };
+        CalcTaskList: {
+            results: components["schemas"]["CalcTaskRow"][];
+        };
+        CalcTaskRow: {
+            deal: components["schemas"]["CalcDeal"];
+            letter_number: string;
+            /** Format: date */
+            due: string;
+            state: components["schemas"]["CalcStateEnum"];
+            lines: number;
+            visas: components["schemas"]["CalcVisaStates"];
+            assignees: components["schemas"]["CalcAssignee"][];
+        };
+        CalcTotals: {
+            /** Format: decimal */
+            purchase: string | null;
+            /** Format: decimal */
+            client: string;
+            /** Format: decimal */
+            markup_pct: string | null;
+            vat_included: boolean;
+        };
+        CalcVisa: {
+            by: string;
+            /** Format: date-time */
+            at: string;
+        };
+        CalcVisaGroup: {
+            state: components["schemas"]["CalcVisaStateEnum"];
+            total: number;
+            signed: number;
+            by: string[];
+        };
+        CalcVisaGroups: {
+            stock: components["schemas"]["CalcVisaGroup"];
+            supply: components["schemas"]["CalcVisaGroup"];
+            engineer: components["schemas"]["CalcVisaGroup"];
+        };
+        /**
+         * @description * `none` - none
+         *     * `waiting` - waiting
+         *     * `done` - done
+         * @enum {string}
+         */
+        CalcVisaStateEnum: "none" | "waiting" | "done";
+        CalcVisaStates: {
+            stock: components["schemas"]["CalcVisaStateEnum"];
+            supply: components["schemas"]["CalcVisaStateEnum"];
+            engineer: components["schemas"]["CalcVisaStateEnum"];
         };
         CancelActRequest: {
             reason: string;
@@ -8940,7 +9416,7 @@ export interface components {
              *     * `env` - env
              *     * `none` - none
              */
-            state: components["schemas"]["StateEnum"];
+            state: components["schemas"]["CrmPairingStatusStateEnum"];
             /** Format: date-time */
             paired_at: string | null;
             /** Format: date-time */
@@ -8958,6 +9434,13 @@ export interface components {
             code_ttl_seconds: number;
             crm_frontend_url: string;
         };
+        /**
+         * @description * `paired` - paired
+         *     * `env` - env
+         *     * `none` - none
+         * @enum {string}
+         */
+        CrmPairingStatusStateEnum: "paired" | "env" | "none";
         Currency: {
             readonly id: number;
             /**
@@ -9781,6 +10264,13 @@ export interface components {
              */
             readonly updated_at: string;
         };
+        /**
+         * @description * `stock` - stock
+         *     * `supply` - supply
+         *     * `engineer` - engineer
+         * @enum {string}
+         */
+        GroupEnum: "stock" | "supply" | "engineer";
         InviteRequestRequest: {
             /** Format: email */
             email: string;
@@ -10159,6 +10649,8 @@ export interface components {
             status: string;
             count: number;
         };
+        /** @enum {unknown} */
+        NullEnum: null;
         /** @description One rendered example number for a document kind (КП / CT / INV). */
         NumberingPreviewItem: {
             type_code: string;
@@ -10590,6 +11082,23 @@ export interface components {
              * @description Привязка к компании
              */
             company?: number | null;
+        };
+        PatchedCalcLinePatchRequest: {
+            name?: string;
+            quantity?: number;
+            unit?: string;
+            lead_days?: number | null;
+            /** Format: decimal */
+            purchase_price?: string;
+            purchase_currency?: string;
+            /** Format: decimal */
+            crew_rate?: string | null;
+            /** Format: decimal */
+            crew_days?: string | null;
+            /** Format: decimal */
+            client_price?: string;
+            product_id?: number | null;
+            kind?: components["schemas"]["CalcItemKindEnum"];
         };
         PatchedCategoryRequest: {
             /**
@@ -12418,7 +12927,7 @@ export interface components {
          */
         PublishedCatalogItem: {
             id: number;
-            kind: components["schemas"]["PublishedCatalogItemKindEnum"];
+            kind: components["schemas"]["CalcItemKindEnum"];
             name: string;
             description: string;
             unit: string;
@@ -12429,12 +12938,6 @@ export interface components {
             images: string[];
             attributes: components["schemas"]["_Attribute"][];
         };
-        /**
-         * @description * `goods` - goods
-         *     * `service` - service
-         * @enum {string}
-         */
-        PublishedCatalogItemKindEnum: "goods" | "service";
         PurchaseActualRequest: {
             /** @description Валюта себестоимости строк опорного КП (или UZS). */
             currency: string;
@@ -13331,13 +13834,6 @@ export interface components {
             permissions: string[];
             platform_access: string[];
         };
-        /**
-         * @description * `paired` - paired
-         *     * `env` - env
-         *     * `none` - none
-         * @enum {string}
-         */
-        StateEnum: "paired" | "env" | "none";
         StockStatus: {
             readonly id: number;
             /**
@@ -18296,6 +18792,589 @@ export interface operations {
             };
             401: components["responses"]["UnauthorizedResponse"];
             403: components["responses"]["ForbiddenResponse"];
+        };
+    };
+    calc_sheet: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                deal_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcSheet"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права (зона строки, роль) или не сотрудник */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+            /** @description Заявки, задания расчёта или строки нет */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+        };
+    };
+    calc_lines_add: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                deal_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CalcLinesInRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["CalcLinesInRequest"];
+                "multipart/form-data": components["schemas"]["CalcLinesInRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcLinesCreated"];
+                };
+            };
+            /** @description Тело не прошло проверку или отказ правила строки */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права (зона строки, роль) или не сотрудник */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+            /** @description Заявки, задания расчёта или строки нет */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+            /** @description Состояние не позволяет (КП не черновик, нет виз, ИИ выключен) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+        };
+    };
+    calc_line_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                deal_id: number;
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcSheet"];
+                };
+            };
+            /** @description Тело не прошло проверку или отказ правила строки */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права (зона строки, роль) или не сотрудник */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+            /** @description Заявки, задания расчёта или строки нет */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+            /** @description Состояние не позволяет (КП не черновик, нет виз, ИИ выключен) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+        };
+    };
+    calc_line_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                deal_id: number;
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedCalcLinePatchRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedCalcLinePatchRequest"];
+                "multipart/form-data": components["schemas"]["PatchedCalcLinePatchRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcSheet"];
+                };
+            };
+            /** @description Тело не прошло проверку или отказ правила строки */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права (зона строки, роль) или не сотрудник */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+            /** @description Заявки, задания расчёта или строки нет */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+            /** @description Состояние не позволяет (КП не черновик, нет виз, ИИ выключен) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+        };
+    };
+    calc_line_sign: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                deal_id: number;
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcSheet"];
+                };
+            };
+            /** @description Тело не прошло проверку или отказ правила строки */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права (зона строки, роль) или не сотрудник */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+            /** @description Заявки, задания расчёта или строки нет */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+            /** @description Состояние не позволяет (КП не черновик, нет виз, ИИ выключен) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+        };
+    };
+    calc_parse: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                deal_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["CalcParseInRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["CalcParseInRequest"];
+                "multipart/form-data": components["schemas"]["CalcParseInRequest"];
+            };
+        };
+        responses: {
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcJob"];
+                };
+            };
+            /** @description Тело не прошло проверку или отказ правила строки */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права (зона строки, роль) или не сотрудник */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+            /** @description Заявки, задания расчёта или строки нет */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+            /** @description Состояние не позволяет (КП не черновик, нет виз, ИИ выключен) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+            /** @description Дневной лимит ИИ компании */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+            /** @description Очередь ИИ недоступна */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+        };
+    };
+    calc_ready: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                deal_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcSheet"];
+                };
+            };
+            /** @description Тело не прошло проверку или отказ правила строки */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права (зона строки, роль) или не сотрудник */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+            /** @description Заявки, задания расчёта или строки нет */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+            /** @description Состояние не позволяет (КП не черновик, нет виз, ИИ выключен) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+        };
+    };
+    calc_start: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                deal_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcSheet"];
+                };
+            };
+            /** @description Тело не прошло проверку или отказ правила строки */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права (зона строки, роль) или не сотрудник */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+            /** @description Заявки, задания расчёта или строки нет */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+            /** @description Состояние не позволяет (КП не черновик, нет виз, ИИ выключен) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+        };
+    };
+    calc_catalog_search: {
+        parameters: {
+            query?: {
+                /** @description Слова названия, артикула, кода производителя, ГОСТ */
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcCatalog"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права (зона строки, роль) или не сотрудник */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+        };
+    };
+    calc_deal_refs: {
+        parameters: {
+            query?: {
+                /** @description Отбор по номеру ЗВ/ПР (`ЗВ-2026-104`, `zv 2026 104`): один NNN года, префикс не важен */
+                number?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcDealRefList"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права (зона строки, роль) или не сотрудник */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+        };
+    };
+    calc_tasks_list: {
+        parameters: {
+            query?: {
+                /** @description Только где сотрудник — исполнитель резолюции */
+                mine?: boolean;
+                /** @description open — стадии расчёта; all — все */
+                scope?: "all" | "open";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcTaskList"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права (зона строки, роль) или не сотрудник */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
         };
     };
     catalog_categories_list: {

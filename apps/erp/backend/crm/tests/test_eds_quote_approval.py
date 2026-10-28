@@ -448,6 +448,9 @@ def test_there_is_no_director_step_and_no_final_approval_permission():
         "QUOTE_VIEW_COST_MARGIN",
         "QUOTE_SEND",
         "QUOTE_REVIEW",
+        # D2-1: визы строки расчёта по типу позиции (ADR-0012 п. 6) — не одобрение КП.
+        "QUOTE_VISA_GOODS",
+        "QUOTE_VISA_SERVICES",
     }
     assert StepStatus.PENDING  # шаги виз остаются
 

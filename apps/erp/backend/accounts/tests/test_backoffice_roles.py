@@ -20,6 +20,8 @@ EXPECTED_TEMPLATES = {
         "quote.view_cost_margin",
         "quote.send",
         "quote.review",
+        "quote.visa_goods",
+        "quote.visa_services",
         "contract.manage",
     },
     "CATALOG_SUPPLY": {"catalog.manage", "catalog.publish", "supply.manage", "quote.view_cost_margin"},
@@ -60,15 +62,19 @@ def test_templates_cover_business_roles_and_prefixes():
 
 
 def test_frozen_migration_table_matches_code():
-    # Каталог и шаблоны = таблица миграции 0003 + добавки миграции 0004 (M1-ERP-08, `finance.rates`).
-    assert set(frozen.ALL) | set(frozen.ADDED_0004) == set(ALL_PERMISSIONS)
-    assert len(frozen.ALL) + len(frozen.ADDED_0004) == len(ALL_PERMISSIONS)
+    # Каталог и шаблоны = таблица миграции 0003 + добавки миграций 0004 (M1-ERP-08, `finance.rates`) и 0011 (D2-1,
+    # визы расчёта по типу позиции).
+    added = frozen.ADDED_0004 + frozen.ADDED_0011
+    assert set(frozen.ALL) | set(added) == set(ALL_PERMISSIONS)
+    assert len(frozen.ALL) + len(added) == len(ALL_PERMISSIONS)
     assert {
-        code: set(perms) | set(frozen.ROLE_GRANTS_0004.get(code, [])) for code, _name, perms in frozen.BACKOFFICE_ROLES
+        code: set(perms) | set(frozen.ROLE_GRANTS_0004.get(code, [])) | set(frozen.ROLE_GRANTS_0011.get(code, []))
+        for code, _name, perms in frozen.BACKOFFICE_ROLES
     } == {code: set(perms) for code, perms in ROLE_TEMPLATES.items()}
     assert [name for _c, name, _p in frozen.BACKOFFICE_ROLES] == [label for _v, label in BackofficeRoleCode.choices]
-    # Волна 12 (EDS-03): каталог после accounts/0010 — ровно каталог кода.
-    assert set(frozen.CATALOG_0010) == set(ALL_PERMISSIONS)
+    # Волна 12 (EDS-03): каталог после accounts/0010 — каталог кода без виз D2-1; после 0011 — ровно каталог кода.
+    assert set(frozen.CATALOG_0010) == set(ALL_PERMISSIONS) - set(frozen.ADDED_0011)
+    assert set(frozen.CATALOG_0011) == set(ALL_PERMISSIONS)
 
 
 def test_migration_0010_prunes_codes_outside_the_catalog_from_roles_and_snapshots(db):

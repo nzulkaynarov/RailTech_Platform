@@ -226,6 +226,29 @@ describe("Admin · Внешние интеграции: обзор", () => {
     expect(await screen.findByRole("heading", { level: 2, name: "Сервисы" })).toBeVisible();
   });
 
+  it("бейдж «Нет данных» не стоит рядом со строкой «Всё в порядке» (W15-G-6)", async () => {
+    signIn("admin@demo.example");
+    const original = await fetch("/api/v1/admin/integrations").then(
+      (r) => r.json() as Promise<{ cards: Record<string, unknown>[] }>,
+    );
+    server.use(
+      http.get("*/admin/integrations", () =>
+        HttpResponse.json({
+          ...original,
+          cards: original.cards.map((c) =>
+            c["key"] === "models" ? { ...c, status: "unknown", note: "all_ok" } : c,
+          ),
+        }),
+      ),
+    );
+    renderAt("/admin/integrations");
+
+    const models = await waitFor(() => tile("Модели ИИ"));
+    expect(within(models).getByText("Нет данных", { selector: ".ant-tag" })).toBeVisible();
+    expect(within(models).queryByText("Всё в порядке")).toBeNull();
+    expect(within(models).getAllByText("Нет данных").length).toBeGreaterThanOrEqual(2);
+  });
+
   it("CRM не ответила целиком: понятный текст и «Повторить»", async () => {
     signIn("admin@demo.example");
     server.use(

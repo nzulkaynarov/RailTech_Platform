@@ -24,6 +24,22 @@ async def test_enqueue_defers_the_right_task_under_a_per_user_lock(
     assert job["args"] == {"user_id": 5}
     assert job["queue_name"] == "notify"
     assert job["lock"] == "erp_user:5"
+    assert job["queueing_lock"] == f"erp_user_q:{action}:5"
+
+
+@pytest.mark.asyncio
+async def test_second_waiting_job_for_the_same_user_and_action_is_not_queued() -> None:
+    """D2-1: массовый провижининг по отпечатку каталога не плодит дублей ждущих задач."""
+    connector = testing.InMemoryConnector()
+    with queue.replace_connector(connector):
+        first = await erp_users.enqueue_erp_sync("provision", 5)
+        second = await erp_users.enqueue_erp_sync("provision", 5)
+        other = await erp_users.enqueue_erp_sync("revoke", 5)
+
+    assert first is not None
+    assert second is None
+    assert other is not None
+    assert len(connector.jobs) == 2
 
 
 def test_tasks_retry_with_growing_pause() -> None:
