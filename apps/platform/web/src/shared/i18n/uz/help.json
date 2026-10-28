@@ -1,0 +1,437 @@
+{
+  "button": {
+    "label": "Yordam",
+    "hint": "Yordam (? tugmasi)"
+  },
+  "drawer": {
+    "title": "Yordam",
+    "close": "Yordamni yopish",
+    "forSection": "Ushbu bo‘lim haqida",
+    "noArticle": "Bu bo‘lim uchun alohida maqola hali yo‘q. «Barcha maqolalar»ni ko‘ring yoki administratorga yozing.",
+    "searchLabel": "Maqolalardan qidirish",
+    "searchPlaceholder": "Masalan: rezolyutsiya, TT, hisob-faktura",
+    "found": "Topilgan maqolalar: {{count}}",
+    "noResults": "«{{query}}» bo‘yicha maqola yo‘q. Boshqa so‘zni sinab ko‘ring yoki administratorga yozing.",
+    "readFull": "«Yordam» sahifasida ochish",
+    "all": "Barcha maqolalar",
+    "write": "Administratorga yozish",
+    "myRequests": "Mening murojaatlarim",
+    "onlyRussian": "Maqolalar hozircha rus tilida yozilgan.",
+    "articlesLabel": "Maqolalar"
+  },
+  "page": {
+    "title": "Yordam",
+    "subtitle": "Nimadan boshlash, ariza yo‘li, lug‘at va tezkor tugmalar",
+    "tabsLabel": "Yordam bo‘limlari",
+    "tabs": {
+      "start": "Nimadan boshlash",
+      "path": "Ariza yo‘li",
+      "glossary": "Lug‘at",
+      "articles": "Maqolalar",
+      "keys": "Tezkor tugmalar",
+      "news": "Yangiliklar",
+      "requests": "Mening murojaatlarim"
+    },
+    "write": "Administratorga yozish",
+    "back": "Barcha maqolalar",
+    "notFoundTitle": "Bunday maqola yo‘q",
+    "notFoundText": "Maqola qayta nomlangan yoki o‘chirilgan. Maqolalar ro‘yxatini oching."
+  },
+  "start": {
+    "intro": "Ertalab «Mening vazifalarim»ni oching: har bir qator sizning rolingiz uchun bitta ish. Qo‘ng‘iroqcha yangilikni bildiradi, qidiruv (Ctrl K) xat, ariza, mijoz yoki hisobni raqami bo‘yicha topadi.",
+    "yours": "Sizning rolingiz: {{role}}",
+    "others": "Boshqa rollar uchun",
+    "kinds": {
+      "director": {
+        "title": "Direktor",
+        "steps": [
+          "«Mening vazifalarim»ni oching: rezolyutsiyasiz xatlar, tasdiqlash uchun TT va xizmat yozuvlari sizni kutmoqda.",
+          "Kiruvchi xatlar: rezolyutsiya qo‘ying — ijrochilarni va hisob-kitob muddatini tanlang.",
+          "Tasdiqlash uchun TT: marja va vizalarni tekshiring, tasdiqlang yoki qaytaring.",
+          "Xizmat yozuvlari: kelishing, qaytaring yoki rad eting; rad etish sababi majburiy.",
+          "Loyihalar va kompaniya xulosasi: nima qotib qolganini ko‘ring."
+        ]
+      },
+      "manager": {
+        "title": "Menejer",
+        "steps": [
+          "«Javob kutmoqda»: botdan o‘tkazmalar va mijoz xabarlari — javob bering yoki ishga oling.",
+          "Lidan ariza yarating: mijoz va ЗВ-YYYY-NNN raqami paydo bo‘ladi.",
+          "Ariza bosqichini uning kartochkasida kuzating: rezolyutsiya, hisob-kitob, TT.",
+          "Ish uchun biror narsa sotib olish kerak bo‘lsa — xizmat yozuvini rasmiylashtiring."
+        ]
+      },
+      "supply": {
+        "title": "Ta’minotchi",
+        "steps": [
+          "«Mening vazifalarim»: hisob-kitob topshiriqlari direktor rezolyutsiyasidan keyin keladi.",
+          "Pozitsiyalarni tanlang: ombor, yetkazib beruvchilar, yetkazish muddati.",
+          "«Tovarlar va ombor» vizasini qo‘ying. Vizalar yig‘ilgach, TT direktorga ketadi."
+        ]
+      },
+      "engineer": {
+        "title": "Bosh muhandis",
+        "steps": [
+          "«Mening vazifalarim»: xizmatlar bo‘yicha topshiriqlar direktor rezolyutsiyasidan keyin keladi.",
+          "Xizmatlarni hisoblang: texnik topshiriq, brigada, muddatlar.",
+          "«Xizmatlar» vizasini qo‘ying. Vizalar yig‘ilgach, TT direktorga ketadi."
+        ]
+      },
+      "accountant": {
+        "title": "Buxgalter",
+        "steps": [
+          "«Mening vazifalarim»: tasdiqlanadigan to‘lov topshiriqnomalari va chiqariladigan hisoblar.",
+          "To‘lovni ko‘chirma bo‘yicha tasdiqlang: hisob to‘liq yoki qisman yopiladi.",
+          "Shartnomalar va dalolatnomalar: chiqarilganini va imzolanganini kiriting, skanerni biriktiring.",
+          "Muddati o‘tgan hisoblar ham vazifa bo‘lib keladi."
+        ]
+      },
+      "admin": {
+        "title": "Administrator",
+        "steps": [
+          "«Sozlamalar»: rollar, xodimlar, ulanishlar va jurnal.",
+          "Yangi xodim uchun: «Xodimni taklif qilish» va rol bering.",
+          "Ulanishlarda «E’tibor talab qiladi»: nima buzilgan va kim tuzatmoqda.",
+          "«Xodimlar murojaatlari»: hamkasblar savollariga javob bering."
+        ]
+      },
+      "default": {
+        "title": "Istalgan rol",
+        "steps": [
+          "«Mening vazifalarim» — rolingiz uchun ishlar. Bitta qator — bitta harakat.",
+          "Qidiruv (Ctrl K) va qo‘ng‘iroqcha kerakli narsani yo‘qotmaslikka yordam beradi.",
+          "Biror narsa yetishmasa — «Administratorga yozish»."
+        ]
+      }
+    }
+  },
+  "path": {
+    "intro": "Ariza yetti bosqichdan o‘tadi — hamma uchun bir xil. Joriy bosqich kartochka sarlavhasida doim ko‘rinadi; har bir bosqichning bitta egasi va bitta asosiy tugmasi bor.",
+    "owner": "Yuritadi: {{who}}",
+    "steps": [
+      {
+        "title": "Ariza",
+        "who": "menejer",
+        "text": "Menejer lidan ariza yaratadi: matn, qatorlar, mijoz xati. Xat ВХ raqami bilan ro‘yxatga olinadi."
+      },
+      {
+        "title": "Rezolyutsiya",
+        "who": "direktor",
+        "text": "Direktor rezolyutsiya qo‘yadi: qaror, ijrochilar, hisob-kitob muddati. Yoki menejerga qaytaradi, yoki rad etadi."
+      },
+      {
+        "title": "Hisob-kitob",
+        "who": "ta’minotchi va bosh muhandis",
+        "text": "Mutaxassislar narxlar, ombor va xizmatlarni hisoblab, viza qo‘yadi. Vizalar yig‘ilgach, hisob-kitob tayyor."
+      },
+      {
+        "title": "TT",
+        "who": "direktor",
+        "text": "Direktor tijorat taklifini tasdiqlaydi; mijoz uni o‘z kanali orqali oladi va qabul qiladi yoki rad etadi."
+      },
+      {
+        "title": "Shartnoma",
+        "who": "buxgalter",
+        "text": "Mijoz tahrirni kelishadi, shartnoma Platformadan tashqarida operatorda rasmiylashtiriladi va imzolanadi; skaner qo‘lda biriktiriladi."
+      },
+      {
+        "title": "To‘lov",
+        "who": "buxgalter",
+        "text": "Hisob chiqariladi, mijoz to‘lov topshiriqnomasini biriktiradi, buxgalter to‘lovni ko‘chirma bo‘yicha tasdiqlaydi. Bajarish parallel ketadi."
+      },
+      {
+        "title": "Bajarildi",
+        "who": "tizim",
+        "text": "Dalolatnoma imzolandi, barcha hisoblar to‘landi — ariza yopildi."
+      }
+    ],
+    "lost": "2–5-bosqichlarda arizani sabab bilan yopish mumkin — «Rad etildi»; uni «Hisob-kitob» bosqichida tiklash mumkin."
+  },
+  "glossary": {
+    "intro": "Bu so‘zlar butun interfeysda bir xil.",
+    "items": [
+      {
+        "term": "Lid (L-2041)",
+        "text": "Birinchi marta yozgan shaxs yoki kompaniya; hali mijoz emas."
+      },
+      {
+        "term": "Mijoz",
+        "text": "Kontaktlari bor kompaniya. Menejer lidan ariza yaratganda paydo bo‘ladi."
+      },
+      {
+        "term": "Ariza (ЗВ-2026-104)",
+        "text": "Mijoz ehtiyoji: matn, qatorlar, ilovalar, xat. Yetti bosqichdan o‘tadi."
+      },
+      {
+        "term": "Loyiha (ПР-2026-104)",
+        "text": "Mijoz TTni qabul qilgandan keyingi o‘sha ariza; raqami ariza raqamidan olinadi."
+      },
+      {
+        "term": "Kiruvchi xat (ВХ-104/26)",
+        "text": "Mijozning direktor nomiga rasmiy hujjati; rezolyutsiyani kutadi."
+      },
+      {
+        "term": "Rezolyutsiya",
+        "text": "Direktorning kiruvchi xat bo‘yicha qarori: matn, ijrochilar, muddat, marja chegarasi."
+      },
+      {
+        "term": "Hisob-kitob",
+        "text": "Ombor va yetkazib beruvchi ma’lumotlari hamda mutaxassis vizalari bilan ariza qatorlari."
+      },
+      {
+        "term": "TT (КП-2026/118)",
+        "text": "Versiyali tijorat taklifi. Mijozga faqat direktor tasdiqlagandan keyin ketadi."
+      },
+      {
+        "term": "ИСХ (ИСХ-082/26)",
+        "text": "TT tasdiqlanganda oladigan chiquvchi raqam."
+      },
+      {
+        "term": "Shartnoma (ДОГ-2026/104)",
+        "text": "Qabul qilingan TTdan shartnoma loyihasi; operatorda imzolanadi, skaner biriktiriladi."
+      },
+      {
+        "term": "Hisob (СЧ-2026/142)",
+        "text": "To‘lov uchun hisob: avans, qoldiq yoki bosqich."
+      },
+      {
+        "term": "To‘lov topshiriqnomasi",
+        "text": "Mijozning to‘lov topshiriqnomasi (fayl); buxgalter tasdiqlaydi."
+      },
+      {
+        "term": "Dalolatnoma (АКТ-2026/058)",
+        "text": "Bajarilgan ish yoki yetkazib berish dalolatnomasi; imzolangan skaner biriktiriladi."
+      },
+      {
+        "term": "Xizmat yozuvi (СЗ-2026/031)",
+        "text": "Xodimning direktor nomiga ichki hujjati: mavzu, matn, summa yoki muddat."
+      },
+      {
+        "term": "Murojaat (ОБР-0012)",
+        "text": "Administratorga savolingiz: kirish, bildirishnomalar, shablon, xato. Mijozning loyiha bo‘yicha murojaati bilan adashtirmang."
+      }
+    ]
+  },
+  "keys": {
+    "intro": "Kursor kiritish maydonida bo‘lganda tezkor tugmalar ishlamaydi.",
+    "items": [
+      {
+        "keys": "Ctrl K yoki ⌘ K",
+        "text": "Raqam, nom yoki STIR bo‘yicha qidiruvga o‘tish."
+      },
+      {
+        "keys": "?",
+        "text": "Joriy ekran uchun yordamni ochish."
+      },
+      {
+        "keys": "Esc",
+        "text": "Oynani yopish: yordam, bildirishnomalar, «Qayerdan ko‘rish» maslahati."
+      },
+      {
+        "keys": "Tab va Shift Tab",
+        "text": "Keyingi va oldingi elementga o‘tish; Enter tugmani bosadi yoki havolani ochadi."
+      }
+    ]
+  },
+  "news": {
+    "intro": "Platformada nima o‘zgardi.",
+    "items": [
+      {
+        "date": "2026-yil 28-oktyabr",
+        "title": "Yordam, birinchi kirish va administratorga murojaatlar",
+        "text": "«?» tugmasi joriy ekran uchun yordamni ochadi; «Administratorga yozish» «Ruxsat yo‘q» ekranidan va Yordamdan ishlaydi; javoblar qo‘ng‘iroqchaga va Telegramga keladi."
+      },
+      {
+        "date": "2026-yil 27-oktyabr",
+        "title": "Halol to‘ldirgichlar va boshi berk ko‘chasiz navbat",
+        "text": "Platformada hali yo‘q bo‘lim ishning hozir qayerda bajarilishini aytadi; «Mening vazifalarim»da ekran hali bo‘lmasa «Ochish» o‘rniga «Qayerda bajarish» chiqadi."
+      },
+      {
+        "date": "2026-yil 27-oktyabr",
+        "title": "Profil",
+        "text": "Surat, telefon, imzo, Telegram va ta’til paytidagi o‘rinbosar profil sahifasida."
+      }
+    ]
+  },
+  "articles": {
+    "intro": "Platforma bo‘limlari bo‘yicha maqolalar. Sarlavhadagi «?» tugmasi kerakli maqolaga olib boradi.",
+    "empty": "Maqolalar hali yo‘q.",
+    "forSection": "Bo‘lim uchun maqola"
+  },
+  "ticket": {
+    "subject": {
+      "access": "Bo‘limga kirish kerak",
+      "notification": "Bildirishnoma kelmayapti",
+      "template": "Hujjat shabloni kerak",
+      "error": "Xato",
+      "other": "Boshqa"
+    },
+    "status": {
+      "new": "Yangi",
+      "in_progress": "Ishda",
+      "resolved": "Hal qilindi"
+    }
+  },
+  "write": {
+    "title": "Administratorga yozish",
+    "lead": "Nima bo‘lganini yozing. Administrator Platformada va Telegramda javob beradi.",
+    "subject": "Mavzu",
+    "subjectPlaceholder": "Mavzuni tanlang",
+    "body": "Nima bo‘ldi",
+    "bodyPlaceholder": "Masalan: ta’minotchi topshiriqlarini ko‘rish uchun «Hisob-kitob» bo‘limiga kirish kerak",
+    "bodyHint": "4000 belgigacha.",
+    "auto": "Avtomatik biriktiriladi: sahifa {{page}}, rol {{role}}.",
+    "autoNoPage": "Avtomatik biriktiriladi: rol {{role}}.",
+    "consequence": [
+      "Administrator murojaatni «Sozlamalar · Xodimlar murojaatlari»da va Telegramda oladi.",
+      "Sahifa va rolingiz o‘zi biriktiriladi.",
+      "Javob qo‘ng‘iroqchaga va (ulangan bo‘lsa) Telegramga keladi; holat «Mening murojaatlarim»da."
+    ],
+    "consequenceTitle": "Nima bo‘ladi",
+    "submit": "Yuborish",
+    "cancel": "Bekor qilish",
+    "sending": "Yuborilmoqda…",
+    "doneTitle": "{{number}}-murojaat yuborildi",
+    "doneText": "Administrator qo‘ng‘iroqchada va Telegramda javob beradi. Holat — «Mening murojaatlarim»da.",
+    "open": "Murojaatni ochish",
+    "close": "Yopish",
+    "subjectRequired": "Mavzuni tanlang",
+    "bodyRequired": "Nima bo‘lganini yozing",
+    "bodyTooLong": "Matn 4000 belgidan uzun: qisqartiring",
+    "errors": {
+      "TOO_MANY_REQUESTS": "Siz juda ko‘p murojaat yubordingiz. Biroz kutib, qayta urinib ko‘ring.",
+      "BACKEND_UNAVAILABLE": "Murojaatlar xizmati javob bermayapti. Bir daqiqadan keyin qayta urinib ko‘ring.",
+      "default": "Murojaatni yuborib bo‘lmadi. Qayta urinib ko‘ring."
+    }
+  },
+  "requests": {
+    "title": "Mening murojaatlarim",
+    "intro": "Administratorga murojaatlaringiz va uning javoblari. Boshqa xodimlar ularni ko‘rmaydi.",
+    "write": "Administratorga yozish",
+    "empty": "Murojaatlar yo‘q",
+    "emptyText": "Bo‘limga kirish bo‘lmasa, bildirishnoma kelmasa yoki biror narsa buzilgan bo‘lsa, administratorga yozing.",
+    "loadError": "Murojaatlarni yuklab bo‘lmadi",
+    "loadErrorText": "Server javob bermadi. Birozdan keyin qayta urinib ko‘ring.",
+    "retry": "Qayta urinish",
+    "listLabel": "Mening murojaatlarim",
+    "open": "{{number}}-murojaatni ochish",
+    "columns": {
+      "number": "Raqam",
+      "subject": "Mavzu",
+      "status": "Holat",
+      "updated": "O‘zgargan"
+    },
+    "back": "Barcha murojaatlarim",
+    "page": "Sahifa",
+    "yourText": "Sizning matningiz",
+    "answers": "Administrator javoblari",
+    "noAnswers": "Javob hali yo‘q. U qo‘ng‘iroqchaga va Telegramga keladi.",
+    "answerFrom": "{{name}}, {{when}}",
+    "notFound": "Bunday murojaat yo‘q",
+    "notFoundText": "Raqam noto‘g‘ri yoki bu boshqa xodimning murojaati.",
+    "sent": "Yuborilgan"
+  },
+  "admin": {
+    "subtitle": "Hamkasblar administratorga nima yozadi: kirish, bildirishnomalar, shablonlar, xatolar",
+    "filtersLabel": "Murojaat filtrlari",
+    "status": "Holat",
+    "allStatuses": "Barcha holatlar",
+    "subject": "Mavzu",
+    "allSubjects": "Barcha mavzular",
+    "reset": "Filtrlarni tozalash",
+    "listLabel": "Xodimlar murojaatlari",
+    "columns": {
+      "number": "Raqam",
+      "subject": "Mavzu",
+      "author": "Kimdan",
+      "status": "Holat",
+      "updated": "O‘zgargan"
+    },
+    "open": "{{number}}-murojaatni ochish",
+    "countsNew": "Yangi: {{count}}",
+    "countsWork": "Ishda: {{count}}",
+    "countsDone": "Hal qilindi: {{count}}",
+    "empty": "Murojaatlar yo‘q",
+    "emptyText": "Xodimlar bu yerga «Ruxsat yo‘q» ekranidan va «Yordam»dan yozadi.",
+    "noMatch": "Filtrga hech narsa mos kelmadi",
+    "noMatchText": "Barcha murojaatlarni ko‘rish uchun filtrlarni tozalang.",
+    "loadError": "Murojaatlarni yuklab bo‘lmadi",
+    "loadErrorText": "Server javob bermadi. Birozdan keyin qayta urinib ko‘ring.",
+    "retry": "Qayta urinish",
+    "pager": "Murojaat sahifalari",
+    "total": "Murojaatlar: {{count}}",
+    "card": {
+      "hintTitle": "Murojaat tanlanmagan",
+      "hint": "Ro‘yxatdan murojaatni oching — bu yerda matn, sahifa, javoblar va «Javob berish» tugmasi paydo bo‘ladi.",
+      "notFound": "Bunday murojaat yo‘q",
+      "notFoundText": "Raqam noto‘g‘ri yoki murojaat o‘chirilgan.",
+      "from": "Kimdan",
+      "role": "Murojaat paytidagi rol",
+      "page": "Sahifa",
+      "subject": "Mavzu",
+      "status": "Holat",
+      "text": "Matn",
+      "answers": "Javoblar",
+      "noAnswers": "Javoblar hali yo‘q.",
+      "reply": "Sizning javobingiz",
+      "replyPlaceholder": "Nima qilindi yoki nimani aniqlashtirish kerak",
+      "send": "Javobni yuborish",
+      "sendResolve": "Javob berib, hal qilindi deb belgilash",
+      "toWork": "Ishga olish",
+      "resolve": "Hal qilindi deb belgilash",
+      "reopen": "Ishga qaytarish",
+      "consequenceTitle": "Nima bo‘ladi",
+      "consequence": [
+        "Muallif javobni qo‘ng‘iroqchada va (ulangan bo‘lsa) Telegramda oladi.",
+        "Yangi murojaat javobdan keyin «Ishda» holatiga o‘tadi.",
+        "Holat va javob jurnalga yoziladi."
+      ],
+      "resolveConsequence": "Muallif murojaat hal qilinganini bilib oladi.",
+      "readOnly": "Direktor murojaatlarni o‘qiydi; administrator javob beradi va holatni o‘zgartiradi.",
+      "replyRequired": "Javob yozing",
+      "errors": {
+        "ticket_status_transition": "Holatni bunday o‘zgartirib bo‘lmaydi: sahifani yangilang.",
+        "default": "Saqlab bo‘lmadi. Qayta urinib ko‘ring."
+      },
+      "saved": "Javob yuborildi",
+      "statusSaved": "Holat o‘zgardi",
+      "openPage": "Bu sahifani ochish"
+    }
+  },
+  "welcome": {
+    "title": "Xush kelibsiz, {{name}}",
+    "role": "Sizning rolingiz — {{role}}.",
+    "lead": "Ertalab siz shularni qilasiz:",
+    "tour": "Nima qayerda ekanini ko‘rsatish",
+    "skip": "O‘tkazib yuborish",
+    "never": "Boshqa ko‘rsatilmasin",
+    "close": "Xush kelibsiz oynasini yopish"
+  },
+  "tour": {
+    "label": "Platforma bilan tanishuv",
+    "progress": "{{current}}-qadam, jami {{total}}",
+    "next": "Keyingisi",
+    "prev": "Orqaga",
+    "done": "Tayyor",
+    "skip": "O‘tkazib yuborish",
+    "never": "Boshqa ko‘rsatilmasin",
+    "steps": {
+      "rail": {
+        "title": "Modullar",
+        "text": "Chapda (telefonda — pastda) faqat rolingizga tegishli modullar ko‘rinadi. Qolganlari yashirilgan, kirish mumkin bo‘lmagan bo‘lim buni o‘zi aytadi."
+      },
+      "menu": {
+        "title": "«Mening vazifalarim»",
+        "text": "Bosh sahifaning birinchi bandi — hozir nima qilish kerak. Bitta qator — bitta ish; «Ochish» tugmasi unga olib boradi."
+      },
+      "bell": {
+        "title": "Qo‘ng‘iroqcha",
+        "text": "Qarorlar, mijoz xabarlari va administrator javoblari. Telegram ulangan bo‘lsa, ular u yerga ham keladi."
+      },
+      "help": {
+        "title": "Yordam",
+        "text": "«?» tugmasi joriy ekran uchun maqolani ochadi. U yerdan administratorga yozish mumkin."
+      }
+    }
+  }
+}

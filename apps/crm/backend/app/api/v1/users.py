@@ -61,6 +61,7 @@ def to_out(view: UserView) -> UserOut:
         deputy_user_id=view.deputy_user_id,
         deputy_from=view.deputy_from,
         deputy_to=view.deputy_to,
+        onboarding_done=view.onboarding_done,
     )
 
 

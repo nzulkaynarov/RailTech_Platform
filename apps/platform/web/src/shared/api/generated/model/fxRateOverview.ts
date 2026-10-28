@@ -133,7 +133,7 @@
  * (директор читает), сброс пароля — `admin: full`; профиль доступен каждому вошедшему. Секреты из записей журнала BFF вырезает
  * (значения полей `password`, `secret`, `token`, `key`, `*_key`, `credentials`, `authorization`, `pin` и им подобных -> `***` целиком, любого типа).
  *
- * **0.25.0 (D2-3) — Расчёт · Номенклатура и поставщики, справочники, Техдокументация.** Добавляющее изменение, тег `erp-catalog`
+ * **0.26.0 (D2-3) — Расчёт · Номенклатура и поставщики, справочники, Техдокументация.** Добавляющее изменение, тег `erp-catalog`
  * (разделы `erp.stock`; решения о правах — за ERP). **Номенклатура**: `GET|POST /erp/catalog/items`, `GET|PATCH /erp/catalog/items/{id}` —
  * позиции с типом (товар со склада или под заказ, услуга фикс / по этапам / по времени), единицей, НДС и сроком цен. **Поставщики**:
  * `GET /erp/catalog/suppliers`, `GET /erp/catalog/suppliers/{id}` (квоты, сроки действия цен), `PATCH …/offers/{offer_id}`. **Закрытые
@@ -144,6 +144,21 @@
  * коды ТН ВЭД `GET|POST /erp/catalog/hs-codes`, `PATCH …/{id}`, производители `GET|POST /erp/catalog/manufacturers`, `PATCH …/{id}`;
  * `GET /erp/catalog/lookups` — единицы, категории, валюты и страны для форм. **Техдокументация**: `GET|POST /erp/docs/files` (multipart,
  * файл до 20 МБ), `DELETE /erp/docs/files/{id}`, `GET /erp/docs/files/{id}/content` (поток, всегда вложением), `GET /erp/docs/deals`.
+ *
+ * **0.25.0 (W15-H7) — помощь, первый вход и обращения к администратору.** Добавляющее изменение (тег `tickets`). **Обращения
+ * сотрудников** (домен CRM, ADR-0015): `POST /tickets` (тема из списка `access|notification|template|error|other`, текст,
+ * адрес страницы; роль автора BFF берёт из сессии), `GET /tickets` и `GET /tickets/{number}` — только свои обращения
+ * (чужое — 404), не больше пяти в час (429 `TOO_MANY_REQUESTS`, `details.reason = ticket_rate_limited`). Админ:
+ * `GET /admin/tickets` (список с фильтрами `status`, `subject`, постранично, `counts` по статусам), `GET /admin/tickets/{number}`,
+ * `POST /admin/tickets/{number}/reply` (ответ; новое обращение берётся «В работу», `status` задаёт итог) и
+ * `POST /admin/tickets/{number}/status` («Новое → В работе → Решено», «Решено» можно вернуть «В работу»; иначе 409
+ * `CONFLICT`, `details.reason = ticket_status_transition`). Раздел `admin`: чтение — директор, ответ и статус — администратор.
+ * Номер обращения — `ОБР-0012`, внутренних id в адресах нет. Ошибки значений — 422 `VALIDATION_FAILED` с `details.fields`
+ * и `details.reason` (`ticket_subject_unknown`, `ticket_text_empty`, `ticket_text_too_long`, `ticket_reply_empty`…).
+ * **Колокольчик** (`GET /notifications`) получил ленту CRM: идентификаторы `crm:<id>`, объект — обращение (`kind = ticket`);
+ * ответ и решение уходят автору, новое обращение — администраторам; `POST /notifications/{id}/read` и `read-all` отмечают
+ * обе ленты. **Первый вход:** `Me.onboarding_done` и `PUT /me/onboarding` («Пропустить» / «Больше не показывать» —
+ * флаг хранит CRM, не браузер).
  *
  * **0.24.0 (D1-4) — EDS · КП на одобрение и документы на согласовании.** Добавляющее изменение, тег `eds-approvals`: `GET /eds/quotes`
  * (КП на одобрение: «на моём шаге» или все), `GET /eds/quotes/{ref}` (карточка КП по id маршрута или номеру `КП-2026/115`: шаги маршрута,
@@ -250,7 +265,7 @@
  * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; «Забыли пароль?» — 5 запросов в час на IP и на адрес; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.25.0
+ * OpenAPI spec version: 0.26.0
  */
 import type { FxRate } from "./fxRate";
 import type { FxRateJournalEntry } from "./fxRateJournalEntry";

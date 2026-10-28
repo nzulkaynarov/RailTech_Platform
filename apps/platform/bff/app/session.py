@@ -80,6 +80,8 @@ class SessionData(BaseModel):
     position: str | None = None
     # Версия фото (CRM `avatar_version`): адрес картинки в `Me.avatar_url`; None — фото нет.
     avatar_version: int | None = None
+    # Приветствие и тур первого входа показаны (CRM `onboarding_done`, W15-H7); без поля — да.
+    onboarding_done: bool = True
     roles: list[SessionRole]
     platform_access: list[str]
     must_change_password: bool

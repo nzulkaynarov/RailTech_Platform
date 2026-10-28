@@ -301,6 +301,147 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/me/onboarding": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Закрыть приветствие и тур первого входа
+     * @description «Пропустить» и «Больше не показывать»: ставит `Me.onboarding_done = true` (CRM `PATCH /me {onboarding_done: true}`), обратно флаг не снимается. Только про себя; повторный вызов безвреден. Ответ — обновлённый профиль.
+     */
+    put: operations["finishOnboarding"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/tickets": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Мои обращения к администратору
+     * @description Только обращения самого сотрудника, новейшие первыми (CRM `GET /staff-tickets/mine`). Нужна сессия и хотя бы один раздел каталога; прав раздела не требуется.
+     */
+    get: operations["listMyTickets"];
+    put?: never;
+    /**
+     * Написать администратору
+     * @description Создаёт обращение: тема из списка, текст, адрес страницы (внутренний путь Платформы, `/eds/inbox?panel=open`). Роль автора подставляет BFF из сессии. Админам уходит строка в колокольчик и личное сообщение бота; не больше пяти обращений в час на сотрудника — иначе 429 `TOO_MANY_REQUESTS` с `details.reason = ticket_rate_limited`. Ошибка значения — 422 `VALIDATION_FAILED` (`details.fields`: `subject`, `body`, `page`; `details.reason`: `ticket_subject_unknown`, `ticket_text_empty`, `ticket_text_too_long`, `ticket_page_invalid`).
+     */
+    post: operations["createTicket"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/tickets/{number}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Моё обращение с ответами администратора
+     * @description Чужое обращение отвечает 404: его для этого сотрудника не существует.
+     */
+    get: operations["getMyTicket"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/tickets": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Все обращения сотрудников (Настройки · Обращения сотрудников)
+     * @description Раздел `admin` от чтения (директор читает, администратор правит). Порядок: «Новое» и «В работе» выше «Решено», внутри — свежее выше. `counts` — по статусам без учёта фильтра.
+     */
+    get: operations["listTickets"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/tickets/{number}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Обращение с ответами (карточка в боковом окне) */
+    get: operations["getTicket"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/tickets/{number}/reply": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Ответить на обращение
+     * @description Раздел `admin` — полный. Ответ уходит автору в колокольчик и в Telegram (если привязан); новое обращение берётся «В работу», `status` задаёт итог сразу («Решено»). Недопустимый переход — 409 `CONFLICT` (`details.reason = ticket_status_transition`), пустой или слишком длинный ответ — 422.
+     */
+    post: operations["replyTicket"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/tickets/{number}/status": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Сменить статус обращения
+     * @description Раздел `admin` — полный. «Новое → В работе → Решено»; «Решено» можно вернуть «В работу». Решение без ответа тоже сообщается автору. Иначе — 409 `CONFLICT` (`details.reason = ticket_status_transition`).
+     */
+    post: operations["setTicketStatus"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/me/profile": {
     parameters: {
       query?: never;
@@ -565,7 +706,12 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Отметить все прочитанными */
+    /**
+     * Отметить все прочитанными
+     * @description Отмечает обе ленты — ERP и CRM (у каждой своя). Недоступность одной ленты не отменяет отметку другой: ответ 204,
+     *     недоступный источник остаётся непрочитанным и виден в `sources` следующей выдачи `GET /notifications`. Ошибка
+     *     возвращается, только если не отмечена ни одна лента.
+     */
     post: operations["markAllNotificationsRead"];
     delete?: never;
     options?: never;
@@ -4299,6 +4445,100 @@ export interface components {
         crm: boolean;
         erp: boolean;
       };
+      /** @description Приветствие и тур первого входа уже показаны («Пропустить» или «Больше не показывать»); `false` — SPA показывает карточку «Добро пожаловать». Флаг хранит CRM (`PUT /me/onboarding`), а не браузер. */
+      onboarding_done: boolean;
+    };
+    /**
+     * @description Тема обращения — «Нужен доступ к разделу», «Не приходит уведомление», «Нужен шаблон документа», «Ошибка», «Другое»
+     * @enum {string}
+     */
+    TicketSubject: "access" | "notification" | "template" | "error" | "other";
+    /**
+     * @description «Новое», «В работе», «Решено»
+     * @enum {string}
+     */
+    TicketStatus: "new" | "in_progress" | "resolved";
+    TicketCreate: {
+      subject: components["schemas"]["TicketSubject"];
+      /** @description Что случилось — до 4000 символов после обрезки пробелов (длиннее — 422 `ticket_text_too_long`) */
+      body: string;
+      /** @description Внутренний путь страницы Платформы с запросом (`/eds/inbox?panel=open`); внешний адрес — 422 */
+      page?: string;
+    };
+    TicketReply: {
+      body: string;
+      status?: components["schemas"]["TicketStatus"];
+    };
+    TicketStatusChange: {
+      status: components["schemas"]["TicketStatus"];
+    };
+    TicketAuthor: {
+      /** @description `crm_user_id` */
+      id: string;
+      name: string;
+    };
+    TicketRow: {
+      /** @example ОБР-0012 */
+      number: string;
+      subject: components["schemas"]["TicketSubject"];
+      status: components["schemas"]["TicketStatus"];
+      author: components["schemas"]["TicketAuthor"];
+      /** @description Роли автора на момент обращения (текст; подставляет BFF) */
+      author_role?: string;
+      /** @description Страница, с которой написано обращение */
+      page?: string;
+      /** @description Начало текста для списка */
+      preview: string;
+      /** @description Сколько ответов администратора */
+      replies: number;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      updated_at: string;
+    };
+    TicketMessage: {
+      /** @description Кто ответил (администратор); пусто, если сотрудник удалён */
+      author_name?: string;
+      body: string;
+      /** Format: date-time */
+      created_at: string;
+    };
+    Ticket: {
+      /** @example ОБР-0012 */
+      number: string;
+      subject: components["schemas"]["TicketSubject"];
+      status: components["schemas"]["TicketStatus"];
+      author: components["schemas"]["TicketAuthor"];
+      /** @description Роли автора на момент обращения (текст; подставляет BFF) */
+      author_role?: string;
+      /** @description Страница, с которой написано обращение */
+      page?: string;
+      preview: string;
+      replies: number;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      updated_at: string;
+      /** @description Полный текст обращения */
+      body: string;
+      /** @description Ответы администратора по порядку */
+      messages: components["schemas"]["TicketMessage"][];
+      /** Format: date-time */
+      resolved_at?: string;
+    };
+    TicketList: {
+      items: components["schemas"]["TicketRow"][];
+    };
+    TicketCounts: {
+      new: number;
+      in_progress: number;
+      resolved: number;
+    };
+    TicketPage: {
+      items: components["schemas"]["TicketRow"][];
+      /** @description Сколько обращений подходит под фильтр */
+      total: number;
+      counts: components["schemas"]["TicketCounts"];
     };
     ChangePasswordIn: {
       current_password: string;
@@ -6496,6 +6736,8 @@ export interface components {
     };
   };
   parameters: {
+    /** @description Номер обращения `ОБР-0012` (в адресе — закодированный) */
+    TicketNumberPath: string;
     /** @description Номер лида `L-NNNN` */
     LeadNumber: string;
     /** @description `crm_user_id` — число без ведущих нулей (`07` и `007` — не адрес сотрудника) */
@@ -7096,6 +7338,257 @@ export interface operations {
       };
     };
   };
+  finishOnboarding: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Профиль с `onboarding_done = true` */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Me"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listMyTickets: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Мои обращения */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TicketList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  createTicket: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["TicketCreate"];
+      };
+    };
+    responses: {
+      /** @description Обращение создано */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Ticket"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+      429: components["responses"]["TooManyRequests"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getMyTicket: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Номер обращения `ОБР-0012` (в адресе — закодированный) */
+        number: components["parameters"]["TicketNumberPath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Обращение */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Ticket"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listTickets: {
+    parameters: {
+      query?: {
+        status?: components["schemas"]["TicketStatus"];
+        subject?: components["schemas"]["TicketSubject"];
+        limit?: number;
+        offset?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Страница обращений */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TicketPage"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getTicket: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Номер обращения `ОБР-0012` (в адресе — закодированный) */
+        number: components["parameters"]["TicketNumberPath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Обращение */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Ticket"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  replyTicket: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер обращения `ОБР-0012` (в адресе — закодированный) */
+        number: components["parameters"]["TicketNumberPath"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["TicketReply"];
+      };
+    };
+    responses: {
+      /** @description Обновлённое обращение */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Ticket"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      /** @description `CONFLICT` — статус так сменить нельзя */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  setTicketStatus: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер обращения `ОБР-0012` (в адресе — закодированный) */
+        number: components["parameters"]["TicketNumberPath"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["TicketStatusChange"];
+      };
+    };
+    responses: {
+      /** @description Обновлённое обращение */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Ticket"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      /** @description `CONFLICT` — статус так сменить нельзя */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
   getProfile: {
     parameters: {
       query?: never;
@@ -7557,7 +8050,7 @@ export interface operations {
     };
     requestBody?: never;
     responses: {
-      /** @description Отмечены */
+      /** @description Отмечены (хотя бы одна лента) */
       204: {
         headers: {
           [name: string]: unknown;

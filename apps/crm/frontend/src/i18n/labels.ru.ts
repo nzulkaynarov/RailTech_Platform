@@ -172,6 +172,10 @@ export const labelsRu = {
     "user.telegram_unlinked": "Отвязал Telegram",
     "user.deputy_set": "Назначил заместителя на время отсутствия",
     "user.deputy_cleared": "Снял замещение",
+    "user.onboarding_done": "Закрыл приветствие в Платформе",
+    "staff_ticket.create": "Написал администратору",
+    "staff_ticket.reply": "Ответил на обращение сотрудника",
+    "staff_ticket.status": "Изменил статус обращения сотрудника",
     "export.leads": "Выгрузил лидов в CSV",
     "export.clients": "Выгрузил клиентов в CSV",
     "export.deals": "Выгрузил сделки в CSV",
@@ -202,6 +206,7 @@ export const labelsRu = {
     integration: "Подключение",
     external_service: "Внешний сервис",
     platform_role: "Роль Платформы",
+    staff_ticket: "Обращение сотрудника",
   } as Dict,
   actor: { system: "Система", bot: "Бот", user: "Сотрудник" } as Dict,
 };
