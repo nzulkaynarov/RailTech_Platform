@@ -92,7 +92,8 @@ export const BRIDGE: Readonly<Record<string, BridgeEntry>> = {
     objectKind: "request",
   },
   "crm.channels": {
-    internal: { to: "/admin/integrations", resource: "admin", section: "integrations" },
+    // Бот подключается в «Настройки · Telegram-бот» (W15-H4), а не в «Подключениях»
+    internal: { to: "/admin/bot", resource: "admin", section: "bot" },
     when: "pilot",
   },
 

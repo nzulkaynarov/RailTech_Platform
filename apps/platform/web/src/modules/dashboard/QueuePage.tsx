@@ -112,7 +112,7 @@ export function QueuePage() {
   let list;
   if (queue.isPending) {
     list = (
-      <Card aria-busy="true" aria-label={t("modules:dashboard.queue.loading")}>
+      <Card role="status" aria-busy="true" aria-label={t("modules:dashboard.queue.loading")}>
         <Skeleton active paragraph={{ rows: 3 }} />
       </Card>
     );
