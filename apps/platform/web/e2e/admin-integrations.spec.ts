@@ -164,7 +164,9 @@ test.describe("Внешние интеграции: администратор",
     await expect(page.getByText("Профиль бота сохранён")).toBeVisible();
   });
 
-  test("Почта: проверка, тестовое письмо в журнале, настройки SMTP", async ({ page }) => {
+  test("Почта: проверка связи и отправки с итогом словами, журнал доставки CRM и ERP, настройки SMTP", async ({
+    page,
+  }) => {
     await loginAndWait(page, "admin@demo.example");
     await openIntegrations(page, "mail");
     const panel = side(page);
@@ -174,9 +176,23 @@ test.describe("Внешние интеграции: администратор",
 
     await panel.getByRole("button", { name: "Проверить связь" }).click();
     await expect(panel.getByText("Сервер принял соединение и вход")).toBeVisible();
-    await panel.getByRole("button", { name: "Тестовое письмо" }).click();
-    const log = panel.getByRole("list", { name: "Журнал отправок" });
+    // W18A-P1: «Проверить отправку» — итог словами под кнопками; письма ERP — в том же журнале доставки.
+    await panel.getByRole("button", { name: "Проверить отправку" }).click();
+    await expect(
+      panel.getByText("Письмо отправлено на admin@demo.example: почтовый сервер его принял."),
+    ).toBeVisible();
+    const log = panel.getByRole("list", { name: "Журнал доставки" });
     await expect(log.getByText("Тестовое письмо")).toBeVisible();
+    await expect(log.getByText("ERP · КП клиенту · вложение: 1")).toBeVisible();
+    await expect(
+      log.getByText("Причина: Почтовый сервер отклонил письмо (SMTP 550)"),
+    ).toBeVisible();
+    for (const width of WIDTHS) {
+      await page.setViewportSize({ width, height: width === 390 ? 844 : 900 });
+      await tallScreenshot(page, "mail-delivery");
+      await expectNoViolations(page, `Почта: итог отправки и журнал доставки, ${String(width)}`);
+    }
+    await page.setViewportSize({ width: 1440, height: 900 });
 
     await panel.getByRole("button", { name: "Настроить SMTP" }).click();
     const form = panel.getByRole("form", { name: "Настройки SMTP" });
@@ -202,7 +218,7 @@ test.describe("Внешние интеграции: администратор",
     await expect(panel.getByText("Telegram Bot API")).toBeVisible();
     await settledScreenshot(page, "services-panel");
 
-    await panel.getByRole("button", { name: "Проверить сервис: Почтовый релей (SMTP)" }).click();
+    await panel.getByRole("button", { name: "Проверить сервис: Почта (SMTP)" }).click();
     await expect(panel.getByText(/В очереди 3 письма/)).toHaveCount(0);
 
     await panel.getByRole("button", { name: "Выключить сервис: Telegram Bot API" }).click();

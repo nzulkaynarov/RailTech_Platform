@@ -240,11 +240,14 @@ class SmtpCheck(_Out):
 
 
 class MailLogItem(_Out):
+    attachments: int
     attempts: int
     created_at: datetime
     error: str | None
     id: int
+    purpose: str | None
     sent_at: datetime | None
+    source: Literal["crm", "erp", "eds"]
     status: MailStatus
     subject: str
     template: str
