@@ -10,10 +10,12 @@
 """
 
 import asyncio
+import time
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
+from app.errors import PlatformError
 from app.feeds.feed import SNAPSHOT_TTL_SECONDS, Feed, rows
 from app.feeds.models import ObjectRef, QueueItem
 from app.feeds.text import ago, due_label, join, parse_deadline, parse_dt, short
@@ -24,6 +26,11 @@ LIST_PATH = "/api/v1/documents"
 KINDS = ("memo", "application", "report")
 # Возвратов у одного автора немного; запасной предел защищает EDS от выборки «всех документов».
 LIMIT = 20
+# Секунды на карточки: не больше `CARDS_BUDGET`, а вместе со списком — в пределах `TOTAL_BUDGET`
+# (таймаут клиента EDS 3 с), но не меньше `MIN_BUDGET`: кэшированные карточки успевают всегда.
+CARDS_BUDGET = 2.0
+TOTAL_BUDGET = 3.0
+MIN_BUDGET = 0.2
 LIST_PARAMS: dict[str, Any] = {
     "mine": "true",
     "status": ["returned"],
@@ -58,29 +65,47 @@ def _last_return(card: Any) -> dict[str, Any] | None:
 
 async def load_rework(feed: Feed, view: View) -> list[Returned] | None:
     """Возвращённые документы автора; `None` — EDS не прочитан (нет доступа или не ответил):
-    строк нет, остальная очередь собирается без него."""
+    строк нет, остальная очередь собирается без него.
+
+    Карточки (решение «Вернуть») — подробность к строке: на них общий бюджет `CARDS_BUDGET`, а сбой
+    или опоздание карточки даёт строку без комментария и не помечает EDS недоступным (список
+    пришёл, строки показаны)."""
     if not wants_rework(view):
         return None
+    started = time.monotonic()
     payload = await feed.get("eds", LIST_PATH, LIST_PARAMS, ttl=SNAPSHOT_TTL_SECONDS)
     if payload is None:
         return None
     documents = [d for d in rows(payload) if isinstance(d.get("id"), str)]
     if not documents:
         return []
-    seen: list[str] = []
 
     async def card(document: dict[str, Any]) -> Returned:
-        detail = await feed.get(
-            "eds", f"{LIST_PATH}/{document['id']}", None, ttl=SNAPSHOT_TTL_SECONDS
-        )
-        seen.append(feed.states["eds"])
+        try:
+            detail = await feed.peek(
+                "eds", f"{LIST_PATH}/{document['id']}", ttl=SNAPSHOT_TTL_SECONDS
+            )
+        except PlatformError:
+            detail = None
         return Returned(document, _last_return(detail))
 
-    found = list(await asyncio.gather(*(card(d) for d in documents)))
-    # Звонки идут параллельно, и состояние источника ставит последний: сбой любого из них важнее.
-    if "unavailable" in seen:
-        feed.states["eds"] = "unavailable"
-    return found
+    # Запросы EDS держат таймаут клиента (3 с): очередь, счётчики и карточки не ждут EDS дольше
+    # этого срока в сумме — на карточки остаётся то, что не потратил список, но не больше бюджета.
+    budget = min(CARDS_BUDGET, max(MIN_BUDGET, TOTAL_BUDGET - (time.monotonic() - started)))
+    tasks = [asyncio.ensure_future(card(d)) for d in documents]
+    done, pending = await asyncio.wait(tasks, timeout=budget)
+    for task in pending:
+        task.cancel()
+    return [
+        task.result() if task in done and task.exception() is None else Returned(document)
+        for task, document in zip(tasks, documents, strict=True)
+    ]
+
+
+async def drop_returned(feed: Feed) -> None:
+    """Забыть кэшированный список возвратов сессии: автор сохранил или отправил документ, и строка
+    «Доработать» не должна жить до конца кэша."""
+    await feed.invalidate("eds", LIST_PATH, LIST_PARAMS)
 
 
 def rework_item(

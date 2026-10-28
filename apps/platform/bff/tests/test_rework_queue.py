@@ -6,15 +6,19 @@ EDS — на respx (`feeds_support.FeedBackends`): `GET /documents?mine=true&sta
 BFF не фильтрует чужие документы и ничего не решает, он передаёт `mine=true` и показывает ответ.
 """
 
+import asyncio
 import json
+import time
 from typing import Any
 
 import httpx
 import pytest
 
+from app.feeds import rework as rework_module
 from app.hub import CHANNEL
 from tests.bus_support import delivery, envelope
 from tests.conftest import ContractChecker, Web
+from tests.eds_documents_support import EdsFake
 from tests.feeds_support import FeedBackends, Moments, escalation, lead
 from tests.roles import custom, rid
 
@@ -157,6 +161,64 @@ async def test_card_failure_keeps_the_row_without_the_remark(web: Web, fb: FeedB
     (row,) = rework(body)
     assert row["subtitle"].startswith("Возвращён на доработку")
     assert body["sources"]["eds"] == "ok"
+
+
+async def test_card_503_keeps_the_row_and_the_source_ok(web: Web, fb: FeedBackends) -> None:
+    """Список пришёл — строки показаны; сбой карточки (подробности) не делает EDS «недоступным»."""
+    fb.state["returned"] = page(item(), item(OTHER_ID, "ЗЯ-2026/012"))
+    fb.eds["card"].mock(return_value=httpx.Response(503, json={"detail": "down"}))
+    await web.login(["MANAGER"])
+
+    body = (await web.client.get("/api/v1/queue")).json()
+
+    assert body["sources"] == {"crm": "ok", "erp": "ok", "eds": "ok"}
+    assert [r["subtitle"] for r in rework(body)] == ["Возвращён на доработку"] * 2
+
+
+async def test_slow_cards_do_not_hold_the_queue(
+    web: Web, fb: FeedBackends, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Общий бюджет на карточки: по его исходу — строки без комментария, а не ожидание EDS."""
+    monkeypatch.setattr(rework_module, "CARDS_BUDGET", 0.1)
+
+    async def slow(_request: httpx.Request) -> httpx.Response:
+        await asyncio.sleep(2)
+        return httpx.Response(200, json=card(DOC_ID, returned("Не успела.")))
+
+    fb.state["returned"] = page(item())
+    fb.eds["card"].mock(side_effect=slow)
+    await web.login(["MANAGER"])
+
+    started = time.monotonic()
+    body = (await web.client.get("/api/v1/queue")).json()
+
+    assert time.monotonic() - started < 1.5
+    (row,) = rework(body)
+    assert row["subtitle"].startswith("Возвращён на доработку")
+    assert body["sources"]["eds"] == "ok"
+
+
+async def test_submit_drops_the_cached_returns(web: Web, fb: FeedBackends) -> None:
+    """Автор отправил документ — кэш списка возвратов сброшен: строки нет сразу, а не через 8 с."""
+    eds = EdsFake(web.be)  # PATCH и submit; чтение возвратов отвечает FeedBackends
+    eds.issued.append("eds-access-1")
+    fb.state["returned"] = page(item())
+    fb.cards[DOC_ID] = card(DOC_ID, returned("Добавьте смету."))
+    await web.login(["MANAGER"])
+    assert len(rework((await web.client.get("/api/v1/queue")).json())) == 1
+
+    fb.state["returned"] = (
+        page()
+    )  # EDS уже не считает документ возвращённым, но кэш ещё держит строку
+    assert len(rework((await web.client.get("/api/v1/queue")).json())) == 1
+    response = await web.send(
+        "PUT",
+        f"/api/v1/eds/documents/{DOC_ID}",
+        json={"subject": "Командировка в Самарканд", "text": "Смета приложена.", "submit": True},
+    )
+
+    assert response.status_code == 200, response.text
+    assert rework((await web.client.get("/api/v1/queue")).json()) == []
 
 
 async def test_eds_down_keeps_the_rest_of_the_queue_and_marks_the_source(
