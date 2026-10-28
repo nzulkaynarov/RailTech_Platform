@@ -1,5 +1,5 @@
 import { Button, Checkbox, Input, Radio, Select, Skeleton } from "antd";
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useViewport } from "../../../app/shell/useViewport";
@@ -9,6 +9,7 @@ import type {
   RequestCreatedView,
 } from "../../../shared/api/generated/model";
 import {
+  useCopyCrmMessageAttachmentToRequest,
   useCreateCrmRequest,
   useGetCrmClient,
   useListCrmClients,
@@ -97,11 +98,19 @@ function ClientMatches({
   );
 }
 
+/** Вложение сообщения лида, которое станет письмом директору */
+export interface LetterSource {
+  message: number;
+  index: number;
+}
+
 export interface RequestFormProps {
   /** Карточка лида, из которого создаётся заявка; `null` — форма из карточки клиента */
   lead: LeadCard | null;
   /** Клиент, для которого создаётся заявка (карточка клиента) */
   clientId: number | null;
+  /** «В заявку» у файла клиента: BFF копирует вложение в EDS, форма получает готовое письмо */
+  letterFrom?: LetterSource | null;
   onCancel: () => void;
 }
 
@@ -111,14 +120,41 @@ export interface RequestFormProps {
  * один на открытие: повтор после сбоя или двойной клик не создаёт вторую заявку (CRM вернёт ту же). Ошибка оставляет
  * введённое; на телефоне форма — лист на весь экран с кнопками внизу.
  */
-export function RequestForm({ lead, clientId, onCancel }: RequestFormProps) {
+export function RequestForm({ lead, clientId, letterFrom = null, onCancel }: RequestFormProps) {
   const { t } = useTranslation(["request", "clients"]);
   const { mobile } = useViewport();
   const fmt = useFormat();
   const ids = useId();
   const id = (name: string) => `${ids}-${name}`;
   const [requestKey] = useState(newKey);
-  const [state, setState] = useState<RequestFormState>(() => initialState(lead, clientId));
+  const [state, setState] = useState<RequestFormState>(() => ({
+    ...initialState(lead, clientId),
+    ...(letterFrom && lead ? { letter: { name: "", status: "uploading" as const } } : {}),
+  }));
+  const copy = useCopyCrmMessageAttachmentToRequest();
+  const copied = useRef(false);
+  // Вложение из переписки копируется в EDS один раз на открытие формы (повторный эффект StrictMode — не второй файл).
+  useEffect(() => {
+    if (!letterFrom || !lead || copied.current) return;
+    copied.current = true;
+    copy
+      .mutateAsync({
+        data: { lead: lead.lead, message: letterFrom.message, index: letterFrom.index },
+      })
+      .then((file) => {
+        setState((prev) => ({ ...prev, letter: { name: file.name, status: "done", id: file.id } }));
+      })
+      .catch((error: unknown) => {
+        setState((prev) => ({
+          ...prev,
+          letter: {
+            name: "",
+            status: "error",
+            error: t("request:letter.failed", { reason: reasonError(t, "request:errors", error) }),
+          },
+        }));
+      });
+  }, [letterFrom, lead, copy, t]);
   const [tried, setTried] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [done, setDone] = useState<RequestCreatedView | null>(null);
@@ -413,6 +449,7 @@ export function RequestForm({ lead, clientId, onCancel }: RequestFormProps) {
             set({ letter });
           }}
         />
+        <FieldError id={`${id("letter")}-error`} text={err("letter")} />
       </FormField>
 
       <fieldset className="pf-req-group">

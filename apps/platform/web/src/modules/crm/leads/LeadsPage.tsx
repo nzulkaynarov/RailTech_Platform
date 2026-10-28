@@ -21,6 +21,7 @@ import { LinkButton } from "../../../shared/ui/LinkButton";
 import { PageHeader } from "../../../shared/ui/PageHeader";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { actionError, channelLabel } from "../messages/labels";
+import { canCreateFromLead } from "../common/access";
 import { Sheet } from "../common/Sheet";
 import {
   clientPath,
@@ -60,7 +61,7 @@ function RowAction({ row, onError }: { row: LeadRow; onError: (text: string | nu
   const refresh = useRefreshCrm();
   const take = useTakeCrmLead();
   const canReply = canEdit(me, "crm.leads");
-  const canCreate = canEdit(me, "crm.clients");
+  const canCreate = canCreateFromLead(me, row.assigned);
   const [params] = useSearchParams();
   const toDialog = `/crm/messages?lead=${row.lead}`;
   if (row.status === "wants_quote" && canCreate) {
@@ -277,6 +278,11 @@ export function LeadsPage({ objectId }: { objectId?: string | undefined }) {
   const offset = Math.max(0, Number(params.get("offset") ?? "0") || 0);
   const lead = parseLead(objectId) ?? parseLead(params.get("lead"));
   const creating = lead !== null && params.get("create") === "1";
+  // «В заявку» у файла клиента в «Ждут ответа»: `letter=<сообщение>-<вложение>`
+  const letterHit = /^(\d{1,12})-(\d{1,3})$/.exec(params.get("letter") ?? "");
+  const letterFrom = letterHit
+    ? { message: Number(letterHit[1]), index: Number(letterHit[2]) }
+    : null;
 
   const query: ListCrmLeadsParams = useMemo(
     () => ({
@@ -295,12 +301,12 @@ export function LeadsPage({ objectId }: { objectId?: string | undefined }) {
   const close = () => {
     if (objectId !== undefined) {
       const next = new URLSearchParams(params);
-      for (const key of ["lead", "create", "panel", "tab"]) next.delete(key);
+      for (const key of ["lead", "create", "letter", "panel", "tab"]) next.delete(key);
       const text = next.toString();
       void navigate(`/crm/leads${text ? `?${text}` : ""}`, { replace: true });
       return;
     }
-    change({ lead: null, create: null, panel: null, tab: null });
+    change({ lead: null, create: null, letter: null, panel: null, tab: null });
   };
 
   const labels = {
@@ -449,8 +455,9 @@ export function LeadsPage({ objectId }: { objectId?: string | undefined }) {
               key={`create-${lead}`}
               lead={lead}
               clientId={null}
+              letterFrom={letterFrom}
               onCancel={() => {
-                change({ create: null });
+                change({ create: null, letter: null });
               }}
             />
           ) : (

@@ -11,7 +11,7 @@ import pytest
 
 from tests.backends import Backends
 from tests.conftest import ContractChecker, Web
-from tests.crm_leads_support import LETTER_ID, CrmLeadsFake
+from tests.crm_leads_support import LETTER_ID, CrmLeadsFake, deal
 
 BASE = "/api/v1/crm/clients"
 
@@ -137,6 +137,23 @@ async def test_card_360_collects_contacts_leads_requests_and_documents(
     assert crm.params("GET", "documents") == {"client_id": "12"}
     for leak in ("внутренняя заметка", "звонить после обеда", "dogovor.pdf"):
         assert leak not in response.text
+
+
+async def test_card_does_not_leak_deal_amount_or_owner(
+    web: Web, crm: CrmLeadsFake, check: ContractChecker
+) -> None:
+    """Сумма сделки CRM и её владелец в карточку клиента не попадают (деньги — разделы ERP/EDS)."""
+    crm.answer(
+        "GET",
+        "deals",
+        body=[deal(77, amount="125000000.00", currency="UZS", owner_name="Дилшод Менеджеров")],
+    )
+    await web.login(["MANAGER"])
+    response = check(await web.client.get(f"{BASE}/12"), "/crm/clients/{id}", "get")
+
+    (row,) = response.json()["requests"]
+    assert not {"amount", "currency", "owner_user_id", "owner_name"} & row.keys()
+    assert "125000000" not in response.text
 
 
 async def test_card_shows_what_crm_gave_when_parts_fail(

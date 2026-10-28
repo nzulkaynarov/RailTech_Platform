@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 
 import { useGetCrmLead } from "../../../shared/api/generated/platform-bff";
 import { EmptyState } from "../../../shared/ui/EmptyState";
-import { RequestForm } from "./RequestForm";
+import { type LetterSource, RequestForm } from "./RequestForm";
 
 /**
  * Форма «Создать заявку» из лида (`lead`) или из карточки клиента (`clientId`): для лида сначала читается его карточка —
@@ -12,10 +12,13 @@ import { RequestForm } from "./RequestForm";
 export function CreateRequest({
   lead,
   clientId,
+  letterFrom = null,
   onCancel,
 }: {
   lead: string | null;
   clientId: number | null;
+  /** Вложение сообщения лида — письмо директору («В заявку» в «Ждут ответа») */
+  letterFrom?: LetterSource | null;
   onCancel: () => void;
 }) {
   const { t } = useTranslation("leads");
@@ -25,5 +28,7 @@ export function CreateRequest({
   if (card.isError) {
     return <EmptyState level={3} compact title={t("loadError.title")} text={t("loadError.text")} />;
   }
-  return <RequestForm lead={card.data} clientId={clientId} onCancel={onCancel} />;
+  return (
+    <RequestForm lead={card.data} clientId={clientId} letterFrom={letterFrom} onCancel={onCancel} />
+  );
 }

@@ -2,7 +2,6 @@ import { Button, Skeleton } from "antd";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 
-import { canEdit } from "../../../app/access";
 import { useAuth } from "../../../app/auth/useAuth";
 import { useViewport } from "../../../app/shell/useViewport";
 import { ApiError } from "../../../shared/api/errors";
@@ -14,6 +13,7 @@ import { EmptyState } from "../../../shared/ui/EmptyState";
 import { LinkButton } from "../../../shared/ui/LinkButton";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { channelLabel, factRows } from "../messages/labels";
+import { canCreateFromLead } from "../common/access";
 import { clientPath } from "../common/params";
 
 import "../crm.css";
@@ -55,7 +55,7 @@ function Body({ card, sheet, onClose }: { card: LeadCard; sheet: boolean; onClos
   const { t } = useTranslation(["leads", "messages", "clients"]);
   const fmt = useFormat();
   const { me } = useAuth();
-  const canCreate = canEdit(me, "crm.clients") && card.status !== "lost";
+  const canCreate = canCreateFromLead(me, card.assigned) && card.status !== "lost";
   const contacts = [
     {
       label: t("messages:card.telegram"),

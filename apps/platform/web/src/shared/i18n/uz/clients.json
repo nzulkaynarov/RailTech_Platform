@@ -95,17 +95,17 @@
     }
   },
   "clientSees": {
-    "in_work": "Qabul qilindi, hisoblayapmiz",
+    "in_work": "Ishga qabul qilindi, hisoblayapmiz",
     "awaiting_decision": "Qaroringizni kutmoqda",
-    "contract_review": "Shartnoma tahririni kelishing",
+    "contract_review": "Shartnoma matnini kelishib oling",
     "contract_signing": "Shartnoma imzolanmoqda",
-    "awaiting_payment": "To‘lov kutilmoqda",
-    "checking_payment": "To‘lovni tekshiryapmiz",
+    "awaiting_payment": "To'lov kutilmoqda",
+    "checking_payment": "To'lovni tekshiryapmiz",
     "fulfilling": "Bajarilmoqda",
-    "awaiting_acceptance": "Qabulingizni kutmoqda",
+    "awaiting_acceptance": "Qabul qilishingizni kutmoqda",
     "done": "Bajarildi",
     "rejected": "Rad etildi",
-    "quote_expired": "TT muddati tugadi"
+    "quote_expired": "Tijorat taklifi muddati tugadi"
   },
   "transferErrors": {
     "erp_unavailable": "bek-ofis javob bermadi",

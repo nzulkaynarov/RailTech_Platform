@@ -65,7 +65,9 @@ async def create_request_for_client(
 async def retry_request(deal_id: int, who: ClientWriter, container: ContainerDep) -> RequestRetried:
     """«Повторить отправку в ERP» (B-082): заявка с ошибкой передачи снова уходит в ERP той же
     задачей и с тем же `crm_request_id`. Не в ошибке — 409 `request_not_failed`; постоянная
-    ошибка (`erp_request_conflict`) — 409 `request_not_retryable`."""
+    ошибка (`erp_request_conflict`) — 409 `request_not_retryable`; бэк-офис не ERP — 409
+    `erp_not_configured`. Очередь отказала — 200 с `erp_request_status = failed` (заявка снова в
+    ошибке `enqueue_failed`, повтор доступен)."""
     return await container.request_retry_service.retry(who, deal_id)
 
 

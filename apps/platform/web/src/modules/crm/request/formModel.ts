@@ -50,7 +50,8 @@ export interface RequestContext {
   contacts: readonly ClientContactView[];
 }
 
-export type RequestField = "company" | "inn" | "contact" | "channel" | "summary" | "consent";
+export type RequestField =
+  "company" | "inn" | "contact" | "channel" | "summary" | "letter" | "consent";
 
 /** Ключ текста ошибки `request:errors.*` по полю. */
 export type RequestErrors = Partial<Record<RequestField, string>>;
@@ -103,6 +104,8 @@ export function validateRequest(state: RequestFormState, ctx: RequestContext): R
     else if (contact.channels.length === 0) errors.channel = "contact_channel_required";
   }
   if (!state.summary.trim()) errors.summary = "summary";
+  // Письмо не загрузилось — заявка не уходит молча без него: убрать файл или выбрать другой.
+  if (state.letter?.status === "error") errors.letter = "letter_failed";
   if (consentNeeded(ctx)) {
     if (ctx.leadChannel === "telegram") errors.consent = "consent_via_bot";
     else if (!state.consentMarked) errors.consent = "consent";

@@ -97,15 +97,15 @@
   "clientSees": {
     "in_work": "Accepted, we are calculating",
     "awaiting_decision": "Awaiting your decision",
-    "contract_review": "Review the contract draft",
-    "contract_signing": "Contract being signed",
+    "contract_review": "Please agree the contract wording",
+    "contract_signing": "Contract is being signed",
     "awaiting_payment": "Awaiting payment",
-    "checking_payment": "Checking the payment",
+    "checking_payment": "Checking your payment",
     "fulfilling": "In progress",
     "awaiting_acceptance": "Awaiting your acceptance",
     "done": "Completed",
     "rejected": "Declined",
-    "quote_expired": "Quote expired"
+    "quote_expired": "Quote has expired"
   },
   "transferErrors": {
     "erp_unavailable": "the back office did not respond",

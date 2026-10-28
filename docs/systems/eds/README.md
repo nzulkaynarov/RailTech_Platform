@@ -77,7 +77,7 @@ apps/eds/
    Отказы первых четырёх — `401 INVALID_SSO_TOKEN` (`details.reason`: `signature`, `audience`, `expired`, `lifetime`, `replayed`, `malformed`). Обмен никого не создаёт.
 3. Ответ `{access_token, token_type: "bearer", expires_in: 900}`; refresh нет (истёк — новый SSO-токен у CRM).
 4. Каждый запрос — `Authorization: Bearer`; сотрудник и его права берутся из проекции **на момент запроса**: отзыв роли и отключение действуют сразу. Нет права — `403 FORBIDDEN`
-   (`details.permission`). Коды v1: `letters.read`, `letters.register`, `letters.resolve`, `memos.create`, `memos.approve`, `approvals.decide`, `registry.read`, `registry.export`, `payments.confirm`, с eds.yaml 0.3.0 — `bus.manage` (журнал шины, раздел `admin` уровня `full`, W13-A2). Неизвестные будущие коды проекция хранит как строки и не падает.
+   (`details.permission`). Коды v1: `letters.read`, `letters.register`, `letters.resolve`, `memos.create`, `memos.approve`, `approvals.decide`, `registry.read`, `registry.export`, `payments.confirm`, с eds.yaml 0.3.0 — `bus.manage` (журнал шины, раздел `admin` уровня `full`, W13-A2), с 0.5.0 — `files.upload` (свой файл: `POST /files` и чтение только своих файлов, раздел `crm.clients` уровня `full` — письмо директору к «Создать заявку», D1-2b). Неизвестные будущие коды проекция хранит как строки и не падает.
 
 Тест `tests/test_contract_permissions.py` сверяет права маршрутов с `x-rt-permissions` в `eds.yaml`.
 

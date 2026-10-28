@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { ThreadAttachment, ThreadMessage } from "../../../shared/api/generated/model";
+import { LinkButton } from "../../../shared/ui/LinkButton";
 import { getCrmThread, useGetCrmThread } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { DeliveryMark } from "./DeliveryMark";
@@ -28,7 +29,32 @@ function Attachment({ file }: { file: ThreadAttachment }) {
   );
 }
 
-function Bubble({ entry }: { entry: Entry }) {
+/**
+ * Файл клиента — «В заявку»: форма «Создать заявку» с этим файлом как письмом директору (BFF копирует вложение в EDS,
+ * `POST /crm/request-files/from-message`). Только у файлов лида и только с правом создавать заявки.
+ */
+function ToRequest({
+  lead,
+  message,
+  file,
+}: {
+  lead: string;
+  message: number;
+  file: ThreadAttachment;
+}) {
+  const { t } = useTranslation("messages");
+  return (
+    <LinkButton
+      size="small"
+      to={`/crm/leads?lead=${lead}&create=1&letter=${String(message)}-${String(file.index)}&panel=open&tab=card`}
+      aria-label={t("thread.toRequestLabel", { name: file.name })}
+    >
+      {t("thread.toRequest")}
+    </LinkButton>
+  );
+}
+
+function Bubble({ entry, lead, canCreate }: { entry: Entry; lead: string; canCreate: boolean }) {
   const { t } = useTranslation("messages");
   const fmt = useFormat();
   if (entry.kind === "note") {
@@ -57,7 +83,12 @@ function Bubble({ entry }: { entry: Entry }) {
       {message.attachments.length ? (
         <div className="pf-msg-files">
           {message.attachments.map((file) => (
-            <Attachment key={file.index} file={file} />
+            <span key={file.index} className="pf-msg-file-row">
+              <Attachment file={file} />
+              {canCreate && message.author === "lead" && file.url ? (
+                <ToRequest lead={lead} message={message.id} file={file} />
+              ) : null}
+            </span>
           ))}
         </div>
       ) : null}
@@ -69,7 +100,16 @@ function Bubble({ entry }: { entry: Entry }) {
  * Лента диалога: сообщения клиента, бота и менеджера с вложениями (скачивание — ссылкой BFF), заметки команды. Последняя
  * страница — запрос, который обновляет подсказка `messages` потока; более ранние страницы неизменны и хранятся здесь.
  */
-export function Thread({ lead, name }: { lead: string; name: string }) {
+export function Thread({
+  lead,
+  name,
+  canCreate = false,
+}: {
+  lead: string;
+  name: string;
+  /** Право создавать заявки (`crm.clients: full`) — у файлов клиента кнопка «В заявку» */
+  canCreate?: boolean;
+}) {
   const { t } = useTranslation("messages");
   const latest = useGetCrmThread(lead, { limit: PAGE_SIZE });
   const [older, setOlder] = useState<ThreadMessage[]>([]);
@@ -143,6 +183,8 @@ export function Thread({ lead, name }: { lead: string; name: string }) {
                       : `n${String(entry.note.id)}`
                   }
                   entry={entry}
+                  lead={lead}
+                  canCreate={canCreate}
                 />
               ))}
             </ol>

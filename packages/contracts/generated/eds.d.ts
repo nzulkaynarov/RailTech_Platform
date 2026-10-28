@@ -580,7 +580,8 @@ export interface components {
     /**
      * @description Код права EDS v1 (runbook волны 12 §2.2; `platform-rbac.yaml`, `backend.eds`). `payments.confirm` — шаг «бухгалтер»
      *     маршрута служебной записки с суммой (решение архитектора). `bus.manage` (0.3.0, W13-A2) — «Журнал интеграций» шины:
-     *     раздел `admin` каталога, уровень `full`. В событиях шины (`identity`, `eds`) код — строка по шаблону
+     *     раздел `admin` каталога, уровень `full`. `files.upload` (0.5.0, D1-2b) — загрузить свой файл и читать свои файлы
+     *     (письмо директору к «Создать заявку»): раздел `crm.clients`, уровень `full`. В событиях шины (`identity`, `eds`) код — строка по шаблону
      *     `^[a-z_]+\.[a-z_]+$`, не перечень: новый код не ломает события v1.
      * @enum {string}
      */
@@ -594,7 +595,8 @@ export interface components {
       | "registry.read"
       | "registry.export"
       | "payments.confirm"
-      | "bus.manage";
+      | "bus.manage"
+      | "files.upload";
     /** Format: uuid */
     Uuid: string;
     /** @description Имя подписчика шины (`crm`, `erp`, `platform-bff`) */

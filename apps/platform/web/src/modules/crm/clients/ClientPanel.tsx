@@ -71,7 +71,7 @@ function stageOf(row: ClientRequestRow): StageOrLost {
 }
 
 function RequestItem({ row, canWrite }: { row: ClientRequestRow; canWrite: boolean }) {
-  const { t } = useTranslation("clients");
+  const { t } = useTranslation(["clients", "request"]);
   const fmt = useFormat();
   const refresh = useRefreshCrm();
   const retry = useRetryCrmRequest();
@@ -113,8 +113,13 @@ function RequestItem({ row, canWrite }: { row: ClientRequestRow; canWrite: boole
                   retry.mutate(
                     { deal: row.deal },
                     {
-                      onSuccess: () => {
-                        setRetried(true);
+                      onSuccess: (result) => {
+                        // Очередь отказала — заявка снова в ошибке, повтор остаётся доступным
+                        if (result.transfer === "failed") {
+                          setFailure(t("request:errors.enqueue_failed"));
+                        } else {
+                          setRetried(true);
+                        }
                         refresh();
                       },
                       onError: (error) => {

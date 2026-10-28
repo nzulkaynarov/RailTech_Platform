@@ -80,6 +80,18 @@ test.describe("Лиды → «Создать заявку» → карточка
     await expectNoViolations(page, "карточка клиента с новой заявкой");
   });
 
+  test("«Ждут ответа»: «В заявку» у файла клиента — форма с этим файлом как письмом директору", async ({
+    page,
+  }) => {
+    await loginAndWait(page, "manager@demo.example");
+    await spaGoto(page, "/crm/messages?lead=L-2041");
+    await page.getByRole("link", { name: "В заявку: Заявка-демо.pdf — письмом директору" }).click();
+    const panel = page.locator("#pf-context-panel");
+    const form = panel.getByRole("form", { name: "Создать заявку" });
+    await expect(form.getByText("Письмо загружено: письмо-директору.pdf")).toBeVisible();
+    await expectNoViolations(page, "форма с письмом из переписки");
+  });
+
   test("карточка клиента 360°: контакты, переписка, заявки, документы, приглашение; «Повторить отправку в ERP»", async ({
     page,
   }) => {

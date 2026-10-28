@@ -89,6 +89,10 @@
     "erp_not_configured": "Bek-ofis ulanmagan — administratorga murojaat qiling",
     "not_lead_owner": "Lidni boshqa xodim olib boryapti",
     "telegram_linked_elsewhere": "Lid Telegrami boshqa mijozga bog‘langan",
+    "letter_failed": "Xat yuklanmadi — uni olib tashlang yoki boshqa fayl tanlang, aks holda ariza xatsiz ketadi",
+    "request_not_failed": "Ariza bek-ofisga uzatilmoqda yoki uzatilgan — kartani yangilang",
+    "request_not_retryable": "Qayta yuborish yordam bermaydi: yuborilgandan keyin ariza ma’lumotlari o‘zgardi — arizani qayta yarating",
+    "enqueue_failed": "Yuborishni navbatga qo‘yib bo‘lmadi — birozdan keyin qayta urinib ko‘ring",
     "generic": "Ariza yaratib bo‘lmadi. Shakl ma’lumotlari saqlandi — qayta urinib ko‘ring"
   }
 }

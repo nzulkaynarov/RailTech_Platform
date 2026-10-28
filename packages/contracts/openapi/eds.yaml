@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — EDS API (электронный документооборот)
-  version: 0.4.0
+  version: 0.5.0
   summary: Пространство `/api/v1/` сервиса EDS — вызывает BFF Платформы от имени сотрудника.
   description: |
     Контракт сервиса EDS (`apps/eds`, ADR-0015; `docs/runbooks/wave12-eds-c1.md` §2). EDS — владелец реестра документов и
@@ -19,11 +19,16 @@ info:
     токен доступа EDS (JWT HS256, секрет `EDS_ACCESS_SECRET`, `iss = eds`, `aud = eds-api`, срок 15 минут, без refresh: истёк — BFF берёт у CRM новый токен
     сотрудника и обменивает снова). Каждый запрос `/api/v1/*`, кроме обмена, — `Authorization: Bearer <токен доступа EDS>`.
 
+    **0.5.0 (D1-2b).** Добавляющее изменение: код права `files.upload` — загрузить свой файл (`POST /files`) и читать только
+    свои файлы (`GET /files/{id}`, `/versions`; чужой — 404). Раздел каталога `crm.clients` уровня `full`: письмо на имя
+    директора к «Создать заявку» без прав на документы EDS.
+
     **0.4.0 (D1-5).** Добавляющее изменение: `PATCH /api/v1/documents/{document_id}` — правка черновика (или возвращённого документа) без отправки.
 
     **Права (runbook §2.2).** Коды EDS v1: `letters.read`, `letters.register`, `letters.resolve`, `memos.create`, `memos.approve`,
     `approvals.decide`, `registry.read`, `registry.export`, `payments.confirm` (`EdsPermission`; `payments.confirm` — решение
-    архитектора: шаг «бухгалтер» служебной записки с суммой), с 0.3.0 — `bus.manage` (журнал шины, раздел `admin` каталога). Их вычисляет CRM из ролей Платформы по каталогу
+    архитектора: шаг «бухгалтер» служебной записки с суммой), с 0.3.0 — `bus.manage` (журнал шины, раздел `admin` каталога), с 0.5.0 —
+    `files.upload` (свой файл, раздел `crm.clients` уровня `full`). Их вычисляет CRM из ролей Платформы по каталогу
     (`platform-rbac.yaml`, `backend.eds`) и публикует в `identity.user.created/updated` (`user.permissions.eds`); EDS держит
     проекцию сотрудников и проверяет право **на каждый запрос по проекции на момент запроса** (claim `permissions` токена —
     справочный, не применяется): отзыв роли или отключение сотрудника действуют сразу, без ожидания срока токена. Нет поля
@@ -819,7 +824,7 @@ paths:
         `multipart/form-data`: `file` и необязательный `version_of` (id файла — новая версия той же цепочки; прежние версии
         остаются). Не больше 25 МБ (413), типы — PDF, изображения, документы Office (415). Файл привязывается к документу
         полем `file_ids` при создании или отправке; непривязанный видит только загрузивший.
-      x-rt-permissions: [letters.register, letters.resolve, memos.create, memos.approve, approvals.decide]
+      x-rt-permissions: [letters.register, letters.resolve, memos.create, memos.approve, approvals.decide, files.upload]
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -863,7 +868,7 @@ paths:
       summary: Скачать файл (поток)
       description: |
         Последняя версия, или `version`. Видит тот, кому виден документ, к которому файл привязан (чужой черновик и исходящее письмо без `letters.read` не видны), или загрузивший; иначе 404.
-      x-rt-permissions: [letters.read, memos.create, memos.approve, approvals.decide, registry.read]
+      x-rt-permissions: [letters.read, memos.create, memos.approve, approvals.decide, registry.read, files.upload]
       parameters:
         - $ref: '#/components/parameters/FileId'
         - name: version
@@ -901,7 +906,7 @@ paths:
       tags: [files]
       operationId: listFileVersions
       summary: Версии файла
-      x-rt-permissions: [letters.read, memos.create, memos.approve, approvals.decide, registry.read]
+      x-rt-permissions: [letters.read, memos.create, memos.approve, approvals.decide, registry.read, files.upload]
       parameters:
         - $ref: '#/components/parameters/FileId'
       responses:
@@ -1322,10 +1327,12 @@ components:
         - registry.export
         - payments.confirm
         - bus.manage
+        - files.upload
       description: |
         Код права EDS v1 (runbook волны 12 §2.2; `platform-rbac.yaml`, `backend.eds`). `payments.confirm` — шаг «бухгалтер»
         маршрута служебной записки с суммой (решение архитектора). `bus.manage` (0.3.0, W13-A2) — «Журнал интеграций» шины:
-        раздел `admin` каталога, уровень `full`. В событиях шины (`identity`, `eds`) код — строка по шаблону
+        раздел `admin` каталога, уровень `full`. `files.upload` (0.5.0, D1-2b) — загрузить свой файл и читать свои файлы
+        (письмо директору к «Создать заявку»): раздел `crm.clients`, уровень `full`. В событиях шины (`identity`, `eds`) код — строка по шаблону
         `^[a-z_]+\.[a-z_]+$`, не перечень: новый код не ломает события v1.
 
     Uuid:

@@ -3,10 +3,12 @@ import { HttpResponse, http } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { readLeads, resetLeads } from "../../../mocks/fixtures/leads";
+import { resetMessages } from "../../../mocks/fixtures/messages";
 import { panelEl, renderAt, setupBotTests, signIn } from "../../../test/botKit";
 import { server } from "../../../test/server";
 import { setViewportWidth } from "../../../test/viewport";
-import type { RequestFormIn } from "../../../shared/api/generated/model";
+import type { Me, RequestFormIn } from "../../../shared/api/generated/model";
+import { canCreateFromLead } from "../common/access";
 import {
   type RequestContext,
   emptyRequestForm,
@@ -18,6 +20,7 @@ setupBotTests();
 
 beforeEach(() => {
   resetLeads();
+  resetMessages();
 });
 
 async function openForm(path: string): Promise<HTMLElement> {
@@ -232,6 +235,59 @@ describe("«Создать заявку» из лида и из клиента (
     fireEvent.click(within(panel).getByRole("button", { name: /Создать заявку → директору/ }));
     expect(await within(panel).findByText("Заявка создана")).toBeVisible();
     expect(requestsOf("ООО Рельс-Сервис Демо")).toBe(before + 1);
+  });
+});
+
+describe("письмо директору: из переписки и при сбое загрузки", () => {
+  it("«В заявку» у файла клиента в «Ждут ответа» — форма с этим файлом как письмом директору", async () => {
+    signIn("manager@demo.example");
+    const { router } = renderAt("/crm/messages?lead=L-2041");
+    const button = await screen.findByRole("link", {
+      name: "В заявку: Заявка-демо.pdf — письмом директору",
+    });
+    fireEvent.click(button);
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/crm/leads");
+    });
+    const panel = await panelEl();
+    expect(await within(panel).findByText("Письмо загружено: письмо-директору.pdf")).toBeVisible();
+    fireEvent.click(within(panel).getByRole("button", { name: /Создать заявку → директору/ }));
+    expect(await within(panel).findByText("Заявка создана")).toBeVisible();
+    const created = readLeads().clients.find((c) => c.name === "ООО Демо-Логистик");
+    expect(created?.requests[0]?.letter_file_id).toBeTruthy();
+  });
+
+  it("письмо не загрузилось — заявка не уходит, пока файл не убран", async () => {
+    const panel = await openForm("/crm/leads?lead=L-2044&create=1&panel=open&tab=card");
+    fireEvent.change(within(panel).getByLabelText("Письмо на имя директора"), {
+      target: { files: [new File(["MZ"], "virus.exe", { type: "application/x-msdownload" })] },
+    });
+    expect(
+      await within(panel).findByText("Подходит PDF, изображение или документ Office"),
+    ).toBeVisible();
+    fireEvent.click(within(panel).getByRole("button", { name: /Создать заявку → директору/ }));
+    expect(await within(panel).findByText(/Письмо не загружено — уберите его/)).toBeVisible();
+    expect(requestsOf("ООО Демо-Строй")).toBe(0);
+
+    fireEvent.click(within(panel).getByRole("button", { name: "Убрать письмо" }));
+    fireEvent.click(within(panel).getByRole("button", { name: /Создать заявку → директору/ }));
+    expect(await within(panel).findByText("Заявка создана")).toBeVisible();
+  });
+});
+
+describe("кнопка «Создать заявку» у чужого лида", () => {
+  const me = (resources: Record<string, "full" | "read">) =>
+    ({ id: "7", resources }) as unknown as Me;
+  const other = { id: "9", name: "Другой Менеджер", initials: "ДМ" };
+  const self = { id: "7", name: "Я", initials: "Я" };
+
+  it("свободный и свой лид — можно; чужой — нет (CRM ответит not_lead_owner); администратору — можно; без права на клиентов — нет", () => {
+    const manager = me({ "crm.clients": "full" });
+    expect(canCreateFromLead(manager, null)).toBe(true);
+    expect(canCreateFromLead(manager, self)).toBe(true);
+    expect(canCreateFromLead(manager, other)).toBe(false);
+    expect(canCreateFromLead(me({ "crm.clients": "full", admin: "full" }), other)).toBe(true);
+    expect(canCreateFromLead(me({ "crm.clients": "read" }), null)).toBe(false);
   });
 });
 

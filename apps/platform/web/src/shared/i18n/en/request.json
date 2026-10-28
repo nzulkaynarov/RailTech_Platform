@@ -89,6 +89,10 @@
     "erp_not_configured": "The back office is not connected — contact the administrator",
     "not_lead_owner": "Another employee handles this lead",
     "telegram_linked_elsewhere": "The lead's Telegram is already linked to another client",
+    "letter_failed": "The letter was not uploaded — remove it or pick another file, otherwise the request goes without it",
+    "request_not_failed": "The request is already being sent or was sent to the back office — refresh the card",
+    "request_not_retryable": "Retrying will not help: the request data changed after sending — create the request again",
+    "enqueue_failed": "Could not queue the sending — try again a bit later",
     "generic": "Could not create the request. The form data is kept — try again"
   }
 }

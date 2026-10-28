@@ -1,5 +1,6 @@
-"""Коды прав EDS v1 (runbook волны 12 §2.2; `EdsPermission` в packages/contracts/openapi/eds.yaml): девять доменных и
-`bus.manage` — «Журнал интеграций» шины (W13-A2, раздел `admin` каталога Платформы).
+"""Коды прав EDS v1 (runbook волны 12 §2.2; `EdsPermission` в packages/contracts/openapi/eds.yaml): доменные коды,
+`bus.manage` — «Журнал интеграций» шины (W13-A2, раздел `admin` каталога Платформы), `files.upload` — загрузка
+своего файла (письмо директору к «Создать заявку», раздел `crm.clients` уровня `full`, D1-2b).
 
 Права — данные: их вычисляет CRM из ролей Платформы по каталогу и публикует в `identity.user.*`
 (`user.permissions.eds`); EDS хранит проекцию (`employees.permissions_eds`) и проверяет право на каждый запрос.
@@ -19,6 +20,8 @@ class EdsPermission(StrEnum):
     REGISTRY_EXPORT = "registry.export"
     PAYMENTS_CONFIRM = "payments.confirm"  # eds.payments full (решение архитектора, волна 12)
     BUS_MANAGE = "bus.manage"  # admin full: журнал шины и повторы (W13-A2)
+    # crm.clients full: загрузить свой файл (письмо директору к «Создать заявку») и читать только свои файлы (D1-2b).
+    FILES_UPLOAD = "files.upload"
 
 
 KNOWN = frozenset(p.value for p in EdsPermission)

@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router";
 
+import { canEdit } from "../../../app/access";
 import { useAuth } from "../../../app/auth/useAuth";
 import { PanelPortal } from "../../../app/shell/PanelSlot";
 import type { ConversationCard, MessageInboxItem } from "../../../shared/api/generated/model";
@@ -128,7 +129,7 @@ export function Dialog({
       </header>
       {takeable && !mobile ? <Consequence items={[t("consequence.take")]} /> : null}
       {item ? <HandoffNoteBox note={item.note} handoff={item.handoff} /> : null}
-      <Thread lead={lead} name={card.name} />
+      <Thread lead={lead} name={card.name} canCreate={canEdit(me, "crm.clients")} />
       {canReply ? (
         <Composer card={card} />
       ) : (

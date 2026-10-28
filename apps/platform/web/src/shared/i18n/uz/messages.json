@@ -130,7 +130,9 @@
     "delivery": {
       "sending": "Yuborilmoqda…",
       "unconfirmedFinal": "Yetkazilgani tasdiqlanmadi — mijoz javobni olganini tekshiring"
-    }
+    },
+    "toRequest": "Arizaga",
+    "toRequestLabel": "Arizaga: {{name}} — direktorga xat sifatida"
   },
   "composer": {
     "mode": "Kimga yozamiz",

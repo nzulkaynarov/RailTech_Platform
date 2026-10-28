@@ -27,9 +27,12 @@ EDS_CODES = {
     "registry.export",
     "payments.confirm",
     "bus.manage",
+    "files.upload",
 }
 #: Код журнала шины (W13-A2): только раздел `admin` уровня `full` — у директора (`admin: read`) его нет.
 BUS = "bus.manage"
+#: Свой файл в EDS (письмо директору к «Создать заявку», D1-2b): раздел `crm.clients` уровня `full`.
+UPLOAD = "files.upload"
 #: Публичные операции EDS: без токена доступа и без права.
 PUBLIC = {("get", "/health"), ("post", "/api/v1/auth/sso/exchange")}
 
@@ -64,7 +67,7 @@ def test_catalog_codes_are_exactly_the_eds_v1_codes() -> None:
     ("code", "expected"),
     [
         ("DIRECTOR", EDS_CODES - {BUS}),
-        ("MANAGER", {"letters.read", "registry.read", "memos.create"}),
+        ("MANAGER", {"letters.read", "registry.read", "memos.create", UPLOAD}),
         ("SUPPLY", {"registry.read", "memos.create"}),
         ("ENGINEER", {"registry.read", "memos.create"}),
         ("ACCOUNTANT", {"letters.read", "registry.read", "registry.export", "payments.confirm", "memos.create"}),
@@ -75,7 +78,7 @@ def test_system_roles_and_templates_map_to_their_eds_codes(code: str, expected: 
 
 
 def test_director_gets_every_eds_code_except_the_bus_journal() -> None:
-    assert len(EDS_CODES) == 10
+    assert len(EDS_CODES) == 11
     assert eds_permissions(role("DIRECTOR")) == EDS_CODES - {BUS}
 
 
@@ -86,6 +89,30 @@ def test_bus_journal_is_admin_full_only() -> None:
     for r in CATALOG["resources"]:
         if r["key"] != "admin":
             assert BUS not in str((r.get("backend") or {}).get("eds")), r["key"]
+
+
+def test_clients_full_brings_only_the_own_file_upload() -> None:
+    """D1-2b (решение архитектора): своя роль только с `crm.clients: full` загружает письмо директору в EDS и читает
+    только свои файлы — ни писем, ни реестра, ни документов; уровень `read` кода не даёт."""
+    assert eds_permissions({"crm.clients": "full"}) == {UPLOAD}
+    assert eds_permissions({"crm.clients": "read"}) == set()
+    paths = EDS_YAML["paths"]
+    assert UPLOAD in paths["/api/v1/files"]["post"]["x-rt-permissions"]
+    assert UPLOAD in paths["/api/v1/files/{file_id}"]["get"]["x-rt-permissions"]
+    granted = {
+        (path, method)
+        for path, ops in paths.items()
+        for method, op in ops.items()
+        if isinstance(op, dict) and UPLOAD in op.get("x-rt-permissions", [])
+    }
+    assert granted == {
+        ("/api/v1/files", "post"),
+        ("/api/v1/files/{file_id}", "get"),
+        ("/api/v1/files/{file_id}/versions", "get"),
+    }
+    for r in CATALOG["resources"]:
+        if r["key"] != "crm.clients":
+            assert UPLOAD not in str((r.get("backend") or {}).get("eds")), r["key"]
 
 
 def test_accountant_step_of_a_memo_is_decided_with_payments_confirm() -> None:
@@ -118,7 +145,7 @@ def test_administrator_sees_no_business_documents() -> None:
         # «Менеджер и бухгалтер (из шаблона)»: матрица «Менеджер» + «Счета и оплаты» full.
         (
             {**CATALOG["templates"]["MANAGER"]["access"], "eds.payments": "full"},
-            {"letters.read", "registry.read", "registry.export", "payments.confirm", "memos.create"},
+            {"letters.read", "registry.read", "registry.export", "payments.confirm", "memos.create", UPLOAD},
         ),
     ],
     ids=["manager-and-accountant", "manager-and-accountant-from-template"],
@@ -173,7 +200,9 @@ def test_eds_api_global_security_is_the_eds_access_token() -> None:
     assert EDS_YAML["security"] == [{"edsAccess": []}]
     scheme = EDS_YAML["components"]["securitySchemes"]["edsAccess"]
     assert (scheme["type"], scheme["scheme"], scheme["bearerFormat"]) == ("http", "bearer", "JWT")
-    assert EDS_YAML["info"]["version"] == "0.4.0"  # 0.4.0 — PATCH /documents/{id} (D1-5); 0.3.0 — журнал шины (W13-A2)
+    assert (
+        EDS_YAML["info"]["version"] == "0.5.0"
+    )  # 0.5.0 — files.upload (D1-2b); 0.4.0 — PATCH /documents/{id} (D1-5); 0.3.0 — журнал шины (W13-A2)
 
 
 def test_numbers_are_not_path_parameters() -> None:

@@ -435,7 +435,9 @@ class Container:
         """«Повторить отправку в ERP» (B-082)."""
         from app.services.request_retry import RequestRetryService
 
-        return RequestRetryService(self.session_factory, _enqueue_erp_request)
+        return RequestRetryService(
+            self.session_factory, _enqueue_erp_request, backoffice_mode=self.backoffice_mode
+        )
 
     @cached_property
     def erp_request_service(self) -> "ErpRequestService":
