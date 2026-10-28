@@ -101,8 +101,14 @@ def can_read_letters(employee: Employee) -> bool:
     return has(employee, EdsPermission.LETTERS_READ)
 
 
+def can_read_project_documents(employee: Employee) -> bool:
+    """Договоры, счета и акты проектов (проекция ERP, D2-5) видит держатель `registry.read`; остальным их нет совсем."""
+    return has(employee, EdsPermission.REGISTRY_READ)
+
+
 __all__ = [
     "can_read_letters",
+    "can_read_project_documents",
     "can_view_document",
     "can_view_route",
     "document_visible",

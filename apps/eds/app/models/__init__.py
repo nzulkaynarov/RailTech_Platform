@@ -9,6 +9,7 @@ from app.models.idempotency import IdempotencyKey
 from app.models.journal import JournalEntry
 from app.models.letters import Letter
 from app.models.numbering import NumberCounter
+from app.models.project_documents import ProjectDocument
 
 __all__ = [
     "ApprovalRoute",
@@ -22,6 +23,7 @@ __all__ = [
     "JournalEntry",
     "Letter",
     "NumberCounter",
+    "ProjectDocument",
     "SsoJti",
     "StoredFile",
 ]

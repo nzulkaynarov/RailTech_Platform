@@ -4,6 +4,9 @@
 исключение откатывает изменения и ставит автоповтор. Повтор события ничего не меняет — ключ inbox `event id`
 и правило «более старый снимок не применяется».
 
+Документы проектов (D2-5): `erp.contract.status_changed`, `erp.invoice.*`, `erp.act.*` → проекция реестра
+`project_documents` (без публикации событий, идемпотентно, более старое событие не перезаписывает новое).
+
 Домен (E3): `erp.request.created` → входящее письмо по заявке (идемпотентно по `erp_request_id`);
 `erp.quote.ready_for_approval` → маршрут согласования КП (идемпотентно по КП и версии). Обработчики публикуют события
 EDS через шину процесса в той же транзакции, что и изменение.
@@ -17,9 +20,9 @@ from rt_bus import Event, HandlerRegistry
 from rt_bus.sqlalchemy import AsyncBus
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.bus.erp_snapshots import QuoteReady, RequestCreated
+from app.bus.erp_snapshots import ProjectDocumentEvent, QuoteReady, RequestCreated
 from app.bus.snapshots import UserDeactivated, UserEnvelope, parse_time
-from app.services import employees, letters, quotes
+from app.services import employees, letters, project_documents, quotes
 
 log = structlog.get_logger(__name__)
 
@@ -54,6 +57,18 @@ async def on_user_deactivated(event: Event, session: AsyncSession) -> None:
     )
 
 
+async def on_project_document(event: Event, session: AsyncSession) -> None:
+    data = ProjectDocumentEvent.model_validate(event.data)
+    row = await project_documents.apply(session, event.type, data, moment=parse_time(event.time))
+    log.info(
+        "project_document",
+        event_type=event.type,
+        number=row.number if row else None,
+        applied=row is not None,
+        event_id=event.id,
+    )
+
+
 def build_registry(get_bus: Callable[[], AsyncBus] | None = None) -> HandlerRegistry:
     """Реестр обработчиков EDS; свой, а не общий `default_registry` — тесты и процессы не делят состояние.
 
@@ -64,6 +79,8 @@ def build_registry(get_bus: Callable[[], AsyncBus] | None = None) -> HandlerRegi
     registry.add(USER_CREATED, on_user_snapshot)
     registry.add(USER_UPDATED, on_user_snapshot)
     registry.add(USER_DEACTIVATED, on_user_deactivated)
+    for event_type in project_documents.EVENT_STATUS:
+        registry.add(event_type, on_project_document)
     if get_bus is not None:
 
         async def request_created(event: Event, session: AsyncSession) -> None:
