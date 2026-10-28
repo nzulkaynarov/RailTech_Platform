@@ -6040,6 +6040,7 @@ export const getGetCalcSheetResponseMock = (
     blocker: faker.helpers.arrayElement([
       faker.helpers.arrayElement([
         "not_started",
+        "not_in_calculation",
         "not_draft",
         "no_lines",
         "visas_missing",
@@ -6238,6 +6239,7 @@ export const getStartCalcResponseMock = (
     blocker: faker.helpers.arrayElement([
       faker.helpers.arrayElement([
         "not_started",
+        "not_in_calculation",
         "not_draft",
         "no_lines",
         "visas_missing",
@@ -6436,6 +6438,7 @@ export const getAddCalcLinesResponseMock = (
     blocker: faker.helpers.arrayElement([
       faker.helpers.arrayElement([
         "not_started",
+        "not_in_calculation",
         "not_draft",
         "no_lines",
         "visas_missing",
@@ -6637,6 +6640,7 @@ export const getUpdateCalcLineResponseMock = (
     blocker: faker.helpers.arrayElement([
       faker.helpers.arrayElement([
         "not_started",
+        "not_in_calculation",
         "not_draft",
         "no_lines",
         "visas_missing",
@@ -6838,6 +6842,7 @@ export const getDeleteCalcLineResponseMock = (
     blocker: faker.helpers.arrayElement([
       faker.helpers.arrayElement([
         "not_started",
+        "not_in_calculation",
         "not_draft",
         "no_lines",
         "visas_missing",
@@ -7036,6 +7041,7 @@ export const getSignCalcLineResponseMock = (
     blocker: faker.helpers.arrayElement([
       faker.helpers.arrayElement([
         "not_started",
+        "not_in_calculation",
         "not_draft",
         "no_lines",
         "visas_missing",
@@ -7234,6 +7240,7 @@ export const getMarkCalcReadyResponseMock = (
     blocker: faker.helpers.arrayElement([
       faker.helpers.arrayElement([
         "not_started",
+        "not_in_calculation",
         "not_draft",
         "no_lines",
         "visas_missing",

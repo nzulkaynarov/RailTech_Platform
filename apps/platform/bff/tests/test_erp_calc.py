@@ -601,3 +601,34 @@ async def test_catalog_search(web: Web, erp: respx.MockRouter, check: ContractCh
     check(response, "/erp/calc/catalog", "get")
     assert response.json()["items"][0]["id"] == "3"
     assert erp.calls.last.request.url.params["q"] == "Р65"
+
+
+async def test_ready_on_a_closed_deal_is_409_with_words(
+    web: Web, erp: respx.MockRouter, check: ContractChecker
+) -> None:
+    await web.login(["SUPPLY"])
+    erp.post(f"{CALC}/104/ready/").mock(
+        return_value=httpx.Response(
+            409, json={"detail": "DEAL_NOT_IN_CALCULATION", "stage": "CLOSED_LOST"}
+        )
+    )
+
+    response = await call(web, "POST", f"/erp/calc/{ENCODED}/ready")
+
+    assert response.status_code == 409
+    check(response, "/erp/calc/{number}/ready", "post")
+    assert response.json()["details"]["reason"] == "deal_not_in_calculation"
+    assert "Заявка закрыта" in response.json()["message"]
+
+
+async def test_sheet_blocker_not_in_calculation_passes_through(
+    web: Web, erp: respx.MockRouter, check: ContractChecker
+) -> None:
+    await web.login(["SUPPLY"])
+    blocked = sheet(ready={"allowed": False, "blocker": "not_in_calculation", "missing": 0})
+    erp.get(f"{CALC}/104/").mock(return_value=httpx.Response(200, json=blocked))
+
+    response = await web.client.get(f"/api/v1/erp/calc/{ENCODED}")
+
+    check(response, "/erp/calc/{number}", "get")
+    assert response.json()["ready"]["blocker"] == "not_in_calculation"

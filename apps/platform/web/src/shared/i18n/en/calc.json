@@ -186,7 +186,8 @@
       "not_draft": "Costing has already gone to the director.",
       "at_director": "The draft quote is already with the director: lines are locked until the decision.",
       "approved": "The director approved the quote — costing is closed. Change it with a new quote version.",
-      "rejected": "The director rejected the quote — costing is closed."
+      "rejected": "The director rejected the quote — costing is closed.",
+      "not_in_calculation": "The request is closed or past costing — the quote cannot be sent to the director from here."
     },
     "missingGroups": "Waiting for sign-off: {{groups}}.",
     "consequence": [
@@ -234,7 +235,8 @@
     "cost_forbidden": "Purchase prices are edited by employees with access to cost.",
     "forbidden": "Your role does not allow this action.",
     "unavailable": "ERP did not respond. Try again in a minute.",
-    "other": "Not saved: {{message}}"
+    "other": "Not saved: {{message}}",
+    "deal_not_in_calculation": "The request is closed or past costing."
   },
   "load": {
     "retry": "Retry",

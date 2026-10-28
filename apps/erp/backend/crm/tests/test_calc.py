@@ -455,11 +455,6 @@ def test_every_calc_operation_conforms_to_the_v1_schema(world, settings):
 COST_KEYS = ("purchase_price", "cost", "markup_pct", "crew_rate", "crew_days")
 
 
-def _priced_and_signed_goods(world):
-    goods_id, service_id = _priced(world)
-    return goods_id, service_id
-
-
 def test_accountant_gets_no_cost_from_erp_directly(world):
     """Прямой вызов ERP /api/v1/calc/* бухгалтером: ни закупки, ни ставок бригады, ни цен поставщика, ни итогов
     себестоимости и наценки (решение по Q-D2-1-4) — режет сам ERP, не только BFF."""
@@ -526,16 +521,30 @@ def test_unbinding_a_service_card_keeps_the_service_zone(world):
     assert rebind.status_code == 403
 
 
-def test_visa_does_not_survive_an_edit_through_the_old_quote_item_path(world):
+def _visa_of(world, line_id):
+    return next(line for line in _sheet(world, world["supply"])["lines"] if line["id"] == line_id)["visa"]
+
+
+def test_visa_does_not_survive_an_edit_through_the_old_quote_item_paths(world):
+    """Правка позиции старым API КП (`crm/quote-items`: PATCH, `reassign-product`) поднимает версию строки — виза
+    расчёта, привязанная к версии, перестаёт действовать без ручного подъёма."""
     goods_id, _ = _priced(world)
-    assert _api(world["supply"]).post(_url(world, f"lines/{goods_id}/visa/")).status_code == 200
-    item = QuoteItem.objects.get(pk=goods_id)
-    item.version += 1  # так правит позицию старый `crm/quote-items` (PATCH и bulk-update поднимают версию)
-    item.quantity = 5
-    item.save()
-    line = next(line for line in _sheet(world, world["supply"])["lines"] if line["id"] == goods_id)
-    assert line["visa"] is None
+    supply = _api(world["supply"])
+    assert supply.post(_url(world, f"lines/{goods_id}/visa/")).status_code == 200
+    assert _visa_of(world, goods_id) is not None
+
+    patched = supply.patch(f"/api/v1/crm/quote-items/{goods_id}/", {"quantity": 5}, format="json")
+    assert patched.status_code == 200, patched.json()
+    assert _visa_of(world, goods_id) is None
     assert CalcLine.objects.get(item_id=goods_id).visa_at is not None, "факт визы в журнале строки остаётся"
+
+    assert supply.post(_url(world, f"lines/{goods_id}/visa/")).status_code == 200
+    assert _visa_of(world, goods_id) is not None
+    rematched = supply.post(
+        f"/api/v1/crm/quote-items/{goods_id}/reassign-product/", {"product_id": world["rail"].pk}, format="json"
+    )
+    assert rematched.status_code == 200, rematched.json()
+    assert _visa_of(world, goods_id) is None
 
 
 def test_ready_refuses_a_closed_deal(world):
@@ -573,3 +582,52 @@ def test_deal_refs_are_light_and_newest_first(world):
     rows = response.json()["results"]
     assert [row["id"] for row in rows] == [other.pk, world["deal"].pk]
     assert set(rows[0]) == {"id", "created_at", "stage_code"} and rows[0]["stage_code"] == "CALCULATING"
+
+
+# ── повторное ревью: границы зон, порог маржи, стадия в готовности, act_on_step без виз строк ──────────────────
+
+
+def test_goods_only_zone_holder_without_cost_margin_sees_no_service_cost(world):
+    goods_only = _staff(world["seller"], "goods@demo.test", ["quote.build", "quote.edit_pricing", "quote.visa_goods"])
+    _priced(world)
+    body = _sheet(world, goods_only)
+    goods, service = body["lines"]
+    assert service["crew_rate"] is None and service["crew_days"] is None and service["cost"] is None
+    assert service["purchase_currency"] is None
+    assert goods["purchase_price"] == "90000000.00" and goods["supplier"]["offer_price"] == "90000000.00"
+    assert goods["markup_pct"] is None and body["totals"]["purchase"] is None
+    assert body["task"]["min_margin_pct"] is None, "порог маржи — только cost_margin"
+
+
+def test_engineer_write_response_hides_goods_cost(world):
+    goods_id, service_id = _priced(world)
+    response = _api(world["engineer"]).patch(_url(world, f"lines/{service_id}/"), {"crew_days": "4"}, format="json")
+    assert response.status_code == 200
+    goods = next(line for line in response.json()["lines"] if line["id"] == goods_id)
+    assert goods["purchase_price"] is None and goods["cost"] is None and goods["purchase_currency"] is None
+    assert goods["supplier"]["offer_price"] is None and goods["supplier"]["offer_currency"] is None
+    assert response.json()["task"]["min_margin_pct"] is None
+    assert _sheet(world, world["supply"])["task"]["min_margin_pct"] == "15.00"
+
+
+def test_sheet_says_why_ready_is_off_for_a_closed_deal(world):
+    _priced(world)
+    Deal.objects.filter(pk=world["deal"].pk).update(stage=DealStage.objects.get(code="CLOSED_LOST"))
+    ready = _sheet(world, world["supply"])["ready"]
+    assert ready["allowed"] is False and ready["blocker"] == "not_in_calculation"
+
+
+def test_quote_level_visa_chain_does_not_mix_in_line_visas(world):
+    """Отправка КП старым путём (визы КП шагами) — событие без подписей строк: они только у «Расчёт готов»."""
+    from crm.services.eds_quote_approval import build_ready_payload
+
+    goods_id, service_id = _priced(world)
+    _api(world["supply"]).post(_url(world, f"lines/{goods_id}/visa/"))
+    _api(world["engineer"]).post(_url(world, f"lines/{service_id}/visa/"))
+    quote = Quote.objects.get(deal=world["deal"])
+    now = datetime(2026, 10, 28, 9, 0, tzinfo=timezone.utc)
+    plain = build_ready_payload(quote, ready_at=now)
+    with_lines = build_ready_payload(quote, ready_at=now, line_visas=True)
+    assert plain["required_zones"] == calc_tasks.required_visa_zones(calc_tasks.latest_task(world["deal"].pk))
+    assert ("services", 12) not in [(v["zone"], v["by"]["crm_user_id"]) for v in plain["visas"]]
+    assert sorted((v["zone"], v["by"]["crm_user_id"]) for v in with_lines["visas"]) == [("goods", 11), ("services", 12)]

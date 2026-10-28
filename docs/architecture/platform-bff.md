@@ -205,7 +205,7 @@ SPA  POST /api/v1/bridge/erp-sso    → BFF → CRM POST /auth/sso/token   {url:
 - **Виза** привязана к версии строки (`QuoteItem.version`): правка через любой путь, в том числе старый `crm/quote-items`,
   визу снимает; при возврате КП директором визы неизменённых строк остаются (Q-D2-1-3).
 - **«Расчёт готов».** Только на стадии расчёта и когда завизированы все строки (ERP — 409 `DEAL_NOT_IN_CALCULATION`,
-  `VISAS_MISSING` с `details.missing`); КП уходит директору
+  `VISAS_MISSING` с `details.missing`; экран заранее получает `ready.blocker = not_in_calculation`); КП уходит директору
   в EDS тем же событием `quote.ready_for_approval`, что после виз КП, но `required_zones` — зоны строк, `visas` — подписи строк.
 - **Резолюция в «Задании»** — проекция события EDS в ERP (`CalcTask`): у снабженца и гл. инженера нет раздела `eds.inbox`, письмо
   EDS им не читается. Чат проекта — ссылкой-подсказкой до волны 18 (B-019).

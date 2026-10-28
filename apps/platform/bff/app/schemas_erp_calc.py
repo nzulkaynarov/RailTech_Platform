@@ -24,7 +24,7 @@ Zone = Literal["goods", "services", "payment_terms"]
 LineZone = Literal["goods", "services"]
 LineKind = Literal["goods", "goods_to_order", "service"]
 Group = Literal["stock", "supply", "engineer"]
-Blocker = Literal["not_started", "not_draft", "no_lines", "visas_missing"]
+Blocker = Literal["not_started", "not_in_calculation", "not_draft", "no_lines", "visas_missing"]
 
 DECIMAL = r"^-?[0-9]+(\.[0-9]+)?$"
 DIGITS = r"^[0-9]+$"

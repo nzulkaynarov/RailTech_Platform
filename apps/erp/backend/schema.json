@@ -24045,12 +24045,13 @@
             "BlockerEnum": {
                 "enum": [
                     "not_started",
+                    "not_in_calculation",
                     "not_draft",
                     "no_lines",
                     "visas_missing"
                 ],
                 "type": "string",
-                "description": "* `not_started` - not_started\n* `not_draft` - not_draft\n* `no_lines` - no_lines\n* `visas_missing` - visas_missing"
+                "description": "* `not_started` - not_started\n* `not_in_calculation` - not_in_calculation\n* `not_draft` - not_draft\n* `no_lines` - no_lines\n* `visas_missing` - visas_missing"
             },
             "BulkCreateQuoteItemsRequestRequest": {
                 "type": "object",
@@ -24686,7 +24687,8 @@
                         "nullable": true
                     },
                     "purchase_currency": {
-                        "type": "string"
+                        "type": "string",
+                        "nullable": true
                     },
                     "crew_rate": {
                         "type": "string",

@@ -6319,7 +6319,13 @@ export interface components {
        * @description Почему «Расчёт готов» неактивна
        * @enum {string|null}
        */
-      blocker: "not_started" | "not_draft" | "no_lines" | "visas_missing" | null;
+      blocker:
+        | "not_started"
+        | "not_in_calculation"
+        | "not_draft"
+        | "no_lines"
+        | "visas_missing"
+        | null;
       /** @description Строк без визы */
       missing: number;
     };
@@ -6557,7 +6563,7 @@ export interface components {
         "application/json": components["schemas"]["Error"];
       };
     };
-    /** @description 409 `CONFLICT` — расчёт не в том состоянии для действия: `details.reason` — код ERP в нижнем регистре (`visas_missing` и `details.missing`, `quote_not_draft`, `calc_not_started`, `line_incomplete`, `purchase_required`, `no_lines`, `quote_below_cost`, `fx_rate_missing`, `quote_client_required`, `request_text_empty`, `ai_disabled`) */
+    /** @description 409 `CONFLICT` — расчёт не в том состоянии для действия: `details.reason` — код ERP в нижнем регистре (`visas_missing` и `details.missing`, `deal_not_in_calculation`, `quote_not_draft`, `calc_not_started`, `line_incomplete`, `purchase_required`, `no_lines`, `quote_below_cost`, `fx_rate_missing`, `quote_client_required`, `request_text_empty`, `ai_disabled`) */
     CalcConflict: {
       headers: {
         [name: string]: unknown;

@@ -50,6 +50,7 @@ const KNOWN = new Set([
   "markup_out_of_range",
   "zone_not_permitted",
   "cost_forbidden",
+  "deal_not_in_calculation",
 ]);
 
 /** Отказ словами: подкод (`details.reason`) из словаря, иначе по статусу, иначе текст BFF. */

@@ -186,7 +186,8 @@
       "not_draft": "Hisob-kitob allaqachon direktorga topshirilgan.",
       "at_director": "TK qoralamasi allaqachon direktorda: qaror qabul qilinguncha qatorlar yopiq.",
       "approved": "TK direktor tomonidan ma’qullangan — hisob-kitob yopiq. Uni TKning yangi versiyasi bilan o‘zgartirish mumkin.",
-      "rejected": "Direktor TKni rad etdi — hisob-kitob yopiq."
+      "rejected": "Direktor TKni rad etdi — hisob-kitob yopiq.",
+      "not_in_calculation": "Ariza yopilgan yoki hisob-kitobdan keyingi bosqichda — TKni bu yerdan direktorga yuborib bo‘lmaydi."
     },
     "missingGroups": "Viza kutmoqda: {{groups}}.",
     "consequence": [
@@ -234,7 +235,8 @@
     "cost_forbidden": "Xarid narxini tannarxga ruxsati bor xodim o‘zgartiradi.",
     "forbidden": "Bu amal rolingizga ruxsat etilmagan.",
     "unavailable": "ERP javob bermadi. Bir daqiqadan keyin qayta urinib ko‘ring.",
-    "other": "Saqlanmadi: {{message}}"
+    "other": "Saqlanmadi: {{message}}",
+    "deal_not_in_calculation": "Ariza yopilgan yoki hisob-kitobdan keyingi bosqichda."
   },
   "load": {
     "retry": "Qayta urinish",

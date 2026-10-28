@@ -10,7 +10,7 @@ LINE_KINDS = ("goods", "goods_to_order", "service")
 ITEM_KINDS = ("goods", "service")
 VISA_STATES = ("none", "waiting", "done")
 CALC_STATES = ("not_started", "in_progress", "returned", "at_director", "rejected", "approved")
-READY_BLOCKERS = ("not_started", "not_draft", "no_lines", "visas_missing")
+READY_BLOCKERS = ("not_started", "not_in_calculation", "not_draft", "no_lines", "visas_missing")
 
 
 class CalcDealSerializer(serializers.Serializer):
@@ -118,7 +118,7 @@ class CalcLineSerializer(serializers.Serializer):
     supplier = CalcSupplierSerializer(allow_null=True)
     lead_days = serializers.IntegerField(allow_null=True)
     purchase_price = serializers.DecimalField(max_digits=14, decimal_places=2, allow_null=True)
-    purchase_currency = serializers.CharField()
+    purchase_currency = serializers.CharField(allow_null=True)
     crew_rate = serializers.DecimalField(max_digits=14, decimal_places=2, allow_null=True)
     crew_days = serializers.DecimalField(max_digits=6, decimal_places=1, allow_null=True)
     cost = serializers.DecimalField(max_digits=14, decimal_places=2, allow_null=True)

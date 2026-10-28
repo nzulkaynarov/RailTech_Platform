@@ -176,11 +176,25 @@ def test_restricted_keys_are_stripped_for_roles_without_the_group() -> None:
 
     manager = strip_restricted(payload, [], RESTRICTED_KEYS)
     director = strip_restricted(payload, ["cost_margin", "supplier_prices"], RESTRICTED_KEYS)
-    accountant = strip_restricted(payload, ["supplier_prices", "totals_only"], RESTRICTED_KEYS)
+    accountant = strip_restricted(payload, ["totals_only"], RESTRICTED_KEYS)
 
     assert manager == {"id": 1, "items": [{"name": "x"}]}
     assert director == payload  # директору видны и маржа, и цены поставщиков
-    assert accountant == {"id": 1, "items": [{"supplier_price": "5", "name": "x"}]}
+    assert accountant == {"id": 1, "items": [{"name": "x"}]}
+
+
+def test_accountant_template_sees_no_supplier_price_keys_in_feeds() -> None:
+    """Q-D2-1-4 (D2-1): шаблон «Бухгалтер» каталога — без `supplier_prices` (в БД CRM — миграция
+    0044_accountant_supplier_prices); ключи цен поставщика не доходят до бухгалтера в ленте."""
+    from app.rbac_generated import TEMPLATES
+
+    fields = TEMPLATES["ACCOUNTANT"]["restricted_fields"]
+    assert "supplier_prices" not in fields
+    payload = {
+        "offer": {"price": "1"},
+        "items": [{"supplier_price": "5", "purchase_price": "4", "unit_cost": "3", "name": "x"}],
+    }
+    assert strip_restricted(payload, fields, RESTRICTED_KEYS) == {"items": [{"name": "x"}]}
 
 
 # --- Роли: активная роль, объединение, явный role -------------------------------------------------

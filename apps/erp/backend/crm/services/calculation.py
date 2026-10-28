@@ -17,8 +17,10 @@
 * **«Расчёт готов»** — только когда завизированы все строки КП, иначе 409 `VISAS_MISSING`: КП уходит на одобрение
   директору в EDS тем же путём, что и после виз КП (`eds_quote_approval.request_director_approval`, событие
   `quote.ready_for_approval` с визами строк).
-* Себестоимость, закупка и наценка по строкам — только держателю `quote.view_cost_margin`; итоги закупки и наценки
-  отдаются всем, кто видит расчёт (бухгалтеру — «только итоги», `totals_only`); лишнее вырезает BFF по каталогу.
+* Видимость себестоимости (решения архитектора по Q-D2-1-2 и Q-D2-1-4, режет сам ERP): закупку и себестоимость
+  строки (у услуги — ставку и дни бригады) видит держатель `quote.view_cost_margin` или права визы зоны этой строки,
+  цены поставщика — `quote.view_cost_margin` или зона товаров; наценку, итоги себестоимости и наценки и порог маржи
+  резолюции — только `quote.view_cost_margin`. Бухгалтер — цены клиенту и итоги без себестоимости.
 
 Ошибки — `CalcError(code, status)`; вьюхи отдают `{"detail": code}`.
 """
@@ -250,7 +252,9 @@ def line_payload(item: QuoteItem, ctx: _Context, *, show_cost: bool, rights: dic
         "lead_days": item.lead_time_days or None,
         "purchase_price": _money(item.frozen_base_price) if zone_cost and not services else None,
         "purchase_currency": (
-            (item.frozen_currency.code if item.frozen_currency_id else "UZS") if not services else "UZS"
+            ((item.frozen_currency.code if item.frozen_currency_id else "UZS") if not services else "UZS")
+            if zone_cost
+            else None
         ),
         "crew_rate": (
             _money(calc.crew_rate)
@@ -408,7 +412,8 @@ def _deal_brief(deal: Deal) -> dict:
     }
 
 
-def _task_brief(task: CalcTask) -> dict:
+def _task_brief(task: CalcTask, *, show_cost: bool = False) -> dict:
+    """Задание из резолюции; порог маржи — только держателю `quote.view_cost_margin` (Q-D2-1-2)."""
     return {
         "letter_number": task.letter_number,
         "letter_subject": task.letter_subject,
@@ -416,7 +421,7 @@ def _task_brief(task: CalcTask) -> dict:
         "decided_at": task.decided_at.isoformat(),
         "decided_by_name": task.decided_by_name or None,
         "due": task.due.isoformat(),
-        "min_margin_pct": None if task.min_margin_pct is None else f"{task.min_margin_pct:.2f}",
+        "min_margin_pct": (None if task.min_margin_pct is None or not show_cost else f"{task.min_margin_pct:.2f}"),
     }
 
 
@@ -513,8 +518,14 @@ def _sheet(deal: Deal, task: CalcTask, user) -> dict:
     client = sum((it.final_price_excl_vat * it.quantity for it in items), Decimal("0"))
     groups = _groups(items, ctx)
     missing = sum(1 for line in lines if line["visa"] is None)
-    if not editable:
-        blocker = "not_draft" if quote is not None else "not_started"
+    stage = deal.stage.code if deal.stage_id else DealStageCode.DRAFT
+    if quote is None:
+        blocker = "not_started"
+    elif stage not in OPEN_STAGES and editable:
+        # Заявка закрыта, проиграна или ушла дальше расчёта: «Расчёт готов» не отправит (409 DEAL_NOT_IN_CALCULATION).
+        blocker = "not_in_calculation"
+    elif not editable:
+        blocker = "not_draft"
     elif not lines:
         blocker = "no_lines"
     elif missing:
@@ -523,7 +534,7 @@ def _sheet(deal: Deal, task: CalcTask, user) -> dict:
         blocker = None
     return {
         "deal": _deal_brief(deal),
-        "task": {**_task_brief(task), "assignees": _assignees(task)},
+        "task": {**_task_brief(task, show_cost=show_cost), "assignees": _assignees(task)},
         "request": {"text": deal_request_text(deal), "lines": deal_request_lines_count(deal)},
         "quote": (
             None

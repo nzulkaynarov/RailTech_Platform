@@ -6487,7 +6487,7 @@ components:
     CalcConflict:
       description: >-
         409 `CONFLICT` — расчёт не в том состоянии для действия: `details.reason` — код ERP в нижнем регистре
-        (`visas_missing` и `details.missing`, `quote_not_draft`, `calc_not_started`, `line_incomplete`, `purchase_required`,
+        (`visas_missing` и `details.missing`, `deal_not_in_calculation`, `quote_not_draft`, `calc_not_started`, `line_incomplete`, `purchase_required`,
         `no_lines`, `quote_below_cost`, `fx_rate_missing`, `quote_client_required`, `request_text_empty`, `ai_disabled`)
       content:
         application/json:
@@ -11619,7 +11619,7 @@ components:
         allowed: {type: boolean}
         blocker:
           type: [string, 'null']
-          enum: [not_started, not_draft, no_lines, visas_missing, null]
+          enum: [not_started, not_in_calculation, not_draft, no_lines, visas_missing, null]
           description: Почему «Расчёт готов» неактивна
         missing: {type: integer, minimum: 0, description: Строк без визы}
 

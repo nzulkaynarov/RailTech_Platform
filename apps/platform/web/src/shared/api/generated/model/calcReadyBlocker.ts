@@ -244,6 +244,7 @@ export type CalcReadyBlocker = (typeof CalcReadyBlocker)[keyof typeof CalcReadyB
 
 export const CalcReadyBlocker = {
   not_started: "not_started",
+  not_in_calculation: "not_in_calculation",
   not_draft: "not_draft",
   no_lines: "no_lines",
   visas_missing: "visas_missing",

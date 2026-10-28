@@ -7778,12 +7778,13 @@ export interface components {
         BlankEnum: "";
         /**
          * @description * `not_started` - not_started
+         *     * `not_in_calculation` - not_in_calculation
          *     * `not_draft` - not_draft
          *     * `no_lines` - no_lines
          *     * `visas_missing` - visas_missing
          * @enum {string}
          */
-        BlockerEnum: "not_started" | "not_draft" | "no_lines" | "visas_missing";
+        BlockerEnum: "not_started" | "not_in_calculation" | "not_draft" | "no_lines" | "visas_missing";
         BulkCreateQuoteItemsRequestRequest: {
             quote: number;
             items: {
@@ -7972,7 +7973,7 @@ export interface components {
             lead_days: number | null;
             /** Format: decimal */
             purchase_price: string | null;
-            purchase_currency: string;
+            purchase_currency: string | null;
             /** Format: decimal */
             crew_rate: string | null;
             /** Format: decimal */
