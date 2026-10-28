@@ -212,6 +212,23 @@ class Feed:
         response = await self.authed.call(backend, method, path)
         return response.status_code
 
+    async def peek(self, backend: Backend, path: str, *, ttl: int = 0) -> Any | None:
+        """GET дополнительной подробности (подпись к строке): как `get`, но состояние источника не
+        меняет — сбой такой подробности не делает ответ неполным. Нет ответа — None."""
+        if not self.usable(backend):
+            return None
+        data_key = self._key("data", backend, path, None)
+        if ttl:
+            cached = await self._redis.get(data_key)
+            if cached is not None:
+                return json.loads(cached)
+            payload, _ = await _single_flight(
+                data_key, lambda: self._load(backend, path, None, ttl, False, data_key)
+            )
+            return payload
+        payload, _ = await self._load(backend, path, None, 0, False, data_key)
+        return payload
+
 
 async def drop_snapshots(redis: Any, sid: str) -> None:
     """Сбросить кэш ответов бэкендов сессии: после подсказки шины (B5) данные свежие, не из кэша."""

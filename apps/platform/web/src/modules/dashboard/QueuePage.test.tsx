@@ -82,7 +82,8 @@ describe("Dashboard · Моя очередь", () => {
 
     expect(await within(page).findByText("Взять в работу лида L-2041")).toBeVisible();
     expect(within(page).getByText("Ответить лиду L-2050")).toBeVisible();
-    expect(within(page).getByText(/Менеджер · .* · 2 решения/)).toBeVisible();
+    // третья строка — «Доработать» (D1-6b): служебку менеджера вернул директор, она лежит в его документах
+    expect(within(page).getByText(/Менеджер · .* · 3 решения/)).toBeVisible();
     expect(within(page).queryByRole("status")).toBeNull();
   });
 

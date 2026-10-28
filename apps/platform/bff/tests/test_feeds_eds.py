@@ -205,12 +205,13 @@ async def test_no_eds_section_means_no_eds_call(
 async def test_manager_with_read_only_eds_sections_does_not_call_eds(
     web: Web, fb: FeedBackends
 ) -> None:
-    """У менеджера `eds.inbox` и `eds.drafts` — чтение: решений по письмам и КП у него нет."""
+    """У менеджера `eds.inbox` и `eds.drafts` — чтение: решений по письмам и КП у него нет. EDS он
+    читает только ради своих возвращённых документов («Доработать», D1-6b)."""
     await web.login(["MANAGER"])
 
     body = (await web.client.get("/api/v1/queue")).json()
 
-    assert "eds" not in body["sources"]
+    assert body["sources"]["eds"] == "ok"
     assert fb.calls(fb.eds["letters"]) == fb.calls(fb.eds["approvals"]) == 0
 
 
