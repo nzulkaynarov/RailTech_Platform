@@ -12,6 +12,7 @@ import {
 import { computeAccess, type MockRole } from "./fixtures/roles";
 import { readSession, sessionRoles } from "./mockSession";
 import { crmNotificationsOf, markCrmNoteRead, ticketQueueItems } from "./ticketsHandlers";
+import { stockQueueItems } from "./erpStock";
 import { coveredQueueItems } from "./profileStore";
 
 /**
@@ -111,10 +112,14 @@ export const feedHandlers = [
     if (!roles) return expired();
     const denied = noQueue(roles);
     if (denied) return denied;
+    const rank = { overdue: 0, today: 1, tomorrow: 2, memo: 3, later: 4 } as const;
     const own = [
       ...queueForView(roles.view),
       ...ticketQueueItems(roles.view), // обращения живут в CRM, как и лиды
-    ].filter((i) => (i.kind.endsWith("_lead") || i.kind === "ticket" ? !crmDown() : !erpDown()));
+      ...stockQueueItems(roles.view), // просроченные заказы поставщикам (ERP, D2-2)
+    ]
+      .filter((i) => (i.kind.endsWith("_lead") || i.kind === "ticket" ? !crmDown() : !erpDown()))
+      .sort((a, b) => rank[a.due_label] - rank[b.due_label]);
     // Замещение (W15-H6): заместитель видит строки замещаемого с пометкой «за {имя}».
     const session = readSession();
     const userId = session ? sessionRoles(session)?.user.id : undefined;
@@ -129,12 +134,17 @@ export const feedHandlers = [
     const denied = noQueue(roles);
     if (denied) return denied;
     const tickets = ticketQueueItems(roles.view).length;
+    const stockOverdue = stockQueueItems(roles.view).length;
     return HttpResponse.json({
       // ERP не отвечает: бейджи разделов ERP (EDS, ERP, «Все проекты») не показываются, остаются очередь и CRM
       items: [
         ...menuCountersFor(
           queueForView(roles.view).filter((i) => !erpDown() || i.kind.endsWith("_lead")).length,
         ).filter((c) => !erpDown() || c.module === "crm" || c.section === "queue"),
+        // «Расчёт · Склад»: просроченные заказы поставщикам (D2-2)
+        ...(stockOverdue > 0 && !erpDown()
+          ? [{ module: "erp" as const, section: "stock", count: stockOverdue, attention: true }]
+          : []),
         // «Настройки · Обращения сотрудников»: число новых обращений (W15-H7)
         ...(tickets > 0
           ? [{ module: "admin" as const, section: "tickets", count: tickets, attention: true }]

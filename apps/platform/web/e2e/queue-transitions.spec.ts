@@ -108,8 +108,6 @@ test.describe("Мои задачи: пустые состояния и част�
   test.skip(({ isMobile }) => isMobile, "ширины задаёт сам сценарий");
 
   for (const [email, title] of [
-    ["supply@demo.example", "Заданий на расчёт нет"],
-    ["engineer@demo.example", "Заданий по услугам нет"],
     ["accountant@demo.example", "Платёжек на подтверждение и счетов к выставлению нет"],
   ] as const) {
     test(`${email}: пустая очередь своими словами`, async ({ page }) => {

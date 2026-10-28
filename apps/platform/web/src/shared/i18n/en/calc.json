@@ -71,7 +71,8 @@
       ]
     },
     "request": "Request text",
-    "requestEmpty": "No request text."
+    "requestEmpty": "No request text.",
+    "requestPrice": "Request a supplier price"
   },
   "lines": {
     "title": "Costing lines",
@@ -127,7 +128,14 @@
     "totals": "Total",
     "noVat": "excl. VAT",
     "saved": "Saved",
-    "mobileCost": "Cost {{value}} · markup {{markup}} %"
+    "mobileCost": "Cost {{value}} · markup {{markup}} %",
+    "cell": "Cell {{cell}}",
+    "free": "Free · {{count}}",
+    "reservedTag": "Reserved · {{count}}",
+    "reserve": "Reserve {{count}}",
+    "reserveLabel": "Reserve {{count}} for “{{name}}”",
+    "release": "Release reservation",
+    "releaseLabel": "Release the reservation of line “{{name}}”"
   },
   "add": {
     "button": "Add line",
