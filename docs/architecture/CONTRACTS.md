@@ -558,7 +558,7 @@ ADR-0015 (EDS — отдельный сервис, владелец реестр
   `letter_out`; поля `ServiceMemo` SPEC-v3 §10.4), `/documents/{document_id}`, `…/submit`; `/approvals?mine=1`,
   `/approvals/{approval_id}` (шаги маршрута, чек-лист и снимок КП для показа), `…/decision` `{decision: approve|return|reject,
   comment, channels?}` — `comment` обязателен для `return` и `reject`; `/registry` (фильтры «Все документы» SPEC-v3 §7.3: тип,
-  статус, период, ответственный, клиент, номер, поиск), `/registry/export` (xlsx, csv); `/files` (multipart, `version_of` — новая
+  статус, период, ответственный, клиент, номер, поиск; **не шире прав на вид документа** — письма только с `letters.read`, чужие черновики скрыты, D1-10), `/registry/export` (xlsx, csv; те же правила видимости); `/files` (multipart, `version_of` — новая
   версия), `/files/{file_id}` (поток), `/files/{file_id}/versions`.
 - **Идентификатор в пути — UUID объекта, не номер** (решение E1, принято лидом; для архитектора — уточнить формулировку runbook
   §2.3 `/letters/{no}`): номер реестра содержит `/`, `%2F` в пути прокси и фреймворки декодируют по-разному. Номер — поле объекта
