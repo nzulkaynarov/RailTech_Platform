@@ -235,6 +235,7 @@ def test_reason_values_are_a_stable_contract() -> None:
         "telegram_paused",
         "won_decided_by_erp",
         "handoff_no_consent",
+        "client_not_in_erp",
         "consent_via_bot",
         "name_required",
         "phone_invalid",

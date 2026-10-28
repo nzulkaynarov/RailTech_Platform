@@ -1,9 +1,10 @@
 """События ERP → CRM против контракта rt_bus: модели `rt_contracts`, схемы, подписки (B4, G-5).
 
 Источник правды — `packages/contracts/events/` и примеры полного конверта рядом (по одному на каждый
-из 22 типов ERP; те же файлы — фикстуры ERP и самой шины). Ручной копии схем в CRM нет. Проверяется:
+из типов ERP, доступных CRM; те же файлы — фикстуры ERP и самой шины). Ручной копии схем в CRM нет.
+Проверяется:
 
-* CRM подписана ровно на те типы ERP, что описаны в контракте (кроме кода акцепта — он inline);
+* CRM подписана ровно на те типы ERP, что описаны в контракте (код акцепта и приглашение — inline);
 * каждый пример разбирается в модель нужного типа, имя события и время берутся из конверта;
 * приёмник проверяет `data` терпимо: лишнее поле — не отказ, чужие значения перечислений и форматов,
   потерянные обязательные поля — отказ (422), на уровне схем библиотеки;
@@ -21,7 +22,15 @@ from rt_contracts.events import TYPES
 from rt_contracts.events.erp import QuoteSentV1
 
 from app.bus import handlers  # noqa: F401 — регистрирует обработчики
-from app.bus.erp_event import CODE_TYPE, NOT_FOR_CRM, erp_types, parse_erp_event, plain
+from app.bus.erp_event import (
+    CODE_TYPE,
+    INLINE_TYPES,
+    INVITE_TYPE,
+    NOT_FOR_CRM,
+    erp_types,
+    parse_erp_event,
+    plain,
+)
 from tests.bus_events import event_types, example_envelope, example_types
 
 #: Типы ERP, которые принимает CRM (без адресованных EDS — `NOT_FOR_CRM`).
@@ -33,19 +42,20 @@ def event_of(event_type: str, **changes: Any) -> Event:
     return Event.from_dict({**example_envelope(event_type), **changes})
 
 
-def test_the_contract_has_twenty_two_erp_types_with_one_example_each() -> None:
-    assert len(ALL_TYPES) == 22
+def test_the_contract_has_twenty_three_erp_types_for_the_crm_with_one_example_each() -> None:
+    assert len(ALL_TYPES) == 23
     examples = set(example_types("erp"))
     assert examples == set(event_types("erp")), "на каждое событие контракта — один пример"
 
 
 def test_the_crm_listens_to_exactly_the_erp_events_of_the_contract_except_the_code() -> None:
-    assert set(erp_types()) == set(ALL_TYPES) - {CODE_TYPE}
+    assert set(erp_types()) == set(ALL_TYPES) - {CODE_TYPE, INVITE_TYPE}
     assert len(erp_types()) == 21
     for event_type in ALL_TYPES:
         matched = default_registry.match(event_type)
         assert len(matched) == 1, event_type
-        assert matched[0].inline is (event_type == CODE_TYPE)
+        # Код акцепта и приглашение в кабинет доставляет бот прямо в запросе приёмника.
+        assert matched[0].inline is (event_type in INLINE_TYPES)
 
 
 def test_handlers_do_not_listen_to_other_domains_or_future_versions() -> None:

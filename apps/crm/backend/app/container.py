@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from app import db
 from app.config import Settings, get_settings
 from app.domain.errors import ConflictError, Reason
+from app.domain.start_link import link_key
 from app.integrations.docling import DoclingClient
 from app.integrations.litellm import Embedder, make_client
 from app.integrations.litellm_admin import LiteLLMAdmin
@@ -38,6 +39,7 @@ if TYPE_CHECKING:
     from app.services.backups import BackupReader
     from app.services.budget import BudgetGuard
     from app.services.client_contacts import ClientContactService
+    from app.services.client_notices import ClientNoticeService
     from app.services.clients import ClientService
     from app.services.documents import DocumentService
     from app.services.erp_access import ErpAccessService
@@ -54,13 +56,14 @@ if TYPE_CHECKING:
     from app.services.kb.markdown_convert import MarkdownConverter
     from app.services.kb.search import KbSearchService
     from app.services.lead_consent import LeadConsentService
-    from app.services.lead_intake import LeadIntakeService
+    from app.services.lead_intake import LeadIntakeService, WebLeadFollowUp
     from app.services.lead_messenger import LeadMessenger
     from app.services.leads import LeadService
     from app.services.llm_usage import DbUsageRecorder
     from app.services.mail import MailService
     from app.services.password_reset import PasswordResetService
     from app.services.platform_roles import PlatformRoleService
+    from app.services.portal_invites import PortalInviteService
     from app.services.sandbox import SandboxService
     from app.services.setup import SetupService
     from app.services.smtp_connector import SmtpConnectorService
@@ -312,7 +315,28 @@ class Container:
             self.session_factory,
             self.settings_service,
             self.settings.jwt_secret.get_secret_value().encode("utf-8"),
+            notices=self.client_notice_service,
+            on_web_lead=_enqueue_web_lead,
         )
+
+    @cached_property
+    def client_notice_service(self) -> "ClientNoticeService":
+        """Подтверждение запроса с сайта клиенту и итог отправки (D1-9, `client_notices`)."""
+        from app.services.client_notices import ClientNoticeService
+
+        return ClientNoticeService(
+            self.session_factory,
+            self.settings_service,
+            self.mail_service,
+            self.telegram_bot,
+            self._bot_username,
+            link_key(self.settings.jwt_secret.get_secret_value().encode("utf-8")),
+            self.settings,
+        )
+
+    async def _bot_username(self) -> str | None:
+        snapshot = await self.bot_state.snapshot()
+        return snapshot.username if snapshot is not None else None
 
     @cached_property
     def assist_service(self) -> "AssistService":
@@ -449,13 +473,16 @@ class Container:
         """Сообщения Telegram по событиям ERP: после коммита обработки (`app.bus.notices`)."""
         from app.bus.notices import ErpEventNotices
 
-        return ErpEventNotices(self.session_factory, self.telegram_bot, self.settings)
+        return ErpEventNotices(
+            self.session_factory, self.telegram_bot, self.settings, mail=self.mail_service
+        )
 
     @cached_property
     def erp_events_service(self) -> "ErpEventsService":
         """Обработчики событий ERP, принятых с шины (M3-CRM-04, B4)."""
         from app.services.erp_acceptance_code import AcceptanceCodeDelivery
         from app.services.erp_events import ErpEventsService
+        from app.services.erp_invite_delivery import InviteDelivery
 
         return ErpEventsService(
             self.settings_service,
@@ -463,7 +490,21 @@ class Container:
             AcceptanceCodeDelivery(
                 self.session_factory, self.settings_service, self.telegram_bot, self.settings
             ),
+            InviteDelivery(
+                self.session_factory,
+                self.settings_service,
+                self.telegram_bot,
+                self.settings,
+                self.portal_invites,
+            ),
         )
+
+    @cached_property
+    def portal_invites(self) -> "PortalInviteService":
+        """Итог приглашения в кабинет и повторная отправка другим каналом (D1-9)."""
+        from app.services.portal_invites import PortalInviteService
+
+        return PortalInviteService(self.session_factory, self.erp_client)
 
     @cached_property
     def bus(self) -> "CrmBus":
@@ -705,6 +746,12 @@ async def _enqueue_ingest(document_id: int) -> object:
         # Замок `kb-document-N`: ингест этого документа уже стоит в очереди — повторять не нужно
         # (C2A-G-6: раньше это было 500 «CRM не отвечает»).
         raise ConflictError("document is already queued", reason=Reason.DOCUMENT_INDEXING) from exc
+
+
+async def _enqueue_web_lead(follow_up: "WebLeadFollowUp") -> None:
+    from app.tasks.client_notices import enqueue_web_lead
+
+    await enqueue_web_lead(follow_up)
 
 
 async def _enqueue_email(email_log_id: int) -> object:

@@ -50,6 +50,7 @@ from app.models.deals import Deal
 from app.models.leads import Lead, TelegramIdentity
 from app.security import audit
 from app.services import deals as deals_service
+from app.services import portal_invites
 
 logger = structlog.get_logger(__name__)
 
@@ -140,6 +141,9 @@ class ErpHandoffService:
             client.erp_company_id = result.erp_company_id
             client.erp_handoff_request = False
             _set_state(client, DONE, None)
+            # Итог приглашения в кабинет (D1-9): письмо, бот или причина, по которой не ушло, —
+            # менеджеру в карточку.
+            await portal_invites.record_handoff(session, client, result)
             if company_changed:
                 await bus_events.client_updated(
                     session, client, audit.Actor.system(), ["erp_company_id"]
@@ -224,14 +228,7 @@ async def _build_payload(
         await session.scalars(select(TelegramIdentity).where(TelegramIdentity.lead_id == lead.id))
     )
     contacts = await _contacts_payload(session, client, lead, identities)
-    channels = [
-        channel
-        for channel, present in (
-            ("telegram", any(c.telegram_user_id for c in contacts)),
-            ("email", any(c.email for c in contacts)),
-        )
-        if present
-    ] or ["telegram"]
+    channels = _invite_channels(contacts)
     language = lead.language if lead.language in _LANGUAGES else "ru"
     return HandoffPayload(
         crm_client_id=client.id,
@@ -295,7 +292,7 @@ async def _contacts_payload(
     out = []
     for row in rows:
         tg_user_id = _telegram_of(row, identities, primary_identity)
-        preferred = _preferred_channel(bool(tg_user_id), bool(row.email))
+        preferred = row.preferred_channel or _preferred_channel(bool(tg_user_id), bool(row.email))
         out.append(
             HandoffContactPayload(
                 crm_contact_id=row.id,
@@ -309,6 +306,13 @@ async def _contacts_payload(
             )
         )
     return out
+
+
+def _invite_channels(contacts: list[HandoffContactPayload]) -> list[str]:
+    """Каналы приглашения: предпочитаемый канал основного контакта (D1-9), не «всё, что нашлось»."""
+    primary = next((c for c in contacts if c.is_primary), contacts[0])
+    wanted = primary.preferred_channel
+    return ["telegram", "email"] if wanted == "both" else [wanted]
 
 
 def _preferred_channel(has_telegram: bool, has_email: bool) -> str:

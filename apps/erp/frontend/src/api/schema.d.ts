@@ -38,6 +38,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/integration/v1/clients/{crm_client_id}/invite": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description POST /api/integration/v1/clients/{crm_client_id}/invite (0.8.0, D1-9): менеджер CRM приглашает контакт ещё раз. */
+        post: operations["api_integration_v1_clients_invite_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/integration/v1/clients/handoff": {
         parameters: {
             query?: never;
@@ -13883,6 +13900,26 @@ export interface operations {
             query?: never;
             header?: never;
             path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_integration_v1_clients_invite_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                crm_client_id: number;
+            };
             cookie?: never;
         };
         requestBody?: never;

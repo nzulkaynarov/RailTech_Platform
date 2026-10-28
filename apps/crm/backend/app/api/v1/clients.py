@@ -39,6 +39,7 @@ from app.schemas.clients import (
 )
 from app.schemas.kb_admin import Created
 from app.schemas.leads import ActionResult
+from app.schemas.notices import InvitationOut, InviteRequest
 from app.security import audit
 from app.security.principal import Principal
 from app.services.documents import MAX_BYTES, NewDocument
@@ -92,8 +93,10 @@ async def get_client(client_id: int, _: ClientReader, container: ContainerDep) -
                 .order_by(ServiceRequest.id.desc())
             )
         ).all()
+        invitation = await container.portal_invites.current(session, client_id)
     return ClientDetail(
         **_client_out(client).model_dump(),
+        invitation=invitation,
         identities=linked,
         candidates=candidates,
         leads=[LeadBrief.model_validate(lead, from_attributes=True) for lead in leads],
@@ -101,6 +104,22 @@ async def get_client(client_id: int, _: ClientReader, container: ContainerDep) -
             ServiceRequestOut.model_validate(r, from_attributes=True) for r in requests
         ],
     )
+
+
+@router.post("/clients/{client_id}/invitation", response_model=InvitationOut)
+async def resend_invitation(
+    client_id: int, body: InviteRequest, who: ClientWriter, container: ContainerDep
+) -> InvitationOut:
+    """«Отправить приглашение в кабинет» выбранным каналом (D1-9): e-mail, Telegram или оба.
+
+    Ответ 200 всегда описывает итог попытки: `status=failed` с `error` и `error_text` — приглашение
+    не ушло (у контакта
+    нет почты, он не писал боту, почта не отработала). 409 `client_not_in_erp` — клиент ещё не
+    передан в ERP;
+    404 — клиента или контакта нет. `suggested_channel` в ответе — чем повторить, если не
+    получилось.
+    """
+    return await container.portal_invites.resend(who, client_id, body.channel, body.contact_id)
 
 
 @router.get("/clients/{client_id}/erp-receivables", response_model=ClientReceivablesOut)

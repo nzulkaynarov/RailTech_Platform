@@ -34,6 +34,7 @@ from app.services.conversation import ConversationService
 from app.services.leads import LeadService
 from app.services.settings import SettingsService
 from app.services.staff_telegram_link import StaffTelegramLinkService
+from app.services.start_links import StartLinkService
 
 logger = structlog.get_logger(__name__)
 
@@ -48,6 +49,7 @@ def build_dispatcher(
     rbac: Rbac | None = None,
     client_bot: ClientBotService | None = None,
     telegram_paused: Paused | None = None,
+    start_links: StartLinkService | None = None,
     staff_link: StaffTelegramLinkService | None = None,
 ) -> Dispatcher:
     dispatcher = Dispatcher(
@@ -59,6 +61,7 @@ def build_dispatcher(
         leads=leads,
         rbac=rbac,
         client_bot=client_bot or ClientBotService(sessions, settings),
+        start_links=start_links,
         staff_link=staff_link,
     )
     dispatcher.update.outer_middleware(IdempotencyMiddleware(sessions))

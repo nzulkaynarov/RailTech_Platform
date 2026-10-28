@@ -101,8 +101,9 @@ def test_repeat_with_same_crm_client_id_returns_200_and_same_ids_without_new_obj
 def test_repeat_reports_only_what_really_went_out(api):
     first = handoff(api, payload(channels=("email", "telegram")))
     again = handoff(api, payload(channels=("email", "telegram")))
-    assert first.json()["invite"]["sent_via"] == ["email"]
-    assert again.json()["invite"]["sent_via"] == ["email"]
+    assert first.json()["invite"]["sent_via"] == ["email", "telegram"]
+    assert again.json()["invite"]["sent_via"] == ["email", "telegram"]
+    assert again.json()["invite"]["error"] is None
 
 
 @pytest.mark.django_db
@@ -216,6 +217,7 @@ def test_inn_link_gives_new_contacts_no_right_to_act_and_sends_no_invite(api):
 
     assert resp.status_code == 201
     assert resp.json()["invite"]["sent_via"] == []
+    assert resp.json()["invite"]["error"] == "COMPANY_LINKED_BY_INN"
     new_contact = CrmContactMapping.objects.get(crm_contact_id=30031).contact
     assert new_contact.company_id == existing.pk
     assert new_contact.can_act is False
@@ -359,25 +361,51 @@ def test_request_created_is_emitted_once_with_source_crm_and_deal_in_request_sta
 def test_invite_sent_reaches_crm_with_only_channels_that_really_went_out(api):
     resp = handoff(api, payload(channels=("telegram", "email")))
 
-    assert resp.json()["invite"]["sent_via"] == ["email"]
+    assert resp.json()["invite"]["sent_via"] == ["email", "telegram"]
     sent = list(events("invite.sent"))
-    assert len(sent) == 1
+    assert len(sent) == 1, "`invite.sent` — только за ушедшее письмо; Telegram — отдельное событие боту"
     assert sent[0]["data"]["crm_client_id"] == 1001
     assert sent[0]["data"]["payload"]["channels"] == ["email"]
+    requested = list(events("invite.requested"))
+    assert len(requested) == 1
+    assert requested[0]["data"]["payload"] == {
+        "channel": "telegram",
+        "erp_contact_id": Contact.objects.get().pk,
+        "crm_contact_id": 10011,
+        "language": "ru",
+    }
     assert len(mail.outbox) == 1
 
 
 @pytest.mark.django_db
-def test_telegram_only_invite_is_not_claimed_as_sent(api):
+def test_telegram_only_invite_goes_to_the_crm_bot_not_pretended(api):
+    """D1-9: канал `telegram` доставляет бот CRM по событию; ERP не пишет в Telegram сама и письма не шлёт."""
     resp = handoff(api, payload(channels=("telegram",)))
 
     assert resp.status_code == 201
-    assert resp.json()["invite"]["sent_via"] == [], "ERP в Telegram не пишет (INVALID_CHANNEL у службы приглашений)"
+    assert resp.json()["invite"]["sent_via"] == ["telegram"]
+    assert resp.json()["invite"]["error"] is None
+    assert len(events("invite.requested")) == 1
     assert len(events("invite.sent")) == 0
     assert len(mail.outbox) == 0
-    # заявка и сопоставление при этом на месте — передача не теряется из-за недоставленного приглашения
+    contact = Contact.objects.get()
+    assert contact.invited_at is not None
+    # заявка и сопоставление при этом на месте
     assert resp.json()["erp_request_id"] is not None
     assert len(events("request.created")) == 1
+
+
+@pytest.mark.django_db
+def test_telegram_invite_without_telegram_account_is_an_error_with_a_code(api):
+    body = payload(channels=("telegram",))
+    body["contacts"][0]["telegram_user_id"] = None
+    resp = handoff(api, body)
+
+    assert resp.status_code == 201
+    assert resp.json()["invite"]["sent_via"] == []
+    assert resp.json()["invite"]["error"] == "CONTACT_TELEGRAM_REQUIRED"
+    assert len(events("invite.requested")) == 0
+    assert Contact.objects.get().invited_at is None
 
 
 @pytest.mark.django_db
@@ -386,6 +414,7 @@ def test_contact_without_email_gets_no_invite_but_handoff_succeeds(api):
     resp = handoff(api, body)
     assert resp.status_code == 201
     assert resp.json()["invite"]["sent_via"] == []
+    assert resp.json()["invite"]["error"] == "CONTACT_EMAIL_REQUIRED"
     assert len(events("invite.sent")) == 0
 
 

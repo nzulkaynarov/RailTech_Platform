@@ -420,6 +420,17 @@ class HandoffResult:
     erp_request_id: int | None
     invite_sent_via: list[str]
     cabinet_url: str
+    # Код причины, по которой приглашение не ушло ни одним каналом (`HandoffResponse.invite.error`,
+    # 0.8.0).
+    invite_error: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class InviteResult:
+    """Итог повторного приглашения (`POST /clients/{crm_client_id}/invite`, 0.8.0)."""
+
+    sent_via: list[str]
+    error: str | None
 
 
 def handoff_payload_to_dict(p: HandoffPayload) -> dict[str, Any]:
@@ -470,6 +481,10 @@ class ErpClient(Protocol):
         self, payload: HandoffPayload, *, idempotency_key: str | None = None
     ) -> HandoffResult: ...
 
+    async def invite_client(
+        self, crm_client_id: int, channel: str, crm_contact_id: int | None
+    ) -> InviteResult: ...
+
 
 def _handoff_conflict(response: httpx.Response) -> ConflictError:
     """409 передачи: `INN_CONFLICT` — ИНН уже у другого клиента CRM в ERP; повтор не поможет."""
@@ -508,6 +523,52 @@ class HttpxErpClient:
     async def handoff_client(
         self, payload: HandoffPayload, *, idempotency_key: str | None = None
     ) -> HandoffResult:
+        response = await self._post(
+            "/api/integration/v1/clients/handoff",
+            handoff_payload_to_dict(payload),
+            idempotency_key,
+        )
+        if response.status_code == 409:
+            raise _handoff_conflict(response)
+        self._check(response, ok=(200, 201))
+        try:
+            data = response.json()
+            invite = data.get("invite", {})
+            return HandoffResult(
+                erp_company_id=data["erp_company_id"],
+                erp_request_id=data.get("erp_request_id"),
+                invite_sent_via=invite.get("sent_via", []),
+                cabinet_url=invite.get("cabinet_url", ""),
+                invite_error=invite.get("error"),
+            )
+        except Exception as exc:
+            raise UpstreamUnavailableError(
+                f"bad json from erp: {exc}", reason=Reason.ERP_BAD_RESPONSE
+            ) from exc
+
+    async def invite_client(
+        self, crm_client_id: int, channel: str, crm_contact_id: int | None
+    ) -> InviteResult:
+        """Повторное приглашение контакта каналом; причина отказа — в `error`, не исключение."""
+        response = await self._post(
+            f"/api/integration/v1/clients/{crm_client_id}/invite",
+            {"channel": channel, "crm_contact_id": crm_contact_id},
+            None,
+        )
+        if response.status_code == 404:
+            raise ConflictError("client is not in erp", reason=Reason.CLIENT_NOT_IN_ERP)
+        self._check(response, ok=(200,))
+        try:
+            data = response.json()
+            return InviteResult(sent_via=list(data.get("sent_via", [])), error=data.get("error"))
+        except Exception as exc:
+            raise UpstreamUnavailableError(
+                f"bad json from erp: {exc}", reason=Reason.ERP_BAD_RESPONSE
+            ) from exc
+
+    async def _post(
+        self, path: str, body: dict[str, Any], idempotency_key: str | None
+    ) -> httpx.Response:
         connection = await resolve_connection(self._store, self._config, self._settings)
         if connection is None:
             raise ConflictError("erp connector is not configured", reason=Reason.ERP_NOT_CONFIGURED)
@@ -518,17 +579,15 @@ class HttpxErpClient:
                 reason=Reason.ERP_INVALID_URL,
                 field="base_url",
             )
-        idem_key = idempotency_key or str(uuid.uuid4())
         headers = {
             "Authorization": f"Bearer {connection.token}",
-            "Idempotency-Key": idem_key,
+            "Idempotency-Key": idempotency_key or str(uuid.uuid4()),
             "Accept": "application/json",
             "Content-Type": "application/json",
         }
-        body = handoff_payload_to_dict(payload)
-        url = f"{connection.base_url.rstrip('/')}/api/integration/v1/clients/handoff"
+        url = f"{connection.base_url.rstrip('/')}{path}"
         try:
-            response = await send(
+            return await send(
                 self._http, "POST", url, timeout_s=self._timeout_s, headers=headers, json=body
             )
         except httpx.TimeoutException as exc:
@@ -542,34 +601,21 @@ class HttpxErpClient:
                 type(exc).__name__, reason=Reason.ERP_UNAVAILABLE
             ) from exc
 
+    @staticmethod
+    def _check(response: httpx.Response, *, ok: tuple[int, ...]) -> None:
         if response.status_code == 429:
             raise rate_limited(response)
         if response.status_code in (401, 403):
             raise UpstreamUnavailableError(
                 f"HTTP {response.status_code}", reason=Reason.ERP_UNAUTHORIZED
             )
-        if response.status_code == 409:
-            raise _handoff_conflict(response)
         if response.status_code == 422:
             raise ValidationFailedError(
                 f"erp validation error: {response.text[:300]}",
                 reason=Reason.ERP_BAD_RESPONSE,
             )
-        if response.status_code not in (200, 201):
+        if response.status_code not in ok:
             raise UpstreamUnavailableError(
                 f"erp bad response: HTTP {response.status_code}",
                 reason=Reason.ERP_BAD_RESPONSE,
             )
-
-        try:
-            data = response.json()
-            return HandoffResult(
-                erp_company_id=data["erp_company_id"],
-                erp_request_id=data.get("erp_request_id"),
-                invite_sent_via=data.get("invite", {}).get("sent_via", []),
-                cabinet_url=data.get("invite", {}).get("cabinet_url", ""),
-            )
-        except Exception as exc:
-            raise UpstreamUnavailableError(
-                f"bad json from erp: {exc}", reason=Reason.ERP_BAD_RESPONSE
-            ) from exc

@@ -10,6 +10,7 @@ from app.models import (  # noqa: F401
     integrations,
     kb,
     leads,
+    notices,
     platform_roles,
     qualification,
     reply_templates,

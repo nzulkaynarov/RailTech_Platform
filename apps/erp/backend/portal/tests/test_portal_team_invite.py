@@ -214,8 +214,12 @@ def test_staff_invite_service_refuses_telegram_only(client_contact):
     from portal.services.invitation import invite_contact_to_portal
 
     result, error = invite_contact_to_portal(client_contact, channel="telegram")
-    assert result is None and error == "INVALID_CHANNEL"
-    assert mail.outbox == [] and not bus_support.published("invite.sent")
+    # D1-9: Telegram — событие для бота CRM; у контакта без привязанного Telegram и сопоставления с CRM — код причины.
+    assert result is None
+    assert error == "CONTACT_TELEGRAM_REQUIRED"
+    assert mail.outbox == []
+    assert not bus_support.published("invite.sent")
+    assert not bus_support.published("invite.requested")
 
 
 def test_staff_invite_service_both_sends_email_and_names_only_what_went_out(client_contact):

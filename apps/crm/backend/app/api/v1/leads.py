@@ -1,6 +1,6 @@
 """REST по лидам (SPEC §10.1): список, карточка, переписка, входящие, действия, решения."""
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
@@ -40,8 +40,9 @@ from app.schemas.leads import (
     Snooze,
     TeamMember,
 )
+from app.schemas.notices import NoticeOut
 from app.security.principal import Principal
-from app.services import handoff_notes
+from app.services import handoff_notes, web_lead_sla
 
 router = APIRouter(prefix="/api/v1", tags=["leads"])
 
@@ -199,8 +200,18 @@ async def get_lead(lead_id: int, _: Reader, container: ContainerDep) -> LeadDeta
         request_id = await service_requests.open_request_id(session, lead)
         client = await session.get(Client, lead.client_id) if lead.client_id is not None else None
         erp_company_id = client.erp_company_id if client is not None else None
+        confirmation = await container.client_notice_service.latest(
+            session, lead_id, "web_confirmation"
+        )
+        invitation = (
+            await container.portal_invites.current(session, client.id)
+            if client is not None
+            else None
+        )
     base = lead_out(lead, escalation, names)
     mode = await container.backoffice_mode()
+    now = datetime.now(UTC)
+    waiting = web_lead_sla.awaiting(lead.first_response_due_at, lead.assigned_user_id)
     return LeadDetail(
         **base.model_dump(),
         qualification=dict(lead.qualification or {}),
@@ -221,6 +232,14 @@ async def get_lead(lead_id: int, _: Reader, container: ContainerDep) -> LeadDeta
         client_in_erp=erp_company_id is not None,
         client_handoff_status=client.erp_handoff_status if client is not None else None,
         client_handoff_error=client.erp_handoff_error if client is not None else None,
+        first_response_due_at=lead.first_response_due_at if waiting else None,
+        first_response_overdue=web_lead_sla.overdue(
+            lead.first_response_due_at, lead.assigned_user_id, now
+        ),
+        confirmation=NoticeOut.model_validate(confirmation, from_attributes=True)
+        if confirmation is not None
+        else None,
+        invitation=invitation,
     )
 
 

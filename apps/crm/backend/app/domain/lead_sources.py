@@ -16,6 +16,9 @@ from typing import Any, Final
 from app.domain.bot_menu import normalize_phone
 from app.domain.stages import OwnerMode, Stage
 
+# Пометка заметки с повторным запросом с сайта (текст запроса — после неё).
+WEB_NOTE_MARK: Final = "[web] "
+
 
 class LeadSource(StrEnum):
     TELEGRAM = "telegram"

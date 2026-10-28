@@ -24,7 +24,7 @@ describe('вход с веба', () => {
     expect(screen.getByRole('link', { name: 'Я новый клиент' })).toHaveAttribute('href', '/new-client');
   });
 
-  it('«Войти»: magic-link → «Письмо отправлено»', async () => {
+  it('«Войти»: magic-link → «Проверьте почту»', async () => {
     const user = userEvent.setup();
     let sentBody: unknown;
     portalServer.events.on('request:start', async ({ request }) => {
@@ -35,7 +35,7 @@ describe('вход с веба', () => {
     await user.type(await screen.findByLabelText('E-mail'), 'a.karimov@toshlog.uz');
     await user.click(screen.getByRole('button', { name: 'Войти' }));
 
-    expect(await screen.findByRole('heading', { level: 1, name: 'Письмо отправлено' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Проверьте почту' })).toBeInTheDocument();
     expect(screen.getByText(/a\.karimov@toshlog\.uz/)).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/login/sent');
     expect(sentBody).toEqual({ email: 'a.karimov@toshlog.uz' });
@@ -271,6 +271,69 @@ describe('вход с веба', () => {
     expect(screen.getByRole('button', { name: 'Отправить запрос' })).toBeInTheDocument();
     const link = screen.getByRole('link', { name: 'Написать в Telegram' });
     expect(link.getAttribute('href')).toMatch(/^https:\/\/t\.me\/[^/?]+\?start=web$/);
+  });
+
+  describe('путь нового клиента на странице входа (D1-9)', () => {
+    afterEach(async () => {
+      window.localStorage.removeItem('cabinet.language');
+      await i18n.changeLanguage('ru');
+    });
+
+    it('«Проверьте почту»: текст не утверждает, что адрес есть, и ведёт нового клиента к запросу', async () => {
+      const user = userEvent.setup();
+      renderApp('/login');
+      await user.type(await screen.findByLabelText('E-mail'), 'neznakomets@example.com');
+      await user.click(screen.getByRole('button', { name: 'Войти' }));
+
+      expect(await screen.findByRole('heading', { level: 1, name: 'Проверьте почту' })).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          'Если адрес neznakomets@example.com зарегистрирован, мы отправили ссылку для входа. Она действует 15 минут и открывается один раз.',
+        ),
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/есть в кабинете/)).not.toBeInTheDocument();
+      expect(screen.getByText(/Письма нет\? Проверьте папку «Спам»/)).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Вы новый клиент? Оставьте запрос' })).toHaveAttribute('href', '/new-client');
+    });
+
+    it('ссылка «Вы новый клиент?» открывает форму запроса', async () => {
+      const user = userEvent.setup();
+      const { router } = renderApp('/login/sent');
+      await user.click(await screen.findByRole('link', { name: 'Вы новый клиент? Оставьте запрос' }));
+      expect(router.state.location.pathname).toBe('/new-client');
+      expect(await screen.findByRole('heading', { level: 1, name: 'Я новый клиент' })).toBeInTheDocument();
+    });
+
+    it('«Войти через Telegram» объясняет, что будет: откроется бот, вход по приглашению', async () => {
+      renderApp('/login');
+      const link = await screen.findByRole('link', { name: 'Войти через Telegram' });
+      const hint = screen.getByText('Откроется бот, вход по приглашению.');
+      expect(link).toHaveAccessibleDescription('Откроется бот, вход по приглашению.');
+      expect(hint).toBeInTheDocument();
+    });
+
+    it.each([
+      ['uz', 'Pochtangizni tekshiring', 'Yangi mijozmisiz? Soʻrov qoldiring', 'Bot ochiladi, kirish taklifnoma orqali.'],
+      ['en', 'Check your e-mail', 'New client? Leave a request', 'The bot will open; sign-in is by invitation.'],
+    ])('uz и en: заголовок, ссылка нового клиента и подпись Telegram (%s)', async (lang, title, link, hint) => {
+      window.localStorage.setItem('cabinet.language', lang);
+      await i18n.changeLanguage(lang);
+      const sent = renderApp('/login/sent');
+      expect(await screen.findByRole('heading', { level: 1, name: title })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: link })).toHaveAttribute('href', '/new-client');
+      sent.unmount();
+      renderApp('/login');
+      expect(await screen.findByText(hint)).toBeInTheDocument();
+    });
+
+    it('axe: «Проверьте почту» и подпись Telegram без нарушений', async () => {
+      const { container, router } = renderApp('/login/sent');
+      await screen.findByRole('heading', { level: 1, name: 'Проверьте почту' });
+      expect((await axe(container)).violations).toEqual([]);
+      await router.navigate('/login');
+      await screen.findByText('Откроется бот, вход по приглашению.');
+      expect((await axe(container)).violations).toEqual([]);
+    });
   });
 
   it('выход: POST /auth/logout → страница входа', async () => {
