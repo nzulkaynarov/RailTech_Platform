@@ -681,7 +681,9 @@ describe("Справочники", () => {
 
   it("курсы, коды ТН ВЭД и производители — в разделе «Номенклатура и поставщики», со ссылкой для тех, кому он открыт", async () => {
     await openTab("reference");
-    expect(await screen.findByText(/Курсы валют, коды ТН ВЭД и производители ведутся/)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/Курсы валют, коды ТН ВЭД и производители ведутся/),
+    ).toBeInTheDocument();
   });
 });
 
