@@ -16,7 +16,7 @@ import type {
 import { ACCOUNTANT_PERSON, MOCK_USER_CRM_ID, readMemos, writeMemos } from "./fixtures/approvals";
 import {
   ACCOUNTANT_NAME,
-  TODAY,
+  companyToday,
   type Tab,
   counts,
   dec,
@@ -287,7 +287,7 @@ export const edsPaymentsHandlers = [
     if (!(cents > 0) || !/^\d{1,12}\.\d{2}$/.test(body.amount)) {
       return validationBff("amount");
     }
-    if (!body.date || body.date > TODAY) return validationBff("date");
+    if (!body.date || body.date > companyToday()) return validationBff("date");
     const card = findInvoice(Number(params["id"]));
     if (!card) return notFound("Счёт не найден.");
     const proof = body.proof_id ? card.proofs.find((p) => p.id === body.proof_id) : undefined;
@@ -508,7 +508,7 @@ export const edsPaymentsHandlers = [
     if (ok.error) return ok.error;
     const body = (await request.json()) as PaymentMemoPayIn;
     if (dec(body.amount) <= 0) return validationBff("amount");
-    if (!body.paid_on || body.paid_on > TODAY) return validationBff("paid_on");
+    if (!body.paid_on || body.paid_on > companyToday()) return validationBff("paid_on");
     const memo = readMemos().find((m) => m.id === String(params["id"]) && m.kind === "memo");
     if (!memo?.amount) return notFound("Служебная записка не найдена.", "eds");
     const existing = memoPayments.get(memo.id);
