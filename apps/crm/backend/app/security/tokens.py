@@ -11,6 +11,7 @@ import jwt
 
 ALGORITHM: Final = "HS256"
 ISSUER: Final = "railtech-crm"
+_EPOCH: Final = datetime(1970, 1, 1, tzinfo=UTC)
 
 
 class TokenError(Exception):
@@ -22,8 +23,9 @@ class AccessClaims:
     user_id: int
     roles: tuple[str, ...]
     must_change_password: bool
-    # Когда токен выпущен (с точностью до секунды); None — токен собран кодом, не прочитан.
-    issued_at: datetime | None = None
+    # Версия пароля на момент выпуска: `password_changed_at` в микросекундах epoch (0 — не менялся).
+    # Токен с устаревшей версией выпущен до смены пароля и не принимается.
+    password_version: int = 0
 
 
 def issue_access(key: bytes, claims: AccessClaims, ttl_s: int, now: datetime | None = None) -> str:
@@ -35,6 +37,7 @@ def issue_access(key: bytes, claims: AccessClaims, ttl_s: int, now: datetime | N
         "sub": str(claims.user_id),
         "roles": list(claims.roles),
         "mcp": claims.must_change_password,
+        "pwv": claims.password_version,
         "iat": issued,
         "exp": issued + timedelta(seconds=ttl_s),
         "jti": uuid.uuid4().hex,
@@ -60,7 +63,7 @@ def decode_access(key: bytes, token: str) -> AccessClaims:
         user_id=int(payload["sub"]),
         roles=tuple(str(r) for r in payload.get("roles", [])),
         must_change_password=bool(payload.get("mcp", False)),
-        issued_at=datetime.fromtimestamp(int(payload["iat"]), UTC),
+        password_version=int(payload.get("pwv", 0)),
     )
 
 
@@ -76,8 +79,13 @@ def new_family() -> str:
     return uuid.uuid4().hex
 
 
-def closed_by_password_reset(issued_at: datetime | None, changed_at: datetime | None) -> bool:
-    """Токен выпущен раньше сброса пароля (сравнение по секундам: iat в JWT целый)."""
-    if issued_at is None or changed_at is None:
-        return False
-    return issued_at < changed_at.replace(microsecond=0)
+def password_version(changed_at: datetime | None) -> int:
+    """Версия пароля для токена: момент смены в микросекундах (точно, без плавающей точки)."""
+    if changed_at is None:
+        return 0
+    return (changed_at - _EPOCH) // timedelta(microseconds=1)
+
+
+def closed_by_password_change(created_at: datetime, changed_at: datetime | None) -> bool:
+    """Refresh-токен создан раньше смены пароля: точное сравнение, оба времени — часы приложения."""
+    return changed_at is not None and created_at < changed_at

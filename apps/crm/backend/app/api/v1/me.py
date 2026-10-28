@@ -89,6 +89,8 @@ async def update_me(body: MePatch, principal: Settled, container: ContainerDep) 
             system=body.notify_system,
             leads=body.notify_leads,
         )
+    if body.onboarding_done:
+        view = await svc.set_onboarding_done(principal.actor, principal.user_id)
     if profile:
         # Только свой профиль: `user_id` — из токена, должность и роли в тело не принимаются.
         view = await container.staff_profile.update(principal.actor, principal.user_id, **profile)

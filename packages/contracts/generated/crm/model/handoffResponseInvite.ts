@@ -31,11 +31,26 @@
  * одобрение КП директором ведёт маршрут EDS (EDS-03, решение архитектора волны 12 §4 п. 3), в ERP этого права больше нет.
  * CRM (карта прав и каталог ролей Платформы) перестаёт его выдавать в том же PR.
  *
- * OpenAPI spec version: 0.7.0
+ * 0.8.0 (волна 16, D1-9; аддитивно): `HandoffResponse.invite.error` — причина, по которой приглашение не ушло (код ERP);
+ * `POST /clients/{crm_client_id}/invite` — повторное приглашение контакта другим каналом из карточки клиента CRM;
+ * канал `telegram` в приглашении доставляется ботом CRM по событию `uz.railtech.erp.invite.requested.v1` (ERP в Telegram не
+ * пишет), поэтому `sent_via: [telegram]` значит «передано боту», а итог доставки CRM знает сама.
+ *
+ * 0.9.0 (волна 16, W16-D1-2; аддитивно): `POST /clients/{crm_client_id}/requests` — «Создать заявку» из CRM для клиента,
+ * уже переданного в ERP (CRM-03): срочность, файл письма директору (EDS), процесс `v3`, менеджер заявки = владелец сделки
+ * ERP (B-008); номер заявки `ЗВ-ГГГГ-NNN` выдаёт ERP (`Deal.number`, ERP-09) и возвращает в ответе; `number` у
+ * `DealListItem` — этот номер (у сделок, заведённых до ERP-09, тоже — номера выданы миграцией).
+ *
+ * OpenAPI spec version: 0.9.0
  */
 import type { HandoffResponseInviteSentViaItem } from "./handoffResponseInviteSentViaItem";
 
 export type HandoffResponseInvite = {
   sent_via: HandoffResponseInviteSentViaItem[];
   cabinet_url: string;
+  /**
+   * Код причины, по которой приглашение не ушло ни одним каналом (0.8.0): `CONTACT_EMAIL_REQUIRED`, `CONTACT_TELEGRAM_REQUIRED`, `EMAIL_DELIVERY_FAILED`, `INVALID_CHANNEL`, `CONTACT_WITHOUT_COMPANY`, `COMPANY_ARCHIVED`, `CONTACT_ARCHIVED`, `CONTACT_CHANNEL_REQUIRED`, `CONTACT_NOT_FOUND`, `COMPANY_LINKED_BY_INN` (передача нашла компанию по ИНН — приглашение не отправлено до проверки контактов); `null` — ушло или приглашение не запрашивалось. Терпимый читатель: незнакомый код CRM показывает как «причина не определена».
+   * @nullable
+   */
+  error?: string | null;
 };

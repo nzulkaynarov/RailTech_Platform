@@ -9,7 +9,7 @@ from typing import Any
 import httpx
 import structlog
 from aiogram import Bot, F, Router
-from aiogram.filters import Command, CommandStart
+from aiogram.filters import Command, CommandObject, CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.types import (
     BufferedInputFile,
@@ -38,6 +38,7 @@ from app.schemas.settings import AppSettings, Language
 from app.services.client_bot import ClientBotService
 from app.services.conversation import ConversationService, Incoming, Outgoing
 from app.services.settings import SettingsService
+from app.services.start_links import StartLinkService
 
 logger = structlog.get_logger(__name__)
 router = Router(name="client-bot")
@@ -111,9 +112,23 @@ def _markup(cfg: AppSettings, item: Outgoing) -> InlineKeyboardMarkup | None:
 
 @router.message(CommandStart(), F.from_user)
 async def on_start(
-    message: Message, bot: Bot, conversation: ConversationService, settings: SettingsService
+    message: Message,
+    bot: Bot,
+    conversation: ConversationService,
+    settings: SettingsService,
+    command: CommandObject,
+    start_links: StartLinkService | None = None,
 ) -> None:
     out = await conversation.start(_incoming(message, "/start"))
+    if start_links is not None and command.args:
+        # Deep-link (D1-9): `web`, `deal_<id>`, подписанная ссылка из письма. Ошибка разбора не
+        # ломает приветствие.
+        try:
+            extra = await start_links.apply(_user(message).id, command.args)
+        except Exception:
+            logger.exception("start_link_failed")
+        else:
+            out = [*out, *(Outgoing(text) for text in extra.texts)]
     await send(bot, message.chat.id, out, settings)
 
 

@@ -17,10 +17,12 @@ TASK_MODULES = (
     "app.tasks.documents",
     "app.tasks.monitoring",
     "app.tasks.mail",
+    "app.tasks.client_notices",
     "app.tasks.external_services",
     "app.tasks.bus",
     "app.tasks.erp_users",
     "app.tasks.erp_handoff",
+    "app.tasks.erp_requests",
 )
 
 queue = procrastinate.App(

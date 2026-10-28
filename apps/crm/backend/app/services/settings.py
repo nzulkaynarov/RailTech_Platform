@@ -15,6 +15,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.domain.platform_links import LinkBase
 from app.domain.public_urls import is_schema_default
 from app.models.leads import Setting
 from app.schemas.settings import SETTINGS_MODELS, AppSettings
@@ -35,9 +36,11 @@ class SettingsService:
         ttl_s: float = 30.0,
         clock: Callable[[], float] = time.monotonic,
         crm_base_url_default: str | None = None,
+        platform_url: str | None = None,
     ) -> None:
         self._sessions = session_factory
         self._crm_base_url_default = crm_base_url_default
+        self._platform_url = platform_url
         self._ttl = ttl_s
         self._clock = clock
         self._cached: AppSettings | None = None
@@ -46,6 +49,10 @@ class SettingsService:
 
     async def get(self) -> AppSettings:
         return (await self._snapshot())[1]
+
+    async def links(self) -> LinkBase:
+        """Адреса для ссылок уведомлений: Платформа (окружение) и старая CRM («Компания»)."""
+        return LinkBase(self._platform_url, (await self.get()).company.crm_base_url)
 
     async def _snapshot(self) -> tuple[AppSettings, AppSettings]:
         """(сохранённые значения, эффективные с подменой из окружения), кэш по TTL."""
@@ -172,7 +179,7 @@ def _merge(rows: dict[str, dict[str, Any]]) -> AppSettings:
         if key not in rows:
             continue
         try:
-            values[key] = model.model_validate(rows[key])
+            values[key] = model.model_validate(rows[key], context={"lenient": True})
         except ValidationError as exc:
             logger.error("settings_invalid_value_ignored", key=key, errors=exc.error_count())
     return AppSettings(**values)

@@ -190,6 +190,7 @@ CRM_BACKEND: Final[dict[str, dict[str, tuple[str, ...]]]] = {
             "settings:read",
             "reply_templates:read",
             "kb:read",
+            "tickets:read",
         ),
         "full": (
             "users:read",
@@ -214,6 +215,8 @@ CRM_BACKEND: Final[dict[str, dict[str, tuple[str, ...]]]] = {
             "reply_templates:write",
             "sandbox:use",
             "export:read",
+            "tickets:read",
+            "tickets:write",
         ),
     },
     "company.settings": {},

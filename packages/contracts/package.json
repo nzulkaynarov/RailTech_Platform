@@ -8,13 +8,14 @@
     "lint:openapi": "redocly lint openapi/erp-portal.yaml openapi/erp-integration.yaml openapi/platform-bff.yaml openapi/eds.yaml && redocly lint --config redocly.internal.yaml openapi/erp-internal.yaml && redocly lint --config redocly.crm.yaml openapi/crm.yaml",
     "lint:asyncapi": "node scripts/validate-asyncapi.mjs events/asyncapi.yaml",
     "lint:mcp": "ajv compile --spec=draft2020 -c ajv-formats -s mcp-tools.schema.json && ajv validate --spec=draft2020 -c ajv-formats -s mcp-tools.schema.json -d mcp-tools.json",
-    "lint": "pnpm lint:openapi && pnpm lint:asyncapi && pnpm lint:mcp && pnpm lint:platform",
+    "lint": "pnpm lint:openapi && pnpm lint:asyncapi && pnpm lint:mcp && pnpm lint:platform && pnpm lint:documents",
     "gen:types": "openapi-typescript openapi/erp-portal.yaml -o generated/erp-portal.d.ts && openapi-typescript openapi/erp-integration.yaml -o generated/erp-integration.d.ts && openapi-typescript openapi/platform-bff.yaml -o generated/platform-bff.d.ts && openapi-typescript openapi/eds.yaml -o generated/eds.d.ts",
     "gen:crm": "orval --config orval.config.ts",
     "generate": "pnpm gen:types && pnpm gen:crm && prettier --write generated --log-level warn",
     "check": "pnpm lint && pnpm generate && pnpm typecheck",
     "typecheck": "tsc -p tsconfig.json",
-    "lint:platform": "ajv compile --spec=draft2020 -s platform-rbac.schema.json && ajv validate --spec=draft2020 -s platform-rbac.schema.json -d platform-rbac.yaml && ajv compile --spec=draft2020 -s client-statuses.schema.json && ajv validate --spec=draft2020 -s client-statuses.schema.json -d client-statuses.yaml"
+    "lint:platform": "ajv compile --spec=draft2020 -s platform-rbac.schema.json && ajv validate --spec=draft2020 -s platform-rbac.schema.json -d platform-rbac.yaml && ajv compile --spec=draft2020 -s client-statuses.schema.json && ajv validate --spec=draft2020 -s client-statuses.schema.json -d client-statuses.yaml",
+    "lint:documents": "ajv compile --spec=draft2020 -s documents/body.schema.json && ajv validate --spec=draft2020 -s documents/body.schema.json -d \"documents/examples/*.json\" && ajv compile --spec=draft2020 -s documents/variables.schema.json && ajv validate --spec=draft2020 -s documents/variables.schema.json -d documents/variables.yaml"
   },
   "devDependencies": {
     "@asyncapi/parser": "3.6.3",

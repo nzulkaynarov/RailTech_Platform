@@ -2,7 +2,7 @@
     "openapi": "3.0.3",
     "info": {
         "title": "ERP API",
-        "version": "1.0.0",
+        "version": "1.1.0",
         "description": "ERP Platform API. Supports deal lifecycle management, quoting, product catalog (PIM), Excel imports, and real-time notifications via WebSocket.",
         "contact": {
             "name": "ERP API Support",
@@ -31,6 +31,54 @@
             "get": {
                 "operationId": "api_integration_v1_catalog_search_retrieve",
                 "description": "GET /api/integration/v1/catalog/search",
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/integration/v1/clients/{crm_client_id}/invite": {
+            "post": {
+                "operationId": "api_integration_v1_clients_invite_create",
+                "description": "POST /api/integration/v1/clients/{crm_client_id}/invite (0.8.0, D1-9): менеджер CRM приглашает контакт ещё раз.",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "crm_client_id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "api"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "No response body"
+                    }
+                }
+            }
+        },
+        "/api/integration/v1/clients/{crm_client_id}/requests": {
+            "post": {
+                "operationId": "api_integration_v1_clients_requests_create",
+                "description": "POST /api/integration/v1/clients/{crm_client_id}/requests — «Создать заявку» CRM (шов 0.9.0, CRM-03).",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "crm_client_id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
                 "tags": [
                     "api"
                 ],
@@ -11550,7 +11598,7 @@
         "/api/v1/crm/deals/": {
             "get": {
                 "operationId": "crm_deals_list",
-                "description": "Returns deals accessible to the current user. Admins/managers see all; clients see only their company's deals.",
+                "description": "Returns deals accessible to the current user. Admins/managers see all; clients see only their company's deals. `search` finds deals by number (ЗВ-ГГГГ-NNN / ПР-ГГГГ-NNN — the same NNN under either prefix, latin ZV/PR and spaces accepted), title or client company name (ERP-09).",
                 "summary": "List deals",
                 "parameters": [
                     {
@@ -25903,6 +25951,30 @@
                         "type": "integer",
                         "readOnly": true
                     },
+                    "number": {
+                        "type": "string",
+                        "readOnly": true,
+                        "title": "Номер заявки",
+                        "description": "ЗВ-ГГГГ-NNN; после принятия КП клиентом — ПР-ГГГГ-NNN (тот же NNN)"
+                    },
+                    "process": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ProcessEnum"
+                            }
+                        ],
+                        "readOnly": true,
+                        "title": "Процесс заявки"
+                    },
+                    "urgency": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/UrgencyEnum"
+                            }
+                        ],
+                        "readOnly": true,
+                        "title": "Срочность"
+                    },
                     "company": {
                         "type": "integer",
                         "nullable": true,
@@ -26042,10 +26114,13 @@
                     "created_at",
                     "execution_complete",
                     "id",
+                    "number",
+                    "process",
                     "quotes",
                     "request_lines_count",
                     "request_text",
                     "updated_at",
+                    "urgency",
                     "viewer_can_release",
                     "viewer_is_seller"
                 ]
@@ -26098,6 +26173,30 @@
                     "id": {
                         "type": "integer",
                         "readOnly": true
+                    },
+                    "number": {
+                        "type": "string",
+                        "readOnly": true,
+                        "title": "Номер заявки",
+                        "description": "ЗВ-ГГГГ-NNN; после принятия КП клиентом — ПР-ГГГГ-NNN (тот же NNN)"
+                    },
+                    "process": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ProcessEnum"
+                            }
+                        ],
+                        "readOnly": true,
+                        "title": "Процесс заявки"
+                    },
+                    "urgency": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/UrgencyEnum"
+                            }
+                        ],
+                        "readOnly": true,
+                        "title": "Срочность"
                     },
                     "title": {
                         "type": "string",
@@ -26201,7 +26300,10 @@
                     "created_at",
                     "execution_complete",
                     "id",
+                    "number",
+                    "process",
                     "total_value",
+                    "urgency",
                     "viewer_can_release",
                     "viewer_is_seller"
                 ]
@@ -31067,6 +31169,14 @@
                     "name"
                 ]
             },
+            "ProcessEnum": {
+                "enum": [
+                    "legacy",
+                    "v3"
+                ],
+                "type": "string",
+                "description": "* `legacy` - legacy\n* `v3` - v3"
+            },
             "Product": {
                 "type": "object",
                 "description": "Strip supplier-cost fields (offers / base_price) from viewers who don't own\nthe product. Only the OWNING seller's team + platform admins see cost & supplier\nidentity — clients, other sellers and anon never do (C1 cost-leak fix). React was\nonly hiding these client-side; the data still travelled in the API response.",
@@ -32368,6 +32478,10 @@
                         "readOnly": true,
                         "description": "Каналы отправки клиенту, выбранные директором при одобрении (telegram, cabinet, email)"
                     },
+                    "send_report": {
+                        "readOnly": true,
+                        "description": "Итог автоотправки после одобрения директором (ERP-11): requested, sent_via, skipped [{channel, reason}], error; пусто — автоотправки не было"
+                    },
                     "items": {
                         "type": "array",
                         "items": {
@@ -32437,6 +32551,7 @@
                     "public_access_token",
                     "public_token_revoked",
                     "send_channels",
+                    "send_report",
                     "status",
                     "subtotal_excl_vat",
                     "total_incl_vat",
@@ -34457,6 +34572,14 @@
                     "code",
                     "name"
                 ]
+            },
+            "UrgencyEnum": {
+                "enum": [
+                    "normal",
+                    "urgent"
+                ],
+                "type": "string",
+                "description": "* `normal` - Обычная\n* `urgent` - Срочная"
             },
             "User": {
                 "type": "object",

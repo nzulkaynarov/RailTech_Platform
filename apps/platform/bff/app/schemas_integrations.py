@@ -54,6 +54,7 @@ ServiceAction = Literal[
     "write_owner",
     "write_hosting",
     "disable_provider",
+    "open_bus",
 ]
 MailStatus = Literal["queued", "sent", "failed", "skipped_no_smtp"]
 

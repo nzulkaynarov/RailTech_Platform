@@ -52,6 +52,14 @@ class FeedBackends:
             "approvals": {"count": 0, "next": None, "previous": None, "results": []},
             "deals": {"count": 0, "next": None, "previous": None, "results": []},
             "notifications": {"count": 0, "next": None, "previous": None, "results": []},
+            # Лента CRM (`staff_notifications`, W15-H7): пустая, пока тест не положит строки
+            "crm_notifications": {"items": [], "unread_count": 0},
+            # Новые обращения сотрудников для «Моих задач» администратора (W15-H7)
+            "crm_tickets": {
+                "items": [],
+                "total": 0,
+                "counts": {"new": 0, "in_progress": 0, "resolved": 0},
+            },
             "documents": {"results": []},
             "activity_logs": (403, {"detail": "PLATFORM_ADMIN_REQUIRED"}),
             "timeline": [],
@@ -65,7 +73,15 @@ class FeedBackends:
             "covering": self._crm("covering", router.get(f"{CRM_URL}/api/v1/me/covering")),
             "leads": self._crm("leads", router.get(f"{CRM_URL}/api/v1/leads")),
             "clients": self._crm("clients", router.get(f"{CRM_URL}/api/v1/clients")),
+            "notifications": self._crm(
+                "crm_notifications", router.get(f"{CRM_URL}/api/v1/me/notifications")
+            ),
+            "tickets": self._crm("crm_tickets", router.get(f"{CRM_URL}/api/v1/staff-tickets")),
         }
+        self.crm_read_status = 204
+        self.crm_read = router.post(
+            url__regex=re.compile(rf"^{CRM_URL}/api/v1/me/notifications/(\d+/read|read-all)$")
+        ).mock(side_effect=lambda _r: httpx.Response(self.crm_read_status))
         self.lead = router.get(url__regex=re.compile(rf"^{CRM_URL}/api/v1/leads/\d+$")).mock(
             side_effect=lambda _r: self._respond("lead", self.crm_down)
         )

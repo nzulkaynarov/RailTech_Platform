@@ -205,7 +205,8 @@
       "telegram_linked": "Привязал Telegram",
       "telegram_unlinked": "Отвязал Telegram",
       "deputy_set": "Назначил заместителя на время отсутствия",
-      "deputy_cleared": "Снял замещение"
+      "deputy_cleared": "Снял замещение",
+      "onboarding_done": "Закрыл приветствие в Платформе"
     },
     "setup": {
       "admin_created": "Первый администратор (мастер настройки)"
@@ -281,6 +282,11 @@
     "external_service": {
       "disable": "Выключил внешний сервис",
       "enable": "Включил внешний сервис"
+    },
+    "staff_ticket": {
+      "create": "Написал администратору",
+      "reply": "Ответил на обращение сотрудника",
+      "status": "Изменил статус обращения сотрудника"
     }
   },
   "entities": {
@@ -303,7 +309,8 @@
     "integration_secret": "Ключ подключения",
     "integration": "Подключение",
     "external_service": "Внешний сервис",
-    "platform_role": "Роль Платформы"
+    "platform_role": "Роль Платформы",
+    "staff_ticket": "Обращение сотрудника"
   },
   "fields": {
     "email": "Электронная почта",

@@ -217,6 +217,27 @@ function seedServices(): ExternalService[] {
       summary: "Сервис копирования жив, копия свежая",
       fix_card: "storage",
     }),
+    service("wal_archive", "Архив журнала базы (WAL)", "Непрерывная копия базы на 14 суток", {
+      system: "ensemble",
+      summary: "Архив пишется: последний сегмент 1 мин назад, базовая копия 7.5 ч назад",
+      fix_card: "storage",
+    }),
+    service("redis_broker", "Redis: брокер", "Очереди и каналы ERP, очереди Langfuse", {
+      system: "ensemble",
+      summary: "Брокер Redis отвечает, память 41 %",
+    }),
+    service("redis_cache", "Redis: кэш", "Сессии Платформы, кэш и троттлинг ERP", {
+      system: "ensemble",
+      summary: "Кэш Redis отвечает, память 23 %",
+    }),
+    service("bus_dlq", "Шина: недоставленные события", "События шины, не доставленные подписчику", {
+      system: "ensemble",
+      summary: "Шина: недоставленных событий нет",
+    }),
+    service("eds_rights", "Права сотрудников в EDS", "Публикация прав EDS на шину", {
+      system: "ensemble",
+      summary: "Права EDS опубликованы",
+    }),
     service("erp.mail", "Почта ERP", "Письма клиентам и сотрудникам бэк-офиса из ERP", {
       system: "erp",
       source: "erp",

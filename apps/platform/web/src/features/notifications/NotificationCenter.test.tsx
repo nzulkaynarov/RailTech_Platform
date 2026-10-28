@@ -45,9 +45,9 @@ describe("Центр уведомлений", () => {
     expect(tabs).toHaveLength(4);
     const list = await within(center).findByRole("list", { name: "Уведомления" });
     expect(within(list).getAllByRole("listitem")).toHaveLength(5);
-    // непрочитанное помечено словом, не только цветом; КП (раздел без экрана) — кнопка «Где посмотреть», а не ссылка
+    // непрочитанное помечено словом, не только цветом; договор (раздел без экрана) — кнопка «Где посмотреть», а не ссылка
     const first = within(list).getAllByRole("button", { name: /Где посмотреть/ })[0] as HTMLElement;
-    expect(first).toHaveTextContent("Новое: КП-2026/118 ждёт вашего согласования");
+    expect(first).toHaveTextContent("Новое: Клиент согласовал проект договора ДОГ-2026/091");
     expect(first).toHaveAttribute("aria-expanded", "false");
   });
 
@@ -117,7 +117,7 @@ describe("Центр уведомлений", () => {
     });
 
     const item = await within(center).findByRole("button", {
-      name: /Где посмотреть.*КП-2026\/118 ждёт/,
+      name: /Где посмотреть.*ДОГ-2026\/091/,
     });
     fireEvent.click(item);
 
@@ -126,11 +126,11 @@ describe("Центр уведомлений", () => {
     expect(within(where).getByText(/Сейчас — в старом ERP/)).toBeInTheDocument();
     expect(
       await within(where).findByRole("link", { name: /Открыть в старом ERP/ }),
-    ).toHaveAttribute("href", "http://erp.localhost:8088/#crm-quotes");
+    ).toHaveAttribute("href", "http://erp.localhost:8088/#crm-deals");
     expect(router.state.location.pathname).toBe("/dashboard/queue");
     expect(center).toBeInTheDocument();
     await waitFor(() => {
-      expect(requests).toContain("/api/v1/notifications/erp:1/read");
+      expect(requests).toContain("/api/v1/notifications/erp:2/read");
     });
     fireEvent.click(item);
     expect(item).toHaveAttribute("aria-expanded", "false");

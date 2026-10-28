@@ -31,7 +31,17 @@
  * одобрение КП директором ведёт маршрут EDS (EDS-03, решение архитектора волны 12 §4 п. 3), в ERP этого права больше нет.
  * CRM (карта прав и каталог ролей Платформы) перестаёт его выдавать в том же PR.
  *
- * OpenAPI spec version: 0.7.0
+ * 0.8.0 (волна 16, D1-9; аддитивно): `HandoffResponse.invite.error` — причина, по которой приглашение не ушло (код ERP);
+ * `POST /clients/{crm_client_id}/invite` — повторное приглашение контакта другим каналом из карточки клиента CRM;
+ * канал `telegram` в приглашении доставляется ботом CRM по событию `uz.railtech.erp.invite.requested.v1` (ERP в Telegram не
+ * пишет), поэтому `sent_via: [telegram]` значит «передано боту», а итог доставки CRM знает сама.
+ *
+ * 0.9.0 (волна 16, W16-D1-2; аддитивно): `POST /clients/{crm_client_id}/requests` — «Создать заявку» из CRM для клиента,
+ * уже переданного в ERP (CRM-03): срочность, файл письма директору (EDS), процесс `v3`, менеджер заявки = владелец сделки
+ * ERP (B-008); номер заявки `ЗВ-ГГГГ-NNN` выдаёт ERP (`Deal.number`, ERP-09) и возвращает в ответе; `number` у
+ * `DealListItem` — этот номер (у сделок, заведённых до ERP-09, тоже — номера выданы миграцией).
+ *
+ * OpenAPI spec version: 0.9.0
  */
 
 export * from "./actStatus";
@@ -43,6 +53,12 @@ export * from "./availability";
 export * from "./catalogItem";
 export * from "./catalogItemKind";
 export * from "./catalogMode";
+export * from "./clientRequestIn";
+export * from "./clientRequestInNeed";
+export * from "./clientRequestInOwner";
+export * from "./clientRequestInProcess";
+export * from "./clientRequestInUrgency";
+export * from "./clientRequestOut";
 export * from "./companySummary";
 export * from "./contact";
 export * from "./contactFields";
@@ -79,6 +95,10 @@ export * from "./handoffResponseInviteSentViaItem";
 export * from "./health";
 export * from "./healthStatus";
 export * from "./idempotencyKeyParameter";
+export * from "./inviteRequest";
+export * from "./inviteRequestChannel";
+export * from "./inviteResponse";
+export * from "./inviteResponseSentViaItem";
 export * from "./invoiceStatus";
 export * from "./invoiceSummary";
 export * from "./language";

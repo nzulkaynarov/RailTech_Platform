@@ -12,8 +12,9 @@
 - Заявка начинается со стадии FSM `DRAFT` (`stages.initial_fsm_stage`); `request.created` уходит с `source=crm` — его
   `request.created(source=crm)` публикует `_create_request` на шину rt_bus в транзакции передачи.
 - Согласие (`consent.given_at`, `consent.version`) сохраняется на компании как пришло.
-- В `invite.sent_via` — только то, что реально ушло (`invite_contact_to_portal`): письмо; Telegram принадлежит CRM, ERP в
-  него не пишет.
+- В `invite.sent_via` — только то, что реально ушло (`invite_contact`): письмо и/или передача боту CRM (`telegram`, событие
+  `invite.requested`, D1-9: ERP в Telegram не пишет, доставляет бот); `invite.error` — код причины, если не ушло ничего
+  (CRM показывает её менеджеру словами).
 
 Параллельные вызовы одного клиента (двойной клик, повтор по таймауту) и двух клиентов с одним ИНН сериализует
 транзакционная рекомендательная блокировка PostgreSQL: сначала по `crm_client_id`, затем по ИНН. Уникальные
@@ -31,7 +32,7 @@ from django.db import IntegrityError, connection, transaction
 from django.utils.dateparse import parse_datetime
 from parties.models import Company, CompanyType, Contact
 from portal.models import PortalRequestLine
-from portal.services.invitation import invite_contact_to_portal
+from portal.services.invitation import invite_contact
 
 from crm.models import ActivityLog, Deal
 
@@ -61,7 +62,11 @@ def _cabinet_url() -> str:
     return getattr(settings, "CABINET_URL", "http://cabinet.localhost")
 
 
-def _repeat_response(mapping: CrmClientMapping) -> Dict[str, Any]:
+def _requested_channels(data: Dict[str, Any]) -> List[str]:
+    return list((data.get("invite") or {}).get("channels") or ["email"])
+
+
+def _repeat_response(mapping: CrmClientMapping, channels: Optional[List[str]] = None) -> Dict[str, Any]:
     """Ответ на повторную передачу: те же id; в `sent_via` — то, что передача реально отправила контакту.
 
     Заявка — та, что создала сама передача (`handoff_deal`), а не самая старая сделка компании: у компании, найденной
@@ -71,10 +76,23 @@ def _repeat_response(mapping: CrmClientMapping) -> Dict[str, Any]:
     company = mapping.company
     primary = company.contacts.filter(is_primary=True).first() or company.contacts.first()
     invited = bool(primary and primary.invited_at and primary.invited_at >= mapping.created_at)
+    sent_via: List[str] = []
+    if invited and primary is not None:
+        # Каналы первого вызова повтор не хранит: восстанавливаем по контакту и каналам повторного запроса — письмо, если
+        # есть адрес, и Telegram, если он привязан и сопоставлен с контактом CRM (`invite.requested` уходит только так).
+        wanted = channels or ["email"]
+        if "email" in wanted and (primary.email or "").strip():
+            sent_via.append("email")
+        if (
+            "telegram" in wanted
+            and primary.telegram_user_id
+            and CrmContactMapping.objects.filter(contact=primary).exists()
+        ):
+            sent_via.append("telegram")
     return {
         "erp_company_id": company.id,
         "erp_request_id": mapping.handoff_deal_id,
-        "invite": {"sent_via": ["email"] if invited else [], "cabinet_url": _cabinet_url()},
+        "invite": {"sent_via": sent_via, "cabinet_url": _cabinet_url(), "error": None},
     }
 
 
@@ -175,9 +193,13 @@ def _create_contacts(
 def _create_request(company: Company, contact: Optional[Contact], data: Dict[str, Any], crm_client_id: int) -> Deal:
     """Заявка из передачи: стадия FSM `DRAFT`, `request.created(source=crm)` — на шину в транзакции передачи."""
     summary = data["need"]["summary"]
+    from .client_requests import manager_for
+
     deal = Deal(
         company=company,
         contact=contact,
+        # Менеджер заявки CRM — владелец сделки ERP: отправляет одобренное КП (`quote.send`, B-008).
+        manager=manager_for((data.get("owner") or {}).get("crm_user_id")),
         stage=stages.initial_fsm_stage(),
         title=f"Заявка: {company.name}",
         notes=summary,
@@ -197,16 +219,15 @@ def _create_request(company: Company, contact: Optional[Contact], data: Dict[str
     return deal
 
 
-def _invite(contact: Optional[Contact], channels: List[str]) -> List[str]:
-    """Приглашение в Cabinet; возвращает каналы, по которым оно РЕАЛЬНО ушло (сбой доставки передачу не роняет)."""
+def _invite(contact: Optional[Contact], channels: List[str]) -> Tuple[List[str], Optional[str]]:
+    """Приглашение в Cabinet: (каналы, по которым оно РЕАЛЬНО ушло, код причины, если не ушло ничего). Сбой передачу не роняет."""
     if contact is None:
-        return []
+        return [], "CONTACT_CHANNEL_REQUIRED"
     effective = "both" if len(channels) > 1 else (channels[0] if channels else "email")
-    result, error = invite_contact_to_portal(contact=contact, channel=effective, language=contact.language)
-    if error:
-        logger.info("Handoff invite for contact #%s was not sent: %s", contact.id, error)
-        return []
-    return [result["channel"]]
+    outcome = invite_contact(contact=contact, channel=effective, language=contact.language)
+    if outcome.error:
+        logger.info("Handoff invite for contact #%s was not sent: %s", contact.id, outcome.error)
+    return list(outcome.sent_via), outcome.error
 
 
 def _log_linked_by_inn(company: Company, deal: Optional[Deal], crm_client_id: int) -> None:
@@ -239,7 +260,7 @@ def process_client_handoff(data: Dict[str, Any]) -> Tuple[Dict[str, Any], bool]:
         mapping = CrmClientMapping.objects.filter(crm_client_id=crm_client_id).select_related("company").first()
         if mapping is None:
             raise
-        return _repeat_response(mapping), False
+        return _repeat_response(mapping, _requested_channels(data)), False
 
 
 def _handoff(data: Dict[str, Any], crm_client_id: int) -> Tuple[Dict[str, Any], bool]:
@@ -247,7 +268,7 @@ def _handoff(data: Dict[str, Any], crm_client_id: int) -> Tuple[Dict[str, Any], 
 
     mapping = CrmClientMapping.objects.filter(crm_client_id=crm_client_id).select_related("company").first()
     if mapping is not None:
-        return _repeat_response(mapping), False
+        return _repeat_response(mapping, _requested_channels(data)), False
 
     company, linked_by_inn = _get_or_create_company(data, crm_client_id)
     # Сопоставление — ДО сделки и приглашения: события строятся по нему.
@@ -265,11 +286,12 @@ def _handoff(data: Dict[str, Any], crm_client_id: int) -> Tuple[Dict[str, Any], 
         # пока сотрудник не проверит контакты (Q-FIX31-5).
         _log_linked_by_inn(company, deal, crm_client_id)
         sent_via: List[str] = []
+        invite_error: Optional[str] = "COMPANY_LINKED_BY_INN"
     else:
-        sent_via = _invite(primary, list(data.get("invite", {}).get("channels") or ["email"]))
+        sent_via, invite_error = _invite(primary, list(data.get("invite", {}).get("channels") or ["email"]))
 
     return {
         "erp_company_id": company.id,
         "erp_request_id": deal.pk if deal else None,
-        "invite": {"sent_via": sent_via, "cabinet_url": _cabinet_url()},
+        "invite": {"sent_via": sent_via, "cabinet_url": _cabinet_url(), "error": invite_error},
     }, True

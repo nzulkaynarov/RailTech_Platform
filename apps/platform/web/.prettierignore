@@ -4,3 +4,4 @@ pnpm-lock.yaml
 test-results
 playwright-report
 src/generated/kb-docs
+src/generated/help-articles

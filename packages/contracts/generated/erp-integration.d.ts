@@ -29,6 +29,34 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/clients/{crm_client_id}/invite": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Повторное приглашение контакта клиента в Cabinet выбранным каналом
+     * @description Менеджер CRM нажимает «Отправить повторно другим каналом» в карточке клиента. `email` — ERP отправляет письмо сама
+     *     (`portal_invitation`); `telegram` — ERP публикует `uz.railtech.erp.invite.requested.v1`, доставляет бот CRM;
+     *     `both` — оба канала. Контакт — по `crm_contact_id`, без него — основной контакт компании. Ответ всегда 200:
+     *     `error` называет причину, по которой приглашение не ушло ни одним из каналов
+     *     (`CONTACT_EMAIL_REQUIRED`, `CONTACT_TELEGRAM_REQUIRED`, `EMAIL_DELIVERY_FAILED`, `INVALID_CHANNEL`,
+     *     `CONTACT_WITHOUT_COMPANY`, `COMPANY_ARCHIVED`, `CONTACT_ARCHIVED`, `CONTACT_NOT_FOUND` — в компании нет такого контакта
+     *     или он не сопоставлен с контактом CRM); CRM переводит её в слова для менеджера. 404 — неизвестен сам клиент.
+     *     Не идемпотентно по смыслу (каждое нажатие — новое приглашение), `Idempotency-Key` защищает только от
+     *     повтора одного запроса.
+     */
+    post: operations["inviteClientContact"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/contacts/{crm_contact_id}": {
     parameters: {
       query?: never;
@@ -108,6 +136,34 @@ export interface paths {
     get: operations["listDealDocuments"];
     put?: never;
     post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/clients/{crm_client_id}/requests": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Новая заявка клиента, переданного в ERP («Создать заявку» CRM, CRM-03)
+     * @description Менеджер CRM создаёт заявку из лида или из карточки клиента (SPEC-v3 §3.1 шаг 2). Клиент уже передан
+     *     (`POST /clients/handoff` создал сопоставление `crm_client_id`); иначе — 404 `CLIENT_NOT_FOUND`, и CRM сначала
+     *     передаёт клиента. ERP создаёт сделку в стадии FSM `DRAFT` с номером `ЗВ-ГГГГ-NNN` (ERP-09, нумерация без пропусков),
+     *     процессом `v3` (ERP-07), срочностью и менеджером заявки — сотрудником ERP, сопоставленным с `owner.crm_user_id`
+     *     (владелец сделки, B-008; сопоставления нет — сделка без менеджера), и публикует `request.created(source=crm)` с
+     *     `request_number`, `urgency`, `letter_file_id`, `crm_request_id`, `process` в той же транзакции: EDS регистрирует
+     *     входящее письмо директору со срочностью и файлом письма. Контакт заявки — по `contact.crm_contact_id`; контакт, которого
+     *     ERP ещё не знает, создаётся в компании и сопоставляется (как в передаче). Идемпотентно по `crm_request_id`: повтор
+     *     (с любым `Idempotency-Key`) — 200 с той же заявкой, без второй сделки и второго события. E-mail контакта не обязателен.
+     */
+    post: operations["createClientRequest"];
     delete?: never;
     options?: never;
     head?: never;
@@ -443,7 +499,26 @@ export interface components {
         sent_via: ("telegram" | "email")[];
         /** Format: uri */
         cabinet_url: string;
+        /** @description Код причины, по которой приглашение не ушло ни одним каналом (0.8.0): `CONTACT_EMAIL_REQUIRED`, `CONTACT_TELEGRAM_REQUIRED`, `EMAIL_DELIVERY_FAILED`, `INVALID_CHANNEL`, `CONTACT_WITHOUT_COMPANY`, `COMPANY_ARCHIVED`, `CONTACT_ARCHIVED`, `CONTACT_CHANNEL_REQUIRED`, `CONTACT_NOT_FOUND`, `COMPANY_LINKED_BY_INN` (передача нашла компанию по ИНН — приглашение не отправлено до проверки контактов); `null` — ушло или приглашение не запрашивалось. Терпимый читатель: незнакомый код CRM показывает как «причина не определена». */
+        error?: string | null;
       };
+    };
+    InviteRequest: {
+      /** @enum {string} */
+      channel: "email" | "telegram" | "both";
+      /**
+       * Format: int64
+       * @description Контакт, которого приглашают; без него — основной контакт компании
+       */
+      crm_contact_id?: number | null;
+    };
+    InviteResponse: {
+      /** @description Каналы, по которым приглашение реально ушло (`telegram` — передано боту CRM) */
+      sent_via: ("telegram" | "email")[];
+      /** Format: uri */
+      cabinet_url: string;
+      /** @description Код причины, если приглашение не ушло ни одним каналом (перечень — в описании операции) */
+      error?: string | null;
     };
     /**
      * @description Стадия сделки глазами CRM — стабильные коды контракта, не коды FSM ERP. ERP вычисляет её одной функцией
@@ -477,6 +552,51 @@ export interface components {
       next_step?: string | null;
       /** Format: date-time */
       updated_at: string;
+    };
+    /** @description Заявка из «Создать заявку» CRM (CRM-03); лишние поля — 422 */
+    ClientRequestIn: {
+      /**
+       * Format: int64
+       * @description Заявка на стороне CRM (зеркало сделки) — ключ идемпотентности и связь события `request.created`
+       */
+      crm_request_id: number;
+      /**
+       * Format: int64
+       * @description Лид, из которого создана заявка; из карточки клиента — `null`
+       */
+      crm_lead_id?: number | null;
+      /** @description Контакт заявки с каналом (телефон, Telegram или e-mail; e-mail не обязателен); нет — основной контакт компании */
+      contact?: components["schemas"]["ContactIn"] | null;
+      need: {
+        summary: string;
+        product_interest?: string[];
+      };
+      /** @description Менеджер заявки (сотрудник CRM) — владелец сделки ERP (B-008) и отправитель КП (`quote.send`) */
+      owner: {
+        /** Format: int64 */
+        crm_user_id: number;
+        name: string;
+      };
+      /** @enum {string} */
+      urgency: "normal" | "urgent";
+      /**
+       * Format: uuid
+       * @description Файл письма на имя директора, загруженный менеджером в EDS (`POST /files`); ERP его не читает, а передаёт в `request.created`
+       */
+      letter_file_id?: string | null;
+      /**
+       * @description Процесс заявки (ERP-07); из CRM — только `v3`
+       * @enum {string}
+       */
+      process: "v3";
+    };
+    ClientRequestOut: {
+      /** Format: int64 */
+      erp_company_id: number;
+      /** Format: int64 */
+      erp_request_id: number;
+      /** @description Номер заявки `ЗВ-ГГГГ-NNN` (ERP-09) */
+      number: string;
     };
     CompanySummary: {
       /** Format: int64 */
@@ -846,6 +966,7 @@ export interface components {
   parameters: {
     /** @description UUID запроса; ERP хранит ключ 7 дней и возвращает первый ответ на повтор. */
     IdempotencyKey: string;
+    CrmClientId: number;
     CrmContactId: number;
     ErpCompanyId: number;
     ErpDealId: number;
@@ -902,6 +1023,39 @@ export interface operations {
           "application/json": components["schemas"]["Error"];
         };
       };
+      422: components["responses"]["ValidationError"];
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  inviteClientContact: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description UUID запроса; ERP хранит ключ 7 дней и возвращает первый ответ на повтор. */
+        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+      };
+      path: {
+        crm_client_id: components["parameters"]["CrmClientId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["InviteRequest"];
+      };
+    };
+    responses: {
+      /** @description Приглашение обработано (в `error` — почему не ушло) */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["InviteResponse"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      404: components["responses"]["NotFound"];
       422: components["responses"]["ValidationError"];
       429: components["responses"]["TooManyRequests"];
     };
@@ -1033,6 +1187,65 @@ export interface operations {
       };
       401: components["responses"]["Unauthorized"];
       404: components["responses"]["NotFound"];
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  createClientRequest: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description UUID запроса; ERP хранит ключ 7 дней и возвращает первый ответ на повтор. */
+        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+      };
+      path: {
+        crm_client_id: components["parameters"]["CrmClientId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ClientRequestIn"];
+      };
+    };
+    responses: {
+      /** @description Заявка с этим `crm_request_id` уже создана — возвращена она же */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ClientRequestOut"];
+        };
+      };
+      /** @description Заявка создана */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ClientRequestOut"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      /** @description `CLIENT_NOT_FOUND` — клиент CRM не передан в ERP (нет сопоставления `crm_client_id`) */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      /** @description `IDEMPOTENCY_CONFLICT` — тот же `Idempotency-Key` пришёл с другим телом (данные заявки изменились после первой отправки): ничего не создано и не перезаписано. CRM повтор не делает — заявка `failed` с причиной `erp_request_conflict`, менеджер создаёт заявку заново. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      422: components["responses"]["ValidationError"];
       429: components["responses"]["TooManyRequests"];
     };
   };

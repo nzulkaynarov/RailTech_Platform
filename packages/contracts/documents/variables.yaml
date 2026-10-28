@@ -1,0 +1,81 @@
+# Каталог документов: виды, переменные-чипы и блоки с замком (ADR-0020, semver 1.0.0 — variables.schema.json).
+# Читают: packages/rt-docs (подпись неразрешённой переменной и блока по языку документа, проверка обязательных блоков),
+# редактор Платформы (меню «/» → «Переменная», «Блок») — D-DOC2, D-DOC3. Подписи: ru, uz (латиница, ʻ = U+02BB в oʻ и gʻ), en.
+# Коды переменных ERP (`crm/services/document_placeholders.py`) сохранены; плоский `today` → `system.today` (конвертер
+# HTML → JSON переводит сам). Значения подставляет домен-владелец: EDS — письма и служебки, ERP — коммерческие виды.
+# Правило изменения: новые коды и виды — добавлением (минор), удаление или переименование кода — мажор (ADR-0016).
+version: 1
+
+kinds:
+  letter: { label: { ru: Письмо, uz: Xat, en: Letter }, layout: letter, domain: eds }
+  memo: { label: { ru: Служебная записка, uz: Xizmat xati, en: Memo }, layout: internal, domain: eds }
+  application: { label: { ru: Заявление, uz: Ariza, en: Application }, layout: internal, domain: eds }
+  report: { label: { ru: Отчёт, uz: Hisobot, en: Report }, layout: internal, domain: eds }
+  custom: { label: { ru: Произвольный документ, uz: Erkin hujjat, en: Custom document }, layout: letter, domain: eds }
+  quote: { label: { ru: Коммерческое предложение, uz: Tijorat taklifi, en: Quotation }, layout: commercial, domain: erp }
+  contract: { label: { ru: Договор, uz: Shartnoma, en: Contract }, layout: commercial, domain: erp }
+  invoice: { label: { ru: Счёт на оплату, uz: Toʻlov uchun hisob, en: Invoice }, layout: commercial, domain: erp }
+  act:
+    label: { ru: Акт выполненных работ, uz: Bajarilgan ishlar dalolatnomasi, en: Certificate of completion }
+    layout: commercial
+    domain: erp
+  receipt: { label: { ru: Квитанция, uz: Kvitansiya, en: Receipt }, layout: commercial, domain: erp }
+  delivery_note: { label: { ru: Накладная, uz: Yuk xati, en: Delivery note }, layout: commercial, domain: erp }
+  specification: { label: { ru: Спецификация, uz: Spetsifikatsiya, en: Specification }, layout: commercial, domain: erp }
+
+variables:
+  - { code: company.name, type: text, label: { ru: Наша компания — название, uz: Kompaniyamiz — nomi, en: Our company — name } }
+  - { code: company.inn, type: text, label: { ru: Наша компания — ИНН, uz: Kompaniyamiz — STIR, en: Our company — TIN } }
+  - { code: company.address, type: text, label: { ru: Наша компания — адрес, uz: Kompaniyamiz — manzili, en: Our company — address } }
+  - code: company.bank
+    type: text
+    label: { ru: Наша компания — банковские реквизиты, uz: Kompaniyamiz — bank rekvizitlari, en: Our company — bank details }
+  - { code: company.director, type: text, label: { ru: Наша компания — руководитель, uz: Kompaniyamiz — rahbari, en: Our company — director } }
+  - code: company.director_position
+    type: text
+    label: { ru: Наша компания — должность руководителя, uz: Kompaniyamiz — rahbar lavozimi, en: Our company — director's title }
+  - { code: counterparty.name, type: text, label: { ru: Контрагент — название, uz: Kontragent — nomi, en: Counterparty — name } }
+  - { code: counterparty.inn, type: text, label: { ru: Контрагент — ИНН, uz: Kontragent — STIR, en: Counterparty — TIN } }
+  - { code: counterparty.address, type: text, label: { ru: Контрагент — адрес, uz: Kontragent — manzili, en: Counterparty — address } }
+  - { code: counterparty.director, type: text, label: { ru: Контрагент — руководитель, uz: Kontragent — rahbari, en: Counterparty — director } }
+  - code: counterparty.director_position
+    type: text
+    label: { ru: Контрагент — должность руководителя, uz: Kontragent — rahbar lavozimi, en: Counterparty — director's title }
+  - { code: deal.number, type: text, label: { ru: Номер заявки, uz: Buyurtma raqami, en: Request number } }
+  - { code: deal.title, type: text, label: { ru: Название заявки, uz: Buyurtma nomi, en: Request title } }
+  - { code: quote.number, type: text, label: { ru: Номер КП, uz: Tijorat taklifi raqami, en: Quotation number }, kinds: [quote, contract, invoice] }
+  - { code: quote.total, type: money, label: { ru: Сумма КП, uz: Tijorat taklifi summasi, en: Quotation total }, kinds: [quote, contract, invoice] }
+  - { code: contract.number, type: text, label: { ru: Номер договора, uz: Shartnoma raqami, en: Contract number } }
+  - { code: contract.date, type: date, label: { ru: Дата договора, uz: Shartnoma sanasi, en: Contract date } }
+  - { code: document.number, type: text, label: { ru: Номер документа, uz: Hujjat raqami, en: Document number } }
+  - { code: document.date, type: date, label: { ru: Дата документа, uz: Hujjat sanasi, en: Document date } }
+  - { code: invoice.total, type: money, label: { ru: Сумма к оплате, uz: Toʻlanadigan summa, en: Amount due }, kinds: [invoice, act] }
+  - { code: invoice.total_words, type: text, label: { ru: Сумма прописью, uz: Summa soʻz bilan, en: Amount in words }, kinds: [invoice, act, contract] }
+  - { code: invoice.due_date, type: date, label: { ru: Срок оплаты, uz: Toʻlov muddati, en: Payment due date }, kinds: [invoice] }
+  - { code: user.full_name, type: text, label: { ru: Автор — ФИО, uz: Muallif — F.I.Sh., en: Author — full name } }
+  - { code: user.position, type: text, label: { ru: Автор — должность, uz: Muallif — lavozimi, en: Author — position } }
+  - { code: user.phone, type: text, label: { ru: Автор — телефон, uz: Muallif — telefoni, en: Author — phone } }
+  - { code: user.email, type: text, label: { ru: Автор — эл. почта, uz: Muallif — elektron pochtasi, en: Author — email } }
+  - { code: system.today, type: date, label: { ru: Сегодняшняя дата, uz: Bugungi sana, en: Today's date } }
+
+blocks:
+  - { code: doc.refs, label: { ru: "Ссылки на заявку, договор и счёт", uz: "Buyurtma, shartnoma va hisobga havolalar", en: References } }
+  - { code: doc.items_table, label: { ru: Таблица позиций, uz: Pozitsiyalar jadvali, en: Line items }, required_for: [quote, invoice, act] }
+  - code: doc.totals
+    label: { ru: Итоги и НДС, uz: Jami va QQS, en: Totals and VAT }
+    required_for: [invoice, act, contract]
+    keep_with_previous: true
+  - { code: doc.signatures, label: { ru: Подписи сторон, uz: Tomonlar imzolari, en: Signatures }, required_for: [act] }
+  - { code: doc.payment_requisites, label: { ru: Платёжные реквизиты, uz: Toʻlov rekvizitlari, en: Payment details }, required_for: [invoice] }
+  - code: doc.spec_table
+    label: { ru: Спецификация (Приложение № 1), uz: Spetsifikatsiya (1-ilova), en: Specification (Annex 1) }
+    required_for: [contract]
+  - code: doc.requisites_and_signatures
+    label: { ru: Реквизиты и подписи сторон, uz: Tomonlar rekvizitlari va imzolari, en: Details and signatures of the parties }
+    required_for: [contract]
+  - { code: doc.notes, label: { ru: Примечание документа, uz: Hujjat izohi, en: Document notes } }
+  - { code: doc.extra_terms_article, label: { ru: Особые условия, uz: Alohida shartlar, en: Special terms } }
+  - { code: doc.act_closing, label: { ru: Заключительная формулировка акта, uz: Dalolatnoma yakuniy matni, en: Closing statement } }
+  - { code: doc.contract_acceptance, label: { ru: Порядок приёмки, uz: Qabul qilish tartibi, en: Acceptance procedure } }
+  - { code: doc.contract_liability, label: { ru: Ответственность сторон, uz: Tomonlarning javobgarligi, en: Liability of the parties } }
+  - { code: doc.signature_stamp, label: { ru: Отметка об электронной подписи, uz: Elektron imzo belgisi, en: E-signature mark } }

@@ -2,7 +2,7 @@
 
 * золотой путь заявка → КП → договор → счёт → оплата → поставка на настоящих сервисах публикует цепочку событий, и каждое
   проходит схему контракта;
-* каждый из 23 типов `uz.railtech.erp.*.v1` рождается в своём сервисе (`test_every_event_type_is_published_by_its_service`);
+* каждый из 24 типов `uz.railtech.erp.*.v1` рождается в своём сервисе (`test_every_event_type_is_published_by_its_service`);
 * откат транзакции — нет события (в обе стороны: событие не переживает откат, откат не прячет событие другого действия);
 * ошибка публикации (в том числе `data` не по схеме) откатывает само изменение;
 * в ERP нет `except Exception` вокруг публикации, сигналов Django и вебхуков.
@@ -77,7 +77,7 @@ def test_golden_path_publishes_the_events_of_the_whole_chain_in_the_same_transac
     assert (
         quote_sent["data"]["erp_company_id"] == deal.company_id and quote_sent["data"]["crm_client_id"] == CRM_CLIENT_ID
     )
-    assert quote_sent["source"] == "rt://erp" and quote_sent["subject"] == f"D-{deal.pk}"
+    assert quote_sent["source"] == "rt://erp" and quote_sent["subject"] == deal.number  # ERP-09: номер ЗВ
 
     quote = QuoteLifecycleService.approve_quote(quote.id, buyer_user)
     contract, error = crm_services.generate_contract_from_quote(quote.id, actor=manager)
@@ -294,6 +294,8 @@ def test_every_event_type_is_published_by_its_service(deal, buyer, manager, mapp
     assert dispute_delivery_line(lines[1].pk, contact, "Повреждена упаковка")[1] is None
     # invite.sent — приглашение в Cabinet
     assert invite_contact_to_portal(contact, channel="email")[1] is None
+    # invite.requested — приглашение через Telegram: доставит бот CRM (D1-9)
+    assert invite_contact_to_portal(contact, channel="telegram")[1] is None
     # deal.lost — закрытие сделки без продажи
     lost_deal = Deal.objects.create(
         title="Проиграна", company=company, client=buyer_user, stage=DealStage.objects.get(code="CALCULATING")

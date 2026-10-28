@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://railtech.uz/contracts/documents/variables.schema.json",
+  "$comment": "semver 1.0.0 (ADR-0016, ADR-0020)",
+  "title": "Каталог переменных и блоков документов (variables.yaml)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "kinds", "variables", "blocks"],
+  "$defs": {
+    "i18n": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ru", "uz", "en"],
+      "description": "Подпись на языке документа или интерфейса; uz — латиница с ʻ (U+02BB) в oʻ и gʻ",
+      "properties": {
+        "ru": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "uz": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "en": { "type": "string", "minLength": 1, "maxLength": 80 }
+      }
+    },
+    "kind": {
+      "enum": [
+        "letter",
+        "memo",
+        "application",
+        "report",
+        "custom",
+        "quote",
+        "contract",
+        "invoice",
+        "act",
+        "receipt",
+        "delivery_note",
+        "specification"
+      ]
+    }
+  },
+  "properties": {
+    "version": { "const": 1 },
+    "kinds": {
+      "type": "object",
+      "description": "Виды документов: подпись и макет бланка по умолчанию (letter — письмо, internal — внутренний, commercial — коммерческий)",
+      "propertyNames": { "$ref": "#/$defs/kind" },
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["label", "layout", "domain"],
+        "properties": {
+          "label": { "$ref": "#/$defs/i18n" },
+          "layout": { "enum": ["letter", "internal", "commercial"] },
+          "domain": { "enum": ["eds", "erp"], "description": "Владелец шаблонов вида (ADR-0015, ADR-0020 п. 5)" }
+        }
+      }
+    },
+    "variables": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "type", "label"],
+        "properties": {
+          "code": { "type": "string", "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$", "maxLength": 64 },
+          "type": { "enum": ["text", "date", "money", "number"], "description": "Как форматировать значение по языку документа" },
+          "label": { "$ref": "#/$defs/i18n" },
+          "kinds": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "$ref": "#/$defs/kind" },
+            "description": "В каких видах предлагать; нет — во всех"
+          }
+        }
+      }
+    },
+    "blocks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["code", "label"],
+        "properties": {
+          "code": { "type": "string", "pattern": "^doc\\.[a-z][a-z0-9_]*$", "maxLength": 64 },
+          "label": { "$ref": "#/$defs/i18n" },
+          "required_for": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "$ref": "#/$defs/kind" },
+            "description": "Виды, в которых блок обязателен (документ без него не выпускается)"
+          },
+          "keep_with_previous": {
+            "type": "boolean",
+            "description": "Не отрывать от предыдущего узла (итоги — от таблицы позиций)"
+          }
+        }
+      }
+    }
+  }
+}

@@ -140,7 +140,7 @@ class QuoteLifecycleService:
 
     @staticmethod
     @transaction.atomic
-    def send_to_client(quote_id: int, sent_by_user, justification: str = "") -> Quote:
+    def send_to_client(quote_id: int, sent_by_user, justification: str = "", channels: Optional[list] = None) -> Quote:
         """
         Send quote to client:
         1. Guard: only READY_TO_SEND (internally approved) quotes can be sent
@@ -155,6 +155,11 @@ class QuoteLifecycleService:
         (does NOT block the send — self-approve stays, DealHub standard) and is recorded
         on the counterparty timeline as a ``quote.sent_below_floor`` audit event. Above the
         floor no justification is required and no special event is logged.
+
+        ERP-11: ``channels`` — каналы автоотправки после одобрения директором (уже проверенные на доступность,
+        ``quote_auto_send``): письмо уходит, только если в них есть ``email`` (тогда и e-mail получателя обязателен),
+        ``quote.sent`` несёт список — бот CRM пишет клиенту, только если там есть ``telegram``. ``None`` — отправка
+        менеджером, все каналы клиента, как прежде.
         """
         from django.utils import timezone
 
@@ -165,7 +170,7 @@ class QuoteLifecycleService:
         # Send preconditions (status / recipient / claim) — the
         # full guard rationale lives in lifecycle_gates.assert_sendable. Returns the issuing
         # seller company (used for КП-number minting below).
-        seller_company = assert_sendable(quote, sent_by_user)
+        seller_company = assert_sendable(quote, sent_by_user, channels=channels)
 
         # Economics + below-floor guardrail. compute_quote_economics is resolved via THIS
         # module's global so the below-floor send tests can patch it.
@@ -234,7 +239,7 @@ class QuoteLifecycleService:
             ]
         )
         # События шины (rt_bus) — в этой же транзакции: сбой публикации откатывает отправку КП.
-        events.publish_quote_sent(quote)
+        events.publish_quote_sent(quote, channels=channels)
         document_events.publish_document_issued("quote", quote, was_issued=was_issued)
 
         # AI-калибровка: the sent КП is the ground truth for the draft's AI match candidates.
@@ -263,7 +268,8 @@ class QuoteLifecycleService:
         # contact. Unified send: one action, channel adapts to who the recipient is.
         from crm.tasks import send_quote_email
 
-        transaction.on_commit(lambda: send_quote_email.delay(quote_id))
+        if channels is None or "email" in channels:
+            transaction.on_commit(lambda: send_quote_email.delay(quote_id))
 
         # Change deal stage via FSM. P0-1: the real buyer path lands the deal in RFQ_OPEN, and
         # QUOTE_SENT is only legal from CALCULATING — so advance through CALCULATING first, and

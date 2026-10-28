@@ -6,6 +6,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
+from app.schemas.notices import InvitationOut, NoticeOut
+
 
 class EscalationOut(BaseModel):
     id: int
@@ -66,6 +68,13 @@ class LeadOut(BaseModel):
     escalation: EscalationOut | None = None
     # Откуда пришёл лид (M3-CRM-05): telegram | web | phone | email | referral (| sandbox).
     source: str = "telegram"
+    # Статус лида для Платформы (CRM-02, W16-D1-2): вкладки «Лиды» —
+    # docs/architecture/integration-map.md §3.1. CRM заполняет всегда; `null` — терпимый читатель
+    # (строковое умолчание у перечисления ломало типы сгенерированных моделей BFF).
+    platform_status: (
+        Literal["new", "dialog", "wants_quote", "no_answer", "client", "lost"] | None
+    ) = None
+
     # Записка передачи — только в `GET /inbox` (CRM-06); в остальных выдачах null.
     handoff_note: HandoffNote | None = None
 
@@ -98,6 +107,15 @@ class LeadDetail(LeadOut):
     # Состояние передачи клиента лида в бэк-офис (FIX-31, `clients.erp_handoff_*`).
     client_handoff_status: Literal["pending", "done", "failed"] | None = None
     client_handoff_error: str | None = None
+    # Запрос с сайта (D1-9): срок первого ответа, пока лид без ответственного (иначе null), и
+    # просрочен ли он.
+    first_response_due_at: datetime | None = None
+    first_response_overdue: bool = False
+    # Подтверждение запроса клиенту: канал, итог, причина словами (null — не заводилось).
+    confirmation: NoticeOut | None = None
+    # Приглашение клиента лида в кабинет: итог, каналы контакта, «повторить другим каналом» (null —
+    # клиента нет).
+    invitation: InvitationOut | None = None
 
 
 class LeadPage(BaseModel):

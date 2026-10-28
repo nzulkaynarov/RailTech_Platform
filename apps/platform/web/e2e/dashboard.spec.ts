@@ -178,12 +178,12 @@ test.describe("Центр уведомлений", () => {
     await settledScreenshot(page, "dashboard-notifications");
     await expectNoViolations(page, "notifications popover");
 
-    // КП: раздела с экраном ещё нет — вместо заглушки «Где посмотреть» с мостом, окно остаётся открытым
-    await center.getByRole("button", { name: /Где посмотреть: .*КП-2026\/118 ждёт/ }).click();
+    // Договор: раздела с экраном ещё нет — вместо заглушки «Где посмотреть» с мостом, окно остаётся открытым
+    await center.getByRole("button", { name: /Где посмотреть: .*ДОГ-2026\/091/ }).click();
     const where = center.getByRole("region", { name: "Где посмотреть" });
     await expect(where.getByRole("link", { name: /Открыть в старом ERP/ })).toHaveAttribute(
       "href",
-      "http://erp.localhost:8088/#crm-quotes",
+      "http://erp.localhost:8088/#crm-deals",
     );
     await expect(page).toHaveURL(/\/dashboard\/queue/);
     await expect(page.getByRole("button", { name: "Центр уведомлений, 2 новых" })).toBeVisible();
@@ -269,7 +269,7 @@ test(
     await settledScreenshot(page, "dashboard-notifications");
     await expectNoViolations(page, "notifications popover 390");
 
-    await center.getByRole("button", { name: /Где посмотреть: .*КП-2026\/118 ждёт/ }).click();
+    await center.getByRole("button", { name: /Где посмотреть: .*ДОГ-2026\/091/ }).click();
     await expect(center.getByRole("region", { name: "Где посмотреть" })).toBeVisible();
   },
 );

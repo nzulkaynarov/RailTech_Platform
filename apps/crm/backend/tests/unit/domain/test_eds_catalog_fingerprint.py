@@ -17,14 +17,16 @@ ROLE_ACCESS: dict[str, dict[str, str]] = {
     "ADMIN": {"eds.inbox": "full", "eds.drafts": "full", "crm.leads": "full"},
     "MANAGER": {"eds.inbox": "read", "crm.leads": "full"},
 }
-SYSTEM = ("ADMIN", "MANAGER")
+SYSTEM = ("ADMIN",)
+TEMPLATES = ("MANAGER",)
 
 
 def _fp(
     backend: Mapping[str, Mapping[str, tuple[str, ...]]] = BACKEND,
     role_access: Mapping[str, Mapping[str, str]] = ROLE_ACCESS,
+    templates: tuple[str, ...] = TEMPLATES,
 ) -> str:
-    return eds_catalog_fingerprint(backend, role_access, SYSTEM)
+    return eds_catalog_fingerprint(backend, role_access, SYSTEM, templates)
 
 
 def test_real_catalog_gives_stable_sha256() -> None:
@@ -35,7 +37,10 @@ def test_real_catalog_gives_stable_sha256() -> None:
 
 def test_real_catalog_fingerprint_follows_generated_tables() -> None:
     explicit = eds_catalog_fingerprint(
-        generated.EDS_BACKEND, generated.ROLE_ACCESS, generated.SYSTEM_ROLE_CODES
+        generated.EDS_BACKEND,
+        generated.ROLE_ACCESS,
+        generated.SYSTEM_ROLE_CODES,
+        generated.TEMPLATE_ROLE_CODES,
     )
     assert explicit == eds_catalog_fingerprint()
 
@@ -79,6 +84,28 @@ def test_published_section_of_system_role_changes_it() -> None:
         eds_catalog_fingerprint(generated.EDS_BACKEND, changed_real, generated.SYSTEM_ROLE_CODES)
         != eds_catalog_fingerprint()
     )
+
+
+def test_eds_result_of_role_template_changes_it() -> None:
+    """B-005: шаблоны `tpl:*` создаются ролями из каталога; их права EDS входят в отпечаток."""
+    changed = copy.deepcopy(ROLE_ACCESS)
+    changed["MANAGER"]["eds.drafts"] = "full"
+    assert _fp(role_access=changed) != _fp()
+    # шаблон входит в отпечаток сам по себе: без него отпечаток другой
+    assert _fp(templates=()) != _fp()
+
+
+def test_template_with_only_crm_rights_does_not_change_it() -> None:
+    changed = copy.deepcopy(ROLE_ACCESS)
+    changed["MANAGER"]["crm.leads"] = "read"
+    assert _fp(role_access=changed) == _fp()
+
+
+def test_real_catalog_covers_every_template() -> None:
+    explicit = eds_catalog_fingerprint(
+        generated.EDS_BACKEND, generated.ROLE_ACCESS, generated.SYSTEM_ROLE_CODES, ()
+    )
+    assert explicit != eds_catalog_fingerprint()
 
 
 def test_non_eds_edits_do_not_change_it() -> None:

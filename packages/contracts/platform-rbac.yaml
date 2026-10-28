@@ -230,7 +230,8 @@ resources:
       crm:
         # W13-A5: директор (admin: read) читает и настройки бота, шаблоны ответов и базу знаний — без правки; правка и
         # песочница — admin: full (settings:write, kb:write, reply_templates:write, sandbox:use, export:read).
-        read: [users:read, integrations:read, models:read, system:read, external_services:read, backups:read, audit:read, settings:read, reply_templates:read, kb:read]
+        # W15-H7: «Обращения сотрудников» — директор читает (tickets:read), администратор отвечает и меняет статус (tickets:write).
+        read: [users:read, integrations:read, models:read, system:read, external_services:read, backups:read, audit:read, settings:read, reply_templates:read, kb:read, tickets:read]
         full:
           - users:read
           - users:write
@@ -254,6 +255,8 @@ resources:
           - reply_templates:write
           - sandbox:use
           - export:read
+          - tickets:read
+          - tickets:write
       # Журнал шины (W13-A2): ERP — `team.manage` (код раздела `admin` в ERP, нового кода не нужно); EDS — `bus.manage`
       # (у EDS кода раздела `admin` не было). В CRM журнал — `integrations:read`/`integrations:write`.
       erp: { full: [team.manage] }
