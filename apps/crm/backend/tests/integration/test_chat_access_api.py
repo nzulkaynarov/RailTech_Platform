@@ -298,6 +298,20 @@ async def test_chat_holder_without_registry_sees_own_dialogs_only(
         assert response.status_code == 404, lead_id
 
 
+async def test_sandbox_dialog_is_closed_to_chat_holders_even_when_assigned(
+    client: TestClient, sessions: async_sessionmaker[AsyncSession], world: World
+) -> None:
+    """Песочница — не переписка с клиентом: ни в списке, ни по номеру (как `GET /chats`)."""
+    async with sessions() as session, session.begin():
+        lead = await session.get(Lead, world.assigned)
+        assert lead is not None
+        lead.source = "sandbox"
+    chat = world.headers["chat"]
+    assert world.assigned not in _listed(client, chat)
+    response = client.get(f"/api/v1/leads/{world.assigned}/messages", headers=chat)
+    assert response.status_code == 404
+
+
 @pytest.mark.parametrize("who", ["manager", "director"])
 async def test_lead_registry_holders_see_every_dialog(
     client: TestClient, world: World, who: str

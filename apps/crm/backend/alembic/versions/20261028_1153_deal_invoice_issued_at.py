@@ -12,7 +12,7 @@
 следующее событие счёта поставит отметку само (на проде живых данных нет).
 
 Revision ID: aa1221ec032b
-Revises: 0048_base_role_by_matrix
+Revises: 9362ca08ba13
 Create Date: 2026-10-28 11:53:20.768799+00:00
 """
 
@@ -22,7 +22,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "aa1221ec032b"
-down_revision: str | Sequence[str] | None = "0048_base_role_by_matrix"
+down_revision: str | Sequence[str] | None = "9362ca08ba13"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

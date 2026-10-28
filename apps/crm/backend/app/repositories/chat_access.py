@@ -43,12 +43,12 @@ def invoiced() -> ColumnElement[bool]:
 
 
 async def dialog_facts(session: AsyncSession, lead_id: int, user_id: int) -> DialogFacts | None:
-    """Факты по диалогу лида; нет лида или он обезличен — `None`."""
+    """Факты по диалогу лида; нет лида, он обезличен или из песочницы — `None` (как в списке)."""
     row = (
         await session.execute(
             select(participant(user_id).label("participant"), invoiced().label("invoiced"))
             .select_from(Lead)
-            .where(Lead.id == lead_id, Lead.erased_at.is_(None))
+            .where(Lead.id == lead_id, Lead.erased_at.is_(None), Lead.source != SANDBOX_SOURCE)
         )
     ).one_or_none()
     if row is None:
