@@ -6,6 +6,8 @@ import { useViewport } from "../../../app/shell/useViewport";
 import type { CalcLine, CalcLinePatch, CalcSheet } from "../../../shared/api/generated/model";
 import {
   useDeleteCalcLine,
+  useReleaseCalcLineReservation,
+  useReserveCalcLine,
   useSignCalcLine,
   useUpdateCalcLine,
 } from "../../../shared/api/generated/platform-bff";
@@ -14,6 +16,7 @@ import { ScrollRegion } from "../../../shared/ui/FormParts";
 import { CrossIcon } from "../../../shared/ui/icons";
 import { StatusTag } from "../../../shared/ui/StatusTag";
 import { calcRef, useApplySheet, useErrorText } from "./api";
+import { useErrorText as useStockErrorText } from "../stock/api";
 import { MatchModal } from "./MatchModal";
 
 const KIND_TONE = { goods: "blue", goods_to_order: "purple", service: "cyan" } as const;
@@ -77,11 +80,30 @@ function useLineActions(sheet: CalcSheet) {
   const onError = (error: unknown) => {
     void message.error(errorText(error));
   };
+  const stockErrorText = useStockErrorText();
+  const onStockError = (error: unknown) => {
+    void message.error(stockErrorText(error));
+  };
   const update = useUpdateCalcLine({ mutation: { onSuccess: apply, onError } });
+  const reserve = useReserveCalcLine({ mutation: { onSuccess: apply, onError: onStockError } });
+  const unreserve = useReleaseCalcLineReservation({
+    mutation: { onSuccess: apply, onError: onStockError },
+  });
   const sign = useSignCalcLine({ mutation: { onSuccess: apply, onError } });
   const remove = useDeleteCalcLine({ mutation: { onSuccess: apply, onError } });
   return {
-    pending: update.isPending || sign.isPending || remove.isPending,
+    pending:
+      update.isPending ||
+      sign.isPending ||
+      remove.isPending ||
+      reserve.isPending ||
+      unreserve.isPending,
+    reserve: (line: CalcLine, quantity: number) => {
+      reserve.mutate({ number, lineId: line.id, data: { quantity } });
+    },
+    release: (line: CalcLine) => {
+      unreserve.mutate({ number, lineId: line.id });
+    },
     patch: (line: CalcLine, data: CalcLinePatch) => {
       update.mutate({ number, lineId: line.id, data });
     },
@@ -120,14 +142,66 @@ function Position({ line, onMatch }: { line: CalcLine; onMatch: () => void }) {
   );
 }
 
-function Stock({ line }: { line: CalcLine }) {
+function Stock({
+  line,
+  canStock,
+  actions,
+}: {
+  line: CalcLine;
+  canStock: boolean;
+  actions: Actions;
+}) {
   const { t } = useTranslation("calc");
   if (line.zone === "services") return <span className="pf-hint">—</span>;
   if (line.stock.on_hand === null) return <span className="pf-hint">{t("lines.noStockData")}</span>;
-  return line.stock.on_hand > 0 ? (
-    <StatusTag tone="green">{t("lines.inStock", { count: line.stock.on_hand })}</StatusTag>
-  ) : (
-    <StatusTag tone="default">{t("lines.noStock")}</StatusTag>
+  const reserved = line.stock.reserved ?? 0;
+  const free = line.stock.free ?? null;
+  // Сколько строка может удерживать: не больше её количества и свободного остатка плюс уже удерживаемого ею.
+  const wanted = free === null ? 0 : Math.min(line.quantity, free + reserved);
+  return (
+    <div className="pf-calc-supplier">
+      {line.stock.on_hand > 0 ? (
+        <StatusTag tone="green">{t("lines.inStock", { count: line.stock.on_hand })}</StatusTag>
+      ) : (
+        <StatusTag tone="default">{t("lines.noStock")}</StatusTag>
+      )}
+      {line.stock.cell ? (
+        <span className="pf-hint">{t("lines.cell", { cell: line.stock.cell })}</span>
+      ) : null}
+      {free !== null ? <span className="pf-hint">{t("lines.free", { count: free })}</span> : null}
+      {reserved > 0 ? (
+        <StatusTag tone="blue">{t("lines.reservedTag", { count: reserved })}</StatusTag>
+      ) : null}
+      {canStock && line.product_id !== null ? (
+        <span className="pf-stock-reserve">
+          {wanted > reserved ? (
+            <Button
+              size="small"
+              disabled={actions.pending}
+              aria-label={t("lines.reserveLabel", { count: wanted, name: line.name })}
+              onClick={() => {
+                actions.reserve(line, wanted);
+              }}
+            >
+              {t("lines.reserve", { count: wanted })}
+            </Button>
+          ) : null}
+          {reserved > 0 ? (
+            <Button
+              size="small"
+              type="text"
+              disabled={actions.pending}
+              aria-label={t("lines.releaseLabel", { name: line.name })}
+              onClick={() => {
+                actions.release(line);
+              }}
+            >
+              {t("lines.release")}
+            </Button>
+          ) : null}
+        </span>
+      ) : null}
+    </div>
   );
 }
 
@@ -367,6 +441,7 @@ export function LinesTable({ sheet }: { sheet: CalcSheet }) {
   const actions = useLineActions(sheet);
   const [matching, setMatching] = useState<CalcLine | null>(null);
   const showMarkup = sheet.rights.cost;
+  const canStock = sheet.rights.stock === true;
 
   const matchModal = matching ? (
     <MatchModal
@@ -404,7 +479,7 @@ export function LinesTable({ sheet }: { sheet: CalcSheet }) {
                 <span className="pf-hint">{t("lines.columns.quantity")}</span>
                 <Quantity line={line} actions={actions} />
                 <span className="pf-hint">{t("lines.columns.stock")}</span>
-                <Stock line={line} />
+                <Stock line={line} canStock={canStock} actions={actions} />
                 <span className="pf-hint">{t("lines.columns.supplier")}</span>
                 <Supplier line={line} />
                 <span className="pf-hint">{t("lines.columns.purchase")}</span>
@@ -465,7 +540,7 @@ export function LinesTable({ sheet }: { sheet: CalcSheet }) {
                   <Quantity line={line} actions={actions} />
                 </td>
                 <td>
-                  <Stock line={line} />
+                  <Stock line={line} canStock={canStock} actions={actions} />
                 </td>
                 <td>
                   <Supplier line={line} />

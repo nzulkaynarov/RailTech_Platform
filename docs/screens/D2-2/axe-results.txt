@@ -1,0 +1,15 @@
+D2-2 · apps/platform/web/e2e/erp-stock.spec.ts (Playwright + axe, WCAG 2.1 AA, MSW), 2026-10-28
+расчёт: склад и запрос цены 1440: axe violations=0
+остатки и резервы 1440: axe violations=0
+заказы поставщикам 1440: axe violations=0
+карточка заказа (подтверждён) 1440: axe violations=0
+приёмка 1440: axe violations=0
+отгрузки 1440: axe violations=0
+«Мои задачи» с просроченным заказом 1440: axe violations=0
+карточка просроченного заказа 1440: axe violations=0
+экран «нет доступа» к складу (администратор) 1440: axe violations=0
+остатки 390: axe violations=0
+заказы 390: axe violations=0
+карточка заказа 390: axe violations=0
+приёмка 390: axe violations=0
+расчёт со складом 390: axe violations=0

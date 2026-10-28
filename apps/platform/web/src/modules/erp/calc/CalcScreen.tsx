@@ -24,6 +24,8 @@ import { AddLineModal } from "./AddLineModal";
 import { calcRef, readyHintKey, useApplySheet, useErrorText, useStateLabels } from "./api";
 import { LinesTable } from "./LinesTable";
 import { ParseModal } from "./ParseModal";
+import { PriceRequestModal } from "./PriceRequestModal";
+import { PriceRequests } from "./PriceRequests";
 import { TaskSlot } from "./TaskPanel";
 
 import "./calc.css";
@@ -182,7 +184,7 @@ function Content({ sheet }: { sheet: CalcSheet }) {
   const { date } = useFormat();
   const { mobile } = useViewport();
   const [, setParams] = useSearchParams();
-  const [dialog, setDialog] = useState<"add" | "parse" | null>(null);
+  const [dialog, setDialog] = useState<"add" | "parse" | "price" | null>(null);
   const state = stateOf(sheet);
   const editable = state === "in_progress" || state === "returned";
   const canLines = sheet.rights.goods || sheet.rights.services;
@@ -205,6 +207,15 @@ function Content({ sheet }: { sheet: CalcSheet }) {
         extra={
           <div className="pf-calc-row">
             <StatusTag tone={STATE_TONE[state]}>{t(`state.${state}`)}</StatusTag>
+            {sheet.quote !== null && sheet.rights.stock === true ? (
+              <Button
+                onClick={() => {
+                  setDialog("price");
+                }}
+              >
+                {t("sheet.requestPrice")}
+              </Button>
+            ) : null}
             {mobile ? (
               <Button
                 onClick={() => {
@@ -263,6 +274,15 @@ function Content({ sheet }: { sheet: CalcSheet }) {
           <Ready sheet={sheet} />
         </Card>
       )}
+      {sheet.quote !== null ? <PriceRequests sheet={sheet} /> : null}
+      {dialog === "price" ? (
+        <PriceRequestModal
+          sheet={sheet}
+          onClose={() => {
+            setDialog(null);
+          }}
+        />
+      ) : null}
       {dialog === "add" ? (
         <AddLineModal
           sheet={sheet}

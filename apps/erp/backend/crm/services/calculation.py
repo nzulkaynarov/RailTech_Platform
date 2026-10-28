@@ -178,20 +178,51 @@ def _markup(cost: Decimal, price: Decimal) -> Optional[str]:
 class _Context:
     own: dict[int, Any] = field(default_factory=dict)
     suppliers: dict[int, Any] = field(default_factory=dict)
+    #: Склад (D2-2): остаток, резервы проектов и ячейки по товарам; резерв по строкам расчёта.
+    stock: dict[int, Any] = field(default_factory=dict)
+    reserved: dict[int, int] = field(default_factory=dict)
 
 
 def _context(items: list[QuoteItem]) -> _Context:
+    from inventory.services import stock
+
     ids = [it.product_id for it in items if it.product_id]
-    return _Context(own=_own_offers(ids), suppliers=_supplier_offers(ids))
+    return _Context(
+        own=_own_offers(ids),
+        suppliers=_supplier_offers(ids),
+        stock=stock.availability(ids),
+        reserved=stock.reserved_by_item(it.pk for it in items),
+    )
+
+
+def _stock_of(item: QuoteItem, ctx: _Context) -> Optional[dict]:
+    """Склад по строке-товару: на складе всего, свободно (после резервов), зарезервировано за этой строкой, ячейка и сколько
+    строка может взять (`available`). Учёт движений есть (D2-2) — остаток оттуда; нет — прежнее поведение D2-1: наличие из
+    своего предложения (`SupplierOffer.stock_quantity`). Строка без карточки каталога — None (склада у неё нет)."""
+    if not item.product_id:
+        return None
+    reserved = ctx.reserved.get(item.pk, 0)
+    state = ctx.stock.get(item.product_id)
+    if state is not None and state.tracked:
+        return {
+            "on_hand": state.on_hand,
+            "free": state.free,
+            "reserved": reserved,
+            "cell": state.main_cell,
+            "available": state.free + reserved,
+        }
+    own = ctx.own.get(item.product_id)
+    on_hand = own.stock_quantity if own is not None else 0
+    return {"on_hand": on_hand, "free": on_hand, "reserved": 0, "cell": None, "available": on_hand}
 
 
 def _line_kind(item: QuoteItem, zone: str, ctx: _Context) -> tuple[str, Optional[int]]:
-    """Тип для экрана: услуга; товар со склада (остаток покрывает количество); товар под заказ."""
+    """Тип для экрана: услуга; товар со склада (свободный остаток покрывает количество); товар под заказ."""
     if zone == Zone.SERVICES:
         return "service", None
-    own = ctx.own.get(item.product_id) if item.product_id else None
-    on_hand = own.stock_quantity if own is not None else (0 if item.product_id else None)
-    if on_hand is not None and on_hand >= item.quantity and on_hand > 0:
+    info = _stock_of(item, ctx)
+    on_hand = info["on_hand"] if info is not None else None
+    if info is not None and info["available"] >= item.quantity and info["available"] > 0:
         return "goods", on_hand
     return "goods_to_order", on_hand
 
@@ -210,6 +241,14 @@ def is_signed(item: QuoteItem, calc: Optional[CalcLine] = None) -> bool:
         and calc.visa_zone == zone_of(item)
         and calc.visa_item_version == item.version
     )
+
+
+def _stock_payload(item: QuoteItem, zone: str, ctx: _Context, on_hand: Optional[int]) -> dict:
+    """Колонка «Склад»: на складе, свободно, ячейка, зарезервировано за строкой (D2-2, B-D21-1)."""
+    info = _stock_of(item, ctx) if zone == Zone.GOODS else None
+    if info is None:
+        return {"on_hand": on_hand, "free": None, "cell": None, "reserved": None}
+    return {"on_hand": info["on_hand"], "free": info["free"], "cell": info["cell"], "reserved": info["reserved"]}
 
 
 def line_payload(item: QuoteItem, ctx: _Context, *, show_cost: bool, rights: dict[str, bool], editable: bool) -> dict:
@@ -248,7 +287,7 @@ def line_payload(item: QuoteItem, ctx: _Context, *, show_cost: bool, rights: dic
         "zone": zone,
         "quantity": item.quantity,
         "unit": item.unit,
-        "stock": {"on_hand": on_hand, "cell": None, "reserved": None},
+        "stock": _stock_payload(item, zone, ctx, on_hand),
         "supplier": supplier,
         "lead_days": item.lead_time_days or None,
         "purchase_price": _money(item.frozen_base_price) if zone_cost and not services else None,
@@ -573,6 +612,7 @@ def _sheet(deal: Deal, task: CalcTask, user) -> dict:
             "services": rights[Zone.SERVICES],
             "build": has_perm(user, Permission.QUOTE_BUILD.value),
             "cost": show_cost,
+            "stock": has_perm(user, Permission.SUPPLY_MANAGE.value),
         },
     }
 
@@ -894,6 +934,10 @@ def update_line(deal_id: int, item_id: int, user, data: dict) -> dict:
     calc.save()
     item.version = (item.version or 0) + 1
     item.save()  # пересчёт КП с курсами строк — в QuoteItem.save
+    if "product_id" in changes or "quantity" in changes:
+        from inventory.services import stock
+
+        stock.sync_reservation(item)  # другой товар или меньшее количество — резерв подгоняется (D2-2)
     if "client_price" in changes:
         _require(user, Permission.QUOTE_EDIT_PRICING.value)
         item.refresh_from_db()
@@ -943,6 +987,9 @@ def delete_line(deal_id: int, item_id: int, user) -> dict:
     item = _locked_item(quote, item_id)
     _require_zone(user, zone_of(item))
     name = item.imported_raw_name
+    from inventory.services import stock
+
+    stock.release_for_item(item)  # резерв удаляемой строки снимается (D2-2)
     item.delete()
     _recalc(quote)
     _log(deal, user, "Строка удалена из расчёта", f"«{name}»", "calc.line_deleted", {"item_id": item_id})
@@ -1121,19 +1168,27 @@ def catalog_search(user, q: str, *, limit: int = 20) -> list[dict]:
             | Q(gost_drawing__icontains=word)
         )
     products = list(qs.order_by("name")[:limit])
+    from inventory.services import stock as warehouse
+
     own = _own_offers([p.id for p in products])
     suppliers = _supplier_offers([p.id for p in products])
+    states = warehouse.availability(p.id for p in products)
     rows = []
     for product in products:
         offer = suppliers.get(product.id)
         stock = own.get(product.id)
+        state = states.get(product.id)
         rows.append(
             {
                 "id": product.id,
                 "name": product.name,
                 "article": product.manufacturer_part_number or product.sku,
                 "kind": "service" if product.is_service else "goods",
-                "on_hand": stock.stock_quantity if stock is not None else 0,
+                "on_hand": (
+                    state.free
+                    if state is not None and state.tracked
+                    else (stock.stock_quantity if stock is not None else 0)
+                ),
                 "supplier_name": offer.supplier.name if offer is not None else None,
                 "lead_days": (offer.order_lead_time_days or offer.in_stock_lead_time_days or None) if offer else None,
             }

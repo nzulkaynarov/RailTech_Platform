@@ -7508,6 +7508,386 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/stock/adjustments/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Корректировка остатка: оприходовать или списать
+         * @description POST /api/v1/stock/adjustments/ — оприходовать или списать вручную (начальные остатки, инвентаризация).
+         */
+        post: operations["stock_adjust"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/stock/balances/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Остатки и резервы по номенклатуре
+         * @description GET /api/v1/stock/balances/ — остатки и резервы по номенклатуре.
+         */
+        get: operations["stock_balances_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/stock/balances/{product_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Товар на складе
+         * @description GET /api/v1/stock/balances/<product_id>/ — товар: ячейки, резервы по проектам, приход, движения.
+         */
+        get: operations["stock_product_detail"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/stock/orders/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Заказы поставщикам
+         * @description GET/POST /api/v1/stock/orders/ — заказы поставщикам; POST — создать черновик.
+         */
+        get: operations["stock_orders_list"];
+        put?: never;
+        /**
+         * Создать заказ поставщику (черновик)
+         * @description GET/POST /api/v1/stock/orders/ — заказы поставщикам; POST — создать черновик.
+         */
+        post: operations["stock_order_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/stock/orders/{order_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Заказ поставщику
+         * @description GET/PATCH /api/v1/stock/orders/<id>/ — карточка заказа; правка (состав — только в черновике).
+         */
+        get: operations["stock_order_detail"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Изменить заказ (состав — в черновике; ожидаемая дата и примечание — пока заказ не закрыт)
+         * @description GET/PATCH /api/v1/stock/orders/<id>/ — карточка заказа; правка (состав — только в черновике).
+         */
+        patch: operations["stock_order_update"];
+        trace?: never;
+    };
+    "/api/v1/stock/orders/{order_id}/cancel/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Отменить заказ
+         * @description POST /api/v1/stock/orders/<id>/cancel/ — отменить заказ (если по нему ещё ничего не принято).
+         */
+        post: operations["stock_order_cancel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/stock/orders/{order_id}/confirm/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Отметить подтверждение поставщика
+         * @description POST /api/v1/stock/orders/<id>/confirm/ — поставщик подтвердил (отправлен → подтверждён); нужна ожидаемая дата.
+         */
+        post: operations["stock_order_confirm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/stock/orders/{order_id}/receipts/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Принять товар от поставщика по строкам заказа
+         * @description POST /api/v1/stock/orders/<id>/receipts/ — приёмка по строкам заказа (частичная); остаток склада растёт.
+         */
+        post: operations["stock_order_receive"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/stock/orders/{order_id}/send/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Отправить заказ поставщику (письмо)
+         * @description POST /api/v1/stock/orders/<id>/send/ — отправить поставщику письмом (черновик → отправлен).
+         */
+        post: operations["stock_order_send"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/stock/orders/from-deal/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Черновик заказа на дефицит проекта
+         * @description POST /api/v1/stock/orders/from-deal/ — черновик ЗП на дефицит проекта.
+         */
+        post: operations["stock_order_from_deal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/stock/overdue/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Просроченные заказы поставщикам
+         * @description GET /api/v1/stock/overdue/ — просроченные заказы (источник вида очереди `supplier_overdue`).
+         */
+        get: operations["stock_overdue_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/stock/price-requests/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Журнал запросов цены у поставщиков
+         * @description GET/POST /api/v1/stock/price-requests/ — журнал запросов цены; POST — запросить цену у поставщика письмом.
+         */
+        get: operations["stock_price_requests_list"];
+        put?: never;
+        /**
+         * Запросить цену у поставщика (письмо) по строкам расчёта
+         * @description GET/POST /api/v1/stock/price-requests/ — журнал запросов цены; POST — запросить цену у поставщика письмом.
+         */
+        post: operations["stock_price_request_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/stock/price-requests/{request_id}/answer/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Отметить ответ поставщика
+         * @description POST /api/v1/stock/price-requests/<id>/answer/ — отметить, что поставщик ответил (цена внесена в расчёт).
+         */
+        post: operations["stock_price_request_answer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/stock/receipts/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Приёмка: ожидаемые строки и последние приёмки
+         * @description GET /api/v1/stock/receipts/ — «Приёмка»: ждут товара и последние приёмки.
+         */
+        get: operations["stock_receipts_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/stock/reservations/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Резервы под проекты
+         * @description GET/POST /api/v1/stock/reservations/ — резервы; POST — зарезервировать (или изменить количество) под строку расчёта.
+         */
+        get: operations["stock_reservations_list"];
+        put?: never;
+        /**
+         * Зарезервировать товар под строку расчёта
+         * @description GET/POST /api/v1/stock/reservations/ — резервы; POST — зарезервировать (или изменить количество) под строку расчёта.
+         */
+        post: operations["stock_reserve"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/stock/reservations/{reservation_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Снять резерв
+         * @description DELETE /api/v1/stock/reservations/<id>/ — снять резерв.
+         */
+        delete: operations["stock_reservation_release"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/stock/shipments/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Отгрузки по проектам
+         * @description GET/POST /api/v1/stock/shipments/ — отгрузки по проектам; POST — отгрузить со склада по резервам заявки.
+         */
+        get: operations["stock_shipments_list"];
+        put?: never;
+        /**
+         * Отгрузить со склада по резервам заявки (накладная ОТГ)
+         * @description GET/POST /api/v1/stock/shipments/ — отгрузки по проектам; POST — отгрузить со склада по резервам заявки.
+         */
+        post: operations["stock_ship"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/stock/suppliers/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Поставщики для выбора
+         * @description GET /api/v1/stock/suppliers/?q= — внешние поставщики для выбора (запрос цены, заказ).
+         */
+        get: operations["stock_suppliers_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/system-settings/": {
         parameters: {
             query?: never;
@@ -8096,6 +8476,8 @@ export interface components {
             services: boolean;
             build: boolean;
             cost: boolean;
+            /** @description Резервы и запросы цены у поставщиков (`supply.manage`, D2-2) */
+            stock: boolean;
         };
         CalcSheet: {
             deal: components["schemas"]["CalcDeal"];
@@ -8119,8 +8501,13 @@ export interface components {
          */
         CalcStateEnum: "not_started" | "in_progress" | "returned" | "at_director" | "rejected" | "approved";
         CalcStock: {
+            /** @description На складе всего; null — у строки нет карточки каталога */
             on_hand: number | null;
+            /** @description Свободно: остаток минус резервы всех проектов (D2-2) */
+            free: number | null;
+            /** @description Ячейка с наибольшим остатком (D2-2) */
             cell: string | null;
+            /** @description Зарезервировано за этой строкой (D2-2) */
             reserved: number | null;
         };
         CalcSupplier: {
@@ -9957,6 +10344,23 @@ export interface components {
              */
             is_active?: boolean;
         };
+        DoneReceipt: {
+            id: number;
+            order_id: number;
+            order_number: string;
+            supplier_name: string;
+            /** Format: date-time */
+            received_at: string;
+            received_by_name: string | null;
+            supplier_doc: string | null;
+            quantity: number;
+            lines: components["schemas"]["DoneReceiptLine"][];
+        };
+        DoneReceiptLine: {
+            name: string;
+            quantity: number;
+            cell: string | null;
+        };
         /** @description DB-editable email template — Platform-Operator admin CRUD. */
         EmailTemplate: {
             readonly id: number;
@@ -10713,6 +11117,199 @@ export interface components {
             preferred_channel: components["schemas"]["ContactPreferredChannelEnum"];
             /** @default  */
             telegram_username: string;
+        };
+        OrderActions: {
+            edit: boolean;
+            send: boolean;
+            confirm: boolean;
+            receive: boolean;
+            cancel: boolean;
+        };
+        OrderCancelInRequest: {
+            /** @default  */
+            reason: string;
+        };
+        OrderConfirmInRequest: {
+            /** Format: date */
+            expected_date?: string | null;
+        };
+        OrderCreateInRequest: {
+            supplier_id: number;
+            /** Format: date */
+            expected_date?: string | null;
+            /** @default  */
+            note: string;
+            currency?: string | null;
+            lines: components["schemas"]["OrderLineInRequest"][];
+        };
+        OrderDetail: {
+            id: number;
+            /** @description ЗП-ГГГГ-NNN */
+            number: string;
+            status: components["schemas"]["SupplierOrderStatusEnum"];
+            supplier: components["schemas"]["OrderSupplier"];
+            /** Format: date */
+            expected_date: string | null;
+            /** @description Ожидаемая дата прошла, заказ отправлен или подтверждён, но не получен */
+            overdue: boolean;
+            days_overdue: number | null;
+            currency: string | null;
+            lines_count: number;
+            quantity: number;
+            received_quantity: number;
+            receipt_state: components["schemas"]["SupplierOrderReceiptStateEnum"];
+            /**
+             * Format: decimal
+             * @description Сумма заказа — только с правом видеть цены поставщиков
+             */
+            total: string | null;
+            projects: components["schemas"]["StockDealRef"][];
+            /** Format: date-time */
+            created_at: string;
+            created_by_name: string | null;
+            actions: components["schemas"]["OrderActions"];
+            note: string;
+            /** Format: date-time */
+            sent_at: string | null;
+            sent_to: string | null;
+            /** Format: date-time */
+            confirmed_at: string | null;
+            /** Format: date-time */
+            received_at: string | null;
+            /** Format: date-time */
+            cancelled_at: string | null;
+            cancel_reason: string | null;
+            lines: components["schemas"]["OrderLine"][];
+            receipts: components["schemas"]["OrderReceipt"][];
+            log: components["schemas"]["OrderLog"][];
+            rights: components["schemas"]["OrderRights"];
+        };
+        OrderFromDealInRequest: {
+            deal_id: number;
+            supplier_id: number;
+        };
+        OrderLine: {
+            id: number;
+            position: number;
+            product_id: number | null;
+            name: string;
+            article: string;
+            unit: string;
+            quantity: number;
+            received_quantity: number;
+            /** Format: decimal */
+            unit_price: string | null;
+            /** Format: decimal */
+            line_total: string | null;
+            deal: components["schemas"]["StockDealRef"] | null;
+            quote_item_id: number | null;
+        };
+        OrderLineInRequest: {
+            /** @description Строка этого заказа (правка); без id — новая */
+            id?: number;
+            product_id: number;
+            /** @default  */
+            name: string;
+            /** @default  */
+            article: string;
+            /** @default  */
+            unit: string;
+            quantity: number;
+            /**
+             * Format: decimal
+             * @description Цена поставщика за единицу; ставит только держатель права видеть цены поставщиков
+             */
+            unit_price?: string | null;
+            deal_id?: number | null;
+            quote_item_id?: number | null;
+        };
+        OrderList: {
+            results: components["schemas"]["OrderRow"][];
+            rights: components["schemas"]["OrderRights"];
+        };
+        OrderLog: {
+            kind: components["schemas"]["OrderLogKindEnum"];
+            /** Format: date-time */
+            at: string;
+            by_name: string | null;
+            detail: string | null;
+        };
+        /**
+         * @description * `created` - created
+         *     * `edited` - edited
+         *     * `sent` - sent
+         *     * `confirmed` - confirmed
+         *     * `receipt` - receipt
+         *     * `received` - received
+         *     * `cancelled` - cancelled
+         *     * `overdue` - overdue
+         * @enum {string}
+         */
+        OrderLogKindEnum: "created" | "edited" | "sent" | "confirmed" | "receipt" | "received" | "cancelled" | "overdue";
+        OrderReceipt: {
+            id: number;
+            /** Format: date-time */
+            received_at: string;
+            received_by_name: string | null;
+            supplier_doc: string | null;
+            note: string | null;
+            lines: components["schemas"]["ReceiptLine"][];
+        };
+        OrderRights: {
+            /** @description Резервы, корректировки, заказы поставщикам, приёмка (`supply.manage`) */
+            manage: boolean;
+            /** @description Отгрузки по проектам (`fulfillment.manage`) */
+            ship: boolean;
+            /** @description Видит цены поставщиков (`quote.view_cost_margin` или зона товаров) */
+            prices: boolean;
+        };
+        OrderRow: {
+            id: number;
+            /** @description ЗП-ГГГГ-NNN */
+            number: string;
+            status: components["schemas"]["SupplierOrderStatusEnum"];
+            supplier: components["schemas"]["OrderSupplier"];
+            /** Format: date */
+            expected_date: string | null;
+            /** @description Ожидаемая дата прошла, заказ отправлен или подтверждён, но не получен */
+            overdue: boolean;
+            days_overdue: number | null;
+            currency: string | null;
+            lines_count: number;
+            quantity: number;
+            received_quantity: number;
+            receipt_state: components["schemas"]["SupplierOrderReceiptStateEnum"];
+            /**
+             * Format: decimal
+             * @description Сумма заказа — только с правом видеть цены поставщиков
+             */
+            total: string | null;
+            projects: components["schemas"]["StockDealRef"][];
+            /** Format: date-time */
+            created_at: string;
+            created_by_name: string | null;
+            actions: components["schemas"]["OrderActions"];
+        };
+        OrderSendInRequest: {
+            to_email?: string;
+        };
+        OrderSupplier: {
+            id: number;
+            name: string;
+            /** @description Только в карточке заказа */
+            email?: string | null;
+        };
+        OverdueList: {
+            results: components["schemas"]["OverdueOrder"][];
+        };
+        OverdueOrder: {
+            id: number;
+            number: string;
+            status: components["schemas"]["SupplierOrderStatusEnum"];
+            supplier_name: string;
+            /** Format: date */
+            expected_date: string;
+            days_overdue: number;
         };
         OwnCompanyCreated: {
             id: number;
@@ -11795,6 +12392,14 @@ export interface components {
                 [key: string]: string;
             };
         };
+        PatchedOrderPatchInRequest: {
+            supplier_id?: number;
+            /** Format: date */
+            expected_date?: string | null;
+            note?: string;
+            currency?: string | null;
+            lines?: components["schemas"]["OrderLineInRequest"][];
+        };
         /**
          * @description Strip supplier-cost fields (offers / base_price) from viewers who don't own
          *     the product. Only the OWNING seller's team + platform admins see cost & supplier
@@ -12351,6 +12956,21 @@ export interface components {
              */
             proof_file?: string | null;
         };
+        PendingReceiptLine: {
+            order_id: number;
+            order_number: string;
+            supplier_name: string;
+            /** Format: date */
+            expected_date: string | null;
+            overdue: boolean;
+            order_line_id: number;
+            name: string;
+            article: string;
+            unit: string;
+            quantity: number;
+            received_quantity: number;
+            deal: components["schemas"]["StockDealRef"] | null;
+        };
         /**
          * @description Вход формы «Новый пользователь» в операторской панели.
          *
@@ -12368,6 +12988,54 @@ export interface components {
             position?: string;
             role?: string;
         };
+        PriceRequest: {
+            id: number;
+            supplier: components["schemas"]["OrderSupplier"];
+            deal_id: number | null;
+            deal_number: string | null;
+            /** Format: date-time */
+            requested_at: string;
+            requested_by_name: string | null;
+            to_email: string;
+            subject: string;
+            note: string | null;
+            status: components["schemas"]["PriceRequestStatusEnum"];
+            error: string | null;
+            /** Format: date-time */
+            answered_at: string | null;
+            answered_by_name: string | null;
+            answer_note: string | null;
+            lines: components["schemas"]["PriceRequestLine"][];
+        };
+        PriceRequestAnswerInRequest: {
+            /** @default  */
+            note: string;
+        };
+        PriceRequestInRequest: {
+            deal_id: number;
+            supplier_id: number;
+            /** @description Строки расчёта */
+            line_ids: number[];
+            /** @default  */
+            note: string;
+            to_email?: string;
+        };
+        PriceRequestLine: {
+            quote_item_id: number | null;
+            name: string;
+            article: string;
+            quantity: number;
+            unit: string;
+        };
+        PriceRequestList: {
+            results: components["schemas"]["PriceRequest"][];
+        };
+        /**
+         * @description * `sent` - sent
+         *     * `failed` - failed
+         * @enum {string}
+         */
+        PriceRequestStatusEnum: "sent" | "failed";
         /**
          * @description * `cabinet` - Показывать цену в кабинете
          *     * `on_request` - Цена по запросу
@@ -13676,6 +14344,30 @@ export interface components {
         ReassignProductRequest: {
             product_id: number | null;
         };
+        ReceiptInRequest: {
+            lines: components["schemas"]["ReceiptLineInRequest"][];
+            /** @default  */
+            supplier_doc: string;
+            /** @default  */
+            note: string;
+        };
+        ReceiptLine: {
+            order_line_id: number;
+            name: string;
+            quantity: number;
+            cell: string | null;
+        };
+        ReceiptLineInRequest: {
+            order_line_id: number;
+            quantity: number;
+            /** @default  */
+            cell: string;
+        };
+        Receipts: {
+            pending: components["schemas"]["PendingReceiptLine"][];
+            done: components["schemas"]["DoneReceipt"][];
+            rights: components["schemas"]["StockRights"];
+        };
         RecentDocument: {
             type: components["schemas"]["TypeEnum"];
             id: number;
@@ -13834,6 +14526,185 @@ export interface components {
             permissions: string[];
             platform_access: string[];
         };
+        StockAdjustInRequest: {
+            product_id: number;
+            /** @description Плюс — оприходовать, минус — списать; не ноль */
+            quantity: number;
+            /** @default  */
+            cell: string;
+            /** @default  */
+            note: string;
+        };
+        StockBalanceList: {
+            results: components["schemas"]["StockRow"][];
+            rights: components["schemas"]["StockRights"];
+        };
+        StockCell: {
+            /** @description Пусто — товар лежит без ячейки */
+            cell: string | null;
+            on_hand: number;
+        };
+        StockDealRef: {
+            id: number;
+            /** @description Номер ЗВ/ПР (`Deal.number`) */
+            number: string | null;
+            client_name: string | null;
+        };
+        StockError: {
+            /** @description Код отказа (`UPPER_SNAKE`) */
+            detail: string;
+            /** @description `VALIDATION_FAILED`: ошибки полей тела запроса — поле → список кодов или вложенные ошибки */
+            fields?: {
+                [key: string]: unknown;
+            };
+            /** @description `NOT_ENOUGH_STOCK`: сколько можно взять */
+            free?: number;
+            /** @description `QUANTITY_OUT_OF_RANGE`: наибольшее допустимое количество */
+            max?: number;
+            /** @description `BELOW_RESERVED`: сколько в резервах */
+            reserved?: number;
+            on_hand?: number;
+            /** @description `BELOW_SHIPPED`: уже отгружено */
+            shipped?: number;
+            /** @description `TRANSITION_NOT_ALLOWED`, `ORDER_NOT_CONFIRMED`: текущий статус */
+            current?: string;
+            /** @description `TRANSITION_NOT_ALLOWED`: куда хотели перейти */
+            target?: string;
+        };
+        StockIncomingOrder: {
+            order_id: number;
+            number: string;
+            status: components["schemas"]["SupplierOrderStatusEnum"];
+            supplier_name: string;
+            /** Format: date */
+            expected_date: string | null;
+            quantity_left: number;
+        };
+        StockMovement: {
+            kind: components["schemas"]["StockMovementKindEnum"];
+            /** @description Плюс — приход, минус — расход */
+            quantity: number;
+            cell: string | null;
+            /** Format: date-time */
+            at: string;
+            by_name: string | null;
+            note: string | null;
+        };
+        /**
+         * @description * `receipt` - receipt
+         *     * `shipment` - shipment
+         *     * `adjustment` - adjustment
+         * @enum {string}
+         */
+        StockMovementKindEnum: "receipt" | "shipment" | "adjustment";
+        StockProduct: {
+            product_id: number;
+            name: string;
+            article: string;
+            unit: string;
+            on_hand: number;
+            /** @description Остаток резервов действующих проектов */
+            reserved: number;
+            /** @description Свободный остаток: остаток − резервы */
+            free: number;
+            /** @description Ожидается по отправленным и подтверждённым заказам поставщикам */
+            incoming: number;
+            /** Format: date */
+            next_expected: string | null;
+            cells: components["schemas"]["StockCell"][];
+            reservations: components["schemas"]["StockReservation"][];
+            incoming_orders: components["schemas"]["StockIncomingOrder"][];
+            movements: components["schemas"]["StockMovement"][];
+            rights: components["schemas"]["StockRights"];
+        };
+        StockReservation: {
+            id: number;
+            product_id: number;
+            product_name: string;
+            deal: components["schemas"]["StockDealRef"];
+            quote_item_id: number | null;
+            quantity: number;
+            shipped_quantity: number;
+            remaining: number;
+            status: components["schemas"]["StockReservationStatusEnum"];
+            /** Format: date-time */
+            created_at: string;
+            created_by_name: string | null;
+        };
+        StockReservationList: {
+            results: components["schemas"]["StockReservation"][];
+        };
+        /**
+         * @description * `active` - active
+         *     * `released` - released
+         *     * `fulfilled` - fulfilled
+         * @enum {string}
+         */
+        StockReservationStatusEnum: "active" | "released" | "fulfilled";
+        StockReserveInRequest: {
+            deal_id: number;
+            quote_item_id: number;
+            quantity: number;
+        };
+        StockRights: {
+            /** @description Резервы, корректировки, заказы поставщикам, приёмка (`supply.manage`) */
+            manage: boolean;
+            /** @description Отгрузки по проектам (`fulfillment.manage`) */
+            ship: boolean;
+        };
+        StockRow: {
+            product_id: number;
+            name: string;
+            article: string;
+            unit: string;
+            on_hand: number;
+            /** @description Остаток резервов действующих проектов */
+            reserved: number;
+            /** @description Свободный остаток: остаток − резервы */
+            free: number;
+            /** @description Ожидается по отправленным и подтверждённым заказам поставщикам */
+            incoming: number;
+            /** Format: date */
+            next_expected: string | null;
+            cells: components["schemas"]["StockCell"][];
+        };
+        StockShipInRequest: {
+            deal_id: number;
+            lines: components["schemas"]["StockShipLineInRequest"][];
+            /** @default  */
+            tracking: string;
+            /** @default  */
+            carrier: string;
+            /** @default  */
+            note: string;
+        };
+        StockShipLineInRequest: {
+            reservation_id: number;
+            quantity: number;
+        };
+        StockShipment: {
+            id: number;
+            /** @description Внутренняя накладная ОТГ-ГГГГ-NNN */
+            number: string;
+            deal: components["schemas"]["StockDealRef"];
+            tracking: string | null;
+            carrier: string | null;
+            note: string | null;
+            /** Format: date-time */
+            shipped_at: string;
+            shipped_by_name: string | null;
+            lines: components["schemas"]["StockShipmentLine"][];
+        };
+        StockShipmentLine: {
+            product_id: number;
+            name: string;
+            quantity: number;
+            cell: string | null;
+        };
+        StockShipmentList: {
+            results: components["schemas"]["StockShipment"][];
+            rights: components["schemas"]["StockRights"];
+        };
         StockStatus: {
             readonly id: number;
             /**
@@ -13846,6 +14717,16 @@ export interface components {
              * @description Отображаемое название
              */
             name: string;
+        };
+        StockSupplier: {
+            id: number;
+            name: string;
+            inn: string | null;
+            /** @description Адрес для писем: почта компании или основного контакта */
+            email: string | null;
+        };
+        StockSupplierList: {
+            results: components["schemas"]["StockSupplier"][];
         };
         SupplierOffer: {
             readonly id: number;
@@ -14011,6 +14892,22 @@ export interface components {
              */
             is_active?: boolean;
         };
+        /**
+         * @description * `none` - none
+         *     * `partial` - partial
+         *     * `full` - full
+         * @enum {string}
+         */
+        SupplierOrderReceiptStateEnum: "none" | "partial" | "full";
+        /**
+         * @description * `draft` - draft
+         *     * `sent` - sent
+         *     * `confirmed` - confirmed
+         *     * `received` - received
+         *     * `cancelled` - cancelled
+         * @enum {string}
+         */
+        SupplierOrderStatusEnum: "draft" | "sent" | "confirmed" | "received" | "cancelled";
         /** @description Response shape for the SystemRole lookup feed ({code, name}). */
         SystemRoleLookup: {
             code: string;
@@ -28226,6 +29123,1160 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
+    stock_adjust: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StockAdjustInRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["StockAdjustInRequest"];
+                "multipart/form-data": components["schemas"]["StockAdjustInRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockProduct"];
+                };
+            };
+            /** @description Тело не прошло проверку */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права или не сотрудник */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            /** @description Объекта нет */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            /** @description Состояние не позволяет (мало остатка, резерв, статус) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+        };
+    };
+    stock_balances_list: {
+        parameters: {
+            query?: {
+                /** @description Только с резервом / с приходом */
+                only?: "incoming" | "reserved";
+                /** @description Слова названия, артикула, SKU; ищет по всей номенклатуре */
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockBalanceList"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права или не сотрудник */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+        };
+    };
+    stock_product_detail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                product_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockProduct"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права или не сотрудник */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            /** @description Объекта нет */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+        };
+    };
+    stock_orders_list: {
+        parameters: {
+            query?: {
+                /** @description Точный номер ЗП-ГГГГ-NNN */
+                number?: string;
+                /** @description Только просроченные */
+                overdue?: boolean;
+                /** @description Номер, поставщик, название позиции */
+                q?: string;
+                /** @description Статус заказа */
+                status?: "cancelled" | "confirmed" | "draft" | "received" | "sent";
+                supplier_id?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderList"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права, не сотрудник или нет права на цены поставщиков */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+        };
+    };
+    stock_order_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrderCreateInRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["OrderCreateInRequest"];
+                "multipart/form-data": components["schemas"]["OrderCreateInRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderDetail"];
+                };
+            };
+            /** @description Тело не прошло проверку */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права, не сотрудник или нет права на цены поставщиков */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            /** @description Заказа, строки, поставщика или заявки нет */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            /** @description Состояние не позволяет (недопустимый переход статуса, нет адреса, письмо не ушло — `EMAIL_FAILED`, мало товара) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+        };
+    };
+    stock_order_detail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                order_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderDetail"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права, не сотрудник или нет права на цены поставщиков */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            /** @description Заказа, строки, поставщика или заявки нет */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+        };
+    };
+    stock_order_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                order_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedOrderPatchInRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedOrderPatchInRequest"];
+                "multipart/form-data": components["schemas"]["PatchedOrderPatchInRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderDetail"];
+                };
+            };
+            /** @description Тело не прошло проверку */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права, не сотрудник или нет права на цены поставщиков */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            /** @description Заказа, строки, поставщика или заявки нет */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            /** @description Состояние не позволяет (недопустимый переход статуса, нет адреса, письмо не ушло — `EMAIL_FAILED`, мало товара) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+        };
+    };
+    stock_order_cancel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                order_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["OrderCancelInRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["OrderCancelInRequest"];
+                "multipart/form-data": components["schemas"]["OrderCancelInRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderDetail"];
+                };
+            };
+            /** @description Тело не прошло проверку */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права, не сотрудник или нет права на цены поставщиков */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            /** @description Заказа, строки, поставщика или заявки нет */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            /** @description Состояние не позволяет (недопустимый переход статуса, нет адреса, письмо не ушло — `EMAIL_FAILED`, мало товара) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+        };
+    };
+    stock_order_confirm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                order_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["OrderConfirmInRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["OrderConfirmInRequest"];
+                "multipart/form-data": components["schemas"]["OrderConfirmInRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderDetail"];
+                };
+            };
+            /** @description Тело не прошло проверку */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права, не сотрудник или нет права на цены поставщиков */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            /** @description Заказа, строки, поставщика или заявки нет */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            /** @description Состояние не позволяет (недопустимый переход статуса, нет адреса, письмо не ушло — `EMAIL_FAILED`, мало товара) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+        };
+    };
+    stock_order_receive: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                order_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReceiptInRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ReceiptInRequest"];
+                "multipart/form-data": components["schemas"]["ReceiptInRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderDetail"];
+                };
+            };
+            /** @description Тело не прошло проверку */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права, не сотрудник или нет права на цены поставщиков */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            /** @description Заказа, строки, поставщика или заявки нет */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            /** @description Состояние не позволяет (недопустимый переход статуса, нет адреса, письмо не ушло — `EMAIL_FAILED`, мало товара) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+        };
+    };
+    stock_order_send: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                order_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["OrderSendInRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["OrderSendInRequest"];
+                "multipart/form-data": components["schemas"]["OrderSendInRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderDetail"];
+                };
+            };
+            /** @description Тело не прошло проверку */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права, не сотрудник или нет права на цены поставщиков */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            /** @description Заказа, строки, поставщика или заявки нет */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            /** @description Состояние не позволяет (недопустимый переход статуса, нет адреса, письмо не ушло — `EMAIL_FAILED`, мало товара) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+        };
+    };
+    stock_order_from_deal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrderFromDealInRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["OrderFromDealInRequest"];
+                "multipart/form-data": components["schemas"]["OrderFromDealInRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderDetail"];
+                };
+            };
+            /** @description Тело не прошло проверку */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права, не сотрудник или нет права на цены поставщиков */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            /** @description Заказа, строки, поставщика или заявки нет */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            /** @description Состояние не позволяет (недопустимый переход статуса, нет адреса, письмо не ушло — `EMAIL_FAILED`, мало товара) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+        };
+    };
+    stock_overdue_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OverdueList"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права, не сотрудник или нет права на цены поставщиков */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+        };
+    };
+    stock_price_requests_list: {
+        parameters: {
+            query?: {
+                deal_id?: number;
+                supplier_id?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PriceRequestList"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права, не сотрудник или нет права на цены поставщиков */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+        };
+    };
+    stock_price_request_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PriceRequestInRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PriceRequestInRequest"];
+                "multipart/form-data": components["schemas"]["PriceRequestInRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PriceRequest"];
+                };
+            };
+            /** @description Тело не прошло проверку */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права, не сотрудник или нет права на цены поставщиков */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            /** @description Заказа, строки, поставщика или заявки нет */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            /** @description Состояние не позволяет (недопустимый переход статуса, нет адреса, письмо не ушло — `EMAIL_FAILED`, мало товара) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+        };
+    };
+    stock_price_request_answer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PriceRequestAnswerInRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PriceRequestAnswerInRequest"];
+                "multipart/form-data": components["schemas"]["PriceRequestAnswerInRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PriceRequest"];
+                };
+            };
+            /** @description Тело не прошло проверку */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права, не сотрудник или нет права на цены поставщиков */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            /** @description Заказа, строки, поставщика или заявки нет */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            /** @description Состояние не позволяет (недопустимый переход статуса, нет адреса, письмо не ушло — `EMAIL_FAILED`, мало товара) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+        };
+    };
+    stock_receipts_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Receipts"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права, не сотрудник или нет права на цены поставщиков */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+        };
+    };
+    stock_reservations_list: {
+        parameters: {
+            query?: {
+                deal_id?: number;
+                product_id?: number;
+                /** @description По умолчанию — действующие */
+                status?: "active" | "fulfilled" | "released";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockReservationList"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права или не сотрудник */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+        };
+    };
+    stock_reserve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StockReserveInRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["StockReserveInRequest"];
+                "multipart/form-data": components["schemas"]["StockReserveInRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockReservation"];
+                };
+            };
+            /** @description Тело не прошло проверку */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права или не сотрудник */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            /** @description Объекта нет */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            /** @description Состояние не позволяет (мало остатка, резерв, статус) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+        };
+    };
+    stock_reservation_release: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reservation_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockReservation"];
+                };
+            };
+            /** @description Тело не прошло проверку */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права или не сотрудник */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            /** @description Объекта нет */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            /** @description Состояние не позволяет (мало остатка, резерв, статус) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+        };
+    };
+    stock_shipments_list: {
+        parameters: {
+            query?: {
+                deal_id?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockShipmentList"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права или не сотрудник */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+        };
+    };
+    stock_ship: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StockShipInRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["StockShipInRequest"];
+                "multipart/form-data": components["schemas"]["StockShipInRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockShipment"];
+                };
+            };
+            /** @description Тело не прошло проверку */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права или не сотрудник */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            /** @description Объекта нет */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            /** @description Состояние не позволяет (мало остатка, резерв, статус) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+        };
+    };
+    stock_suppliers_list: {
+        parameters: {
+            query?: {
+                /** @description Название или ИНН */
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockSupplierList"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права или не сотрудник */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
                 };
             };
         };

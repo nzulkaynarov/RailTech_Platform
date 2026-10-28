@@ -490,6 +490,7 @@ async def test_menu_counters_for_supply_have_no_action_badges(
     check(response, "/menu-counters", "get")
     assert [(c["module"], c["section"], c["attention"]) for c in response.json()["items"]] == [
         ("dashboard", "queue", False),
+        ("erp", "stock", False),
         ("dashboard", "projects", False),
         ("eds", "projects", False),
     ]

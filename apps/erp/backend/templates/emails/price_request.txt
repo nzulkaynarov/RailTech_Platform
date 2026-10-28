@@ -1,0 +1,12 @@
+{% load i18n %}{% blocktranslate %}Здравствуйте, {{ supplier_name }}!{% endblocktranslate %}
+
+{% blocktranslate %}Просим сообщить цену, срок поставки и наличие по позициям (ссылка на запрос: {{ reference }}):{% endblocktranslate %}
+{% for line in lines %}
+{{ forloop.counter }}. {{ line.name }}{% if line.article %} ({{ line.article }}){% endif %} — {{ line.quantity }}{% if line.unit %} {{ line.unit }}{% endif %}{% endfor %}
+{% if note %}
+{{ note }}
+{% endif %}
+{% translate "Ответьте, пожалуйста, на это письмо: цена за единицу, валюта, условия поставки, срок действия цены." %}
+
+{{ sender_name }}{% if sender_email %}
+{{ sender_email }}{% endif %}

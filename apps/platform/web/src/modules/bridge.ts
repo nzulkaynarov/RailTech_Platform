@@ -114,7 +114,6 @@ export const BRIDGE: Readonly<Record<string, BridgeEntry>> = {
     objectKind: "invoice",
   },
 
-  "erp.stock": { legacy: erp("#my-products", "erpStock"), when: "pilot" },
   "erp.catalog": { legacy: erp("#catalog-reference", "erpCatalog"), when: "pilot" },
   "erp.docs": { legacy: erp("#company-files", "erpFiles"), when: "pilot" },
 
@@ -134,6 +133,7 @@ export const NATIVE_SECTIONS: readonly string[] = [
   "eds.inbox",
   "erp.requests",
   "erp.calc",
+  "erp.stock",
   "eds.drafts",
   "eds.approvals",
   "admin.roles",
