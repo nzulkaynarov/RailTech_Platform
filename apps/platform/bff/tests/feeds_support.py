@@ -9,7 +9,7 @@ from typing import Any
 import httpx
 import respx
 
-from tests.consts import CRM_URL, ERP_URL
+from tests.consts import CRM_URL, EDS_URL, ERP_URL
 from tests.fakes import Clock
 
 Handler = Callable[[httpx.Request], httpx.Response]
@@ -63,11 +63,18 @@ class FeedBackends:
             "documents": {"results": []},
             "activity_logs": (403, {"detail": "PLATFORM_ADMIN_REQUIRED"}),
             "timeline": [],
+            # EDS (D1-6): письма «Ждут резолюции», маршруты на моём шаге, реестр для поиска
+            "letters": {"items": [], "next_cursor": None},
+            "memos": {"items": [], "next_cursor": None},
+            "registry": {"items": [], "next_cursor": None},
         }
         self.mark_read_status = 200
         self.mark_all_status = 200
         self.erp_down: Exception | int | None = None
         self.crm_down: Exception | int | None = None
+        # EDS: сбой (исключение сети или статус) и отказ обмена токена («не заведён в EDS», 403)
+        self.eds_down: Exception | int | None = None
+        self.eds_exchange_status = 200
         self.crm = {
             "inbox": router.get(f"{CRM_URL}/api/v1/inbox").mock(side_effect=self._inbox),
             "covering": self._crm("covering", router.get(f"{CRM_URL}/api/v1/me/covering")),
@@ -98,11 +105,32 @@ class FeedBackends:
             "activity_logs": self._erp("activity_logs", router.get(f"{base}/crm/activity-logs/")),
             "timeline": self._erp("timeline", router.get(f"{base}/crm/timeline/")),
         }
+        self.eds = {
+            "letters": self._eds("letters", router.get(f"{EDS_URL}/api/v1/letters")),
+            "approvals": self._eds("memos", router.get(f"{EDS_URL}/api/v1/approvals")),
+            "registry": self._eds("registry", router.get(f"{EDS_URL}/api/v1/registry")),
+        }
+        self.eds_exchange = router.post(f"{EDS_URL}/api/v1/auth/sso/exchange").mock(
+            side_effect=self._eds_exchange
+        )
         self.mark_read = router.patch(
             url__regex=re.compile(rf"^{ERP_URL}/api/v1/notifications/\d+/mark_read/$")
         ).mock(side_effect=lambda _r: self._respond_status(self.mark_read_status))
         self.mark_all = router.patch(f"{base}/notifications/mark_all_read/").mock(
             side_effect=lambda _r: self._respond_status(self.mark_all_status)
+        )
+
+    def _eds(self, key: str, route: respx.Route) -> respx.Route:
+        return route.mock(side_effect=lambda _r: self._respond(key, self.eds_down))
+
+    def _eds_exchange(self, request: httpx.Request) -> httpx.Response:
+        if self.eds_exchange_status != 200:
+            return httpx.Response(
+                self.eds_exchange_status,
+                json={"code": "USER_NOT_PROVISIONED", "message": "x", "source": "eds"},
+            )
+        return httpx.Response(
+            200, json={"access_token": "eds-access-1", "token_type": "bearer", "expires_in": 900}
         )
 
     def _respond(self, key: str, down: Exception | int | None) -> httpx.Response:
