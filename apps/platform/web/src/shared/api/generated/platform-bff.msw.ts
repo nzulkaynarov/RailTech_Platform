@@ -133,7 +133,7 @@
  * (директор читает), сброс пароля — `admin: full`; профиль доступен каждому вошедшему. Секреты из записей журнала BFF вырезает
  * (значения полей `password`, `secret`, `token`, `key`, `*_key`, `credentials`, `authorization`, `pin` и им подобных -> `***` целиком, любого типа).
  *
- * **0.24.0 (W15-H7) — помощь, первый вход и обращения к администратору.** Добавляющее изменение (тег `tickets`). **Обращения
+ * **0.25.0 (W15-H7) — помощь, первый вход и обращения к администратору.** Добавляющее изменение (тег `tickets`). **Обращения
  * сотрудников** (домен CRM, ADR-0015): `POST /tickets` (тема из списка `access|notification|template|error|other`, текст,
  * адрес страницы; роль автора BFF берёт из сессии), `GET /tickets` и `GET /tickets/{number}` — только свои обращения
  * (чужое — 404), не больше пяти в час (429 `TOO_MANY_REQUESTS`, `details.reason = ticket_rate_limited`). Админ:
@@ -147,6 +147,21 @@
  * ответ и решение уходят автору, новое обращение — администраторам; `POST /notifications/{id}/read` и `read-all` отмечают
  * обе ленты. **Первый вход:** `Me.onboarding_done` и `PUT /me/onboarding` («Пропустить» / «Больше не показывать» —
  * флаг хранит CRM, не браузер).
+ *
+ * **0.24.0 (D1-4) — EDS · КП на одобрение и документы на согласовании.** Добавляющее изменение, тег `eds-approvals`: `GET /eds/quotes`
+ * (КП на одобрение: «на моём шаге» или все), `GET /eds/quotes/{ref}` (карточка КП по id маршрута или номеру `КП-2026/115`: шаги маршрута,
+ * чек-лист с датой и автором, состав и итоги из ERP, письмо и заявка, каналы отправки по контакту клиента; **внутренний блок**
+ * `internal` — себестоимость, маржа, порог, сроки — и значение маржи в чек-листе BFF вырезает у роли без группы `cost_margin`),
+ * `POST /eds/quotes/{id}/decision` («Одобрить КП → отправить клиенту» с `channels`, «Вернуть на доработку», «Отклонить»; чек-лист
+ * проверяет EDS: красная блокирующая строка — 409 `checklist_not_green`, строка «срок» — предупреждение, КП одобряется с отметкой),
+ * `GET /eds/memo-approvals` и `GET /eds/memo-approvals/{ref}` (служебные записки, заявления, отчёты на согласовании; карточка по id
+ * документа или номеру `СЗ-2026/014`, шаги маршрута, вложения), `POST /eds/memo-approvals/{id}/decision` («Согласовать», «Вернуть
+ * на доработку», «Отклонить»). Разделы: КП — `eds.drafts` (полный — решение, чтение — менеджер); служебки — `eds.memo.approve`
+ * (полный — решение директора) или `eds.payments` (полный — решение бухгалтера на его шаге), чтение также у `eds.memo.create` (автор видит свой документ). `comment` для `return` и `reject` обязателен
+ * (422 в BFF до EDS). Ошибки EDS (`not_your_step`, `route_closed`, `checklist_not_green` с `details.failed`) приходят в формате `Error`.
+ * Карточка КП: `snapshot_total` (итог снимка EDS), `totals_mismatch` (итог ERP расходится со снимком), строки ERP не показываются при другой редакции КП в ERP;
+ * карточка документа: `accountant_step` (шаг бухгалтера — «Принять к оплате», решает держатель `eds.payments` full). Отправки КП по `channels` пока нет (Δ ERP-11).
+ *
  *
  * **0.23.0 (W15-H8) — Admin · Компания: шаблоны документов и лента.** Добавляющее изменение. `DocumentTemplateIn.kind` — вид
  * шаблона при создании (`letter`, `report`, `custom`, `contract`, `invoice`, `act`, `receipt`, `delivery_note`; без поля — `custom`,
@@ -238,7 +253,7 @@
  * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; «Забыли пароль?» — 5 запросов в час на IP и на адрес; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.24.0
+ * OpenAPI spec version: 0.25.0
  */
 import { faker } from "@faker-js/faker";
 
@@ -247,6 +262,8 @@ import type { RequestHandlerOptions } from "msw";
 
 import {
   AccessLevel,
+  ApprovalDecision,
+  ApprovalRouteStatus,
   AttentionKind,
   AuditActorType,
   BusDeliveryStatus,
@@ -255,6 +272,7 @@ import {
   BusSourceState,
   BusSubscriberState,
   CategoryRequestStatus,
+  ChecklistCode,
   DocumentKind,
   DocumentTemplateKind,
   DueLabel,
@@ -364,6 +382,8 @@ import type {
   MailLog,
   MailQueued,
   Me,
+  MemoApprovalCard,
+  MemoApprovalPage,
   MenuCounters,
   MessageInbox,
   NotificationPage,
@@ -376,7 +396,12 @@ import type {
   ProviderKeyResult,
   Queue,
   QueueCards,
+  QuoteApprovalCard,
+  QuoteApprovalPage,
+  QuoteChannels,
   QuoteDefaults,
+  QuoteLetterRef,
+  QuoteTotals,
   ReferenceItem,
   ReferenceItemList,
   ReplyTemplateList,
@@ -1991,6 +2016,744 @@ export const getUploadEdsDocumentFileResponseMock = (
 
 export const getDownloadEdsDocumentFileResponseMock = (): Blob =>
   new Blob([new Uint8Array(faker.number.int({ min: 1, max: 64 }))]);
+
+export const getListQuoteApprovalsResponseEdsMoneyMock = (
+  overrideResponse: Partial<EdsMoney> = {},
+): EdsMoney => ({
+  ...{
+    amount: faker.helpers.fromRegExp("^\\d+\\.\\d{2}$"),
+    currency: faker.helpers.fromRegExp("^[A-Z]{3}$"),
+  },
+  ...overrideResponse,
+});
+
+export const getListQuoteApprovalsResponseMock = (
+  overrideResponse: Partial<Extract<QuoteApprovalPage, object>> = {},
+): QuoteApprovalPage => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.string.uuid(),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    version: faker.number.int({ min: 1 }),
+    request_number: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    client_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    total: faker.helpers.arrayElement([{ ...getListQuoteApprovalsResponseEdsMoneyMock() }, null]),
+    due: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    status: faker.helpers.arrayElement(Object.values(ApprovalRouteStatus)),
+    can_decide: faker.datatype.boolean(),
+    outgoing_number: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  })),
+  next_cursor: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  ...overrideResponse,
+});
+
+export const getGetQuoteApprovalResponseLetterRequestMock = (
+  overrideResponse: Partial<LetterRequest> = {},
+): LetterRequest => ({
+  ...{
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    title: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getGetQuoteApprovalResponseQuoteLetterRefMock = (
+  overrideResponse: Partial<QuoteLetterRef> = {},
+): QuoteLetterRef => ({
+  ...{
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getGetQuoteApprovalResponseEdsMoneyMock = (
+  overrideResponse: Partial<EdsMoney> = {},
+): EdsMoney => ({
+  ...{
+    amount: faker.helpers.fromRegExp("^\\d+\\.\\d{2}$"),
+    currency: faker.helpers.fromRegExp("^[A-Z]{3}$"),
+  },
+  ...overrideResponse,
+});
+
+export const getGetQuoteApprovalResponseQuoteTotalsMock = (
+  overrideResponse: Partial<QuoteTotals> = {},
+): QuoteTotals => ({
+  ...{
+    currency: faker.helpers.fromRegExp("^[A-Z]{3}$"),
+    subtotal: faker.helpers.arrayElement([faker.helpers.fromRegExp("^-?\\d+(\\.\\d+)?$"), null]),
+    vat_rate: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    vat_amount: faker.helpers.arrayElement([faker.helpers.fromRegExp("^-?\\d+(\\.\\d+)?$"), null]),
+    total: faker.helpers.fromRegExp("^-?\\d+(\\.\\d+)?$"),
+  },
+  ...overrideResponse,
+});
+
+export const getGetQuoteApprovalResponseEdsPersonMock = (
+  overrideResponse: Partial<EdsPerson> = {},
+): EdsPerson => ({
+  ...{
+    crm_user_id: faker.number.int(),
+    full_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getGetQuoteApprovalResponseQuoteChannelsMock = (
+  overrideResponse: Partial<QuoteChannels> = {},
+): QuoteChannels => ({
+  ...{
+    contact_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    telegram: faker.datatype.boolean(),
+    cabinet: faker.datatype.boolean(),
+    email: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
+export const getGetQuoteApprovalResponseMock = (
+  overrideResponse: Partial<Extract<QuoteApprovalCard, object>> = {},
+): QuoteApprovalCard => ({
+  id: faker.string.uuid(),
+  number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  version: faker.number.int({ min: 1 }),
+  round: faker.number.int({ min: 1 }),
+  status: faker.helpers.arrayElement(Object.values(ApprovalRouteStatus)),
+  stage: faker.helpers.arrayElement(Object.values(StepCode)),
+  can_decide: faker.datatype.boolean(),
+  allowed_decisions: faker.helpers.arrayElements(Object.values(ApprovalDecision)),
+  approved_late: faker.datatype.boolean(),
+  outgoing_number: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  ready_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
+  due: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  client_name: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  request: faker.helpers.arrayElement([
+    { ...getGetQuoteApprovalResponseLetterRequestMock() },
+    null,
+  ]),
+  letter: faker.helpers.arrayElement([
+    { ...getGetQuoteApprovalResponseQuoteLetterRefMock() },
+    null,
+  ]),
+  calculated_by: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      zone: faker.helpers.arrayElement(["goods", "services"] as const),
+    }),
+  ),
+  snapshot_total: faker.helpers.arrayElement([
+    { ...getGetQuoteApprovalResponseEdsMoneyMock() },
+    null,
+  ]),
+  totals_mismatch: faker.datatype.boolean(),
+  lines: faker.helpers.arrayElement([
+    Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+      position: faker.number.int({ min: 1 }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      quantity: faker.number.int({ min: 0 }),
+      unit: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      unit_price: faker.helpers.fromRegExp("^-?\\d+(\\.\\d+)?$"),
+      amount: faker.helpers.fromRegExp("^-?\\d+(\\.\\d+)?$"),
+      lead_time_days: faker.helpers.arrayElement([faker.number.int(), null]),
+      optional: faker.datatype.boolean(),
+    })),
+    null,
+  ]),
+  totals: faker.helpers.arrayElement([{ ...getGetQuoteApprovalResponseQuoteTotalsMock() }, null]),
+  internal: faker.helpers.arrayElement([
+    {
+      cost: faker.helpers.arrayElement([faker.helpers.fromRegExp("^-?\\d+(\\.\\d+)?$"), null]),
+      margin_amount: faker.helpers.arrayElement([
+        faker.helpers.fromRegExp("^-?\\d+(\\.\\d+)?$"),
+        null,
+      ]),
+      margin_pct: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      min_margin_pct: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      payment_terms: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      supplier_price_until: faker.helpers.arrayElement([
+        faker.date.past().toISOString().slice(0, 10),
+        null,
+      ]),
+    },
+    undefined,
+  ]),
+  checklist: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      code: faker.helpers.arrayElement(Object.values(ChecklistCode)),
+      ok: faker.datatype.boolean(),
+      blocking: faker.datatype.boolean(),
+      by_name: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
+      value: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+    }),
+  ),
+  steps: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    label: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement([
+      "pending",
+      "current",
+      "approved",
+      "returned",
+      "rejected",
+      "skipped",
+    ] as const),
+    decided_by: faker.helpers.arrayElement([
+      { ...getGetQuoteApprovalResponseEdsPersonMock() },
+      null,
+    ]),
+    decided_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    comment: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  })),
+  channels: faker.helpers.arrayElement([
+    { ...getGetQuoteApprovalResponseQuoteChannelsMock() },
+    null,
+  ]),
+  sources: {
+    crm: faker.helpers.arrayElement(Object.values(SourceState)),
+    erp: faker.helpers.arrayElement(Object.values(SourceState)),
+  },
+  ...overrideResponse,
+});
+
+export const getDecideQuoteApprovalResponseLetterRequestMock = (
+  overrideResponse: Partial<LetterRequest> = {},
+): LetterRequest => ({
+  ...{
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    title: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getDecideQuoteApprovalResponseQuoteLetterRefMock = (
+  overrideResponse: Partial<QuoteLetterRef> = {},
+): QuoteLetterRef => ({
+  ...{
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getDecideQuoteApprovalResponseEdsMoneyMock = (
+  overrideResponse: Partial<EdsMoney> = {},
+): EdsMoney => ({
+  ...{
+    amount: faker.helpers.fromRegExp("^\\d+\\.\\d{2}$"),
+    currency: faker.helpers.fromRegExp("^[A-Z]{3}$"),
+  },
+  ...overrideResponse,
+});
+
+export const getDecideQuoteApprovalResponseQuoteTotalsMock = (
+  overrideResponse: Partial<QuoteTotals> = {},
+): QuoteTotals => ({
+  ...{
+    currency: faker.helpers.fromRegExp("^[A-Z]{3}$"),
+    subtotal: faker.helpers.arrayElement([faker.helpers.fromRegExp("^-?\\d+(\\.\\d+)?$"), null]),
+    vat_rate: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    vat_amount: faker.helpers.arrayElement([faker.helpers.fromRegExp("^-?\\d+(\\.\\d+)?$"), null]),
+    total: faker.helpers.fromRegExp("^-?\\d+(\\.\\d+)?$"),
+  },
+  ...overrideResponse,
+});
+
+export const getDecideQuoteApprovalResponseEdsPersonMock = (
+  overrideResponse: Partial<EdsPerson> = {},
+): EdsPerson => ({
+  ...{
+    crm_user_id: faker.number.int(),
+    full_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getDecideQuoteApprovalResponseQuoteChannelsMock = (
+  overrideResponse: Partial<QuoteChannels> = {},
+): QuoteChannels => ({
+  ...{
+    contact_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    telegram: faker.datatype.boolean(),
+    cabinet: faker.datatype.boolean(),
+    email: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
+export const getDecideQuoteApprovalResponseMock = (
+  overrideResponse: Partial<Extract<QuoteApprovalCard, object>> = {},
+): QuoteApprovalCard => ({
+  id: faker.string.uuid(),
+  number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  version: faker.number.int({ min: 1 }),
+  round: faker.number.int({ min: 1 }),
+  status: faker.helpers.arrayElement(Object.values(ApprovalRouteStatus)),
+  stage: faker.helpers.arrayElement(Object.values(StepCode)),
+  can_decide: faker.datatype.boolean(),
+  allowed_decisions: faker.helpers.arrayElements(Object.values(ApprovalDecision)),
+  approved_late: faker.datatype.boolean(),
+  outgoing_number: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  ready_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
+  due: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  client_name: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  request: faker.helpers.arrayElement([
+    { ...getDecideQuoteApprovalResponseLetterRequestMock() },
+    null,
+  ]),
+  letter: faker.helpers.arrayElement([
+    { ...getDecideQuoteApprovalResponseQuoteLetterRefMock() },
+    null,
+  ]),
+  calculated_by: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      zone: faker.helpers.arrayElement(["goods", "services"] as const),
+    }),
+  ),
+  snapshot_total: faker.helpers.arrayElement([
+    { ...getDecideQuoteApprovalResponseEdsMoneyMock() },
+    null,
+  ]),
+  totals_mismatch: faker.datatype.boolean(),
+  lines: faker.helpers.arrayElement([
+    Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+      position: faker.number.int({ min: 1 }),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      quantity: faker.number.int({ min: 0 }),
+      unit: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      unit_price: faker.helpers.fromRegExp("^-?\\d+(\\.\\d+)?$"),
+      amount: faker.helpers.fromRegExp("^-?\\d+(\\.\\d+)?$"),
+      lead_time_days: faker.helpers.arrayElement([faker.number.int(), null]),
+      optional: faker.datatype.boolean(),
+    })),
+    null,
+  ]),
+  totals: faker.helpers.arrayElement([
+    { ...getDecideQuoteApprovalResponseQuoteTotalsMock() },
+    null,
+  ]),
+  internal: faker.helpers.arrayElement([
+    {
+      cost: faker.helpers.arrayElement([faker.helpers.fromRegExp("^-?\\d+(\\.\\d+)?$"), null]),
+      margin_amount: faker.helpers.arrayElement([
+        faker.helpers.fromRegExp("^-?\\d+(\\.\\d+)?$"),
+        null,
+      ]),
+      margin_pct: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      min_margin_pct: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      payment_terms: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      supplier_price_until: faker.helpers.arrayElement([
+        faker.date.past().toISOString().slice(0, 10),
+        null,
+      ]),
+    },
+    undefined,
+  ]),
+  checklist: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      code: faker.helpers.arrayElement(Object.values(ChecklistCode)),
+      ok: faker.datatype.boolean(),
+      blocking: faker.datatype.boolean(),
+      by_name: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
+      value: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+    }),
+  ),
+  steps: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    label: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement([
+      "pending",
+      "current",
+      "approved",
+      "returned",
+      "rejected",
+      "skipped",
+    ] as const),
+    decided_by: faker.helpers.arrayElement([
+      { ...getDecideQuoteApprovalResponseEdsPersonMock() },
+      null,
+    ]),
+    decided_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    comment: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  })),
+  channels: faker.helpers.arrayElement([
+    { ...getDecideQuoteApprovalResponseQuoteChannelsMock() },
+    null,
+  ]),
+  sources: {
+    crm: faker.helpers.arrayElement(Object.values(SourceState)),
+    erp: faker.helpers.arrayElement(Object.values(SourceState)),
+  },
+  ...overrideResponse,
+});
+
+export const getListMemoApprovalsResponseEdsPersonMock = (
+  overrideResponse: Partial<EdsPerson> = {},
+): EdsPerson => ({
+  ...{
+    crm_user_id: faker.number.int(),
+    full_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getListMemoApprovalsResponseEdsMoneyMock = (
+  overrideResponse: Partial<EdsMoney> = {},
+): EdsMoney => ({
+  ...{
+    amount: faker.helpers.fromRegExp("^\\d+\\.\\d{2}$"),
+    currency: faker.helpers.fromRegExp("^[A-Z]{3}$"),
+  },
+  ...overrideResponse,
+});
+
+export const getListMemoApprovalsResponseMock = (
+  overrideResponse: Partial<Extract<MemoApprovalPage, object>> = {},
+): MemoApprovalPage => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.string.uuid(),
+    approval_id: faker.string.uuid(),
+    number: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    kind: faker.helpers.arrayElement(["memo", "application", "report"] as const),
+    subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    author: faker.helpers.arrayElement([{ ...getListMemoApprovalsResponseEdsPersonMock() }, null]),
+    amount: faker.helpers.arrayElement([{ ...getListMemoApprovalsResponseEdsMoneyMock() }, null]),
+    due_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    status: faker.helpers.arrayElement(Object.values(ApprovalRouteStatus)),
+    step_label: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    can_decide: faker.datatype.boolean(),
+    created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  })),
+  next_cursor: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  ...overrideResponse,
+});
+
+export const getGetMemoApprovalResponseEdsPersonMock = (
+  overrideResponse: Partial<EdsPerson> = {},
+): EdsPerson => ({
+  ...{
+    crm_user_id: faker.number.int(),
+    full_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getGetMemoApprovalResponseEdsMoneyMock = (
+  overrideResponse: Partial<EdsMoney> = {},
+): EdsMoney => ({
+  ...{
+    amount: faker.helpers.fromRegExp("^\\d+\\.\\d{2}$"),
+    currency: faker.helpers.fromRegExp("^[A-Z]{3}$"),
+  },
+  ...overrideResponse,
+});
+
+export const getGetMemoApprovalResponseEdsDealRefMock = (
+  overrideResponse: Partial<EdsDealRef> = {},
+): EdsDealRef => ({
+  ...{
+    erp_deal_id: faker.number.int(),
+    number: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getGetMemoApprovalResponseMock = (
+  overrideResponse: Partial<Extract<MemoApprovalCard, object>> = {},
+): MemoApprovalCard => ({
+  id: faker.string.uuid(),
+  approval_id: faker.string.uuid(),
+  number: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  kind: faker.helpers.arrayElement(["memo", "application", "report"] as const),
+  subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  document_status: faker.helpers.arrayElement([
+    "draft",
+    "on_approval",
+    "returned",
+    "rejected",
+    "approved",
+    "to_accountant",
+    "paid",
+    "sent",
+  ] as const),
+  status: faker.helpers.arrayElement(Object.values(ApprovalRouteStatus)),
+  round: faker.number.int({ min: 1 }),
+  author: {
+    crm_user_id: faker.number.int(),
+    full_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  addressee: faker.helpers.arrayElement([{ ...getGetMemoApprovalResponseEdsPersonMock() }, null]),
+  amount: faker.helpers.arrayElement([{ ...getGetMemoApprovalResponseEdsMoneyMock() }, null]),
+  due_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  files: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.string.uuid(),
+    name: faker.string.alpha({ length: { min: 10, max: 255 } }),
+    content_type: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    size: faker.number.int({ min: 0 }),
+  })),
+  deal: faker.helpers.arrayElement([{ ...getGetMemoApprovalResponseEdsDealRefMock() }, null]),
+  steps: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    label: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement([
+      "pending",
+      "current",
+      "approved",
+      "returned",
+      "rejected",
+      "skipped",
+    ] as const),
+    decided_by: faker.helpers.arrayElement([
+      { ...getGetMemoApprovalResponseEdsPersonMock() },
+      null,
+    ]),
+    decided_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    comment: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  })),
+  accountant_step: faker.datatype.boolean(),
+  decisions: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      round: faker.number.int({ min: 1 }),
+      step: faker.number.int({ min: 1 }),
+      decision: faker.helpers.arrayElement(["approve", "return", "reject"] as const),
+      comment: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      by: {
+        crm_user_id: faker.number.int(),
+        full_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      },
+      at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    }),
+  ),
+  can_decide: faker.datatype.boolean(),
+  allowed_decisions: faker.helpers.arrayElements(Object.values(ApprovalDecision)),
+  created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  ...overrideResponse,
+});
+
+export const getDecideMemoApprovalResponseEdsPersonMock = (
+  overrideResponse: Partial<EdsPerson> = {},
+): EdsPerson => ({
+  ...{
+    crm_user_id: faker.number.int(),
+    full_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getDecideMemoApprovalResponseEdsMoneyMock = (
+  overrideResponse: Partial<EdsMoney> = {},
+): EdsMoney => ({
+  ...{
+    amount: faker.helpers.fromRegExp("^\\d+\\.\\d{2}$"),
+    currency: faker.helpers.fromRegExp("^[A-Z]{3}$"),
+  },
+  ...overrideResponse,
+});
+
+export const getDecideMemoApprovalResponseEdsDealRefMock = (
+  overrideResponse: Partial<EdsDealRef> = {},
+): EdsDealRef => ({
+  ...{
+    erp_deal_id: faker.number.int(),
+    number: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getDecideMemoApprovalResponseMock = (
+  overrideResponse: Partial<Extract<MemoApprovalCard, object>> = {},
+): MemoApprovalCard => ({
+  id: faker.string.uuid(),
+  approval_id: faker.string.uuid(),
+  number: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  kind: faker.helpers.arrayElement(["memo", "application", "report"] as const),
+  subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  document_status: faker.helpers.arrayElement([
+    "draft",
+    "on_approval",
+    "returned",
+    "rejected",
+    "approved",
+    "to_accountant",
+    "paid",
+    "sent",
+  ] as const),
+  status: faker.helpers.arrayElement(Object.values(ApprovalRouteStatus)),
+  round: faker.number.int({ min: 1 }),
+  author: {
+    crm_user_id: faker.number.int(),
+    full_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  addressee: faker.helpers.arrayElement([
+    { ...getDecideMemoApprovalResponseEdsPersonMock() },
+    null,
+  ]),
+  amount: faker.helpers.arrayElement([{ ...getDecideMemoApprovalResponseEdsMoneyMock() }, null]),
+  due_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  files: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.string.uuid(),
+    name: faker.string.alpha({ length: { min: 10, max: 255 } }),
+    content_type: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    size: faker.number.int({ min: 0 }),
+  })),
+  deal: faker.helpers.arrayElement([{ ...getDecideMemoApprovalResponseEdsDealRefMock() }, null]),
+  steps: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    label: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement([
+      "pending",
+      "current",
+      "approved",
+      "returned",
+      "rejected",
+      "skipped",
+    ] as const),
+    decided_by: faker.helpers.arrayElement([
+      { ...getDecideMemoApprovalResponseEdsPersonMock() },
+      null,
+    ]),
+    decided_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    comment: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  })),
+  accountant_step: faker.datatype.boolean(),
+  decisions: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      round: faker.number.int({ min: 1 }),
+      step: faker.number.int({ min: 1 }),
+      decision: faker.helpers.arrayElement(["approve", "return", "reject"] as const),
+      comment: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      by: {
+        crm_user_id: faker.number.int(),
+        full_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      },
+      at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    }),
+  ),
+  can_decide: faker.datatype.boolean(),
+  allowed_decisions: faker.helpers.arrayElements(Object.values(ApprovalDecision)),
+  created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  ...overrideResponse,
+});
 
 export const getListEdsDealOptionsResponseMock = (
   overrideResponse: Partial<Extract<EdsDealOptions, object>> = {},
@@ -7197,6 +7960,150 @@ export const getDownloadEdsDocumentFileMockHandler = (
   );
 };
 
+export const getListQuoteApprovalsMockHandler = (
+  overrideResponse?:
+    | QuoteApprovalPage
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<QuoteApprovalPage> | QuoteApprovalPage),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/eds/quotes",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListQuoteApprovalsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetQuoteApprovalMockHandler = (
+  overrideResponse?:
+    | QuoteApprovalCard
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<QuoteApprovalCard> | QuoteApprovalCard),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/eds/quotes/:ref",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetQuoteApprovalResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getDecideQuoteApprovalMockHandler = (
+  overrideResponse?:
+    | QuoteApprovalCard
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<QuoteApprovalCard> | QuoteApprovalCard),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/eds/quotes/:id/decision",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getDecideQuoteApprovalResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getListMemoApprovalsMockHandler = (
+  overrideResponse?:
+    | MemoApprovalPage
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<MemoApprovalPage> | MemoApprovalPage),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/eds/memo-approvals",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListMemoApprovalsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetMemoApprovalMockHandler = (
+  overrideResponse?:
+    | MemoApprovalCard
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<MemoApprovalCard> | MemoApprovalCard),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/eds/memo-approvals/:ref",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetMemoApprovalResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getDecideMemoApprovalMockHandler = (
+  overrideResponse?:
+    | MemoApprovalCard
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<MemoApprovalCard> | MemoApprovalCard),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/eds/memo-approvals/:id/decision",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getDecideMemoApprovalResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getListEdsDealOptionsMockHandler = (
   overrideResponse?:
     | EdsDealOptions
@@ -10503,6 +11410,12 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getUpdateEdsDocumentMockHandler(),
   getUploadEdsDocumentFileMockHandler(),
   getDownloadEdsDocumentFileMockHandler(),
+  getListQuoteApprovalsMockHandler(),
+  getGetQuoteApprovalMockHandler(),
+  getDecideQuoteApprovalMockHandler(),
+  getListMemoApprovalsMockHandler(),
+  getGetMemoApprovalMockHandler(),
+  getDecideMemoApprovalMockHandler(),
   getListEdsDealOptionsMockHandler(),
   getGetIntegrationsOverviewMockHandler(),
   getGetErpConnectorMockHandler(),

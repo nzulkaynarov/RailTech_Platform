@@ -58,14 +58,7 @@ describe("SectionStubPage · раздел с мостом", () => {
 
   it("ни «пока нет», ни «фаза Pn» нет ни на одной заглушке", async () => {
     signInAs("all@demo.example");
-    for (const path of [
-      "/crm/leads",
-      "/crm/clients",
-      "/eds/approvals",
-      "/eds/payments",
-      "/erp/calc",
-      "/chats",
-    ]) {
+    for (const path of ["/crm/leads", "/crm/clients", "/eds/payments", "/erp/calc", "/chats"]) {
       renderApp(path);
       await main();
       const text = document.body.textContent;
@@ -158,19 +151,19 @@ describe("SectionStubPage · раздел с мостом", () => {
 });
 
 describe("SectionStubPage · раздел без аналога в старых экранах", () => {
-  it("директор, На согласовании: честно «в интерфейсе нет», кто делает, когда появится; кнопки нет", async () => {
-    signInAs("director@demo.example");
-    renderApp("/eds/approvals");
+  it("Чаты · Команда: честно «в интерфейсе нет», кто делает, когда появится; кнопки нет", async () => {
+    signInAs("all@demo.example");
+    renderApp("/chats?scope=internal");
     const page = await main();
 
     expect(
       within(page).getByText(
-        "Сейчас этой работы в интерфейсе нет; её делает директор и бухгалтер: служебные записки пока согласуют устно или на бумаге.",
+        "Сейчас этой работы в интерфейсе нет; её делает команда: рабочая переписка пока идёт в мессенджерах вне системы.",
       ),
     ).toBeVisible();
     expect(within(page).queryByRole("link", { name: /Открыть в/ })).not.toBeInTheDocument();
     expect(within(page).queryByRole("button")).not.toBeInTheDocument();
-    expect(within(page).getByText("Когда появится: в ближайшем обновлении.")).toBeVisible();
+    expect(within(page).getByText("Когда появится: к пилоту.")).toBeVisible();
   });
 });
 
@@ -196,37 +189,6 @@ describe("SectionStubPage · адрес старой системы не опр�
 });
 
 describe("SectionStubPage · карточка объекта по прямой ссылке", () => {
-  it("служебка из «Моей очереди»: «Служебка СЗ-2026/031», что известно очереди, кнопки в старый экран нет", async () => {
-    signInAs("director@demo.example");
-    renderApp("/eds/approvals/%D0%A1%D0%97-2026%2F031?panel=open&tab=agree");
-    const page = await main();
-
-    expect(
-      within(page).getByRole("heading", { level: 1, name: "Служебка СЗ-2026/031" }),
-    ).toBeVisible();
-    const known = await within(page).findByRole("region", {
-      name: "Что известно из «Моей очереди»",
-    });
-    expect(within(known).getByText(/Согласовать СЗ-2026\/031 · Закупка кофе/)).toBeVisible();
-    expect(within(known).getByText(/от Демо Офисовой/)).toBeVisible();
-    expect(within(known).getByText("служебка")).toBeVisible();
-    expect(within(page).queryByRole("link", { name: /Открыть в/ })).not.toBeInTheDocument();
-    expect(document.title).toContain("Служебка СЗ-2026/031");
-  });
-
-  it("КП из «Моей очереди»: «КП-2026/118» без повтора типа, кнопка ведёт в «Коммерческие предложения» старого ERP", async () => {
-    signInAs("director@demo.example");
-    renderApp("/eds/drafts/%D0%9A%D0%9F-2026%2F118?panel=open&tab=approve");
-    const page = await main();
-
-    expect(within(page).getByRole("heading", { level: 1, name: "КП-2026/118" })).toBeVisible();
-    expect(await within(page).findByText("Одобрить КП-2026/118 (черновик)")).toBeVisible();
-    expect(await within(page).findByRole("link", { name: /Открыть в старом ERP/ })).toHaveAttribute(
-      "href",
-      "http://erp.localhost:8088/#crm-quotes",
-    );
-  });
-
   it("лид по ?lead=: «Лид L-2041», кнопка ведёт прямо в карточку лида старой CRM", async () => {
     signInAs("manager@demo.example");
     renderApp("/crm/leads?lead=L-2041&panel=open&tab=card");
@@ -276,12 +238,12 @@ describe("Бейджи меню у заглушек", () => {
   });
 
   it("раздел без аналога в старых экранах: бейджа нет", async () => {
-    signInAs("director@demo.example");
-    renderApp("/eds/approvals");
+    signInAs("all@demo.example");
+    renderApp("/chats?scope=internal");
     await main();
     const menu = screen.getByRole("navigation", { name: "Разделы модуля" });
-    const item = within(menu).getByRole("link", { name: /На согласовании/ });
+    const item = within(menu).getByRole("link", { name: /^Команда/ });
     expect(item.querySelector(".pf-badge")).toBeNull();
-    expect(item).toHaveAccessibleName("На согласовании");
+    expect(item).toHaveAccessibleName("Команда");
   });
 });
