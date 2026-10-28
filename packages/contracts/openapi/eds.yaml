@@ -724,6 +724,12 @@ paths:
       description: |
         Единый реестр с вкладками по типу и фильтрами статус · период · ответственный · клиент. КП — маршруты одобрения
         (номер КП ERP); договоры, счета и акты ERP появятся, когда EDS начнёт вести их проекции (вне C1).
+
+        `registry.read` открывает сам реестр, но он **не шире прав на вид документа**: входящие и исходящие письма
+        (`letter_in`, `letter_out`) попадают в выдачу только у сотрудника с `letters.read`; черновики (`status = draft`) —
+        только у автора; служебные записки, заявления и отчёты — по видимости документа, КП — по видимости маршрута.
+        Отбор идёт до курсора и ограничения страницы: скрытые строки не занимают место на странице. Вкладка, на которую
+        у сотрудника нет прав, — `200` с пустой страницей, не `403`.
       x-rt-permissions: [registry.read]
       parameters:
         - $ref: '#/components/parameters/RegistryKind'
@@ -755,7 +761,9 @@ paths:
       tags: [registry]
       operationId: exportRegistry
       summary: Экспорт реестра с теми же фильтрами
-      description: Не больше 10 000 строк (иначе 422 `VALIDATION_FAILED`, `details.reason = export_too_large`); в журнал — `registry.export`.
+      description: |
+        Не больше 10 000 строк (иначе 422 `VALIDATION_FAILED`, `details.reason = export_too_large`); в журнал — `registry.export`.
+        Видимость строк — как у `GET /registry`: письма только с `letters.read`, чужие черновики не выгружаются.
       x-rt-permissions: [registry.export]
       parameters:
         - $ref: '#/components/parameters/RegistryKind'
