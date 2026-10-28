@@ -77,8 +77,8 @@ test.describe("панели", () => {
     await settledScreenshot(page, "crm-leads");
 
     // «Мои расчёты» — настоящий экран (D2-1): по SPEC-v3 §11 подменю свёрнуто, боковое окно открыто
-    await page.goto("/erp/stock");
-    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await page.goto("/erp/calc");
+    await expect(page.getByRole("heading", { level: 1, name: "Мои расчёты" })).toBeVisible();
     await expect(menu).toHaveCount(0);
     await expect(panel).toBeVisible();
     await expect(page.getByRole("tab", { name: "Задание" })).toBeVisible();
