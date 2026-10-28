@@ -124,13 +124,15 @@ def test_codes_become_roles_the_column_goes_and_downgrade_brings_the_codes_back(
             ("erp_provision_user", {"user_id": ids[name]})
             for name in ("mgr_acc", "admin", "dir_sup", "dir_sup")
         ]
-        # Директор: лиды и внешние чаты — только чтение, версия роли выросла (0038).
+        # Директор: лиды и внешние чаты — чтение (0038), «Счета и оплаты» — чтение (0048, D2-4);
+        # версия роли выросла дважды.
         director = conn.execute(
             "SELECT access, version FROM platform_roles WHERE code = 'DIRECTOR'"
         ).fetchone()
         assert director is not None
         assert (director[0]["crm.leads"], director[0]["chats.external"]) == ("read", "read")
-        assert director[1] == 2
+        assert director[0]["eds.payments"] == "read"
+        assert director[1] == 3
         # Остальные роли — версия 1; «Бухгалтер» — 2 (0044: без цен поставщиков, D2-1).
         assert conn.execute(
             "SELECT DISTINCT version FROM platform_roles "
