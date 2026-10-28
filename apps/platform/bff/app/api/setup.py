@@ -60,25 +60,38 @@ async def create_first_admin(
         "full_name": body.name,
         "password": body.password.get_secret_value(),
     }
+    refresh: str | None = None
+    opened: tuple[str, Any] | None = None
     try:
         refresh = await crm_setup.create_admin(service.crm, payload, client_ip)
     except PlatformError as exc:
-        log.warning("setup_admin_failed", code=exc.body.code, status=exc.status_code)
-        if exc.body.code not in _COUNTED:
-            await limiter.refund(attempt)
-        raise
+        late = (exc.body.details or {}).get("reason") == crm_setup.SETUP_DONE_LATE_REASON
+        log.warning("setup_admin_failed", code=exc.body.code, status=exc.status_code, late=late)
+        if not late:
+            if exc.body.code not in _COUNTED:
+                await limiter.refund(attempt)
+            raise
+        # Администратор создан, ответ CRM опоздал: входим теми же данными; не подошли (создал
+        # кто-то другой) — «первый запуск выполнен, войдите».
+        try:
+            opened = await service.login(email, body.password.get_secret_value(), client_ip)
+        except PlatformError:
+            # Неверный пароль после позднего ответа — обычная неудачная попытка: лимит расходуется.
+            raise exc from None
     except Exception:
         await limiter.refund(attempt)
         raise
     # CRM после создания вошла сама и выдала refresh-токен; сессию Платформы открывает обычный
     # вход (роли, доступ к ERP), поэтому токен CRM не нужен и не должен висеть.
-    if refresh:
-        await service.crm.logout(refresh)
-    try:
-        sid, data = await service.login(email, body.password.get_secret_value(), client_ip)
-    except BaseException:
-        await limiter.refund(attempt)
-        raise
+    if opened is None:
+        if refresh:
+            await service.crm.logout(refresh)
+        try:
+            opened = await service.login(email, body.password.get_secret_value(), client_ip)
+        except BaseException:
+            await limiter.refund(attempt)
+            raise
+    sid, data = opened
     await limiter.succeeded(attempt)
     log.info("setup_admin_created", user_id=data.user_id)
     set_session_cookies(

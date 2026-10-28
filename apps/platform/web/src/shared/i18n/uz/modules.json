@@ -185,6 +185,7 @@
       "companyUnknown": "ERP hozircha javob bermadi. Yangi administratorga ERP'ga kirish kechikib beriladi: bir necha soniyadan keyin takrorlang.",
       "companyNoRights": "O'z kompaniyasini faqat ERP administratori yarata oladi. Administrator sifatida kiring.",
       "companyRetry": "Qayta tekshirish",
+      "companyWaiting": "ERP kirishni berishini kutmoqdamiz…",
       "companyName": "Kompaniya nomi",
       "companyNameRequired": "Kompaniya nomini kiriting",
       "companyInn": "STIR (ixtiyoriy)",

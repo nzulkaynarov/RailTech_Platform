@@ -84,7 +84,7 @@
     "again": "Yangi havola olish",
     "close": "Yopish",
     "errors": {
-      "NOT_CONFIGURED": "Bot ulanmagan. Administratordan Sozlamalar · Ulanishlar bo‘limida Telegram botni ulashni so‘rang.",
+      "NOT_CONFIGURED": "Bot ulanmagan. Administratordan Sozlamalar · Telegram-bot bo‘limida Telegram botni ulashni so‘rang.",
       "CONFLICT": "Bot hozir ishlamayapti. Bir daqiqadan keyin takrorlang yoki administratorga yozing.",
       "BACKEND_UNAVAILABLE": "CRM javob bermayapti. Keyinroq takrorlang.",
       "default": "Amalni bajarib bo‘lmadi. Qayta urinib ko‘ring."

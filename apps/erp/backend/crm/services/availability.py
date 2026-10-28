@@ -123,7 +123,8 @@ def auto_split_quote_by_availability(quote, seller_company_id: Optional[int]) ->
         first, *rest = tranches
         line.quantity = first.quantity
         line.lead_time_days = first.lead_time_days
-        line.save(update_fields=["quantity", "lead_time_days"])
+        line.version = (line.version or 0) + 1  # другое количество — виза строки расчёта не переживает (D2-1)
+        line.save(update_fields=["quantity", "lead_time_days", "version"])
         new_lines = [_clone_tranche(line, tranche) for tranche in rest]
         QuoteItem.objects.bulk_create(new_lines)
         created_total += len(new_lines)

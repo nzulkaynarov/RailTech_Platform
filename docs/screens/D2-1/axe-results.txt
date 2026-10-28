@@ -1,0 +1,10 @@
+D2-1 · e2e/erp-calc.spec.ts (Playwright + axe, WCAG 2.1 AA, MSW), 2026-10-28
+заявки в расчёте 1440: axe violations=0
+расчёт снабженца 1440: axe violations=0
+расчёт гл. инженера, все визы 1440: axe violations=0
+расчёт у директора 1440: axe violations=0
+расчёт бухгалтера 1440: axe violations=0
+ИИ-разбор (диалог) 1440: axe violations=0
+заявки на телефоне 390: axe violations=0
+расчёт на телефоне 390: axe violations=0
+задание листом 390: axe violations=0
