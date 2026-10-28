@@ -53,6 +53,7 @@ export function ModuleMenuContent({
   return (
     <nav
       aria-label={labels.nav}
+      data-tour="menu"
       style={{ height: "100%", display: "flex", flexDirection: "column", padding: "0 8px 12px" }}
     >
       <div

@@ -70,8 +70,11 @@ if TYPE_CHECKING:
     from app.services.sso import SsoService
     from app.services.staff_deputy import StaffDeputyService
     from app.services.staff_link_notice import StaffLinkNotice
+    from app.services.staff_notifications import StaffNotificationService
+    from app.services.staff_notifier import StaffNotifier
     from app.services.staff_profile import StaffProfileService
     from app.services.staff_telegram_link import StaffTelegramLinkService
+    from app.services.staff_tickets import StaffTicketService
     from app.services.user_invites import UserInviteService
     from app.services.users import UserService
 
@@ -600,6 +603,7 @@ class Container:
             self.mail_service,
             self.settings_service,
             self.settings.platform_base_url,
+            self.staff_notifications,
         )
 
     @cached_property
@@ -607,6 +611,28 @@ class Container:
         from app.services.staff_deputy import StaffDeputyService
 
         return StaffDeputyService(self.session_factory)
+
+    @cached_property
+    def staff_notifications(self) -> "StaffNotificationService":
+        """Колокольчик сотрудника: события CRM (ответ на обращение, привязка Telegram, W15-H7)."""
+        from app.services.staff_notifications import StaffNotificationService
+
+        return StaffNotificationService(self.session_factory)
+
+    @cached_property
+    def staff_tickets(self) -> "StaffTicketService":
+        """Обращения сотрудников к администратору (W15-H7); личные сообщения — через бота CRM."""
+        from app.services.staff_tickets import StaffTicketService
+
+        return StaffTicketService(
+            self.session_factory, self._staff_messenger, self.settings.platform_base_url
+        )
+
+    async def _staff_messenger(self) -> "StaffNotifier | None":
+        from app.services.staff_notifier import StaffNotifier
+
+        bot = await self.telegram_bot()
+        return StaffNotifier(self.session_factory, bot) if bot is not None else None
 
     @cached_property
     def password_reset(self) -> "PasswordResetService":

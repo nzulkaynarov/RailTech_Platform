@@ -23,6 +23,7 @@ import { isEmployeeDisabled } from "./fixtures/employees";
 import { feedHandlers } from "./feedHandlers";
 import { profileHandlers } from "./profileHandlers";
 import { setupHandlers } from "./setupHandlers";
+import { ticketsHandlers } from "./ticketsHandlers";
 import {
   DEMO_WRONG_CURRENT_PASSWORD,
   DEMO_WRONG_PASSWORD,
@@ -153,6 +154,7 @@ export const handlers = [
   ...botKbHandlers,
   ...crmMessagesHandlers,
   ...bridgeHandlers,
+  ...ticketsHandlers,
   // Раньше «Создать документ»: вложения служебок к оплате (счёт поставщика, платёжка) отдаются здесь, остальное — дальше.
   ...edsPaymentsHandlers,
   ...edsDocumentsHandlers,

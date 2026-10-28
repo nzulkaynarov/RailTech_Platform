@@ -1,7 +1,7 @@
-"""Центр уведомлений (контракт: tag `notifications`): лента ERP, CRM-лента появится с CRM-04."""
+"""Центр уведомлений (контракт: tag `notifications`): лента ERP и лента CRM (W15-H7)."""
 
 import re
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, Query, Response
 
@@ -43,15 +43,38 @@ def _not_found() -> PlatformError:
     return PlatformError("NOT_FOUND", "Не найдено.", status_code=404)
 
 
+async def _mark_all(
+    feed: Feed, source: Literal["crm", "erp"], method: str, path: str
+) -> PlatformError | None:
+    """Отметка одной ленты: `None` — отмечена, иначе ошибка источника (вторую ленту не обрывает)."""
+    try:
+        status = await feed.send(source, method, path)
+    except PlatformError as exc:
+        return exc
+    # 403 CRM — сначала смените временный пароль: ленты CRM у сотрудника ещё нет, не сбой.
+    if status >= 400 and not (source == "crm" and status == 403):
+        return _failed(status, source)
+    return None
+
+
 @router.post("/notifications/read-all", status_code=204, operation_id="markAllNotificationsRead")
 async def mark_all_read(authed: NotifyAuthed) -> Response:
-    """Отметить все прочитанными: у ERP такая операция есть, у CRM уведомлений пока нет (CRM-04)."""
+    """Отметить все прочитанными в обеих лентах (у каждой своя), сбой одной не отменяет другую.
+
+    Недоступный источник остаётся непрочитанным и виден в `sources` следующей выдачи ленты; ошибка
+    возвращается, только если не отмечена ни одна из лент.
+    """
     feed = Feed(authed)
+    results: list[PlatformError | None] = []
     if feed.usable("erp"):
-        status = await feed.send("erp", "PATCH", "/api/v1/notifications/mark_all_read/")
-        if status >= 400:
-            raise _failed(status)
-        await _forget(feed)
+        results.append(
+            await _mark_all(feed, "erp", "PATCH", "/api/v1/notifications/mark_all_read/")
+        )
+    results.append(await _mark_all(feed, "crm", "POST", f"{service.CRM_PATH}/read-all"))
+    failures = [r for r in results if r is not None]
+    if failures and len(failures) == len(results):
+        raise failures[0]
+    await _forget(feed)
     return Response(status_code=204)
 
 
@@ -68,10 +91,15 @@ async def mark_read(notification_id: str, authed: NotifyAuthed) -> Response:
             details={"fields": ["id"]},
         )
     source, number = match.group(1), match.group(2)
-    if source == "crm":
-        # Уведомлений CRM пока нет (CRM-04): такого идентификатора не существует.
-        raise _not_found()
     feed = Feed(authed)
+    if source == "crm":
+        crm_status = await feed.send("crm", "POST", f"{service.CRM_PATH}/{number}/read")
+        if crm_status == 404:
+            raise _not_found()
+        if crm_status >= 400:
+            raise _failed(crm_status, "crm")
+        await _forget(feed)
+        return Response(status_code=204)
     status = await feed.send("erp", "PATCH", f"/api/v1/notifications/{number}/mark_read/")
     if status == 404:
         raise _not_found()
@@ -84,10 +112,11 @@ async def mark_read(notification_id: str, authed: NotifyAuthed) -> Response:
 async def _forget(feed: Feed) -> None:
     """Отметка «прочитано» устарила кэш ленты: следующий опрос должен увидеть новое состояние."""
     await feed.invalidate("erp", service.NOTIFICATIONS_PATH, service.NOTIFICATIONS_PARAMS)
+    await feed.invalidate("crm", service.CRM_PATH)
 
 
-def _failed(status: int) -> PlatformError:
+def _failed(status: int, source: Literal["crm", "erp"] = "erp") -> PlatformError:
     """Бэкенд отказал в отметке (права, лимит): код BFF по статусу ответа."""
     import httpx
 
-    return from_backend("erp", httpx.Response(status))
+    return from_backend(source, httpx.Response(status))

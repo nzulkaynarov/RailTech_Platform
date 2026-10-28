@@ -108,7 +108,9 @@
         "reply_templates:write",
         "export:read",
         "external_services:read",
-        "external_services:write"
+        "external_services:write",
+        "tickets:read",
+        "tickets:write"
       ]
     },
     "edsPermission": {

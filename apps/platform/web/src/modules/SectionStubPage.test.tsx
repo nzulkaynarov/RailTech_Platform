@@ -58,7 +58,7 @@ describe("SectionStubPage · раздел с мостом", () => {
 
   it("ни «пока нет», ни «фаза Pn» нет ни на одной заглушке", async () => {
     signInAs("all@demo.example");
-    for (const path of ["/crm/leads", "/crm/clients", "/erp/calc", "/chats", "/admin/tickets"]) {
+    for (const path of ["/crm/leads", "/crm/clients", "/erp/calc", "/chats"]) {
       renderApp(path);
       await main();
       const text = document.body.textContent;
@@ -151,14 +151,14 @@ describe("SectionStubPage · раздел с мостом", () => {
 });
 
 describe("SectionStubPage · раздел без аналога в старых экранах", () => {
-  it("администратор, Обращения: честно «в интерфейсе нет», кто делает, когда появится; кнопки нет", async () => {
+  it("Чаты · Команда: честно «в интерфейсе нет», кто делает, когда появится; кнопки нет", async () => {
     signInAs("all@demo.example");
-    renderApp("/admin/tickets");
+    renderApp("/chats?scope=internal");
     const page = await main();
 
     expect(
       within(page).getByText(
-        "Сейчас этой работы в интерфейсе нет; её делает администратор: просьбы к нему пока приходят в Telegram или лично.",
+        "Сейчас этой работы в интерфейсе нет; её делает команда: рабочая переписка пока идёт в мессенджерах вне системы.",
       ),
     ).toBeVisible();
     expect(within(page).queryByRole("link", { name: /Открыть в/ })).not.toBeInTheDocument();
@@ -239,11 +239,11 @@ describe("Бейджи меню у заглушек", () => {
 
   it("раздел без аналога в старых экранах: бейджа нет", async () => {
     signInAs("all@demo.example");
-    renderApp("/admin/tickets");
+    renderApp("/chats?scope=internal");
     await main();
     const menu = screen.getByRole("navigation", { name: "Разделы модуля" });
-    const item = within(menu).getByRole("link", { name: /Обращения сотрудников/ });
+    const item = within(menu).getByRole("link", { name: /^Команда/ });
     expect(item.querySelector(".pf-badge")).toBeNull();
-    expect(item).toHaveAccessibleName("Обращения сотрудников");
+    expect(item).toHaveAccessibleName("Команда");
   });
 });

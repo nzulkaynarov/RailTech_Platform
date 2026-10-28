@@ -205,7 +205,8 @@
       "telegram_linked": "Linked Telegram",
       "telegram_unlinked": "Unlinked Telegram",
       "deputy_set": "Assigned a deputy while away",
-      "deputy_cleared": "Removed the deputy"
+      "deputy_cleared": "Removed the deputy",
+      "onboarding_done": "Closed the welcome in the Platform"
     },
     "setup": {
       "admin_created": "First administrator (setup wizard)"
@@ -281,6 +282,11 @@
     "external_service": {
       "disable": "Disabled an external service",
       "enable": "Enabled an external service"
+    },
+    "staff_ticket": {
+      "create": "Wrote to the administrator",
+      "reply": "Replied to a staff request",
+      "status": "Changed a staff request status"
     }
   },
   "entities": {
@@ -303,7 +309,8 @@
     "integration_secret": "Connection key",
     "integration": "Connection",
     "external_service": "External service",
-    "platform_role": "Platform role"
+    "platform_role": "Platform role",
+    "staff_ticket": "Staff request"
   },
   "fields": {
     "email": "Email",

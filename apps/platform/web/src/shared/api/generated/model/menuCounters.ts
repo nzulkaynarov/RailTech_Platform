@@ -133,17 +133,32 @@
  * (директор читает), сброс пароля — `admin: full`; профиль доступен каждому вошедшему. Секреты из записей журнала BFF вырезает
  * (значения полей `password`, `secret`, `token`, `key`, `*_key`, `credentials`, `authorization`, `pin` и им подобных -> `***` целиком, любого типа).
  *
- * **0.25.0 (D2-4) — EDS · Счета и оплаты бухгалтера.** Добавляющее изменение, тег `eds-payments`: `GET /eds/payments` (таблица счетов
+ * **0.26.0 (D2-4) — EDS · Счета и оплаты бухгалтера.** Добавляющее изменение, тег `eds-payments`: `GET /eds/payments` (таблица счетов
  * по вкладкам «К выставлению», «Ждут оплаты», «Платёжки на подтверждение», «Просрочены», «Все счета» и счётчики; «Просрочен»
  * вычисляется по сроку), `GET /eds/payments/{id}` (карточка: платёжки клиента — файл, откуда, когда; платежи и остаток; журнал),
  * `POST /eds/payments/{id}/confirm` («Подтвердить оплату», в том числе частичную; повтор идемпотентен; сумма больше остатка — 409
  * `exceeds_balance`), `POST /eds/payments/{id}/proofs` и `GET /eds/payments/{id}/proofs/{proof_id}/file` (платёжка клиента),
- * `POST /eds/payments/{id}/request-payment-doc` (отметка «платёжку запросили»; автоотправки клиенту нет — B-D2-4),
+ * `POST /eds/payments/{id}/request-payment-doc` (отметка «платёжку запросили»; автоотправки клиенту нет — B-081),
  * `GET /eds/payment-memos`, `GET /eds/payment-memos/{id}`, `POST /eds/payment-memos/{id}/pay` и `POST /eds/payment-receipt-files`
  * («Служебки к оплате» и «Оплачено» с датой, суммой и платёжкой — EDS 0.5.0). Раздел `eds.payments`: чтение — менеджер, директор;
  * действия — бухгалтер; ERP читает счета только сотруднику с правами на финансы (иначе 403 `source = erp`). В данных нет
  * себестоимости, маржи и цен поставщиков. Решение `approve` на шаге «Бухгалтер» в `POST /eds/memo-approvals/{id}/decision` теперь
  * отклоняется EDS (409 `payment_required`): оплату записки фиксирует `pay`.
+ *
+ * **0.25.0 (W15-H7) — помощь, первый вход и обращения к администратору.** Добавляющее изменение (тег `tickets`). **Обращения
+ * сотрудников** (домен CRM, ADR-0015): `POST /tickets` (тема из списка `access|notification|template|error|other`, текст,
+ * адрес страницы; роль автора BFF берёт из сессии), `GET /tickets` и `GET /tickets/{number}` — только свои обращения
+ * (чужое — 404), не больше пяти в час (429 `TOO_MANY_REQUESTS`, `details.reason = ticket_rate_limited`). Админ:
+ * `GET /admin/tickets` (список с фильтрами `status`, `subject`, постранично, `counts` по статусам), `GET /admin/tickets/{number}`,
+ * `POST /admin/tickets/{number}/reply` (ответ; новое обращение берётся «В работу», `status` задаёт итог) и
+ * `POST /admin/tickets/{number}/status` («Новое → В работе → Решено», «Решено» можно вернуть «В работу»; иначе 409
+ * `CONFLICT`, `details.reason = ticket_status_transition`). Раздел `admin`: чтение — директор, ответ и статус — администратор.
+ * Номер обращения — `ОБР-0012`, внутренних id в адресах нет. Ошибки значений — 422 `VALIDATION_FAILED` с `details.fields`
+ * и `details.reason` (`ticket_subject_unknown`, `ticket_text_empty`, `ticket_text_too_long`, `ticket_reply_empty`…).
+ * **Колокольчик** (`GET /notifications`) получил ленту CRM: идентификаторы `crm:<id>`, объект — обращение (`kind = ticket`);
+ * ответ и решение уходят автору, новое обращение — администраторам; `POST /notifications/{id}/read` и `read-all` отмечают
+ * обе ленты. **Первый вход:** `Me.onboarding_done` и `PUT /me/onboarding` («Пропустить» / «Больше не показывать» —
+ * флаг хранит CRM, не браузер).
  *
  * **0.24.0 (D1-4) — EDS · КП на одобрение и документы на согласовании.** Добавляющее изменение, тег `eds-approvals`: `GET /eds/quotes`
  * (КП на одобрение: «на моём шаге» или все), `GET /eds/quotes/{ref}` (карточка КП по id маршрута или номеру `КП-2026/115`: шаги маршрута,
@@ -250,7 +265,7 @@
  * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; «Забыли пароль?» — 5 запросов в час на IP и на адрес; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.25.0
+ * OpenAPI spec version: 0.26.0
  */
 import type { MenuCounter } from "./menuCounter";
 import type { Sources } from "./sources";
