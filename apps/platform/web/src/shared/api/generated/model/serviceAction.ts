@@ -4,7 +4,7 @@
  */
 
 /**
- * Действие по смыслу: `enter_key` Ввести новый ключ (форма в карточке «Модели ИИ»), `enter_token` Ввести новый токен (карточка Telegram), `recheck` Проверить снова, `reconnect` Переподключить, `open_settings` Открыть настройки, `write_owner` Написать владельцу и `write_hosting` Передать хостингу (готовый текст `message` — копируется, ничего не отправляется), `disable_provider` Выключить провайдера (пароль администратора).
+ * Действие по смыслу: `enter_key` Ввести новый ключ (форма в карточке «Модели ИИ»), `enter_token` Ввести новый токен (карточка Telegram), `recheck` Проверить снова, `reconnect` Переподключить, `open_settings` Открыть настройки, `write_owner` Написать владельцу и `write_hosting` Передать хостингу (готовый текст `message` — копируется, ничего не отправляется), `disable_provider` Выключить провайдера (пароль администратора), `open_bus` Открыть журнал обмена (`/admin/bus`, раздел `admin` — полный; строка «Шина: недоставленные события», W15-H8b).
  */
 export type ServiceAction = (typeof ServiceAction)[keyof typeof ServiceAction];
 
@@ -17,4 +17,5 @@ export const ServiceAction = {
   write_owner: "write_owner",
   write_hosting: "write_hosting",
   disable_provider: "disable_provider",
+  open_bus: "open_bus",
 } as const;

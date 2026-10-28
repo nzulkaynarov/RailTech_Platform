@@ -36,7 +36,10 @@ async def notify_web_lead(lead_id: int, repeat: bool = False) -> int:
     cfg = await c.settings_service.get()
     notifier = StaffNotifier(c.session_factory, await c.telegram_bot())
     return await notifier.web_lead(
-        lead_id, cfg.company.crm_base_url, cfg.web_form.first_response_sla_minutes, repeat=repeat
+        lead_id,
+        await c.settings_service.links(),
+        cfg.web_form.first_response_sla_minutes,
+        repeat=repeat,
     )
 
 
@@ -47,7 +50,10 @@ async def _remind_overdue(lead_id: int) -> bool:
     cfg = await c.settings_service.get()
     notifier = StaffNotifier(c.session_factory, await c.telegram_bot())
     await notifier.web_lead(
-        lead_id, cfg.company.crm_base_url, cfg.web_form.first_response_sla_minutes, overdue=True
+        lead_id,
+        await c.settings_service.links(),
+        cfg.web_form.first_response_sla_minutes,
+        overdue=True,
     )
     return True
 

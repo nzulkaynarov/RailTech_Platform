@@ -22,6 +22,7 @@ class Action(StrEnum):
     write_owner = "write_owner"
     write_hosting = "write_hosting"
     disable_provider = "disable_provider"
+    open_bus = "open_bus"
 
 
 class Action1(StrEnum):
@@ -33,6 +34,7 @@ class Action1(StrEnum):
     write_owner = "write_owner"
     write_hosting = "write_hosting"
     disable_provider = "disable_provider"
+    open_bus = "open_bus"
 
 
 class ActionResult(BaseModel):
@@ -840,6 +842,7 @@ class MoreAction(StrEnum):
     write_owner = "write_owner"
     write_hosting = "write_hosting"
     disable_provider = "disable_provider"
+    open_bus = "open_bus"
 
 
 class NoteOut(BaseModel):

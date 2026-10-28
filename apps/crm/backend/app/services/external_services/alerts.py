@@ -16,6 +16,7 @@ from aiogram.exceptions import TelegramAPIError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.domain.external_cause import OPEN_LINE
 from app.domain.external_incidents import AlertText
 from app.models.auth import Role, User, UserRole
 from app.services.mail import MailService
@@ -25,6 +26,26 @@ from app.services.staff_notifier import SEND_TIMEOUT_S, StaffNotifier
 logger = structlog.get_logger(__name__)
 BotProvider = Callable[[], Awaitable[Any]]
 Paused = Callable[[str], Awaitable[bool]]
+
+
+def telegram_html(alert: AlertText, url: str | None) -> str:
+    """Сообщение Telegram; «Открыть: …» — ссылка на «Подключения» Платформы, если адрес известен."""
+    lines = [
+        f'Открыть: <a href="{escape(url, quote=True)}">Платформа → Admin → Подключения</a>'
+        if url and line == OPEN_LINE
+        else escape(line)
+        for line in alert.lines
+    ]
+    return "\n".join([f"<b>{escape(alert.subject)}</b>", *lines])
+
+
+def mail_body(alert: AlertText, url: str | None) -> str:
+    """Тело письма; к строке «Открыть: …» добавляется полный адрес."""
+    lines = [
+        f"{line.removesuffix('.')}: {url}" if url and line == OPEN_LINE else line
+        for line in alert.lines
+    ]
+    return "\n".join(lines)
 
 
 class AlertSender:
@@ -54,7 +75,7 @@ class AlertSender:
         bot = await self._bot()
         if bot is None:
             return False
-        html = "\n".join([f"<b>{escape(alert.subject)}</b>", *(escape(x) for x in alert.lines)])
+        html = telegram_html(alert, (await self._settings.links()).integrations())
         delivered = 0
         if rules.telegram_admins:
             delivered = await StaffNotifier(self._sessions, bot).alert_admins(html, f"svc:{key}")
@@ -84,7 +105,7 @@ class AlertSender:
         for to in dict.fromkeys(recipients):
             context = {
                 "subject": alert.subject,
-                "body": "\n".join(alert.lines),
+                "body": mail_body(alert, (await self._settings.links()).integrations()),
                 "company": cfg.company.name,
             }
             try:

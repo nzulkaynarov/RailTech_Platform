@@ -9,7 +9,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 import structlog
-from sqlalchemy import func, update
+from sqlalchemy import update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
@@ -248,7 +248,8 @@ class UserService:
             await audit.record(session, actor, "user.reset_password", "user", user_id)
         return password
 
-    async def change_password(self, actor: Actor, user_id: int, current: str, new: str) -> None:
+    async def change_password(self, actor: Actor, user_id: int, current: str, new: str) -> datetime:
+        """Новый пароль; возвращает момент смены (прежние сессии закрыты: `close_sessions`)."""
         # Lockout как у входа (аудит P0-4): счётчик коммитится, ошибка — после транзакции.
         async with self._sessions() as session, session.begin():
             user = await repo.get(session, user_id, for_update=True)
@@ -277,7 +278,9 @@ class UserService:
                 ) from exc
             user.password_hash = hash_password(new)
             user.must_change_password = False
+            changed = await close_sessions(session, user_id)
             await audit.record(session, actor, "user.change_password", "user", user_id)
+        return changed
 
     async def set_ui_mode(self, actor: Actor, user_id: int, mode: str) -> UserView:
         async with self._sessions() as session, session.begin():
@@ -491,12 +494,18 @@ def _apply(user: User, patch: UserPatch) -> None:
         user.language = patch.language
 
 
-async def close_sessions(session: AsyncSession, user_id: int) -> None:
-    """Сброс пароля: refresh отозваны, выпущенные раньше access-токены больше не принимаются."""
+async def close_sessions(session: AsyncSession, user_id: int) -> datetime:
+    """Смена или сброс пароля: refresh отозваны, выпущенные раньше токены больше не принимаются.
+
+    Время — по часам приложения, как `iat` access-токенов и `created_at` новых refresh-токенов
+    (часы БД с ними не сравниваются). Возвращает момент смены: сессия, которую нужно сохранить
+    (смена пароля самим сотрудником), выпускается заново ровно на него."""
+    changed = datetime.now(UTC)
     await revoke_tokens(session, user_id)
     await session.execute(
-        update(User).where(User.id == user_id).values(password_changed_at=func.now())
+        update(User).where(User.id == user_id).values(password_changed_at=changed)
     )
+    return changed
 
 
 async def revoke_tokens(session: AsyncSession, user_id: int) -> None:

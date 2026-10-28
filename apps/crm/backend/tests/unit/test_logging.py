@@ -99,3 +99,43 @@ def test_bot_token_is_masked_in_any_stdlib_record(
     assert FAKE_TOKEN not in out
     assert "/bot123456:" not in out
     assert "/bot***/getMe" in out
+
+
+# --- B-006: extra журнала шины доходит до JSON-журнала -----------------------------------------
+
+
+def test_bus_extra_fields_reach_the_json_log(
+    json_settings: Settings, capsys: pytest.CaptureFixture[str]
+) -> None:
+    configure_logging(json_settings)
+    logging.getLogger("rt_bus").warning(
+        "rt_bus_delivery_retry",
+        extra={
+            "subscriber": "eds",
+            "event_id": "e-1",
+            "attempt": 2,
+            "status_code": 503,
+            "error": "HTTP 503",
+        },
+    )
+    logging.getLogger("rt_bus.receiver").warning(
+        "rt_bus_receive_rejected", extra={"status_code": 401, "reason": "signature mismatch"}
+    )
+    lines = [json.loads(x) for x in capsys.readouterr().out.splitlines() if x.strip()]
+    retry, rejected = lines[-2], lines[-1]
+    assert retry["event"] == "rt_bus_delivery_retry"
+    assert (retry["subscriber"], retry["event_id"], retry["attempt"]) == ("eds", "e-1", 2)
+    assert (retry["status_code"], retry["error"]) == (503, "HTTP 503")
+    assert (rejected["status_code"], rejected["reason"]) == (401, "signature mismatch")
+
+
+def test_extra_of_other_loggers_is_not_copied(
+    json_settings: Settings, capsys: pytest.CaptureFixture[str]
+) -> None:
+    configure_logging(json_settings)
+    logging.getLogger("uvicorn.error").warning(
+        "started", extra={"status": "x", "color_message": "y"}
+    )
+    record = last_json_line(capsys)
+    assert "status" not in record
+    assert "color_message" not in record

@@ -18,4 +18,5 @@ export const ExternalServiceOutAction = {
   write_owner: "write_owner",
   write_hosting: "write_hosting",
   disable_provider: "disable_provider",
+  open_bus: "open_bus",
 } as const;

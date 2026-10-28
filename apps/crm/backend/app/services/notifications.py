@@ -23,6 +23,7 @@ from aiogram.types import (
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.domain.platform_links import LinkBase
 from app.models.leads import Lead
 from app.models.qualification import Escalation
 from app.schemas.settings import AppSettings
@@ -81,7 +82,7 @@ class NotificationService:
             logger.info("channel_not_configured", escalation_id=escalation_id)
             return SyncResult(ok=False)
         async with self._sessions() as session:
-            loaded = await load_card(session, escalation_id, cfg)
+            loaded = await load_card(session, escalation_id, cfg, await self._settings.links())
         if loaded is None:
             return SyncResult(ok=False)
         escalation, card = loaded
@@ -157,6 +158,7 @@ class NotificationService:
     async def digest(self) -> int:
         """Ежедневная сводка открытых эскалаций (09:05 по Ташкенту): горячие первыми."""
         cfg = await self._settings.get()
+        links = await self._settings.links()
         channel = cfg.notifications.channel_id
         async with self._sessions() as session:
             rows = (
@@ -171,7 +173,7 @@ class NotificationService:
             ordered = sorted(rows, key=lambda r: (PRIORITY_RANK.get(r.priority, 9), r.created_at))
             lines = [tx.DIGEST_TITLE.format(count=len(rows))]
             for r in ordered[:DIGEST_LIMIT]:
-                lines.append(await _digest_line(session, r, cfg))
+                lines.append(await _digest_line(session, r, links))
         if len(rows) > DIGEST_LIMIT:
             lines.append(tx.DIGEST_MORE.format(count=len(rows) - DIGEST_LIMIT))
         await self._send(channel, "\n".join(lines), "digest")
@@ -237,7 +239,7 @@ class NotificationService:
             return
         async with self._sessions() as session:
             people = await mentions(session, cfg.notifications.duty_user_ids)
-        lead = lead_link(cfg, row.lead_id)
+        lead = lead_link(await self._settings.links(), row.lead_id)
         waited = duration(datetime.now(UTC) - row.created_at)
         text = template.format(lead=lead, waited=waited) + (f"\n{people}" if people else "")
         await self._send(channel, text, "reminder", reply_to=row.channel_message_id)
@@ -278,13 +280,13 @@ def _keyboard(card: CardData) -> InlineKeyboardMarkup | None:
     return InlineKeyboardMarkup(inline_keyboard=[row]) if row else None
 
 
-async def _digest_line(session: AsyncSession, row: Escalation, cfg: AppSettings) -> str:
+async def _digest_line(session: AsyncSession, row: Escalation, links: LinkBase) -> str:
     lead = await session.get(Lead, row.lead_id)
     name = escape((lead.display_name if lead else "") or tx.NO_NAME)
     reason = escape(why(row.reason_codes or [], None) or tx.PRIORITY.get(row.priority, ""))
     return tx.DIGEST_LINE.format(
         icon=tx.PRIORITY_ICON.get(row.priority, "•"),
-        lead=lead_link(cfg, row.lead_id),
+        lead=lead_link(links, row.lead_id),
         name=name,
         why=reason,
         waited=duration(datetime.now(UTC) - row.created_at),

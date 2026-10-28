@@ -530,6 +530,48 @@ class ErpEventsStats:
     last_error: str | None
 
 
+@dataclass(frozen=True, slots=True)
+class BusDlqStats:
+    dead: int
+    failed: int
+    last_error: str | None
+
+
+async def bus_dlq_stats(session: AsyncSession, now: datetime) -> BusDlqStats:
+    """Недоставленное на шине CRM за неделю, кроме обмена с ERP (его считает `erp_events_stats`)."""
+    since = now - timedelta(days=EVENTS_WINDOW_DAYS)
+    inbox, delivery = TABLES.inbox.c, TABLES.delivery.c
+    dead = (delivery.status == "dead", delivery.subscriber != "erp", delivery.created_at >= since)
+    failed = (inbox.status == "failed", inbox.publisher != "erp", inbox.received_at >= since)
+
+    async def count(table: Any, *conditions: Any) -> int:
+        total = await session.scalar(select(func.count()).select_from(table).where(*conditions))
+        return int(total or 0)
+
+    last_dead = (
+        await session.execute(
+            select(delivery.subscriber, delivery.event_type, delivery.last_error)
+            .where(*dead, delivery.last_error.is_not(None))
+            .order_by(delivery.updated_at.desc())
+            .limit(1)
+        )
+    ).first()
+    last_failed = (
+        await session.execute(
+            select(inbox.publisher, inbox.type, inbox.error)
+            .where(*failed, inbox.error.is_not(None))
+            .order_by(inbox.received_at.desc())
+            .limit(1)
+        )
+    ).first()
+    last = last_dead or last_failed
+    return BusDlqStats(
+        dead=await count(TABLES.delivery, *dead),
+        failed=await count(TABLES.inbox, *failed),
+        last_error=f"{last[0]}/{last[1]}: {last[2]}"[:500] if last else None,
+    )
+
+
 async def erp_events_stats(session: AsyncSession, now: datetime) -> ErpEventsStats:
     """Шина rt_bus за неделю: события ERP, не обработанные (`failed`) и зависшие `received`, и
     события CRM, не доставленные ERP (`dead`); последняя ошибка.

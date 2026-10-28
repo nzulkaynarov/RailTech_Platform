@@ -91,10 +91,11 @@ def test_lead_dm_due(last: datetime | None, expected: bool) -> None:
 
 
 def test_lead_dm_text_has_preview_and_link() -> None:
-    text = lead_dm_text("Иван", "Когда  будет\nпоставка?", "https://crm.example.com/", 42)
+    url = "https://platform.example.com/crm/leads?lead=L-0042&panel=open&tab=card"
+    text = lead_dm_text("Иван", "Когда  будет\nпоставка?", url, 42)
     assert text == (
         "💬 Новое сообщение от лида #42 Иван: «Когда будет поставка?» — "
-        '<a href="https://crm.example.com/leads/42">открыть в CRM</a>'
+        f'<a href="{url.replace("&", "&amp;")}">открыть</a>'
     )
 
 
@@ -142,18 +143,21 @@ def test_web_lead_text_escapes_the_form_input_and_links_to_the_card() -> None:
         company="ООО & Ко",
         need="Нужен <script>расчёт</script>",
         minutes=15,
-        crm_url="https://crm.example.com/",
+        lead_url="https://platform.example.com/crm/leads?lead=L-0007&panel=open&tab=card",
         lead_id=7,
     )
     assert "<b>" not in text
     assert "<script>" not in text
     assert "&lt;b&gt;Али&lt;/b&gt; (ООО &amp; Ко)" in text
-    assert 'href="https://crm.example.com/leads/7"' in text
+    assert (
+        'href="https://platform.example.com/crm/leads?lead=L-0007&amp;panel=open&amp;tab=card"'
+        in text
+    )
     assert "|15|" in text
 
 
 def test_web_lead_text_without_name_and_need() -> None:
     text = web_lead_dm_text(
-        "{who}|{need}", name="", company=None, need=None, minutes=5, crm_url="https://c", lead_id=9
+        "{who}|{need}", name="", company=None, need=None, minutes=5, lead_url="https://c", lead_id=9
     )
     assert text == "#9|без описания"

@@ -125,9 +125,8 @@ async def lead_handed_over(lead_id: int, user_id: int) -> bool:
     ).handed_over(lead_id, user_id)
     if escalation_id is not None:
         await enqueue_escalation(escalation_id, new=False)
-    cfg = await c.settings_service.get()
     notifier = StaffNotifier(c.session_factory, bot)
-    return await notifier.handed_over(lead_id, user_id, cfg.company.crm_base_url)
+    return await notifier.handed_over(lead_id, user_id, await c.settings_service.links())
 
 
 async def enqueue_handover(lead_id: int, user_id: int) -> None:
@@ -141,7 +140,8 @@ async def notify_lead_message(lead_id: int) -> bool:
     cfg = await c.settings_service.get()
     window = timedelta(minutes=cfg.notifications.manager_dm_throttle_minutes)
     notifier = StaffNotifier(c.session_factory, await c.telegram_bot())
-    return await notifier.lead_message(lead_id, datetime.now(UTC), window, cfg.company.crm_base_url)
+    links = await c.settings_service.links()
+    return await notifier.lead_message(lead_id, datetime.now(UTC), window, links)
 
 
 async def enqueue_lead_message(lead_id: int) -> None:

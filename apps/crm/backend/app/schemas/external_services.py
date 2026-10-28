@@ -19,6 +19,7 @@ ServiceAction = Literal[
     "write_owner",
     "write_hosting",
     "disable_provider",
+    "open_bus",
 ]
 MetricValue = float | int | str | None
 
