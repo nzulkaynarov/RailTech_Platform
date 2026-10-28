@@ -56,6 +56,9 @@ class Snapshot:
     # Есть следующая страница EDS: число в карточке — «не меньше», а не точное
     letters_more: bool = False
     memos_more: bool = False
+    # Новые обращения сотрудников (CRM `staff-tickets?status=new`): админу — «Мои задачи» (W15-H7).
+    tickets: list[dict[str, Any]] = field(default_factory=list)
+    tickets_total: int = 0
 
     @property
     def deal_index(self) -> dict[int, dict[str, Any]]:
@@ -81,6 +84,10 @@ def wants_letters(view: View) -> bool:
 
 def wants_memos(view: View) -> bool:
     return view.wants("approve_memo") or view.wants("pay_memo")
+
+
+def wants_tickets(view: View) -> bool:
+    return view.wants("ticket")
 
 
 def wants_projects(view: View) -> bool:
@@ -119,8 +126,19 @@ async def _covered(feed: Feed) -> list[Covered]:
     return [c for c in found if c is not None]
 
 
+TICKETS_PATH = "/api/v1/staff-tickets"
+TICKETS_PARAMS = {"status": "new", "limit": 20}
+
+
 async def load_snapshot(
-    feed: Feed, view: View, *, inbox: bool, approvals: bool, deals: bool, eds: bool = False
+    feed: Feed,
+    view: View,
+    *,
+    inbox: bool,
+    approvals: bool,
+    deals: bool,
+    tickets: bool = False,
+    eds: bool = False,
 ) -> Snapshot:
     """Параллельно прочитать нужные источники. `view` — роли «вида» (активная роль, если задана);
     сделки нужны и для подписей к очереди и уведомлениям, поэтому их читает тот, кто их просит."""
@@ -161,5 +179,14 @@ async def load_snapshot(
             payload = await feed.get("erp", DEALS_PATH, DEALS_PARAMS, ttl=SNAPSHOT_TTL_SECONDS)
             snap.deals = rows(payload)
 
-    await asyncio.gather(load_inbox(), load_approvals(), load_deals(), load_letters(), load_memos())
+    async def load_tickets() -> None:
+        if tickets and wants_tickets(view):
+            payload = await feed.get("crm", TICKETS_PATH, TICKETS_PARAMS, ttl=SNAPSHOT_TTL_SECONDS)
+            snap.tickets = rows(payload)
+            total = payload.get("total") if isinstance(payload, dict) else None
+            snap.tickets_total = total if isinstance(total, int) else len(snap.tickets)
+
+    await asyncio.gather(
+        load_inbox(), load_approvals(), load_deals(), load_tickets(), load_letters(), load_memos()
+    )
     return snap

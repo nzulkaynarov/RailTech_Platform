@@ -112,3 +112,58 @@ def structlog_processor(_logger: Any, _method: str, event_dict: MutableMapping[s
     if tp is not None:
         event_dict.setdefault("traceparent", tp)
     return event_dict
+
+
+#: Поля `extra` записей журнала шины (`rt_bus*`), которые должны дойти до JSON-журнала сервиса (B-006): причина
+#: отказа приёма, код ответа подписчика, подписчик, событие, попытка. Явный перечень, а не «всё из записи»: чужие
+#: поля stdlib-записей (`color_message` uvicorn и т. п.) в журнал не попадают.
+LOG_EXTRA_FIELDS: frozenset[str] = frozenset(
+    {
+        "actor",
+        "attempt",
+        "consecutive_failures",
+        "count",
+        "delivery_id",
+        "error",
+        "event_id",
+        "event_type",
+        "next_attempt_at",
+        "outcome",
+        "path",
+        "probe",
+        "publisher",
+        "reason",
+        "reset",
+        "rt_bus_metrics",
+        "rt_bus_service",
+        "status",
+        "status_code",
+        "subscriber",
+        "subscribers",
+    }
+)
+
+
+#: Текстовые поля, которые могут нести чужой текст (ответ подписчика, причина отказа): усекаются до `LOG_TEXT_LIMIT`.
+LOG_TEXT_FIELDS: frozenset[str] = frozenset({"error", "reason"})
+LOG_TEXT_LIMIT = 200
+
+
+def structlog_extra_processor(
+    _logger: Any, _method: str, event_dict: MutableMapping[str, Any]
+) -> MutableMapping[str, Any]:
+    """Процессор structlog для `foreign_pre_chain`: переносит `extra` записей шины (`LOG_EXTRA_FIELDS`) в событие.
+
+    Без него `ProcessorFormatter` оставляет от stdlib-записи только сообщение — в журнале сервиса печатается голое
+    имя события (`rt_bus_delivery_retry`) без причины и подписчика. Ключи, уже заданные в событии, не затираются;
+    записи других логгеров и нативные записи structlog (без `_record`) не меняются."""
+    record = event_dict.get("_record")
+    if record is None or not str(getattr(record, "name", "")).startswith("rt_bus"):
+        return event_dict
+    for key in LOG_EXTRA_FIELDS:
+        if key in record.__dict__:
+            value = record.__dict__[key]
+            if key in LOG_TEXT_FIELDS and isinstance(value, str) and len(value) > LOG_TEXT_LIMIT:
+                value = value[: LOG_TEXT_LIMIT - 1] + "…"
+            event_dict.setdefault(key, value)
+    return event_dict

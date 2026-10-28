@@ -114,7 +114,7 @@ def _deal_item(deal: Deal, stage: str) -> Dict[str, Any]:
     amount = stages.deal_amount(deal)
     return {
         "erp_deal_id": deal.id,
-        "number": projections.deal_number(deal),
+        "number": deal.number or projections.deal_number(deal),  # ЗВ/ПР-ГГГГ-NNN (ERP-09, шов 0.9.0)
         "title": deal.title or f"Сделка #{deal.id}",
         "stage": stage,
         "amount": projections.format_amount(amount) if amount is not None else None,

@@ -184,3 +184,10 @@ def quote_ref(quote: dict[str, Any], *, title: str | None, drafting: bool) -> Ob
     else:
         path = f"/eds/outbox/{segment(number)}?panel=open&tab=card"
     return ObjectRef(kind="quote", number=number, title=title, path=path)
+
+
+def ticket_ref(number: str) -> ObjectRef:
+    """Обращение сотрудника (`ОБР-0012`): карточка в «Обращениях сотрудников» (W15-H7)."""
+    return ObjectRef(
+        kind="ticket", number=number, path=f"/admin/tickets/{segment(number)}?panel=open&tab=card"
+    )

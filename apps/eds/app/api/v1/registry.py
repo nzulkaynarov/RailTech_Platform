@@ -51,13 +51,13 @@ Filter = Annotated[registry.Filters, Depends(filters)]
 
 @router.get("/registry", response_model=RegistryPage, operation_id="listRegistry")
 async def list_registry(
-    _: Annotated[Employee, Depends(require_permission(P.REGISTRY_READ))],
+    employee: Annotated[Employee, Depends(require_permission(P.REGISTRY_READ))],
     session: Session,
     flt: Filter,
     cursor: Cursor = None,
     limit: Limit = 50,
 ) -> RegistryPage:
-    return await registry.list_page(session, flt, cursor=cursor, limit=limit)
+    return await registry.list_page(session, employee, flt, cursor=cursor, limit=limit)
 
 
 @router.get("/registry/export", operation_id="exportRegistry", response_class=Response)
@@ -68,7 +68,7 @@ async def export_registry(
     format: Annotated[str, Query(pattern="^(xlsx|csv)$")] = "xlsx",
 ) -> Response:
     async with session.begin():
-        items = await registry.export_rows(session, flt)
+        items = await registry.export_rows(session, employee, flt)
         if items is None:
             raise EdsError(
                 "VALIDATION_FAILED",

@@ -323,6 +323,14 @@ class Quote(models.Model):
         verbose_name=_("Каналы отправки"),
         help_text=_("Каналы отправки клиенту, выбранные директором при одобрении (telegram, cabinet, email)"),
     )
+    # Итог автоотправки после одобрения директором (ERP-11): {"sent_via": [...], "skipped": [{"channel", "reason"}],
+    # "error": код | null}. Пусто — автоотправки не было (каналы не выбраны, КП отправляет менеджер).
+    send_report = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name=_("Итог отправки по каналам"),
+        help_text=_("Автоотправка КП по каналам директора: куда ушло, что пропущено и почему (ERP-11)"),
+    )
 
     created_at = models.DateTimeField(
         auto_now_add=True,

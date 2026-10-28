@@ -280,3 +280,10 @@ async def set_deputy(body: DeputyUpdate, authed: AuthedDep) -> Profile:
 )
 async def clear_deputy(authed: AuthedDep) -> Profile:
     return await _profile_of(authed, _json(await authed.call("crm", "DELETE", f"{ME}/deputy")))
+
+
+@router.put("/me/onboarding", response_model=Me, operation_id="finishOnboarding")
+async def finish_onboarding(authed: AuthedDep) -> Me:
+    """«Пропустить» и «Больше не показывать» в туре первого входа: флаг хранит CRM (W15-H7)."""
+    crm_me = _json(await authed.call("crm", "PATCH", ME, json={"onboarding_done": True}))
+    return build_me(await authed.service.apply_profile(authed.sid, crm_me))

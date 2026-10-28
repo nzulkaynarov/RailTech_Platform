@@ -79,6 +79,13 @@ def acceptance_code_message(
     return BotMessage(text)
 
 
+def _telegram_chosen(payload: Mapping[str, Any]) -> bool:
+    """`quote.sent.channels` (ERP-11): нет списка — отправка менеджером, все каналы клиента; есть —
+    только выбранные."""
+    channels = payload.get("channels")
+    return channels is None or "telegram" in channels
+
+
 #: Источники заявки, о которых клиенту пишем «принята»: заявку завёл менеджер из лида (`crm`) или
 #: сам
 #: клиент в кабинете (`cabinet`). Заявка сотрудника в ERP (`erp`) клиенту не сообщается.
@@ -115,6 +122,8 @@ def client_message(
 ) -> BotMessage | None:
     """Сообщение клиенту по событию ERP или `None`, если по этому событию бот молчит."""
     p = payload
+    if event == "quote.sent" and not _telegram_chosen(p):
+        return None  # ERP-11: директор выбрал каналы без Telegram — клиенту в бот КП не шлём
     doc_button: tuple[str, str] | None = None
     if event == "request.created":
         return request_accepted(p, number=deal_number, language=language, cabinet_url=cabinet_url)

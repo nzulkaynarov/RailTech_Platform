@@ -41,6 +41,8 @@ export const routes: RouteObject[] = [
           { index: true, element: <HomeRedirect /> },
           // Профиль — страница, а не окно (W15-H6, UX-оценка P1-3); вход — пункт «Профиль» в меню аватара.
           { path: "me", lazy: () => import("../features/profile/ProfilePage") },
+          // Помощь (W15-H7): «С чего начать», путь заявки, словарь, статьи, «Мои обращения»; вкладка — часть адреса.
+          { path: "help/*", lazy: () => import("../features/help/HelpPage") },
           { path: "dashboard/*", lazy: () => import("../modules/dashboard") },
           { path: "crm/*", lazy: () => import("../modules/crm") },
           { path: "eds/*", lazy: () => import("../modules/eds") },

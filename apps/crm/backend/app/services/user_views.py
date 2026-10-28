@@ -41,6 +41,8 @@ class UserView:
     deputy_user_id: int | None = None
     deputy_from: date | None = None
     deputy_to: date | None = None
+    # Приветствие и тур первого входа закрыты (W15-H7); у существующих сотрудников — сразу True.
+    onboarding_done: bool = True
 
 
 @dataclass(frozen=True, slots=True)
@@ -104,6 +106,7 @@ def view_of(
         deputy_user_id=user.deputy_user_id,
         deputy_from=user.deputy_from,
         deputy_to=user.deputy_to,
+        onboarding_done=user.onboarding_done_at is not None,
     )
 
 

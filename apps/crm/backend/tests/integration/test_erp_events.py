@@ -618,3 +618,61 @@ async def test_the_stand_events_pass_the_generated_models(harness: Harness) -> N
         )
         assert isinstance(stub, Event)
         assert parse_erp_event(stub).event == event
+
+
+async def test_request_created_links_the_mirror_to_the_crm_request_by_its_id(
+    harness: Harness,
+) -> None:
+    """«Создать заявку» (W16-D1-2): `request.created.crm_request_id` связывает событие именно с
+    заявкой CRM, даже если у лида есть другая открытая сделка; номер ЗВ из ERP — в `erp_number`."""
+    client_id, lead_id = await harness.seed_client()
+    async with harness.sessions() as session, session.begin():
+        other = Deal(client_id=client_id, lead_id=lead_id, title="Другая открытая", stage="open")
+        request = Deal(
+            client_id=client_id,
+            lead_id=lead_id,
+            title="Заявка",
+            stage="open",
+            request_summary="Нужны оси",
+            erp_request_status="pending",
+        )
+        session.add_all([other, request])
+        await session.flush()
+        other_id, request_id = other.id, request.id
+    data = data_for(
+        "request.created",
+        client_id,
+        payload={"source": "crm", "erp_request_id": ERP_DEAL, "crm_request_id": request_id},
+    )
+    data["deal"]["number"] = "ЗВ-2026-104"
+    event_id = await harness.receive(event_type_of("request.created"), data, time=T0)
+
+    assert await harness.process(event_id) == "processed"
+
+    deals = {deal.id: deal for deal in await harness.deals()}
+    assert set(deals) == {other_id, request_id}, "второго зеркала нет"
+    assert deals[request_id].erp_deal_id == ERP_DEAL
+    assert deals[request_id].erp_number == "ЗВ-2026-104"
+    assert deals[other_id].erp_deal_id is None
+
+
+async def test_crm_request_of_another_client_is_not_adopted(harness: Harness) -> None:
+    client_id, _ = await harness.seed_client()
+    other_client, _ = await harness.seed_client(tg_user_id=778)
+    async with harness.sessions() as session, session.begin():
+        foreign = Deal(client_id=other_client, title="Чужая", stage="open", request_summary="x")
+        session.add(foreign)
+        await session.flush()
+        foreign_id = foreign.id
+    data = data_for(
+        "request.created",
+        client_id,
+        payload={"source": "crm", "erp_request_id": ERP_DEAL, "crm_request_id": foreign_id},
+    )
+    event_id = await harness.receive(event_type_of("request.created"), data, time=T0)
+
+    assert await harness.process(event_id) == "processed"
+
+    deals = {deal.id: deal for deal in await harness.deals()}
+    assert deals[foreign_id].erp_deal_id is None
+    assert [d.client_id for d in deals.values() if d.erp_deal_id == ERP_DEAL] == [client_id]

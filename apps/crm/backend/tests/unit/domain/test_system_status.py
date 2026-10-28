@@ -120,19 +120,27 @@ CRM_OK = "https://crm.example.com"
             ["Платформы", "localhost", "PLATFORM_DOMAIN"],
         ),
         (CRM_OK, PlatformUrlFacts("http://127.0.0.1:8088", True), "warn", ["localhost", "хостинг"]),
-        ("http://localhost", PROD_OK, "warn", ["Адрес CRM", "«Настройки» → «Компания»"]),
+        # ссылки Telegram идут в Платформу: адрес CRM — только запасной (B-009)
+        ("http://localhost", PROD_OK, "ok", []),
+        ("http://localhost", None, "warn", ["Адрес CRM", "«Настройки» → «Компания»"]),
         # на стенде localhost для Платформы — норма
         (CRM_OK, PlatformUrlFacts("http://platform.localhost:8088", False), "ok", []),
         # адреса нет совсем — честная строка в любом режиме, а не localhost в письме
         (CRM_OK, PlatformUrlFacts(None, True), "warn", ["Платформы не задан", "PLATFORM_DOMAIN"]),
-        (CRM_OK, PlatformUrlFacts(None, False), "warn", ["Платформы не задан"]),
+        (
+            CRM_OK,
+            PlatformUrlFacts(None, False),
+            "warn",
+            ["Платформы не задан", "ссылки из Telegram"],
+        ),
     ],
     ids=[
         "ok",
         "no-platform-check",
         "platform-localhost",
         "platform-127",
-        "crm-localhost",
+        "crm-localhost-platform-ok",
+        "crm-localhost-no-platform-check",
         "dev-ok",
         "missing-prod",
         "missing-dev",

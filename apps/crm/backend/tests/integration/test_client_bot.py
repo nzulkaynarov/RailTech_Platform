@@ -124,13 +124,18 @@ async def test_human_request_without_phone_waits_then_hands_off_with_phone(
     await bot.save_phone(USER, "+998901234567")
     assert await bot.hold_handoff_for_phone(USER) is None  # номер есть — передаём сразу
     await svc.handle_message(Incoming(USER, USER, "📇 Азиз", human_requested=True))
-    cfg = await SettingsService(sessions, ttl_s=0).get()
+    settings = SettingsService(sessions, ttl_s=0, platform_url="https://platform.example.com")
+    cfg = await settings.get()
     async with sessions() as session:
         escalation = (await session.scalars(select(Escalation))).one()
-        loaded = await load_card(session, escalation.id, cfg)
+        loaded = await load_card(session, escalation.id, cfg, await settings.links())
     assert escalation.reason_codes == ["human_requested"]
     assert loaded is not None
     assert loaded[1].phone == "+998901234567"
+    # ссылка карточки в канале ведёт в Платформу, а не в старую CRM (B-009)
+    assert loaded[1].crm_url == (
+        f"https://platform.example.com/crm/leads?lead=L-{loaded[1].lead_id:04d}&panel=open&tab=card"
+    )
 
 
 async def test_human_request_gate_can_be_switched_off(

@@ -34,6 +34,7 @@ export const admin: ModuleConfig = {
     {
       key: "tickets",
       path: "/admin/tickets",
+      detail: "/admin/tickets/:id",
       access: { resource: "admin" },
       tabs: [{ key: "card" }],
       defaults: { panelOpen: false },

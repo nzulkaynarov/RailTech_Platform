@@ -221,8 +221,12 @@ async def test_temporary_password_forces_change(
         json={"current_password": temporary, "new_password": PASSWORD},
         headers=headers,
     )
-    assert changed.status_code == 204
-    assert client.get("/api/v1/leads", headers=headers).status_code == 200
+    assert changed.status_code == 200
+    # Смена закрыла прежний токен, а в ответе — новая рабочая пара (сессия продолжается).
+    assert client.get("/api/v1/leads", headers=headers).status_code == 401
+    fresh = {"Authorization": f"Bearer {changed.json()['access_token']}"}
+    assert changed.json()["must_change_password"] is False
+    assert client.get("/api/v1/leads", headers=fresh).status_code == 200
 
 
 async def test_last_admin_is_protected(

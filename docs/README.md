@@ -1,5 +1,5 @@
 # docs/ — вся документация RailTech Platform, одна правда
-Статус: действует · Владелец: архитектор · Обновлено: 2026-10-27
+Статус: действует · Владелец: архитектор · Обновлено: 2026-10-28
 
 **Правило (владелец 2026-10-23, `docs/ORCHESTRATOR.md` §3 п. 17).** Вся правда о продукте, архитектуре, процессе и
 правилах кода живёт здесь, в `docs/`, и нигде больше. В `apps/*`, `packages/*`, `infra/` и корне — только указатели:
@@ -23,13 +23,14 @@
 | Открытые вопросы | [`QUESTIONS.md`](QUESTIONS.md) | действует | архитектор |
 | Действия владельца вне кода | [`OWNER-CHECKLIST.md`](OWNER-CHECKLIST.md) | действует | владелец |
 | Стратегия, целевая архитектура, план этапов 0, B–H | [`strategy/2026-10-23-platform-architecture-strategy.md`](strategy/2026-10-23-platform-architecture-strategy.md) | действует | архитектор |
-| Архитектурные решения ансамбля | [`adr/`](adr/) (0001…0019) | действует | архитектор |
+| Архитектурные решения ансамбля | [`adr/`](adr/) (0001…0020) | действует | архитектор |
 | Продукт: спецификация единого интерфейса (словарь, процессы, роли, экраны) | [`product/SPEC-v3.md`](product/SPEC-v3.md) (§4 — вместе с ADR-0012) | действует | владелец |
 | Продукт: ценность систем и путь клиента | [`product/BUSINESS.md`](product/BUSINESS.md) | основание; при расхождении права SPEC-v3 | владелец |
 | Шов CRM ↔ ERP: API, события, MCP, портал | [`architecture/CONTRACTS.md`](architecture/CONTRACTS.md) (машиночитаемо — `packages/contracts/`) | действует | архитектор |
 | SSO-токен сотрудника | [`architecture/sso-token.md`](architecture/sso-token.md) | действует | архитектор |
 | Платформа: BFF, вход, события, развёртывание | [`architecture/platform-bff.md`](architecture/platform-bff.md) | действует | архитектор |
 | Платформа: фронтенд, каркас, размеры, тема | [`architecture/platform-frontend.md`](architecture/platform-frontend.md) | действует | архитектор |
+| Документы: формат тела, бланк, рендер PDF и DOCX, «Подогнать» (пакет `rt-docs`, контракт `documents/`) | [`architecture/rt-docs.md`](architecture/rt-docs.md), решение — [ADR-0020](adr/0020-documents-letterhead-body-rendering.md) | действует | архитектор |
 | Карта интеграции: экран → BFF → домены, разрывы | [`architecture/integration-map.md`](architecture/integration-map.md) | действует | архитектор |
 | Система: назначение, запуск, команды | `systems/<crm\|erp\|cabinet\|platform\|eds\|infra\|contracts\|ui-tokens>/README.md` | действует | лид |
 | Система: правила кода | `systems/<crm\|erp\|cabinet\|platform\|eds>/CONVENTIONS.md` | действует | лид |
@@ -39,6 +40,7 @@
 | Аудиты | [`audits/`](audits/), [`audits/crm/`](audits/crm/) | снимок на дату | архитектор |
 | Исследования | [`research/`](research/) | снимок на дату | архитектор |
 | База знаний CRM: формат и промпт подготовки | [`kb/`](kb/) (копию в Платформу делает `pnpm kb:sync` в `apps/platform/web`, `make -C apps/platform kb-sync`) | действует | лид |
+| Статьи помощи сотрудникам Платформы (окно «?» и раздел «Помощь») | [`kb/help/`](kb/help/) (не база знаний бота; копию в сборку делает тот же `pnpm kb:sync`; правка — PR, редактора в интерфейсе нет, Q-W15-H7) | действует | лид |
 | Скриншоты DoD | [`screens/<задача>/`](screens/) | артефакт PR | исполнитель |
 | Всё недействующее | [`history/`](history/README.md) | история | — |
 

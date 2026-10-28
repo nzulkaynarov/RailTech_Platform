@@ -77,7 +77,9 @@ def integration_exception_handler(exc, context):
 
     if isinstance(exc, (exceptions.NotFound, Http404, IntegrationNotFound)):
         response.status_code = status.HTTP_404_NOT_FOUND
-        response.data = {"detail": "NOT_FOUND"}
+        # Свой код операции (шов 0.9.0: `CLIENT_NOT_FOUND`) остаётся; прочие 404 — `NOT_FOUND`.
+        code = str(exc.detail) if isinstance(exc, IntegrationNotFound) else "NOT_FOUND"
+        response.data = {"detail": code if code.isupper() else "NOT_FOUND"}
         return response
 
     # Ошибки валидации данных DRF

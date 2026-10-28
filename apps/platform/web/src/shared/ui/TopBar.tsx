@@ -2,7 +2,7 @@ import { Button, Layout, Popover, theme } from "antd";
 import { type ReactNode, useEffect, useRef } from "react";
 import { Link } from "react-router";
 
-import { BellIcon, ExpandRightIcon, PanelIcon } from "./icons";
+import { BellIcon, ExpandRightIcon, HelpIcon, PanelIcon } from "./icons";
 import "./shell.css";
 
 export interface Crumb {
@@ -35,6 +35,8 @@ export interface TopBarProps {
   /** Окно уведомлений открыто — состояние снаружи, чтобы закрыть его после перехода по уведомлению */
   bellOpen: boolean;
   onBellOpenChange: (open: boolean) => void;
+  /** Кнопка «?» рядом с колокольчиком (W15-H7): открывает окно помощи; нет — кнопки нет */
+  help?: { label: string; open: boolean; onClick: () => void };
   /** Нет бокового окна у раздела (403, 404) — кнопка «Панель» не показывается */
   hasPanel: boolean;
   panelOpen: boolean;
@@ -84,6 +86,7 @@ export function TopBar({
   bellTitle,
   bellOpen,
   onBellOpenChange,
+  help,
   hasPanel,
   panelOpen,
   onTogglePanel,
@@ -146,6 +149,20 @@ export function TopBar({
       {mobile ? null : <Crumbs crumbs={crumbs} label={labels.crumbs} />}
       {mobile ? null : <div style={{ flex: 1 }} />}
       {search}
+      {help ? (
+        <button
+          type="button"
+          className="pf-icon-btn pf-focusable"
+          aria-label={help.label}
+          aria-haspopup="dialog"
+          aria-expanded={help.open}
+          data-tour="help"
+          onClick={help.onClick}
+          style={{ width: 32, height: 32, flex: "0 0 auto" }}
+        >
+          <HelpIcon />
+        </button>
+      ) : null}
       <Popover
         trigger="click"
         placement="bottomRight"
@@ -177,6 +194,7 @@ export function TopBar({
           className="pf-icon-btn pf-focusable"
           aria-label={labels.bell}
           aria-haspopup="dialog"
+          data-tour="bell"
           style={{ position: "relative", width: 32, height: 32, flex: "0 0 auto" }}
         >
           <BellIcon />

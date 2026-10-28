@@ -123,6 +123,9 @@ class DealListSerializer(serializers.ModelSerializer):
         model = Deal
         fields = [
             "id",
+            "number",
+            "process",
+            "urgency",
             "title",
             "company",
             "company_name",
@@ -141,6 +144,7 @@ class DealListSerializer(serializers.ModelSerializer):
             "execution_complete",
             "created_at",
         ]
+        read_only_fields = ["number", "process", "urgency"]
 
 
 class DealDetailSerializer(serializers.ModelSerializer):
@@ -209,6 +213,9 @@ class DealDetailSerializer(serializers.ModelSerializer):
         model = Deal
         fields = [
             "id",
+            "number",
+            "process",
+            "urgency",
             "company",
             "company_name",
             "contact_name",
@@ -234,6 +241,7 @@ class DealDetailSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
+        read_only_fields = ["number", "process", "urgency"]
         extra_kwargs = {
             "company": {"required": False},
             "client": {"required": False},

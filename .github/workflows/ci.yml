@@ -62,6 +62,7 @@ jobs:
       eds: ${{ contains(fromJSON('["schedule","workflow_dispatch"]'), github.event_name) || steps.filter.outputs.eds == 'true' }}
       packages: ${{ contains(fromJSON('["schedule","workflow_dispatch"]'), github.event_name) || steps.filter.outputs.packages == 'true' }}
       rtbus: ${{ contains(fromJSON('["schedule","workflow_dispatch"]'), github.event_name) || steps.filter.outputs.rtbus == 'true' }}
+      rtdocs: ${{ contains(fromJSON('["schedule","workflow_dispatch"]'), github.event_name) || steps.filter.outputs.rtdocs == 'true' }}
       infra: ${{ contains(fromJSON('["schedule","workflow_dispatch"]'), github.event_name) || steps.filter.outputs.infra == 'true' }}
       cpu: ${{ contains(fromJSON('["schedule","workflow_dispatch"]'), github.event_name) || steps.filter.outputs.cpu == 'true' }}
       cpurules: ${{ contains(fromJSON('["schedule","workflow_dispatch"]'), github.event_name) || steps.filter.outputs.cpurules == 'true' }}
@@ -151,6 +152,10 @@ jobs:
               - 'packages/rt-bus/**'
               - 'packages/contracts/events/**'
               - 'packages/contracts/bus/**'
+            # Документы (D-DOC1, ADR-0020): пакет рендера и контракт тела документа (схема, каталог, примеры — тестовые данные пакета).
+            rtdocs:
+              - 'packages/rt-docs/**'
+              - 'packages/contracts/documents/**'
             infra:
               - 'infra/**'
               - 'scripts/**'
@@ -792,6 +797,30 @@ jobs:
       # ruff, mypy --strict, миграция Django без дрейфа, pytest: ядро, SQLAlchemy (psycopg, asyncpg), Django (psycopg2, psycopg)
       - run: make check-rt-bus
 
+  # ─── packages: документы rt-docs (D-DOC1; подключено с разрешения владельца 2026-10-28) ─────────────────────
+  # Тяжёлое (heavy): сборка образа тестов (pango, harfbuzz) и эталонные PDF. На push в main не идёт — уже прошло на PR,
+  # полностью — ночью и вручную; быстрые задания push не удлиняет.
+
+  rt-docs:
+    name: packages · rt-docs
+    needs: changes
+    if: needs.changes.outputs.rtdocs == 'true' && needs.changes.outputs.heavy == 'true'
+    runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: ${{ env.UV_VERSION }}
+          python-version: ${{ env.PYTHON_VERSION }}
+          enable-cache: true
+          cache-dependency-glob: packages/rt-docs/uv.lock
+      - name: Install
+        run: make -C packages/rt-docs install
+      # ruff, mypy --strict; pytest — в контейнере docker/test.Dockerfile (тот же образ, что локально: pango, harfbuzz, WeasyPrint 69,
+      # базовый образ по digest), сеть выключена; эталонные PDF: число страниц и заполненность последней (docs/architecture/rt-docs.md §6)
+      - run: make check-rt-docs
+
   # ─── infra: compose и Caddy валидны ────────────────────────────────────────────────────────
 
   infra:
@@ -912,7 +941,7 @@ jobs:
   ci-ok:
     name: CI ok
     if: always()
-    needs: [changes, gitleaks, crm-lint, crm-unit, crm-integration, crm-build, crm-e2e, crm-audit, erp-lint, erp-backend, erp-schema, cabinet, platform, platform-e2e, eds, contracts, rt-bus, infra, cpu-rules, cpu-common, cpu-image]
+    needs: [changes, gitleaks, crm-lint, crm-unit, crm-integration, crm-build, crm-e2e, crm-audit, erp-lint, erp-backend, erp-schema, cabinet, platform, platform-e2e, eds, contracts, rt-bus, rt-docs, infra, cpu-rules, cpu-common, cpu-image]
     runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 5
     steps:

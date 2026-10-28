@@ -143,7 +143,7 @@
     "decided": {
       "approved": {
         "title": "Quote approved",
-        "text": "The decision is made, the outgoing number is assigned, the quote is \"Ready to send\". The request manager will send it to the client."
+        "text": "The decision is made and the outgoing number is assigned. With channels chosen, the quote goes to the client right away (an unavailable channel is shown with the reason on the quote card and the request manager is notified); without channels the request manager sends it."
       },
       "returned": {
         "title": "Quote returned for rework",
@@ -200,8 +200,8 @@
     },
     "consequence": {
       "title": "What will happen",
-      "step1": "The quote gets an outgoing number and becomes \"Ready to send\".",
-      "step2": "The request manager will send it to the client through the chosen channels ({{channels}}). The client gets a PDF without cost and margin.",
+      "step1": "The quote gets an outgoing number.",
+      "step2": "The quote goes to the client right away through the chosen channels ({{channels}}) that are available; an unavailable channel is shown with the reason on the quote card and the request manager is notified. The client gets a PDF without cost and margin.",
       "step2None": "No channels chosen: the quote goes to \"Outgoing\" and the request manager sends it to the client.",
       "step3": "Nothing goes to the client until the quote is sent; the validity period and the reminder start after sending."
     },

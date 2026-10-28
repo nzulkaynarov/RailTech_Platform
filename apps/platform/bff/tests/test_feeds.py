@@ -739,8 +739,13 @@ async def test_mark_read_unknown_and_crm_ids(
     await web.login(["DIRECTOR"])
 
     crm = await web.send("POST", "/api/v1/notifications/crm:5/read")
-    assert crm.status_code == 404  # уведомлений CRM нет до CRM-04
+    assert crm.status_code == 204  # лента CRM (W15-H7): отметка уходит в CRM
     check(crm, "/notifications/{id}/read", "post")
+    assert str(fb.crm_read.calls.last.request.url).endswith("/api/v1/me/notifications/5/read")
+    fb.crm_read_status = 404
+    gone = await web.send("POST", "/api/v1/notifications/crm:6/read")
+    assert gone.status_code == 404
+    check(gone, "/notifications/{id}/read", "post")
 
     fb.mark_read_status = 404
     missing = await web.send("POST", "/api/v1/notifications/erp:999/read")
