@@ -37,15 +37,9 @@ from .model import (
 )
 from .resolve import Node, plain_text, resolve
 
-_FC_DECLARED = False
-
-
-def _declare_fontconfig() -> None:
-    """FcConfigCreate нет в объявлениях cffi WeasyPrint — добавляем один раз (ABI-режим разрешает это после dlopen)."""
-    global _FC_DECLARED
-    if not _FC_DECLARED:
-        ffi.cdef("FcConfig * FcConfigCreate (void);")
-        _FC_DECLARED = True
+# FcConfigCreate нет в объявлениях cffi WeasyPrint — объявляем один раз при импорте модуля (ABI-режим разрешает cdef
+# после dlopen; импорт идёт под блокировкой импорта, поэтому потоки сервера не объявят его дважды).
+ffi.cdef("FcConfig * FcConfigCreate (void);")
 
 
 class IsolatedFontConfiguration(FontConfiguration):  # type: ignore[misc]
@@ -58,7 +52,6 @@ class IsolatedFontConfiguration(FontConfiguration):  # type: ignore[misc]
     """
 
     def __init__(self) -> None:
-        _declare_fontconfig()
         self._config = ffi.gc(fontconfig.FcConfigCreate(), fontconfig.FcConfigDestroy)
         self.font_map = ffi.gc(pangoft2.pango_ft2_font_map_new(), gobject.g_object_unref)
         pangoft2.pango_fc_font_map_set_config(ffi.cast("PangoFcFontMap *", self.font_map), self._config)
