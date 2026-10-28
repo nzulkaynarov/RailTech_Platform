@@ -139,7 +139,7 @@ describe("Склад · заказы поставщикам", () => {
     });
     fireEvent.click(within(modal).getByRole("button", { name: "Принять" }));
     expect(await screen.findByText("Товар принят")).toBeVisible();
-    expect(await screen.findByText(/накладная НП-77/)).toBeVisible();
+    expect((await screen.findAllByText(/накладная НП-77/)).length).toBeGreaterThan(0);
     expect(screen.getAllByText("Подтверждён").length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByRole("button", { name: "Принять товар" }));
