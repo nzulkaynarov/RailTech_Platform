@@ -1,7 +1,8 @@
 """Снимок сотрудника из событий `uz.railtech.identity.user.*.v1` — терпимое чтение (L10).
 
-Модели `rt_contracts` не используются намеренно: поле `user.permissions.eds` аддитивное и необязательное
-(волна 12, E1), а читатель обязан работать и со старым CRM (поля нет), и с новым (есть, возможны новые коды).
+Модели `rt_contracts` не используются намеренно: поля `user.permissions.eds` (волна 12, E1) и
+`user.permissions.sections` (D1-8) аддитивные и необязательные, а читатель обязан работать и со старым CRM
+(поля нет), и с новым (есть, возможны новые коды).
 Лишние поля игнорируются; неверный тип или нет обязательного поля — ошибка обработчика (автоповтор, затем `failed`).
 """
 
@@ -15,6 +16,8 @@ class Permissions(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     eds: list[str] = Field(default_factory=list)
+    # Разделы каталога сотрудника и уровень (`full`/`read`), D1-8: нужны проверке зоны исполнителя резолюции.
+    sections: dict[str, str] = Field(default_factory=dict)
 
 
 class UserSnapshot(BaseModel):
@@ -35,6 +38,11 @@ class UserSnapshot(BaseModel):
     def permissions_eds(self) -> list[str]:
         """Права EDS по снимку; поля нет (CRM без `permissions.eds`) — доступа нет."""
         return sorted(set(self.permissions.eds)) if self.permissions is not None else []
+
+    @property
+    def sections(self) -> dict[str, str]:
+        """Разделы каталога по снимку; поля нет (снимок до D1-8) — разделов нет: зону не подтвердить."""
+        return dict(self.permissions.sections) if self.permissions is not None else {}
 
 
 class UserEnvelope(BaseModel):

@@ -1,0 +1,413 @@
+{
+  "title": "Stock",
+  "subtitle": "Stock and reservations, supplier orders, receiving and shipments by project",
+  "common": {
+    "cancel": "Cancel"
+  },
+  "tabs": {
+    "balances": "Stock and reservations",
+    "orders": "Supplier orders",
+    "receipts": "Receiving",
+    "shipments": "Shipments"
+  },
+  "load": {
+    "retry": "Retry",
+    "loadError": {
+      "title": "Could not load",
+      "text": "Refresh the page or try again later."
+    },
+    "unavailable": {
+      "title": "ERP is not responding",
+      "text": "Stock data is unavailable right now. Try again in a minute."
+    },
+    "forbidden": {
+      "title": "No access",
+      "text": "Stock is available to roles with the Stock section. Ask the administrator if you need it."
+    }
+  },
+  "errors": {
+    "forbidden": "Your role is not allowed to do this.",
+    "unavailable": "ERP is not responding. Try again later.",
+    "other": "Failed: {{message}}",
+    "not_enough_stock": "Not enough free stock (free: {{free}}).",
+    "below_reserved": "Stock cannot drop below project reservations.",
+    "below_shipped": "A reservation cannot be less than what is already shipped.",
+    "transition_not_allowed": "The order is already in another status: refresh the screen.",
+    "order_not_draft": "Lines and supplier can only be changed in a draft.",
+    "order_closed": "The order is closed: it cannot be changed.",
+    "order_not_confirmed": "Goods can be received on a confirmed order.",
+    "order_has_receipts": "The order already has receipts: it cannot be cancelled.",
+    "expected_date_required": "Enter the expected delivery date.",
+    "supplier_email_required": "The supplier has no email: enter an address for the letter.",
+    "email_failed": "The letter to the supplier was not sent, the order status is unchanged. Try again later.",
+    "fulfillment_not_ready": "The project is not signed yet: shipping is possible after the contract is signed.",
+    "product_required": "Match the line to a catalog item first.",
+    "no_shortage": "No shortage: everything is reserved or already ordered.",
+    "deal_closed": "The request is closed: reservations are not taken.",
+    "line_not_actual": "The line belongs to an earlier quote version.",
+    "line_not_goods": "Services are not requested from goods suppliers.",
+    "reservation_not_active": "The reservation is already released or shipped.",
+    "reservation_not_found": "No reservation.",
+    "already_answered": "The supplier reply is already marked.",
+    "request_not_sent": "The letter was not sent: nothing to mark.",
+    "service_not_stocked": "Services are not stocked.",
+    "calc_not_started": "The costing has not started yet.",
+    "quantity_out_of_range": "Quantity out of range: at most {{max}}.",
+    "prices_forbidden": "Supplier prices are entered by an employee with access to them.",
+    "calc_task_not_found": "No request with this number among requests with a costing task.",
+    "order_not_found": "No order with this number.",
+    "line_not_found": "No such line.",
+    "request_and_line_together": "Request and costing line are given together.",
+    "nothing_to_change": "Nothing to change.",
+    "role_not_permitted": "Your role is not allowed to do this.",
+    "supplier_not_found": "No such supplier.",
+    "product_not_found": "No such item."
+  },
+  "balances": {
+    "search": "Find an item by name or article",
+    "only": "Reserved only",
+    "caption": "Stock and reservations by item",
+    "scroll": "Stock and reservations table",
+    "columns": {
+      "product": "Item",
+      "onHand": "In stock",
+      "reserved": "Reserved",
+      "free": "Free",
+      "incoming": "Expected",
+      "cells": "Cells"
+    },
+    "open": "Open item “{{name}}”",
+    "free": "Free · {{count}}",
+    "noFree": "None free",
+    "until": "by {{date}}",
+    "cellLine": "{{cell}}: {{count}}",
+    "card": "In stock {{onHand}} · reserved {{reserved}}",
+    "empty": {
+      "title": "The warehouse is empty for now",
+      "text": "Stock appears after receiving from a supplier or manual entry: find an item by search and open it to add stock."
+    },
+    "emptySearch": {
+      "title": "Nothing found",
+      "text": "Try another word from the name or article."
+    }
+  },
+  "product": {
+    "adjust": "Add or write off",
+    "cells": "Cells",
+    "noCells": "The item is not in stock.",
+    "noCell": "No cell",
+    "reservations": "Project reservations",
+    "noReservations": "No reservations.",
+    "release": "Release",
+    "releaseLabel": "Release reservation for {{number}}",
+    "releaseConfirm": "Release the reservation for {{number}}? The goods return to free stock.",
+    "released": "Reservation released",
+    "incoming": "Expected from suppliers",
+    "noIncoming": "No orders on the way.",
+    "movements": "Latest movements",
+    "noMovements": "No movements yet.",
+    "kind": {
+      "receipt": "Receipt",
+      "shipment": "Shipment",
+      "adjustment": "Adjustment"
+    }
+  },
+  "adjust": {
+    "title": "Add or write off · {{name}}",
+    "quantity": "Quantity",
+    "quantityHint": "Plus adds, minus writes off. Stock cannot go below zero or below reservations.",
+    "quantityRequired": "Enter a non-zero quantity",
+    "cell": "Cell",
+    "note": "Reason",
+    "submit": "Record",
+    "done": "Stock changed",
+    "consequence": [
+      "The cell stock changes immediately.",
+      "The item movement log gets an entry with author and time.",
+      "Project reservations are untouched: stock will not drop below their total."
+    ]
+  },
+  "orders": {
+    "search": "Find an order: number, supplier, item",
+    "statusFilter": "Status",
+    "overdueOnly": "Overdue only",
+    "create": "Create order",
+    "caption": "Supplier orders",
+    "scroll": "Supplier orders table",
+    "columns": {
+      "number": "PO number",
+      "supplier": "Supplier",
+      "requests": "Requests and projects",
+      "expected": "Expected date",
+      "status": "Status",
+      "receipt": "Receiving",
+      "total": "Total",
+      "action": "Action"
+    },
+    "status": {
+      "draft": "Draft",
+      "sent": "Sent",
+      "confirmed": "Confirmed",
+      "received": "Received",
+      "cancelled": "Cancelled"
+    },
+    "receipt": {
+      "none": "Not received",
+      "partial": "partially",
+      "full": "Fully received"
+    },
+    "receivedOf": "{{received}} of {{total}}",
+    "overdueDays": "Overdue · {{count}} d.",
+    "open": "Open",
+    "openLabel": "Open order {{number}}",
+    "empty": {
+      "title": "No supplier orders",
+      "text": "An order is created for a request shortage or by hand: a draft, then sent to the supplier by email."
+    }
+  },
+  "create": {
+    "title": "New supplier order",
+    "supplier": "Supplier",
+    "supplierRequired": "Choose a supplier",
+    "noEmail": "no email",
+    "mode": "Contents",
+    "modeManual": "By hand",
+    "modeShortage": "For a request shortage",
+    "request": "Request or project number",
+    "requestHint": "The order gets what is missing in the quote goods lines: quantity minus reservation minus already ordered.",
+    "requestRequired": "Enter the request number",
+    "expected": "Expected date",
+    "note": "Note",
+    "product": "Item",
+    "productLabel": "Item, line {{n}}",
+    "productRequired": "Choose an item",
+    "quantity": "Qty",
+    "quantityLabel": "Quantity, line {{n}}",
+    "quantityRequired": "Enter the quantity",
+    "price": "Price",
+    "priceLabel": "Supplier unit price, line {{n}}",
+    "addLine": "Add line",
+    "removeLine": "Remove line {{n}}",
+    "submit": "Create draft",
+    "done": "Draft {{number}} created",
+    "consequence": [
+      "A draft order with number PO-YYYY-NNN is created.",
+      "Nothing is sent to the supplier until you press “Send to supplier”.",
+      "Lines and prices can be edited while the order is a draft."
+    ],
+    "productHint": "Type at least two letters of the name or article",
+    "productSearching": "Searching…",
+    "productNone": "Nothing found"
+  },
+  "order": {
+    "title": "Supplier order {{number}}",
+    "back": "To orders",
+    "action": {
+      "send": "Send to supplier",
+      "confirm": "Supplier confirmed",
+      "receive": "Receive goods",
+      "edit": "Edit",
+      "cancel": "Cancel order"
+    },
+    "overdueBanner": "Expected by {{date}}, goods not received — {{count}} d. overdue. Contact the supplier and update the expected date.",
+    "cancelledBanner": "The order is cancelled. Reason: {{reason}}",
+    "details": "Order details",
+    "supplier": "Supplier",
+    "email": "Supplier email",
+    "expected": "Expected date",
+    "sent": "Sent",
+    "confirmed": "Confirmed",
+    "receivedAt": "Received",
+    "createdBy": "Created by",
+    "note": "Note",
+    "linesTitle": "Order lines",
+    "receiptsTitle": "Receipts",
+    "logTitle": "Order log",
+    "notFound": {
+      "title": "No such order",
+      "text": "There is no order with this number, or it is not available to your role.",
+      "action": "To supplier orders"
+    },
+    "lines": {
+      "scroll": "Order lines table",
+      "caption": "Lines of order {{number}}",
+      "position": "Item",
+      "request": "For request",
+      "quantity": "Ordered",
+      "received": "Received",
+      "price": "Price",
+      "total": "Amount",
+      "totals": "Total"
+    },
+    "receipts": {
+      "empty": "No receipts yet.",
+      "label": "Order receipts",
+      "doc": "waybill {{doc}}"
+    },
+    "log": {
+      "label": "Order log",
+      "created": "Order created",
+      "edited": "Order edited",
+      "sent": "Sent to supplier",
+      "confirmed": "Supplier confirmed",
+      "receipt": "Goods received",
+      "received": "Order fully received",
+      "cancelled": "Order cancelled",
+      "overdue": "Order overdue"
+    },
+    "send": {
+      "title": "Send order {{number}} to the supplier",
+      "email": "Email address",
+      "emailKnown": "Address from the supplier card; you can enter another.",
+      "emailMissing": "The supplier has no email: enter an address for the letter.",
+      "submit": "Send letter",
+      "consequence": [
+        "The supplier gets a letter with the order lines; they can reply to your mailbox.",
+        "The status becomes “Sent” and the order log gets an entry.",
+        "If the letter is not sent, the status does not change."
+      ]
+    },
+    "confirm": {
+      "title": "Supplier confirmed order {{number}}",
+      "date": "Confirmed delivery date",
+      "dateHint": "The expected date is needed to track delays.",
+      "submit": "Confirm",
+      "consequence": [
+        "The status becomes “Confirmed”, the delivery date is remembered.",
+        "If goods do not arrive by this date, the order appears in My tasks as overdue.",
+        "You can then receive goods by line."
+      ]
+    },
+    "cancel": {
+      "title": "Cancel order {{number}}",
+      "reason": "Reason",
+      "submit": "Cancel order",
+      "consequence": [
+        "The order is closed, no letter goes to the supplier.",
+        "You can cancel while nothing has been received.",
+        "The reason is saved in the order log."
+      ]
+    },
+    "receive": {
+      "title": "Receive goods on order {{number}}",
+      "hint": "Enter how much arrived on each line: you can receive a part and the rest later.",
+      "left": "{{left}} of {{total}} left",
+      "quantityLabel": "Receive, “{{name}}”",
+      "cell": "Cell",
+      "cellLabel": "Cell for “{{name}}”",
+      "doc": "Supplier waybill",
+      "submit": "Receive",
+      "consequence": [
+        "Warehouse stock grows by the received quantity.",
+        "A line ordered for a project is reserved for it.",
+        "When everything is received the order becomes “Received”."
+      ]
+    },
+    "edit": {
+      "title": "Edit order {{number}}",
+      "date": "Expected date",
+      "note": "Note",
+      "quantityLabel": "Quantity, “{{name}}”",
+      "remove": "Remove",
+      "removeLabel": "Remove line “{{name}}”",
+      "submit": "Save"
+    },
+    "notice": {
+      "sent": "Order sent to the supplier",
+      "confirmed": "Order confirmed",
+      "received": "Goods received",
+      "cancelled": "Order cancelled",
+      "edited": "Order saved"
+    }
+  },
+  "receipts": {
+    "pendingTitle": "Waiting for goods",
+    "pendingCaption": "Confirmed order lines waiting for goods",
+    "pendingScroll": "Table of lines waiting for receiving",
+    "doneTitle": "Latest receipts",
+    "doneEmpty": "No receipts yet.",
+    "doc": "waybill {{doc}}",
+    "columns": {
+      "order": "Order",
+      "supplier": "Supplier",
+      "position": "Item",
+      "left": "Left to receive",
+      "expected": "Expected",
+      "action": "Action"
+    },
+    "left": "{{left}} of {{total}}",
+    "overdue": "Overdue",
+    "receive": "Receive",
+    "receiveLabel": "Receive “{{name}}” on order {{number}}",
+    "empty": {
+      "title": "Nothing expected",
+      "text": "Lines of confirmed orders whose goods are not fully received appear here."
+    }
+  },
+  "shipments": {
+    "newTitle": "New shipment for a project",
+    "request": "Project number",
+    "requestPlaceholder": "PR-2026-099",
+    "find": "Find reservations",
+    "hint": "Enter a project number: we will show reservations that can be shipped.",
+    "noReservations": {
+      "title": "No reservations",
+      "text": "Nothing to ship from stock for {{request}}: no reservations or all already shipped."
+    },
+    "reserved": "reserved {{remaining}} of {{total}}",
+    "quantityLabel": "Ship, “{{name}}”",
+    "tracking": "Tracking number",
+    "carrier": "Carrier",
+    "submit": "Ship",
+    "done": "Shipped, waybill {{number}}",
+    "readOnly": "Shipping is done by an employee with stock rights.",
+    "consequence": [
+      "Stock and the project reservation decrease by the shipped amount.",
+      "An internal waybill SHP-YYYY-NNN with tracking is issued.",
+      "When all quote goods are shipped, project fulfilment becomes “Shipped”."
+    ],
+    "listTitle": "Shipments",
+    "caption": "Shipments by project",
+    "scroll": "Shipments table",
+    "columns": {
+      "number": "Waybill",
+      "request": "Project",
+      "lines": "Lines",
+      "tracking": "Tracking",
+      "when": "When"
+    },
+    "empty": {
+      "title": "No shipments yet",
+      "text": "A shipment is made from project reservations after the contract is signed."
+    }
+  },
+  "priceRequest": {
+    "title": "Request a supplier price · {{number}}",
+    "supplier": "Supplier",
+    "supplierPlaceholder": "Choose a supplier",
+    "email": "Email address",
+    "emailHint": "The supplier has no email: enter an address to send the letter to.",
+    "lines": "Request lines",
+    "noGoods": "The costing has no goods to request a price for.",
+    "note": "Comment to the supplier",
+    "submit": "Send request",
+    "sent": "Request sent to {{email}}",
+    "failed": "The letter to “{{name}}” was not sent: the request stays in the log as “not sent”.",
+    "consequence": [
+      "The supplier gets a letter with the request lines; they can reply to your mailbox.",
+      "The costing log gets an entry: who, when, to whom and which lines.",
+      "Enter the price from the reply into the costing line, then press “Reply received”."
+    ],
+    "logTitle": "Supplier price requests",
+    "logEmpty": "No requests yet.",
+    "status": {
+      "sent": "Awaiting reply",
+      "answered": "Reply received",
+      "failed": "Not sent"
+    },
+    "entryMeta": "{{when}} · {{who}} → {{email}}",
+    "answerNote": "Reply: {{note}}",
+    "answer": "Reply received",
+    "answerLabel": "Reply received: supplier “{{name}}”"
+  }
+}

@@ -61,6 +61,8 @@ class FeedBackends:
                 "counts": {"new": 0, "in_progress": 0, "resolved": 0},
             },
             "documents": {"results": []},
+            # Просроченные заказы поставщикам (ERP `stock/overdue`, D2-2): пусто, пока нет строк
+            "overdue": {"results": []},
             "activity_logs": (403, {"detail": "PLATFORM_ADMIN_REQUIRED"}),
             "timeline": [],
             # EDS (D1-6): письма «Ждут резолюции», маршруты на моём шаге, реестр для поиска
@@ -104,6 +106,7 @@ class FeedBackends:
             ),
             "activity_logs": self._erp("activity_logs", router.get(f"{base}/crm/activity-logs/")),
             "timeline": self._erp("timeline", router.get(f"{base}/crm/timeline/")),
+            "overdue": self._erp("overdue", router.get(f"{base}/stock/overdue/")),
         }
         self.deal_by_id = router.get(
             url__regex=re.compile(rf"^{ERP_URL}/api/v1/crm/deals/\d+/$")
@@ -122,6 +125,21 @@ class FeedBackends:
         self.mark_all = router.patch(f"{base}/notifications/mark_all_read/").mock(
             side_effect=lambda _r: self._respond_status(self.mark_all_status)
         )
+        # EDS (D1-6b): возвращённые документы автора и карточки с решением «Вернуть»
+        self.state["returned"] = {"items": [], "next_cursor": None}
+        self.cards: dict[str, Any] = {}
+        self.eds["returned"] = self._eds("returned", router.get(f"{EDS_URL}/api/v1/documents"))
+        self.eds["card"] = router.get(
+            url__regex=re.compile(rf"^{EDS_URL}/api/v1/documents/[0-9a-f-]+$")
+        ).mock(side_effect=self._card)
+
+    def _card(self, request: httpx.Request) -> httpx.Response:
+        if self.eds_down is not None:
+            return self._respond("returned", self.eds_down)
+        found = self.cards.get(request.url.path.rsplit("/", 1)[-1])
+        if found is None:
+            return httpx.Response(404, json={"code": "NOT_FOUND", "message": "x", "source": "eds"})
+        return httpx.Response(200, json=found)
 
     def _deals(self, request: httpx.Request) -> httpx.Response:
         """Список сделок ERP; с `?search=` — как ERP-09: номер (латиница и пробелы допустимы,

@@ -143,7 +143,7 @@ def render(spec: dict[str, Any]) -> str:
             "CRM_BASE_ROLE_BY_CODE",
             "dict[str, str]",
             dict(base["by_code"]),
-            "Базовая роль CRM для старого фронта: роль с кодом (порядок — прежние шесть ролей).",
+            "Роли версии 1 (порядок — прежние шесть); признак базовой роли они не задают (D1-8).",
         ),
         _const(
             "CRM_BASE_ROLE_BY_ACCESS",
@@ -152,7 +152,7 @@ def render(spec: dict[str, Any]) -> str:
                 role: tuple(f"{c['resource']}:{c['level']}" for c in conds)
                 for role, conds in base["by_access"].items()
             },
-            "Базовая роль CRM для роли без кода: достаточно одного условия `раздел:уровень`.",
+            "Признак базовой роли CRM по матрице роли: одно условие `раздел:уровень` (D1-8).",
         ),
     ]
     return HEADER.format(version=spec["version"]) + "\n".join(blocks)

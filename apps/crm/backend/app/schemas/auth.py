@@ -12,6 +12,8 @@ Role = Literal["admin", "manager", "viewer"]
 PlatformSystem = Literal["crm", "erp"]
 UiMode = Literal["admin", "manager"]
 Language = Literal["ru", "uz", "en"]
+# Запись «Что нового» Платформы — по дате выкладки (W-REL).
+WHATS_NEW_PATTERN = r"^\d{4}-\d{2}-\d{2}$"
 
 
 def _crm_only() -> list[PlatformSystem]:
@@ -113,6 +115,10 @@ class MeOut(UserOut):
     sso_enabled: bool = False
     # Имя заместителя (W15-H6), чтобы экран не ходил за справочником.
     deputy_name: str | None = None
+    # «Что нового» (W-REL): дата записи, до которой показано окно «Платформа обновлена», и дата
+    # последней открытой записи; None — ещё ничего не видел. Только в `/me`: это отметка о себе.
+    whats_new_shown: str | None = None
+    whats_new_read: str | None = None
 
 
 class MePatch(BaseModel):
@@ -134,6 +140,10 @@ class MePatch(BaseModel):
     email_signature: str | None = Field(default=None, max_length=2000)
     # Закрыть приветствие и тур первого входа; снять флаг нельзя, поэтому только `true`.
     onboarding_done: Literal[True] | None = None
+    # «Что нового» (W-REL): дата записи (`2026-10-28`), до которой показано окно и открыт раздел.
+    # Отметка только растёт: более ранняя дата, чем сохранённая, ничего не меняет.
+    whats_new_shown: str | None = Field(default=None, pattern=WHATS_NEW_PATTERN)
+    whats_new_read: str | None = Field(default=None, pattern=WHATS_NEW_PATTERN)
 
 
 class DeputyIn(BaseModel):

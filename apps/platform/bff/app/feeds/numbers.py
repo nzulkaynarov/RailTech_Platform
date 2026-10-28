@@ -56,6 +56,10 @@ def lead_id_of(text: str) -> int | None:
 _LATIN_PREFIXES = {"zv": "ЗВ", "pr": "ПР", "kp": "КП"}
 _LATIN_PREFIX = re.compile(r"(?i:(zv|pr|kp))(?![^\W\d_])")
 
+_DEAL_NUMBER_QUERY = re.compile(
+    r"(?P<prefix>[^\W\d_]{2})[\s\-–—/]*(?P<year>\d{4})[\s\-–—/]*(?P<seq>\d{1,6})"
+)
+
 
 def cyrillic_prefix(text: str) -> str:
     """Запрос как набран, но латинский префикс номера заменён кириллическим: `kp-2026-0` ->
@@ -66,6 +70,22 @@ def cyrillic_prefix(text: str) -> str:
     if match is None:
         return stripped
     return _LATIN_PREFIXES[match[1].casefold()] + stripped[match.end() :]
+
+
+def number_query(text: str) -> str | None:
+    """Запрос, похожий на номер заявки или проекта, в каноническом виде: `zv-2026-1` ->
+    `ЗВ-2026-001` (ERP выдаёт номер с тремя знаками). Не номер ЗВ/ПР — None. Это нормализация
+    набранной строки для точного вызова ERP (`GET /calc/deals/?number=`), не разбор идентификатора:
+    `id` сделки из номера не извлекается. Поиск по частичному номеру — `?search=` ERP.
+    """
+    match = _DEAL_NUMBER_QUERY.fullmatch(text.strip())
+    if match is None:
+        return None
+    prefix = match["prefix"].casefold()
+    prefix = _LATIN_PREFIXES.get(prefix, prefix.upper())
+    if prefix not in ("ЗВ", "ПР"):
+        return None
+    return f"{prefix}-{match['year']}-{match['seq'].zfill(3)}"
 
 
 def deal_step(deal: dict[str, Any]) -> DealStep:
@@ -163,4 +183,14 @@ def ticket_ref(number: str) -> ObjectRef:
     """Обращение сотрудника (`ОБР-0012`): карточка в «Обращениях сотрудников» (W15-H7)."""
     return ObjectRef(
         kind="ticket", number=number, path=f"/admin/tickets/{segment(number)}?panel=open&tab=card"
+    )
+
+
+def supplier_order_ref(number: str, supplier: str | None) -> ObjectRef:
+    """Заказ поставщику (`ЗП-2026-031`): карточка в Расчёт · Склад (D2-2)."""
+    return ObjectRef(
+        kind="supplier_order",
+        number=number,
+        title=supplier,
+        path=f"/erp/stock/{segment(number)}",
     )

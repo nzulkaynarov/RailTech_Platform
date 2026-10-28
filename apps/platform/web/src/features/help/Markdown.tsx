@@ -91,3 +91,8 @@ export function Markdown({
     </div>
   );
 }
+
+/** Одна строка без блоков: **жирный** и `код` (пункт «Что нового», W-REL). */
+export function InlineMarkdown({ text }: { text: string }) {
+  return <>{inline(text)}</>;
+}

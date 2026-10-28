@@ -39,6 +39,7 @@ def test_registry_lists_every_external_service_of_the_ensemble() -> None:
         "erp_events",
         "backup",
         "wal_archive",
+        "offsite_backup",
         "redis_broker",
         "redis_cache",
         "bus_dlq",

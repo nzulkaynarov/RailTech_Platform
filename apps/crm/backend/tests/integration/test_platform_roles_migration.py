@@ -131,9 +131,14 @@ def test_codes_become_roles_the_column_goes_and_downgrade_brings_the_codes_back(
         assert director is not None
         assert (director[0]["crm.leads"], director[0]["chats.external"]) == ("read", "read")
         assert director[1] == 2
+        # Остальные роли — версия 1; «Бухгалтер» — 2 (0044: без цен поставщиков, D2-1).
         assert conn.execute(
-            "SELECT DISTINCT version FROM platform_roles WHERE code <> 'DIRECTOR'"
+            "SELECT DISTINCT version FROM platform_roles "
+            "WHERE code NOT IN ('DIRECTOR', 'tpl:ACCOUNTANT')"
         ).fetchall() == [(1,)]
+        assert conn.execute(
+            "SELECT version FROM platform_roles WHERE code = 'tpl:ACCOUNTANT'"
+        ).fetchall() == [(2,)]
         # Столбец с кодами удалён, связь по роли не даёт её удалить.
         columns = conn.execute(
             "SELECT column_name FROM information_schema.columns "
@@ -210,8 +215,39 @@ def test_a_migrated_manager_and_accountant_keeps_the_same_rights(
         for act, allowed in actions.items()
         if allowed and not crm_before[res][act]
     }
-    assert extra == {"spend:read"}  # бухгалтер видит «Сводку по компании» (dashboard.summary)
+    # Бухгалтер видит «Сводку по компании» (dashboard.summary); переписка с клиентами — отдельным
+    # правом `chats:*` и зоной «Счета и оплаты» (B-D18-1), не правами реестра лидов.
+    chats = {"chats:read", "chats:reply", "chats:note", "chats:assist", "chats:invoiced"}
+    assert extra == {"spend:read", *chats}
     erp_after = set(derived.erp_permissions)
     # quote.send — менеджер отправляет одобренное КП клиенту (C1-G-4, архитектор 2026-10-26)
     assert erp_after - erp_before == {"contract.sign", "quote.send"}
     assert erp_before - erp_after == {"quote.view_cost_margin"}
+
+
+def test_accountant_template_loses_supplier_prices_and_downgrade_returns_them(
+    alembic_config: Config, live_settings: Settings
+) -> None:
+    """0047 (D2-1, Q-D2-1-4): «Бухгалтер» без цен поставщиков; версия роли растёт в обе стороны."""
+
+    def accountant() -> tuple[list[str], int]:
+        with psycopg.connect(live_settings.libpq_dsn, autocommit=True) as conn:
+            row = conn.execute(
+                "SELECT restricted_fields, version FROM platform_roles "
+                "WHERE code = 'tpl:ACCOUNTANT'"
+            ).fetchone()
+        assert row is not None
+        return list(row[0]), int(row[1])
+
+    command.upgrade(alembic_config, "head")
+    command.downgrade(alembic_config, "0046_client_requests")
+    fields, version = accountant()
+    assert "supplier_prices" in fields
+
+    command.upgrade(alembic_config, "head")
+    after, after_version = accountant()
+    assert after == ["totals_only"]
+    assert after_version == version + 1
+
+    command.upgrade(alembic_config, "head")  # повтор — без изменений
+    assert accountant() == (after, after_version)

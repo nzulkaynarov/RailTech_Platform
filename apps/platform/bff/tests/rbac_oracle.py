@@ -45,7 +45,7 @@ FIELDS: Final[dict[str, tuple[str, ...]]] = {
     "MANAGER": (),
     "SUPPLY": ("cost_margin", "supplier_prices"),
     "ENGINEER": (),
-    "ACCOUNTANT": ("supplier_prices", "totals_only"),
+    "ACCOUNTANT": ("totals_only",),
 }
 
 

@@ -3,12 +3,15 @@
 #   /opt/rt/.env.prod            переменные прода (chmod 600), только на сервере
 #   /opt/rt/releases/<тег>/      infra/ и apps/crm/infra/casbin выбранной версии (кладёт deploy.yml)
 #   /opt/rt/state/               current_tag, previous_tag, predeploy/ (дампы перед миграциями)
+#   /opt/rt/secrets/             секреты владельца вне .env.prod (gdrive-sa.json — ключ внешней копии), chmod 700
 # shellcheck shell=bash
 
 RT_ROOT="${RT_ROOT:-/opt/rt}"
 RT_ENV_FILE="${RT_ENV_FILE:-$RT_ROOT/.env.prod}"
 RT_RELEASES="${RT_RELEASES:-$RT_ROOT/releases}"
 RT_STATE="${RT_STATE:-$RT_ROOT/state}"
+# Секреты, которые владелец кладёт на сервер сам (ключ сервисного аккаунта Google для offsite-backup, OPS-GDRIVE): chmod 700, владелец deploy.
+RT_SECRETS_DIR="${RT_SECRETS_DIR:-$RT_ROOT/secrets}"
 
 log() { printf '▸ %s\n' "$*"; }
 die() { printf '✘ %s\n' "$*" >&2; exit 1; }
@@ -103,6 +106,14 @@ wait_healthy() {
 release_dir() { echo "$RT_RELEASES/$1"; }
 
 state_get() { cat "$RT_STATE/$1" 2>/dev/null || true; }
+
+# Дата выкладки релиза (W-REL, версия «Платформа ГГГГ.ММ.ДД»): пишется в каталог релиза при первой выкладке и дальше не
+# меняется — повтор деплоя и откат на этот релиз показывают ту же версию. release_date <каталог-релиза>
+release_date() {
+  local file="$1/.released_at"
+  [[ -s "$file" ]] || date -u +%Y-%m-%d > "$file" 2>/dev/null || true
+  cat "$file" 2>/dev/null || true
+}
 state_set() { mkdir -p "$RT_STATE"; printf '%s\n' "$2" > "$RT_STATE/$1"; }
 
 # Удаляет образы rt-* всех тегов, кроме перечисленных (текущий и предыдущий), и каталоги релизов старше пяти.

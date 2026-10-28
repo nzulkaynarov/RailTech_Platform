@@ -439,6 +439,56 @@
     }
   },
   "storage": {
+    "offsite": {
+      "title": "Offsite backup copy (Google Drive)",
+      "purpose": "Once a day the database archive is copied to a folder on your company's Google shared drive, so it can be restored even if both servers are lost. Everything is set up here; no server access needed.",
+      "copyState": "Copy state",
+      "folder": "Shared drive folder (ID)",
+      "account": "Service account",
+      "key": "Key",
+      "delivered": "Handed to the copy service",
+      "notDelivered": "not yet",
+      "checkedAt": "Checked: {{date}}",
+      "check": "Check",
+      "setup": "Set up",
+      "change": "Change key or folder",
+      "reason": {
+        "ok": "Access works: folder “{{folder}}” is on a shared drive and files can be added.",
+        "key_rejected": "Google rejected the key: it was revoked or deleted, or the service account is disabled. Create a new key (step 3) and upload it.",
+        "drive_api_disabled": "Google Drive API is not enabled in the Google Cloud project — enable it (step 2) and check again.",
+        "folder_not_found": "Folder not found: wrong ID or the service account has no access to it (step 4).",
+        "not_folder": "This ID is not a folder — use the folder ID from its address.",
+        "not_shared_drive": "Folder “{{folder}}” is in My Drive, but a shared drive folder is required: a service account has no storage of its own (step 1).",
+        "read_only": "The service account cannot add files to folder “{{folder}}”: give it the Content manager role (step 4).",
+        "network": "Google did not respond: server connectivity problem. Try later; if it persists, tell your hosting."
+      },
+      "steps": {
+        "title": "Preparation in Google (once, ≈ 15 minutes)",
+        "drive": "Create a shared drive and a folder for the copies in it.",
+        "driveLink": "Shared drives",
+        "api": "In Google Cloud pick or create a project and enable Google Drive API.",
+        "apiLink": "Google Drive API",
+        "account": "Create a service account (no project roles needed) and download its JSON key: Keys → Add key → JSON.",
+        "accountLink": "Service accounts",
+        "share": "Share the folder with the service account address as Content manager, without notification."
+      },
+      "form": {
+        "title": "Key and folder",
+        "submit": "Save and check",
+        "step1": "The key is stored encrypted; only the account address and the last characters of the key are shown.",
+        "step2": "The key and folder are handed to the copy service — the first copy starts within a few minutes.",
+        "step3": "Right after saving, access to the folder is checked with Google; the change is recorded in the action log.",
+        "key": "Service account key (JSON file)",
+        "keyHint": "The file downloaded in step 3. Stored encrypted and never shown.",
+        "keyKeepHint": "Do not pick a file to keep the current key.",
+        "keyChosen": "Selected {{name}}: service account {{email}}.",
+        "keyTooBig": "The file is too large for a service account key.",
+        "keyNotServiceAccount": "This is not a Google service account key: a JSON with \"type\": \"service_account\" is required.",
+        "keyForeignTokenUri": "The key points to a foreign token address (token_uri) — such a key is not accepted. Download the key again in Google Cloud.",
+        "folder": "Shared drive folder ID",
+        "folderHint": "The part of the folder address after /folders/ — or paste the whole address."
+      }
+    },
     "files": {
       "title": "File storage",
       "none": "File storage was not found in the service registry."
@@ -483,7 +533,8 @@
   },
   "system": {
     "overall": "Overall:",
-    "checkedAt": "Checked: {{date}}"
+    "checkedAt": "Checked: {{date}}",
+    "versions": "Version and services"
   },
   "errors": {
     "DEFAULT": "Could not complete the action. Try again later.",
@@ -505,6 +556,10 @@
       "api_base": "The API address is invalid: it must start with http:// or https:// and contain no spaces."
     },
     "reasons": {
+      "offsite_key_invalid": "The file is not a Google service account key. Download the JSON key again (step 3).",
+      "offsite_folder_invalid": "The folder ID is wrong: use the part of the address after /folders/.",
+      "offsite_delivery_failed": "The key could not be handed to the copy service (storage did not respond). Nothing was saved — try again later.",
+      "offsite_not_configured": "The offsite copy is not set up yet: upload the key and enter the folder.",
       "erp_not_configured": "ERP is not connected yet.",
       "erp_invalid_url": "The ERP address is incorrect.",
       "erp_https_required": "In production the ERP address must start with https.",

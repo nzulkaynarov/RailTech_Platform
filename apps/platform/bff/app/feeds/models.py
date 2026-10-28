@@ -26,6 +26,7 @@ ObjectKind = Literal[
     "chat",
     "ticket",
     "integration",
+    "supplier_order",
 ]
 StepCode = Literal[
     "REQUEST", "RESOLUTION", "CALCULATION", "QUOTE", "CONTRACT", "PAYMENT", "DONE", "LOST"
@@ -38,6 +39,7 @@ QueueItemKind = Literal[
     "resolve_letter",
     "approve_quote",
     "approve_memo",
+    "rework_document",
     "problem_project",
     "calc_task",
     "supplier_overdue",

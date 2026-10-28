@@ -279,10 +279,13 @@ def test_queue_kinds_follow_the_catalog_queue_section() -> None:
 
 
 def test_backends_of_the_sections() -> None:
-    only_payments = rbac.merge(roles(custom(44, "Касса", {"eds.payments": "full"})))
-    assert not rbac.gives_backend(only_payments, "crm")
-    assert rbac.gives_backend(only_payments, "erp")
+    only_projects = rbac.merge(roles(custom(44, "Архив", {"eds.projects": "full"})))
+    assert not rbac.gives_backend(only_projects, "crm")
+    assert rbac.gives_backend(only_projects, "erp")
     assert rbac.gives_backend(rbac.merge(roles(MIXED)), "crm")
+    # B-D18-1: «Счета и оплаты» полный — ещё и зона переписки в CRM (`chats:invoiced`).
+    only_payments = rbac.merge(roles(custom(45, "Касса", {"eds.payments": "full"})))
+    assert rbac.gives_backend(only_payments, "crm")
 
 
 # --- поля с ограничением --------------------------------------------------------------------------
@@ -320,8 +323,11 @@ def test_strip_removes_fields_nobody_of_the_roles_sees() -> None:
 
 
 def test_strip_keeps_fields_visible_to_any_role() -> None:
+    # Бухгалтер (Q-D2-1-4) — без цен поставщиков и себестоимости; цены поставщиков видит снабженец.
     accountant = rbac.strip_restricted(PAYLOAD, rbac.fields_of(roles("ACCOUNTANT")), RULES)
-    assert accountant["lines"][0] == {"name": "Рельс", "supplier_price": 650}
+    assert accountant["lines"][0] == {"name": "Рельс"}
+    supply = rbac.strip_restricted(PAYLOAD, rbac.fields_of(roles("SUPPLY")), RULES)
+    assert supply["lines"][0]["supplier_price"] == 650
     assert rbac.strip_restricted(PAYLOAD, rbac.fields_of(roles("DIRECTOR")), RULES) == PAYLOAD
     both = rbac.strip_restricted(PAYLOAD, rbac.fields_of(roles("MANAGER", "SUPPLY")), RULES)
     assert both == PAYLOAD

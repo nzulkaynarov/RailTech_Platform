@@ -5,16 +5,20 @@ import {
   getRailTechPlatformBFFAPICRMERPMock,
 } from "../shared/api/generated/platform-bff.msw";
 import type { ChangePasswordIn, LoginIn, MeUpdate } from "../shared/api/generated/model";
+import { aboutHandlers } from "./aboutHandlers";
 import { adminAuditHandlers } from "./adminAudit";
 import { adminBusHandlers } from "./adminBus";
 import { adminIntegrationsHandlers } from "./adminIntegrations";
 import { adminCompanyHandlers } from "./adminCompany";
 import { adminRolesHandlers } from "./adminRoles";
 import { botKbHandlers } from "./botKb";
+import { crmLeadsHandlers } from "./crmLeads";
 import { crmMessagesHandlers } from "./crmMessages";
 import { edsApprovalsHandlers } from "./edsApprovals";
 import { bridgeHandlers } from "./bridgeHandlers";
 import { edsLettersHandlers } from "./edsLetters";
+import { erpCalcHandlers } from "./erpCalc";
+import { erpStockHandlers } from "./erpStock";
 import { adminUsersHandlers } from "./adminUsers";
 import { edsDocumentsHandlers } from "./edsDocuments";
 import { eventStreamHandlers } from "./eventStream";
@@ -143,6 +147,7 @@ export const handlers = [
   }),
 
   ...profileHandlers,
+  ...aboutHandlers,
   ...adminUsersHandlers,
   ...adminAuditHandlers,
   ...adminRolesHandlers,
@@ -152,11 +157,14 @@ export const handlers = [
   ...setupHandlers,
   ...botKbHandlers,
   ...crmMessagesHandlers,
+  ...crmLeadsHandlers,
   ...bridgeHandlers,
   ...ticketsHandlers,
   ...edsDocumentsHandlers,
   ...edsLettersHandlers,
   ...edsApprovalsHandlers,
+  ...erpCalcHandlers,
+  ...erpStockHandlers,
 
   getGetHealthMockHandler({
     status: "ok",

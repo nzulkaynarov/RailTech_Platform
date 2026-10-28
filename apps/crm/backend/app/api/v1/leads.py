@@ -1,4 +1,9 @@
-"""REST по лидам (SPEC §10.1): список, карточка, переписка, входящие, действия, решения."""
+"""REST по лидам (SPEC §10.1): список, карточка, переписка, входящие, действия, решения.
+
+Реестр (список, очередь, карточка, решения, действия над лидом) — только `leads:*` (раздел
+`crm.leads`). Переписка (сообщения, заметки, ответ, подсказка, заметка) — `leads:*` или `chats:*`
+с объектной проверкой диалога (B-D18-1, `app/api/dialog_access.py`).
+"""
 
 from datetime import UTC, datetime
 from typing import Annotated
@@ -7,6 +12,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import ContainerDep, require
+from app.api.dialog_access import dialog
 from app.domain.client_requests import platform_status
 from app.domain.errors import NotFoundError
 from app.models.clients import Client
@@ -15,7 +21,6 @@ from app.models.qualification import Escalation
 from app.repositories import crm, lead_status, service_requests
 from app.repositories import decisions as repo
 from app.repositories import leads as leads_repo
-from app.repositories import users as users_repo
 from app.schemas.decisions import (
     DecisionsResponse,
     QualifierRunItem,
@@ -39,7 +44,6 @@ from app.schemas.leads import (
     Reply,
     ReturnToBot,
     Snooze,
-    TeamMember,
 )
 from app.schemas.notices import NoticeOut
 from app.security.principal import Principal
@@ -50,9 +54,11 @@ router = APIRouter(prefix="/api/v1", tags=["leads"])
 Reader = Annotated[Principal, Depends(require("leads", "read"))]
 Taker = Annotated[Principal, Depends(require("leads", "take"))]
 Worker = Annotated[Principal, Depends(require("leads", "work"))]
-Replier = Annotated[Principal, Depends(require("leads", "reply"))]
-Assister = Annotated[Principal, Depends(require("leads", "assist"))]
-Noter = Annotated[Principal, Depends(require("leads", "note"))]
+# Переписка диалога: реестр или участник/зона (B-D18-1).
+DialogReader = Annotated[Principal, Depends(dialog("read"))]
+DialogReplier = Annotated[Principal, Depends(dialog("reply"))]
+DialogAssister = Annotated[Principal, Depends(dialog("assist"))]
+DialogNoter = Annotated[Principal, Depends(dialog("note"))]
 
 
 def escalation_out(e: Escalation | None) -> EscalationOut | None:
@@ -117,12 +123,24 @@ def _unread(lead: Lead) -> bool:
     return lead.last_human_msg_at is None or lead.last_lead_msg_at > lead.last_human_msg_at
 
 
+# Ключи вложения, которые уходят клиентам API (D1-8, B-014): ключ хранилища (`storage_key`) не
+# входит — файл отдаёт только маршрут вложения с проверкой доступа к лиду.
+_ATTACHMENT_FIELDS = ("kind", "name", "mime", "size", "stored", "too_large", "note")
+
+
+def attachment_out(item: object) -> dict[str, object]:
+    """Вложение без адреса в хранилище: имя, тип, размер и признак «файл сохранён»."""
+    if not isinstance(item, dict):
+        return {}
+    return {key: item[key] for key in _ATTACHMENT_FIELDS if key in item}
+
+
 def message_out(m: Message) -> MessageOut:
     return MessageOut(
         id=m.id,
         role=m.role,
         text=m.text,
-        attachments=list(m.attachments or []),
+        attachments=[attachment_out(a) for a in m.attachments or []],
         sent_by_user_id=m.sent_by_user_id,
         created_at=m.created_at,
         meta=dict(m.meta or {}),
@@ -153,9 +171,25 @@ async def list_leads(
     overdue: Annotated[
         bool | None, Query(description="Просроченные: открытая передача с истёкшим SLA ответа")
     ] = None,
+    source: Annotated[
+        str | None,
+        Query(
+            pattern=r"^[a-z][a-z_]{0,15}(,[a-z][a-z_]{0,15})*$",
+            description="Канал лида (источник), через запятую",
+        ),
+    ] = None,
 ) -> LeadPage:
     flt = crm.LeadFilter(
-        stage, owner, min_score, language, q, created_from, created_to, platform_status, overdue
+        stage,
+        owner,
+        min_score,
+        language,
+        q,
+        created_from,
+        created_to,
+        platform_status,
+        overdue,
+        source,
     )
     async with container.session_factory() as session:
         rows, total = await crm.list_leads(session, flt, who.user_id, limit, offset, sort)
@@ -265,7 +299,7 @@ async def get_lead(lead_id: int, _: Reader, container: ContainerDep) -> LeadDeta
 @router.get("/leads/{lead_id}/messages", response_model=list[MessageOut])
 async def lead_messages(
     lead_id: int,
-    _: Reader,
+    _: DialogReader,
     container: ContainerDep,
     limit: Annotated[int, Query(ge=1, le=500)] = 200,
     before_id: int | None = None,
@@ -277,7 +311,9 @@ async def lead_messages(
 
 
 @router.post("/leads/{lead_id}/messages", response_model=ActionResult)
-async def reply(lead_id: int, body: Reply, who: Replier, container: ContainerDep) -> ActionResult:
+async def reply(
+    lead_id: int, body: Reply, who: DialogReplier, container: ContainerDep
+) -> ActionResult:
     message_id = await container.lead_service.reply(
         who, lead_id, body.text, client_message_id=body.client_message_id
     )
@@ -286,7 +322,7 @@ async def reply(lead_id: int, body: Reply, who: Replier, container: ContainerDep
 
 @router.post("/leads/{lead_id}/assist", response_model=AssistOut)
 async def assist(
-    lead_id: int, body: AssistRequest, who: Assister, container: ContainerDep
+    lead_id: int, body: AssistRequest, who: DialogAssister, container: ContainerDep
 ) -> AssistOut:
     """ИИ-помощь менеджеру (Q-019): текст для поля ответа; клиенту ничего не отправляется."""
     result = await container.assist_service.assist(who, lead_id, body.mode, body.text)
@@ -294,7 +330,7 @@ async def assist(
 
 
 @router.get("/leads/{lead_id}/notes", response_model=list[NoteOut])
-async def lead_notes(lead_id: int, _: Reader, container: ContainerDep) -> list[NoteOut]:
+async def lead_notes(lead_id: int, _: DialogReader, container: ContainerDep) -> list[NoteOut]:
     async with container.session_factory() as session:
         await _existing_lead(session, lead_id)
         rows = await crm.notes(session, lead_id)
@@ -378,21 +414,10 @@ async def assign(lead_id: int, body: Assign, who: Worker, container: ContainerDe
     return ActionResult()
 
 
-@router.get("/team", response_model=list[TeamMember])
-async def team(_: Reader, container: ContainerDep) -> list[TeamMember]:
-    """Активные менеджеры и админы: кому передать лида, чьё имя показать (без email и ролей)."""
-    async with container.session_factory() as session:
-        users = await users_repo.list_users(session)
-        roles = await users_repo.roles_by_user(session)
-    return [
-        TeamMember(id=u.id, full_name=u.full_name)
-        for u in users
-        if u.is_active and {"manager", "admin"} & set(roles.get(u.id, []))
-    ]
-
-
 @router.post("/leads/{lead_id}/actions/note", response_model=ActionResult)
-async def note(lead_id: int, body: NoteCreate, who: Noter, container: ContainerDep) -> ActionResult:
+async def note(
+    lead_id: int, body: NoteCreate, who: DialogNoter, container: ContainerDep
+) -> ActionResult:
     note_id = await container.lead_service.add_note(who, lead_id, body.text, body.visible_to_bot)
     return ActionResult(id=note_id)
 

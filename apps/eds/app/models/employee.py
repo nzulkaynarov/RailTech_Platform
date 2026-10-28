@@ -14,6 +14,7 @@ from sqlalchemy import (
     Uuid,
     text,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.models.base import Base
@@ -37,6 +38,8 @@ class Employee(Base):
     language: Mapped[str] = mapped_column(String(2), server_default="ru")
     is_active: Mapped[bool] = mapped_column(Boolean)
     permissions_eds: Mapped[list[str]] = mapped_column(ARRAY(Text), server_default=text("'{}'::text[]"))
+    # Разделы каталога (`erp.calc.goods` -> `full`) из `user.permissions.sections` (D1-8): зона исполнителя.
+    sections: Mapped[dict[str, str]] = mapped_column(JSONB, server_default=text("'{}'::jsonb"))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     last_event_id: Mapped[uuid.UUID | None] = mapped_column(Uuid)
     synced_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=text("now()"))

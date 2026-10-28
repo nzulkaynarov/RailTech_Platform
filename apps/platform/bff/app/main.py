@@ -9,6 +9,7 @@ from rt_bus.fastapi import bus_router
 
 from app import __version__
 from app.api import (
+    about,
     admin_audit,
     admin_bot,
     admin_bus,
@@ -19,12 +20,18 @@ from app.api import (
     admin_users,
     auth,
     bridge,
+    chats,
+    crm_clients,
     crm_kb,
+    crm_leads,
     crm_messages,
+    crm_requests,
     dashboard,
     eds_approvals,
     eds_documents,
     eds_letters,
+    erp_calc,
+    erp_stock,
     events,
     health,
     me,
@@ -91,6 +98,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.add_middleware(ClientIpMiddleware, networks=cfg.trusted_proxy_networks)
     install_error_handlers(app)
     app.include_router(health.router, prefix=API_PREFIX)
+    app.include_router(about.router, prefix=API_PREFIX)
     app.include_router(auth.router, prefix=API_PREFIX)
     app.include_router(me.router, prefix=API_PREFIX)
     app.include_router(bridge.router, prefix=API_PREFIX)
@@ -108,9 +116,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(admin_bot.router, prefix=API_PREFIX)
     app.include_router(crm_kb.router, prefix=API_PREFIX)
     app.include_router(crm_messages.router, prefix=API_PREFIX)
+    app.include_router(chats.router, prefix=API_PREFIX)
+    app.include_router(crm_leads.router, prefix=API_PREFIX)
+    app.include_router(crm_clients.router, prefix=API_PREFIX)
+    app.include_router(crm_requests.router, prefix=API_PREFIX)
     app.include_router(eds_documents.router, prefix=API_PREFIX)
     app.include_router(eds_letters.router, prefix=API_PREFIX)
     app.include_router(eds_approvals.router, prefix=API_PREFIX)
+    app.include_router(erp_calc.router, prefix=API_PREFIX)
+    app.include_router(erp_stock.router, prefix=API_PREFIX)
     app.include_router(dashboard.router, prefix=API_PREFIX)
     app.include_router(notifications.router, prefix=API_PREFIX)
     app.include_router(search.router, prefix=API_PREFIX)

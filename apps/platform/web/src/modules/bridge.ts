@@ -29,6 +29,11 @@ export interface LegacyTarget {
 export interface BridgeEntry {
   /** Где работа делается сейчас; без поля — в интерфейсе её нет, см. `who` */
   legacy?: LegacyTarget;
+  /**
+   * Раздел каталога, без которого старый экран сотруднику ничего не покажет (B-D18-1: «Входящие» старой CRM — реестр
+   * лидов, раздел `crm.leads`). Раздела у сотрудника нет — кнопки «Открыть в …» нет, вместо неё текст `who`.
+   */
+  legacyNeeds?: string;
   /** Ключ `bridge:who.*`: кто и как делает работу вне интерфейса (когда `legacy` нет) */
   who?: string;
   /** Работа уже есть в Платформе в другом разделе (Каналы связи — в Admin) */
@@ -56,12 +61,6 @@ const erp = (path: string, where: string, object?: LegacyTarget["object"]): Lega
   ...(object ? { object } : {}),
 });
 
-/** `L-2041` -> `/leads/2041`: в старой CRM лид открывается по числовому id, номер лида — `L-<id>`. */
-const leadPath = (objectId: string) => {
-  const hit = /^L-(\d+)$/.exec(objectId);
-  // BFF форматирует номер как `L-{id:04d}`: ведущие нули в старом адресе не нужны.
-  return hit ? `/leads/${String(Number(hit[1]))}` : undefined;
-};
 const numericPath = (prefix: string) => (objectId: string) =>
   /^\d+$/.test(objectId) ? `${prefix}${objectId}` : undefined;
 
@@ -74,25 +73,15 @@ export const BRIDGE: Readonly<Record<string, BridgeEntry>> = {
   },
   "dashboard.summary": { legacy: crm("/dashboard", "crmDashboard"), when: "pilot" },
 
-  "crm.leads": {
-    legacy: crm("/leads", "crmLeads", leadPath),
-    when: "soon",
-    legacyCount: true,
-    objectKind: "lead",
-  },
-  "crm.clients": {
-    legacy: crm("/clients", "crmClients", numericPath("/clients/")),
-    when: "soon",
-    legacyCount: true,
-    objectKind: "client",
-  },
+  // «Лиды» и «Клиенты» — настоящие экраны (D1-2b), записей моста у них нет.
   "crm.requests": {
     legacy: erp("#crm-deals", "erpDeals", numericPath("#request-detail/")),
     when: "pilot",
     objectKind: "request",
   },
   "crm.channels": {
-    internal: { to: "/admin/integrations", resource: "admin", section: "integrations" },
+    // Бот подключается в «Настройки · Telegram-бот» (W15-H4), а не в «Подключениях»
+    internal: { to: "/admin/bot", resource: "admin", section: "bot" },
     when: "pilot",
   },
 
@@ -113,23 +102,20 @@ export const BRIDGE: Readonly<Record<string, BridgeEntry>> = {
     objectKind: "invoice",
   },
 
-  "erp.requests": {
-    legacy: erp("#crm-deals", "erpDeals", numericPath("#request-detail/")),
-    when: "pilot",
-    objectKind: "request",
-  },
-  "erp.calc": {
-    legacy: erp("#crm-deals", "erpCalc", numericPath("#deal-quote/")),
-    when: "pilot",
-    objectKind: "request",
-  },
-  "erp.stock": { legacy: erp("#my-products", "erpStock"), when: "pilot" },
   "erp.catalog": { legacy: erp("#catalog-reference", "erpCatalog"), when: "pilot" },
   "erp.docs": { legacy: erp("#company-files", "erpFiles"), when: "pilot" },
 
   "chats.all": { who: "chats", when: "pilot", objectKind: "chat" },
   "chats.internal": { who: "chats", when: "pilot", objectKind: "chat" },
-  "chats.external": { legacy: crm("/inbox", "crmInbox"), when: "pilot", objectKind: "chat" },
+  // B-D18-1: переписка отдельно от реестра лидов — «Входящие» старой CRM открываются только с разделом лидов; бухгалтеру
+  // (переписка по сделкам со счётом) старая CRM ничего не покажет.
+  "chats.external": {
+    legacy: crm("/inbox", "crmInbox"),
+    legacyNeeds: "crm.leads",
+    who: "chatsExternal",
+    when: "pilot",
+    objectKind: "chat",
+  },
   "chats.contacts": { who: "chats", when: "pilot" },
 };
 
@@ -137,10 +123,15 @@ export const BRIDGE: Readonly<Record<string, BridgeEntry>> = {
 export const NATIVE_SECTIONS: readonly string[] = [
   "dashboard.queue",
   "crm.messages",
+  "crm.leads",
+  "crm.clients",
   "crm.kb",
   "eds.documents",
   "eds.new",
   "eds.inbox",
+  "erp.requests",
+  "erp.calc",
+  "erp.stock",
   "eds.drafts",
   "eds.approvals",
   "admin.roles",
@@ -156,7 +147,6 @@ export const NATIVE_SECTIONS: readonly string[] = [
 
 /** Главные действия модулей без экрана (кнопка внизу подменю неактивна): когда появятся. Остальных модулей это не касается. */
 export const MODULE_ACTION_WHEN: Readonly<Partial<Record<ModuleCode, When>>> = {
-  crm: "soon",
   eds: "soon",
   erp: "pilot",
   chats: "pilot",

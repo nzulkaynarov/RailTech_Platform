@@ -65,7 +65,7 @@ async def test_manager_queue_comes_from_crm_inbox(
     assert response.status_code == 200
     check(response, "/queue", "get")
     body = response.json()
-    assert body["sources"] == {"crm": "ok", "erp": "ok"}
+    assert body["sources"] == {"crm": "ok", "erp": "ok", "eds": "ok"}
     assert [(i["object"]["number"], i["kind"]) for i in body["items"]] == [
         ("L-2041", "take_lead"),
         ("L-2050", "answer_lead"),
@@ -176,11 +176,25 @@ def test_restricted_keys_are_stripped_for_roles_without_the_group() -> None:
 
     manager = strip_restricted(payload, [], RESTRICTED_KEYS)
     director = strip_restricted(payload, ["cost_margin", "supplier_prices"], RESTRICTED_KEYS)
-    accountant = strip_restricted(payload, ["supplier_prices", "totals_only"], RESTRICTED_KEYS)
+    accountant = strip_restricted(payload, ["totals_only"], RESTRICTED_KEYS)
 
     assert manager == {"id": 1, "items": [{"name": "x"}]}
     assert director == payload  # директору видны и маржа, и цены поставщиков
-    assert accountant == {"id": 1, "items": [{"supplier_price": "5", "name": "x"}]}
+    assert accountant == {"id": 1, "items": [{"name": "x"}]}
+
+
+def test_accountant_template_sees_no_supplier_price_keys_in_feeds() -> None:
+    """Q-D2-1-4 (D2-1): шаблон «Бухгалтер» каталога — без `supplier_prices` (в БД CRM — миграция
+    0047_accountant_supplier_prices); ключи цен поставщика не доходят до бухгалтера в ленте."""
+    from app.rbac_generated import TEMPLATES
+
+    fields = TEMPLATES["ACCOUNTANT"]["restricted_fields"]
+    assert "supplier_prices" not in fields
+    payload = {
+        "offer": {"price": "1"},
+        "items": [{"supplier_price": "5", "purchase_price": "4", "unit_cost": "3", "name": "x"}],
+    }
+    assert strip_restricted(payload, fields, RESTRICTED_KEYS) == {"items": [{"name": "x"}]}
 
 
 # --- Роли: активная роль, объединение, явный role -------------------------------------------------
@@ -228,9 +242,7 @@ async def test_other_roles_have_an_empty_queue(
     response = await web.client.get("/api/v1/queue")
 
     check(response, "/queue", "get")
-    # бухгалтер читает EDS (служебки на своём шаге): EDS ответил пустым списком — `eds: ok`
-    eds = {"eds": "ok"} if role == "ACCOUNTANT" else {}
-    assert response.json() == {"items": [], "sources": {"crm": "ok", "erp": "ok", **eds}}
+    assert response.json() == {"items": [], "sources": {"crm": "ok", "erp": "ok", "eds": "ok"}}
     assert fb.calls(fb.crm["inbox"]) == 0
     assert fb.calls(fb.erp["approvals"]) == 0
 
@@ -240,7 +252,9 @@ MIXED = custom(
     "Менеджер и бухгалтер",
     {"dashboard.queue": "full", "crm.leads": "full", "eds.payments": "full"},
 )
-CASHIER = custom(41, "Касса", {"dashboard.queue": "full", "eds.payments": "full"})
+# Раздел без прав в CRM. «Счета и оплаты» сюда не годятся: с B-D18-1 раздел даёт CRM зону переписки
+# (`chats:invoiced`), и CRM для него — источник.
+CASHIER = custom(41, "Архив", {"dashboard.queue": "full", "eds.projects": "read"})
 
 
 async def test_created_role_gets_the_lead_queue_by_its_sections(
@@ -478,6 +492,7 @@ async def test_menu_counters_for_supply_have_no_action_badges(
     check(response, "/menu-counters", "get")
     assert [(c["module"], c["section"], c["attention"]) for c in response.json()["items"]] == [
         ("dashboard", "queue", False),
+        ("erp", "stock", False),
         ("dashboard", "projects", False),
         ("eds", "projects", False),
     ]

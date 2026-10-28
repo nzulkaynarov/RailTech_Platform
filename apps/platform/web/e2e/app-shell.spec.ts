@@ -63,7 +63,7 @@ test.describe("панели", () => {
     await expect(page.getByRole("navigation", { name: "Разделы модуля" })).toBeVisible();
   });
 
-  test("умолчания по приложению А: Клиенты · Лиды — без бокового окна, Расчёт · Мои расчёты — без подменю; у заглушки окно закрыто", async ({
+  test("умолчания по приложению А: Клиенты · Лиды — без бокового окна, Расчёт · Мои расчёты — без подменю, окно открыто; у заглушки окно закрыто", async ({
     page,
   }) => {
     await loginAndWait(page, "all@demo.example");
@@ -76,14 +76,22 @@ test.describe("панели", () => {
     await expect(panel).toHaveCount(0);
     await settledScreenshot(page, "crm-leads");
 
+    // «Мои расчёты» — настоящий экран (D2-1): по SPEC-v3 §11 подменю свёрнуто, боковое окно открыто
     await page.goto("/erp/calc");
     await expect(page.getByRole("heading", { level: 1, name: "Мои расчёты" })).toBeVisible();
     await expect(menu).toHaveCount(0);
-    // раздел-заглушка: выбирать нечего — боковое окно закрыто (W15-H4); «Панель» открывает его
-    await expect(panel).toHaveCount(0);
-    await page.getByRole("button", { name: "Панель", exact: true }).click();
+    await expect(panel).toBeVisible();
     await expect(page.getByRole("tab", { name: "Задание" })).toBeVisible();
     await settledScreenshot(page, "erp-calc");
+
+    // раздел-заглушка: выбирать нечего — боковое окно закрыто (W15-H4); «Панель» открывает его
+    await page.goto("/erp/catalog");
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Номенклатура и поставщики" }),
+    ).toBeVisible();
+    await expect(panel).toHaveCount(0);
+    await page.getByRole("button", { name: "Панель", exact: true }).click();
+    await expect(panel).toBeVisible();
 
     await page.goto("/eds/inbox");
     await expect(menu).toBeVisible();
@@ -120,19 +128,34 @@ test.describe("панели", () => {
     await expect(page.getByRole("button", { name: /^Центр уведомлений, 3 новых/ })).toBeVisible();
   });
 
-  test("главные действия модулей — неактивные кнопки с подсказкой «появится в фазе P2»", async ({
+  test("главное действие без экрана — неактивная кнопка с подсказкой; с экраном — ссылка", async ({
+    page,
+  }) => {
+    // ERP: главное действие модуля «Создать заявку» ещё без экрана — неактивна, подсказка «к пилоту»
+    await loginAndWait(page, "supply@demo.example");
+    await page.goto("/erp/stock");
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    // подменю модуля может быть свёрнуто — раскрываем
+    const menu = page.getByRole("navigation", { name: "Разделы модуля" });
+    if (!(await menu.isVisible())) await page.getByRole("button", { name: "Меню" }).click();
+    const action = menu.getByRole("button", { name: /^Создать заявку/ });
+    await expect(action).toBeDisabled();
+    await expect(action).toHaveAccessibleName("Создать заявку. Появится к пилоту");
+    await menu.getByText("Создать заявку").hover({ force: true });
+    await expect(page.getByRole("tooltip")).toContainText("Появится к пилоту");
+  });
+
+  test("CRM: «Создать заявку» — настоящий экран (D1-2b), кнопка ведёт к лидам «Просят КП»", async ({
     page,
   }) => {
     await loginAndWait(page, "manager@demo.example");
     await page.goto("/crm/leads");
-    const action = page.getByRole("button", { name: /^Создать заявку/ });
-    await expect(action).toBeDisabled();
-    await expect(action).toHaveAccessibleName("Создать заявку. Появится в ближайшем обновлении");
-    await page
+    const action = page
       .getByRole("navigation", { name: "Разделы модуля" })
-      .getByText("Создать заявку")
-      .hover({ force: true });
-    await expect(page.getByRole("tooltip")).toContainText("Появится в ближайшем обновлении");
+      .getByRole("link", { name: /Создать заявку/ });
+    await expect(action).toHaveAttribute("href", "/crm/leads?status=wants_quote");
+    await action.click();
+    await expect(page.getByRole("tab", { name: "Просят КП", selected: true })).toBeVisible();
   });
 });
 

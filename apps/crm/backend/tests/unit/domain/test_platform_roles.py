@@ -221,15 +221,19 @@ EXPECTED: dict[tuple[str, str], tuple[set[str], set[str]]] = {
     (
         "eds.payments",
         "full",
-    ): (set(), {"finance.invoice", "finance.payment", "finance.rates", "data.export"}),
+    ): (
+        # B-D18-1: зона переписки «Счета и оплаты» — только вместе с `chats:read`.
+        {"chats:invoiced"},
+        {"finance.invoice", "finance.payment", "finance.rates", "data.export"},
+    ),
     ("eds.memo.create", "read"): NOTHING,
     ("eds.memo.create", "full"): NOTHING,
     ("eds.memo.approve", "read"): NOTHING,
     ("eds.memo.approve", "full"): NOTHING,
     ("erp.calc", "read"): NOTHING,
     ("erp.calc", "full"): (set(), {"deal.manage", "quote.build", "quote.edit_pricing"}),
-    ("erp.calc.goods", "full"): (set(), {"quote.build", "quote.edit_pricing"}),
-    ("erp.calc.services", "full"): (set(), {"quote.build"}),
+    ("erp.calc.goods", "full"): (set(), {"quote.build", "quote.edit_pricing", "quote.visa_goods"}),
+    ("erp.calc.services", "full"): (set(), {"quote.build", "quote.visa_services"}),
     ("erp.stock", "read"): NOTHING,
     (
         "erp.stock",
@@ -237,11 +241,12 @@ EXPECTED: dict[tuple[str, str], tuple[set[str], set[str]]] = {
     ): (set(), {"catalog.manage", "catalog.publish", "supply.manage", "fulfillment.manage"}),
     ("chats.internal", "read"): NOTHING,
     ("chats.internal", "full"): NOTHING,
-    ("chats.external", "read"): ({"leads:read"}, set()),
+    # B-D18-1: переписка отдельно от реестра лидов — `chats:*`, а не `leads:*`.
+    ("chats.external", "read"): ({"chats:read"}, set()),
     (
         "chats.external",
         "full",
-    ): ({"leads:read", "leads:reply", "leads:note", "leads:assist"}, set()),
+    ): ({"chats:read", "chats:reply", "chats:note", "chats:assist"}, set()),
     ("company.settings", "read"): NOTHING,
     ("company.settings", "full"): (set(), {"settings.edit", "settings.charge_templates"}),
     ("admin", "read"): (ADMIN_READ, set()),
@@ -296,6 +301,7 @@ ROLE_ERP: dict[str, set[str]] = {
         "quote.build",
         "quote.edit_pricing",
         "quote.view_cost_margin",
+        "quote.visa_goods",
         "catalog.manage",
         "catalog.publish",
         "supply.manage",
@@ -305,6 +311,7 @@ ROLE_ERP: dict[str, set[str]] = {
         "deal.manage",
         "quote.build",
         "quote.edit_pricing",
+        "quote.visa_services",
         "catalog.manage",
         "catalog.publish",
         "supply.manage",
@@ -321,13 +328,14 @@ ROLE_ERP: dict[str, set[str]] = {
     },
     "ADMIN": {"team.manage", "settings.edit", "settings.charge_templates"},
 }
-# Базовая роль CRM для старого фронта (как в версии 1 каталога).
+# Базовая роль CRM — признак по матрице (D1-8, B-014): «Бухгалтер» без `crm.leads` — viewer, а не
+# manager, как в версии 1 каталога (по коду роли).
 ROLE_BASE = {
     "MANAGER": "manager",
     "DIRECTOR": "viewer",
     "SUPPLY": "viewer",
     "ENGINEER": "viewer",
-    "ACCOUNTANT": "manager",
+    "ACCOUNTANT": "viewer",
     "ADMIN": "admin",
 }
 
@@ -475,7 +483,7 @@ def test_manager_plus_accountant_is_the_union_of_their_rights() -> None:
     assert derived.access["crm.leads"] == "full"  # от менеджера
     assert derived.access["eds.payments"] == "full"  # от бухгалтера
     assert derived.access["eds.projects"] == "full"  # максимум: менеджер read, бухгалтер full
-    assert derived.restricted_fields == ("supplier_prices", "totals_only")
+    assert derived.restricted_fields == ("totals_only",)
     assert set(derived.erp_permissions) == ROLE_ERP["MANAGER"] | ROLE_ERP["ACCOUNTANT"]
     assert crm_policies(make_grant("MANAGER").access) <= derived.crm_permissions
 
@@ -542,10 +550,13 @@ def test_role_without_a_code_gets_the_base_role_from_its_matrix(
     assert role_crm_base(RoleGrant(access, code=None)) == expected
 
 
-def test_role_with_a_code_keeps_the_v1_base_role_even_if_edited() -> None:
-    edited = RoleGrant({"crm.leads": "full"}, code="DIRECTOR")  # директор не становится менеджером
-    assert role_crm_base(edited) == "viewer"
-    assert role_crm_base(RoleGrant({}, code="tpl:ACCOUNTANT")) == "manager"
+def test_base_role_follows_the_matrix_not_the_role_code() -> None:
+    """D1-8: код роли признака не задаёт — отредактированный шаблон «Менеджер» без `crm.leads`
+    перестаёт быть менеджером, а «Бухгалтер» не был им и в каталоге."""
+    assert role_crm_base(RoleGrant({}, code="tpl:MANAGER")) == "viewer"
+    assert role_crm_base(RoleGrant({}, code="tpl:ACCOUNTANT")) == "viewer"
+    assert role_crm_base(RoleGrant({"crm.leads": "full"}, code="tpl:ACCOUNTANT")) == "manager"
+    assert role_crm_base(RoleGrant({"crm.leads": "full"}, code="DIRECTOR")) == "manager"
 
 
 # --- коды ----------------------------------------------------------------------------------------

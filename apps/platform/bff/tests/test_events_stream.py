@@ -17,6 +17,8 @@ from tests.fakes import Clock, FakeRedis
 from tests.feeds_support import FeedBackends, Moments
 from tests.roles import custom
 
+# Страховка от зависания теста: проверяются факты (событие, завершение задачи), а не это время.
+SAFETY = 10
 FAST = {"PLATFORM_EVENTS_COALESCE_MS": 30, "PLATFORM_EVENTS_HEARTBEAT_SECONDS": 0.2}
 
 
@@ -251,6 +253,7 @@ class Asgi:
         self.body = b""
         self.chunks: list[bytes] = []
         self._disconnect = asyncio.Event()
+        self.started = asyncio.Event()  # ответ начат (заголовки ушли)
         headers = [(b"host", b"bff.test")]
         if cookie:
             headers.append((b"cookie", cookie.encode()))
@@ -278,6 +281,7 @@ class Asgi:
     async def _send(self, message: dict[str, Any]) -> None:
         if message["type"] == "http.response.start":
             self.start = message
+            self.started.set()
         elif message["type"] == "http.response.body":
             self.chunks.append(message.get("body", b""))
             self.body += message.get("body", b"")
@@ -346,11 +350,16 @@ async def test_stream_opens_with_sse_headers_and_delivers_a_bus_event(
 
 
 async def test_stream_closes_after_logout(web: Web, fast_app: FastAPI) -> None:
+    """Выход закрывает поток на ближайшем heartbeat. Проверяется факт (задача соединения
+    завершилась, поток снят с хаба) без окон ожидания: события вместо опроса по часам. `SAFETY` —
+    только страховка от зависания теста, а не проверяемое время."""
     assert (await web.login(["MANAGER"])).status_code == 200
     conn = Asgi(fast_app, "/api/v1/events/stream", f"rt_pf_session={web.sid}")
-    await until(lambda: conn.status == 200)
-    await web.redis.delete(f"session:{web.sid}")  # выход или истёкший срок
-    async with asyncio.timeout(2):
+    async with asyncio.timeout(SAFETY):
+        await conn.started.wait()
+        assert conn.status == 200
+        assert not conn.task.done()  # пока сессия жива, поток открыт
+        await web.redis.delete(f"session:{web.sid}")  # выход или истёкший срок
         await conn.task  # BFF сам завершает поток при ближайшем heartbeat
     assert fast_app.state.hub.streams == 0
 
@@ -365,7 +374,8 @@ async def test_eds_event_drops_the_cached_eds_parts_of_the_queue_before_the_hint
     assert (await web.login(["DIRECTOR"])).status_code == 200
     assert (await web.client.get("/api/v1/queue")).status_code == 200
     cached = [k for k in web.redis.values if k.startswith(f"feed:{web.sid}:data:eds:")]
-    assert len(cached) == 2  # письма и служебки директора лежат в кэше сессии
+    # письма, служебки директора и его возвращённые документы (D1-6b) лежат в кэше сессии
+    assert len(cached) == 3
     conn = Asgi(fast_app, "/api/v1/events/stream", f"rt_pf_session={web.sid}")
     await until(lambda: conn.status == 200 and b": connected" in conn.body)
     await until(lambda: bool(web.redis.subscribers))

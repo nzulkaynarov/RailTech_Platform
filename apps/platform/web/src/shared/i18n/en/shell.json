@@ -74,7 +74,8 @@
   "panel": {
     "label": "Side panel",
     "hide": "Hide side panel",
-    "show": "Show side panel"
+    "show": "Show side panel",
+    "close": "Close"
   },
   "avatar": {
     "open": "{{initials}} {{role}}: profile and settings, {{name}}",

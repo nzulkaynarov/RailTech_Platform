@@ -305,6 +305,66 @@ async def test_crm_down_during_setup_is_503(
     check(response, "/setup/admin", "post")
 
 
+async def test_setup_waits_longer_than_an_ordinary_crm_call(web: Web, crm: SetupCrm) -> None:
+    """W15-G-11: создание администратора — долгая операция (хеш пароля под нагрузкой)."""
+    web.be.set_roles(["ADMIN"])
+
+    await web.client.post("/api/v1/setup/admin", json=payload())
+
+    assert crm.admin.calls.last.request.extensions["timeout"]["read"] == 30.0
+
+
+async def test_timeout_after_the_admin_was_created_signs_in_instead_of_an_error(
+    web: Web, crm: SetupCrm, check: ContractChecker
+) -> None:
+    """CRM создала администратора, ответ не дошёл: экран не говорит «нет связи с CRM», а входит."""
+    web.be.set_roles(["ADMIN"])
+    crm.down.add("admin")
+    crm.needs_setup = False  # к моменту проверки администратор уже есть
+
+    response = await web.client.post("/api/v1/setup/admin", json=payload())
+
+    assert response.status_code == 200
+    check(response, "/setup/admin", "post")
+    assert response.json()["me"]["email"] == "ivan.test@example.org"
+    assert response.cookies.get("rt_pf_session")
+    assert web.be.crm_login.call_count == 1  # один вход, не два
+
+
+async def test_timeout_after_the_admin_was_created_by_someone_else_says_setup_done(
+    web: Web, crm: SetupCrm, check: ContractChecker
+) -> None:
+    crm.down.add("admin")
+    crm.needs_setup = False
+    body = {**payload(), "password": "Другой-пароль-123"}
+
+    response = await web.client.post("/api/v1/setup/admin", json=body)
+
+    assert response.status_code == 409
+    check(response, "/setup/admin", "post")
+    assert response.json()["code"] == "SETUP_DONE"
+    assert response.json()["details"]["reason"] == "created_before_timeout"
+    assert not response.cookies.get("rt_pf_session")
+
+
+async def test_timeout_while_the_admin_is_still_missing_stays_503(web: Web, crm: SetupCrm) -> None:
+    crm.down.add("admin")
+    crm.needs_setup = True
+
+    response = await web.client.post("/api/v1/setup/admin", json=payload())
+
+    assert response.status_code == 503
+    assert response.json()["code"] == "BACKEND_UNAVAILABLE"
+
+
+async def test_timeout_and_crm_state_unreachable_stays_503(web: Web, crm: SetupCrm) -> None:
+    crm.down.update({"admin", "state"})
+
+    response = await web.client.post("/api/v1/setup/admin", json=payload())
+
+    assert response.status_code == 503
+
+
 async def test_wrong_codes_count_against_the_login_limit(web: Web, crm: SetupCrm) -> None:
     """Перебор кода ограничивает и BFF (сверх блокировки CRM): 11-я попытка в минуту — 429."""
     crm.admin_response = crm_error(422, "validation_failed", "setup_code_invalid", field="code")
@@ -316,6 +376,21 @@ async def test_wrong_codes_count_against_the_login_limit(web: Web, crm: SetupCrm
 
     assert statuses == [422] * 10 + [429] * 2
     assert crm.admin.call_count == 10
+
+
+async def test_wrong_password_after_a_late_reply_burns_the_login_limit(
+    web: Web, crm: SetupCrm
+) -> None:
+    """Подбор пароля через «ответ опоздал» не обходит лимит входа: 11-я попытка в минуту — 429."""
+    crm.down.add("admin")
+    crm.needs_setup = False
+    body = {**payload(), "password": "Другой-пароль-123"}
+
+    statuses = [
+        (await web.client.post("/api/v1/setup/admin", json=body)).status_code for _ in range(12)
+    ]
+
+    assert statuses == [409] * 10 + [429] * 2
 
 
 async def test_weak_password_attempts_do_not_burn_the_limit(web: Web, crm: SetupCrm) -> None:

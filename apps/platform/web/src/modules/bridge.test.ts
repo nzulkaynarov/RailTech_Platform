@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { RESOURCES } from "../app/rbac.generated";
 import { resources } from "../shared/i18n";
 import {
   BRIDGE,
@@ -37,12 +38,22 @@ describe("мост в старые экраны: карта разделов-з�
     }
   });
 
+  it("старый экран с нужным разделом (B-D18-1): раздел есть в каталоге, и без него есть текст «кто делает»", () => {
+    const needing = Object.entries(BRIDGE).filter(([, entry]) => entry.legacyNeeds !== undefined);
+    expect(needing.map(([id]) => id)).toEqual(["chats.external"]);
+    for (const [id, entry] of needing) {
+      expect(Object.keys(RESOURCES), id).toContain(entry.legacyNeeds);
+      expect(entry.legacy, id).toBeDefined();
+      expect(entry.who, id).toBeDefined();
+    }
+  });
+
   it("волна 16 — «в ближайшем обновлении», остальное — «к пилоту»", () => {
     const soon = Object.entries(BRIDGE)
       .filter(([, entry]) => entry.when === "soon")
       .map(([id]) => id)
       .sort();
-    expect(soon).toEqual(["crm.clients", "crm.leads"].sort());
+    expect(soon).toEqual([]);
   });
 
   it.each(["ru", "uz", "en"] as const)("%s: тексты есть для каждой записи", (lng) => {
@@ -88,31 +99,27 @@ describe("мост в старые экраны: карта разделов-з�
 });
 
 describe("адрес кнопки", () => {
-  const leads = bridgeEntry("crm", "leads")?.legacy;
-  const deals = bridgeEntry("erp", "requests")?.legacy;
+  const inbox = bridgeEntry("chats", "external")?.legacy;
+  const deals = bridgeEntry("crm", "requests")?.legacy;
 
   it("старая CRM — путь к адресу, ERP — хэш-маршрут после слэша", () => {
-    expect(leads && legacyHref(leads, "http://crm.localhost:8088")).toBe(
-      "http://crm.localhost:8088/leads",
+    expect(inbox && legacyHref(inbox, "http://crm.localhost:8088")).toBe(
+      "http://crm.localhost:8088/inbox",
     );
     expect(deals && legacyHref(deals, "http://erp.localhost:8088")).toBe(
       "http://erp.localhost:8088/#crm-deals",
     );
   });
 
-  it("лид L-2041 открывается карточкой лида, чужой номер — списком", () => {
-    expect(leads && legacyHref(leads, "http://crm.localhost", "L-2041")).toBe(
-      "http://crm.localhost/leads/2041",
-    );
-    expect(leads && legacyHref(leads, "http://crm.localhost", "ВХ-104/26")).toBe(
-      "http://crm.localhost/leads",
+  it("раздел без карточки объекта в старой системе — список и для номера", () => {
+    expect(inbox && legacyHref(inbox, "http://crm.localhost", "L-2041")).toBe(
+      "http://crm.localhost/inbox",
     );
   });
 
-  it("номер лида с ведущими нулями L-0042 — карточка /leads/42", () => {
-    expect(leads && legacyHref(leads, "http://crm.localhost", "L-0042")).toBe(
-      "http://crm.localhost/leads/42",
-    );
+  it("«Лиды» и «Клиенты» — настоящие экраны (D1-2b): записей моста нет", () => {
+    expect(bridgeEntry("crm", "leads")).toBeUndefined();
+    expect(bridgeEntry("crm", "clients")).toBeUndefined();
   });
 
   it("числовой номер заявки — карточка сделки старого ERP, бизнес-номер — список сделок", () => {
@@ -125,8 +132,8 @@ describe("адрес кнопки", () => {
   });
 
   it("адреса нет — кнопки нет", () => {
-    expect(leads && legacyHref(leads, null)).toBeUndefined();
-    expect(leads && legacyHref(leads, "")).toBeUndefined();
+    expect(inbox && legacyHref(inbox, null)).toBeUndefined();
+    expect(inbox && legacyHref(inbox, "")).toBeUndefined();
   });
 });
 
@@ -145,27 +152,32 @@ describe("исполнимость адреса: есть ли экран в П�
     ["/eds/inbox?letter=%D0%92%D0%A5-104%2F26", true],
     ["/dashboard/queue?panel=open&tab=notifications", true],
     ["/admin/org?invite=open&panel=open", true],
-    ["/crm/leads?lead=L-2041&panel=open&tab=card", false],
+    ["/crm/leads?lead=L-2041&panel=open&tab=card", true],
+    ["/crm/clients/17?panel=open&tab=card", true],
     ["/eds/drafts/%D0%9A%D0%9F-2026%2F118?panel=open&tab=approve", true],
     ["/eds/approvals/%D0%A1%D0%97-2026%2F031?panel=open&tab=agree", true],
     ["/crm/messages?lead=L-2041", true],
     ["/eds/documents?doc=5f0c7a52-3b1e-4c53-9d0a-1c6a1f0e2b77", true],
     ["/eds/new?type=memo", true],
     ["/eds/payments/%D0%A1%D0%A7-2026%2F142", false],
-    ["/erp/calc", false],
+    ["/erp/calc", true],
+    ["/erp/stock", true],
+    ["/erp/stock/%D0%97%D0%9F-2026-029", true],
+    ["/erp/catalog", false],
     ["/nowhere/at-all", true],
   ])("%s → %s", (path, expected) => {
     expect(isActionable(path)).toBe(expected);
   });
 
   it("раздел с родным экраном исполним, а стоит убрать запись моста — адрес становится исполнимым сам", () => {
-    const key = "crm.leads";
+    const key = "eds.payments";
     const entry = BRIDGE[key];
-    expect(isActionable("/crm/leads?lead=L-2041")).toBe(false);
-    // имитация D1-6: запись моста удалена
+    const path = "/eds/payments/%D0%A1%D0%A7-2026%2F142";
+    expect(isActionable(path)).toBe(false);
+    // имитация переноса раздела: запись моста удалена
     Reflect.deleteProperty(BRIDGE, key);
     try {
-      expect(isActionable("/crm/leads?lead=L-2041")).toBe(true);
+      expect(isActionable(path)).toBe(true);
     } finally {
       (BRIDGE as Record<string, unknown>)[key] = entry;
     }

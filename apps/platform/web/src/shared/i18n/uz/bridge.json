@@ -47,13 +47,13 @@
     "erpCalc": "«Сделки» → ariza kartochkasi → TT hisob-kitobi",
     "erpQuotes": "«Документы» → «Коммерческие предложения»",
     "erpPayments": "«Документы» → «Платежи»",
-    "erpStock": "«Товары» → «Мои товары» (qoldiq va yetkazish muddati — tovar kartochkasida)",
     "erpCatalog": "«Товары» → «Справочники»",
     "erpFiles": "«Документы» → «Файлы»"
   },
   "who": {
     "memos": "direktor va buxgalter — xizmat yozuvlarini hozircha og‘zaki yoki qog‘ozda kelishadi",
     "chats": "jamoa — ish yozishmalari hozircha tizimdan tashqari messenjerlarda yuritiladi",
+    "chatsExternal": "mijoz menejeri: kerakli xabar yoki faylni yuborishini so‘rang",
     "tickets": "administrator — unga so‘rovlar hozircha Telegramda yoki shaxsan keladi",
     "unknown": "interfeysdan tashqaridagi mas’ul xodim"
   },

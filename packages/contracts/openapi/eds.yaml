@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — EDS API (электронный документооборот)
-  version: 0.4.0
+  version: 0.6.0
   summary: Пространство `/api/v1/` сервиса EDS — вызывает BFF Платформы от имени сотрудника.
   description: |
     Контракт сервиса EDS (`apps/eds`, ADR-0015; `docs/runbooks/wave12-eds-c1.md` §2). EDS — владелец реестра документов и
@@ -23,7 +23,8 @@ info:
 
     **Права (runbook §2.2).** Коды EDS v1: `letters.read`, `letters.register`, `letters.resolve`, `memos.create`, `memos.approve`,
     `approvals.decide`, `registry.read`, `registry.export`, `payments.confirm` (`EdsPermission`; `payments.confirm` — решение
-    архитектора: шаг «бухгалтер» служебной записки с суммой), с 0.3.0 — `bus.manage` (журнал шины, раздел `admin` каталога). Их вычисляет CRM из ролей Платформы по каталогу
+    архитектора: шаг «бухгалтер» служебной записки с суммой), с 0.3.0 — `bus.manage` (журнал шины, раздел `admin` каталога), `files.upload` —
+    свой файл (раздел `crm.clients` уровня `full`, D1-2b). Их вычисляет CRM из ролей Платформы по каталогу
     (`platform-rbac.yaml`, `backend.eds`) и публикует в `identity.user.created/updated` (`user.permissions.eds`); EDS держит
     проекцию сотрудников и проверяет право **на каждый запрос по проекции на момент запроса** (claim `permissions` токена —
     справочный, не применяется): отзыв роли или отключение сотрудника действуют сразу, без ожидания срока токена. Нет поля
@@ -283,7 +284,10 @@ paths:
       description: |
         Только письмо в статусе `awaiting_resolution` (иначе 409 `CONFLICT`, `details.reason = invalid_state`). Статус →
         `resolved`; публикуется `letter.resolved` (исполнители, срок, мин. маржа, ссылки на заявку и сделку ERP) — ERP создаёт
-        задание расчёта (EDS-01). Исполнители — активные сотрудники проекции (иначе 422, `details.fields.assignees`). Срок
+        задание расчёта (EDS-01). Исполнители — активные сотрудники проекции (иначе 422, `details.fields.assignees =
+        not_active_employee`), у каждого — раздел каталога его зоны на уровне `full`: товары — `erp.calc.goods`, услуги —
+        `erp.calc.services`, условия оплаты — `eds.payments` (проекция берёт разделы из `identity.user.*`,
+        `user.permissions.sections`; иначе 422, `details.fields.assignees = assignee_zone_mismatch`; D1-8, B-007). Срок
         `due` — не раньше сегодняшней даты по `Asia/Tashkent` (иначе 422, `details.fields.due`; решение архитектора
         2026-10-26, C1-G-1).
       x-rt-permissions: [letters.resolve]
@@ -819,7 +823,7 @@ paths:
         `multipart/form-data`: `file` и необязательный `version_of` (id файла — новая версия той же цепочки; прежние версии
         остаются). Не больше 25 МБ (413), типы — PDF, изображения, документы Office (415). Файл привязывается к документу
         полем `file_ids` при создании или отправке; непривязанный видит только загрузивший.
-      x-rt-permissions: [letters.register, letters.resolve, memos.create, memos.approve, approvals.decide]
+      x-rt-permissions: [letters.register, letters.resolve, memos.create, memos.approve, approvals.decide, files.upload]
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -863,7 +867,7 @@ paths:
       summary: Скачать файл (поток)
       description: |
         Последняя версия, или `version`. Видит тот, кому виден документ, к которому файл привязан (чужой черновик и исходящее письмо без `letters.read` не видны), или загрузивший; иначе 404.
-      x-rt-permissions: [letters.read, memos.create, memos.approve, approvals.decide, registry.read]
+      x-rt-permissions: [letters.read, memos.create, memos.approve, approvals.decide, registry.read, files.upload]
       parameters:
         - $ref: '#/components/parameters/FileId'
         - name: version
@@ -901,7 +905,7 @@ paths:
       tags: [files]
       operationId: listFileVersions
       summary: Версии файла
-      x-rt-permissions: [letters.read, memos.create, memos.approve, approvals.decide, registry.read]
+      x-rt-permissions: [letters.read, memos.create, memos.approve, approvals.decide, registry.read, files.upload]
       parameters:
         - $ref: '#/components/parameters/FileId'
       responses:
@@ -1322,10 +1326,12 @@ components:
         - registry.export
         - payments.confirm
         - bus.manage
+        - files.upload
       description: |
         Код права EDS v1 (runbook волны 12 §2.2; `platform-rbac.yaml`, `backend.eds`). `payments.confirm` — шаг «бухгалтер»
         маршрута служебной записки с суммой (решение архитектора). `bus.manage` (0.3.0, W13-A2) — «Журнал интеграций» шины:
-        раздел `admin` каталога, уровень `full`. В событиях шины (`identity`, `eds`) код — строка по шаблону
+        раздел `admin` каталога, уровень `full`. `files.upload` (D1-2b) — загрузить свой файл и читать свои файлы
+        (письмо директору к «Создать заявку»): раздел `crm.clients`, уровень `full`. В событиях шины (`identity`, `eds`) код — строка по шаблону
         `^[a-z_]+\.[a-z_]+$`, не перечень: новый код не ломает события v1.
 
     Uuid:

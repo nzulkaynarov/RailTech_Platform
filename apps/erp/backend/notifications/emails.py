@@ -167,6 +167,7 @@ def send_templated_email(
     attachments: Optional[Iterable[tuple]] = None,
     fail_silently: bool = False,
     language: Optional[str] = None,
+    reply_to: Optional[Iterable[str]] = None,
 ) -> EmailLog:
     """Render a template bundle and send it through the named channel.
 
@@ -234,6 +235,7 @@ def send_templated_email(
         to=recipients,
         cc=list(cc) if cc else None,
         bcc=list(bcc) if bcc else None,
+        reply_to=list(reply_to) if reply_to else None,
         connection=connection,
     )
     if html_body:

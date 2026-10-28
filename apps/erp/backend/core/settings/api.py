@@ -158,6 +158,16 @@ SPECTACULAR_SETTINGS = {
         "ContactPreferredChannelEnum": ["email", "telegram", "both"],
         "LanguageEnum": ["ru", "uz", "en"],
         "SecretSourceEnum": ["db", "env", "none"],
+        # D2-1 «Расчёт по заявке» (crm.serializers.calc): наборы значений с явными именами.
+        "CalcVisaStateEnum": "crm.serializers.calc.VISA_STATES",
+        "CalcStateEnum": "crm.serializers.calc.CALC_STATES",
+        "CalcLineKindEnum": "crm.serializers.calc.LINE_KINDS",
+        "CalcItemKindEnum": "crm.serializers.calc.ITEM_KINDS",
+        # D2-2 «Склад»: статусы заказа поставщику, резерва и запроса цены.
+        "SupplierOrderStatusEnum": "supply.serializers.ORDER_STATUSES",
+        "StockReservationStatusEnum": "inventory.serializers.RESERVATION_STATUSES",
+        "PriceRequestStatusEnum": ["sent", "failed"],
+        "SupplierOrderReceiptStateEnum": "supply.serializers.RECEIPT_STATES",
     },
     "TAGS": [
         {"name": "Auth", "description": "Login, password setup by invitation, JWT tokens"},

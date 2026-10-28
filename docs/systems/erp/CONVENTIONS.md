@@ -64,8 +64,8 @@ ERP сам их не описывает. Токены дизайна — из `p
 | `parties` | контрагенты: клиент / поставщик / субподрядчик; контакты (`telegram_user_id`, язык, предпочитаемый канал); реквизиты; `crm_client_id` | `accounts` `Company`, `Contact`, `CompanyDocumentProfile` минус KYC-уровни, merge по ИНН, `CounterpartyRelationship` |
 | `catalog` | единая карточка «товар / услуга», два слоя (внутренний / опубликованный), политика видимости `cabinet` / `on_request`, категории, импорт Excel, ИИ-обогащение по полям, полнота, ТН ВЭД как справочник | `catalog/` + `master_data.HSCode` минус `EquipmentGroup`, `DomainType` ЖД; `SupplierOffer` → `supply` |
 | `sales` | запрос → сделка (FSM) → КП (билдер, версии, экономика, согласование, курс на дату) → договор → публичная страница акцепта | `crm/` (deals, quotes, contracts, approvals, numbering, wording, document_blocks) |
-| `supply` (M4) | поставщик, заказ поставщику (back-to-back, дропшип), приёмка, счёт и оплата поставщику, сроки; субподряд как этапы | `catalog.SupplierOffer`, `crm/services/availability.py`; остальное новое |
-| `inventory` (M4) | журнал движений, остаток = сумма движений, резервы, «доступно к обещанию»; отгрузки по строкам | `crm` `Fulfillment` |
+| `supply` (D2-2: заказы ЗП, приёмка, запросы цен, просрочка; остальное — M4) | поставщик, заказ поставщику (back-to-back, дропшип), приёмка, счёт и оплата поставщику, сроки; субподряд как этапы | `catalog.SupplierOffer`, `crm/services/availability.py`; остальное новое |
+| `inventory` (D2-2: остатки по ячейкам, журнал, резервы, отгрузки; `/api/v1/stock/*`) | журнал движений, остаток = сумма движений, резервы, «доступно к обещанию»; отгрузки по строкам | `crm` `Fulfillment` |
 | `finance` | счета клиентам, платежи, акты (двусторонние), напоминания, отклонение маржи по курсу | `crm/services/billing.py`, `invoice_lifecycle.py`, `deal_emails.py` |
 | `documents` | шаблоны компании, PDF off-thread, квитанции, накладные, поиск, «недавние» | `crm/services/documents/`, `generated_documents.py`, `crm.tasks.render_document_pdf` |
 | `ai` | очередь `ai`: разбор запроса, сопоставление с каталогом, черновик КП, обогащение карточки, разбор прайса (M4), диф КП; клиент LiteLLM; трейсы Langfuse; evals | `sourcing/` (`services_ai*.py`, `tasks_ai.py`, `AIJob`, `ImportTask`) минус прямой SDK |
@@ -179,7 +179,7 @@ Makefile · .env.example · docs/ (ADR и runbooks ERP в docs/runbooks/erp/ —
 | Раздел | Коды |
 |---|---|
 | Запросы и сделки | `deal.manage` (создать/править, стадия, взять в работу, документы и вложения сделки, книга клиентов), `deal.assign` (назначить ответственного, вернуть чужую заявку в очередь) |
-| КП | `quote.build` (жизненный цикл: на согласование, отзыв, копия, PDF, базис, ИИ-подбор позиций), `quote.edit_pricing` (создание и правка КП и его позиций — они несут цены, скидки, статьи расходов; ИИ-черновик и «Взять и подготовить КП»), `quote.view_cost_margin`, `quote.send`, `quote.review` (виза КП; одобрение КП директором — маршрут EDS, EDS-03, волна 12) |
+| КП | `quote.build` (жизненный цикл: на согласование, отзыв, копия, PDF, базис, ИИ-подбор позиций), `quote.edit_pricing` (создание и правка КП и его позиций — они несут цены, скидки, статьи расходов; ИИ-черновик и «Взять и подготовить КП»), `quote.view_cost_margin`, `quote.send`, `quote.review` (виза КП; одобрение КП директором — маршрут EDS, EDS-03, волна 12), `quote.visa_goods`, `quote.visa_services` (виза строки расчёта по типу позиции — товар и услуга, D2-1; CRM выдаёт из разделов `erp.calc.goods` и `erp.calc.services`) |
 | Договоры | `contract.manage` (подготовка, правка, формулировки, скан), `contract.sign` (подпись от компании) |
 | Каталог | `catalog.manage`, `catalog.publish` |
 | Снабжение | `supply.manage` (поставщики и их предложения; M4 добавит заказы поставщикам и приёмку) |
@@ -193,7 +193,7 @@ Makefile · .env.example · docs/ (ADR и runbooks ERP в docs/runbooks/erp/ —
 
 | Код | Роль | Права |
 |---|---|---|
-| `CALCULATION` | Расчёт | `deal.manage`, `quote.build`, `quote.edit_pricing`, `quote.view_cost_margin`, `quote.send`, `quote.review`, `contract.manage` |
+| `CALCULATION` | Расчёт | `deal.manage`, `quote.build`, `quote.edit_pricing`, `quote.view_cost_margin`, `quote.send`, `quote.review`, `quote.visa_goods`, `quote.visa_services`, `contract.manage` |
 | `CATALOG_SUPPLY` | Каталог и закупки | `catalog.manage`, `catalog.publish`, `supply.manage`, `quote.view_cost_margin` |
 | `FULFILLMENT` | Исполнение и логистика | `fulfillment.manage`, `fulfillment.act` |
 | `FINANCE` | Финансы | `finance.invoice`, `finance.payment`, `finance.rates`, `quote.view_cost_margin`, `data.export` |

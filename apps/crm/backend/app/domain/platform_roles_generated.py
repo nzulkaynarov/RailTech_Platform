@@ -161,7 +161,9 @@ CRM_BACKEND: Final[dict[str, dict[str, tuple[str, ...]]]] = {
     "eds.inbox": {},
     "eds.drafts": {},
     "eds.projects": {},
-    "eds.payments": {},
+    "eds.payments": {
+        "full": ("chats:invoiced",),
+    },
     "eds.memo.create": {},
     "eds.memo.approve": {},
     "erp.calc": {},
@@ -170,12 +172,12 @@ CRM_BACKEND: Final[dict[str, dict[str, tuple[str, ...]]]] = {
     "erp.stock": {},
     "chats.internal": {},
     "chats.external": {
-        "read": ("leads:read",),
+        "read": ("chats:read",),
         "full": (
-            "leads:read",
-            "leads:reply",
-            "leads:note",
-            "leads:assist",
+            "chats:read",
+            "chats:reply",
+            "chats:note",
+            "chats:assist",
         ),
     },
     "admin": {
@@ -269,10 +271,14 @@ ERP_BACKEND: Final[dict[str, dict[str, tuple[str, ...]]]] = {
         "full": (
             "quote.build",
             "quote.edit_pricing",
+            "quote.visa_goods",
         ),
     },
     "erp.calc.services": {
-        "full": ("quote.build",),
+        "full": (
+            "quote.build",
+            "quote.visa_services",
+        ),
     },
     "erp.stock": {
         "full": (
@@ -300,7 +306,9 @@ EDS_BACKEND: Final[dict[str, dict[str, tuple[str, ...]]]] = {
     "dashboard.queue": {},
     "dashboard.summary": {},
     "crm.leads": {},
-    "crm.clients": {},
+    "crm.clients": {
+        "full": ("files.upload",),
+    },
     "eds.inbox": {
         "read": (
             "letters.read",
@@ -477,13 +485,10 @@ ROLE_RESTRICTED_FIELDS: Final[dict[str, tuple[str, ...]]] = {
         "supplier_prices",
     ),
     "ENGINEER": (),
-    "ACCOUNTANT": (
-        "totals_only",
-        "supplier_prices",
-    ),
+    "ACCOUNTANT": ("totals_only",),
 }
 
-# Базовая роль CRM для старого фронта: роль с кодом (порядок — прежние шесть ролей).
+# Роли версии 1 (порядок — прежние шесть); признак базовой роли они не задают (D1-8).
 CRM_BASE_ROLE_BY_CODE: Final[dict[str, str]] = {
     "MANAGER": "manager",
     "DIRECTOR": "viewer",
@@ -493,7 +498,7 @@ CRM_BASE_ROLE_BY_CODE: Final[dict[str, str]] = {
     "ADMIN": "admin",
 }
 
-# Базовая роль CRM для роли без кода: достаточно одного условия `раздел:уровень`.
+# Признак базовой роли CRM по матрице роли: одно условие `раздел:уровень` (D1-8).
 CRM_BASE_ROLE_BY_ACCESS: Final[dict[str, tuple[str, ...]]] = {
     "admin": ("admin:full",),
     "manager": ("crm.leads:full",),

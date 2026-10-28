@@ -42,12 +42,20 @@ IdemKey = Annotated[str | None, Header(alias="Idempotency-Key", min_length=8, ma
 Uploader = Annotated[
     Employee,
     Depends(
-        require_permission(P.LETTERS_REGISTER, P.LETTERS_RESOLVE, P.MEMOS_CREATE, P.MEMOS_APPROVE, P.APPROVALS_DECIDE)
+        require_permission(
+            P.LETTERS_REGISTER, P.LETTERS_RESOLVE, P.MEMOS_CREATE, P.MEMOS_APPROVE, P.APPROVALS_DECIDE, P.FILES_UPLOAD
+        )
     ),
 ]
 Reader = Annotated[
     Employee,
-    Depends(require_permission(P.LETTERS_READ, P.MEMOS_CREATE, P.MEMOS_APPROVE, P.APPROVALS_DECIDE, P.REGISTRY_READ)),
+    # `files.upload` (D1-2b): только свои файлы — чужой непривязанный и файлы писем без `letters.read`
+    # дают 404 (`can_view_file`).
+    Depends(
+        require_permission(
+            P.LETTERS_READ, P.MEMOS_CREATE, P.MEMOS_APPROVE, P.APPROVALS_DECIDE, P.REGISTRY_READ, P.FILES_UPLOAD
+        )
+    ),
 ]
 Session = Annotated[AsyncSession, Depends(get_session)]
 Storage = Annotated[ObjectStorage, Depends(get_storage)]

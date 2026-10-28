@@ -416,7 +416,9 @@ def reassign_quote_item_product(
             item.lead_time_days = max((tranche.lead_time_days for tranche in tranches), default=0)
     else:
         item.product = None
-    item.save(update_fields=["product", "assigned_at", "hs_code", "lead_time_days"])
+    # Новая карточка — другая строка: версия растёт (визы строк расчёта D2-1 к ней привязаны, оптимистичная блокировка).
+    item.version = (item.version or 0) + 1
+    item.save(update_fields=["product", "assigned_at", "hs_code", "lead_time_days", "version"])
     # AI-калибровка: an explicit re-match is the seller's verdict on the AI candidate for this line.
     from crm.services.ai_telemetry import resolve_outcome_on_reassign
 

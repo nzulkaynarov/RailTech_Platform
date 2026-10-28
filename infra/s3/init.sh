@@ -16,8 +16,11 @@ log() { printf 's3-init: %s\n' "$*"; }
 die() { printf 's3-init: ОШИБКА: %s\n' "$*" >&2; exit 1; }
 
 # Сервисы и их доступ. Бакеты: erp-* — файлы ERP; kb-sources, client-documents, tg-attachments — CRM; eds-private — EDS; langfuse — события и
-# медиа Langfuse; wal — архив WAL-G (VPS 2); backups — ежедневные дампы (VPS 2 пишет, CRM читает статус бэкапа).
-SERVICES="erp crm eds langfuse wal backup"
+# медиа Langfuse; wal — архив WAL-G (VPS 2); backups — ежедневные дампы (VPS 2 пишет, CRM читает статус бэкапа); offsite — внешняя копия
+# архива на Google Drive (offsite-backup на VPS 1, OPS-GDRIVE): читает wal, пишет только свою отметку status.json в бакет offsite.
+SERVICES="erp crm eds langfuse wal backup offsite"
+# offsite-config — настройка внешней копии из интерфейса (OPS-GDRIVE-2): CRM кладёт ключ сервисного аккаунта Google и ID папки
+# (только запись — прочитать обратно не может), offsite-backup забирает (только чтение).
 rw_of() {
   case "$1" in
     erp) echo "erp-private erp-public erp-temp" ;;
@@ -26,11 +29,14 @@ rw_of() {
     langfuse) echo "langfuse" ;;
     wal) echo "wal" ;;
     backup) echo "backups" ;;
+    offsite) echo "offsite" ;;
   esac
 }
 ro_of() {
   case "$1" in
     crm) echo "backups" ;; # статус бэкапа в «Центре внешних сервисов»: только чтение
+    # копирует уже зашифрованные WAL-G объекты на Drive: чтение, без записи и удаления в архиве
+    offsite) echo "wal offsite-config" ;;
     *) echo "" ;;
   esac
 }
@@ -42,17 +48,34 @@ ls_of() {
     *) echo "" ;;
   esac
 }
+# Отдельные объекты, которые сервису можно читать (бакет/ключ), и список их бакетов — без чтения остального: отметка внешней копии
+# на Google Drive для строки «Внешняя копия бэкапов» (OPS-GDRIVE). Остальное в бакете offsite CRM не видит, как crm-probe в Redis.
+obj_of() {
+  case "$1" in
+    crm) echo "offsite/status.json" ;;
+    *) echo "" ;;
+  esac
+}
+# Бакеты только на ЗАПИСЬ (без чтения, списка и удаления): ключ внешней копии, который CRM передаёт сервису offsite-backup.
+wo_of() {
+  case "$1" in
+    crm) echo "offsite-config" ;;
+    *) echo "" ;;
+  esac
+}
 key_of() { # <сервис> <ACCESS_KEY|SECRET_KEY>
   upper="$(printf '%s' "$1" | tr '[:lower:]' '[:upper:]')"
   eval "printf '%s' \"\${S3_${upper}_$2:-}\""
 }
 
 # Политика: чтение/запись/удаление объектов в rw-бакетах, чтение — в ro-бакетах. Больше ничего (ни создания бакетов, ни IAM).
-policy_json() { # <rw-бакеты> <ro-бакеты> [бакеты только со списком]
-  jq -n --arg rw "$1" --arg ro "$2" --arg ls "${3:-}" '
+policy_json() { # <rw-бакеты> <ro-бакеты> [бакеты только со списком] [объекты «бакет/ключ» только на чтение] [бакеты только на запись]
+  jq -n --arg rw "$1" --arg ro "$2" --arg ls "${3:-}" --arg obj "${4:-}" --arg wo "${5:-}" '
     ($rw | split(" ") | map(select(. != ""))) as $rw
     | ($ro | split(" ") | map(select(. != ""))) as $ro
     | ($ls | split(" ") | map(select(. != ""))) as $ls
+    | ($obj | split(" ") | map(select(. != ""))) as $obj
+    | ($wo | split(" ") | map(select(. != ""))) as $wo
     | {Version: "2012-10-17", Statement: (
         (if ($rw | length) > 0 then [
           {Effect: "Allow", Action: ["s3:ListBucket", "s3:GetBucketLocation", "s3:ListBucketMultipartUploads"],
@@ -63,7 +86,12 @@ policy_json() { # <rw-бакеты> <ro-бакеты> [бакеты только
           {Effect: "Allow", Action: ["s3:ListBucket", "s3:GetBucketLocation"], Resource: ($ro | map("arn:aws:s3:::" + .))},
           {Effect: "Allow", Action: ["s3:GetObject"], Resource: ($ro | map("arn:aws:s3:::" + . + "/*"))}] else [] end)
         + (if ($ls | length) > 0 then [
-          {Effect: "Allow", Action: ["s3:ListBucket", "s3:GetBucketLocation"], Resource: ($ls | map("arn:aws:s3:::" + .))}] else [] end))}'
+          {Effect: "Allow", Action: ["s3:ListBucket", "s3:GetBucketLocation"], Resource: ($ls | map("arn:aws:s3:::" + .))}] else [] end)
+        + (if ($obj | length) > 0 then [
+          {Effect: "Allow", Action: ["s3:ListBucket", "s3:GetBucketLocation"], Resource: ($obj | map("arn:aws:s3:::" + split("/")[0]) | unique)},
+          {Effect: "Allow", Action: ["s3:GetObject"], Resource: ($obj | map("arn:aws:s3:::" + .))}] else [] end)
+        + (if ($wo | length) > 0 then [
+          {Effect: "Allow", Action: ["s3:PutObject", "s3:AbortMultipartUpload"], Resource: ($wo | map("arn:aws:s3:::" + . + "/*"))}] else [] end))}'
 }
 
 contains() { case " $1 " in *" $2 "*) return 0 ;; esac; return 1; }
@@ -92,11 +120,11 @@ done
 # 2. Пользователи и политики.
 for svc in $SERVICES; do
   ak="$(key_of "$svc" ACCESS_KEY)"; sk="$(key_of "$svc" SECRET_KEY)"
-  policy_json "$(rw_of "$svc")" "$(ro_of "$svc")" "$(ls_of "$svc")" >"$work/$svc.json"
+  policy_json "$(rw_of "$svc")" "$(ro_of "$svc")" "$(ls_of "$svc")" "$(obj_of "$svc")" "$(wo_of "$svc")" >"$work/$svc.json"
   rc admin policy create root "rt-$svc" "$work/$svc.json" >/dev/null
   rc admin user add root "$ak" "$sk" >/dev/null
   rc admin policy attach root "rt-$svc" --user "$ak" >/dev/null
-  log "ключ сервиса $svc: политика rt-$svc (запись: $(rw_of "$svc"); только чтение: $(ro_of "$svc"); только список: $(ls_of "$svc"))"
+  log "ключ сервиса $svc: политика rt-$svc (запись: $(rw_of "$svc"); только чтение: $(ro_of "$svc"); только список: $(ls_of "$svc"); объекты: $(obj_of "$svc"); только запись: $(wo_of "$svc"))"
 done
 
 # 3. Чужие пользователи (старые ключи после смены идентификатора, заведённые вручную) удаляются. Корневой ключ не трогается никогда,
@@ -122,7 +150,7 @@ log "erp-temp: удаление объектов через 1 сутки"
 for svc in $SERVICES; do
   alias_name="u-$svc"
   rc alias set "$alias_name" "$S3_ENDPOINT" "$(key_of "$svc" ACCESS_KEY)" "$(key_of "$svc" SECRET_KEY)" >/dev/null
-  rw="$(rw_of "$svc")"; ro="$(ro_of "$svc")"; lo="$(ls_of "$svc")"
+  rw="$(rw_of "$svc")"; ro="$(ro_of "$svc")"; lo="$(ls_of "$svc")"; ob=" $(obj_of "$svc") "; wo="$(wo_of "$svc")"
   for bucket in $S3_BUCKETS; do
     if contains "$rw" "$bucket"; then
       rc ls "$alias_name/$bucket" >/dev/null 2>&1 || die "$svc: нет чтения своего бакета $bucket"
@@ -134,6 +162,26 @@ for svc in $SERVICES; do
         rc rm "root/$bucket/.s3-init-probe" >/dev/null 2>&1 || true
         die "$svc: запись в бакет $bucket должна быть закрыта"
       fi
+    elif contains "$wo" "$bucket"; then
+      # Только запись: положить можно, прочитать и перечислить — нет (пробный объект убирает корневой ключ).
+      printf 'probe' | rc pipe "$alias_name/$bucket/.s3-init-probe" >/dev/null 2>&1 || die "$svc: нет записи в бакет $bucket"
+      readable=0; rc cat "$alias_name/$bucket/.s3-init-probe" >/dev/null 2>&1 && readable=1
+      rc rm "root/$bucket/.s3-init-probe" >/dev/null 2>&1 || true
+      [ "$readable" -eq 0 ] || die "$svc: чтение бакета $bucket должно быть закрыто (только запись)"
+      if rc ls "$alias_name/$bucket" >/dev/null 2>&1; then die "$svc: список бакета $bucket должен быть закрыт (только запись)"; fi
+    elif [ "${ob#* "$bucket"/}" != "$ob" ]; then
+      # Только перечисленные объекты: список бакета есть, записи нет, чужой объект не читается (сам объект может ещё не существовать).
+      rc ls "$alias_name/$bucket" >/dev/null 2>&1 || die "$svc: нет списка бакета $bucket"
+      if printf 'probe' | rc pipe "$alias_name/$bucket/.s3-init-probe" >/dev/null 2>&1; then
+        rc rm "root/$bucket/.s3-init-probe" >/dev/null 2>&1 || true
+        die "$svc: запись в бакет $bucket должна быть закрыта"
+      fi
+      printf 'probe' | rc pipe "root/$bucket/.s3-init-probe" >/dev/null 2>&1 || die "$svc: не удалось создать пробный объект в $bucket"
+      if rc cat "$alias_name/$bucket/.s3-init-probe" >/dev/null 2>&1; then
+        rc rm "root/$bucket/.s3-init-probe" >/dev/null 2>&1 || true
+        die "$svc: в бакете $bucket читаются не только разрешённые объекты"
+      fi
+      rc rm "root/$bucket/.s3-init-probe" >/dev/null 2>&1 || true
     elif contains "$lo" "$bucket"; then
       rc ls "$alias_name/$bucket" >/dev/null 2>&1 || die "$svc: нет списка бакета $bucket"
       # Содержимое закрыто: читаем заведомо существующий объект корневым ключом и пробуем под ключом сервиса.

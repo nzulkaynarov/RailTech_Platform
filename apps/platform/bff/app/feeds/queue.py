@@ -33,8 +33,10 @@ from app.feeds.numbers import (
     memo_ref,
     quote_number,
     quote_ref,
+    supplier_order_ref,
     ticket_ref,
 )
+from app.feeds.rework import rework_item
 from app.feeds.snapshot import (
     Covered,
     Snapshot,
@@ -43,9 +45,20 @@ from app.feeds.snapshot import (
     wants_letters,
     wants_memos,
     wants_projects,
+    wants_supplier_overdue,
     wants_tickets,
 )
-from app.feeds.text import ago, due_label, join, money, now_utc, parse_deadline, parse_dt, short
+from app.feeds.text import (
+    COMPANY_TZ,
+    ago,
+    due_label,
+    join,
+    money,
+    now_utc,
+    parse_deadline,
+    parse_dt,
+    short,
+)
 from app.rbac import View
 
 _RANK: dict[DueLabel, int] = {"overdue": 0, "today": 1, "tomorrow": 2, "memo": 3, "later": 4}
@@ -223,6 +236,12 @@ def quote_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
     return out
 
 
+def rework_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
+    """Мои документы, которые вернули на доработку (EDS по токену автора): «Доработать»."""
+    role_id = _role_id(view, "rework_document")
+    return [Row(*rework_item(entry, now, role_id=role_id)) for entry in snap.rework or []]
+
+
 def _dict(value: Any) -> dict[str, Any]:
     return value if isinstance(value, dict) else {}
 
@@ -354,6 +373,37 @@ def ticket_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
     return out
 
 
+def supplier_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
+    """Просроченные заказы поставщикам (D2-2, SPEC-v3 §9): ожидаемая дата прошла, товар не
+    получен. Строка ведёт на карточку ЗП. Что просрочено, решает ERP (`/stock/overdue/`), BFF
+    только показывает."""
+    role_id = _role_id(view, "supplier_overdue")
+    out: list[Row] = []
+    for order in snap.overdue_orders:
+        number = order.get("number")
+        if not isinstance(number, str) or not number:
+            continue
+        expected = parse_deadline(order.get("expected_date"))
+        days = order.get("days_overdue")
+        supplier = str(order.get("supplier_name") or "") or None
+        item = QueueItem(
+            id=f"supplier_order:{order.get('id', number)}",
+            role_id=role_id,
+            kind="supplier_overdue",
+            title=f"Просрочен заказ {number}",
+            subtitle=join(
+                supplier,
+                f"ждали к {expected.astimezone(COMPANY_TZ):%d.%m}" if expected else None,
+                f"{days} дн. просрочки" if isinstance(days, int) else None,
+            ),
+            due_label="overdue",
+            due_at=expected,
+            object=supplier_order_ref(number, supplier),
+        )
+        out.append(Row(item, expected))
+    return out
+
+
 def build_queue(feed: Feed, view: View, snap: Snapshot) -> list[QueueItem]:
     now = now_utc()
     rows_: list[Row] = []
@@ -365,12 +415,15 @@ def build_queue(feed: Feed, view: View, snap: Snapshot) -> list[QueueItem]:
             rows_ += covered_rows(covered, now, view, taken)
     if wants_approvals(view):
         rows_ += quote_rows(snap, now, view)
+    rows_ += rework_rows(snap, now, view)
     if wants_letters(view):
         rows_ += letter_rows(snap, now, view)
     if wants_memos(view):
         rows_ += memo_rows(snap, now, view)
     if wants_tickets(view):
         rows_ += ticket_rows(snap, now, view)
+    if wants_supplier_overdue(view):
+        rows_ += supplier_rows(snap, now, view)
     rows_.sort(key=_sort_key)
     return [row.item for row in rows_]
 
@@ -473,6 +526,9 @@ def build_counters(view: View, snap: Snapshot, queue: list[QueueItem]) -> list[M
                 attention=snap.tickets_total > 0,
             )
         )
+    if wants_supplier_overdue(view):
+        late = sum(1 for i in queue if i.kind == "supplier_overdue")
+        items.append(MenuCounter(module="erp", section="stock", count=late, attention=late > 0))
     if wants_projects(view):
         total = projects_in_work(snap)
         items.append(

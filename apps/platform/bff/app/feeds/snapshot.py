@@ -9,6 +9,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from app.feeds.feed import SNAPSHOT_TTL_SECONDS, Feed, rows
+from app.feeds.rework import Returned, load_rework
 from app.rbac import View, allows
 
 # Сделки ERP постранично (DRF: максимум 200 на страницу); берём новейшие — поиск и счётчики
@@ -49,6 +50,8 @@ class Snapshot:
     approvals: list[dict[str, Any]] = field(default_factory=list)
     approvals_total: int = 0
     deals: list[dict[str, Any]] = field(default_factory=list)
+    # EDS: мои документы, возвращённые на доработку (D1-6b); `None` — не читали или EDS не ответил.
+    rework: list[Returned] | None = None
     # EDS: `None` — источник не читали или он не ответил (карточка и бейдж без числа: ноль был бы
     # ложью), список — ответ EDS как есть (что EDS вернул по токену сотрудника, то и строки).
     letters: list[dict[str, Any]] | None = None
@@ -59,6 +62,8 @@ class Snapshot:
     # Новые обращения сотрудников (CRM `staff-tickets?status=new`): админу — «Мои задачи» (W15-H7).
     tickets: list[dict[str, Any]] = field(default_factory=list)
     tickets_total: int = 0
+    # Просроченные заказы поставщикам (ERP `stock/overdue`): снабженцу — «Мои задачи» (D2-2).
+    overdue_orders: list[dict[str, Any]] = field(default_factory=list)
 
     @property
     def deal_index(self) -> dict[int, dict[str, Any]]:
@@ -88,6 +93,10 @@ def wants_memos(view: View) -> bool:
 
 def wants_tickets(view: View) -> bool:
     return view.wants("ticket")
+
+
+def wants_supplier_overdue(view: View) -> bool:
+    return view.wants("supplier_overdue")
 
 
 def wants_projects(view: View) -> bool:
@@ -126,6 +135,7 @@ async def _covered(feed: Feed) -> list[Covered]:
     return [c for c in found if c is not None]
 
 
+OVERDUE_PATH = "/api/v1/stock/overdue/"
 TICKETS_PATH = "/api/v1/staff-tickets"
 TICKETS_PARAMS = {"status": "new", "limit": 20}
 
@@ -139,6 +149,7 @@ async def load_snapshot(
     deals: bool,
     tickets: bool = False,
     eds: bool = False,
+    stock: bool = False,
 ) -> Snapshot:
     """Параллельно прочитать нужные источники. `view` — роли «вида» (активная роль, если задана);
     сделки нужны и для подписей к очереди и уведомлениям, поэтому их читает тот, кто их просит."""
@@ -179,6 +190,10 @@ async def load_snapshot(
             payload = await feed.get("erp", DEALS_PATH, DEALS_PARAMS, ttl=SNAPSHOT_TTL_SECONDS)
             snap.deals = rows(payload)
 
+    async def load_returned() -> None:
+        if eds:
+            snap.rework = await load_rework(feed, view)
+
     async def load_tickets() -> None:
         if tickets and wants_tickets(view):
             payload = await feed.get("crm", TICKETS_PATH, TICKETS_PARAMS, ttl=SNAPSHOT_TTL_SECONDS)
@@ -186,7 +201,20 @@ async def load_snapshot(
             total = payload.get("total") if isinstance(payload, dict) else None
             snap.tickets_total = total if isinstance(total, int) else len(snap.tickets)
 
+    async def load_stock() -> None:
+        if stock and wants_supplier_overdue(view):
+            # ERP не ответил — очередь без просроченных заказов, `sources.erp = unavailable`.
+            payload = await feed.get("erp", OVERDUE_PATH, ttl=SNAPSHOT_TTL_SECONDS)
+            snap.overdue_orders = rows(payload)
+
     await asyncio.gather(
-        load_inbox(), load_approvals(), load_deals(), load_tickets(), load_letters(), load_memos()
+        load_inbox(),
+        load_approvals(),
+        load_deals(),
+        load_tickets(),
+        load_letters(),
+        load_memos(),
+        load_returned(),
+        load_stock(),
     )
     return snap

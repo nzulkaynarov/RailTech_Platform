@@ -120,7 +120,10 @@ export interface paths {
      * Утвердить резолюцию → задание в ERP
      * @description Только письмо в статусе `awaiting_resolution` (иначе 409 `CONFLICT`, `details.reason = invalid_state`). Статус →
      *     `resolved`; публикуется `letter.resolved` (исполнители, срок, мин. маржа, ссылки на заявку и сделку ERP) — ERP создаёт
-     *     задание расчёта (EDS-01). Исполнители — активные сотрудники проекции (иначе 422, `details.fields.assignees`). Срок
+     *     задание расчёта (EDS-01). Исполнители — активные сотрудники проекции (иначе 422, `details.fields.assignees =
+     *     not_active_employee`), у каждого — раздел каталога его зоны на уровне `full`: товары — `erp.calc.goods`, услуги —
+     *     `erp.calc.services`, условия оплаты — `eds.payments` (проекция берёт разделы из `identity.user.*`,
+     *     `user.permissions.sections`; иначе 422, `details.fields.assignees = assignee_zone_mismatch`; D1-8, B-007). Срок
      *     `due` — не раньше сегодняшней даты по `Asia/Tashkent` (иначе 422, `details.fields.due`; решение архитектора
      *     2026-10-26, C1-G-1).
      */
@@ -580,7 +583,8 @@ export interface components {
     /**
      * @description Код права EDS v1 (runbook волны 12 §2.2; `platform-rbac.yaml`, `backend.eds`). `payments.confirm` — шаг «бухгалтер»
      *     маршрута служебной записки с суммой (решение архитектора). `bus.manage` (0.3.0, W13-A2) — «Журнал интеграций» шины:
-     *     раздел `admin` каталога, уровень `full`. В событиях шины (`identity`, `eds`) код — строка по шаблону
+     *     раздел `admin` каталога, уровень `full`. `files.upload` (D1-2b) — загрузить свой файл и читать свои файлы
+     *     (письмо директору к «Создать заявку»): раздел `crm.clients`, уровень `full`. В событиях шины (`identity`, `eds`) код — строка по шаблону
      *     `^[a-z_]+\.[a-z_]+$`, не перечень: новый код не ломает события v1.
      * @enum {string}
      */
@@ -594,7 +598,8 @@ export interface components {
       | "registry.read"
       | "registry.export"
       | "payments.confirm"
-      | "bus.manage";
+      | "bus.manage"
+      | "files.upload";
     /** Format: uuid */
     Uuid: string;
     /** @description Имя подписчика шины (`crm`, `erp`, `platform-bff`) */

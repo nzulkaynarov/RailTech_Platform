@@ -238,3 +238,29 @@ async def test_filename_cannot_carry_path_or_control_characters(
     assert all(key.startswith(f"files/{ref['id']}/") for key in TEST_STORAGE.objects)  # ключ не зависит от имени
     assert files_service.clean_name("a/b\\c\x00d") == "a_b_c_d"
     assert files_service.clean_name("  ..  ") == "file"
+
+
+async def test_own_file_upload_only_role_uploads_and_reads_only_its_own_files(
+    client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
+) -> None:
+    """D1-2b: своя роль только с `crm.clients: full` (код `files.upload`) загружает письмо директору и читает свой
+    файл; чужой файл и файл письма — 404, документы и реестр — 403."""
+    from tests.helpers import seed_employee
+
+    uploader = Person(21, "Заявочный Демо", ["files.upload"])
+    await seed_employee(
+        container,
+        uploader.id,
+        full_name=uploader.name,
+        email="uploader@example.com",
+        permissions={"eds": uploader.permissions},
+    )
+    response = await upload(client, uploader, name="pismo-direktoru.pdf")
+    assert response.status_code == 201, response.text
+    own = response.json()
+    assert (await client.get(f"/api/v1/files/{own['id']}", headers=uploader.headers)).status_code == 200
+    assert (await client.get(f"/api/v1/files/{own['id']}/versions", headers=uploader.headers)).status_code == 200
+
+    foreign = (await upload(client, staff["manager"])).json()
+    assert_error(await client.get(f"/api/v1/files/{foreign['id']}", headers=uploader.headers), 404, "NOT_FOUND")
+    assert_error(await client.get("/api/v1/documents", headers=uploader.headers), 403, "FORBIDDEN")

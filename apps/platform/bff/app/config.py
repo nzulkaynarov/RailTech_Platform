@@ -68,6 +68,13 @@ class Settings(BaseSettings):
     erp_public_url: str = Field(
         default="", validation_alias=AliasChoices("PLATFORM_ERP_PUBLIC_URL")
     )
+    # Версия релиза (W-REL, «О системе»): тег выкладки (полный git sha, deploy.sh -> prod.yml)
+    # и дата выкладки (`ГГГГ-ММ-ДД`); при сборке образа deploy.yml зашивает sha и дату сборки
+    # (`PLATFORM_BUILD_*`, Dockerfile). Пусто — локальная сборка, версия `dev`.
+    release: str = Field(default="", validation_alias=AliasChoices("PLATFORM_RELEASE"))
+    release_date: str = Field(default="", validation_alias=AliasChoices("PLATFORM_RELEASE_DATE"))
+    build_sha: str = Field(default="", validation_alias=AliasChoices("PLATFORM_BUILD_SHA"))
+    build_date: str = Field(default="", validation_alias=AliasChoices("PLATFORM_BUILD_DATE"))
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = Field(
         default="INFO", validation_alias=AliasChoices("LOG_LEVEL")
     )

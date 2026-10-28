@@ -84,7 +84,7 @@
     "again": "Get a new link",
     "close": "Close",
     "errors": {
-      "NOT_CONFIGURED": "The bot is not connected. Ask an administrator to connect the Telegram bot in Settings · Connections.",
+      "NOT_CONFIGURED": "The bot is not connected. Ask an administrator to connect the Telegram bot in Settings · Telegram bot.",
       "CONFLICT": "The bot is not running right now. Try again in a minute or write to an administrator.",
       "BACKEND_UNAVAILABLE": "CRM is not responding. Try again later.",
       "default": "Could not complete the action. Try again."

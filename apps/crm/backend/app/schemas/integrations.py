@@ -229,3 +229,39 @@ class EmailQueuedOut(BaseModel):
     email_log_id: int
     to_email: str
     status: EmailStatus
+
+
+class OffsiteCheckOut(BaseModel):
+    """Итог «Проверить» внешней копии (OPS-GDRIVE-2): `reason` — `ok` или что исправить владельцу
+    (`key_rejected`, `drive_api_disabled`, `folder_not_found`, `not_folder`, `not_shared_drive`,
+    `read_only`), `network` — Google не ответил (хостинг)."""
+
+    ok: bool
+    reason: str
+    folder_name: str | None
+    checked_at: datetime
+
+
+class OffsiteStatusOut(BaseModel):
+    """Внешняя копия бэкапов на Google Drive: ключ не возвращается — адрес аккаунта и `key_suffix`
+    (последние 4 символа ID ключа); `delivered_at` — когда ключ и папка ушли сервису копирования."""
+
+    configured: bool
+    folder_id: str
+    client_email: str
+    key_suffix: str | None
+    key_updated_at: datetime | None
+    delivered_at: datetime | None
+    last_check: OffsiteCheckOut | None
+    secrets_enabled: bool
+
+
+class OffsiteConnectorIn(BaseModel):
+    """Сохранение: `key_json` — содержимое JSON-ключа сервисного аккаунта (`null` — оставить
+    прежний), `folder_id` — ID папки общего диска или её адрес, `password` — пароль админа."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    key_json: SecretStr | None = Field(default=None, min_length=1, max_length=16384)
+    folder_id: str = Field(min_length=1, max_length=512)
+    password: SecretStr = Field(min_length=1, max_length=256)
