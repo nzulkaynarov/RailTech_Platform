@@ -81,11 +81,12 @@ class Stand:
         self.transport = FakeTransport()
         self.fetcher = FakeFetcher()
         self.queued: list[int] = []
-        smtp_env = (
-            {"smtp_host": "smtp.test", "smtp_from_email": "crm@railtech.test"} if smtp else {}
-        )
         config = Settings(
-            _env_file=None, app_env="test", secrets_key=SecretStr(SECRETS_KEY), **smtp_env
+            _env_file=None,
+            app_env="test",
+            secrets_key=SecretStr(SECRETS_KEY),
+            smtp_host="smtp.test" if smtp else "",
+            smtp_from_email="crm@railtech.test" if smtp else "",
         )
         cipher = SecretCipher(SECRETS_KEY)
         self.mail = MailService(

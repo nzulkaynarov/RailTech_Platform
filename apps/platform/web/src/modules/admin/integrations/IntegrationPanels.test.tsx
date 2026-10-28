@@ -262,9 +262,7 @@ describe("карточка «Внешние сервисы»", () => {
     const side = await openPanel("services");
     expect(await within(side).findByText("Telegram Bot API")).toBeVisible();
 
-    fireEvent.click(
-      within(side).getByRole("button", { name: "Проверить сервис: Почта (SMTP)" }),
-    );
+    fireEvent.click(within(side).getByRole("button", { name: "Проверить сервис: Почта (SMTP)" }));
     await waitFor(() => {
       expect(within(side).queryByText(/В очереди 3 письма/)).not.toBeInTheDocument();
     });

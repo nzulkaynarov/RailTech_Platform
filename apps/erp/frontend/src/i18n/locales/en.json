@@ -2935,6 +2935,14 @@
         "title": "Quote was not sent automatically — the request manager will send it",
         "detail": "Unavailable channels and reasons are on the quote card"
       },
+      "email_sent": {
+        "title": "Quote email sent to the client",
+        "detail": "Quote {{number}}"
+      },
+      "email_failed": {
+        "title": "Quote email was not sent",
+        "detail": "Quote {{number}}: {{reason}}"
+      },
       "director_returned": {
         "title": "Quote returned by the director for rework",
         "detail": "{{comment}}"
