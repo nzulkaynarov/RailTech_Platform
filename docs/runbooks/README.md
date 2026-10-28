@@ -23,4 +23,5 @@
 **Отчёты прогонов глазами** — [`m1_qa_02_report.md`](m1_qa_02_report.md), [`m2_qa_01_report.md`](m2_qa_01_report.md),
 [`m2_qa_02_report.md`](m2_qa_02_report.md), [`plt_p1_gate_report.md`](plt_p1_gate_report.md);
 [`c1_eds_gate_report.md`](c1_eds_gate_report.md) (гейт этапа C1, сервис EDS; скрипты и выводы — `qa/c1-eds/`);
-[`c2a_admin_gate_report.md`](c2a_admin_gate_report.md) (гейт этапа C2a, паритет Admin в Платформе, волна 13; скрипты — `qa/w13-a7-gate/`, снимки — `../screens/w13-a7-gate/`); снимки — `qa/`.
+[`c2a_admin_gate_report.md`](c2a_admin_gate_report.md) (гейт этапа C2a, паритет Admin в Платформе, волна 13; скрипты — `qa/w13-a7-gate/`, снимки — `../screens/w13-a7-gate/`);
+[`wave15_gate_report.md`](wave15_gate_report.md) (гейт волны 15 «Честный интерфейс», проход по ролям; скрипты — `qa/w15-h9-gate/`, снимки — `../screens/w15-h9/`); снимки — `qa/`.

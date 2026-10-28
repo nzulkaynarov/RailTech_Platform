@@ -73,7 +73,7 @@ infra/     Docker Compose (base/dev/prod) · Caddy · LiteLLM · Langfuse · Rus
 - Исключения домена — свои классы в `domain/errors.py`; API маппит их в HTTP через один handler.
 - Логи — `structlog`, только kwargs, без f-строк; `lead_id`, `request_id` в контексте. Никаких `print`.
 - Все мутации через REST и callback-кнопку — через `security/audit.py`.
-- Миграции: одна миграция на PR, обратимая (`downgrade` реализован), имена `YYYYMMDD_HHMM_slug`.
+- Миграции: одна миграция на PR, обратимая (`downgrade` реализован), имена файлов `YYYYMMDD_HHMM_slug`. `revision` — тот, что выдал `alembic revision` (случайный id), а не следующий `00NN_…` (параллельные PR брали один номер; владелец 2026-10-28); существующие ревизии не переименовываются — прод знает их по id. Две головы после слияния ловит CI (`crm-lint`, «Alembic — единственный head») → в своей ветке `alembic merge heads` или перевести свой `down_revision` на новую голову (ORCHESTRATOR §4.1).
 - Промпты — только в `backend/prompts/*.md`, подстановка через явный шаблон; пользовательский текст и фрагменты KB — в отдельных XML-блоках.
 
 **TypeScript**

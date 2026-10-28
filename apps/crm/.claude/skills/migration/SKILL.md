@@ -11,7 +11,7 @@ description: Создать Alembic-миграцию по изменению SQL
 
 1. Измени модели в `backend/app/models/` (наследники `app.models.base.Base`; имена ограничений — из `NAMING_CONVENTION`). Таблицы — с `created_at`, `updated_at` (`SPEC §5`).
 2. Если в PR уже есть миграция — дополни её, а не создавай вторую.
-3. Создание: `make migration m="add leads"` (autogenerate через контейнер api стенда). Без стенда — ревизия вручную: `cd backend && uv run alembic revision -m "add leads"`.
+3. Создание: `make migration m="add leads"` (autogenerate через контейнер api стенда). Без стенда — ревизия вручную: `cd backend && uv run alembic revision -m "add leads"`. `revision` оставь тем, что выдал Alembic (случайный id): без `--rev-id` и без порядкового `00NN_…` — параллельные PR брали один номер (`docs/ORCHESTRATOR.md` §4.1). Две головы после merge `origin/main` — `uv run alembic merge heads -m "merge"` или перевести свой `down_revision` на новую голову.
 4. Прочитай сгенерированный файл целиком: autogenerate не видит расширения, триггеры, `GENERATED`-колонки, HNSW/GIN-индексы, ENUM — допиши руками.
 5. `downgrade()` — полный откат в обратном порядке (тест падает на пустом `downgrade`).
 6. Таблицы Procrastinate/LangGraph не трогай: они исключены из autogenerate (`alembic/env.py`). Обновление Procrastinate — отдельная ревизия, применяющая SQL из `procrastinate/sql/migrations` (ADR-0006).
