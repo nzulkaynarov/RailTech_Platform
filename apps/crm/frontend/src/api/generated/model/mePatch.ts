@@ -21,4 +21,6 @@ export interface MePatch {
   phone?: string | null;
   timezone?: string | null;
   ui_mode?: MePatchUiMode;
+  whats_new_read?: string | null;
+  whats_new_shown?: string | null;
 }

@@ -2,6 +2,7 @@
 title: Проекты: договоры, счета и акты
 sections: dashboard.projects, eds.projects
 order: 30
+screens: [/dashboard/projects, /eds/projects]
 ---
 Заявка становится проектом, когда клиент принимает коммерческое предложение. Номер проекта наследует номер заявки: ЗВ-2026-104 → ПР-2026-104.
 

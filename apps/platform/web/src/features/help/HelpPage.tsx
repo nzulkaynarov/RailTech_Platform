@@ -11,18 +11,29 @@ import { WriteToAdminModal } from "../tickets/WriteToAdminModal";
 import { ArticleList } from "./ArticleList";
 import { ArticleView } from "./ArticleView";
 import { findArticle } from "./articles";
-import { Glossary, Hotkeys, News, PathGuide, StartGuide } from "./HelpSections";
+import { AboutPanel } from "../about/AboutPanel";
+import { Glossary, Hotkeys, News, PathGuide, Roadmap, StartGuide } from "./HelpSections";
 
 import "./help.css";
 
-const TABS = ["start", "path", "glossary", "articles", "keys", "news", "requests"] as const;
+const TABS = [
+  "start",
+  "path",
+  "glossary",
+  "articles",
+  "keys",
+  "news",
+  "roadmap",
+  "about",
+  "requests",
+] as const;
 type Tab = (typeof TABS)[number];
 
 const isTab = (value: string | undefined): value is Tab => TABS.some((tab) => tab === value);
 
 /**
  * Раздел `/help` (W15-H7, UX-оценка P1-2): «С чего начать» по ролям, путь заявки (7 шагов), словарь, статьи,
- * горячие клавиши, «Что нового» и «Мои обращения». Вкладка — часть адреса (`/help/glossary`, `/help/articles/<статья>`,
+ * горячие клавиши, «Что нового», «Что ожидается», «О системе» (W-REL) и «Мои обращения». Вкладка — часть адреса (`/help/glossary`, `/help/articles/<статья>`,
  * `/help/requests/ОБР-0012`), чтобы на неё можно было сослаться и вернуться кнопкой «Назад».
  */
 export function HelpPage() {
@@ -53,6 +64,8 @@ export function HelpPage() {
   else if (tab === "glossary") content = <Glossary />;
   else if (tab === "keys") content = <Hotkeys />;
   else if (tab === "news") content = <News />;
+  else if (tab === "roadmap") content = <Roadmap />;
+  else if (tab === "about") content = <AboutPanel />;
   else if (tab === "requests") content = <MyRequests {...(rest[1] ? { number: rest[1] } : {})} />;
   else if (rest[1]) {
     const article = findArticle(rest[1]);

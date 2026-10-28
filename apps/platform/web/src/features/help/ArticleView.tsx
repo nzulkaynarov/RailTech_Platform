@@ -1,11 +1,15 @@
 import { useTranslation } from "react-i18next";
 
+import { ArticleFeedback } from "./ArticleFeedback";
 import { type HelpArticle } from "./articles";
 import { Markdown } from "./Markdown";
 
 import "./help.css";
 
-/** Статья помощи: заголовок и текст. Статьи пока на русском — на другом языке интерфейса честно сказано об этом. */
+/**
+ * Статья помощи: заголовок, текст и под ним «Помогла? Да / Нет» и «Здесь устарело» (W-REL). Статьи пока на русском — на
+ * другом языке интерфейса честно сказано об этом.
+ */
 export function ArticleView({
   article,
   headingLevel = 2,
@@ -30,6 +34,7 @@ export function ArticleView({
         </p>
       )}
       <Markdown source={article.body} headingLevel={(headingLevel + 1) as 3 | 4} />
+      <ArticleFeedback article={article} />
     </article>
   );
 }
