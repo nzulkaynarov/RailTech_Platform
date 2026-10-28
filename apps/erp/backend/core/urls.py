@@ -105,6 +105,18 @@ from crm.views import (
     TimeToFirstQuoteView,
     WordingVariantViewSet,
 )
+from crm.views.calc import (
+    CalcCatalogView,
+    CalcDealRefsView,
+    CalcLinesView,
+    CalcLineView,
+    CalcLineVisaView,
+    CalcParseView,
+    CalcReadyView,
+    CalcSheetView,
+    CalcStartView,
+    CalcTaskListView,
+)
 from master_data.views import (
     CountryViewSet,
     CurrencyViewSet,
@@ -257,6 +269,17 @@ urlpatterns = (
         path("api/v1/sourcing/import-status/<str:task_id>/", ImportStatusView.as_view(), name="import-status"),
         # ARCH-01: polling endpoint for the off-thread AI jobs (202 + task_id pattern).
         path("api/v1/sourcing/ai-status/<str:task_id>/", AIJobStatusView.as_view(), name="ai-status"),
+        # D2-1 — «Расчёт по заявке» Платформы (crm.views.calc).
+        path("api/v1/calc/tasks/", CalcTaskListView.as_view(), name="calc-tasks"),
+        path("api/v1/calc/catalog/", CalcCatalogView.as_view(), name="calc-catalog"),
+        path("api/v1/calc/deals/", CalcDealRefsView.as_view(), name="calc-deals"),
+        path("api/v1/calc/<int:deal_id>/", CalcSheetView.as_view(), name="calc-sheet"),
+        path("api/v1/calc/<int:deal_id>/start/", CalcStartView.as_view(), name="calc-start"),
+        path("api/v1/calc/<int:deal_id>/lines/", CalcLinesView.as_view(), name="calc-lines"),
+        path("api/v1/calc/<int:deal_id>/lines/<int:item_id>/", CalcLineView.as_view(), name="calc-line"),
+        path("api/v1/calc/<int:deal_id>/lines/<int:item_id>/visa/", CalcLineVisaView.as_view(), name="calc-line-visa"),
+        path("api/v1/calc/<int:deal_id>/ready/", CalcReadyView.as_view(), name="calc-ready"),
+        path("api/v1/calc/<int:deal_id>/parse/", CalcParseView.as_view(), name="calc-parse"),
         # Витрина интегрированного тарифа ГТК: платежи по коду ТН ВЭД и стране происхождения.
         path("api/v1/master-data/hs-codes/<str:code>/duties/", hs_code_duties, name="hs-code-duties"),
         path("api/v1/crm/analytics/dashboard/", DashboardAnalyticsView.as_view(), name="dashboard-analytics"),

@@ -17,7 +17,7 @@ import { useGetMenuCounters } from "../../shared/api/generated/platform-bff";
 import type { MenuCounter } from "../../shared/api/generated/model";
 import { usePollQuery } from "../../shared/api/polling";
 import { useEventStream } from "../../shared/api/useEventStream";
-import { ContextPanel, ContextPanelDrawer } from "../../shared/ui/ContextPanel";
+import { ContextPanel, ContextPanelDrawer, ContextPanelSheet } from "../../shared/ui/ContextPanel";
 import { PlusIcon } from "../../shared/ui/icons";
 import { LinkButton } from "../../shared/ui/LinkButton";
 import { ModuleMenu, ModuleMenuContent, type MenuItem } from "../../shared/ui/ModuleMenu";
@@ -48,7 +48,8 @@ function isMac(): boolean {
 /**
  * Каркас Платформы (docs/architecture/platform-frontend.md §4): рейл 64 · подменю 208 · шапка 56 · основное окно · боковое окно 360.
  * Модули и разделы — из `Me.modules` и `Me.resources`; панели запоминаются по пользователю и разделу.
- * < 1200 px боковое окно — Drawer, < 768 px рейл — нижняя панель, подменю — Drawer.
+ * < 1200 px боковое окно — Drawer, < 768 px рейл — нижняя панель, подменю — Drawer; раздел с `sheetOnMobile` на телефоне
+ * показывает боковое окно листом на весь экран (B-020).
  */
 export function AppShell() {
   const { me } = useAuth();
@@ -363,7 +364,17 @@ export function AppShell() {
           ) : null}
         </Layout>
       </Layout>
-      {viewport.wide || !hasPanel ? null : (
+      {viewport.mobile && hasPanel && match.section.sheetOnMobile ? (
+        <ContextPanelSheet
+          open={panels.panelOpen}
+          onClose={() => {
+            panels.setPanelOpen(false);
+          }}
+          title={t(`modules:tabs.${panels.tab}`)}
+          closeLabel={t("panel.close")}
+          {...panelProps}
+        />
+      ) : viewport.wide || !hasPanel ? null : (
         <ContextPanelDrawer
           open={panels.panelOpen}
           onClose={() => {

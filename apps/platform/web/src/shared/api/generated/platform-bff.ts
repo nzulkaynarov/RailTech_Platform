@@ -47,6 +47,15 @@ import type {
   BusJournal,
   BusRetryDeadIn,
   BusRetryResult,
+  CalcCatalogPage,
+  CalcConflictResponse,
+  CalcLinePatch,
+  CalcLinesIn,
+  CalcParseIn,
+  CalcParseJob,
+  CalcParseResult,
+  CalcRequestList,
+  CalcSheet,
   CatalogCategory,
   CatalogCategoryIn,
   CatalogCategoryList,
@@ -143,6 +152,7 @@ import type {
   ListAuditParams,
   ListBusDeliveriesParams,
   ListBusInboxParams,
+  ListCalcRequestsParams,
   ListCategoryRequestsParams,
   ListEdsDealOptionsParams,
   ListEdsDocumentsParams,
@@ -210,6 +220,7 @@ import type {
   SandboxMessageIn,
   SandboxTurn,
   SaveBotSettingBody,
+  SearchCalcCatalogParams,
   SearchParams,
   SearchResult,
   SentMessage,
@@ -23909,3 +23920,1396 @@ export function useListCrmReplyTemplates<
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+export const getListCalcRequestsUrl = (params?: ListCalcRequestsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/erp/calc/requests?${stringifiedParams}`
+    : `/api/v1/erp/calc/requests`;
+};
+
+/**
+ * ERP `GET /calc/tasks/`: заявки с заданием расчёта по резолюции директора на стадиях расчёта, по сроку расчёта. Строка — номер ЗВ, клиент, шаг пути, срок, состояние расчёта, три индикатора виз (склад — товары со склада, снабжение — товары под заказ, гл. инженер — услуги; `none` — таких строк нет), ответственный (менеджер заявки) и исполнители резолюции. `mine=true` — только где сотрудник исполнитель резолюции («Мои расчёты»). Раздел `erp.calc` — чтение. Номер ЗВ/ПР выдаёт ERP (`Deal.number`, ERP-09); из номера `id` не разбирается.
+ * @summary Расчёт · Заявки в расчёте (и «Мои расчёты»)
+ */
+export const listCalcRequests = async (
+  params?: ListCalcRequestsParams,
+  options?: Parameters<typeof http>[1],
+): Promise<CalcRequestList> => {
+  return http<CalcRequestList>(getListCalcRequestsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListCalcRequestsQueryKey = (params?: ListCalcRequestsParams) => {
+  return [`/api/v1/erp/calc/requests`, ...(params ? [params] : [])] as const;
+};
+
+export const getListCalcRequestsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listCalcRequests>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListCalcRequestsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listCalcRequests>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListCalcRequestsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listCalcRequests>>> = ({ signal }) =>
+    listCalcRequests(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listCalcRequests>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListCalcRequestsQueryResult = NonNullable<Awaited<ReturnType<typeof listCalcRequests>>>;
+export type ListCalcRequestsQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse
+>;
+
+export function useListCalcRequests<
+  TData = Awaited<ReturnType<typeof listCalcRequests>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params: undefined | ListCalcRequestsParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listCalcRequests>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listCalcRequests>>,
+          TError,
+          Awaited<ReturnType<typeof listCalcRequests>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListCalcRequests<
+  TData = Awaited<ReturnType<typeof listCalcRequests>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListCalcRequestsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listCalcRequests>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listCalcRequests>>,
+          TError,
+          Awaited<ReturnType<typeof listCalcRequests>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListCalcRequests<
+  TData = Awaited<ReturnType<typeof listCalcRequests>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListCalcRequestsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listCalcRequests>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Расчёт · Заявки в расчёте (и «Мои расчёты»)
+ */
+
+export function useListCalcRequests<
+  TData = Awaited<ReturnType<typeof listCalcRequests>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListCalcRequestsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listCalcRequests>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListCalcRequestsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getSearchCalcCatalogUrl = (params: SearchCalcCatalogParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/erp/calc/catalog?${stringifiedParams}`
+    : `/api/v1/erp/calc/catalog`;
+};
+
+/**
+ * ERP `GET /calc/catalog/?q=`: карточки, в названии, артикуле, коде производителя или ГОСТ которых есть каждое слово запроса (до 20, без ИИ). Человек выбирает карточку сам (`PATCH …/lines/{line_id}` с `product_id`). Раздел `erp.calc` — чтение.
+ * @summary Расчёт · Каталог для сопоставления строки
+ */
+export const searchCalcCatalog = async (
+  params: SearchCalcCatalogParams,
+  options?: Parameters<typeof http>[1],
+): Promise<CalcCatalogPage> => {
+  return http<CalcCatalogPage>(getSearchCalcCatalogUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getSearchCalcCatalogQueryKey = (params?: SearchCalcCatalogParams) => {
+  return [`/api/v1/erp/calc/catalog`, ...(params ? [params] : [])] as const;
+};
+
+export const getSearchCalcCatalogQueryOptions = <
+  TData = Awaited<ReturnType<typeof searchCalcCatalog>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params: SearchCalcCatalogParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof searchCalcCatalog>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getSearchCalcCatalogQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof searchCalcCatalog>>> = ({ signal }) =>
+    searchCalcCatalog(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof searchCalcCatalog>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type SearchCalcCatalogQueryResult = NonNullable<
+  Awaited<ReturnType<typeof searchCalcCatalog>>
+>;
+export type SearchCalcCatalogQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse | BackendUnavailableResponse
+>;
+
+export function useSearchCalcCatalog<
+  TData = Awaited<ReturnType<typeof searchCalcCatalog>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params: SearchCalcCatalogParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof searchCalcCatalog>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof searchCalcCatalog>>,
+          TError,
+          Awaited<ReturnType<typeof searchCalcCatalog>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useSearchCalcCatalog<
+  TData = Awaited<ReturnType<typeof searchCalcCatalog>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params: SearchCalcCatalogParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof searchCalcCatalog>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof searchCalcCatalog>>,
+          TError,
+          Awaited<ReturnType<typeof searchCalcCatalog>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useSearchCalcCatalog<
+  TData = Awaited<ReturnType<typeof searchCalcCatalog>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params: SearchCalcCatalogParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof searchCalcCatalog>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Расчёт · Каталог для сопоставления строки
+ */
+
+export function useSearchCalcCatalog<
+  TData = Awaited<ReturnType<typeof searchCalcCatalog>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params: SearchCalcCatalogParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof searchCalcCatalog>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getSearchCalcCatalogQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getGetCalcParseUrl = (jobId: string) => {
+  return `/api/v1/erp/calc-jobs/${jobId}`;
+};
+
+/**
+ * ERP `GET /sourcing/ai-status/{task_id}/`. `pending` — разбор идёт (опрашивать раз в 2 с); `done` — предложение строк (ничего не записано: человек отмечает строки и добавляет их `POST …/lines`); `failed` — `reason` (`ai_extract_failed`, `ai_disabled`, `ai_budget_exceeded`, …). Чужое задание — 404. Раздел `erp.calc` — полный.
+ * @summary Расчёт · Итог ИИ-разбора текста заявки (предложение строк)
+ */
+export const getCalcParse = async (
+  jobId: string,
+  options?: Parameters<typeof http>[1],
+): Promise<CalcParseResult> => {
+  return http<CalcParseResult>(getGetCalcParseUrl(jobId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCalcParseQueryKey = (jobId: string) => {
+  return [`/api/v1/erp/calc-jobs/${jobId}`] as const;
+};
+
+export const getGetCalcParseQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCalcParse>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  jobId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCalcParse>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetCalcParseQueryKey(jobId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getCalcParse>>> = ({ signal }) =>
+    getCalcParse(jobId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: jobId !== null && jobId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getCalcParse>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetCalcParseQueryResult = NonNullable<Awaited<ReturnType<typeof getCalcParse>>>;
+export type GetCalcParseQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useGetCalcParse<
+  TData = Awaited<ReturnType<typeof getCalcParse>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  jobId: string,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCalcParse>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCalcParse>>,
+          TError,
+          Awaited<ReturnType<typeof getCalcParse>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetCalcParse<
+  TData = Awaited<ReturnType<typeof getCalcParse>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  jobId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCalcParse>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCalcParse>>,
+          TError,
+          Awaited<ReturnType<typeof getCalcParse>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetCalcParse<
+  TData = Awaited<ReturnType<typeof getCalcParse>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  jobId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCalcParse>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Расчёт · Итог ИИ-разбора текста заявки (предложение строк)
+ */
+
+export function useGetCalcParse<
+  TData = Awaited<ReturnType<typeof getCalcParse>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  jobId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCalcParse>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetCalcParseQueryOptions(jobId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getGetCalcSheetUrl = (number: string) => {
+  return `/api/v1/erp/calc/${number}`;
+};
+
+/**
+ * ERP `GET /calc/{deal_id}/` (заявку по номеру BFF находит среди заявок с заданием расчёта). Заявка, задание (резолюция директора — проекция события EDS в ERP: текст, дата, кто; исполнители по зонам), КП расчёта, строки (позиция и тип, кол-во, склад, поставщик и срок, закупка и цена клиенту без НДС, наценка, виза), итоги без НДС, визы по трём индикаторам, готовность «Расчёт готов» с причиной и права сотрудника по зонам. Поля с ограничением BFF вырезает (и ERP режет сам): закупку и себестоимость строки (в том числе ставку и дни бригады услуги) видит группа `cost_margin` или держатель зоны этой строки (`erp.calc.goods` — товары, `erp.calc.services` — услуги); наценку, итоги себестоимости и наценки и порог маржи резолюции — только `cost_margin`; цены предложений поставщиков — `supplier_prices` или держатель зоны товаров. Бухгалтер (`totals_only`) — цены клиенту, итоги и НДС. Номера нет среди заявок с заданием — 404. Раздел `erp.calc` — чтение.
+ * @summary Расчёт · Расчёт по заявке ЗВ-…
+ */
+export const getCalcSheet = async (
+  number: string,
+  options?: Parameters<typeof http>[1],
+): Promise<CalcSheet> => {
+  return http<CalcSheet>(getGetCalcSheetUrl(number), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCalcSheetQueryKey = (number: string) => {
+  return [`/api/v1/erp/calc/${number}`] as const;
+};
+
+export const getGetCalcSheetQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCalcSheet>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  number: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCalcSheet>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetCalcSheetQueryKey(number);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getCalcSheet>>> = ({ signal }) =>
+    getCalcSheet(number, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: number !== null && number !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getCalcSheet>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetCalcSheetQueryResult = NonNullable<Awaited<ReturnType<typeof getCalcSheet>>>;
+export type GetCalcSheetQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useGetCalcSheet<
+  TData = Awaited<ReturnType<typeof getCalcSheet>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  number: string,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCalcSheet>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCalcSheet>>,
+          TError,
+          Awaited<ReturnType<typeof getCalcSheet>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetCalcSheet<
+  TData = Awaited<ReturnType<typeof getCalcSheet>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  number: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCalcSheet>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCalcSheet>>,
+          TError,
+          Awaited<ReturnType<typeof getCalcSheet>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetCalcSheet<
+  TData = Awaited<ReturnType<typeof getCalcSheet>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  number: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCalcSheet>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Расчёт · Расчёт по заявке ЗВ-…
+ */
+
+export function useGetCalcSheet<
+  TData = Awaited<ReturnType<typeof getCalcSheet>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  number: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCalcSheet>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetCalcSheetQueryOptions(number, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getStartCalcUrl = (number: string) => {
+  return `/api/v1/erp/calc/${number}/start`;
+};
+
+/**
+ * ERP `POST /calc/{deal_id}/start/`: черновик КП расчёта — строки заявки (точные совпадения ГОСТ/артикула с каталогом, закупка из своего предложения), без ИИ; у заявки без строк — пустой черновик. Уже начат — без изменений. Раздел `erp.calc` — полный.
+ * @summary Расчёт · Начать расчёт: черновик КП из строк заявки
+ */
+export const startCalc = async (
+  number: string,
+  options?: Parameters<typeof http>[1],
+): Promise<CalcSheet> => {
+  return http<CalcSheet>(getStartCalcUrl(number), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getStartCalcMutationKey = () => ["startCalc"] as const;
+
+export const getStartCalcMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | CalcConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof startCalc>>,
+    TError,
+    StartCalcMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof startCalc>>,
+  TError,
+  StartCalcMutationVariables,
+  TContext
+> => {
+  const mutationKey = getStartCalcMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof startCalc>>,
+    StartCalcMutationVariables
+  > = (props) => {
+    const { number } = props ?? {};
+
+    return startCalc(number, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type StartCalcMutationResult = NonNullable<Awaited<ReturnType<typeof startCalc>>>;
+
+export type StartCalcMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | CalcConflictResponse
+  | BackendUnavailableResponse
+>;
+export type StartCalcMutationVariables = { number: string };
+
+/**
+ * @summary Расчёт · Начать расчёт: черновик КП из строк заявки
+ */
+export const useStartCalc = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | CalcConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof startCalc>>,
+      TError,
+      StartCalcMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof startCalc>>,
+  TError,
+  StartCalcMutationVariables,
+  TContext
+> => {
+  return useMutation(getStartCalcMutationOptions(options), queryClient);
+};
+
+export const getAddCalcLinesUrl = (number: string) => {
+  return `/api/v1/erp/calc/${number}/lines`;
+};
+
+/**
+ * ERP `POST /calc/{deal_id}/lines/`. Строка-услуга (`kind = service` или карточка каталога «услуга») — раздел `erp.calc.services`, товар — `erp.calc.goods` (полный); иначе 403 до ERP. Решает ERP (`quote.visa_goods`, `quote.visa_services`). До 50 строк за раз. Ответ — обновлённый расчёт.
+ * @summary Расчёт · Добавить строки (вручную или подтверждённое предложение ИИ-разбора)
+ */
+export const addCalcLines = async (
+  number: string,
+  calcLinesIn: CalcLinesIn,
+  options?: Parameters<typeof http>[1],
+): Promise<CalcSheet> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<CalcSheet>(getAddCalcLinesUrl(number), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(calcLinesIn),
+  });
+};
+
+export const getAddCalcLinesMutationKey = () => ["addCalcLines"] as const;
+
+export const getAddCalcLinesMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | CalcConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof addCalcLines>>,
+    TError,
+    AddCalcLinesMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof addCalcLines>>,
+  TError,
+  AddCalcLinesMutationVariables,
+  TContext
+> => {
+  const mutationKey = getAddCalcLinesMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof addCalcLines>>,
+    AddCalcLinesMutationVariables
+  > = (props) => {
+    const { number, data } = props ?? {};
+
+    return addCalcLines(number, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AddCalcLinesMutationResult = NonNullable<Awaited<ReturnType<typeof addCalcLines>>>;
+export type AddCalcLinesMutationBody = CalcLinesIn;
+export type AddCalcLinesMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | CalcConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type AddCalcLinesMutationVariables = { number: string; data: CalcLinesIn };
+
+/**
+ * @summary Расчёт · Добавить строки (вручную или подтверждённое предложение ИИ-разбора)
+ */
+export const useAddCalcLines = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | CalcConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof addCalcLines>>,
+      TError,
+      AddCalcLinesMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof addCalcLines>>,
+  TError,
+  AddCalcLinesMutationVariables,
+  TContext
+> => {
+  return useMutation(getAddCalcLinesMutationOptions(options), queryClient);
+};
+
+export const getUpdateCalcLineUrl = (number: string, lineId: string) => {
+  return `/api/v1/erp/calc/${number}/lines/${lineId}`;
+};
+
+/**
+ * ERP `PATCH /calc/{deal_id}/lines/{item_id}/`. Правит держатель права зоны строки: товар — снабженец (закупка, валюта, срок, цена клиенту, карточка каталога), услуга — гл. инженер (ставка бригады и дни; закупка услуги = ставка × дни). Цена клиенту без НДС пересчитывает наценку строки; ниже закупки — 422 `details.reason = client_price_below_cost`. Закупку (`purchase_price`, `purchase_currency`) без группы `cost_margin` BFF не принимает: 422 `details.reason = cost_forbidden`, в ERP запрос не уходит. Любая правка снимает визу строки. Нужен раздел `erp.calc.goods` или `erp.calc.services` (полный); зону решает ERP (403 `details.reason = zone_not_permitted`).
+ * @summary Расчёт · Изменить строку (виза строки снимается)
+ */
+export const updateCalcLine = async (
+  number: string,
+  lineId: string,
+  calcLinePatch: CalcLinePatch,
+  options?: Parameters<typeof http>[1],
+): Promise<CalcSheet> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<CalcSheet>(getUpdateCalcLineUrl(number, lineId), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(calcLinePatch),
+  });
+};
+
+export const getUpdateCalcLineMutationKey = () => ["updateCalcLine"] as const;
+
+export const getUpdateCalcLineMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | CalcConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateCalcLine>>,
+    TError,
+    UpdateCalcLineMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateCalcLine>>,
+  TError,
+  UpdateCalcLineMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateCalcLineMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateCalcLine>>,
+    UpdateCalcLineMutationVariables
+  > = (props) => {
+    const { number, lineId, data } = props ?? {};
+
+    return updateCalcLine(number, lineId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateCalcLineMutationResult = NonNullable<Awaited<ReturnType<typeof updateCalcLine>>>;
+export type UpdateCalcLineMutationBody = CalcLinePatch;
+export type UpdateCalcLineMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | CalcConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type UpdateCalcLineMutationVariables = {
+  number: string;
+  lineId: string;
+  data: CalcLinePatch;
+};
+
+/**
+ * @summary Расчёт · Изменить строку (виза строки снимается)
+ */
+export const useUpdateCalcLine = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | CalcConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateCalcLine>>,
+      TError,
+      UpdateCalcLineMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateCalcLine>>,
+  TError,
+  UpdateCalcLineMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateCalcLineMutationOptions(options), queryClient);
+};
+
+export const getDeleteCalcLineUrl = (number: string, lineId: string) => {
+  return `/api/v1/erp/calc/${number}/lines/${lineId}`;
+};
+
+/**
+ * ERP `DELETE /calc/{deal_id}/lines/{item_id}/`; держатель права зоны строки (разделы — как у правки).
+ * @summary Расчёт · Удалить строку
+ */
+export const deleteCalcLine = async (
+  number: string,
+  lineId: string,
+  options?: Parameters<typeof http>[1],
+): Promise<CalcSheet> => {
+  return http<CalcSheet>(getDeleteCalcLineUrl(number, lineId), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteCalcLineMutationKey = () => ["deleteCalcLine"] as const;
+
+export const getDeleteCalcLineMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | CalcConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteCalcLine>>,
+    TError,
+    DeleteCalcLineMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteCalcLine>>,
+  TError,
+  DeleteCalcLineMutationVariables,
+  TContext
+> => {
+  const mutationKey = getDeleteCalcLineMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteCalcLine>>,
+    DeleteCalcLineMutationVariables
+  > = (props) => {
+    const { number, lineId } = props ?? {};
+
+    return deleteCalcLine(number, lineId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteCalcLineMutationResult = NonNullable<Awaited<ReturnType<typeof deleteCalcLine>>>;
+
+export type DeleteCalcLineMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | CalcConflictResponse
+  | BackendUnavailableResponse
+>;
+export type DeleteCalcLineMutationVariables = { number: string; lineId: string };
+
+/**
+ * @summary Расчёт · Удалить строку
+ */
+export const useDeleteCalcLine = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | CalcConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteCalcLine>>,
+      TError,
+      DeleteCalcLineMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof deleteCalcLine>>,
+  TError,
+  DeleteCalcLineMutationVariables,
+  TContext
+> => {
+  return useMutation(getDeleteCalcLineMutationOptions(options), queryClient);
+};
+
+export const getSignCalcLineUrl = (number: string, lineId: string) => {
+  return `/api/v1/erp/calc/${number}/lines/${lineId}/visa`;
+};
+
+/**
+ * ERP `POST /calc/{deal_id}/lines/{item_id}/visa/`. Товар визирует держатель `erp.calc.goods`, услугу — `erp.calc.services` (решает ERP: 403 `details.reason = zone_not_permitted`). Кто визирует — факт визы (имя в `visa.by`): список «сотрудников зоны» в CRM ещё не появился (B-007), поэтому визирует любой держатель права зоны. Строка без закупки или цены клиенту — 409 `details.reason = line_incomplete`. Повтор — без изменений.
+ * @summary Расчёт · «Подтвердить» строку (виза по зоне)
+ */
+export const signCalcLine = async (
+  number: string,
+  lineId: string,
+  options?: Parameters<typeof http>[1],
+): Promise<CalcSheet> => {
+  return http<CalcSheet>(getSignCalcLineUrl(number, lineId), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getSignCalcLineMutationKey = () => ["signCalcLine"] as const;
+
+export const getSignCalcLineMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | CalcConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof signCalcLine>>,
+    TError,
+    SignCalcLineMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof signCalcLine>>,
+  TError,
+  SignCalcLineMutationVariables,
+  TContext
+> => {
+  const mutationKey = getSignCalcLineMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof signCalcLine>>,
+    SignCalcLineMutationVariables
+  > = (props) => {
+    const { number, lineId } = props ?? {};
+
+    return signCalcLine(number, lineId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SignCalcLineMutationResult = NonNullable<Awaited<ReturnType<typeof signCalcLine>>>;
+
+export type SignCalcLineMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | CalcConflictResponse
+  | BackendUnavailableResponse
+>;
+export type SignCalcLineMutationVariables = { number: string; lineId: string };
+
+/**
+ * @summary Расчёт · «Подтвердить» строку (виза по зоне)
+ */
+export const useSignCalcLine = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | CalcConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof signCalcLine>>,
+      TError,
+      SignCalcLineMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof signCalcLine>>,
+  TError,
+  SignCalcLineMutationVariables,
+  TContext
+> => {
+  return useMutation(getSignCalcLineMutationOptions(options), queryClient);
+};
+
+export const getMarkCalcReadyUrl = (number: string) => {
+  return `/api/v1/erp/calc/${number}/ready`;
+};
+
+/**
+ * ERP `POST /calc/{deal_id}/ready/`. Только когда завизированы все строки — иначе 409 `details.reason = visas_missing` (`details.missing` — сколько строк без визы); проверка на сервере, не только кнопкой. Дальше — как отправка КП на одобрение: клиент заявки, ненулевая сумма, курсы строк, не в убыток (409 с причиной ERP). КП получает номер и уходит директору в EDS событием `quote.ready_for_approval` (визы — подписи строк по зонам): у директора — «КП на одобрение» в Документах · Черновик КП и в «Моей очереди». Раздел `erp.calc` — полный.
+ * @summary Расчёт · «Расчёт готов → черновик КП директору»
+ */
+export const markCalcReady = async (
+  number: string,
+  options?: Parameters<typeof http>[1],
+): Promise<CalcSheet> => {
+  return http<CalcSheet>(getMarkCalcReadyUrl(number), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getMarkCalcReadyMutationKey = () => ["markCalcReady"] as const;
+
+export const getMarkCalcReadyMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | CalcConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof markCalcReady>>,
+    TError,
+    MarkCalcReadyMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof markCalcReady>>,
+  TError,
+  MarkCalcReadyMutationVariables,
+  TContext
+> => {
+  const mutationKey = getMarkCalcReadyMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof markCalcReady>>,
+    MarkCalcReadyMutationVariables
+  > = (props) => {
+    const { number } = props ?? {};
+
+    return markCalcReady(number, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type MarkCalcReadyMutationResult = NonNullable<Awaited<ReturnType<typeof markCalcReady>>>;
+
+export type MarkCalcReadyMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | CalcConflictResponse
+  | BackendUnavailableResponse
+>;
+export type MarkCalcReadyMutationVariables = { number: string };
+
+/**
+ * @summary Расчёт · «Расчёт готов → черновик КП директору»
+ */
+export const useMarkCalcReady = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | CalcConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof markCalcReady>>,
+      TError,
+      MarkCalcReadyMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof markCalcReady>>,
+  TError,
+  MarkCalcReadyMutationVariables,
+  TContext
+> => {
+  return useMutation(getMarkCalcReadyMutationOptions(options), queryClient);
+};
+
+export const getParseCalcTextUrl = (number: string) => {
+  return `/api/v1/erp/calc/${number}/parse`;
+};
+
+/**
+ * ERP `POST /calc/{deal_id}/parse/`: задание в очереди ИИ (модель — через шлюз по алиасу), ответ — `job_id`; итог — `GET /erp/calc-jobs/{job_id}`. Ничего не записывается: строки добавляет человек. Без `text` разбирается текст заявки. ИИ выключен — 409 `details.reason = ai_disabled`; текста нет — 409 `request_text_empty`; дневной лимит ИИ — 429. Раздел `erp.calc` — полный.
+ * @summary Расчёт · ИИ-разбор текста заявки в строки (предложение)
+ */
+export const parseCalcText = async (
+  number: string,
+  calcParseIn?: CalcParseIn,
+  options?: Parameters<typeof http>[1],
+): Promise<CalcParseJob> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<CalcParseJob>(getParseCalcTextUrl(number), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(calcParseIn),
+  });
+};
+
+export const getParseCalcTextMutationKey = () => ["parseCalcText"] as const;
+
+export const getParseCalcTextMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | CalcConflictResponse
+    | ValidationFailedResponse
+    | TooManyRequestsResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof parseCalcText>>,
+    TError,
+    ParseCalcTextMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof parseCalcText>>,
+  TError,
+  ParseCalcTextMutationVariables,
+  TContext
+> => {
+  const mutationKey = getParseCalcTextMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof parseCalcText>>,
+    ParseCalcTextMutationVariables
+  > = (props) => {
+    const { number, data } = props ?? {};
+
+    return parseCalcText(number, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ParseCalcTextMutationResult = NonNullable<Awaited<ReturnType<typeof parseCalcText>>>;
+export type ParseCalcTextMutationBody = CalcParseIn | undefined;
+export type ParseCalcTextMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | CalcConflictResponse
+  | ValidationFailedResponse
+  | TooManyRequestsResponse
+  | BackendUnavailableResponse
+>;
+export type ParseCalcTextMutationVariables = { number: string; data?: CalcParseIn };
+
+/**
+ * @summary Расчёт · ИИ-разбор текста заявки в строки (предложение)
+ */
+export const useParseCalcText = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | CalcConflictResponse
+    | ValidationFailedResponse
+    | TooManyRequestsResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof parseCalcText>>,
+      TError,
+      ParseCalcTextMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof parseCalcText>>,
+  TError,
+  ParseCalcTextMutationVariables,
+  TContext
+> => {
+  return useMutation(getParseCalcTextMutationOptions(options), queryClient);
+};

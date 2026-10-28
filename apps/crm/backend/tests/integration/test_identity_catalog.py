@@ -210,3 +210,42 @@ async def test_state_written_before_d1_8_triggers_a_republish_with_sections(
         permissions = [r[0]["data"]["user"]["permissions"] for r in rows]
     assert len(permissions) == 3
     assert all("sections" in p and "eds" in p for p in permissions)
+
+
+# --- права ERP (D2-1, B-073): провижининг заново по отпечатку ERP-части каталога ----------------
+
+
+async def test_changed_erp_fingerprint_provisions_active_erp_staff_once(
+    sessions: async_sessionmaker[AsyncSession], bus: Any
+) -> None:
+    from app.services.identity_catalog import ERP_KEY, ensure_erp_rights_provisioned
+
+    ids = await _staff(sessions, inactive=1)  # ids[0] неактивен
+    async with sessions() as session, session.begin():
+        await session.execute(
+            text("UPDATE users SET platform_access = CAST(:access AS jsonb) WHERE id = ANY(:ids)"),
+            {"access": '["crm", "erp"]', "ids": [ids[0], ids[1]]},
+        )
+    calls: list[tuple[str, int]] = []
+
+    async def enqueue(action: str, user_id: int) -> None:
+        calls.append((action, user_id))
+
+    first = await ensure_erp_rights_provisioned(sessions, enqueue, fingerprint="erp-a")
+    again = await ensure_erp_rights_provisioned(sessions, enqueue, fingerprint="erp-a")
+    changed = await ensure_erp_rights_provisioned(sessions, enqueue, fingerprint="erp-b")
+
+    # Только активный сотрудник с доступом к ERP; без ERP и неактивный — нет.
+    assert (first.republished, first.users) == (True, 1)
+    assert (again.republished, again.users) == (False, 0)
+    assert (changed.republished, changed.users) == (True, 1)
+    assert calls == [("provision", ids[1]), ("provision", ids[1])]
+    assert (ERP_KEY, "erp-b", 1) in await _stored(sessions)
+    assert await _outbox_subjects(sessions) == [], "права ERP — провижинингом, не событиями"
+
+
+def test_erp_fingerprint_follows_erp_part_of_catalog() -> None:
+    from app.domain.platform_roles import erp_catalog_fingerprint
+
+    assert erp_catalog_fingerprint() == erp_catalog_fingerprint()
+    assert erp_catalog_fingerprint() != eds_catalog_fingerprint()

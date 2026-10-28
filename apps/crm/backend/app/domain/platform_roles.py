@@ -62,6 +62,7 @@ __all__ = [
     "eds_permissions_for",
     "eds_permissions_of",
     "erp_access_for",
+    "erp_catalog_fingerprint",
     "erp_permissions_for",
     "legacy_code",
     "merge_access",
@@ -292,6 +293,20 @@ def eds_catalog_fingerprint(
             }
             for code in sorted(role_access)
         },
+    }
+    return hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
+
+
+def erp_catalog_fingerprint() -> str:
+    """Отпечаток части каталога, от которой зависят права ERP сотрудника (провижининг, D2-1).
+
+    Тот же расчёт, что у EDS (`eds_catalog_fingerprint`) по `ERP_BACKEND`, плюс права ERP полей с
+    ограничением (`FIELD_ERP_BACKEND`). Смена отпечатка = «провижинить заново всех с доступом к ERP»
+    (`services/identity_catalog.py`)."""
+    payload = {
+        "v": 1,
+        "backend": eds_catalog_fingerprint(ERP_BACKEND),
+        "fields": {name: sorted(codes) for name, codes in sorted(FIELD_ERP_BACKEND.items())},
     }
     return hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
 

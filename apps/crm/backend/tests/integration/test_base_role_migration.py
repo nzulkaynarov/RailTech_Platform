@@ -17,7 +17,7 @@ from app.domain.platform_roles import default_roles
 from tests.integration.test_migrations import _seed_user
 
 pytestmark = pytest.mark.integration
-REVISION = "0047_base_role_by_matrix"
+REVISION = "0048_base_role_by_matrix"
 
 
 def _ensure_roles(conn: psycopg.Connection) -> None:

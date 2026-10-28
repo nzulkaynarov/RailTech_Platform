@@ -92,7 +92,8 @@ export const BRIDGE: Readonly<Record<string, BridgeEntry>> = {
     objectKind: "request",
   },
   "crm.channels": {
-    internal: { to: "/admin/integrations", resource: "admin", section: "integrations" },
+    // Бот подключается в «Настройки · Telegram-бот» (W15-H4), а не в «Подключениях»
+    internal: { to: "/admin/bot", resource: "admin", section: "bot" },
     when: "pilot",
   },
 
@@ -115,16 +116,6 @@ export const BRIDGE: Readonly<Record<string, BridgeEntry>> = {
   },
   "eds.new": { who: "newDocument", when: "soon" },
 
-  "erp.requests": {
-    legacy: erp("#crm-deals", "erpDeals", numericPath("#request-detail/")),
-    when: "pilot",
-    objectKind: "request",
-  },
-  "erp.calc": {
-    legacy: erp("#crm-deals", "erpCalc", numericPath("#deal-quote/")),
-    when: "pilot",
-    objectKind: "request",
-  },
   "erp.stock": { legacy: erp("#my-products", "erpStock"), when: "pilot" },
   "erp.catalog": { legacy: erp("#catalog-reference", "erpCatalog"), when: "pilot" },
   "erp.docs": { legacy: erp("#company-files", "erpFiles"), when: "pilot" },
@@ -141,6 +132,8 @@ export const NATIVE_SECTIONS: readonly string[] = [
   "crm.messages",
   "crm.kb",
   "eds.inbox",
+  "erp.requests",
+  "erp.calc",
   "eds.drafts",
   "eds.approvals",
   "admin.roles",

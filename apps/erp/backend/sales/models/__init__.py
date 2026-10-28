@@ -3,6 +3,7 @@
 from .acceptance import QuoteAcceptanceCode
 from .ai_match import AIMatchOutcome
 from .approvals import QuoteApprovalStep, StepParticipation, StepStatus, StepTrigger
+from .calc_lines import CalcLine, CalcLineKind
 from .calc_tasks import CalcTask, CalcTaskAssignee, CalcZone
 from .charges import ChargeTemplate, QuoteCharge
 from .contracts import Contract
@@ -15,6 +16,8 @@ from .quotes import Quote, QuoteItem, QuoteItemHistory, QuoteItemQuerySet
 __all__ = [
     "AIMatchOutcome",
     "ActivityLog",
+    "CalcLine",
+    "CalcLineKind",
     "CalcTask",
     "CalcTaskAssignee",
     "CalcZone",
