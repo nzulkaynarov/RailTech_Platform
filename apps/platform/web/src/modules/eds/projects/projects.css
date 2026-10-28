@@ -1,0 +1,87 @@
+/* EDS · Проекты (D2-5): фильтры списка, исполнение, пометки. Значения — макет v3: рамка #f0f0f0, радиус 8, без теней;
+   второстепенный текст #595959 (контраст ≥ 4.5:1 на белом). Остальное переиспользует decision.css и form-parts.css. */
+.pf-proj-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px 16px;
+}
+.pf-proj-filters .pf-fp-field {
+  min-width: 160px;
+}
+.pf-proj-filters .pf-proj-search {
+  flex: 1 1 240px;
+  min-width: 200px;
+}
+.pf-proj-docs {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.pf-proj-docs li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+}
+.pf-proj-docs .pf-hint {
+  font-size: 12px;
+}
+.pf-proj-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+.pf-proj-done {
+  margin: 0;
+  padding: 8px 12px;
+  border: 1px solid #b7eb8f;
+  border-radius: 8px;
+  background: #f6ffed;
+  color: #135200;
+}
+.pf-proj-exec {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.pf-proj-lines {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pf-proj-lines li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-wrap: anywhere;
+}
+.pf-doc--note {
+  display: block;
+}
+.pf-doc--note p {
+  margin: 0;
+}
+.pf-proj-pager {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 12px 24px;
+}
+@media (max-width: 767px) {
+  .pf-proj-exec {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .pf-proj-pager {
+    padding: 12px 16px;
+  }
+}

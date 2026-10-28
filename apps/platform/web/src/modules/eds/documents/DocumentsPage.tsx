@@ -28,7 +28,19 @@ import { DocumentStatusTag } from "./status";
 import "./documents.css";
 
 const PAGE_SIZE = 25;
-const KIND_TABS = ["all", "memo", "application", "report", "letters", "quote"] as const;
+const KIND_TABS = [
+  "all",
+  "memo",
+  "application",
+  "report",
+  "letters",
+  "quote",
+  "contract",
+  "invoice",
+  "act",
+] as const;
+/** Вкладки реестра компании: КП и документы проектов видны только в «Все документы» */
+const REGISTRY_TABS: readonly KindTab[] = ["quote", "contract", "invoice", "act"];
 type KindTab = (typeof KIND_TABS)[number];
 const TAB_KINDS: Record<Exclude<KindTab, "all">, EdsRegistryKind[]> = {
   memo: ["memo"],
@@ -36,6 +48,9 @@ const TAB_KINDS: Record<Exclude<KindTab, "all">, EdsRegistryKind[]> = {
   report: ["report"],
   letters: ["letter_in", "letter_out"],
   quote: ["quote"],
+  contract: ["contract"],
+  invoice: ["invoice"],
+  act: ["act"],
 };
 /** Статусы фильтра: документы всегда; входящие письма и КП — когда открыт реестр */
 const DOCUMENT_STATUSES = [
@@ -59,7 +74,8 @@ type Scope = "mine" | "all";
 
 function tabOf(value: string | null, scope: Scope): KindTab {
   const found = KIND_TABS.find((tab) => tab === value);
-  if (found === undefined || (found === "quote" && scope === "mine")) return "all";
+  if (found === undefined || (found !== "all" && REGISTRY_TABS.includes(found) && scope === "mine"))
+    return "all";
   return found;
 }
 
@@ -72,6 +88,7 @@ function useIsOwn(scope: Scope): (row: EdsDocumentRow) => boolean {
 
 function RowAction({ row, own }: { row: EdsDocumentRow; own: boolean }) {
   const { t } = useTranslation(["documents", "modules"]);
+  const { me } = useAuth();
   if (row.openable) {
     // «Продолжить» — только у своих черновиков и возвращённых: чужой документ править нельзя (EDS ответит 403).
     if (!own || (row.status !== "draft" && row.status !== "returned")) return null;
@@ -83,6 +100,18 @@ function RowAction({ row, own }: { row: EdsDocumentRow; own: boolean }) {
       >
         {t("documents:list.continue")}
       </LinkButton>
+    );
+  }
+  // Договор, счёт и акт проекта (проекция ERP): документ ведёт в карточку проекта, если есть доступ к разделу.
+  if (row.project_ref && canSee(me, { resource: "eds.projects" })) {
+    return (
+      <Link
+        className="pf-docs-link pf-focusable"
+        to={`/eds/projects/${encodeURIComponent(row.project_ref)}`}
+        aria-label={t("documents:list.inProjectLabel", { subject: row.subject })}
+      >
+        {t("documents:list.inProject")}
+      </Link>
     );
   }
   const section = SECTION_OF[row.kind];
@@ -327,7 +356,7 @@ export function DocumentsPage() {
     },
   };
 
-  const kindTabs = KIND_TABS.filter((k) => k !== "quote" || scope === "all");
+  const kindTabs = KIND_TABS.filter((k) => !REGISTRY_TABS.includes(k) || scope === "all");
 
   const body = (
     <QueryState query={list} labels={labels}>

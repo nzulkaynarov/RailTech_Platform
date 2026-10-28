@@ -117,6 +117,42 @@ describe("EDS · Документы: список", () => {
     expect(screen.queryByText("Заказ спецодежды для бригады")).toBeNull();
   });
 
+  it("реестр: договор и акт проекта — вкладки «Договоры» и «Акты», статус словами SPEC, ссылка «В проекте» ведёт в карточку проекта (D2-5)", async () => {
+    await openDocuments("director@demo.example");
+
+    fireEvent.click(await screen.findByRole("tab", { name: "Договоры" }));
+
+    const contract = (await screen.findByText("Поставка стрелочных переводов")).closest(
+      "tr",
+    ) as HTMLElement;
+    expect(within(contract).getByText("ДОГ-2026/105")).toBeVisible();
+    expect(within(contract).getByText("Согласован клиентом")).toBeVisible();
+    expect(
+      within(contract).getByRole("link", {
+        name: "Открыть в проекте: Поставка стрелочных переводов",
+      }),
+    ).toHaveAttribute("href", "/eds/projects/105");
+    expect(screen.queryByText("Монтаж крепежа, объект «Север»")).toBeNull();
+
+    fireEvent.click(screen.getByRole("tab", { name: "Акты" }));
+    const act = (await screen.findByText("Монтаж крепежа, объект «Север»")).closest(
+      "tr",
+    ) as HTMLElement;
+    expect(within(act).getByText("Выпущен")).toBeVisible();
+    expect(within(act).getByRole("link", { name: /Открыть в проекте/ })).toHaveAttribute(
+      "href",
+      "/eds/projects/97",
+    );
+  });
+
+  it("«Мои документы»: вкладок договоров, счетов и актов нет — они в реестре компании", async () => {
+    await openDocuments("manager@demo.example", "?scope=mine");
+    await screen.findByRole("link", { name: "Открыть документ: Закупка канцтоваров на квартал" });
+    for (const name of ["Договоры", "Счета", "Акты"]) {
+      expect(screen.queryByRole("tab", { name })).toBeNull();
+    }
+  });
+
   it("реестр отдаёт меньше прав на вид (D1-10): вкладка «Письма» без права на письма — пусто словами, не ошибка", async () => {
     // EDS без `letters.read` не включает письма в реестр: ответ 200 с пустой страницей
     server.use(

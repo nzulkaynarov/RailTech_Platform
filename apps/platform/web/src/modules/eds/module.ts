@@ -39,6 +39,8 @@ export const eds: ModuleConfig = {
       path: "/eds/projects",
       detail: "/eds/projects/:id",
       access: { resource: "eds.projects" },
+      // D2-5: договор и акт — вкладки бокового окна карточки проекта (SPEC-v3 §7.3); «Оплата» подключит D2-4.
+      tabs: [{ key: "contract" }, { key: "act" }, { key: "journal" }, { key: "chat" }],
       actionTo: "/eds/documents",
     },
     {

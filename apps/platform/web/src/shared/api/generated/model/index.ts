@@ -133,6 +133,23 @@
  * (директор читает), сброс пароля — `admin: full`; профиль доступен каждому вошедшему. Секреты из записей журнала BFF вырезает
  * (значения полей `password`, `secret`, `token`, `key`, `*_key`, `credentials`, `authorization`, `pin` и им подобных -> `***` целиком, любого типа).
  *
+ * **0.26.0 (D2-5) — EDS · Проекты: договор, акт, сканы.** Добавляющее изменение, тег `eds-projects`: `GET /eds/projects` (список:
+ * ПР-номер, клиент, шаг пути, статус для клиента, документы КП · Договор · Счёт · Акт, срок, ответственный; фильтры «мои», «с
+ * проблемами», шаг, поиск), `GET /eds/projects/{ref}` (карточка по номеру `ПР-2026-104` или id сделки: документы с историей и
+ * действиями, доступными сотруднику, исполнение из ERP — только чтение, журнал), `POST /eds/projects/{ref}/contract/draft`
+ * («Сформировать проект договора» из принятого КП), `POST /eds/projects/{ref}/contract` (действия: «На согласование клиенту»,
+ * «Согласован клиентом», «Отклонён клиентом» с причиной, «Вернуть в проект», «Выставлен у оператора»),
+ * `POST /eds/projects/{ref}/contract/scan` и `…/act/scan` («Прикрепить скан» → договор и акт «Подписан»; multipart до 20 МБ, BFF не
+ * разбирает, ERP проверяет тип и сигнатуру), `POST /eds/projects/{ref}/act` («Выпустить акт», «Возвращён заказчиком» с причиной,
+ * «Выпустить заново»), `GET /eds/projects/{ref}/files/{kind}/{doc_id}` (PDF или скан потоком). Подписи кликом в Платформе нет: договор
+ * подписывают вне платформы (у оператора ЭДО), статусы — SPEC-v3 §2.4. Раздел `eds.projects`: чтение — менеджер, снабженец,
+ * гл. инженер; действия — директор и бухгалтер. Источник один — ERP (`GET /crm/projects/`, `crm/contracts/*`, `crm/acts/*`) с токеном
+ * сотрудника; право (`contract.manage`, `contract.sign`, `fulfillment.act`), допустимый переход и скан проверяет ERP, id документа BFF
+ * берёт из карточки проекта, а не из запроса. Ошибки ERP — в формате `Error`: 409 `CONFLICT` (`details.reason` =
+ * `contract_transition_not_allowed`, `act_sign_not_allowed`…), 422 `VALIDATION_FAILED` (`reason_required`, `scan_invalid`,
+ * `scan_required`; `details.fields`), 413 `PAYLOAD_TOO_LARGE`. `EdsRegistryKind` дополнен `contract`, `invoice`, `act` (реестр «Все документы»
+ * показывает проекцию ERP, EDS 0.5.0), `EdsDocumentRow.project_ref` — id сделки для ссылки на карточку проекта.
+ *
  * **0.25.0 (W15-H7) — помощь, первый вход и обращения к администратору.** Добавляющее изменение (тег `tickets`). **Обращения
  * сотрудников** (домен CRM, ADR-0015): `POST /tickets` (тема из списка `access|notification|template|error|other`, текст,
  * адрес страницы; роль автора BFF берёт из сессии), `GET /tickets` и `GET /tickets/{number}` — только свои обращения
@@ -253,7 +270,7 @@
  * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; «Забыли пароль?» — 5 запросов в час на IP и на адрес; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.25.0
+ * OpenAPI spec version: 0.26.0
  */
 
 export * from "./accessLevel";
@@ -382,6 +399,8 @@ export * from "./documentTemplateList";
 export * from "./documentTemplatePreviewIn";
 export * from "./documentTemplateUpdate";
 export * from "./downloadCsvExportParams";
+export * from "./downloadEdsProjectFileParams";
+export * from "./downloadEdsProjectFileVariant";
 export * from "./dueLabel";
 export * from "./edsConflictResponse";
 export * from "./edsDealOption";
@@ -526,6 +545,7 @@ export * from "./listCategoryRequestsParams";
 export * from "./listEdsDealOptionsParams";
 export * from "./listEdsDocumentsParams";
 export * from "./listEdsDocumentsScope";
+export * from "./listEdsProjectsParams";
 export * from "./listEmployeesParams";
 export * from "./listKbDocumentsParams";
 export * from "./listKbGapsParams";
@@ -586,6 +606,48 @@ export * from "./platformSettings";
 export * from "./platformSettingsUpdate";
 export * from "./profile";
 export * from "./profileUpdate";
+export * from "./projectAct";
+export * from "./projectActActionIn";
+export * from "./projectActActionInAction";
+export * from "./projectActActionsItem";
+export * from "./projectActRef";
+export * from "./projectActRefStatus";
+export * from "./projectActStatus";
+export * from "./projectCard";
+export * from "./projectCardActBlocker";
+export * from "./projectCardClientStatus";
+export * from "./projectCardProblemsItem";
+export * from "./projectCardStep";
+export * from "./projectConflictResponse";
+export * from "./projectContract";
+export * from "./projectContractActionIn";
+export * from "./projectContractActionInAction";
+export * from "./projectContractActionsItem";
+export * from "./projectContractRef";
+export * from "./projectContractRefStatus";
+export * from "./projectContractStatus";
+export * from "./projectDeliveryLine";
+export * from "./projectDocuments";
+export * from "./projectFileGenerating";
+export * from "./projectFulfillment";
+export * from "./projectInvoice";
+export * from "./projectInvoiceRef";
+export * from "./projectInvoiceRefStatus";
+export * from "./projectInvoiceStatus";
+export * from "./projectJournalEntry";
+export * from "./projectJournalEntryDocument";
+export * from "./projectMoney";
+export * from "./projectPage";
+export * from "./projectPayloadTooLargeResponse";
+export * from "./projectPerson";
+export * from "./projectQuote";
+export * from "./projectQuoteRef";
+export * from "./projectRow";
+export * from "./projectRowClientStatus";
+export * from "./projectRowProblemsItem";
+export * from "./projectRowStep";
+export * from "./projectScanUpload";
+export * from "./projectStage";
 export * from "./providerKeyIn";
 export * from "./providerKeyResult";
 export * from "./providerToday";

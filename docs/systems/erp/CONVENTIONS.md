@@ -243,6 +243,8 @@ Makefile · .env.example · docs/ (ADR и runbooks ERP в docs/runbooks/erp/ —
 деньги — строка с двумя знаками + ISO-4217; даты — ISO-8601 с зоной; версия — префикс `v1`, несовместимое изменение — новый префикс.
 Любое изменение здесь начинается с `packages/contracts` и PR с обеих сторон в одной вехе.
 
+**Договор и акт проекта (D2-5, SPEC-v3 §2.4).** Договор подписывают вне платформы (оператор ЭДО или бумага): подписи кликом нет. Переходы договора — одна таблица `TRANSITIONS` в `crm/services/contract_flow.py` (`send_to_client`, `client_agreed`, `reject` с причиной, `revise`, `mark_issued`, `attach_scan` → «Подписан (скан)»); недопустимый переход — `409` с кодом `contract_transition_not_allowed`, а не молчаливый отказ. Акт — `crm/services/act_flow.py` (`attach_act_scan`, `record_act_return`; выпуск и повторный выпуск — `billing.py`). Право проверяется в сервисе (`contract.manage`, `contract.sign`, `fulfillment.act`; `RoleGatedViewMixin` — fail-closed), скан — `core/validators.validate_scan_upload` (PDF, jpg, png, webp по сигнатуре и расширению, до 20 МБ). Каждый переход — в транзакции: блокировка строки, журнал `ActivityLog` с `event_code`, событие шины `contract.status_changed` / `act.accepted` / `act.returned` (схемы и совместимость — `packages/contracts/events/erp`). Проект как чтение — `crm/services/projects.py` (`GET /crm/projects/`): шаг, документы, «действия сейчас» с учётом прав, «Выполнено», когда акт подписан и счета оплачены (одна запись `project.done`). Свои PDF (счёт, акт, договор) никогда не называются «счёт-фактурой».
+
 ## 8. Команды
 
 | Команда | Что делает | Появится в |

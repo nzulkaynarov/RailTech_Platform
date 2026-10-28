@@ -5,7 +5,10 @@
     "report": "Hisobot",
     "letter_out": "Xat",
     "letter_in": "Kiruvchi xat",
-    "quote": "TT"
+    "quote": "TT",
+    "contract": "Shartnoma",
+    "invoice": "Hisob",
+    "act": "Dalolatnoma"
   },
   "status": {
     "draft": "Qoralama",
@@ -45,7 +48,10 @@
       "application": "Arizalar",
       "report": "Hisobotlar",
       "letters": "Xatlar",
-      "quote": "TT"
+      "quote": "TT",
+      "contract": "Shartnomalar",
+      "invoice": "Hisoblar",
+      "act": "Dalolatnomalar"
     },
     "status": {
       "label": "Holat",
@@ -98,7 +104,9 @@
     "forbidden": {
       "title": "Hujjatlar sizga ochilmagan",
       "text": "Ro‘yxat rolingizga berilmagan yoki hujjatlar xizmatida huquqingiz yo‘q. Administratorga murojaat qiling."
-    }
+    },
+    "inProject": "Loyihada",
+    "inProjectLabel": "Loyihada ochish: {{subject}}"
   },
   "panel": {
     "label": "Hujjat",

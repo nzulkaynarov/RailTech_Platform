@@ -581,7 +581,9 @@
     "role": "Rol",
     "employees": "Xodimlar",
     "journal": "Jurnal",
-    "step": "Qadam"
+    "step": "Qadam",
+    "contract": "Shartnoma",
+    "act": "Dalolatnoma"
   },
   "panel": {
     "today": {
@@ -647,6 +649,14 @@
     "step": {
       "title": "Qadam tanlanmagan",
       "text": "Qadam yonidagi tugmani bosing — uning shakli ustozdan chiqmasdan shu yerda ochiladi."
+    },
+    "contract": {
+      "title": "Shartnoma tanlanmagan",
+      "text": "Loyihani oching — bu yerda shartnoma holati va amallar paydo bo'ladi: mijozga kelishuvga yuborish, operatorda rasmiylashtirildi, imzolangan skan."
+    },
+    "act": {
+      "title": "Dalolatnoma tanlanmagan",
+      "text": "Loyihani oching — bu yerda dalolatnoma, uning skani va buyurtmachi tomonidan qaytarilishi paydo bo'ladi."
     }
   }
 }
