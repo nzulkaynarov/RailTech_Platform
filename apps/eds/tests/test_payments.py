@@ -156,12 +156,14 @@ async def test_pay_before_the_director_approves_or_for_a_memo_without_amount_is_
     doc = await create(client, staff["manager"], **WITH_AMOUNT)
     await submit(client, staff["manager"], doc["id"])
     assert_error(await pay(client, staff["accountant"], doc["id"]), 409, "CONFLICT", reason="invalid_state")
-    draft = await create(client, staff["manager"], **WITH_AMOUNT)
-    assert_error(await pay(client, staff["accountant"], draft["id"]), 409, "CONFLICT", reason="invalid_state")
-    no_amount = await create(client, staff["manager"])
-    assert_error(await pay(client, staff["accountant"], no_amount["id"]), 409, "CONFLICT", reason="invalid_state")
-    report = await create(client, staff["manager"], kind="report", amount=MONEY)
-    assert_error(await pay(client, staff["accountant"], report["id"]), 409, "CONFLICT", reason="invalid_state")
+    # свои черновики: чужой черновик бухгалтеру не виден (D1-10) — отказ был бы 404, а не состояние
+    me = staff["accountant"]
+    draft = await create(client, me, **WITH_AMOUNT)
+    assert_error(await pay(client, me, draft["id"]), 409, "CONFLICT", reason="invalid_state")
+    no_amount = await create(client, me)
+    assert_error(await pay(client, me, no_amount["id"]), 409, "CONFLICT", reason="invalid_state")
+    report = await create(client, me, kind="report", amount=MONEY)
+    assert_error(await pay(client, me, report["id"]), 409, "CONFLICT", reason="invalid_state")
 
 
 async def test_unknown_document_is_404(client: httpx.AsyncClient, staff: dict[str, Person]) -> None:

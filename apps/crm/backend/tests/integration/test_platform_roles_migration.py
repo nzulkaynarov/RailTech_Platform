@@ -249,3 +249,29 @@ def test_accountant_template_loses_supplier_prices_and_downgrade_returns_them(
 
     command.upgrade(alembic_config, "head")  # повтор — без изменений
     assert accountant() == (after, after_version)
+
+
+def test_director_reads_payments_and_downgrade_returns_full(
+    alembic_config: Config, live_settings: Settings
+) -> None:
+    """0048 (D2-4, Q-D2-4-1 п. 1): у «Директора» `eds.payments` — `read`, версия растёт."""
+
+    def director() -> tuple[str, int]:
+        with psycopg.connect(live_settings.libpq_dsn, autocommit=True) as conn:
+            row = conn.execute(
+                "SELECT access->>'eds.payments', version FROM platform_roles "
+                "WHERE code = 'DIRECTOR'"
+            ).fetchone()
+        assert row is not None
+        return str(row[0]), int(row[1])
+
+    command.upgrade(alembic_config, "head")
+    command.downgrade(alembic_config, "0047_accountant_supplier_prices")
+    level, version = director()
+    assert level == "full"
+
+    command.upgrade(alembic_config, "head")
+    assert director() == ("read", version + 1)
+
+    command.upgrade(alembic_config, "head")  # повтор — без изменений
+    assert director() == ("read", version + 1)
