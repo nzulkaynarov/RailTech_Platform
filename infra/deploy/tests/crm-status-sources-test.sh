@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Тест W15-H8b: CRM видит источники для строк «Состояния системы» — архив WAL, Redis брокера и кэша. Секретов не требует.
-#  1. crm-api, crm-worker, crm-bot получают REDIS_BROKER_URL / REDIS_CACHE_URL ТОЛЬКО с паролем пользователя пробы crm-probe
+#  1. все сервисы CRM (api, worker, bot, mcp-*, migrate) получают REDIS_BROKER_URL / REDIS_CACHE_URL ТОЛЬКО с паролем пользователя пробы crm-probe
 #     (REDIS_PROBE_PASSWORD; PING и INFO, без ключей) — полных паролей Redis у CRM нет — и WAL_S3_PREFIX; прод и стенд; без пароля
 #     пробы CRM работает, пользователь выключен; секрет создаёт деплой (make-env-prod.sh ensure-secrets), а не человек.
 #  2. Ключ CRM читает бакет `wal` (только чтение: список и объекты, без записи и удаления) — политика, собранная из init.sh.
@@ -23,12 +23,12 @@ grep -v '^#' "$root/.env.example" | grep -v '^$' > "$tmp/env.dev.raw"; mkenv "$t
 export RT_IMAGE_TAG=crm-status-sources-test
 profiles=(--profile observability --profile kb-ingest --profile mcp)
 docker compose -f "$base" -f "$prod" --env-file "$tmp/env.prod" "${profiles[@]}" config --format json > "$tmp/prod.json"
-docker compose -f "$base" -f "$dev" --env-file "$tmp/env.dev" --profile observability config --format json > "$tmp/dev.json"
+docker compose -f "$base" -f "$dev" --env-file "$tmp/env.dev" "${profiles[@]}" config --format json > "$tmp/dev.json"
 
 # 1. Окружение CRM: только пользователь пробы, полных паролей Redis нет.
 for f in prod dev; do
   j="$tmp/$f.json"
-  for svc in crm-api crm-worker crm-bot; do
+  for svc in crm-api crm-worker crm-bot crm-mcp-crm crm-mcp-docs crm-mcp-kb crm-migrate; do
     env_of() { jq -r --arg s "$svc" --arg k "$1" '.services[$s].environment[$k] // "none"' "$j"; }
     [[ "$(env_of REDIS_BROKER_URL)" == redis://crm-probe:probepw@redis-broker:6379/0 ]] || fail "$f/$svc: REDIS_BROKER_URL: $(env_of REDIS_BROKER_URL)"
     [[ "$(env_of REDIS_CACHE_URL)" == redis://crm-probe:probepw@redis-cache:6379/0 ]] || fail "$f/$svc: REDIS_CACHE_URL: $(env_of REDIS_CACHE_URL)"

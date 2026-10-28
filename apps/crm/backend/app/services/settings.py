@@ -179,7 +179,7 @@ def _merge(rows: dict[str, dict[str, Any]]) -> AppSettings:
         if key not in rows:
             continue
         try:
-            values[key] = model.model_validate(rows[key])
+            values[key] = model.model_validate(rows[key], context={"lenient": True})
         except ValidationError as exc:
             logger.error("settings_invalid_value_ignored", key=key, errors=exc.error_count())
     return AppSettings(**values)

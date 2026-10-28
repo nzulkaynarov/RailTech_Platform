@@ -163,3 +163,40 @@ def test_crm_base_url_accepts_http_and_empty() -> None:
         == "https://crm.example.com"
     )
     assert CompanySettings(crm_base_url="").crm_base_url == ""
+
+
+def test_stored_crm_base_url_without_scheme_keeps_the_company_section() -> None:
+    """Прод: адрес, введённый владельцем без схемы, не должен ронять раздел «Компания»."""
+    cfg = _merge(
+        {"company": {"name": "Рельс", "phone": "+998000000", "crm_base_url": "crm.railtech.uz"}}
+    )
+    assert cfg.company.name == "Рельс"
+    assert cfg.company.phone == "+998000000"
+    assert cfg.company.crm_base_url == "https://crm.railtech.uz"
+
+
+def test_stored_garbage_crm_base_url_resets_only_the_address() -> None:
+    cfg = _merge({"company": {"name": "Рельс", "crm_base_url": "javascript:alert(1)"}})
+    assert cfg.company.name == "Рельс"
+    assert cfg.company.crm_base_url == ""
+    # пусто = «не задан»: подставится адрес из окружения
+    assert _with_env_defaults(cfg, ENV_CRM).company.crm_base_url == ENV_CRM
+
+
+async def test_saving_a_crm_base_url_without_scheme_is_refused() -> None:
+    service = SettingsService(lambda: _Session([]), crm_base_url_default=ENV_CRM)  # type: ignore[arg-type]
+    with pytest.raises(ValidationError):
+        await service.update("company", {"name": "Рельс", "crm_base_url": "crm.railtech.uz"}, None)
+
+
+@pytest.mark.parametrize(
+    ("stored", "expected"),
+    [
+        ("crm.example.com:8443", "https://crm.example.com:8443"),
+        ("ftp://crm.example.com", ""),
+        ("mailto:a@b.c", ""),
+        ("http://crm.example.com", "http://crm.example.com"),
+    ],
+)
+def test_stored_crm_base_url_variants(stored: str, expected: str) -> None:
+    assert _merge({"company": {"crm_base_url": stored}}).company.crm_base_url == expected
