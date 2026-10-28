@@ -107,16 +107,14 @@ test.describe("Мои задачи: «Открыть» или «Где сдел�
 test.describe("Мои задачи: пустые состояния и частичный результат", () => {
   test.skip(({ isMobile }) => isMobile, "ширины задаёт сам сценарий");
 
-  for (const [email, title] of [
-    ["accountant@demo.example", "Платёжек на подтверждение и счетов к выставлению нет"],
-  ] as const) {
-    test(`${email}: пустая очередь своими словами`, async ({ page }) => {
-      await loginAndWait(page, email);
-      await expect(page.getByRole("main").getByText(title)).toBeVisible();
-      await expect(page.getByText("Решений от вас пока не требуется")).toHaveCount(0);
-      if (email === "accountant@demo.example") await shoot(page, "queue-empty-accountant");
-    });
-  }
+  test("accountant@demo.example: пустая очередь своими словами", async ({ page }) => {
+    await loginAndWait(page, "accountant@demo.example");
+    await expect(
+      page.getByRole("main").getByText("Платёжек на подтверждение и счетов к выставлению нет"),
+    ).toBeVisible();
+    await expect(page.getByText("Решений от вас пока не требуется")).toHaveCount(0);
+    await shoot(page, "queue-empty-accountant");
+  });
 
   test("ERP не отвечает: данные CRM показаны, плашка называет «Документы» и «Расчёт»", async ({
     page,
