@@ -80,7 +80,7 @@ def _decode(token: str) -> dict[str, Any]:
 
 
 @pytest.mark.asyncio
-async def test_director_gets_an_eds_token_with_all_nine_codes(
+async def test_director_gets_an_eds_token_with_the_document_codes(
     sso_settings: Settings, roles_of: dict[int, list[PlatformRole]]
 ) -> None:
     user = _active_user(7)
@@ -95,7 +95,10 @@ async def test_director_gets_an_eds_token_with_all_nine_codes(
     assert claims["exp"] - claims["iat"] == 60
     assert uuid.UUID(claims["jti"]).version == 4
     # журнал шины (`bus.manage`) — раздел `admin: full`, у директора `admin: read` (W13-A2)
-    assert claims["permissions"] == sorted(set(EDS_PERMISSIONS) - {"bus.manage"})
+    # «Счета и оплаты» у директора — read (D2-4): без подтверждения оплаты
+    assert claims["permissions"] == sorted(
+        set(EDS_PERMISSIONS) - {"bus.manage", "payments.confirm"}
+    )
     assert redirect_url == "", "у EDS нет внешнего маршрута"
 
 

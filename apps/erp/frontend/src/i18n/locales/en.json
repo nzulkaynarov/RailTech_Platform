@@ -2513,6 +2513,7 @@
     "supply_manage": "Maintain suppliers & their offers",
     "fulfillment_manage": "Handle shipments & delivery notes",
     "fulfillment_act": "Issue acceptance acts",
+    "finance_view": "See customer invoices & payments",
     "finance_invoice": "Issue customer invoices",
     "finance_payment": "Record payments",
     "settings_edit": "Edit company details, templates & numbering",

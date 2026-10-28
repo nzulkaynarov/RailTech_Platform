@@ -69,6 +69,26 @@ class DocumentUpdate(DocumentSubmitIn):
     recipient: LetterSender | None = None
 
 
+class DocumentPaymentIn(Strict):
+    """«Оплачено» (SPEC-v3 §3.2 п. 5): дата и сумма платежа, платёжка бухгалтера (файл, загруженный `POST /files`)."""
+
+    paid_on: dt.date
+    amount: Money
+    receipt_file_id: uuid.UUID | None = None
+    note: Annotated[str | None, Field(max_length=500)] = None
+
+
+class DocumentPayment(BaseModel):
+    """Факт оплаты служебной записки: кто, когда, сколько, какой платёжкой."""
+
+    paid_on: dt.date
+    amount: Money
+    receipt_file_id: uuid.UUID | None
+    note: str | None
+    paid_by: PersonRef
+    recorded_at: dt.datetime
+
+
 class DocumentDecision(BaseModel):
     round: int
     step: int
@@ -87,6 +107,8 @@ class DocumentListItem(BaseModel):
     author: PersonRef
     amount: Money | None
     due_date: dt.date | None
+    files_count: int
+    paid_on: dt.date | None
     created_at: dt.datetime
 
 
@@ -114,6 +136,7 @@ class Document(BaseModel):
     recipient: LetterSender | None
     in_reply_to: uuid.UUID | None
     approval_id: uuid.UUID | None
+    payment: DocumentPayment | None
     decisions: list[DocumentDecision]
     journal: list[JournalEntry]
     created_at: dt.datetime

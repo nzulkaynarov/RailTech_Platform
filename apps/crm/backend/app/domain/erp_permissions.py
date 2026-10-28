@@ -38,6 +38,7 @@ ERP_PERMISSIONS: Final[tuple[str, ...]] = (
     "supply.manage",
     "fulfillment.manage",
     "fulfillment.act",
+    "finance.view",
     "finance.invoice",
     "finance.payment",
     "finance.rates",

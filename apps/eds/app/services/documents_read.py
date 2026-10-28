@@ -2,11 +2,11 @@
 
 import uuid
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.errors import not_found
-from app.models import ApprovalRoute, ApprovalStep, Document, Employee
+from app.models import ApprovalRoute, ApprovalStep, Document, DocumentPayment, Employee, StoredFile
 from app.schemas.approvals import Decision
 from app.schemas.common import LetterSender, Money
 from app.schemas.documents import Document as DocumentOut
@@ -17,6 +17,7 @@ from app.schemas.documents import (
     DocumentPage,
     DocumentStatus,
 )
+from app.schemas.documents import DocumentPayment as PaymentOut
 from app.schemas.pagination import decode_cursor
 from app.services import access, files, journal, paging
 from app.services.people import Directory, load_directory
@@ -57,6 +58,22 @@ async def _decisions(session: AsyncSession, document_id: uuid.UUID, directory: D
         )
         for round_no, step in rows.all()
     ]
+
+
+async def payment_of(session: AsyncSession, document: Document) -> PaymentOut | None:
+    """Факт оплаты служебной записки, если бухгалтер её оплатил."""
+    paid = await session.get(DocumentPayment, document.id)
+    if paid is None:
+        return None
+    directory = await load_directory(session, [paid.paid_by_crm_user_id])
+    return PaymentOut(
+        paid_on=paid.paid_on,
+        amount=Money(amount=f"{paid.amount:.2f}", currency=paid.currency),
+        receipt_file_id=paid.receipt_file_id,
+        note=paid.note,
+        paid_by=directory.person(paid.paid_by_crm_user_id),
+        recorded_at=paid.created_at,
+    )
 
 
 async def present(session: AsyncSession, document: Document) -> DocumentOut:
@@ -100,6 +117,7 @@ async def present(session: AsyncSession, document: Document) -> DocumentOut:
         recipient=recipient,
         in_reply_to=document.in_reply_to,
         approval_id=route_id,
+        payment=await payment_of(session, document),
         decisions=decisions,
         journal=entries,
         created_at=document.created_at,
@@ -129,6 +147,17 @@ async def list_page(
     rows = list((await session.execute(stmt)).scalars().all())
     page, next_cursor = paging.cut(rows, limit, lambda r: r.created_at, lambda r: r.id)
     directory = await load_directory(session, (r.author_crm_user_id for r in page))
+    ids = [r.id for r in page]
+    count_rows = await session.execute(
+        select(StoredFile.document_id, func.count())
+        .where(StoredFile.document_id.in_(ids))
+        .group_by(StoredFile.document_id)
+    )
+    counts = dict(count_rows.all())
+    paid_rows = await session.execute(
+        select(DocumentPayment.document_id, DocumentPayment.paid_on).where(DocumentPayment.document_id.in_(ids))
+    )
+    paid_on = dict(paid_rows.all())
     items = [
         DocumentListItem(
             id=r.id,
@@ -139,6 +168,8 @@ async def list_page(
             author=directory.person(r.author_crm_user_id),
             amount=money_of(r),
             due_date=r.due_date,
+            files_count=counts.get(r.id, 0),
+            paid_on=paid_on.get(r.id),
             created_at=r.created_at,
         )
         for r in page
