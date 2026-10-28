@@ -183,3 +183,7 @@
   min-height: 32px;
   font-size: 14px;
 }
+/* Вкладки раздела: лента SectionTabs без боковых полей, как у «Telegram-бота» */
+.pf-cat .pf-co-tabs {
+  padding: 0;
+}

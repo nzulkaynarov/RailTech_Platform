@@ -312,6 +312,8 @@ test.describe("Техдокументация", () => {
 
 test.describe("Номенклатура и техдокументация на телефоне @mobile", () => {
   test("карточки вместо таблиц, окна на всю ширину, PDF в просмотре", async ({ page }) => {
+    // проект chromium (CI гоняет оба проекта) открывает тест на 1440: ширину задаёт сам сценарий
+    await page.setViewportSize({ width: 390, height: 844 });
     await loginAndWait(page, "supply@demo.example");
 
     await openCatalog(page);

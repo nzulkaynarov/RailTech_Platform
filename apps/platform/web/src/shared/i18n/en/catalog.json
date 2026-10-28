@@ -4,6 +4,7 @@
   "save": "Save",
   "actions": "Actions",
   "tabs": {
+    "label": "Catalog sections",
     "items": "Items",
     "suppliers": "Suppliers",
     "brigades": "Crews",

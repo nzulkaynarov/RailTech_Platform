@@ -4,6 +4,7 @@
   "save": "Saqlash",
   "actions": "Amallar",
   "tabs": {
+    "label": "Nomenklatura bo'limlari",
     "items": "Pozitsiyalar",
     "suppliers": "Yetkazib beruvchilar",
     "brigades": "Brigadalar",

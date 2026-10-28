@@ -1,16 +1,17 @@
-import { Tabs } from "antd";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router";
 
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { useListCatalogCategoryRequests } from "../../../shared/api/generated/platform-bff";
 import { PageHeader } from "../../../shared/ui/PageHeader";
+import { SectionTabs } from "../../admin/company/SectionTabs";
 import { BrigadesPanel } from "./BrigadesPanel";
 import { ItemsPanel } from "./ItemsPanel";
 import { RefsPanel } from "./RefsPanel";
 import { RequestsPanel } from "./RequestsPanel";
 import { SuppliersPanel } from "./SuppliersPanel";
 
+import "../../admin/company/company.css";
 import "./catalog.css";
 
 const PARTS = ["items", "suppliers", "brigades", "refs", "requests"] as const;
@@ -43,14 +44,16 @@ export function CatalogScreen() {
   return (
     <div className="pf-cat">
       <PageHeader title={t("modules:erp.sections.catalog")} subtitle={t("catalog:subtitle")} />
-      <Tabs
-        activeKey={part}
-        destroyOnHidden
+      <SectionTabs
+        label={t("catalog:tabs.label")}
+        active={part}
+        tabs={PARTS.map((key) => ({ key, label: label(key) }))}
         onChange={(key) => {
           setParams({ part: key });
         }}
-        items={PARTS.map((key) => ({ key, label: label(key), children: panels[key] }))}
-      />
+      >
+        {panels[part]}
+      </SectionTabs>
     </div>
   );
 }
