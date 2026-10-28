@@ -95,12 +95,8 @@ export const BRIDGE: Readonly<Record<string, BridgeEntry>> = {
     when: "pilot",
     objectKind: "project",
   },
-  // «Все документы» и «Создать документ» (D1-5), «КП на одобрение» и «На согласовании» (D1-4) — настоящие экраны, записей моста у них нет.
-  "eds.payments": {
-    legacy: erp("#payments", "erpPayments"),
-    when: "pilot",
-    objectKind: "invoice",
-  },
+  // «Все документы» и «Создать документ» (D1-5), «КП на одобрение» и «На согласовании» (D1-4), «Счета и оплаты» (D2-4) — настоящие
+  // экраны, записей моста у них нет.
 
   "erp.catalog": { legacy: erp("#catalog-reference", "erpCatalog"), when: "pilot" },
   "erp.docs": { legacy: erp("#company-files", "erpFiles"), when: "pilot" },
@@ -134,6 +130,7 @@ export const NATIVE_SECTIONS: readonly string[] = [
   "erp.stock",
   "eds.drafts",
   "eds.approvals",
+  "eds.payments",
   "admin.roles",
   "admin.org",
   "admin.integrations",
@@ -143,6 +140,7 @@ export const NATIVE_SECTIONS: readonly string[] = [
   "admin.bot",
   "admin.audit",
   "admin.tickets",
+  "admin.articles",
 ];
 
 /** Главные действия модулей без экрана (кнопка внизу подменю неактивна): когда появятся. Остальных модулей это не касается. */

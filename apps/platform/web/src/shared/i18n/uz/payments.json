@@ -1,0 +1,431 @@
+{
+  "state": {
+    "retry": "Qayta urinish",
+    "loadError": {
+      "title": "Hisoblar yuklanmadi",
+      "text": "Ma’lumotlarni olib bo‘lmadi. Qayta urinib ko‘ring."
+    },
+    "unavailable": {
+      "title": "Xizmat javob bermayapti",
+      "text": "ERP yoki hujjat aylanishi vaqtincha mavjud emas. Hech narsa yo‘qolmagan — birozdan so‘ng qayta urinib ko‘ring."
+    },
+    "forbidden": {
+      "title": "Ruxsat yo‘q",
+      "text": "«Hisoblar va to‘lovlar» bo‘limi rolingiz uchun mavjud emas."
+    },
+    "erpForbidden": {
+      "title": "Mijoz hisoblari sizga ko‘rsatilmaydi",
+      "text": "Hisoblardagi pulni buxgalteriya va rahbar ko‘radi. Qo‘shni yorliqdagi to‘lanadigan xizmat xatlari mavjud."
+    },
+    "notGranted": {
+      "title": "Hujjat aylanishiga ruxsat yo‘q",
+      "text": "Hisobingiz hali hujjat aylanishiga qo‘shilmagan. Administratorga yozing."
+    },
+    "notFound": {
+      "title": "Hisob topilmadi",
+      "text": "Bunday hisob yo‘q yoki u rolingizga ko‘rinmaydi.",
+      "action": "Hisoblar ro‘yxatiga"
+    },
+    "memoNotFound": {
+      "title": "Xizmat xati topilmadi",
+      "text": "Bunday xat yo‘q, u xizmat xati emas yoki rolingizga ko‘rinmaydi.",
+      "action": "To‘lanadigan xizmat xatlariga"
+    }
+  },
+  "list": {
+    "subtitle": "Mijoz hisoblari, tasdiqlanadigan to‘lov topshiriqnomalari va to‘lanadigan xizmat xatlari.",
+    "tabsLabel": "Hisob va to‘lov yorliqlari",
+    "tabs": {
+      "to_issue": "Rasmiylashtirish uchun",
+      "awaiting": "To‘lovni kutmoqda",
+      "proofs": "Tasdiqlash uchun to‘lov topshiriqnomalari",
+      "overdue": "Muddati o‘tgan",
+      "memos": "To‘lanadigan xizmat xatlari",
+      "all": "Barcha hisoblar"
+    },
+    "search": {
+      "label": "Hisob raqami yoki mijoz bo‘yicha qidirish",
+      "placeholder": "СЧ-2026/142 yoki mijoz"
+    },
+    "caption": "Hisoblar",
+    "scroll": "Hisoblar jadvali",
+    "columns": {
+      "number": "Hisob va loyiha",
+      "client": "Mijoz",
+      "amount": "Summa",
+      "issued": "Rasmiylashtirilgan",
+      "due": "To‘lov muddati",
+      "status": "Holat",
+      "action": "Amal"
+    },
+    "select": "{{number}} hisobini yon oynada ko‘rsatish",
+    "open": "Ochish",
+    "more": "Yana ko‘rsatish",
+    "balance": "qoldiq {{amount}}",
+    "overdueDays": "{{count}} kunga o‘tkazib yuborilgan",
+    "action": {
+      "confirm": "Tasdiqlash",
+      "review": "Tekshirish",
+      "open": "Ochish"
+    },
+    "empty": {
+      "to_issue": {
+        "title": "Rasmiylashtiriladigan hisoblar yo‘q",
+        "text": "Loyiha shartnomasi imzolanganda oldindan to‘lov hisobi shu yerda paydo bo‘ladi.",
+        "action": "To‘lovni kutmoqda"
+      },
+      "awaiting": {
+        "title": "To‘lovni kutayotgan hisoblar yo‘q",
+        "text": "Rasmiylashtirilgan hisoblar shu yerda to‘lovni kutadi. Mijozlarning to‘lov topshiriqnomalarini «Tasdiqlash uchun to‘lov topshiriqnomalari» yorlig‘ida ko‘ring.",
+        "action": "Tasdiqlash uchun to‘lov topshiriqnomalari"
+      },
+      "proofs": {
+        "title": "Tasdiqlanadigan to‘lov topshiriqnomalari yo‘q",
+        "text": "To‘lov topshiriqnomasini hisobga biriktirsangiz, u shu yerda paydo bo‘ladi. Mijoz kabineti va botdagi «Men to‘ladim» tugmasi tayyor bo‘lgach, ularni o‘zi yuboradi.",
+        "action": "To‘lovni kutmoqda"
+      },
+      "overdue": {
+        "title": "Muddati o‘tgan hisoblar yo‘q",
+        "text": "To‘lov muddati o‘tib, pul kelmasa, hisob shu yerga tushadi.",
+        "action": "To‘lovni kutmoqda"
+      },
+      "all": {
+        "title": "Hozircha hisoblar yo‘q",
+        "text": "Hisoblar loyiha shartnomalari imzolanganidan keyin paydo bo‘ladi.",
+        "action": "Qayta urinish"
+      },
+      "search": {
+        "title": "Hech narsa topilmadi",
+        "text": "Hisob raqami yoki mijoz nomini tekshiring.",
+        "action": "Qidiruvni tozalash"
+      }
+    },
+    "actionLabel": "{{action}}: {{number}}",
+    "actionName": {
+      "confirm": "Tasdiqlash: to‘lovni tasdiqlash",
+      "review": "Tekshirish: to‘lov topshiriqnomasi",
+      "open": "Ochish: hisob kartochkasi"
+    }
+  },
+  "status": {
+    "draft": "Rasmiylashtirilmagan",
+    "cancelled": "Bekor qilingan"
+  },
+  "brief": {
+    "client": "Mijoz",
+    "project": "Loyiha",
+    "amount": "Hisob summasi",
+    "paid": "To‘langan",
+    "balance": "Qoldiq",
+    "issued": "Rasmiylashtirilgan",
+    "due": "To‘lov muddati",
+    "overdue": "Kechikish"
+  },
+  "panel": {
+    "sheetLabel": "Hisob to‘lovi",
+    "sheetTitle": "To‘lov · {{number}}",
+    "sheetClose": "Yopish",
+    "open": "Hisob kartochkasini ochish",
+    "readOnly": {
+      "title": "Faqat ko‘rish",
+      "text": "To‘lovni buxgalter tasdiqlaydi. Sizga to‘lov topshiriqnomalari va hisob tarixi ochiq."
+    },
+    "closed": {
+      "paid": {
+        "title": "Hisob to‘langan",
+        "text": "Pul olingan va yozilgan. To‘lovlar tarixi quyida."
+      },
+      "draft": {
+        "title": "Hisob hali rasmiylashtirilmagan",
+        "text": "To‘lovni faqat rasmiylashtirilgan hisob bo‘yicha tasdiqlash mumkin."
+      },
+      "cancelled": {
+        "title": "Hisob bekor qilingan",
+        "text": "Bekor qilingan hisob bo‘yicha to‘lov qabul qilinmaydi."
+      }
+    }
+  },
+  "proofs": {
+    "title": "Mijozning to‘lov topshiriqnomalari",
+    "none": "To‘lov topshiriqnomasi hali yo‘q. Mijozdan yuborishini so‘rang yoki pochta orqali kelgan bo‘lsa, faylni biriktiring.",
+    "received": "Olingan sana: {{date}}",
+    "byStaff": "{{name}} biriktirgan",
+    "claimed": "Mijoz {{date}} sanasida {{amount}} ko‘rsatgan",
+    "download": "{{name}} to‘lov topshiriqnomasini yuklab olish",
+    "state": {
+      "PENDING": "Tasdiqlashni kutmoqda",
+      "CONFIRMED": "To‘lov tasdiqlangan",
+      "EXTRA": "Ortiqcha: hisob allaqachon to‘langan"
+    },
+    "source": {
+      "CABINET": "Mijoz kabineti",
+      "BOT": "Telegram-bot",
+      "EMAIL": "Pochta",
+      "MANUAL": "Buxgalter biriktirgan"
+    },
+    "from": "Manba: {{source}}"
+  },
+  "attach": {
+    "toggle": "To‘lov topshiriqnomasini biriktirish",
+    "form": "Mijozning to‘lov topshiriqnomasi",
+    "file": {
+      "label": "To‘lov topshiriqnomasi fayli",
+      "hint": "PDF, rasm yoki Office hujjati, 25 MB gacha"
+    },
+    "source": {
+      "label": "Qayerdan kelgan"
+    },
+    "note": {
+      "label": "Izoh",
+      "hint": "Majburiy emas"
+    },
+    "submit": "Biriktirish",
+    "done": "To‘lov topshiriqnomasi biriktirildi",
+    "failed": "Biriktirilmadi: {{reason}}",
+    "needFile": "To‘lov topshiriqnomasi faylini tanlang.",
+    "reasons": {
+      "not_open": "hisob endi to‘lovni kutmaydi, kartochka yangilandi",
+      "forbidden": "amal rolingiz uchun mavjud emas",
+      "too_large": "fayl 25 MB dan katta",
+      "unsupported": "PDF, rasm va Office hujjatlari mumkin",
+      "unavailable": "xizmat javob bermayapti, fayl shaklda qoldi",
+      "unknown": "nimadir noto‘g‘ri ketdi, fayl shaklda qoldi"
+    }
+  },
+  "confirm": {
+    "name": "To‘lovni tasdiqlash",
+    "proof": {
+      "label": "Mijozning to‘lov topshiriqnomasi",
+      "none": "To‘lov topshiriqnomasisiz (bank ko‘chirmasi bo‘yicha)"
+    },
+    "amount": {
+      "label": "Ko‘chirma bo‘yicha summa",
+      "hint": "Hisob qoldig‘i: {{balance}}. Qoldiqdan kam bo‘lsa — qisman to‘lov."
+    },
+    "date": {
+      "label": "Tushgan sana",
+      "hint": "Bank ko‘chirmasi bo‘yicha, bugundan kech emas"
+    },
+    "reference": {
+      "label": "Bank operatsiyasi raqami",
+      "hint": "Majburiy emas. Shu raqam bilan qayta kiritish ikkinchi to‘lovni yaratmaydi."
+    },
+    "submit": "To‘lovni tasdiqlash",
+    "submitPartial": "Qisman to‘lovni tasdiqlash",
+    "partial": "Qisman to‘lov",
+    "partialHint": "Olingan summani kiriting — u qoldiqdan kam.",
+    "done": "To‘lov tasdiqlandi: {{amount}}",
+    "donePartial": "Qisman to‘lov tasdiqlandi: {{amount}}, qoldiq {{rest}}",
+    "replayed": "Bu to‘lov allaqachon tasdiqlangan — qayta hech narsa yozilmadi.",
+    "consequence": {
+      "full": {
+        "step1": "{{number}} hisobi «To‘langan» bo‘ladi: {{amount}} olindi.",
+        "step2": "{{project}} loyihasining barcha hisoblari to‘langach, loyiha bosqichi «To‘lov bajarildi» bo‘ladi.",
+        "step3": "Mijoz Telegramda to‘lov haqida xabar oladi — bot yoqilgan va kontakt uni ulagan bo‘lsa."
+      },
+      "partial": {
+        "step1": "{{number}} hisobi «Qisman to‘langan» bo‘ladi: {{amount}} olindi, qoldiq {{rest}}.",
+        "step2": "Qoldiq «To‘lovni kutmoqda» yorlig‘ida qoladi — pul kelganda tasdiqlang.",
+        "step3": "Mijozga to‘lov haqidagi xabar hisob to‘liq to‘langandan keyin yuboriladi."
+      }
+    },
+    "invalidAmount": "Noldan katta summa kiriting, masalan 1500000.00.",
+    "invalidDate": "Bugundan kech bo‘lmagan tushgan sanani kiriting.",
+    "failed": "Saqlanmadi: {{reason}}",
+    "reasons": {
+      "exceeds_balance": "summa hisob qoldig‘idan katta ({{balance}}), hech narsa yozilmadi",
+      "already_paid": "hisob to‘liq to‘langan, kartochka yangilandi",
+      "not_issued": "hisob hali rasmiylashtirilmagan",
+      "not_open": "hisob endi to‘lovni kutmaydi, kartochka yangilandi",
+      "cancelled": "hisob bekor qilingan",
+      "reference_conflict": "bunday operatsiya raqamli to‘lov boshqa summa yoki sana bilan allaqachon yozilgan",
+      "forbidden": "amal rolingiz uchun mavjud emas",
+      "unavailable": "xizmat javob bermayapti, kiritilgan ma’lumot shaklda qoldi",
+      "validation": "summa va sanani tekshiring",
+      "not_found": "to‘lov topshiriqnomasi yoki hisob topilmadi, kartochka yangilandi",
+      "unknown": "nimadir noto‘g‘ri ketdi, kiritilgan ma’lumot shaklda qoldi"
+    }
+  },
+  "request": {
+    "toggle": "To‘lov topshiriqnomasini so‘rash",
+    "title": "Mijozga xabar",
+    "label": "Xabar matni",
+    "template": "Assalomu alaykum! Iltimos, {{number}} hisob bo‘yicha {{amount}} summadagi to‘lov topshiriqnomasini yuboring. To‘lov muddati — {{due}}. Rahmat!",
+    "templateNoDue": "Assalomu alaykum! Iltimos, {{number}} hisob bo‘yicha {{amount}} summadagi to‘lov topshiriqnomasini yuboring. Rahmat!",
+    "note": "Mijozning botiga va pochtasiga avtomatik yuborish hozircha yo‘q: matnni nusxalab, «Chatlar»da yuboring, so‘ng so‘rovni belgilang.",
+    "copy": "Matnni nusxalash",
+    "copied": "Matn nusxalandi",
+    "copyFailed": "Nusxalab bo‘lmadi — matnni qo‘lda belgilang.",
+    "mark": "Belgilash: to‘lov topshiriqnomasi so‘raldi",
+    "done": "To‘lov topshiriqnomasi so‘rovi hisob jurnalida belgilandi",
+    "requestedAt": "To‘lov topshiriqnomasi so‘ralgan sana: {{date}}",
+    "failed": "Belgilanmadi: {{reason}}"
+  },
+  "history": {
+    "title": "Hisob jurnali",
+    "empty": "Jurnalda hozircha yozuvlar yo‘q.",
+    "by": "{{name}}",
+    "code": {
+      "payment_recorded": "To‘lov tasdiqlandi",
+      "payment_doc_attached": "Mijozning to‘lov topshiriqnomasi biriktirildi",
+      "payment_doc_requested": "Mijozdan to‘lov topshiriqnomasi so‘raldi"
+    }
+  },
+  "payments": {
+    "title": "To‘lovlar",
+    "none": "Hisob bo‘yicha hali to‘lovlar bo‘lmagan.",
+    "columns": {
+      "date": "Sana",
+      "amount": "Summa",
+      "reference": "Operatsiya raqami",
+      "by": "Tasdiqlagan"
+    },
+    "caption": "Hisob bo‘yicha to‘lovlar"
+  },
+  "items": {
+    "title": "Hisob tarkibi",
+    "caption": "Hisob pozitsiyalari",
+    "columns": {
+      "name": "Nomi",
+      "quantity": "Soni",
+      "price": "Narx",
+      "total": "Summa"
+    },
+    "subtotal": "QQSsiz jami",
+    "vat": "QQS",
+    "total": "QQS bilan jami"
+  },
+  "view": {
+    "back": "Hisoblar ro‘yxatiga",
+    "backMemos": "To‘lanadigan xizmat xatlariga",
+    "projectLine": "{{project}} loyihasi · {{client}}"
+  },
+  "memo": {
+    "caption": "To‘lanadigan xizmat xatlari",
+    "scroll": "To‘lanadigan xizmat xatlari jadvali",
+    "scope": {
+      "label": "Qaysi xizmat xatlarini ko‘rsatish",
+      "to_pay": "To‘lanadigan",
+      "paid": "To‘langan"
+    },
+    "columns": {
+      "number": "Xizmat xati va mavzu",
+      "author": "Kimdan",
+      "amount": "Summa",
+      "due": "Qachongacha kerak",
+      "invoice": "Yetkazib beruvchi hisobi",
+      "status": "Holat",
+      "action": "Amal"
+    },
+    "invoice": {
+      "attached": "Biriktirilgan",
+      "missing": "Biriktirilmagan"
+    },
+    "status": {
+      "to_pay": "Buxgalterga topshirilgan",
+      "paid": "To‘langan"
+    },
+    "paidOn": "{{date}} sanasida to‘langan",
+    "select": "{{number}} xizmat xatini yon oynada ko‘rsatish",
+    "openLabel": "{{number}} xizmat xatini ochish",
+    "empty": {
+      "to_pay": {
+        "title": "To‘lanadigan xizmat xatlari yo‘q",
+        "text": "Summali xizmat xatlari direktor tasdiqlagandan keyin yetkazib beruvchi hisobi bilan shu yerda paydo bo‘ladi.",
+        "action": "To‘langan"
+      },
+      "paid": {
+        "title": "To‘langan xizmat xatlari hali yo‘q",
+        "text": "To‘langan xizmat xatlari sana, summa va to‘lov topshiriqnomasi bilan shu yerda qoladi.",
+        "action": "To‘lanadigan"
+      }
+    },
+    "panel": {
+      "sheetLabel": "Xizmat xati to‘lovi",
+      "sheetTitle": "To‘lov · {{number}}",
+      "from": "Kimdan",
+      "amount": "Kelishilgan summa",
+      "due": "Qachongacha kerak",
+      "text": "Xizmat xati matni",
+      "files": "Yetkazib beruvchi hisobi va ilovalar",
+      "noFiles": "Yetkazib beruvchi hisobi biriktirilmagan. Muallif hisobni biriktirishi uchun xizmat xatini unga qaytaring.",
+      "download": "{{name}} faylini yuklab olish",
+      "open": "Xizmat xati kartochkasini ochish",
+      "paidTitle": "To‘langan",
+      "paidText": "{{date}} sanasida to‘langan: {{amount}}. To‘lov topshiriqnomasi va sana — xat jurnalida.",
+      "paidBy": "To‘lovni tasdiqlagan: {{name}}",
+      "receipt": "To‘lov topshiriqnomasi",
+      "readOnly": {
+        "title": "Faqat ko‘rish",
+        "text": "Xizmat xatini navbati kelgan buxgalter to‘laydi. Sizga yetkazib beruvchi hisobi va jurnal ochiq."
+      },
+      "notYourStep": {
+        "title": "Hozir sizning qadamingiz emas",
+        "text": "Bu xizmat xatini boshqa buxgalter to‘laydi, o‘zingizning xatingizni esa hamkasbingiz to‘laydi."
+      },
+      "journal": "Xat jurnali"
+    },
+    "form": {
+      "name": "Xizmat xati to‘lovi",
+      "date": {
+        "label": "To‘lov sanasi",
+        "hint": "Bugundan kech emas"
+      },
+      "amount": {
+        "label": "To‘lov summasi, {{currency}}",
+        "hint": "Kelishilgan {{approved}} summadan oshmasin"
+      },
+      "receipt": {
+        "label": "To‘lov topshiriqnomasi",
+        "hint": "PDF, rasm yoki Office hujjati, 25 MB gacha. Majburiy emas",
+        "uploaded": "Yuklandi: {{name}}"
+      },
+      "note": {
+        "label": "Izoh",
+        "hint": "Majburiy emas"
+      },
+      "submit": "To‘landi",
+      "done": "{{number}} xizmat xati to‘landi",
+      "failed": "Saqlanmadi: {{reason}}",
+      "invalidAmount": "Noldan katta summa kiriting, masalan 1500000.00.",
+      "invalidDate": "Bugundan kech bo‘lmagan to‘lov sanasini kiriting.",
+      "consequence": {
+        "step1": "{{number}} xizmat xati «To‘langan» bo‘ladi: {{date}} sanasida {{amount}}.",
+        "step2": "Sana, summa va to‘lov topshiriqnomasi xat jurnaliga yoziladi.",
+        "step3": "Xat hujjatlar arxiviga o‘tadi."
+      },
+      "return": {
+        "toggle": "Muallifga qaytarish",
+        "label": "Qaytarish sababi",
+        "hint": "Majburiy: muallif uni ko‘radi va xizmat xatini to‘g‘rilaydi.",
+        "submit": "Xizmat xatini qaytarish",
+        "done": "Xizmat xati muallifga qaytarildi",
+        "failed": "Qaytarilmadi: {{reason}}"
+      },
+      "reasons": {
+        "amount_exceeds_approved": "summa direktor kelishgan summadan katta",
+        "amount_currency_mismatch": "to‘lov valyutasi xat valyutasiga mos emas",
+        "amount_must_be_positive": "summa noldan katta bo‘lishi kerak",
+        "paid_on_in_future": "to‘lov sanasi kelajakda",
+        "already_paid": "xat boshqa ma’lumotlar bilan allaqachon to‘langan, kartochka yangilandi",
+        "invalid_state": "xat buxgalterda emas, kartochka yangilandi",
+        "route_closed": "xat bo‘yicha qaror allaqachon qabul qilingan, kartochka yangilandi",
+        "not_your_step": "hozir sizning qadamingiz emas",
+        "file": "to‘lov topshiriqnomasi mavjud emas, uni qayta yuklang",
+        "forbidden": "amal rolingiz uchun mavjud emas",
+        "unavailable": "hujjatlar xizmati javob bermayapti, kiritilgan ma’lumot shaklda qoldi",
+        "validation": "summa va sanani tekshiring",
+        "unknown": "nimadir noto‘g‘ri ketdi, kiritilgan ma’lumot shaklda qoldi"
+      }
+    },
+    "journalAction": {
+      "document_created": "Yaratilgan",
+      "document_submitted": "Kelishuvga yuborilgan",
+      "approval_requested": "Kelishuvga topshirilgan",
+      "approval_decided": "Qaror qabul qilingan",
+      "document_paid": "To‘langan",
+      "document_archived": "Arxivga o‘tkazilgan",
+      "file_attached": "Fayl biriktirilgan"
+    }
+  }
+}

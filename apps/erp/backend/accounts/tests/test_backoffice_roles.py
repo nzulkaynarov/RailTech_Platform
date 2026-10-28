@@ -26,7 +26,14 @@ EXPECTED_TEMPLATES = {
     },
     "CATALOG_SUPPLY": {"catalog.manage", "catalog.publish", "supply.manage", "quote.view_cost_margin"},
     "FULFILLMENT": {"fulfillment.manage", "fulfillment.act"},
-    "FINANCE": {"finance.invoice", "finance.payment", "finance.rates", "quote.view_cost_margin", "data.export"},
+    "FINANCE": {
+        "finance.view",
+        "finance.invoice",
+        "finance.payment",
+        "finance.rates",
+        "quote.view_cost_margin",
+        "data.export",
+    },
     "HEAD": set(ALL_PERMISSIONS),
     "VIEWER": set(),
 }
@@ -62,19 +69,24 @@ def test_templates_cover_business_roles_and_prefixes():
 
 
 def test_frozen_migration_table_matches_code():
-    # Каталог и шаблоны = таблица миграции 0003 + добавки миграций 0004 (M1-ERP-08, `finance.rates`) и 0011 (D2-1,
-    # визы расчёта по типу позиции).
-    added = frozen.ADDED_0004 + frozen.ADDED_0011
+    # Каталог и шаблоны = таблица миграции 0003 + добавки миграций 0004 (M1-ERP-08, `finance.rates`), 0011 (D2-1,
+    # визы расчёта по типу позиции) и 0012 (D2-4, `finance.view`).
+    added = frozen.ADDED_0004 + frozen.ADDED_0011 + frozen.ADDED_0012
     assert set(frozen.ALL) | set(added) == set(ALL_PERMISSIONS)
     assert len(frozen.ALL) + len(added) == len(ALL_PERMISSIONS)
     assert {
-        code: set(perms) | set(frozen.ROLE_GRANTS_0004.get(code, [])) | set(frozen.ROLE_GRANTS_0011.get(code, []))
+        code: set(perms)
+        | set(frozen.ROLE_GRANTS_0004.get(code, []))
+        | set(frozen.ROLE_GRANTS_0011.get(code, []))
+        | set(frozen.ROLE_GRANTS_0012.get(code, []))
         for code, _name, perms in frozen.BACKOFFICE_ROLES
     } == {code: set(perms) for code, perms in ROLE_TEMPLATES.items()}
     assert [name for _c, name, _p in frozen.BACKOFFICE_ROLES] == [label for _v, label in BackofficeRoleCode.choices]
-    # Волна 12 (EDS-03): каталог после accounts/0010 — каталог кода без виз D2-1; после 0011 — ровно каталог кода.
-    assert set(frozen.CATALOG_0010) == set(ALL_PERMISSIONS) - set(frozen.ADDED_0011)
-    assert set(frozen.CATALOG_0011) == set(ALL_PERMISSIONS)
+    # Волна 12 (EDS-03): каталог после accounts/0010 — каталог кода без виз D2-1 и `finance.view`;
+    # после 0012 — ровно каталог кода.
+    assert set(frozen.CATALOG_0010) == set(ALL_PERMISSIONS) - set(frozen.ADDED_0011) - set(frozen.ADDED_0012)
+    assert set(frozen.CATALOG_0011) == set(ALL_PERMISSIONS) - set(frozen.ADDED_0012)
+    assert set(frozen.CATALOG_0012) == set(ALL_PERMISSIONS)
 
 
 def test_migration_0010_prunes_codes_outside_the_catalog_from_roles_and_snapshots(db):

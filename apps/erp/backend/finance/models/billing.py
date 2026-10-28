@@ -7,7 +7,14 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 from core.models import Currency
-from core.storage import act_pdf_path, get_private_storage, invoice_pdf_path, payment_proof_path, payment_receipt_path
+from core.storage import (
+    act_pdf_path,
+    get_private_storage,
+    invoice_pdf_path,
+    payment_confirmation_path,
+    payment_proof_path,
+    payment_receipt_path,
+)
 
 from .lookups import ActStatus, InvoiceStatus
 
@@ -201,6 +208,74 @@ class Payment(models.Model):
 
     def __str__(self):
         return f"Payment {self.amount} on {self.paid_at}"
+
+
+class PaymentConfirmation(models.Model):
+    """Платёжка клиента на подтверждение (SPEC-v3 §2.1 «Платёжка», integration-map ERP-04).
+
+    Файл платёжного поручения, приложенный клиентом (кабинет, бот, почта) или бухгалтером (`MANUAL`): сам по себе деньгами
+    не является. Деньги — `Payment`, который записывает бухгалтер, сверив платёжку с выпиской банка («Подтвердить оплату»).
+    Пока платёжка `PENDING`, счёт в разделе «Счета и оплаты» стоит на вкладке «Платёжки на подтверждение».
+    """
+
+    class Source(models.TextChoices):
+        CABINET = "CABINET", _("Кабинет клиента")
+        BOT = "BOT", _("Telegram-бот")
+        EMAIL = "EMAIL", _("Почта")
+        MANUAL = "MANUAL", _("Приложил бухгалтер")
+
+    class Status(models.TextChoices):
+        PENDING = "PENDING", _("Ждёт подтверждения")
+        CONFIRMED = "CONFIRMED", _("Оплата подтверждена")
+
+    invoice = models.ForeignKey(Invoice, on_delete=models.PROTECT, related_name="confirmations")
+    source = models.CharField(max_length=10, choices=Source.choices, default=Source.MANUAL)
+    file = models.FileField(upload_to=payment_confirmation_path, storage=get_private_storage)
+    original_name = models.CharField(max_length=255, blank=True, default="")
+    claimed_amount = models.DecimalField(
+        max_digits=14,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name=_("Сумма по словам клиента"),
+        help_text=_("Что указал клиент; не доверяется: сумму подтверждает бухгалтер по выписке"),
+    )
+    claimed_date = models.DateField(null=True, blank=True, verbose_name=_("Дата платежа по словам клиента"))
+    note = models.CharField(max_length=500, blank=True, default="")
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING, db_index=True)
+    payment = models.OneToOneField(
+        Payment,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="confirmation",
+        verbose_name=_("Платёж, который подтвердил эту платёжку"),
+    )
+    received_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    recorded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+        verbose_name=_("Приложил сотрудник"),
+    )
+    confirmed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
+    confirmed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = _("Платёжка клиента")
+        verbose_name_plural = _("Платёжки клиентов")
+        ordering = ["received_at", "id"]
+
+    def __str__(self):
+        return f"PaymentConfirmation {self.pk} ({self.status})"
 
 
 @pghistory.track(

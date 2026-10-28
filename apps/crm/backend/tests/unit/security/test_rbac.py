@@ -182,6 +182,8 @@ ADMINISTRATION = {
     ("external_services", "write"),
     ("tickets", "read"),
     ("tickets", "write"),
+    ("company_articles", "read"),
+    ("company_articles", "write"),
     ("models", "read"),
     ("models", "test"),
     ("models", "write"),

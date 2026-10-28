@@ -116,12 +116,10 @@ describe("переходы: адрес и вкладка бокового окн
     }
   });
 
-  it("договор, счёт и акт остаются без экрана — остаётся «Где сделать»", () => {
-    for (const path of [
-      "/eds/projects/%D0%9F%D0%A0-2026-099?panel=open&tab=documents",
-      `/eds/payments/${seg("СЧ-2026/142")}`,
-    ]) {
-      expect(isActionable(path), path).toBe(false);
-    }
+  it("договор и акт остаются без экрана — остаётся «Где сделать»; счёт открывается в «Счетах и оплатах» (D2-4)", () => {
+    expect(isActionable("/eds/projects/%D0%9F%D0%A0-2026-099?panel=open&tab=documents")).toBe(
+      false,
+    );
+    expect(isActionable(`/eds/payments/${seg("СЧ-2026/142")}`)).toBe(true);
   });
 });

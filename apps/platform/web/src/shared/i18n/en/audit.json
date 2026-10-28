@@ -287,6 +287,13 @@
       "create": "Wrote to the administrator",
       "reply": "Replied to a staff request",
       "status": "Changed a staff request status"
+    },
+    "company_article": {
+      "create": "Created a company article",
+      "update": "Changed a company article",
+      "publish": "Published a company article",
+      "unpublish": "Unpublished a company article",
+      "delete": "Deleted a company article"
     }
   },
   "entities": {
@@ -310,7 +317,8 @@
     "integration": "Connection",
     "external_service": "External service",
     "platform_role": "Platform role",
-    "staff_ticket": "Staff request"
+    "staff_ticket": "Staff request",
+    "company_article": "Company article"
   },
   "fields": {
     "email": "Email",
@@ -337,6 +345,9 @@
     "model": "Model",
     "enabled": "Enabled",
     "key": "Key",
-    "roles_count": "Number of roles"
+    "roles_count": "Number of roles",
+    "title": "Title",
+    "status": "Status",
+    "body_length": "Text length"
   }
 }

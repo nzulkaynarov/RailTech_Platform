@@ -66,7 +66,7 @@ ERP сам их не описывает. Токены дизайна — из `p
 | `sales` | запрос → сделка (FSM) → КП (билдер, версии, экономика, согласование, курс на дату) → договор → публичная страница акцепта | `crm/` (deals, quotes, contracts, approvals, numbering, wording, document_blocks) |
 | `supply` (D2-2: заказы ЗП, приёмка, запросы цен, просрочка; остальное — M4) | поставщик, заказ поставщику (back-to-back, дропшип), приёмка, счёт и оплата поставщику, сроки; субподряд как этапы | `catalog.SupplierOffer`, `crm/services/availability.py`; остальное новое |
 | `inventory` (D2-2: остатки по ячейкам, журнал, резервы, отгрузки; `/api/v1/stock/*`) | журнал движений, остаток = сумма движений, резервы, «доступно к обещанию»; отгрузки по строкам | `crm` `Fulfillment` |
-| `finance` | счета клиентам, платежи, акты (двусторонние), напоминания, отклонение маржи по курсу | `crm/services/billing.py`, `invoice_lifecycle.py`, `deal_emails.py` |
+| `finance` | счета клиентам, платежи, акты (двусторонние), напоминания, отклонение маржи по курсу; **«Счета и оплаты» бухгалтера (D2-4)**: доска вкладок без пересечений, карточка, подтверждение оплаты (полное и частичное), платёжка клиента `PaymentConfirmation`, запрос платёжки — `/api/v1/finance/receivables/*`; чтение — `finance.invoice` или `finance.payment`, действия — `finance.payment`; «Просрочен» вычисляется по сроку, не статусом | `crm/services/billing.py`, `invoice_lifecycle.py`, `deal_emails.py`; `finance/services/receivables.py`, `finance/views_receivables.py`, `finance/serializers_receivables.py` |
 | `documents` | шаблоны компании, PDF off-thread, квитанции, накладные, поиск, «недавние» | `crm/services/documents/`, `generated_documents.py`, `crm.tasks.render_document_pdf` |
 | `ai` | очередь `ai`: разбор запроса, сопоставление с каталогом, черновик КП, обогащение карточки, разбор прайса (M4), диф КП; клиент LiteLLM; трейсы Langfuse; evals | `sourcing/` (`services_ai*.py`, `tasks_ai.py`, `AIJob`, `ImportTask`) минус прямой SDK |
 | `portal` (M2) | `/api/portal/v1/*`: только своя компания; вход Telegram `initData` / magic-link; действия клиента | покупательские вьюхи `crm`, `crm/views/documents_public.py`, `crm/services/public_page.py` |
@@ -185,7 +185,7 @@ Makefile · .env.example · docs/ (ADR и runbooks ERP в docs/runbooks/erp/ —
 | Каталог | `catalog.manage`, `catalog.publish` |
 | Снабжение | `supply.manage` (поставщики и их предложения; M4 добавит заказы поставщикам и приёмку) |
 | Исполнение и логистика | `fulfillment.manage` (отгрузки, накладные), `fulfillment.act` (акты: выставить из счёта, переоформить, отменить, напомнить) |
-| Финансы | `finance.invoice` (счета клиентам), `finance.payment` (фиксация оплат), `finance.rates` (договорной курс КП с причиной — `fx-override`; факт закупки для отклонения маржи — вместе с `supply.manage`; M1-ERP-08) |
+| Финансы | `finance.view` (читать счета и оплаты без права действовать — директор и менеджер Платформы, D2-4), `finance.invoice` (счета клиентам), `finance.payment` (фиксация оплат), `finance.rates` (договорной курс КП с причиной — `fx-override`; факт закупки для отклонения маржи — вместе с `supply.manage`; M1-ERP-08) |
 | Настройки и команда | `settings.edit` (реквизиты, бланк, шаблоны документов, нумерация, формулировки), `settings.charge_templates` (шаблоны статей расходов КП), `team.manage` (команда и роли) |
 | Данные | `data.export` |
 
@@ -197,7 +197,7 @@ Makefile · .env.example · docs/ (ADR и runbooks ERP в docs/runbooks/erp/ —
 | `CALCULATION` | Расчёт | `deal.manage`, `quote.build`, `quote.edit_pricing`, `quote.view_cost_margin`, `quote.send`, `quote.review`, `quote.visa_goods`, `quote.visa_services`, `contract.manage` |
 | `CATALOG_SUPPLY` | Каталог и закупки | `catalog.manage`, `catalog.publish`, `supply.manage`, `quote.view_cost_margin` |
 | `FULFILLMENT` | Исполнение и логистика | `fulfillment.manage`, `fulfillment.act` |
-| `FINANCE` | Финансы | `finance.invoice`, `finance.payment`, `finance.rates`, `quote.view_cost_margin`, `data.export` |
+| `FINANCE` | Финансы | `finance.view`, `finance.invoice`, `finance.payment`, `finance.rates`, `quote.view_cost_margin`, `data.export` |
 | `HEAD` | Руководитель | все коды (визы КП, подпись договора, команда, настройки; одобрение КП директором — в EDS) |
 | `VIEWER` | Наблюдатель | — (только просмотр) |
 
