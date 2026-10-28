@@ -18,6 +18,7 @@ import { SourceBanner } from "../../shared/ui/SourceBanner";
 import { matchSection } from "../registry";
 import { viewRoleNames } from "../../entities/role/roles";
 import { isActionable } from "../bridge";
+import { objectLink } from "../objectLinks";
 import { WhereToDo } from "../stub/WhereToDo";
 import { dueBadge, isUrgent, pluralForm, queueEmptyKind } from "./queue";
 import "./dashboard.css";
@@ -64,23 +65,27 @@ export function QueuePage() {
     .filter(Boolean)
     .join(" · ");
 
-  const rows: RowItem[] = (queue.data?.items ?? []).map((item) => ({
-    id: item.id,
-    badge: dueBadge(
-      item,
-      (key, options) => t(key, options),
-      (value) => format.date(value, "short"),
-    ),
-    title: item.title,
-    // Строка замещаемого коллеги (W15-H6): «за Имя · …» — чья это работа.
-    caption: item.on_behalf_of
-      ? `${t("modules:dashboard.queue.onBehalf", { name: item.on_behalf_of.name })} · ${item.subtitle}`
-      : item.subtitle,
-    to: item.object.path,
-    urgent: isUrgent(item),
-    // У цели нет экрана в Платформе — «Где сделать» вместо ссылки на заглушку (W15-H2).
-    ...(isActionable(item.object.path) ? {} : { where: <WhereToDo path={item.object.path} /> }),
-  }));
+  const rows: RowItem[] = (queue.data?.items ?? []).map((item) => {
+    // Письмо, КП, служебка и диалог клиента открываются в своём экране на нужной вкладке (D1-6), без «моста» в старую систему.
+    const to = objectLink(item.object);
+    return {
+      id: item.id,
+      badge: dueBadge(
+        item,
+        (key, options) => t(key, options),
+        (value) => format.date(value, "short"),
+      ),
+      title: item.title,
+      // Строка замещаемого коллеги (W15-H6): «за Имя · …» — чья это работа.
+      caption: item.on_behalf_of
+        ? `${t("modules:dashboard.queue.onBehalf", { name: item.on_behalf_of.name })} · ${item.subtitle}`
+        : item.subtitle,
+      to,
+      urgent: isUrgent(item),
+      // У цели нет экрана в Платформе (договор, счёт, акт, расчёт) — «Где сделать» вместо ссылки на заглушку (W15-H2).
+      ...(isActionable(to) ? {} : { where: <WhereToDo path={to} /> }),
+    };
+  });
 
   const sources = mergeSources(queue.data?.sources, cards.data?.sources);
   const partial =

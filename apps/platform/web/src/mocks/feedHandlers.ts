@@ -1,6 +1,6 @@
 import { HttpResponse, http } from "msw";
 
-import type { Notification, Sources } from "../shared/api/generated/model";
+import type { Notification, QueueItem, Sources } from "../shared/api/generated/model";
 import {
   activityToday,
   cardsForView,
@@ -37,6 +37,37 @@ function crmDown(): boolean {
     return false;
   }
 }
+
+/**
+ * Строка очереди без родного экрана (проект на стадии «Оплата») для e2e и снимков «Где сделать»:
+ * `localStorage["rt-pf-mock-queue-stub"] = "1"` добавляет её к очереди директора (D1-6: у лидов, писем, КП и служебок
+ * экраны уже есть, а проверять мост H1 надо на строке, у которой экрана нет).
+ */
+export const MOCK_QUEUE_STUB_KEY = "rt-pf-mock-queue-stub";
+
+function queueStub(): boolean {
+  try {
+    return window.localStorage.getItem(MOCK_QUEUE_STUB_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+const STUB_ROW: QueueItem = {
+  id: "project:99:problem",
+  role_id: "",
+  kind: "problem_project",
+  title: "Разобраться с проектом ПР-2026-099",
+  subtitle: "АО «Демо-Рейл» · 9 дней на стадии «Оплата»",
+  due_label: "later",
+  object: {
+    kind: "project",
+    number: "ПР-2026-099",
+    title: "Рельсовые скрепления",
+    path: "/eds/projects/%D0%9F%D0%A0-2026-099?panel=open&tab=documents",
+    step: "PAYMENT",
+  },
+};
 
 const sources = (): Sources => ({
   crm: crmDown() ? "unavailable" : "ok",
@@ -113,6 +144,8 @@ export const feedHandlers = [
     const own = queueForView(roles.view).filter((i) =>
       i.kind.endsWith("_lead") ? !crmDown() : !erpDown(),
     );
+    const director = own.find((i) => i.kind === "resolve_letter");
+    if (queueStub() && director) own.push({ ...STUB_ROW, role_id: director.role_id });
     // Замещение (W15-H6): заместитель видит строки замещаемого с пометкой «за {имя}».
     const session = readSession();
     const userId = session ? sessionRoles(session)?.user.id : undefined;

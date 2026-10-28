@@ -72,7 +72,7 @@ def _lead_row(
         subtitle=join(name, short(why or lead.get("need_summary")), ago(waiting, now)),
         due_label=due_label(due_at, now, default="today"),
         due_at=due_at,
-        object=lead_ref(lead_id, name),
+        object=lead_ref(lead_id, name, conversation=True),
     )
     return Row(item, waiting)
 

@@ -77,7 +77,7 @@ async def test_manager_queue_comes_from_crm_inbox(
     assert first["due_label"] == "today"
     assert "Демо Клиентов" in first["subtitle"]
     assert "Просит цену и договор" in first["subtitle"]
-    assert first["object"]["path"] == "/crm/leads?lead=L-2041&panel=open&tab=card"
+    assert first["object"]["path"] == "/crm/messages?lead=L-2041"
     assert body["items"][1]["title"] == "Ответить лиду L-2050"
     assert "3 ч назад" in body["items"][1]["subtitle"]
     assert fb.calls(fb.erp["approvals"]) == 0  # у менеджера ERP-очереди нет
@@ -852,6 +852,8 @@ async def test_search_merges_crm_and_erp_into_module_groups(
     assert list(groups) == ["crm", "eds"]
     assert [h["object"]["kind"] for h in groups["crm"]] == ["lead", "client", "request"]
     assert groups["crm"][0]["object"]["number"] == "L-2041"
+    # поиск открывает лида карточкой («Все лиды»), а не диалогом: диалог — у строки очереди
+    assert groups["crm"][0]["object"]["path"] == "/crm/leads?lead=L-2041&panel=open&tab=card"
     assert groups["crm"][1]["subtitle"] == "ИНН 300000001"
     assert fb.query(fb.crm["leads"])["q"] == "Демо"
     # из документов нашлись КП, счёт и договор; «Квитанция» Платформа не открывает

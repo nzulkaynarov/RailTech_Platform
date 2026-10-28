@@ -39,6 +39,12 @@
 | `GET /activity/today` (вкладка «Сегодня») | ERP `GET /crm/activity-logs/`, `GET /crm/timeline/`; CRM `GET /audit` | ✓ |
 | `GET /summary` (воронка, застрявшие, дебиторка, причины отказов) | CRM `GET /dashboard`, `GET /deals/summary`; ERP `GET /crm/analytics/dashboard/`, `GET /crm/analytics/time-to-first-quote/` | ✓ (застрявшие по 7 шагам — вывод BFF) |
 
+**Ссылки объектов (`ObjectRef.path`) в очереди, поиске и уведомлениях (D1-6, без изменения контракта).** Строка очереди «ждут ответа клиенту»
+(`answer_lead`, `take_lead`: передача бота, новое сообщение, лид без менеджера) ведёт в диалог «Клиенты · Ждут ответа» —
+`/crm/messages?lead=L-NNNN`; тот же лид в поиске — карточка в «Все лиды» (`/crm/leads?lead=…&panel=open&tab=card`). Письмо, КП на одобрении и служебка —
+`/eds/inbox|drafts|approvals/<номер или id>?panel=open&tab=resolution|approve|agree`; если BFF прислал адрес короче, Платформа достраивает окно и вкладку
+(`modules/objectLinks.ts`). Договор, счёт, акт и расчёт остаются разделами-заглушками («Где сделать», мост H1).
+
 ### 1.3. CRM
 
 | Экран / действие | BFF | CRM | ERP | Статус |

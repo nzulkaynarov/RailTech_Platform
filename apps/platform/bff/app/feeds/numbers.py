@@ -136,14 +136,17 @@ def deal_ref(deal: dict[str, Any], *, tab: str = "card") -> ObjectRef:
     )
 
 
-def lead_ref(lead_id: int, title: str | None) -> ObjectRef:
+def lead_ref(lead_id: int, title: str | None, *, conversation: bool = False) -> ObjectRef:
+    """Лид открывается карточкой в «Все лиды»; строка, где от менеджера ждут ответа клиенту
+    (`conversation`: передача бота, новое сообщение, лид без менеджера), — диалогом в «Ждут
+    ответа» (D1-6): там «Забрать», лента и ответ."""
     number = lead_number(lead_id)
-    return ObjectRef(
-        kind="lead",
-        number=number,
-        title=title,
-        path=f"/crm/leads?lead={segment(number)}&panel=open&tab=card",
+    path = (
+        f"/crm/messages?lead={segment(number)}"
+        if conversation
+        else f"/crm/leads?lead={segment(number)}&panel=open&tab=card"
     )
+    return ObjectRef(kind="lead", number=number, title=title, path=path)
 
 
 def quote_number(quote: dict[str, Any]) -> str:
