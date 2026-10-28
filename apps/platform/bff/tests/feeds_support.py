@@ -4,7 +4,7 @@ import json
 import re
 from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, Literal
 
 import httpx
 import respx
@@ -99,7 +99,7 @@ class FeedBackends:
             "approvals": self._erp(
                 "approvals", router.get(f"{base}/crm/quotes/my-approval-queue/")
             ),
-            "deals": self._erp("deals", router.get(f"{base}/crm/deals/")),
+            "deals": router.get(f"{base}/crm/deals/").mock(side_effect=self._deals),
             "notifications": self._erp("notifications", router.get(f"{base}/notifications/")),
             "documents": self._erp(
                 "documents", router.get(f"{base}/crm/analytics/search-documents/")
@@ -108,6 +108,9 @@ class FeedBackends:
             "timeline": self._erp("timeline", router.get(f"{base}/crm/timeline/")),
             "overdue": self._erp("overdue", router.get(f"{base}/stock/overdue/")),
         }
+        self.deal_by_id = router.get(
+            url__regex=re.compile(rf"^{ERP_URL}/api/v1/crm/deals/\d+/$")
+        ).mock(side_effect=self._deal)
         self.eds = {
             "letters": self._eds("letters", router.get(f"{EDS_URL}/api/v1/letters")),
             "approvals": self._eds("memos", router.get(f"{EDS_URL}/api/v1/approvals")),
@@ -137,6 +140,27 @@ class FeedBackends:
         if found is None:
             return httpx.Response(404, json={"code": "NOT_FOUND", "message": "x", "source": "eds"})
         return httpx.Response(200, json=found)
+
+    def _deals(self, request: httpx.Request) -> httpx.Response:
+        """Список сделок ERP; с `?search=` — как ERP-09: номер (латиница и пробелы допустимы,
+        NNN под любым префиксом), название и компания; страница — `page_size`."""
+        response = self._respond("deals", self.erp_down)
+        term = request.url.params.get("search")
+        if term is None or response.status_code != 200:
+            return response
+        body = json.loads(response.content)
+        found = [d for d in body["results"] if deal_matches(d, term)]
+        size = request.url.params.get("page_size")
+        page = found[: int(size)] if size else found
+        return httpx.Response(200, json={**body, "count": len(found), "results": page})
+
+    def _deal(self, request: httpx.Request) -> httpx.Response:
+        """Сделка по id (`/crm/deals/{id}/`)."""
+        deal_id = int(request.url.path.rstrip("/").rsplit("/", 1)[1])
+        for item in self.state["deals"]["results"]:
+            if item["id"] == deal_id:
+                return httpx.Response(200, json=item)
+        return httpx.Response(404, json={"detail": "Not found."})
 
     def _eds(self, key: str, route: respx.Route) -> respx.Route:
         return route.mock(side_effect=lambda _r: self._respond(key, self.eds_down))
@@ -244,6 +268,31 @@ def escalation(
     }
 
 
+_PROJECT_STAGES = ("CONTRACT_SIGNED", "CLOSED_WON")
+
+
+def deal_number_of(deal_id: int, stage: str, created: str, complete: bool) -> str:
+    """Номер, который выдал бы ERP: `ЗВ-ГГГГ-NNN`, у проекта (договор подписан) — `ПР-`."""
+    prefix = "ПР" if complete or stage in _PROJECT_STAGES else "ЗВ"
+    return f"{prefix}-{created[:4]}-{deal_id:03d}"
+
+
+def _normal(text: str) -> str:
+    folded = text.casefold().replace("zv", "зв").replace("pr", "пр")
+    return "".join(ch for ch in folded if ch not in " -–—/")
+
+
+def deal_matches(deal: dict[str, Any], term: str) -> bool:
+    """Поиск сделок ERP-09: номер (латиница ZV/PR и пробелы допустимы), название, компания."""
+    needle = _normal(term)
+    number = _normal(str(deal.get("number") or ""))
+    title = str(deal.get("title") or "").casefold()
+    company = str(deal.get("company_name") or "").casefold()
+    return bool(needle) and (
+        needle in number or term.strip().casefold() in title or term.strip().casefold() in company
+    )
+
+
 def deal(
     deal_id: int,
     stage: str,
@@ -252,10 +301,13 @@ def deal(
     company: str | None = "ООО «Демо-Депо»",
     created: str = "2027-01-10T08:00:00Z",
     complete: bool = False,
+    number: str | Literal["auto"] | None = "auto",
 ) -> dict[str, Any]:
-    """Сделка ERP со «служебными» полями, которые Платформа не должна показывать."""
+    """Сделка ERP со «служебными» полями, которые Платформа не должна показывать. `number` —
+    номер ERP (`auto` — как выдал бы ERP; `None` — ERP номера не отдал)."""
     return {
         "id": deal_id,
+        "number": deal_number_of(deal_id, stage, created, complete) if number == "auto" else number,
         "title": title,
         "company": 1,
         "company_name": company,

@@ -1,8 +1,9 @@
 """Сквозной поиск ⌘K: CRM — лиды и клиенты, ERP — сделки и документы; группы по модулям.
 
 Каждая группа и каждый результат проходят по матрице ролей «вида» (`platform-rbac.yaml`): что
-раздел скрывает, того в поиске нет. Операции поиска сделок в ERP нет (ERP-09), поэтому номер и
-название сделки ищутся по новейшим сделкам ERP (docs/QUESTIONS.md, Q-PLT-14-1).
+раздел скрывает, того в поиске нет. Сделки (заявки ЗВ, проекты ПР) ищет сам ERP:
+`GET /crm/deals/?search=` по номеру (латиница ZV/PR и пробелы допустимы), названию и компании
+(ERP-09); BFF поиск не повторяет.
 """
 
 import asyncio
@@ -22,10 +23,9 @@ from app.feeds.numbers import (
     lead_ref,
     letter_ref,
     memo_ref,
-    number_query,
     quote_ref,
 )
-from app.feeds.snapshot import DEALS_PARAMS, DEALS_PATH
+from app.feeds.snapshot import DEALS_PATH
 from app.feeds.text import join, segment, short
 from app.rbac import Access, allows
 from app.rbac_generated import ModuleCode
@@ -90,16 +90,6 @@ def _deal_hit(deal: dict[str, Any]) -> SearchHit:
     )
 
 
-# TODO(ERP-09): поиск сделок по номеру, названию и компании — операция ERP; пока ищет BFF.
-def _deal_matches(deal: dict[str, Any], needles: tuple[str, ...]) -> bool:
-    haystack = (
-        deal_number(deal),
-        str(deal.get("title") or ""),
-        str(deal.get("company_name") or ""),
-    )
-    return any(needle in part.casefold() for part in haystack for needle in needles)
-
-
 def _doc_hit(doc: dict[str, Any], deals: dict[int, dict[str, Any]]) -> SearchHit | None:
     kind = doc.get("type")
     label = doc.get("label")
@@ -160,13 +150,10 @@ def _registry_hit(item: dict[str, Any]) -> SearchHit | None:
 
 
 async def search(feed: Feed, access: Access, query: str) -> SearchResult:
-    needle = query.strip().casefold()
-    # Латинский префикс номера (`ZV-…`, `kp-…`) -> кириллический; запрос как набран ищется в сделках
-    # и в документах ERP (номера документов строит схема нумерации ERP, BFF её не перестраивает).
-    # `ЗВ-2026-1` для сделок ищется ещё и как `ЗВ-2026-001`: номер сделки составляет BFF.
+    # Сделки ERP получают запрос как набран (`ZV 2026 104`, `зв-2026-10`): номер, название и
+    # компанию разбирает ERP. Латинский префикс номера документа (`kp-…`) -> кириллический; номера
+    # документов строит схема нумерации ERP, BFF её не перестраивает.
     typed = cyrillic_prefix(query)
-    canonical = number_query(query)
-    needles = tuple(dict.fromkeys(n.casefold() for n in (needle, typed, canonical) if n))
     docs_query = typed
     can_leads = allows(access, "crm.leads", "read")
     can_clients = allows(access, "crm.clients", "read")
@@ -202,8 +189,8 @@ async def search(feed: Feed, access: Access, query: str) -> SearchResult:
 
     async def deals_and_docs() -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
         deal_rows, doc_rows = await asyncio.gather(
-            feed.get("erp", DEALS_PATH, DEALS_PARAMS, ttl=SNAPSHOT_TTL_SECONDS)
-            if can_deals or can_docs
+            feed.get("erp", DEALS_PATH, {"search": query.strip(), "page_size": HITS_LIMIT})
+            if can_deals
             else _none(),
             feed.get(
                 "erp",
@@ -224,8 +211,8 @@ async def search(feed: Feed, access: Access, query: str) -> SearchResult:
     lead_hits, client_hits, (all_deals, all_docs), registry_rows = await asyncio.gather(
         leads(), clients(), deals_and_docs(), registry()
     )
-    index = {int(d["id"]): d for d in all_deals if isinstance(d.get("id"), int)}
-    matching = [d for d in all_deals if isinstance(d.get("id"), int) and _deal_matches(d, needles)]
+    matching = [d for d in all_deals if isinstance(d.get("id"), int)]
+    index = await _deals_of_documents(feed, matching, all_docs)
     requests = [_deal_hit(d) for d in matching if deal_ref(d).kind == "request" and can_clients]
     projects = [
         _deal_hit(d)
@@ -263,6 +250,31 @@ async def search(feed: Feed, access: Access, query: str) -> SearchResult:
         if hits
     ]
     return SearchResult(groups=groups, sources=feed.sources)
+
+
+async def _deals_of_documents(
+    feed: Feed, found: list[dict[str, Any]], docs: list[dict[str, Any]]
+) -> dict[int, dict[str, Any]]:
+    """Сделки для подписей документов («проект», путь на вкладку «Документы»): найденные поиском и
+    сделки документов, которых среди них нет, — по id (не больше `HITS_LIMIT` запросов)."""
+    index = {int(d["id"]): d for d in found}
+    missing = list(
+        dict.fromkeys(
+            int(doc["deal"])
+            for doc in docs
+            if isinstance(doc.get("deal"), int) and int(doc["deal"]) not in index
+        )
+    )[:HITS_LIMIT]
+    loaded = await asyncio.gather(
+        *(
+            feed.get("erp", f"{DEALS_PATH}{deal_id}/", ttl=SNAPSHOT_TTL_SECONDS)
+            for deal_id in missing
+        )
+    )
+    for payload in loaded:
+        if isinstance(payload, dict) and isinstance(payload.get("id"), int):
+            index[int(payload["id"])] = payload
+    return index
 
 
 async def _none() -> None:
