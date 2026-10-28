@@ -87,6 +87,10 @@ from accounts.views import (
 )
 from accounts.views.setup import SetupCompanyView, SetupStatusView
 from accounts.wizard import WIZARD_FORMS, CompanyWizardView
+from catalog.desk.views_items import ItemDeskViewSet, SupplierDeskViewSet
+from catalog.desk.views_people import BrigadeDeskViewSet
+from catalog.desk.views_refs import ExchangeRateListViewSet, HsCodeDeskViewSet
+from catalog.desk.views_tech_docs import TechDocDeskViewSet
 from catalog.views import (
     CategoryRequestViewSet,
     CategoryViewSet,
@@ -170,6 +174,13 @@ from sourcing.views import (  # noqa: F811
 )
 
 router = DefaultRouter()
+# D2-3: «Номенклатура и поставщики», бригады, техдокументация и справочники для Платформы (`catalog.desk`).
+router.register(r"catalog/items", ItemDeskViewSet, basename="desk-item")
+router.register(r"catalog/suppliers", SupplierDeskViewSet, basename="desk-supplier")
+router.register(r"catalog/brigades", BrigadeDeskViewSet, basename="desk-brigade")
+router.register(r"catalog/tech-docs", TechDocDeskViewSet, basename="desk-tech-doc")
+router.register(r"master-data/hs-codes", HsCodeDeskViewSet, basename="desk-hs-code")
+router.register(r"exchange-rates", ExchangeRateListViewSet, basename="desk-exchange-rate")
 router.register(r"catalog/products", ProductViewSet, basename="product")
 router.register(r"catalog/offers", SupplierOfferViewSet, basename="offer")
 router.register(r"catalog/categories", CategoryViewSet, basename="category")

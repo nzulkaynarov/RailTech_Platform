@@ -49,6 +49,13 @@ _CONFLICTS: dict[str, tuple[str, str]] = {
         "doc_prefix_taken",
         "Такой префикс нумерации уже занят другой компанией. Выберите другой.",
     ),
+    # D2-3: справочники «Номенклатура и поставщики»
+    "HS_CODE_EXISTS": ("hs_code_exists", "Такой код ТН ВЭД уже есть в справочнике."),
+    "MANUFACTURER_EXISTS": ("manufacturer_exists", "Такой производитель уже есть в справочнике."),
+    "CATEGORY_REQUEST_ALREADY_PENDING": (
+        "already_pending",
+        "Запрос на такую категорию уже на рассмотрении.",
+    ),
 }
 # Код ERP -> поле контракта (`details.fields`), когда отказ относится к одному полю.
 _FIELD_OF: dict[str, str] = {
@@ -66,6 +73,33 @@ _FIELD_OF: dict[str, str] = {
     "REASON_REQUIRED": "reason",
     "CATEGORY_REQUIRED": "category_id",
     "CATEGORY_REQUEST_NAME_REQUIRED": "name",
+    # D2-3: коды ERP «Номенклатура и поставщики» -> поле формы
+    "ITEM_NAME_REQUIRED": "name",
+    "ITEM_KIND_INVALID": "kind",
+    "VAT_RATE_INVALID": "vat_rate",
+    "UNIT_NOT_FOUND": "unit_id",
+    "CATEGORY_NOT_FOUND": "category_id",
+    "OFFER_PRICE_INVALID": "price",
+    "OFFER_CURRENCY_INVALID": "price",
+    "OFFER_VALIDITY_RANGE_INVALID": "valid_until",
+    "STOCK_STATUS_NOT_FOUND": "stock_status",
+    "BRIGADE_NAME_REQUIRED": "name",
+    "BRIGADE_KIND_INVALID": "kind",
+    "BRIGADE_HEADCOUNT_INVALID": "headcount",
+    "RATE_UNIT_INVALID": "rate_unit",
+    "CREW_RATE_INVALID": "rate",
+    "CREW_CURRENCY_INVALID": "rate",
+    "HS_CODE_INVALID": "code",
+    "HS_NAME_REQUIRED": "name",
+    "HS_VALIDITY_RANGE_INVALID": "valid_until",
+    "FILE_TOO_LARGE": "file",
+    "FILE_TYPE_NOT_ALLOWED": "file",
+    "FILE_CONTENT_MISMATCH": "file",
+    "NO_FILE_PROVIDED": "file",
+    "TECH_DOC_LINK_REQUIRED": "product_id",
+    "TECH_DOC_KIND_INVALID": "kind",
+    "PRODUCT_NOT_FOUND": "product_id",
+    "DEAL_NOT_FOUND": "deal_id",
 }
 _CODE = re.compile(r"^[A-Z][A-Z0-9_]*(:.*)?$")
 
@@ -132,10 +166,16 @@ def erp_error(response: httpx.Response) -> PlatformError:
     409 `CONFLICT`.
     403, 404, 409 и 429 переводит общий `from_backend`.
     """
-    if response.status_code not in (400, 422):
-        return from_backend("erp", response)
     body = _body(response)
     code = backend_code(response)
+    known_conflict = (
+        response.status_code == 409
+        and code is not None
+        and _CODE.match(code) is not None
+        and code.split(":", 1)[0] in _CONFLICTS
+    )
+    if response.status_code not in (400, 422) and not known_conflict:
+        return from_backend("erp", response)
     details: dict[str, Any] = {"backend_status": response.status_code}
     if code is not None:
         details["backend_code"] = code

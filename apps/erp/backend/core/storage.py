@@ -138,6 +138,14 @@ def product_document_path(instance, filename):
     return f"products/{instance.product_id}/docs/{name}"
 
 
+def tech_document_path(instance, filename):
+    """tech-docs/{yyyy}/{uuid}.{ext} — техдокументация (D2-3): реестр без привязки пути к позиции или проекту."""
+    from django.utils import timezone
+
+    name = _uuid_filename(instance, filename)
+    return f"tech-docs/{timezone.localdate().year}/{name}"
+
+
 def company_logo_path(instance, filename):
     """companies/{company_id}/logo/{uuid}.{ext}"""
     name = _uuid_filename(instance, filename)

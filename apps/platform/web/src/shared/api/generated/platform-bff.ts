@@ -43,6 +43,10 @@ import type {
   BrandProfileUpdate,
   Bridge,
   BridgeErpSso,
+  Brigade,
+  BrigadeCreate,
+  BrigadePage,
+  BrigadeUpdate,
   BusDeliveryPage,
   BusInboxPage,
   BusJournal,
@@ -61,6 +65,13 @@ import type {
   CatalogCategoryIn,
   CatalogCategoryList,
   CatalogCategoryUpdate,
+  CatalogItemCreate,
+  CatalogItemDetail,
+  CatalogItemPage,
+  CatalogItemUpdate,
+  CatalogLookups,
+  CatalogOffer,
+  CategoryProposalIn,
   CategoryRequest,
   CategoryRequestApproveIn,
   CategoryRequestList,
@@ -79,6 +90,7 @@ import type {
   CompanyArticleCreate,
   CompanyArticleList,
   CompanyArticleUpdate,
+  CompanyItemRef,
   CompanyProfile,
   CompanyProfileUpdate,
   ConversationCard,
@@ -122,6 +134,7 @@ import type {
   Error,
   EscalationDryRun,
   EscalationSettingsIn,
+  ExchangeRatePage,
   ExternalChatList,
   ExternalService,
   ExternalServiceDetail,
@@ -138,6 +151,10 @@ import type {
   GetRoleJournalParams,
   GetSpendReportParams,
   Health,
+  HsCode,
+  HsCodeCreate,
+  HsCodePage,
+  HsCodeUpdate,
   IntegrationConflictResponse,
   IntegrationFailedResponse,
   IntegrationInvalidResponse,
@@ -162,9 +179,14 @@ import type {
   LetterRejectIn,
   LetterReturnIn,
   ListAuditParams,
+  ListBrigadesParams,
   ListBusDeliveriesParams,
   ListBusInboxParams,
   ListCalcRequestsParams,
+  ListCatalogCategoryRequestsParams,
+  ListCatalogExchangeRatesParams,
+  ListCatalogItemsParams,
+  ListCatalogSuppliersParams,
   ListCategoryRequestsParams,
   ListCrmClientsParams,
   ListCrmLeadsParams,
@@ -172,10 +194,12 @@ import type {
   ListEdsDocumentsParams,
   ListEmployeesParams,
   ListExternalChatsParams,
+  ListHsCodesParams,
   ListKbDocumentsParams,
   ListKbGapsParams,
   ListLettersParams,
   ListMailLogParams,
+  ListManufacturersParams,
   ListMemoApprovalsParams,
   ListNotificationsParams,
   ListPaymentMemosParams,
@@ -186,11 +210,17 @@ import type {
   ListStockShipmentsParams,
   ListStockSuppliersParams,
   ListSupplierOrdersParams,
+  ListTechDocDealOptionsParams,
+  ListTechDocsParams,
   ListTicketsParams,
   LoginIn,
   LogoUpload,
   MailLog,
   MailQueued,
+  Manufacturer,
+  ManufacturerCreate,
+  ManufacturerPage,
+  ManufacturerUpdate,
   Me,
   MeUpdate,
   MemoApprovalCard,
@@ -290,6 +320,8 @@ import type {
   StockShipment,
   StockShipmentList,
   StockSupplierList,
+  SupplierDetail,
+  SupplierOfferUpdate,
   SupplierOrderCancelIn,
   SupplierOrderConfirmIn,
   SupplierOrderCreate,
@@ -299,8 +331,12 @@ import type {
   SupplierOrderPatch,
   SupplierOrderReceiptIn,
   SupplierOrderSendIn,
+  SupplierPage,
   SystemStatus,
   TeamNoteIn,
+  TechDoc,
+  TechDocPage,
+  TechDocUpload,
   TelegramChannelList,
   TelegramConnector,
   TelegramLink,
@@ -32645,3 +32681,3575 @@ export const useCopyCrmMessageAttachmentToRequest = <
 > => {
   return useMutation(getCopyCrmMessageAttachmentToRequestMutationOptions(options), queryClient);
 };
+
+export const getGetCatalogLookupsUrl = () => {
+  return `/api/v1/erp/catalog/lookups`;
+};
+
+/**
+ * ERP `master-data/units|currencies|countries`, `catalog/categories`. Раздел `erp.stock` — чтение.
+ * @summary Расчёт · Справочники для форм: единицы, категории, валюты, страны
+ */
+export const getCatalogLookups = async (
+  options?: Parameters<typeof http>[1],
+): Promise<CatalogLookups> => {
+  return http<CatalogLookups>(getGetCatalogLookupsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCatalogLookupsQueryKey = () => {
+  return [`/api/v1/erp/catalog/lookups`] as const;
+};
+
+export const getGetCatalogLookupsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCatalogLookups>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCatalogLookups>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetCatalogLookupsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getCatalogLookups>>> = ({ signal }) =>
+    getCatalogLookups({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCatalogLookups>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetCatalogLookupsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCatalogLookups>>
+>;
+export type GetCatalogLookupsQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse | BackendUnavailableResponse
+>;
+
+export function useGetCatalogLookups<
+  TData = Awaited<ReturnType<typeof getCatalogLookups>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCatalogLookups>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCatalogLookups>>,
+          TError,
+          Awaited<ReturnType<typeof getCatalogLookups>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetCatalogLookups<
+  TData = Awaited<ReturnType<typeof getCatalogLookups>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCatalogLookups>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCatalogLookups>>,
+          TError,
+          Awaited<ReturnType<typeof getCatalogLookups>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetCatalogLookups<
+  TData = Awaited<ReturnType<typeof getCatalogLookups>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCatalogLookups>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Расчёт · Справочники для форм: единицы, категории, валюты, страны
+ */
+
+export function useGetCatalogLookups<
+  TData = Awaited<ReturnType<typeof getCatalogLookups>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCatalogLookups>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetCatalogLookupsQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getListCatalogItemsUrl = (params?: ListCatalogItemsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/erp/catalog/items?${stringifiedParams}`
+    : `/api/v1/erp/catalog/items`;
+};
+
+/**
+ * ERP `catalog/items/`. Тип позиции (товар со склада или под заказ, услуга фикс / по этапам / по времени) ERP вычисляет сам. Цен поставщиков в списке нет. Раздел `erp.stock` — чтение.
+ * @summary Расчёт · Номенклатура: позиции
+ */
+export const listCatalogItems = async (
+  params?: ListCatalogItemsParams,
+  options?: Parameters<typeof http>[1],
+): Promise<CatalogItemPage> => {
+  return http<CatalogItemPage>(getListCatalogItemsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListCatalogItemsQueryKey = (params?: ListCatalogItemsParams) => {
+  return [`/api/v1/erp/catalog/items`, ...(params ? [params] : [])] as const;
+};
+
+export const getListCatalogItemsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listCatalogItems>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListCatalogItemsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listCatalogItems>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListCatalogItemsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listCatalogItems>>> = ({ signal }) =>
+    listCatalogItems(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listCatalogItems>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListCatalogItemsQueryResult = NonNullable<Awaited<ReturnType<typeof listCatalogItems>>>;
+export type ListCatalogItemsQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse | BackendUnavailableResponse
+>;
+
+export function useListCatalogItems<
+  TData = Awaited<ReturnType<typeof listCatalogItems>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params: undefined | ListCatalogItemsParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listCatalogItems>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listCatalogItems>>,
+          TError,
+          Awaited<ReturnType<typeof listCatalogItems>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListCatalogItems<
+  TData = Awaited<ReturnType<typeof listCatalogItems>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListCatalogItemsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listCatalogItems>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listCatalogItems>>,
+          TError,
+          Awaited<ReturnType<typeof listCatalogItems>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListCatalogItems<
+  TData = Awaited<ReturnType<typeof listCatalogItems>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListCatalogItemsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listCatalogItems>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Расчёт · Номенклатура: позиции
+ */
+
+export function useListCatalogItems<
+  TData = Awaited<ReturnType<typeof listCatalogItems>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListCatalogItemsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listCatalogItems>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListCatalogItemsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getCreateCatalogItemUrl = () => {
+  return `/api/v1/erp/catalog/items`;
+};
+
+/**
+ * ERP `POST catalog/items/` — право `catalog.manage` (иначе 403 `FORBIDDEN`, `source = erp`). Новая позиция — черновик. Раздел `erp.stock` — полный.
+ * @summary Расчёт · Номенклатура: добавить позицию
+ */
+export const createCatalogItem = async (
+  catalogItemCreate: CatalogItemCreate,
+  options?: Parameters<typeof http>[1],
+): Promise<CatalogItemDetail> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<CatalogItemDetail>(getCreateCatalogItemUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(catalogItemCreate),
+  });
+};
+
+export const getCreateCatalogItemMutationKey = () => ["createCatalogItem"] as const;
+
+export const getCreateCatalogItemMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createCatalogItem>>,
+    TError,
+    CreateCatalogItemMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createCatalogItem>>,
+  TError,
+  CreateCatalogItemMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateCatalogItemMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createCatalogItem>>,
+    CreateCatalogItemMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createCatalogItem(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateCatalogItemMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createCatalogItem>>
+>;
+export type CreateCatalogItemMutationBody = CatalogItemCreate;
+export type CreateCatalogItemMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse | BackendUnavailableResponse
+>;
+export type CreateCatalogItemMutationVariables = { data: CatalogItemCreate };
+
+/**
+ * @summary Расчёт · Номенклатура: добавить позицию
+ */
+export const useCreateCatalogItem = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createCatalogItem>>,
+      TError,
+      CreateCatalogItemMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createCatalogItem>>,
+  TError,
+  CreateCatalogItemMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateCatalogItemMutationOptions(options), queryClient);
+};
+
+export const getGetCatalogItemUrl = (id: string) => {
+  return `/api/v1/erp/catalog/items/${id}`;
+};
+
+/**
+ * ERP `catalog/items/{id}/`. Цена закупки в предложении — `null` и `prices_visible = false` без поля `supplier_prices` (режет и ERP, и BFF). Раздел `erp.stock` — чтение.
+ * @summary Расчёт · Номенклатура: карточка позиции с предложениями поставщиков
+ */
+export const getCatalogItem = async (
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<CatalogItemDetail> => {
+  return http<CatalogItemDetail>(getGetCatalogItemUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCatalogItemQueryKey = (id: string) => {
+  return [`/api/v1/erp/catalog/items/${id}`] as const;
+};
+
+export const getGetCatalogItemQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCatalogItem>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCatalogItem>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetCatalogItemQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getCatalogItem>>> = ({ signal }) =>
+    getCatalogItem(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: id !== null && id !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getCatalogItem>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetCatalogItemQueryResult = NonNullable<Awaited<ReturnType<typeof getCatalogItem>>>;
+export type GetCatalogItemQueryError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+
+export function useGetCatalogItem<
+  TData = Awaited<ReturnType<typeof getCatalogItem>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCatalogItem>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCatalogItem>>,
+          TError,
+          Awaited<ReturnType<typeof getCatalogItem>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetCatalogItem<
+  TData = Awaited<ReturnType<typeof getCatalogItem>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCatalogItem>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCatalogItem>>,
+          TError,
+          Awaited<ReturnType<typeof getCatalogItem>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetCatalogItem<
+  TData = Awaited<ReturnType<typeof getCatalogItem>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCatalogItem>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Расчёт · Номенклатура: карточка позиции с предложениями поставщиков
+ */
+
+export function useGetCatalogItem<
+  TData = Awaited<ReturnType<typeof getCatalogItem>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCatalogItem>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetCatalogItemQueryOptions(id, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getUpdateCatalogItemUrl = (id: string) => {
+  return `/api/v1/erp/catalog/items/${id}`;
+};
+
+/**
+ * ERP `PATCH catalog/items/{id}/` — право `catalog.manage`. НДС `null` — ставка компании по умолчанию. Раздел `erp.stock` — полный.
+ * @summary Расчёт · Номенклатура: изменить позицию
+ */
+export const updateCatalogItem = async (
+  id: string,
+  catalogItemUpdate: CatalogItemUpdate,
+  options?: Parameters<typeof http>[1],
+): Promise<CatalogItemDetail> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<CatalogItemDetail>(getUpdateCatalogItemUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(catalogItemUpdate),
+  });
+};
+
+export const getUpdateCatalogItemMutationKey = () => ["updateCatalogItem"] as const;
+
+export const getUpdateCatalogItemMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateCatalogItem>>,
+    TError,
+    UpdateCatalogItemMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateCatalogItem>>,
+  TError,
+  UpdateCatalogItemMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateCatalogItemMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateCatalogItem>>,
+    UpdateCatalogItemMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateCatalogItem(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateCatalogItemMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateCatalogItem>>
+>;
+export type UpdateCatalogItemMutationBody = CatalogItemUpdate;
+export type UpdateCatalogItemMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type UpdateCatalogItemMutationVariables = { id: string; data: CatalogItemUpdate };
+
+/**
+ * @summary Расчёт · Номенклатура: изменить позицию
+ */
+export const useUpdateCatalogItem = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateCatalogItem>>,
+      TError,
+      UpdateCatalogItemMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateCatalogItem>>,
+  TError,
+  UpdateCatalogItemMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateCatalogItemMutationOptions(options), queryClient);
+};
+
+export const getListCatalogSuppliersUrl = (params?: ListCatalogSuppliersParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/erp/catalog/suppliers?${stringifiedParams}`
+    : `/api/v1/erp/catalog/suppliers`;
+};
+
+/**
+ * ERP `catalog/suppliers/`: число предложений, истёкшие и истекающие сроки цен. Цен нет. Раздел `erp.stock` — чтение.
+ * @summary Расчёт · Поставщики
+ */
+export const listCatalogSuppliers = async (
+  params?: ListCatalogSuppliersParams,
+  options?: Parameters<typeof http>[1],
+): Promise<SupplierPage> => {
+  return http<SupplierPage>(getListCatalogSuppliersUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListCatalogSuppliersQueryKey = (params?: ListCatalogSuppliersParams) => {
+  return [`/api/v1/erp/catalog/suppliers`, ...(params ? [params] : [])] as const;
+};
+
+export const getListCatalogSuppliersQueryOptions = <
+  TData = Awaited<ReturnType<typeof listCatalogSuppliers>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListCatalogSuppliersParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCatalogSuppliers>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListCatalogSuppliersQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listCatalogSuppliers>>> = ({ signal }) =>
+    listCatalogSuppliers(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listCatalogSuppliers>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListCatalogSuppliersQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listCatalogSuppliers>>
+>;
+export type ListCatalogSuppliersQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse | BackendUnavailableResponse
+>;
+
+export function useListCatalogSuppliers<
+  TData = Awaited<ReturnType<typeof listCatalogSuppliers>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params: undefined | ListCatalogSuppliersParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCatalogSuppliers>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listCatalogSuppliers>>,
+          TError,
+          Awaited<ReturnType<typeof listCatalogSuppliers>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListCatalogSuppliers<
+  TData = Awaited<ReturnType<typeof listCatalogSuppliers>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListCatalogSuppliersParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCatalogSuppliers>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listCatalogSuppliers>>,
+          TError,
+          Awaited<ReturnType<typeof listCatalogSuppliers>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListCatalogSuppliers<
+  TData = Awaited<ReturnType<typeof listCatalogSuppliers>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListCatalogSuppliersParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCatalogSuppliers>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Расчёт · Поставщики
+ */
+
+export function useListCatalogSuppliers<
+  TData = Awaited<ReturnType<typeof listCatalogSuppliers>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListCatalogSuppliersParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCatalogSuppliers>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListCatalogSuppliersQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getGetCatalogSupplierUrl = (id: string) => {
+  return `/api/v1/erp/catalog/suppliers/${id}`;
+};
+
+/**
+ * ERP `catalog/suppliers/{id}/`: квоты, сроки поставки и действия цен; цена закупки — только с полем `supplier_prices`. Раздел `erp.stock` — чтение.
+ * @summary Расчёт · Поставщик: карточка с предложениями
+ */
+export const getCatalogSupplier = async (
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<SupplierDetail> => {
+  return http<SupplierDetail>(getGetCatalogSupplierUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCatalogSupplierQueryKey = (id: string) => {
+  return [`/api/v1/erp/catalog/suppliers/${id}`] as const;
+};
+
+export const getGetCatalogSupplierQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCatalogSupplier>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCatalogSupplier>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetCatalogSupplierQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getCatalogSupplier>>> = ({ signal }) =>
+    getCatalogSupplier(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: id !== null && id !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getCatalogSupplier>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetCatalogSupplierQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCatalogSupplier>>
+>;
+export type GetCatalogSupplierQueryError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+
+export function useGetCatalogSupplier<
+  TData = Awaited<ReturnType<typeof getCatalogSupplier>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCatalogSupplier>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCatalogSupplier>>,
+          TError,
+          Awaited<ReturnType<typeof getCatalogSupplier>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetCatalogSupplier<
+  TData = Awaited<ReturnType<typeof getCatalogSupplier>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof getCatalogSupplier>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getCatalogSupplier>>,
+          TError,
+          Awaited<ReturnType<typeof getCatalogSupplier>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetCatalogSupplier<
+  TData = Awaited<ReturnType<typeof getCatalogSupplier>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCatalogSupplier>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Расчёт · Поставщик: карточка с предложениями
+ */
+
+export function useGetCatalogSupplier<
+  TData = Awaited<ReturnType<typeof getCatalogSupplier>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getCatalogSupplier>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetCatalogSupplierQueryOptions(id, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getUpdateSupplierOfferUrl = (id: CompanyItemRef, offerId: CompanyItemRef) => {
+  return `/api/v1/erp/catalog/suppliers/${id}/offers/${offerId}`;
+};
+
+/**
+ * ERP `PATCH catalog/suppliers/{id}/offers/{offer_id}/` — право `supply.manage`; цена — ещё и поле `supplier_prices` (иначе 403 `FORBIDDEN`). Раздел `erp.stock` — полный.
+ * @summary Расчёт · Поставщик: изменить условия предложения
+ */
+export const updateSupplierOffer = async (
+  id: CompanyItemRef,
+  offerId: CompanyItemRef,
+  supplierOfferUpdate: SupplierOfferUpdate,
+  options?: Parameters<typeof http>[1],
+): Promise<CatalogOffer> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<CatalogOffer>(getUpdateSupplierOfferUrl(id, offerId), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(supplierOfferUpdate),
+  });
+};
+
+export const getUpdateSupplierOfferMutationKey = () => ["updateSupplierOffer"] as const;
+
+export const getUpdateSupplierOfferMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateSupplierOffer>>,
+    TError,
+    UpdateSupplierOfferMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateSupplierOffer>>,
+  TError,
+  UpdateSupplierOfferMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateSupplierOfferMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateSupplierOffer>>,
+    UpdateSupplierOfferMutationVariables
+  > = (props) => {
+    const { id, offerId, data } = props ?? {};
+
+    return updateSupplierOffer(id, offerId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateSupplierOfferMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateSupplierOffer>>
+>;
+export type UpdateSupplierOfferMutationBody = SupplierOfferUpdate;
+export type UpdateSupplierOfferMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type UpdateSupplierOfferMutationVariables = {
+  id: CompanyItemRef;
+  offerId: CompanyItemRef;
+  data: SupplierOfferUpdate;
+};
+
+/**
+ * @summary Расчёт · Поставщик: изменить условия предложения
+ */
+export const useUpdateSupplierOffer = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateSupplierOffer>>,
+      TError,
+      UpdateSupplierOfferMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateSupplierOffer>>,
+  TError,
+  UpdateSupplierOfferMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateSupplierOfferMutationOptions(options), queryClient);
+};
+
+export const getListBrigadesUrl = (params?: ListBrigadesParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/erp/catalog/brigades?${stringifiedParams}`
+    : `/api/v1/erp/catalog/brigades`;
+};
+
+/**
+ * ERP `catalog/brigades/`. Ставка — `null`, если нет поля `cost_margin` и раздела `erp.calc.services` (режет и ERP, и BFF). Раздел `erp.stock` — чтение.
+ * @summary Расчёт · Бригады и исполнители услуг
+ */
+export const listBrigades = async (
+  params?: ListBrigadesParams,
+  options?: Parameters<typeof http>[1],
+): Promise<BrigadePage> => {
+  return http<BrigadePage>(getListBrigadesUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListBrigadesQueryKey = (params?: ListBrigadesParams) => {
+  return [`/api/v1/erp/catalog/brigades`, ...(params ? [params] : [])] as const;
+};
+
+export const getListBrigadesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listBrigades>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListBrigadesParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listBrigades>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListBrigadesQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listBrigades>>> = ({ signal }) =>
+    listBrigades(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listBrigades>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListBrigadesQueryResult = NonNullable<Awaited<ReturnType<typeof listBrigades>>>;
+export type ListBrigadesQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse | BackendUnavailableResponse
+>;
+
+export function useListBrigades<
+  TData = Awaited<ReturnType<typeof listBrigades>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params: undefined | ListBrigadesParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listBrigades>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listBrigades>>,
+          TError,
+          Awaited<ReturnType<typeof listBrigades>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListBrigades<
+  TData = Awaited<ReturnType<typeof listBrigades>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListBrigadesParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listBrigades>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listBrigades>>,
+          TError,
+          Awaited<ReturnType<typeof listBrigades>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListBrigades<
+  TData = Awaited<ReturnType<typeof listBrigades>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListBrigadesParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listBrigades>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Расчёт · Бригады и исполнители услуг
+ */
+
+export function useListBrigades<
+  TData = Awaited<ReturnType<typeof listBrigades>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListBrigadesParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listBrigades>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListBrigadesQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getCreateBrigadeUrl = () => {
+  return `/api/v1/erp/catalog/brigades`;
+};
+
+/**
+ * ERP `POST catalog/brigades/` — право `catalog.manage`; ставка — ещё и зона услуг или `cost_margin`. Раздел `erp.stock` — полный.
+ * @summary Расчёт · Бригады: добавить
+ */
+export const createBrigade = async (
+  brigadeCreate: BrigadeCreate,
+  options?: Parameters<typeof http>[1],
+): Promise<Brigade> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<Brigade>(getCreateBrigadeUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(brigadeCreate),
+  });
+};
+
+export const getCreateBrigadeMutationKey = () => ["createBrigade"] as const;
+
+export const getCreateBrigadeMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createBrigade>>,
+    TError,
+    CreateBrigadeMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createBrigade>>,
+  TError,
+  CreateBrigadeMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateBrigadeMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createBrigade>>,
+    CreateBrigadeMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createBrigade(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateBrigadeMutationResult = NonNullable<Awaited<ReturnType<typeof createBrigade>>>;
+export type CreateBrigadeMutationBody = BrigadeCreate;
+export type CreateBrigadeMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse | BackendUnavailableResponse
+>;
+export type CreateBrigadeMutationVariables = { data: BrigadeCreate };
+
+/**
+ * @summary Расчёт · Бригады: добавить
+ */
+export const useCreateBrigade = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createBrigade>>,
+      TError,
+      CreateBrigadeMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createBrigade>>,
+  TError,
+  CreateBrigadeMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateBrigadeMutationOptions(options), queryClient);
+};
+
+export const getUpdateBrigadeUrl = (id: string) => {
+  return `/api/v1/erp/catalog/brigades/${id}`;
+};
+
+/**
+ * ERP `PATCH catalog/brigades/{id}/` — право `catalog.manage`. `is_active = false` убирает бригаду из выбора, не удаляя. Раздел `erp.stock` — полный.
+ * @summary Расчёт · Бригады: изменить или убрать из выбора
+ */
+export const updateBrigade = async (
+  id: string,
+  brigadeUpdate: BrigadeUpdate,
+  options?: Parameters<typeof http>[1],
+): Promise<Brigade> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<Brigade>(getUpdateBrigadeUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(brigadeUpdate),
+  });
+};
+
+export const getUpdateBrigadeMutationKey = () => ["updateBrigade"] as const;
+
+export const getUpdateBrigadeMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateBrigade>>,
+    TError,
+    UpdateBrigadeMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateBrigade>>,
+  TError,
+  UpdateBrigadeMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateBrigadeMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateBrigade>>,
+    UpdateBrigadeMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateBrigade(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateBrigadeMutationResult = NonNullable<Awaited<ReturnType<typeof updateBrigade>>>;
+export type UpdateBrigadeMutationBody = BrigadeUpdate;
+export type UpdateBrigadeMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type UpdateBrigadeMutationVariables = { id: string; data: BrigadeUpdate };
+
+/**
+ * @summary Расчёт · Бригады: изменить или убрать из выбора
+ */
+export const useUpdateBrigade = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateBrigade>>,
+      TError,
+      UpdateBrigadeMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateBrigade>>,
+  TError,
+  UpdateBrigadeMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateBrigadeMutationOptions(options), queryClient);
+};
+
+export const getListCatalogCategoryRequestsUrl = (params?: ListCatalogCategoryRequestsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/erp/catalog/category-requests?${stringifiedParams}`
+    : `/api/v1/erp/catalog/category-requests`;
+};
+
+/**
+ * ERP `catalog/category-requests/`: запросы своей компании. Решает директор: `approveCategoryRequest` и `rejectCategoryRequest` (раздел `company.settings`). Раздел `erp.stock` — чтение.
+ * @summary Расчёт · Запросы на категории
+ */
+export const listCatalogCategoryRequests = async (
+  params?: ListCatalogCategoryRequestsParams,
+  options?: Parameters<typeof http>[1],
+): Promise<CategoryRequestList> => {
+  return http<CategoryRequestList>(getListCatalogCategoryRequestsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListCatalogCategoryRequestsQueryKey = (
+  params?: ListCatalogCategoryRequestsParams,
+) => {
+  return [`/api/v1/erp/catalog/category-requests`, ...(params ? [params] : [])] as const;
+};
+
+export const getListCatalogCategoryRequestsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listCatalogCategoryRequests>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListCatalogCategoryRequestsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCatalogCategoryRequests>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListCatalogCategoryRequestsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listCatalogCategoryRequests>>> = ({
+    signal,
+  }) => listCatalogCategoryRequests(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listCatalogCategoryRequests>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListCatalogCategoryRequestsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listCatalogCategoryRequests>>
+>;
+export type ListCatalogCategoryRequestsQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse | BackendUnavailableResponse
+>;
+
+export function useListCatalogCategoryRequests<
+  TData = Awaited<ReturnType<typeof listCatalogCategoryRequests>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params: undefined | ListCatalogCategoryRequestsParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCatalogCategoryRequests>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listCatalogCategoryRequests>>,
+          TError,
+          Awaited<ReturnType<typeof listCatalogCategoryRequests>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListCatalogCategoryRequests<
+  TData = Awaited<ReturnType<typeof listCatalogCategoryRequests>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListCatalogCategoryRequestsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCatalogCategoryRequests>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listCatalogCategoryRequests>>,
+          TError,
+          Awaited<ReturnType<typeof listCatalogCategoryRequests>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListCatalogCategoryRequests<
+  TData = Awaited<ReturnType<typeof listCatalogCategoryRequests>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListCatalogCategoryRequestsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCatalogCategoryRequests>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Расчёт · Запросы на категории
+ */
+
+export function useListCatalogCategoryRequests<
+  TData = Awaited<ReturnType<typeof listCatalogCategoryRequests>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListCatalogCategoryRequestsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCatalogCategoryRequests>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListCatalogCategoryRequestsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getCreateCatalogCategoryRequestUrl = () => {
+  return `/api/v1/erp/catalog/category-requests`;
+};
+
+/**
+ * ERP `POST catalog/category-requests/` — право `catalog.manage`. Запрос ничего не создаёт: категорию заводит директор или администратор и привязывает к запросу. Второй такой же запрос, пока первый на рассмотрении, — 409 `CONFLICT`. Раздел `erp.stock` — полный.
+ * @summary Расчёт · Запросить новую категорию
+ */
+export const createCatalogCategoryRequest = async (
+  categoryProposalIn: CategoryProposalIn,
+  options?: Parameters<typeof http>[1],
+): Promise<CategoryRequest> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<CategoryRequest>(getCreateCatalogCategoryRequestUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(categoryProposalIn),
+  });
+};
+
+export const getCreateCatalogCategoryRequestMutationKey = () =>
+  ["createCatalogCategoryRequest"] as const;
+
+export const getCreateCatalogCategoryRequestMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | Error
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createCatalogCategoryRequest>>,
+    TError,
+    CreateCatalogCategoryRequestMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createCatalogCategoryRequest>>,
+  TError,
+  CreateCatalogCategoryRequestMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateCatalogCategoryRequestMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createCatalogCategoryRequest>>,
+    CreateCatalogCategoryRequestMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createCatalogCategoryRequest(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateCatalogCategoryRequestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createCatalogCategoryRequest>>
+>;
+export type CreateCatalogCategoryRequestMutationBody = CategoryProposalIn;
+export type CreateCatalogCategoryRequestMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | Error
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type CreateCatalogCategoryRequestMutationVariables = { data: CategoryProposalIn };
+
+/**
+ * @summary Расчёт · Запросить новую категорию
+ */
+export const useCreateCatalogCategoryRequest = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | Error
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createCatalogCategoryRequest>>,
+      TError,
+      CreateCatalogCategoryRequestMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createCatalogCategoryRequest>>,
+  TError,
+  CreateCatalogCategoryRequestMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateCatalogCategoryRequestMutationOptions(options), queryClient);
+};
+
+export const getListCatalogExchangeRatesUrl = (params?: ListCatalogExchangeRatesParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/erp/catalog/exchange-rates?${stringifiedParams}`
+    : `/api/v1/erp/catalog/exchange-rates`;
+};
+
+/**
+ * ERP `exchange-rates/`: строки по дням, источник — ЦБ или вручную. Ввод курса на дату — `createFxRate` (раздел `company.settings`). Раздел `erp.stock` — чтение.
+ * @summary Расчёт · Справочники: курсы валют к UZS
+ */
+export const listCatalogExchangeRates = async (
+  params?: ListCatalogExchangeRatesParams,
+  options?: Parameters<typeof http>[1],
+): Promise<ExchangeRatePage> => {
+  return http<ExchangeRatePage>(getListCatalogExchangeRatesUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListCatalogExchangeRatesQueryKey = (params?: ListCatalogExchangeRatesParams) => {
+  return [`/api/v1/erp/catalog/exchange-rates`, ...(params ? [params] : [])] as const;
+};
+
+export const getListCatalogExchangeRatesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listCatalogExchangeRates>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListCatalogExchangeRatesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCatalogExchangeRates>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListCatalogExchangeRatesQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listCatalogExchangeRates>>> = ({
+    signal,
+  }) => listCatalogExchangeRates(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listCatalogExchangeRates>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListCatalogExchangeRatesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listCatalogExchangeRates>>
+>;
+export type ListCatalogExchangeRatesQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse | BackendUnavailableResponse
+>;
+
+export function useListCatalogExchangeRates<
+  TData = Awaited<ReturnType<typeof listCatalogExchangeRates>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params: undefined | ListCatalogExchangeRatesParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCatalogExchangeRates>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listCatalogExchangeRates>>,
+          TError,
+          Awaited<ReturnType<typeof listCatalogExchangeRates>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListCatalogExchangeRates<
+  TData = Awaited<ReturnType<typeof listCatalogExchangeRates>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListCatalogExchangeRatesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCatalogExchangeRates>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listCatalogExchangeRates>>,
+          TError,
+          Awaited<ReturnType<typeof listCatalogExchangeRates>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListCatalogExchangeRates<
+  TData = Awaited<ReturnType<typeof listCatalogExchangeRates>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListCatalogExchangeRatesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCatalogExchangeRates>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Расчёт · Справочники: курсы валют к UZS
+ */
+
+export function useListCatalogExchangeRates<
+  TData = Awaited<ReturnType<typeof listCatalogExchangeRates>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListCatalogExchangeRatesParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCatalogExchangeRates>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListCatalogExchangeRatesQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getListHsCodesUrl = (params?: ListHsCodesParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/erp/catalog/hs-codes?${stringifiedParams}`
+    : `/api/v1/erp/catalog/hs-codes`;
+};
+
+/**
+ * ERP `master-data/hs-codes/`. Раздел `erp.stock` — чтение.
+ * @summary Расчёт · Справочники: коды ТН ВЭД
+ */
+export const listHsCodes = async (
+  params?: ListHsCodesParams,
+  options?: Parameters<typeof http>[1],
+): Promise<HsCodePage> => {
+  return http<HsCodePage>(getListHsCodesUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListHsCodesQueryKey = (params?: ListHsCodesParams) => {
+  return [`/api/v1/erp/catalog/hs-codes`, ...(params ? [params] : [])] as const;
+};
+
+export const getListHsCodesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listHsCodes>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListHsCodesParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listHsCodes>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListHsCodesQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listHsCodes>>> = ({ signal }) =>
+    listHsCodes(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listHsCodes>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListHsCodesQueryResult = NonNullable<Awaited<ReturnType<typeof listHsCodes>>>;
+export type ListHsCodesQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse | BackendUnavailableResponse
+>;
+
+export function useListHsCodes<
+  TData = Awaited<ReturnType<typeof listHsCodes>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params: undefined | ListHsCodesParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listHsCodes>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listHsCodes>>,
+          TError,
+          Awaited<ReturnType<typeof listHsCodes>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListHsCodes<
+  TData = Awaited<ReturnType<typeof listHsCodes>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListHsCodesParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listHsCodes>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listHsCodes>>,
+          TError,
+          Awaited<ReturnType<typeof listHsCodes>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListHsCodes<
+  TData = Awaited<ReturnType<typeof listHsCodes>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListHsCodesParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listHsCodes>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Расчёт · Справочники: коды ТН ВЭД
+ */
+
+export function useListHsCodes<
+  TData = Awaited<ReturnType<typeof listHsCodes>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListHsCodesParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listHsCodes>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListHsCodesQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getCreateHsCodeUrl = () => {
+  return `/api/v1/erp/catalog/hs-codes`;
+};
+
+/**
+ * ERP `POST master-data/hs-codes/` — право `catalog.manage`. Повтор кода — 409 `CONFLICT` (`details.reason = hs_code_exists`). Раздел `erp.stock` — полный.
+ * @summary Расчёт · Справочники: добавить код ТН ВЭД
+ */
+export const createHsCode = async (
+  hsCodeCreate: HsCodeCreate,
+  options?: Parameters<typeof http>[1],
+): Promise<HsCode> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<HsCode>(getCreateHsCodeUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(hsCodeCreate),
+  });
+};
+
+export const getCreateHsCodeMutationKey = () => ["createHsCode"] as const;
+
+export const getCreateHsCodeMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | Error
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createHsCode>>,
+    TError,
+    CreateHsCodeMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createHsCode>>,
+  TError,
+  CreateHsCodeMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateHsCodeMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createHsCode>>,
+    CreateHsCodeMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createHsCode(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateHsCodeMutationResult = NonNullable<Awaited<ReturnType<typeof createHsCode>>>;
+export type CreateHsCodeMutationBody = HsCodeCreate;
+export type CreateHsCodeMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | Error
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type CreateHsCodeMutationVariables = { data: HsCodeCreate };
+
+/**
+ * @summary Расчёт · Справочники: добавить код ТН ВЭД
+ */
+export const useCreateHsCode = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | Error
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createHsCode>>,
+      TError,
+      CreateHsCodeMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createHsCode>>,
+  TError,
+  CreateHsCodeMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateHsCodeMutationOptions(options), queryClient);
+};
+
+export const getUpdateHsCodeUrl = (id: string) => {
+  return `/api/v1/erp/catalog/hs-codes/${id}`;
+};
+
+/**
+ * ERP `PATCH master-data/hs-codes/{id}/` — право `catalog.manage`. Код не меняется; выведенный из обращения закрывается датой `valid_until`, не удаляется. Раздел `erp.stock` — полный.
+ * @summary Расчёт · Справочники: изменить код ТН ВЭД
+ */
+export const updateHsCode = async (
+  id: string,
+  hsCodeUpdate: HsCodeUpdate,
+  options?: Parameters<typeof http>[1],
+): Promise<HsCode> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<HsCode>(getUpdateHsCodeUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(hsCodeUpdate),
+  });
+};
+
+export const getUpdateHsCodeMutationKey = () => ["updateHsCode"] as const;
+
+export const getUpdateHsCodeMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateHsCode>>,
+    TError,
+    UpdateHsCodeMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateHsCode>>,
+  TError,
+  UpdateHsCodeMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateHsCodeMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateHsCode>>,
+    UpdateHsCodeMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateHsCode(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateHsCodeMutationResult = NonNullable<Awaited<ReturnType<typeof updateHsCode>>>;
+export type UpdateHsCodeMutationBody = HsCodeUpdate;
+export type UpdateHsCodeMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type UpdateHsCodeMutationVariables = { id: string; data: HsCodeUpdate };
+
+/**
+ * @summary Расчёт · Справочники: изменить код ТН ВЭД
+ */
+export const useUpdateHsCode = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateHsCode>>,
+      TError,
+      UpdateHsCodeMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateHsCode>>,
+  TError,
+  UpdateHsCodeMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateHsCodeMutationOptions(options), queryClient);
+};
+
+export const getListManufacturersUrl = (params?: ListManufacturersParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/erp/catalog/manufacturers?${stringifiedParams}`
+    : `/api/v1/erp/catalog/manufacturers`;
+};
+
+/**
+ * ERP `catalog/manufacturers/`. Отключённые видит только держатель `catalog.manage` (`include_inactive`). Раздел `erp.stock` — чтение.
+ * @summary Расчёт · Справочники: производители
+ */
+export const listManufacturers = async (
+  params?: ListManufacturersParams,
+  options?: Parameters<typeof http>[1],
+): Promise<ManufacturerPage> => {
+  return http<ManufacturerPage>(getListManufacturersUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListManufacturersQueryKey = (params?: ListManufacturersParams) => {
+  return [`/api/v1/erp/catalog/manufacturers`, ...(params ? [params] : [])] as const;
+};
+
+export const getListManufacturersQueryOptions = <
+  TData = Awaited<ReturnType<typeof listManufacturers>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListManufacturersParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listManufacturers>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListManufacturersQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listManufacturers>>> = ({ signal }) =>
+    listManufacturers(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listManufacturers>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListManufacturersQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listManufacturers>>
+>;
+export type ListManufacturersQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse | BackendUnavailableResponse
+>;
+
+export function useListManufacturers<
+  TData = Awaited<ReturnType<typeof listManufacturers>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params: undefined | ListManufacturersParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listManufacturers>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listManufacturers>>,
+          TError,
+          Awaited<ReturnType<typeof listManufacturers>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListManufacturers<
+  TData = Awaited<ReturnType<typeof listManufacturers>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListManufacturersParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listManufacturers>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listManufacturers>>,
+          TError,
+          Awaited<ReturnType<typeof listManufacturers>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListManufacturers<
+  TData = Awaited<ReturnType<typeof listManufacturers>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListManufacturersParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listManufacturers>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Расчёт · Справочники: производители
+ */
+
+export function useListManufacturers<
+  TData = Awaited<ReturnType<typeof listManufacturers>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListManufacturersParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listManufacturers>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListManufacturersQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getCreateManufacturerUrl = () => {
+  return `/api/v1/erp/catalog/manufacturers`;
+};
+
+/**
+ * ERP `POST catalog/manufacturers/` — право `catalog.manage`. Название уникально без учёта регистра — 409 `CONFLICT` (`details.reason = manufacturer_exists`). Раздел `erp.stock` — полный.
+ * @summary Расчёт · Справочники: добавить производителя
+ */
+export const createManufacturer = async (
+  manufacturerCreate: ManufacturerCreate,
+  options?: Parameters<typeof http>[1],
+): Promise<Manufacturer> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<Manufacturer>(getCreateManufacturerUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(manufacturerCreate),
+  });
+};
+
+export const getCreateManufacturerMutationKey = () => ["createManufacturer"] as const;
+
+export const getCreateManufacturerMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | Error
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createManufacturer>>,
+    TError,
+    CreateManufacturerMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createManufacturer>>,
+  TError,
+  CreateManufacturerMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateManufacturerMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createManufacturer>>,
+    CreateManufacturerMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createManufacturer(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateManufacturerMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createManufacturer>>
+>;
+export type CreateManufacturerMutationBody = ManufacturerCreate;
+export type CreateManufacturerMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | Error
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type CreateManufacturerMutationVariables = { data: ManufacturerCreate };
+
+/**
+ * @summary Расчёт · Справочники: добавить производителя
+ */
+export const useCreateManufacturer = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | Error
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createManufacturer>>,
+      TError,
+      CreateManufacturerMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createManufacturer>>,
+  TError,
+  CreateManufacturerMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateManufacturerMutationOptions(options), queryClient);
+};
+
+export const getUpdateManufacturerUrl = (id: string) => {
+  return `/api/v1/erp/catalog/manufacturers/${id}`;
+};
+
+/**
+ * ERP `PATCH catalog/manufacturers/{id}/` — право `catalog.manage`. `is_active = false` скрывает бренд в выборе. Раздел `erp.stock` — полный.
+ * @summary Расчёт · Справочники: изменить производителя
+ */
+export const updateManufacturer = async (
+  id: string,
+  manufacturerUpdate: ManufacturerUpdate,
+  options?: Parameters<typeof http>[1],
+): Promise<Manufacturer> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<Manufacturer>(getUpdateManufacturerUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(manufacturerUpdate),
+  });
+};
+
+export const getUpdateManufacturerMutationKey = () => ["updateManufacturer"] as const;
+
+export const getUpdateManufacturerMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | Error
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateManufacturer>>,
+    TError,
+    UpdateManufacturerMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateManufacturer>>,
+  TError,
+  UpdateManufacturerMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateManufacturerMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateManufacturer>>,
+    UpdateManufacturerMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateManufacturer(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateManufacturerMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateManufacturer>>
+>;
+export type UpdateManufacturerMutationBody = ManufacturerUpdate;
+export type UpdateManufacturerMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | Error
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type UpdateManufacturerMutationVariables = { id: string; data: ManufacturerUpdate };
+
+/**
+ * @summary Расчёт · Справочники: изменить производителя
+ */
+export const useUpdateManufacturer = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | Error
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateManufacturer>>,
+      TError,
+      UpdateManufacturerMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateManufacturer>>,
+  TError,
+  UpdateManufacturerMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateManufacturerMutationOptions(options), queryClient);
+};
+
+export const getListTechDocsUrl = (params?: ListTechDocsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/erp/docs/files?${stringifiedParams}`
+    : `/api/v1/erp/docs/files`;
+};
+
+/**
+ * ERP `catalog/tech-docs/`: ТЗ, чертежи, сертификаты и регламенты ПНР с привязкой к позиции и заявке. Раздел `erp.stock` — чтение.
+ * @summary Расчёт · Техдокументация: файлы
+ */
+export const listTechDocs = async (
+  params?: ListTechDocsParams,
+  options?: Parameters<typeof http>[1],
+): Promise<TechDocPage> => {
+  return http<TechDocPage>(getListTechDocsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListTechDocsQueryKey = (params?: ListTechDocsParams) => {
+  return [`/api/v1/erp/docs/files`, ...(params ? [params] : [])] as const;
+};
+
+export const getListTechDocsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listTechDocs>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListTechDocsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listTechDocs>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListTechDocsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listTechDocs>>> = ({ signal }) =>
+    listTechDocs(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listTechDocs>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListTechDocsQueryResult = NonNullable<Awaited<ReturnType<typeof listTechDocs>>>;
+export type ListTechDocsQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse | BackendUnavailableResponse
+>;
+
+export function useListTechDocs<
+  TData = Awaited<ReturnType<typeof listTechDocs>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params: undefined | ListTechDocsParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listTechDocs>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listTechDocs>>,
+          TError,
+          Awaited<ReturnType<typeof listTechDocs>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListTechDocs<
+  TData = Awaited<ReturnType<typeof listTechDocs>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListTechDocsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listTechDocs>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listTechDocs>>,
+          TError,
+          Awaited<ReturnType<typeof listTechDocs>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListTechDocs<
+  TData = Awaited<ReturnType<typeof listTechDocs>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListTechDocsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listTechDocs>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Расчёт · Техдокументация: файлы
+ */
+
+export function useListTechDocs<
+  TData = Awaited<ReturnType<typeof listTechDocs>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListTechDocsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listTechDocs>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListTechDocsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getUploadTechDocUrl = () => {
+  return `/api/v1/erp/docs/files`;
+};
+
+/**
+ * ERP `POST catalog/tech-docs/` (multipart) — право `catalog.manage`. BFF читает тело до 21 МБ (копится в памяти BFF, B-D23-6), multipart не разбирает и передаёт ERP как есть; файл ≤ 20 МБ (PDF, PNG, JPEG, DOC(X), XLS(X)), содержимое сверяется с расширением. Нужна привязка к позиции или заявке. Раздел `erp.stock` — полный.
+ * @summary Расчёт · Техдокументация: загрузить файл
+ */
+export const uploadTechDoc = async (
+  techDocUpload: TechDocUpload,
+  options?: Parameters<typeof http>[1],
+): Promise<TechDoc> => {
+  const formData = new FormData();
+  formData.append(`file`, techDocUpload.file);
+  if (techDocUpload.kind !== undefined) {
+    formData.append(`kind`, techDocUpload.kind);
+  }
+  if (techDocUpload.title !== undefined) {
+    formData.append(`title`, techDocUpload.title);
+  }
+  if (techDocUpload.product_id !== undefined) {
+    formData.append(`product_id`, techDocUpload.product_id);
+  }
+  if (techDocUpload.deal_id !== undefined) {
+    formData.append(`deal_id`, techDocUpload.deal_id);
+  }
+
+  return http<TechDoc>(getUploadTechDocUrl(), {
+    ...options,
+    method: "POST",
+    body: formData,
+  });
+};
+
+export const getUploadTechDocMutationKey = () => ["uploadTechDoc"] as const;
+
+export const getUploadTechDocMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | Error
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof uploadTechDoc>>,
+    TError,
+    UploadTechDocMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof uploadTechDoc>>,
+  TError,
+  UploadTechDocMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUploadTechDocMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof uploadTechDoc>>,
+    UploadTechDocMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return uploadTechDoc(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UploadTechDocMutationResult = NonNullable<Awaited<ReturnType<typeof uploadTechDoc>>>;
+export type UploadTechDocMutationBody = TechDocUpload;
+export type UploadTechDocMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | Error
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type UploadTechDocMutationVariables = { data: TechDocUpload };
+
+/**
+ * @summary Расчёт · Техдокументация: загрузить файл
+ */
+export const useUploadTechDoc = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | Error
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof uploadTechDoc>>,
+      TError,
+      UploadTechDocMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof uploadTechDoc>>,
+  TError,
+  UploadTechDocMutationVariables,
+  TContext
+> => {
+  return useMutation(getUploadTechDocMutationOptions(options), queryClient);
+};
+
+export const getDeleteTechDocUrl = (id: string) => {
+  return `/api/v1/erp/docs/files/${id}`;
+};
+
+/**
+ * ERP `DELETE catalog/tech-docs/{id}/` — право `catalog.manage`; файл удаляется из хранилища. Раздел `erp.stock` — полный.
+ * @summary Расчёт · Техдокументация: удалить файл
+ */
+export const deleteTechDoc = async (
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<void> => {
+  return http<void>(getDeleteTechDocUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteTechDocMutationKey = () => ["deleteTechDoc"] as const;
+
+export const getDeleteTechDocMutationOptions = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteTechDoc>>,
+    TError,
+    DeleteTechDocMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteTechDoc>>,
+  TError,
+  DeleteTechDocMutationVariables,
+  TContext
+> => {
+  const mutationKey = getDeleteTechDocMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteTechDoc>>,
+    DeleteTechDocMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteTechDoc(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteTechDocMutationResult = NonNullable<Awaited<ReturnType<typeof deleteTechDoc>>>;
+
+export type DeleteTechDocMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+export type DeleteTechDocMutationVariables = { id: string };
+
+/**
+ * @summary Расчёт · Техдокументация: удалить файл
+ */
+export const useDeleteTechDoc = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteTechDoc>>,
+      TError,
+      DeleteTechDocMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof deleteTechDoc>>,
+  TError,
+  DeleteTechDocMutationVariables,
+  TContext
+> => {
+  return useMutation(getDeleteTechDocMutationOptions(options), queryClient);
+};
+
+export const getDownloadTechDocUrl = (id: string) => {
+  return `/api/v1/erp/docs/files/${id}/content`;
+};
+
+/**
+ * ERP `catalog/tech-docs/{id}/file/` потоком. Всегда вложением с `X-Content-Type-Options: nosniff`: тип содержимого браузер не исполняет, просмотр PDF и изображений строит интерфейс сам из полученных байт. Раздел `erp.stock` — чтение.
+ * @summary Расчёт · Техдокументация: содержимое файла
+ */
+export const downloadTechDoc = async (
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<Blob> => {
+  return http<Blob>(getDownloadTechDocUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getDownloadTechDocQueryKey = (id: string) => {
+  return [`/api/v1/erp/docs/files/${id}/content`] as const;
+};
+
+export const getDownloadTechDocQueryOptions = <
+  TData = Awaited<ReturnType<typeof downloadTechDoc>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof downloadTechDoc>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getDownloadTechDocQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof downloadTechDoc>>> = ({ signal }) =>
+    downloadTechDoc(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: id !== null && id !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof downloadTechDoc>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type DownloadTechDocQueryResult = NonNullable<Awaited<ReturnType<typeof downloadTechDoc>>>;
+export type DownloadTechDocQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useDownloadTechDoc<
+  TData = Awaited<ReturnType<typeof downloadTechDoc>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof downloadTechDoc>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof downloadTechDoc>>,
+          TError,
+          Awaited<ReturnType<typeof downloadTechDoc>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useDownloadTechDoc<
+  TData = Awaited<ReturnType<typeof downloadTechDoc>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof downloadTechDoc>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof downloadTechDoc>>,
+          TError,
+          Awaited<ReturnType<typeof downloadTechDoc>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useDownloadTechDoc<
+  TData = Awaited<ReturnType<typeof downloadTechDoc>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof downloadTechDoc>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Расчёт · Техдокументация: содержимое файла
+ */
+
+export function useDownloadTechDoc<
+  TData = Awaited<ReturnType<typeof downloadTechDoc>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof downloadTechDoc>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getDownloadTechDocQueryOptions(id, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getListTechDocDealOptionsUrl = (params?: ListTechDocDealOptionsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/erp/docs/deals?${stringifiedParams}`
+    : `/api/v1/erp/docs/deals`;
+};
+
+/**
+ * ERP `crm/deals/` (как «Связь с проектом» в EDS); номер ЗВ/ПР составляется до ERP-09. Раздел `erp.stock` — чтение.
+ * @summary Расчёт · Техдокументация: заявки и проекты для привязки
+ */
+export const listTechDocDealOptions = async (
+  params?: ListTechDocDealOptionsParams,
+  options?: Parameters<typeof http>[1],
+): Promise<EdsDealOptions> => {
+  return http<EdsDealOptions>(getListTechDocDealOptionsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListTechDocDealOptionsQueryKey = (params?: ListTechDocDealOptionsParams) => {
+  return [`/api/v1/erp/docs/deals`, ...(params ? [params] : [])] as const;
+};
+
+export const getListTechDocDealOptionsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listTechDocDealOptions>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListTechDocDealOptionsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listTechDocDealOptions>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListTechDocDealOptionsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listTechDocDealOptions>>> = ({ signal }) =>
+    listTechDocDealOptions(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listTechDocDealOptions>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListTechDocDealOptionsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listTechDocDealOptions>>
+>;
+export type ListTechDocDealOptionsQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse
+>;
+
+export function useListTechDocDealOptions<
+  TData = Awaited<ReturnType<typeof listTechDocDealOptions>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params: undefined | ListTechDocDealOptionsParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listTechDocDealOptions>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listTechDocDealOptions>>,
+          TError,
+          Awaited<ReturnType<typeof listTechDocDealOptions>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListTechDocDealOptions<
+  TData = Awaited<ReturnType<typeof listTechDocDealOptions>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListTechDocDealOptionsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listTechDocDealOptions>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listTechDocDealOptions>>,
+          TError,
+          Awaited<ReturnType<typeof listTechDocDealOptions>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListTechDocDealOptions<
+  TData = Awaited<ReturnType<typeof listTechDocDealOptions>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListTechDocDealOptionsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listTechDocDealOptions>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Расчёт · Техдокументация: заявки и проекты для привязки
+ */
+
+export function useListTechDocDealOptions<
+  TData = Awaited<ReturnType<typeof listTechDocDealOptions>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListTechDocDealOptionsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listTechDocDealOptions>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListTechDocDealOptionsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}

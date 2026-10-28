@@ -163,7 +163,8 @@ describe("исполнимость адреса: есть ли экран в П�
     ["/erp/calc", true],
     ["/erp/stock", true],
     ["/erp/stock/%D0%97%D0%9F-2026-029", true],
-    ["/erp/catalog", false],
+    ["/erp/catalog", true],
+    ["/erp/docs?doc=2", true],
     ["/nowhere/at-all", true],
   ])("%s → %s", (path, expected) => {
     expect(isActionable(path)).toBe(expected);

@@ -40,6 +40,18 @@ info:
     (`crm.leads`) и внешние чаты (`chats.external`) — только чтение (`platform-rbac.yaml`), поэтому «Моя очередь» директора без видов
     «ответить лиду» и «взять лид».
 
+    **D2-3 (без подъёма версии, добавляющее) — Расчёт · Номенклатура и поставщики, справочники, Техдокументация.** Добавляющее изменение, тег `erp-catalog`
+    (разделы `erp.stock`; решения о правах — за ERP). **Номенклатура**: `GET|POST /erp/catalog/items`, `GET|PATCH /erp/catalog/items/{id}` —
+    позиции с типом (товар со склада или под заказ, услуга фикс / по этапам / по времени), единицей, НДС и сроком цен. **Поставщики**:
+    `GET /erp/catalog/suppliers`, `GET /erp/catalog/suppliers/{id}` (квоты, сроки действия цен), `PATCH …/offers/{offer_id}`. **Закрытые
+    поля**: цена закупки в предложениях (`price`) — только с полем `supplier_prices`, ставка бригады (`Brigade.rate`) — с полем
+    `cost_margin` или разделом `erp.calc.services`; иначе `null` — режут и ERP, и BFF. **Бригады**: `GET|POST /erp/catalog/brigades`,
+    `PATCH /erp/catalog/brigades/{id}`. **Запросы на категории** сотрудника: `GET|POST /erp/catalog/category-requests` (решение директора —
+    прежние `approve|rejectCategoryRequest`). **Справочники «только в Django admin»**: курсы валют `GET /erp/catalog/exchange-rates`,
+    коды ТН ВЭД `GET|POST /erp/catalog/hs-codes`, `PATCH …/{id}`, производители `GET|POST /erp/catalog/manufacturers`, `PATCH …/{id}`;
+    `GET /erp/catalog/lookups` — единицы, категории, валюты и страны для форм. **Техдокументация**: `GET|POST /erp/docs/files` (multipart,
+    файл до 20 МБ), `DELETE /erp/docs/files/{id}`, `GET /erp/docs/files/{id}/content` (поток, всегда вложением), `GET /erp/docs/deals`.
+
     **0.3.0 (R-2, ADR-0012) — ломающее (до 1.0 допустимо): роли — данные.** Роль сотрудника — `RoleRef {id, name,
     system, code?}` вместо перечисления `RoleCode` (удалено): `Me.roles: RoleRef[]`, `Me.active_role` и `MeUpdate.active_role` —
     id роли или `null`; `Employee.roles: RoleRef[]`, `EmployeeInvite.role_ids`, `EmployeeUpdate.role_ids`; параметр `role` очереди
@@ -341,6 +353,8 @@ tags:
     description: Обращения сотрудников к администратору — «Написать администратору» и Настройки · Обращения сотрудников (CRM, ADR-0015)
   - name: company-articles
     description: 'Статьи компании — внутренние инструкции «как у нас принято»: Настройки · Статьи компании и раздел «Как у нас принято» в Помощи (CRM, ADR-0015, B-079)'
+  - name: erp-catalog
+    description: Расчёт · Номенклатура и поставщики, бригады, справочники (ТН ВЭД, производители, курсы) и Техдокументация (ERP; раздел `erp.stock`)
 
 paths:
   /auth/login:
@@ -8370,6 +8384,845 @@ paths:
           $ref: '#/components/responses/EdsUnsupportedMedia'
         '503':
           $ref: '#/components/responses/BackendUnavailable'
+  /erp/catalog/lookups:
+    get:
+      tags: [erp-catalog]
+      operationId: getCatalogLookups
+      summary: 'Расчёт · Справочники для форм: единицы, категории, валюты, страны'
+      description: >-
+        ERP `master-data/units|currencies|countries`, `catalog/categories`. Раздел `erp.stock` — чтение.
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogLookups'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /erp/catalog/items:
+    get:
+      tags: [erp-catalog]
+      operationId: listCatalogItems
+      summary: 'Расчёт · Номенклатура: позиции'
+      description: >-
+        ERP `catalog/items/`. Тип позиции (товар со склада или под заказ, услуга фикс / по этапам / по времени) ERP вычисляет сам. Цен поставщиков в списке нет. Раздел `erp.stock` — чтение.
+      parameters:
+        - name: q
+          in: query
+          required: false
+          description: Поиск
+          schema: {type: string, maxLength: 200}
+        - name: page
+          in: query
+          required: false
+          schema: {type: integer, minimum: 1, default: 1}
+        - name: page_size
+          in: query
+          required: false
+          schema: {type: integer, minimum: 1, maximum: 200, default: 25}
+        - name: kind
+          in: query
+          required: false
+          description: Тип
+          schema: {$ref: '#/components/schemas/CatalogItemKind'}
+        - name: category_id
+          in: query
+          required: false
+          description: Категория
+          schema: {$ref: '#/components/schemas/CompanyItemRef'}
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogItemPage'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+    post:
+      tags: [erp-catalog]
+      operationId: createCatalogItem
+      summary: 'Расчёт · Номенклатура: добавить позицию'
+      description: >-
+        ERP `POST catalog/items/` — право `catalog.manage` (иначе 403 `FORBIDDEN`, `source = erp`). Новая позиция — черновик. Раздел `erp.stock` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CatalogItemCreate'
+      responses:
+        '201':
+          description: Создана
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogItemDetail'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /erp/catalog/items/{id}:
+    get:
+      tags: [erp-catalog]
+      operationId: getCatalogItem
+      summary: 'Расчёт · Номенклатура: карточка позиции с предложениями поставщиков'
+      description: >-
+        ERP `catalog/items/{id}/`. Цена закупки в предложении — `null` и `prices_visible = false` без поля `supplier_prices` (режет и ERP, и BFF). Раздел `erp.stock` — чтение.
+      parameters:
+        - $ref: '#/components/parameters/CompanyItemId'
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogItemDetail'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+    patch:
+      tags: [erp-catalog]
+      operationId: updateCatalogItem
+      summary: 'Расчёт · Номенклатура: изменить позицию'
+      description: >-
+        ERP `PATCH catalog/items/{id}/` — право `catalog.manage`. НДС `null` — ставка компании по умолчанию. Раздел `erp.stock` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/CompanyItemId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CatalogItemUpdate'
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogItemDetail'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /erp/catalog/suppliers:
+    get:
+      tags: [erp-catalog]
+      operationId: listCatalogSuppliers
+      summary: 'Расчёт · Поставщики'
+      description: >-
+        ERP `catalog/suppliers/`: число предложений, истёкшие и истекающие сроки цен. Цен нет. Раздел `erp.stock` — чтение.
+      parameters:
+        - name: q
+          in: query
+          required: false
+          description: Поиск
+          schema: {type: string, maxLength: 200}
+        - name: page
+          in: query
+          required: false
+          schema: {type: integer, minimum: 1, default: 1}
+        - name: page_size
+          in: query
+          required: false
+          schema: {type: integer, minimum: 1, maximum: 200, default: 25}
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupplierPage'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /erp/catalog/suppliers/{id}:
+    get:
+      tags: [erp-catalog]
+      operationId: getCatalogSupplier
+      summary: 'Расчёт · Поставщик: карточка с предложениями'
+      description: >-
+        ERP `catalog/suppliers/{id}/`: квоты, сроки поставки и действия цен; цена закупки — только с полем `supplier_prices`. Раздел `erp.stock` — чтение.
+      parameters:
+        - $ref: '#/components/parameters/CompanyItemId'
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupplierDetail'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /erp/catalog/suppliers/{id}/offers/{offer_id}:
+    patch:
+      tags: [erp-catalog]
+      operationId: updateSupplierOffer
+      summary: 'Расчёт · Поставщик: изменить условия предложения'
+      description: >-
+        ERP `PATCH catalog/suppliers/{id}/offers/{offer_id}/` — право `supply.manage`; цена — ещё и поле `supplier_prices` (иначе 403 `FORBIDDEN`). Раздел `erp.stock` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {name: id, in: path, required: true, description: Id поставщика, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
+        - {name: offer_id, in: path, required: true, description: Id предложения, schema: {$ref: '#/components/schemas/CompanyItemRef'}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SupplierOfferUpdate'
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogOffer'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /erp/catalog/brigades:
+    get:
+      tags: [erp-catalog]
+      operationId: listBrigades
+      summary: 'Расчёт · Бригады и исполнители услуг'
+      description: >-
+        ERP `catalog/brigades/`. Ставка — `null`, если нет поля `cost_margin` и раздела `erp.calc.services` (режет и ERP, и BFF). Раздел `erp.stock` — чтение.
+      parameters:
+        - name: q
+          in: query
+          required: false
+          description: Поиск
+          schema: {type: string, maxLength: 200}
+        - name: page
+          in: query
+          required: false
+          schema: {type: integer, minimum: 1, default: 1}
+        - name: page_size
+          in: query
+          required: false
+          schema: {type: integer, minimum: 1, maximum: 200, default: 25}
+        - name: kind
+          in: query
+          required: false
+          schema: {$ref: '#/components/schemas/BrigadeKind'}
+        - name: include_inactive
+          in: query
+          required: false
+          description: Вместе с теми, кто не работает
+          schema: {type: boolean, default: false}
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BrigadePage'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+    post:
+      tags: [erp-catalog]
+      operationId: createBrigade
+      summary: 'Расчёт · Бригады: добавить'
+      description: >-
+        ERP `POST catalog/brigades/` — право `catalog.manage`; ставка — ещё и зона услуг или `cost_margin`. Раздел `erp.stock` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BrigadeCreate'
+      responses:
+        '201':
+          description: Создана
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Brigade'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /erp/catalog/brigades/{id}:
+    patch:
+      tags: [erp-catalog]
+      operationId: updateBrigade
+      summary: 'Расчёт · Бригады: изменить или убрать из выбора'
+      description: >-
+        ERP `PATCH catalog/brigades/{id}/` — право `catalog.manage`. `is_active = false` убирает бригаду из выбора, не удаляя. Раздел `erp.stock` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/CompanyItemId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BrigadeUpdate'
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Brigade'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /erp/catalog/category-requests:
+    get:
+      tags: [erp-catalog]
+      operationId: listCatalogCategoryRequests
+      summary: 'Расчёт · Запросы на категории'
+      description: >-
+        ERP `catalog/category-requests/`: запросы своей компании. Решает директор: `approveCategoryRequest` и `rejectCategoryRequest` (раздел `company.settings`). Раздел `erp.stock` — чтение.
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema: {$ref: '#/components/schemas/CategoryRequestStatus'}
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryRequestList'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+    post:
+      tags: [erp-catalog]
+      operationId: createCatalogCategoryRequest
+      summary: 'Расчёт · Запросить новую категорию'
+      description: >-
+        ERP `POST catalog/category-requests/` — право `catalog.manage`. Запрос ничего не создаёт: категорию заводит директор или администратор и привязывает к запросу. Второй такой же запрос, пока первый на рассмотрении, — 409 `CONFLICT`. Раздел `erp.stock` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryProposalIn'
+      responses:
+        '201':
+          description: Запрос подан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryRequest'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: '`CONFLICT` — такой запрос уже на рассмотрении'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /erp/catalog/exchange-rates:
+    get:
+      tags: [erp-catalog]
+      operationId: listCatalogExchangeRates
+      summary: 'Расчёт · Справочники: курсы валют к UZS'
+      description: >-
+        ERP `exchange-rates/`: строки по дням, источник — ЦБ или вручную. Ввод курса на дату — `createFxRate` (раздел `company.settings`). Раздел `erp.stock` — чтение.
+      parameters:
+        - name: currency
+          in: query
+          required: false
+          description: Код валюты
+          schema: {type: string, pattern: '^[A-Za-z]{3}$'}
+        - name: page
+          in: query
+          required: false
+          schema: {type: integer, minimum: 1, default: 1}
+        - name: page_size
+          in: query
+          required: false
+          schema: {type: integer, minimum: 1, maximum: 200, default: 25}
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExchangeRatePage'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /erp/catalog/hs-codes:
+    get:
+      tags: [erp-catalog]
+      operationId: listHsCodes
+      summary: 'Расчёт · Справочники: коды ТН ВЭД'
+      description: >-
+        ERP `master-data/hs-codes/`. Раздел `erp.stock` — чтение.
+      parameters:
+        - name: q
+          in: query
+          required: false
+          description: Поиск
+          schema: {type: string, maxLength: 200}
+        - name: page
+          in: query
+          required: false
+          schema: {type: integer, minimum: 1, default: 1}
+        - name: page_size
+          in: query
+          required: false
+          schema: {type: integer, minimum: 1, maximum: 200, default: 25}
+        - name: level
+          in: query
+          required: false
+          description: Число знаков
+          schema: {type: integer, enum: [2, 4, 6, 8, 10]}
+        - name: active
+          in: query
+          required: false
+          description: Только действующие
+          schema: {type: boolean, default: false}
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HsCodePage'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+    post:
+      tags: [erp-catalog]
+      operationId: createHsCode
+      summary: 'Расчёт · Справочники: добавить код ТН ВЭД'
+      description: >-
+        ERP `POST master-data/hs-codes/` — право `catalog.manage`. Повтор кода — 409 `CONFLICT` (`details.reason = hs_code_exists`). Раздел `erp.stock` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HsCodeCreate'
+      responses:
+        '201':
+          description: Добавлен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HsCode'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: '`CONFLICT` — такой код уже есть'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /erp/catalog/hs-codes/{id}:
+    patch:
+      tags: [erp-catalog]
+      operationId: updateHsCode
+      summary: 'Расчёт · Справочники: изменить код ТН ВЭД'
+      description: >-
+        ERP `PATCH master-data/hs-codes/{id}/` — право `catalog.manage`. Код не меняется; выведенный из обращения закрывается датой `valid_until`, не удаляется. Раздел `erp.stock` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/CompanyItemId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HsCodeUpdate'
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HsCode'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /erp/catalog/manufacturers:
+    get:
+      tags: [erp-catalog]
+      operationId: listManufacturers
+      summary: 'Расчёт · Справочники: производители'
+      description: >-
+        ERP `catalog/manufacturers/`. Отключённые видит только держатель `catalog.manage` (`include_inactive`). Раздел `erp.stock` — чтение.
+      parameters:
+        - name: q
+          in: query
+          required: false
+          description: Поиск
+          schema: {type: string, maxLength: 200}
+        - name: page
+          in: query
+          required: false
+          schema: {type: integer, minimum: 1, default: 1}
+        - name: page_size
+          in: query
+          required: false
+          schema: {type: integer, minimum: 1, maximum: 200, default: 25}
+        - name: include_inactive
+          in: query
+          required: false
+          schema: {type: boolean, default: false}
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ManufacturerPage'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+    post:
+      tags: [erp-catalog]
+      operationId: createManufacturer
+      summary: 'Расчёт · Справочники: добавить производителя'
+      description: >-
+        ERP `POST catalog/manufacturers/` — право `catalog.manage`. Название уникально без учёта регистра — 409 `CONFLICT` (`details.reason = manufacturer_exists`). Раздел `erp.stock` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ManufacturerCreate'
+      responses:
+        '201':
+          description: Добавлен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Manufacturer'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: '`CONFLICT` — такой производитель уже есть'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /erp/catalog/manufacturers/{id}:
+    patch:
+      tags: [erp-catalog]
+      operationId: updateManufacturer
+      summary: 'Расчёт · Справочники: изменить производителя'
+      description: >-
+        ERP `PATCH catalog/manufacturers/{id}/` — право `catalog.manage`. `is_active = false` скрывает бренд в выборе. Раздел `erp.stock` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/CompanyItemId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ManufacturerUpdate'
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Manufacturer'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: '`CONFLICT` — такой производитель уже есть'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /erp/docs/files:
+    get:
+      tags: [erp-catalog]
+      operationId: listTechDocs
+      summary: 'Расчёт · Техдокументация: файлы'
+      description: >-
+        ERP `catalog/tech-docs/`: ТЗ, чертежи, сертификаты и регламенты ПНР с привязкой к позиции и заявке. Раздел `erp.stock` — чтение.
+      parameters:
+        - name: q
+          in: query
+          required: false
+          description: Поиск
+          schema: {type: string, maxLength: 200}
+        - name: page
+          in: query
+          required: false
+          schema: {type: integer, minimum: 1, default: 1}
+        - name: page_size
+          in: query
+          required: false
+          schema: {type: integer, minimum: 1, maximum: 200, default: 25}
+        - name: kind
+          in: query
+          required: false
+          schema: {$ref: '#/components/schemas/TechDocKind'}
+        - name: product_id
+          in: query
+          required: false
+          description: Позиция номенклатуры
+          schema: {$ref: '#/components/schemas/CompanyItemRef'}
+        - name: deal_id
+          in: query
+          required: false
+          description: Заявка или проект (id сделки ERP)
+          schema: {$ref: '#/components/schemas/CompanyItemRef'}
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TechDocPage'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+    post:
+      tags: [erp-catalog]
+      operationId: uploadTechDoc
+      summary: 'Расчёт · Техдокументация: загрузить файл'
+      description: >-
+        ERP `POST catalog/tech-docs/` (multipart) — право `catalog.manage`. BFF читает тело до 21 МБ (копится в памяти BFF, B-D23-6), multipart не разбирает и передаёт ERP как есть; файл ≤ 20 МБ (PDF, PNG, JPEG, DOC(X), XLS(X)), содержимое сверяется с расширением. Нужна привязка к позиции или заявке. Раздел `erp.stock` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TechDocUpload'
+      responses:
+        '201':
+          description: Загружен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TechDoc'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '413':
+          description: '`PAYLOAD_TOO_LARGE` — файл больше 20 МБ (`details.max_bytes`)'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /erp/docs/files/{id}:
+    delete:
+      tags: [erp-catalog]
+      operationId: deleteTechDoc
+      summary: 'Расчёт · Техдокументация: удалить файл'
+      description: >-
+        ERP `DELETE catalog/tech-docs/{id}/` — право `catalog.manage`; файл удаляется из хранилища. Раздел `erp.stock` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/CompanyItemId'
+      responses:
+        '204':
+          description: Удалён
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /erp/docs/files/{id}/content:
+    get:
+      tags: [erp-catalog]
+      operationId: downloadTechDoc
+      summary: 'Расчёт · Техдокументация: содержимое файла'
+      description: >-
+        ERP `catalog/tech-docs/{id}/file/` потоком. Всегда вложением с `X-Content-Type-Options: nosniff`: тип содержимого браузер не исполняет, просмотр PDF и изображений строит интерфейс сам из полученных байт. Раздел `erp.stock` — чтение.
+      parameters:
+        - $ref: '#/components/parameters/CompanyItemId'
+      responses:
+        '200':
+          description: Файл
+          content:
+            application/octet-stream:
+              schema: {type: string, format: binary}
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+  /erp/docs/deals:
+    get:
+      tags: [erp-catalog]
+      operationId: listTechDocDealOptions
+      summary: 'Расчёт · Техдокументация: заявки и проекты для привязки'
+      description: >-
+        ERP `crm/deals/` (как «Связь с проектом» в EDS); номер ЗВ/ПР составляется до ERP-09. Раздел `erp.stock` — чтение.
+      parameters:
+        - name: q
+          in: query
+          required: false
+          description: Номер, название или компания
+          schema: {type: string, maxLength: 100}
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EdsDealOptions'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
 
 components:
   securitySchemes:
@@ -16047,3 +16900,463 @@ components:
         lead: {type: string, pattern: '^[Ll]-?\d{1,9}$'}
         message: {type: integer, minimum: 1}
         index: {type: integer, minimum: 0}
+    # --- D2-3: Расчёт · Номенклатура и поставщики, Техдокументация (0.25.0, tag `erp-catalog`) ---
+    CatalogItemKind:
+      type: string
+      enum: [stock, on_order, service_fixed, service_milestones, service_time]
+      description: 'Товар со склада, товар под заказ, услуга: фикс / по этапам / по времени (ERP вычисляет)'
+    CatalogNamedRef:
+      type: object
+      additionalProperties: false
+      required: [id, name]
+      properties:
+        id: {$ref: '#/components/schemas/CompanyItemRef'}
+        name: {type: string}
+    CatalogUnit:
+      type: object
+      additionalProperties: false
+      required: [id, code, name]
+      properties:
+        id: {$ref: '#/components/schemas/CompanyItemRef'}
+        code: {type: string}
+        name: {type: string}
+    CatalogMoney:
+      type: object
+      additionalProperties: false
+      required: [amount, currency]
+      properties:
+        amount: {$ref: '#/components/schemas/DecimalString'}
+        currency: {type: [string, 'null'], description: Код валюты ISO 4217}
+    CatalogMoneyIn:
+      type: object
+      additionalProperties: false
+      required: [amount, currency]
+      properties:
+        amount: {$ref: '#/components/schemas/DecimalString'}
+        currency: {type: string, minLength: 3, maxLength: 8}
+    CatalogItem:
+      type: object
+      additionalProperties: false
+      required: [id, sku, name, kind, unit, vat_rate, vat_effective, category, status, offers_count, nearest_valid_until, docs_count]
+      properties:
+        id: {$ref: '#/components/schemas/CompanyItemRef'}
+        sku: {type: string}
+        name: {type: string}
+        kind: {$ref: '#/components/schemas/CatalogItemKind'}
+        unit:
+          oneOf: [{$ref: '#/components/schemas/CatalogUnit'}, {type: 'null'}]
+        vat_rate:
+          oneOf: [{$ref: '#/components/schemas/DecimalString'}, {type: 'null'}]
+          description: НДС позиции, %; `null` — ставка компании по умолчанию
+        vat_effective:
+          oneOf: [{$ref: '#/components/schemas/DecimalString'}, {type: 'null'}]
+          description: Действующая ставка (своя или компании по умолчанию); `null` — нигде не задана
+        category:
+          oneOf: [{$ref: '#/components/schemas/CatalogNamedRef'}, {type: 'null'}]
+        status: {type: [string, 'null'], description: 'Код статуса карточки: DRAFT, PUBLISHED'}
+        offers_count: {type: integer, minimum: 0}
+        nearest_valid_until: {type: [string, 'null'], format: date}
+        docs_count: {type: integer, minimum: 0}
+    CatalogItemPage:
+      type: object
+      additionalProperties: false
+      required: [items, total, page, page_size]
+      properties:
+        items: {type: array, items: {$ref: '#/components/schemas/CatalogItem'}}
+        total: {type: integer, minimum: 0}
+        page: {type: integer, minimum: 1}
+        page_size: {type: integer, minimum: 1}
+    CatalogProductRef:
+      type: object
+      additionalProperties: false
+      required: [id, name, sku]
+      properties:
+        id: {$ref: '#/components/schemas/CompanyItemRef'}
+        name: {type: string}
+        sku: {type: string}
+    CatalogOffer:
+      type: object
+      additionalProperties: false
+      description: Предложение поставщика. Квота — сколько единиц поставщик готов отгрузить по цене.
+      required: [id, supplier, product, supplier_sku, price, quota_qty, min_order_qty, in_stock_lead_days, order_lead_days, stock_status, valid_from, valid_until, is_active, validity]
+      properties:
+        id: {$ref: '#/components/schemas/CompanyItemRef'}
+        supplier: {$ref: '#/components/schemas/CatalogNamedRef'}
+        product: {$ref: '#/components/schemas/CatalogProductRef'}
+        supplier_sku: {type: string}
+        price:
+          oneOf: [{$ref: '#/components/schemas/CatalogMoney'}, {type: 'null'}]
+          description: Цена закупки — только с полем `supplier_prices`, иначе `null`
+        quota_qty: {type: integer, minimum: 0}
+        min_order_qty: {type: integer, minimum: 1}
+        in_stock_lead_days: {type: integer, minimum: 0}
+        order_lead_days: {type: integer, minimum: 0}
+        stock_status: {type: [string, 'null'], description: 'Код: IN_STOCK, ON_ORDER, EXPECTED…'}
+        valid_from: {type: [string, 'null'], format: date}
+        valid_until: {type: [string, 'null'], format: date}
+        is_active: {type: boolean}
+        validity: {type: string, enum: [ok, expiring, expired], description: 'Срок цены: действует, истекает в ближайшие 14 дней, истёк'}
+    CatalogTechDocRef:
+      type: object
+      additionalProperties: false
+      required: [id, title, kind]
+      properties:
+        id: {$ref: '#/components/schemas/CompanyItemRef'}
+        title: {type: string}
+        kind: {$ref: '#/components/schemas/TechDocKind'}
+    CatalogItemDetail:
+      type: object
+      additionalProperties: false
+      required: [id, sku, name, kind, unit, vat_rate, vat_effective, category, status, offers_count, nearest_valid_until, docs_count, description, gost_drawing, hs_code, manufacturer_part_number, brand, offers, prices_visible, tech_docs]
+      properties:
+        id: {$ref: '#/components/schemas/CompanyItemRef'}
+        sku: {type: string}
+        name: {type: string}
+        kind: {$ref: '#/components/schemas/CatalogItemKind'}
+        unit:
+          oneOf: [{$ref: '#/components/schemas/CatalogUnit'}, {type: 'null'}]
+        vat_rate:
+          oneOf: [{$ref: '#/components/schemas/DecimalString'}, {type: 'null'}]
+          description: НДС позиции, %; `null` — ставка компании по умолчанию
+        vat_effective:
+          oneOf: [{$ref: '#/components/schemas/DecimalString'}, {type: 'null'}]
+          description: Действующая ставка (своя или компании по умолчанию); `null` — нигде не задана
+        category:
+          oneOf: [{$ref: '#/components/schemas/CatalogNamedRef'}, {type: 'null'}]
+        status: {type: [string, 'null'], description: 'Код статуса карточки: DRAFT, PUBLISHED'}
+        offers_count: {type: integer, minimum: 0}
+        nearest_valid_until: {type: [string, 'null'], format: date}
+        docs_count: {type: integer, minimum: 0}
+        description: {type: string}
+        gost_drawing: {type: string}
+        hs_code: {type: string}
+        manufacturer_part_number: {type: string}
+        brand: {type: [string, 'null']}
+        offers: {type: array, items: {$ref: '#/components/schemas/CatalogOffer'}}
+        prices_visible: {type: boolean, description: 'Видит ли сотрудник цены поставщиков'}
+        tech_docs: {type: array, items: {$ref: '#/components/schemas/CatalogTechDocRef'}}
+    CatalogItemCreate:
+      type: object
+      additionalProperties: false
+      required: [name, kind]
+      properties:
+        name: {type: string, minLength: 1, maxLength: 255}
+        kind: {$ref: '#/components/schemas/CatalogItemKind'}
+        description: {type: string, maxLength: 5000}
+        unit_id: {oneOf: [{$ref: '#/components/schemas/CompanyItemRef'}, {type: 'null'}]}
+        category_id: {oneOf: [{$ref: '#/components/schemas/CompanyItemRef'}, {type: 'null'}]}
+        vat_rate: {oneOf: [{$ref: '#/components/schemas/DecimalString'}, {type: 'null'}], description: 'Процент 0..100; `null` — по умолчанию компании'}
+    CatalogItemUpdate:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        name: {type: string, minLength: 1, maxLength: 255}
+        kind: {$ref: '#/components/schemas/CatalogItemKind'}
+        description: {type: string, maxLength: 5000}
+        unit_id: {oneOf: [{$ref: '#/components/schemas/CompanyItemRef'}, {type: 'null'}]}
+        category_id: {oneOf: [{$ref: '#/components/schemas/CompanyItemRef'}, {type: 'null'}]}
+        vat_rate: {oneOf: [{$ref: '#/components/schemas/DecimalString'}, {type: 'null'}]}
+    CatalogLookups:
+      type: object
+      additionalProperties: false
+      required: [units, categories, currencies, countries]
+      properties:
+        units: {type: array, items: {$ref: '#/components/schemas/CatalogUnit'}}
+        categories:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [id, name, parent_id]
+            properties:
+              id: {$ref: '#/components/schemas/CompanyItemRef'}
+              name: {type: string}
+              parent_id: {oneOf: [{$ref: '#/components/schemas/CompanyItemRef'}, {type: 'null'}]}
+        currencies:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [code, symbol]
+            properties:
+              code: {type: string}
+              symbol: {type: string}
+        countries: {type: array, items: {$ref: '#/components/schemas/CatalogNamedRef'}}
+    SupplierRow:
+      type: object
+      additionalProperties: false
+      required: [id, name, tin, country, offers_count, expired_count, expiring_count, nearest_valid_until]
+      properties:
+        id: {$ref: '#/components/schemas/CompanyItemRef'}
+        name: {type: string}
+        tin: {type: string}
+        country: {type: [string, 'null']}
+        offers_count: {type: integer, minimum: 0}
+        expired_count: {type: integer, minimum: 0, description: Действующих предложений с истёкшим сроком цены}
+        expiring_count: {type: integer, minimum: 0, description: Срок цены истекает в ближайшие 14 дней}
+        nearest_valid_until: {type: [string, 'null'], format: date}
+    SupplierPage:
+      type: object
+      additionalProperties: false
+      required: [items, total, page, page_size]
+      properties:
+        items: {type: array, items: {$ref: '#/components/schemas/SupplierRow'}}
+        total: {type: integer, minimum: 0}
+        page: {type: integer, minimum: 1}
+        page_size: {type: integer, minimum: 1}
+    SupplierDetail:
+      type: object
+      additionalProperties: false
+      required: [id, name, tin, country, offers_count, expired_count, expiring_count, nearest_valid_until, contact_person, phone, email, website, legal_address, offers, prices_visible]
+      properties:
+        id: {$ref: '#/components/schemas/CompanyItemRef'}
+        name: {type: string}
+        tin: {type: string}
+        country: {type: [string, 'null']}
+        offers_count: {type: integer, minimum: 0}
+        expired_count: {type: integer, minimum: 0, description: Действующих предложений с истёкшим сроком цены}
+        expiring_count: {type: integer, minimum: 0, description: Срок цены истекает в ближайшие 14 дней}
+        nearest_valid_until: {type: [string, 'null'], format: date}
+        contact_person: {type: string}
+        phone: {type: string}
+        email: {type: string}
+        website: {type: string}
+        legal_address: {type: string}
+        offers: {type: array, items: {$ref: '#/components/schemas/CatalogOffer'}}
+        prices_visible: {type: boolean}
+    SupplierOfferUpdate:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        price: {$ref: '#/components/schemas/CatalogMoneyIn'}
+        quota_qty: {type: integer, minimum: 0}
+        min_order_qty: {type: integer, minimum: 1}
+        in_stock_lead_days: {type: integer, minimum: 0}
+        order_lead_days: {type: integer, minimum: 0}
+        stock_status: {type: [string, 'null'], maxLength: 50}
+        valid_from: {type: [string, 'null'], format: date}
+        valid_until: {type: [string, 'null'], format: date}
+        is_active: {type: boolean}
+    BrigadeKind:
+      type: string
+      enum: [brigade, person, subcontractor]
+    CrewRate:
+      type: object
+      additionalProperties: false
+      required: [amount, currency, unit]
+      properties:
+        amount: {$ref: '#/components/schemas/DecimalString'}
+        currency: {type: [string, 'null']}
+        unit: {type: string, enum: [day, hour]}
+    Brigade:
+      type: object
+      additionalProperties: false
+      required: [id, name, kind, specialization, headcount, rate, rate_visible, note, is_active]
+      properties:
+        id: {$ref: '#/components/schemas/CompanyItemRef'}
+        name: {type: string}
+        kind: {$ref: '#/components/schemas/BrigadeKind'}
+        specialization: {type: string}
+        headcount: {type: integer, minimum: 1}
+        rate:
+          oneOf: [{$ref: '#/components/schemas/CrewRate'}, {type: 'null'}]
+          description: Ставка — держатель зоны услуг расчёта или поле `cost_margin`; иначе `null`
+        rate_visible: {type: boolean}
+        note: {type: string}
+        is_active: {type: boolean}
+    BrigadePage:
+      type: object
+      additionalProperties: false
+      required: [items, total, page, page_size]
+      properties:
+        items: {type: array, items: {$ref: '#/components/schemas/Brigade'}}
+        total: {type: integer, minimum: 0}
+        page: {type: integer, minimum: 1}
+        page_size: {type: integer, minimum: 1}
+    BrigadeCreate:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name: {type: string, minLength: 1, maxLength: 255}
+        kind: {$ref: '#/components/schemas/BrigadeKind'}
+        specialization: {type: string, maxLength: 255}
+        headcount: {type: integer, minimum: 1, maximum: 500}
+        rate: {oneOf: [{$ref: '#/components/schemas/CatalogMoneyIn'}, {type: 'null'}]}
+        rate_unit: {type: string, enum: [day, hour]}
+        note: {type: string, maxLength: 500}
+        is_active: {type: boolean}
+    BrigadeUpdate:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        name: {type: string, minLength: 1, maxLength: 255}
+        kind: {$ref: '#/components/schemas/BrigadeKind'}
+        specialization: {type: string, maxLength: 255}
+        headcount: {type: integer, minimum: 1, maximum: 500}
+        rate: {oneOf: [{$ref: '#/components/schemas/CatalogMoneyIn'}, {type: 'null'}]}
+        rate_unit: {type: string, enum: [day, hour]}
+        note: {type: string, maxLength: 500}
+        is_active: {type: boolean}
+    CategoryProposalIn:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name: {type: string, minLength: 1, maxLength: 255}
+        parent_id: {oneOf: [{$ref: '#/components/schemas/CompanyItemRef'}, {type: 'null'}]}
+        justification: {type: string, maxLength: 2000}
+    ExchangeRateRow:
+      type: object
+      additionalProperties: false
+      required: [id, currency, rate_to_uzs, rate_date, source]
+      properties:
+        id: {$ref: '#/components/schemas/CompanyItemRef'}
+        currency: {type: string}
+        rate_to_uzs: {$ref: '#/components/schemas/DecimalString'}
+        rate_date: {type: string, format: date}
+        source: {type: string, enum: [CBU, MANUAL], description: 'Автозагрузка ЦБ РУз или вручную'}
+    ExchangeRatePage:
+      type: object
+      additionalProperties: false
+      required: [items, total, page, page_size]
+      properties:
+        items: {type: array, items: {$ref: '#/components/schemas/ExchangeRateRow'}}
+        total: {type: integer, minimum: 0}
+        page: {type: integer, minimum: 1}
+        page_size: {type: integer, minimum: 1}
+    HsCode:
+      type: object
+      additionalProperties: false
+      required: [id, code, name, unit_name, extra_unit_name, level, valid_from, valid_until, is_active, source]
+      properties:
+        id: {$ref: '#/components/schemas/CompanyItemRef'}
+        code: {type: string, pattern: '^[0-9]{2,10}$'}
+        name: {type: string}
+        unit_name: {type: string}
+        extra_unit_name: {type: string}
+        level: {type: integer, enum: [2, 4, 6, 8, 10]}
+        valid_from: {type: [string, 'null'], format: date}
+        valid_until: {type: [string, 'null'], format: date}
+        is_active: {type: boolean}
+        source: {type: string}
+    HsCodePage:
+      type: object
+      additionalProperties: false
+      required: [items, total, page, page_size]
+      properties:
+        items: {type: array, items: {$ref: '#/components/schemas/HsCode'}}
+        total: {type: integer, minimum: 0}
+        page: {type: integer, minimum: 1}
+        page_size: {type: integer, minimum: 1}
+    HsCodeCreate:
+      type: object
+      additionalProperties: false
+      required: [code, name]
+      properties:
+        code: {type: string, pattern: '^[0-9]{2,10}$', description: '2, 4, 6, 8 или 10 цифр'}
+        name: {type: string, minLength: 1}
+        unit_name: {type: string, maxLength: 64}
+        extra_unit_name: {type: string, maxLength: 64}
+        valid_from: {type: [string, 'null'], format: date}
+        valid_until: {type: [string, 'null'], format: date}
+    HsCodeUpdate:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        name: {type: string, minLength: 1}
+        unit_name: {type: string, maxLength: 64}
+        extra_unit_name: {type: string, maxLength: 64}
+        valid_from: {type: [string, 'null'], format: date}
+        valid_until: {type: [string, 'null'], format: date}
+    Manufacturer:
+      type: object
+      additionalProperties: false
+      required: [id, name, country_id, country_name, website, is_active]
+      properties:
+        id: {$ref: '#/components/schemas/CompanyItemRef'}
+        name: {type: string}
+        country_id: {oneOf: [{$ref: '#/components/schemas/CompanyItemRef'}, {type: 'null'}]}
+        country_name: {type: [string, 'null']}
+        website: {type: string}
+        is_active: {type: boolean}
+    ManufacturerPage:
+      type: object
+      additionalProperties: false
+      required: [items, total, page, page_size]
+      properties:
+        items: {type: array, items: {$ref: '#/components/schemas/Manufacturer'}}
+        total: {type: integer, minimum: 0}
+        page: {type: integer, minimum: 1}
+        page_size: {type: integer, minimum: 1}
+    ManufacturerCreate:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name: {type: string, minLength: 1, maxLength: 255}
+        country_id: {oneOf: [{$ref: '#/components/schemas/CompanyItemRef'}, {type: 'null'}]}
+        website: {type: string, maxLength: 200}
+        is_active: {type: boolean}
+    ManufacturerUpdate:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        name: {type: string, minLength: 1, maxLength: 255}
+        country_id: {oneOf: [{$ref: '#/components/schemas/CompanyItemRef'}, {type: 'null'}]}
+        website: {type: string, maxLength: 200}
+        is_active: {type: boolean}
+    TechDocKind:
+      type: string
+      enum: [tz, drawing, certificate, pnr, other]
+      description: 'ТЗ, чертёж, сертификат, регламент ПНР, другое'
+    TechDocDeal:
+      type: object
+      additionalProperties: false
+      required: [id, number, title, client]
+      properties:
+        id: {$ref: '#/components/schemas/CompanyItemRef'}
+        number: {type: string, description: 'Номер для показа (`ЗВ-2026-104`, `ПР-…`); составляется до ERP-09'}
+        title: {type: string}
+        client: {type: string}
+    TechDoc:
+      type: object
+      additionalProperties: false
+      required: [id, kind, title, original_name, content_type, size_bytes, previewable, product, deal, uploaded_by, created_at]
+      properties:
+        id: {$ref: '#/components/schemas/CompanyItemRef'}
+        kind: {$ref: '#/components/schemas/TechDocKind'}
+        title: {type: string}
+        original_name: {type: string}
+        content_type: {type: string}
+        size_bytes: {type: integer, minimum: 0}
+        previewable: {type: boolean, description: PDF и изображения открываются для просмотра; остальное скачивается}
+        product:
+          oneOf: [{$ref: '#/components/schemas/CatalogProductRef'}, {type: 'null'}]
+        deal:
+          oneOf: [{$ref: '#/components/schemas/TechDocDeal'}, {type: 'null'}]
+        uploaded_by: {type: [string, 'null']}
+        created_at: {type: string, format: date-time}
+    TechDocPage:
+      type: object
+      additionalProperties: false
+      required: [items, total, page, page_size]
+      properties:
+        items: {type: array, items: {$ref: '#/components/schemas/TechDoc'}}
+        total: {type: integer, minimum: 0}
+        page: {type: integer, minimum: 1}
+        page_size: {type: integer, minimum: 1}
+    TechDocUpload:
+      type: object
+      required: [file]
+      properties:
+        file: {type: string, format: binary, description: 'До 20 МБ: PDF, PNG, JPEG, DOC(X), XLS(X)'}
+        kind: {$ref: '#/components/schemas/TechDocKind'}
+        title: {type: string, maxLength: 255}
+        product_id: {$ref: '#/components/schemas/CompanyItemRef'}
+        deal_id: {$ref: '#/components/schemas/CompanyItemRef'}

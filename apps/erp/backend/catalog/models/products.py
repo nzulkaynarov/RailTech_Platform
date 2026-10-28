@@ -194,6 +194,17 @@ class Product(models.Model):
         related_name="+",
         verbose_name=_("Валюта цены-витрины"),
     )
+    # НДС позиции, % (D2-3, SPEC-v3 §7.4): пусто — ставка компании по умолчанию (`CompanySettings.default_vat_rate`).
+    # Во внутренний слой: опубликованный слой (`catalog.published`, белый список) поле не отдаёт.
+    vat_rate = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal("0"))],
+        verbose_name=_("НДС, %"),
+        help_text=_("Пусто — ставка компании по умолчанию."),
+    )
 
     # ── Провенанс кандидата (волна A номенклатуры) ───────────────────────────────
     #

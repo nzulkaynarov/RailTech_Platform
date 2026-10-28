@@ -170,6 +170,26 @@ Makefile · .env.example · docs/ (ADR и runbooks ERP в docs/runbooks/erp/ —
   (`DEFAULT_RENDERER_CLASSES`): Browsable API раскрывал справочники в формах; неприемлемый `Accept` → JSON, не 406
   (`core/negotiation.py` — публичные страницы КП и документов сами отдают HTML по `Accept`).
 
+### Номенклатура, поставщики, бригады, техдокументация и справочники для Платформы (D2-3)
+
+- **Пакет `catalog/desk/`** (не `services.py` — тот модуль занят): `items.py`, `suppliers.py`, `brigades.py`, `tech_docs.py`, `refs.py` — логика;
+  `serializers.py` — явные схемы; `views_*.py` — тонкие вьюхи (`DeskViewSet` = `RoleGatedViewMixin` + `IsBackOfficeStaff`). Операции `/api/v1`:
+  `catalog/items/` (список с типом, единицей, НДС; карточка с предложениями; создание и правка — `catalog.manage`), `catalog/suppliers/`
+  (+ `PATCH …/offers/{id}/` — `supply.manage`), `catalog/brigades/`, `catalog/tech-docs/` (+ `{id}/file/` потоком), `master-data/hs-codes/`,
+  `exchange-rates/` (список; ввод — прежний `…/manual/` с `settings.edit`), запись `catalog/manufacturers/`. Чтение — любому сотруднику бэк-офиса.
+- **Закрытые поля режет ERP, не только BFF** (`catalog/desk/access.py`): цена закупки в предложениях — `quote.view_cost_margin` или зона товаров
+  расчёта (`quote.visa_goods`); ставка бригады — `quote.view_cost_margin` или зона услуг (`quote.visa_services`). Без права поле `null`, а запись
+  поля — 403 `SUPPLIER_PRICES_REQUIRED` / `CREW_RATES_REQUIRED`. Права зон приходят с D2-1: пока их нет в `accounts.constants.Permission`,
+  `staff_permissions` их отбрасывает и действует только `cost_margin`. Негативные тесты прямого вызова ERP — `catalog/tests/test_d2_3_desk.py`.
+- **Тип позиции вычисляется**: услуга — по домену и `fulfillment_policy`; товар «со склада» — если у действующего предложения (активно, в окне
+  цены) есть остаток или статус «в наличии» (то же правило, что `catalog.published.availability`). Квота предложения — `SupplierOffer.stock_quantity`.
+  НДС позиции — `Product.vat_rate` (пусто — `CompanySettings.default_vat_rate`); в опубликованный слой поле не попадает (белый список).
+- **Техдокументация** (`catalog.TechDocument`, приватный бакет `erp-private`, путь `tech-docs/<год>/<uuid>`): вид (ТЗ, чертёж, сертификат,
+  регламент ПНР, другое), привязка к позиции и/или сделке (хотя бы одна), ≤ 20 МБ, PDF/PNG/JPEG/DOC(X)/XLS(X) с проверкой подписи файла.
+  Выдача — потоком через представление; `ProductDocument` (паспорт в карточке товара) остаётся для старого фронта.
+- **Бригады** (`catalog.Brigade`) — справочник исполнителей услуг (название, вид, состав, специализация, ставка за день или час); из справочника
+  ставку берёт расчёт услуги (D2-1). Не удаляются — `is_active = false`.
+
 ## 6. Роли бэк-офиса (ARCHITECTURE §7, §9; BUSINESS §11; M1-ERP-05 — сделано)
 
 Каталог прав — `accounts.constants.Permission` (21 код, разделы `PERMISSION_GROUPS`); роль — `accounts.CompanyRole`

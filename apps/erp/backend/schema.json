@@ -7408,6 +7408,242 @@
                 }
             }
         },
+        "/api/v1/catalog/brigades/": {
+            "get": {
+                "operationId": "catalog_brigades_list",
+                "description": "Ставка (`rate`) — `null` без зоны услуг расчёта и без `quote.view_cost_margin`; `rate_visible` говорит, почему.",
+                "summary": "Crews and service performers",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "include_inactive",
+                        "schema": {
+                            "type": "boolean"
+                        },
+                        "description": "Вместе с теми, кто не работает."
+                    },
+                    {
+                        "in": "query",
+                        "name": "kind",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "brigade",
+                                "person",
+                                "subcontractor"
+                            ]
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "Номер страницы."
+                    },
+                    {
+                        "in": "query",
+                        "name": "page_size",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "Строк на странице, до 200."
+                    },
+                    {
+                        "in": "query",
+                        "name": "q",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Поиск по названию и коду."
+                    }
+                ],
+                "tags": [
+                    "Catalog"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedDeskBrigadeList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/ForbiddenResponse"
+                    }
+                }
+            },
+            "post": {
+                "operationId": "catalog_brigades_create",
+                "description": "Needs `catalog.manage`; ставка — ещё и зона услуг или `quote.view_cost_margin` (403 `CREW_RATES_REQUIRED`).",
+                "summary": "Add a crew or performer",
+                "tags": [
+                    "Catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DeskBrigadeInRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DeskBrigadeInRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DeskBrigadeInRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeskBrigade"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "Отказ проверки: код в `detail` или ошибки полей.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BadRequest"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/catalog/brigades/{id}/": {
+            "patch": {
+                "operationId": "catalog_brigades_update",
+                "description": "Needs `catalog.manage`; ставка — ещё и зона услуг или `quote.view_cost_margin` (403 `CREW_RATES_REQUIRED`). `is_active=false` убирает из выбора.",
+                "summary": "Edit a crew or performer",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^\\d+$"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedDeskBrigadeInRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedDeskBrigadeInRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedDeskBrigadeInRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeskBrigade"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "Отказ проверки: код в `detail` или ошибки полей.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BadRequest"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Объекта нет.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
         "/api/v1/catalog/categories/": {
             "get": {
                 "operationId": "catalog_categories_list",
@@ -8212,10 +8448,301 @@
                 }
             }
         },
+        "/api/v1/catalog/items/": {
+            "get": {
+                "operationId": "catalog_items_list",
+                "description": "Позиции номенклатуры с типом, единицей, НДС и числом предложений. Цены поставщиков здесь нет вовсе — они в карточке и только с правом на `supplier_prices`.",
+                "summary": "Catalog items for the nomenclature screen",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "category",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "Id категории."
+                    },
+                    {
+                        "in": "query",
+                        "name": "kind",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "on_order",
+                                "service_fixed",
+                                "service_milestones",
+                                "service_time",
+                                "stock"
+                            ]
+                        },
+                        "description": "Тип позиции."
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "Номер страницы."
+                    },
+                    {
+                        "in": "query",
+                        "name": "page_size",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "Строк на странице, до 200."
+                    },
+                    {
+                        "in": "query",
+                        "name": "q",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Поиск по названию и коду."
+                    }
+                ],
+                "tags": [
+                    "Catalog"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedDeskItemRowList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/ForbiddenResponse"
+                    }
+                }
+            },
+            "post": {
+                "operationId": "catalog_items_create",
+                "description": "Needs `catalog.manage`. Новая позиция — черновик; тип задаёт домен и политику исполнения.",
+                "summary": "Create a catalog item",
+                "tags": [
+                    "Catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DeskItemInRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DeskItemInRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DeskItemInRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeskItemDetail"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "Отказ проверки: код в `detail` или ошибки полей.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BadRequest"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/catalog/items/{id}/": {
+            "get": {
+                "operationId": "catalog_items_retrieve",
+                "description": "Предложения поставщиков: цена закупки (`price`) — `null` без права на цены поставщиков.",
+                "summary": "Catalog item card with supplier offers",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^\\d+$"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Catalog"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeskItemDetail"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "404": {
+                        "description": "Объекта нет.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/ForbiddenResponse"
+                    }
+                }
+            },
+            "patch": {
+                "operationId": "catalog_items_update",
+                "description": "Needs `catalog.manage`. НДС: пусто — ставка компании по умолчанию.",
+                "summary": "Edit a catalog item",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^\\d+$"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedDeskItemInRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedDeskItemInRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedDeskItemInRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeskItemDetail"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "Отказ проверки: код в `detail` или ошибки полей.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BadRequest"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Объекта нет.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
         "/api/v1/catalog/manufacturers/": {
             "get": {
                 "operationId": "catalog_manufacturers_list",
-                "description": "Returns OEM brands from the `catalog.Manufacturer` reference table — the canonical source for `Product.brand`. A brand is catalog metadata, not a platform participant (sellers/clients are the participant roles).",
+                "description": "Returns OEM brands from the `catalog.Manufacturer` reference table — the canonical source for `Product.brand`. A brand is catalog metadata, not a platform participant (sellers/clients are the participant roles). `?include_inactive=1` adds disabled brands — only for a `catalog.manage` holder.",
                 "summary": "List manufacturers (OEM brands)",
                 "parameters": [
                     {
@@ -8267,12 +8794,73 @@
                         "description": ""
                     }
                 }
+            },
+            "post": {
+                "operationId": "catalog_manufacturers_create",
+                "description": "Needs `catalog.manage` (D2-3, B-035). The name is unique, case-insensitively.",
+                "summary": "Add a manufacturer",
+                "tags": [
+                    "Catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ManufacturerRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ManufacturerRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ManufacturerRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Manufacturer"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "Field errors or MANUFACTURER_EXISTS",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BadRequest"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/ForbiddenResponse"
+                    }
+                }
             }
         },
         "/api/v1/catalog/manufacturers/{id}/": {
             "get": {
                 "operationId": "catalog_manufacturers_retrieve",
-                "description": "Read-only list of OEM brands (catalog.Manufacturer) for the `brand` selector.",
+                "description": "OEM brands (catalog.Manufacturer): public read for the `brand` selector; create/edit — `catalog.manage` (D2-3).",
                 "summary": "Get manufacturer (OEM brand)",
                 "parameters": [
                     {
@@ -8304,6 +8892,80 @@
                             }
                         },
                         "description": ""
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFoundResponse"
+                    }
+                }
+            },
+            "patch": {
+                "operationId": "catalog_manufacturers_partial_update",
+                "description": "Needs `catalog.manage` (D2-3, B-035). `is_active=false` hides the brand in selectors; brands are not deleted.",
+                "summary": "Edit a manufacturer",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Производитель.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedManufacturerRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedManufacturerRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedManufacturerRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Manufacturer"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "Field errors or MANUFACTURER_EXISTS",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BadRequest"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/ForbiddenResponse"
                     },
                     "404": {
                         "$ref": "#/components/responses/NotFoundResponse"
@@ -10412,6 +11074,482 @@
                     },
                     "404": {
                         "$ref": "#/components/responses/NotFoundResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/catalog/suppliers/": {
+            "get": {
+                "operationId": "catalog_suppliers_list",
+                "description": "Поставщики: число предложений, истёкшие и истекающие сроки цен. Цен нет.",
+                "summary": "Suppliers with offers summary",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "Номер страницы."
+                    },
+                    {
+                        "in": "query",
+                        "name": "page_size",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "Строк на странице, до 200."
+                    },
+                    {
+                        "in": "query",
+                        "name": "q",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Поиск по названию и коду."
+                    }
+                ],
+                "tags": [
+                    "Catalog"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedDeskSupplierRowList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/ForbiddenResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/catalog/suppliers/{id}/": {
+            "get": {
+                "operationId": "catalog_suppliers_retrieve",
+                "description": "Предложения поставщика: квота, сроки поставки и действия цены; `price` — `null` без права на цены поставщиков.",
+                "summary": "Supplier card with offers",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^\\d+$"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Catalog"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeskSupplierDetail"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "404": {
+                        "description": "Объекта нет.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/ForbiddenResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/catalog/suppliers/{id}/offers/{offer_id}/": {
+            "patch": {
+                "operationId": "catalog_suppliers_offer_update",
+                "description": "Needs `supply.manage`. Квота, минимальный заказ, сроки поставки, окно действия цены, признак «действует». Цена (`price`) — только с правом на цены поставщиков: иначе 403 `SUPPLIER_PRICES_REQUIRED`.",
+                "summary": "Edit a supplier offer",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^\\d+$"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "offer_id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^[0-9]+$"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedDeskOfferInRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedDeskOfferInRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedDeskOfferInRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeskOffer"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "Отказ проверки: код в `detail` или ошибки полей.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BadRequest"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Объекта нет.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/catalog/tech-docs/": {
+            "get": {
+                "operationId": "catalog_tech_docs_list",
+                "description": "Реестр читает любой сотрудник бэк-офиса; загрузка и удаление — `catalog.manage`.",
+                "summary": "Technical documentation registry",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "deal",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "Id заявки или проекта."
+                    },
+                    {
+                        "in": "query",
+                        "name": "kind",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "certificate",
+                                "drawing",
+                                "other",
+                                "pnr",
+                                "tz"
+                            ]
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "Номер страницы."
+                    },
+                    {
+                        "in": "query",
+                        "name": "page_size",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "Строк на странице, до 200."
+                    },
+                    {
+                        "in": "query",
+                        "name": "product",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "Id позиции номенклатуры."
+                    },
+                    {
+                        "in": "query",
+                        "name": "q",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Поиск по названию и коду."
+                    }
+                ],
+                "tags": [
+                    "Catalog"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedDeskTechDocList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/ForbiddenResponse"
+                    }
+                }
+            },
+            "post": {
+                "operationId": "catalog_tech_docs_create",
+                "description": "Needs `catalog.manage`. PDF, PNG, JPEG, DOC(X), XLS(X) до 20 МБ; содержимое сверяется с расширением. Нужна привязка к позиции (`product_id`) или заявке (`deal_id`). Коды: FILE_TOO_LARGE, FILE_TYPE_NOT_ALLOWED, FILE_CONTENT_MISMATCH, TECH_DOC_LINK_REQUIRED, PRODUCT_NOT_FOUND, DEAL_NOT_FOUND, NO_FILE_PROVIDED.",
+                "summary": "Upload a technical document",
+                "tags": [
+                    "Catalog"
+                ],
+                "requestBody": {
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DeskTechDocUploadRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeskTechDoc"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "Отказ проверки: код в `detail` или ошибки полей.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BadRequest"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/catalog/tech-docs/{id}/": {
+            "delete": {
+                "operationId": "catalog_tech_docs_destroy",
+                "description": "Needs `catalog.manage`. Файл удаляется из хранилища.",
+                "summary": "Delete a technical document",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^\\d+$"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Catalog"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No response body"
+                    },
+                    "403": {
+                        "description": "Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Объекта нет.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/catalog/tech-docs/{id}/file/": {
+            "get": {
+                "operationId": "catalog_tech_docs_file",
+                "description": "Файл потоком из приватного хранилища. PDF и изображения — `inline` (просмотр), `?download=1` и прочие форматы — вложением. Тип содержимого браузер не угадывает (`nosniff`).",
+                "summary": "Stream the file of a technical document",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "download",
+                        "schema": {
+                            "type": "boolean"
+                        },
+                        "description": "Отдать вложением."
+                    },
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^\\d+$"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Catalog"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/octet-stream": {
+                                "schema": {
+                                    "type": "string",
+                                    "format": "binary"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "404": {
+                        "description": "Документа или файла нет.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/ForbiddenResponse"
                     }
                 }
             }
@@ -19078,6 +20216,65 @@
                 }
             }
         },
+        "/api/v1/exchange-rates/": {
+            "get": {
+                "operationId": "exchange_rates_list",
+                "description": "Курсы к UZS по дням, новые первыми. Читает любой сотрудник; ручной ввод — `settings.edit` (`POST exchange-rates/manual/`).",
+                "summary": "Exchange rate rows",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "currency",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Код валюты (USD, EUR, RUB)."
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "Номер страницы."
+                    },
+                    {
+                        "in": "query",
+                        "name": "page_size",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "Строк на странице, до 200."
+                    }
+                ],
+                "tags": [
+                    "Finance"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedDeskExchangeRateList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/ForbiddenResponse"
+                    }
+                }
+            }
+        },
         "/api/v1/exchange-rates/current/": {
             "get": {
                 "operationId": "exchange_rates_current_retrieve",
@@ -21376,6 +22573,165 @@
                 }
             }
         },
+        "/api/v1/master-data/hs-codes/": {
+            "get": {
+                "operationId": "master_data_hs_codes_list",
+                "description": "Классификатор ТН ВЭД: чтение — любой сотрудник; добавить код и править наименование и срок — `catalog.manage`.\nКод выведенный из обращения не удаляется, а закрывается датой (`valid_until`).",
+                "summary": "HS (TN VED) code classifier",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "active",
+                        "schema": {
+                            "type": "boolean"
+                        },
+                        "description": "Только действующие на сегодня."
+                    },
+                    {
+                        "in": "query",
+                        "name": "level",
+                        "schema": {
+                            "type": "integer",
+                            "enum": [
+                                10,
+                                2,
+                                4,
+                                6,
+                                8
+                            ]
+                        },
+                        "description": "Число знаков кода."
+                    },
+                    {
+                        "in": "query",
+                        "name": "page",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "Номер страницы."
+                    },
+                    {
+                        "in": "query",
+                        "name": "page_size",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "Строк на странице, до 200."
+                    },
+                    {
+                        "in": "query",
+                        "name": "q",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Поиск по названию и коду."
+                    }
+                ],
+                "tags": [
+                    "Master Data"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PaginatedDeskHsCodeList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/ForbiddenResponse"
+                    }
+                }
+            },
+            "post": {
+                "operationId": "master_data_hs_codes_create",
+                "description": "Needs `catalog.manage`. Код — 2, 4, 6, 8 или 10 цифр; повтор — 409 `HS_CODE_EXISTS`. Родитель находится по самому длинному существующему префиксу.",
+                "summary": "Add an HS code",
+                "tags": [
+                    "Master Data"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DeskHsCodeInRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DeskHsCodeInRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DeskHsCodeInRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeskHsCode"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "Отказ проверки: код в `detail` или ошибки полей.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BadRequest"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "HS_CODE_EXISTS — такой код уже есть.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
         "/api/v1/master-data/hs-codes/{code}/duties/": {
             "get": {
                 "operationId": "master_data_hs_codes_duties_retrieve",
@@ -21419,6 +22775,96 @@
                     },
                     "404": {
                         "$ref": "#/components/responses/NotFoundResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/master-data/hs-codes/{id}/": {
+            "patch": {
+                "operationId": "master_data_hs_codes_update",
+                "description": "Needs `catalog.manage`. Менять можно наименование, единицы и срок действия; сам код — нет.",
+                "summary": "Edit an HS code",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^\\d+$"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Master Data"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedDeskHsCodeInRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedDeskHsCodeInRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedDeskHsCodeInRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeskHsCode"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "Отказ проверки: код в `detail` или ошибки полей.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BadRequest"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Объекта нет.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
                     }
                 }
             }
@@ -26399,6 +27845,15 @@
                 "type": "string",
                 "description": "* `not_started` - not_started\n* `not_in_calculation` - not_in_calculation\n* `not_draft` - not_draft\n* `no_lines` - no_lines\n* `visas_missing` - visas_missing"
             },
+            "BrigadeKindEnum": {
+                "enum": [
+                    "brigade",
+                    "person",
+                    "subcontractor"
+                ],
+                "type": "string",
+                "description": "* `brigade` - brigade\n* `person` - person\n* `subcontractor` - subcontractor"
+            },
             "BulkCreateQuoteItemsRequestRequest": {
                 "type": "object",
                 "properties": {
@@ -29911,6 +31366,14 @@
                     "deal"
                 ]
             },
+            "CrewRateUnitEnum": {
+                "enum": [
+                    "day",
+                    "hour"
+                ],
+                "type": "string",
+                "description": "* `day` - day\n* `hour` - hour"
+            },
             "CrmPairingStatus": {
                 "type": "object",
                 "properties": {
@@ -30602,6 +32065,927 @@
                 },
                 "required": [
                     "code",
+                    "name"
+                ]
+            },
+            "DeskBrigade": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "kind": {
+                        "$ref": "#/components/schemas/BrigadeKindEnum"
+                    },
+                    "specialization": {
+                        "type": "string"
+                    },
+                    "headcount": {
+                        "type": "integer"
+                    },
+                    "rate": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/DeskCrewRate"
+                            }
+                        ],
+                        "nullable": true,
+                        "description": "Ставка: держатель зоны услуг или cost_margin; иначе null."
+                    },
+                    "rate_visible": {
+                        "type": "boolean"
+                    },
+                    "note": {
+                        "type": "string"
+                    },
+                    "is_active": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "headcount",
+                    "id",
+                    "is_active",
+                    "kind",
+                    "name",
+                    "note",
+                    "rate",
+                    "rate_visible",
+                    "specialization"
+                ]
+            },
+            "DeskBrigadeInRequest": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "kind": {
+                        "$ref": "#/components/schemas/BrigadeKindEnum"
+                    },
+                    "specialization": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "headcount": {
+                        "type": "integer",
+                        "maximum": 500,
+                        "minimum": 1
+                    },
+                    "rate": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/DeskCrewRateInRequest"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "rate_unit": {
+                        "$ref": "#/components/schemas/CrewRateUnitEnum"
+                    },
+                    "note": {
+                        "type": "string",
+                        "maxLength": 500
+                    },
+                    "is_active": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "DeskCrewRate": {
+                "type": "object",
+                "properties": {
+                    "amount": {
+                        "type": "string"
+                    },
+                    "currency": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "unit": {
+                        "$ref": "#/components/schemas/CrewRateUnitEnum"
+                    }
+                },
+                "required": [
+                    "amount",
+                    "currency",
+                    "unit"
+                ]
+            },
+            "DeskCrewRateInRequest": {
+                "type": "object",
+                "properties": {
+                    "amount": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "currency": {
+                        "type": "string",
+                        "minLength": 1
+                    }
+                },
+                "required": [
+                    "amount",
+                    "currency"
+                ]
+            },
+            "DeskExchangeRate": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "currency": {
+                        "type": "string"
+                    },
+                    "rate_to_uzs": {
+                        "type": "string"
+                    },
+                    "rate_date": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "source": {
+                        "type": "string",
+                        "description": "CBU (автозагрузка ЦБ РУз) или MANUAL."
+                    }
+                },
+                "required": [
+                    "currency",
+                    "id",
+                    "rate_date",
+                    "rate_to_uzs",
+                    "source"
+                ]
+            },
+            "DeskHsCode": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "code": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "unit_name": {
+                        "type": "string"
+                    },
+                    "extra_unit_name": {
+                        "type": "string"
+                    },
+                    "level": {
+                        "type": "integer"
+                    },
+                    "valid_from": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "valid_until": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "is_active": {
+                        "type": "boolean"
+                    },
+                    "source": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "code",
+                    "extra_unit_name",
+                    "id",
+                    "is_active",
+                    "level",
+                    "name",
+                    "source",
+                    "unit_name",
+                    "valid_from",
+                    "valid_until"
+                ]
+            },
+            "DeskHsCodeInRequest": {
+                "type": "object",
+                "properties": {
+                    "code": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Только при создании: 2, 4, 6, 8 или 10 цифр."
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "unit_name": {
+                        "type": "string",
+                        "maxLength": 64
+                    },
+                    "extra_unit_name": {
+                        "type": "string",
+                        "maxLength": 64
+                    },
+                    "valid_from": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "valid_until": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    }
+                }
+            },
+            "DeskItemDetail": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "sku": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "kind": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/DeskItemKindEnum"
+                            }
+                        ],
+                        "description": "Тип вычисляется: товар со склада или под заказ, услуга фикс / по этапам / по времени.\n\n* `stock` - stock\n* `on_order` - on_order\n* `service_fixed` - service_fixed\n* `service_milestones` - service_milestones\n* `service_time` - service_time"
+                    },
+                    "is_service": {
+                        "type": "boolean"
+                    },
+                    "unit": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/DeskUnit"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "vat_rate": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "НДС позиции, %; null — ставка компании по умолчанию."
+                    },
+                    "vat_effective": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Действующая ставка: своя или компании по умолчанию."
+                    },
+                    "category": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/DeskRef"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "status": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Код статуса карточки: DRAFT, PUBLISHED."
+                    },
+                    "offers_count": {
+                        "type": "integer"
+                    },
+                    "nearest_valid_until": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "docs_count": {
+                        "type": "integer"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "gost_drawing": {
+                        "type": "string"
+                    },
+                    "hs_code": {
+                        "type": "string"
+                    },
+                    "manufacturer_part_number": {
+                        "type": "string"
+                    },
+                    "brand": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "offers": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DeskOffer"
+                        }
+                    },
+                    "prices_visible": {
+                        "type": "boolean",
+                        "description": "Видит ли сотрудник цены поставщиков (иначе price = null)."
+                    },
+                    "tech_docs": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DeskTechDocRef"
+                        }
+                    }
+                },
+                "required": [
+                    "brand",
+                    "category",
+                    "description",
+                    "docs_count",
+                    "gost_drawing",
+                    "hs_code",
+                    "id",
+                    "is_service",
+                    "kind",
+                    "manufacturer_part_number",
+                    "name",
+                    "nearest_valid_until",
+                    "offers",
+                    "offers_count",
+                    "prices_visible",
+                    "sku",
+                    "status",
+                    "tech_docs",
+                    "unit",
+                    "vat_effective",
+                    "vat_rate"
+                ]
+            },
+            "DeskItemInRequest": {
+                "type": "object",
+                "description": "Создание и правка позиции. При правке приходят только изменяемые поля.",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "kind": {
+                        "$ref": "#/components/schemas/DeskItemKindEnum"
+                    },
+                    "unit_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "category_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "vat_rate": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Процент 0..100; пусто — по умолчанию компании."
+                    }
+                }
+            },
+            "DeskItemKindEnum": {
+                "enum": [
+                    "stock",
+                    "on_order",
+                    "service_fixed",
+                    "service_milestones",
+                    "service_time"
+                ],
+                "type": "string",
+                "description": "* `stock` - stock\n* `on_order` - on_order\n* `service_fixed` - service_fixed\n* `service_milestones` - service_milestones\n* `service_time` - service_time"
+            },
+            "DeskItemRow": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "sku": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "kind": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/DeskItemKindEnum"
+                            }
+                        ],
+                        "description": "Тип вычисляется: товар со склада или под заказ, услуга фикс / по этапам / по времени.\n\n* `stock` - stock\n* `on_order` - on_order\n* `service_fixed` - service_fixed\n* `service_milestones` - service_milestones\n* `service_time` - service_time"
+                    },
+                    "is_service": {
+                        "type": "boolean"
+                    },
+                    "unit": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/DeskUnit"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "vat_rate": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "НДС позиции, %; null — ставка компании по умолчанию."
+                    },
+                    "vat_effective": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Действующая ставка: своя или компании по умолчанию."
+                    },
+                    "category": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/DeskRef"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "status": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Код статуса карточки: DRAFT, PUBLISHED."
+                    },
+                    "offers_count": {
+                        "type": "integer"
+                    },
+                    "nearest_valid_until": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "docs_count": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "category",
+                    "docs_count",
+                    "id",
+                    "is_service",
+                    "kind",
+                    "name",
+                    "nearest_valid_until",
+                    "offers_count",
+                    "sku",
+                    "status",
+                    "unit",
+                    "vat_effective",
+                    "vat_rate"
+                ]
+            },
+            "DeskMoneyInRequest": {
+                "type": "object",
+                "properties": {
+                    "amount": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "currency": {
+                        "type": "string",
+                        "minLength": 1
+                    }
+                },
+                "required": [
+                    "amount",
+                    "currency"
+                ]
+            },
+            "DeskOffer": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "supplier": {
+                        "$ref": "#/components/schemas/DeskOfferSupplier"
+                    },
+                    "product": {
+                        "$ref": "#/components/schemas/DeskOfferProduct"
+                    },
+                    "supplier_sku": {
+                        "type": "string"
+                    },
+                    "price": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/Money"
+                            }
+                        ],
+                        "nullable": true,
+                        "description": "Цена закупки: только с правом на цены поставщиков (иначе null)."
+                    },
+                    "quota_qty": {
+                        "type": "integer",
+                        "description": "Квота: сколько единиц поставщик готов отгрузить по этой цене."
+                    },
+                    "min_order_qty": {
+                        "type": "integer"
+                    },
+                    "in_stock_lead_days": {
+                        "type": "integer"
+                    },
+                    "order_lead_days": {
+                        "type": "integer"
+                    },
+                    "stock_status": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "valid_from": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "valid_until": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "is_active": {
+                        "type": "boolean"
+                    },
+                    "validity": {
+                        "$ref": "#/components/schemas/ValidityEnum"
+                    }
+                },
+                "required": [
+                    "id",
+                    "in_stock_lead_days",
+                    "is_active",
+                    "min_order_qty",
+                    "order_lead_days",
+                    "price",
+                    "product",
+                    "quota_qty",
+                    "stock_status",
+                    "supplier",
+                    "supplier_sku",
+                    "valid_from",
+                    "valid_until",
+                    "validity"
+                ]
+            },
+            "DeskOfferProduct": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "sku": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "name",
+                    "sku"
+                ]
+            },
+            "DeskOfferSupplier": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "name"
+                ]
+            },
+            "DeskRef": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "name"
+                ]
+            },
+            "DeskSupplierDetail": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "tin": {
+                        "type": "string"
+                    },
+                    "country": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "offers_count": {
+                        "type": "integer"
+                    },
+                    "expired_count": {
+                        "type": "integer",
+                        "description": "Действующих предложений с истёкшим сроком цены."
+                    },
+                    "expiring_count": {
+                        "type": "integer",
+                        "description": "Срок цены истекает в ближайшие 14 дней."
+                    },
+                    "nearest_valid_until": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "contact_person": {
+                        "type": "string"
+                    },
+                    "phone": {
+                        "type": "string"
+                    },
+                    "email": {
+                        "type": "string"
+                    },
+                    "website": {
+                        "type": "string"
+                    },
+                    "legal_address": {
+                        "type": "string"
+                    },
+                    "offers": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DeskOffer"
+                        }
+                    },
+                    "prices_visible": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "contact_person",
+                    "country",
+                    "email",
+                    "expired_count",
+                    "expiring_count",
+                    "id",
+                    "legal_address",
+                    "name",
+                    "nearest_valid_until",
+                    "offers",
+                    "offers_count",
+                    "phone",
+                    "prices_visible",
+                    "tin",
+                    "website"
+                ]
+            },
+            "DeskSupplierRow": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "tin": {
+                        "type": "string"
+                    },
+                    "country": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "offers_count": {
+                        "type": "integer"
+                    },
+                    "expired_count": {
+                        "type": "integer",
+                        "description": "Действующих предложений с истёкшим сроком цены."
+                    },
+                    "expiring_count": {
+                        "type": "integer",
+                        "description": "Срок цены истекает в ближайшие 14 дней."
+                    },
+                    "nearest_valid_until": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "country",
+                    "expired_count",
+                    "expiring_count",
+                    "id",
+                    "name",
+                    "nearest_valid_until",
+                    "offers_count",
+                    "tin"
+                ]
+            },
+            "DeskTechDoc": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "kind": {
+                        "$ref": "#/components/schemas/TechDocKindEnum"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "original_name": {
+                        "type": "string"
+                    },
+                    "content_type": {
+                        "type": "string"
+                    },
+                    "size_bytes": {
+                        "type": "integer"
+                    },
+                    "previewable": {
+                        "type": "boolean",
+                        "description": "PDF и изображения открываются для просмотра; остальное скачивается."
+                    },
+                    "product": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/DeskTechDocProduct"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "deal": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/DeskTechDocDeal"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "uploaded_by": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "content_type",
+                    "created_at",
+                    "deal",
+                    "id",
+                    "kind",
+                    "original_name",
+                    "previewable",
+                    "product",
+                    "size_bytes",
+                    "title",
+                    "uploaded_by"
+                ]
+            },
+            "DeskTechDocDeal": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "number": {
+                        "type": "string",
+                        "description": "Номер ЗВ/ПР, который выдал ERP (ERP-09); пусто — у сделки номера ещё нет."
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "client": {
+                        "type": "string"
+                    },
+                    "stage_code": {
+                        "type": "string",
+                        "description": "Код стадии сделки."
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "client",
+                    "created_at",
+                    "id",
+                    "number",
+                    "stage_code",
+                    "title"
+                ]
+            },
+            "DeskTechDocProduct": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "sku": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "name",
+                    "sku"
+                ]
+            },
+            "DeskTechDocRef": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "kind": {
+                        "$ref": "#/components/schemas/TechDocKindEnum"
+                    }
+                },
+                "required": [
+                    "id",
+                    "kind",
+                    "title"
+                ]
+            },
+            "DeskTechDocUploadRequest": {
+                "type": "object",
+                "description": "multipart/form-data: файл ≤ 20 МБ (PDF, PNG, JPEG, DOC(X), XLS(X)), хотя бы одна привязка — позиция или заявка.",
+                "properties": {
+                    "file": {
+                        "type": "string",
+                        "format": "binary"
+                    },
+                    "kind": {
+                        "$ref": "#/components/schemas/TechDocKindEnum"
+                    },
+                    "title": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "product_id": {
+                        "type": "integer"
+                    },
+                    "deal_id": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "file"
+                ]
+            },
+            "DeskUnit": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "code": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "code",
+                    "id",
                     "name"
                 ]
             },
@@ -32247,6 +34631,54 @@
                     "name"
                 ]
             },
+            "ManufacturerRequest": {
+                "type": "object",
+                "description": "OEM brand lookup (catalog.Manufacturer) — the canonical `Product.brand` source.\n\nNOT a platform participant (that's the seller/owner). A brand needn't have an\naccount; `company` optionally links it to one if the OEM is registered.",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "title": "Название",
+                        "description": "Название бренда/производителя (OEM)",
+                        "maxLength": 255
+                    },
+                    "country": {
+                        "type": "integer",
+                        "nullable": true,
+                        "title": "Страна",
+                        "description": "Страна происхождения производителя"
+                    },
+                    "website": {
+                        "title": "Сайт",
+                        "description": "Официальный сайт производителя",
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "format": "uri",
+                                "maxLength": 200
+                            },
+                            {
+                                "type": "string",
+                                "maxLength": 0
+                            }
+                        ]
+                    },
+                    "company": {
+                        "type": "integer",
+                        "nullable": true,
+                        "title": "Связанная компания",
+                        "description": "Платформенная компания, если производитель зарегистрирован (местный)"
+                    },
+                    "is_active": {
+                        "type": "boolean",
+                        "title": "Активен",
+                        "description": "Неактивные бренды скрыты в формах выбора"
+                    }
+                },
+                "required": [
+                    "name"
+                ]
+            },
             "MarginDeviation": {
                 "type": "object",
                 "description": "Отклонение маржи сделки: опорное КП, построчно по валютам, итог. Суммы — строки, UZS.",
@@ -32466,6 +34898,24 @@
                 "required": [
                     "code",
                     "label"
+                ]
+            },
+            "Money": {
+                "type": "object",
+                "properties": {
+                    "amount": {
+                        "type": "string",
+                        "description": "Сумма строкой с двумя знаками."
+                    },
+                    "currency": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Код валюты ISO 4217."
+                    }
+                },
+                "required": [
+                    "amount",
+                    "currency"
                 ]
             },
             "Notification": {
@@ -33803,6 +36253,192 @@
                     }
                 }
             },
+            "PaginatedDeskBrigadeList": {
+                "type": "object",
+                "required": [
+                    "count",
+                    "results"
+                ],
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "example": 123
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=4"
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=2"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DeskBrigade"
+                        }
+                    }
+                }
+            },
+            "PaginatedDeskExchangeRateList": {
+                "type": "object",
+                "required": [
+                    "count",
+                    "results"
+                ],
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "example": 123
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=4"
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=2"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DeskExchangeRate"
+                        }
+                    }
+                }
+            },
+            "PaginatedDeskHsCodeList": {
+                "type": "object",
+                "required": [
+                    "count",
+                    "results"
+                ],
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "example": 123
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=4"
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=2"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DeskHsCode"
+                        }
+                    }
+                }
+            },
+            "PaginatedDeskItemRowList": {
+                "type": "object",
+                "required": [
+                    "count",
+                    "results"
+                ],
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "example": 123
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=4"
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=2"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DeskItemRow"
+                        }
+                    }
+                }
+            },
+            "PaginatedDeskSupplierRowList": {
+                "type": "object",
+                "required": [
+                    "count",
+                    "results"
+                ],
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "example": 123
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=4"
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=2"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DeskSupplierRow"
+                        }
+                    }
+                }
+            },
+            "PaginatedDeskTechDocList": {
+                "type": "object",
+                "required": [
+                    "count",
+                    "results"
+                ],
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "example": 123
+                    },
+                    "next": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=4"
+                    },
+                    "previous": {
+                        "type": "string",
+                        "nullable": true,
+                        "format": "uri",
+                        "example": "http://api.example.org/accounts/?page=2"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DeskTechDoc"
+                        }
+                    }
+                }
+            },
             "PaginatedEmailTemplateList": {
                 "type": "object",
                 "required": [
@@ -35040,6 +37676,151 @@
                     }
                 }
             },
+            "PatchedDeskBrigadeInRequest": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "kind": {
+                        "$ref": "#/components/schemas/BrigadeKindEnum"
+                    },
+                    "specialization": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "headcount": {
+                        "type": "integer",
+                        "maximum": 500,
+                        "minimum": 1
+                    },
+                    "rate": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/DeskCrewRateInRequest"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "rate_unit": {
+                        "$ref": "#/components/schemas/CrewRateUnitEnum"
+                    },
+                    "note": {
+                        "type": "string",
+                        "maxLength": 500
+                    },
+                    "is_active": {
+                        "type": "boolean"
+                    }
+                }
+            },
+            "PatchedDeskHsCodeInRequest": {
+                "type": "object",
+                "properties": {
+                    "code": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Только при создании: 2, 4, 6, 8 или 10 цифр."
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "unit_name": {
+                        "type": "string",
+                        "maxLength": 64
+                    },
+                    "extra_unit_name": {
+                        "type": "string",
+                        "maxLength": 64
+                    },
+                    "valid_from": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "valid_until": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    }
+                }
+            },
+            "PatchedDeskItemInRequest": {
+                "type": "object",
+                "description": "Создание и правка позиции. При правке приходят только изменяемые поля.",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "kind": {
+                        "$ref": "#/components/schemas/DeskItemKindEnum"
+                    },
+                    "unit_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "category_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "vat_rate": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Процент 0..100; пусто — по умолчанию компании."
+                    }
+                }
+            },
+            "PatchedDeskOfferInRequest": {
+                "type": "object",
+                "properties": {
+                    "price": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/DeskMoneyInRequest"
+                            }
+                        ],
+                        "description": "Цена закупки; нужно право на цены поставщиков (403 SUPPLIER_PRICES_REQUIRED)."
+                    },
+                    "quota_qty": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "min_order_qty": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "in_stock_lead_days": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "order_lead_days": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "stock_status": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "valid_from": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "valid_until": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "is_active": {
+                        "type": "boolean"
+                    }
+                }
+            },
             "PatchedDocumentTemplateWriteRequest": {
                 "type": "object",
                 "description": "Тело `PUT/PATCH crm/document-templates/{id}/` — ровно то, что читает `DocumentTemplateViewSet.update`.\n\nТолько для описания контракта (D2-0, B-011): вьюха не гоняет тело через сериализатор, а берёт поля из\n`request.data` и отдаёт сервису `update_template`. Модельный `DocumentTemplateSerializer` тут не годится:\n`kind` у него только для чтения (в запросе его не было бы), а `kind`, `name`, `body_html`, `is_active` вьюха\nпринимает. Не присланное поле не меняется.",
@@ -35158,6 +37939,51 @@
                     },
                     "notes": {
                         "type": "string"
+                    }
+                }
+            },
+            "PatchedManufacturerRequest": {
+                "type": "object",
+                "description": "OEM brand lookup (catalog.Manufacturer) — the canonical `Product.brand` source.\n\nNOT a platform participant (that's the seller/owner). A brand needn't have an\naccount; `company` optionally links it to one if the OEM is registered.",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "minLength": 1,
+                        "title": "Название",
+                        "description": "Название бренда/производителя (OEM)",
+                        "maxLength": 255
+                    },
+                    "country": {
+                        "type": "integer",
+                        "nullable": true,
+                        "title": "Страна",
+                        "description": "Страна происхождения производителя"
+                    },
+                    "website": {
+                        "title": "Сайт",
+                        "description": "Официальный сайт производителя",
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "format": "uri",
+                                "maxLength": 200
+                            },
+                            {
+                                "type": "string",
+                                "maxLength": 0
+                            }
+                        ]
+                    },
+                    "company": {
+                        "type": "integer",
+                        "nullable": true,
+                        "title": "Связанная компания",
+                        "description": "Платформенная компания, если производитель зарегистрирован (местный)"
+                    },
+                    "is_active": {
+                        "type": "boolean",
+                        "title": "Активен",
+                        "description": "Неактивные бренды скрыты в формах выбора"
                     }
                 }
             },
@@ -40853,6 +43679,17 @@
                 "type": "string",
                 "description": "* `to_issue` - to_issue\n* `awaiting` - awaiting\n* `proofs` - proofs\n* `overdue` - overdue\n* `all` - all"
             },
+            "TechDocKindEnum": {
+                "enum": [
+                    "tz",
+                    "drawing",
+                    "certificate",
+                    "pnr",
+                    "other"
+                ],
+                "type": "string",
+                "description": "* `tz` - tz\n* `drawing` - drawing\n* `certificate` - certificate\n* `pnr` - pnr\n* `other` - other"
+            },
             "TimelineEntry": {
                 "type": "object",
                 "properties": {
@@ -41282,6 +44119,15 @@
                     "email",
                     "username"
                 ]
+            },
+            "ValidityEnum": {
+                "enum": [
+                    "ok",
+                    "expiring",
+                    "expired"
+                ],
+                "type": "string",
+                "description": "* `ok` - ok\n* `expiring` - expiring\n* `expired` - expired"
             },
             "WorkspaceRoleLookup": {
                 "type": "object",

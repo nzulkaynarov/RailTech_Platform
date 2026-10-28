@@ -146,20 +146,18 @@ test.describe("Заглушки и мост", () => {
     await shoot(page, "stub-chats-external-accountant");
   });
 
-  test("снабженец: «Справочники» — мост в старый ERP; клик открывает SSO-адрес в новой вкладке", async ({
+  test("«Заявки» — мост в старый ERP; клик открывает SSO-адрес в новой вкладке", async ({
     page,
     context,
   }) => {
     await context.route("**/sso/exchange**", (route) =>
       route.fulfill({ contentType: "text/html", body: "<title>old erp</title>" }),
     );
-    await loginAndWait(page, "supply@demo.example");
-    await spaGoto(page, "/erp/catalog");
-    await expect(
-      page.getByRole("heading", { level: 1, name: "Номенклатура и поставщики" }),
-    ).toBeVisible();
+    await loginAndWait(page, "all@demo.example");
+    await spaGoto(page, "/crm/requests");
+    await expect(page.getByRole("heading", { level: 1, name: "Заявки" })).toBeVisible();
     const open = page.getByRole("main").getByRole("link", { name: /Открыть в старом ERP/ });
-    await expect(open).toHaveAttribute("href", "http://erp.localhost:8088/#catalog-reference");
+    await expect(open).toHaveAttribute("href", "http://erp.localhost:8088/#crm-deals");
     await expect(page.getByRole("main").getByText(/Вход выполнится сам/)).toBeVisible();
     await expectNoViolations(page, "erp bridge");
 

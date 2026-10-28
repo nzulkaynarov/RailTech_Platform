@@ -158,6 +158,11 @@ SPECTACULAR_SETTINGS = {
         "ContactPreferredChannelEnum": ["email", "telegram", "both"],
         "LanguageEnum": ["ru", "uz", "en"],
         "SecretSourceEnum": ["db", "env", "none"],
+        # D2-3: «Номенклатура и поставщики» — одноимённые поля `kind` и `unit` у разных схем.
+        "DeskItemKindEnum": ["stock", "on_order", "service_fixed", "service_milestones", "service_time"],
+        "BrigadeKindEnum": ["brigade", "person", "subcontractor"],
+        "TechDocKindEnum": ["tz", "drawing", "certificate", "pnr", "other"],
+        "CrewRateUnitEnum": ["day", "hour"],
         # D2-1 «Расчёт по заявке» (crm.serializers.calc): наборы значений с явными именами.
         "CalcVisaStateEnum": "crm.serializers.calc.VISA_STATES",
         "CalcStateEnum": "crm.serializers.calc.CALC_STATES",
