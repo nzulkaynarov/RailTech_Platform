@@ -19,6 +19,9 @@ from app.schemas.integrations import (
     ErpPairingOut,
     ErpRotateIn,
     ErpStatusOut,
+    OffsiteCheckOut,
+    OffsiteConnectorIn,
+    OffsiteStatusOut,
     ProfilePublishOut,
     SmtpCheckOut,
     SmtpConnectorIn,
@@ -34,6 +37,7 @@ from app.services.erp_connector import ErpConnectorService, ErpStatus
 from app.services.erp_pairing import ErpPairingService, PairingOutcome
 from app.services.integrations import TelegramIntegrationService
 from app.services.mail import EmailLogView
+from app.services.offsite_connector import OffsiteConnectorService, OffsiteStatus
 from app.services.smtp_connector import SmtpConnectorService
 
 router = APIRouter(prefix="/api/v1/integrations", tags=["integrations"])
@@ -307,3 +311,53 @@ async def list_email_log(
     """Журнал писем сотрудникам: последние `limit`, фильтр по статусу; тел писем в журнале нет."""
     rows = await container.mail_service.list_log(status, limit)
     return [EmailLogItem.model_validate(asdict(row)) for row in rows]
+
+
+def get_offsite_service(container: ContainerDep) -> OffsiteConnectorService:
+    return container.offsite_connector
+
+
+OffsiteDep = Annotated[OffsiteConnectorService, Depends(get_offsite_service)]
+
+
+def offsite_out(status: OffsiteStatus) -> OffsiteStatusOut:
+    return OffsiteStatusOut.model_validate(asdict(status))
+
+
+@router.get("/offsite", response_model=OffsiteStatusOut)
+async def get_offsite_status(_: Reader, service: OffsiteDep) -> OffsiteStatusOut:
+    """Внешняя копия бэкапов на Google Drive (OPS-GDRIVE-2): папка, адрес сервисного аккаунта,
+    последние символы ID ключа, доставка сервису копирования, итог последней проверки. Ключ не
+    возвращается никогда. Состояние самой копии — строка `offsite_backup` внешних сервисов."""
+    return offsite_out(await service.status())
+
+
+@router.put("/offsite", response_model=OffsiteStatusOut)
+async def put_offsite_connector(
+    body: OffsiteConnectorIn, who: Writer, service: OffsiteDep
+) -> OffsiteStatusOut:
+    """Сохранить ключ сервисного аккаунта и папку (после пароля админа) и сразу проверить у Google.
+
+    Ключ доставляется сервису копирования (бакет `offsite-config`, у CRM — только запись) и
+    хранится зашифрованным; `key_json = null` — оставить прежний. Итог проверки — `last_check`.
+    Ошибки: `offsite_key_invalid` (422, `key_json`; `details.problem`: `not_json`,
+    `not_service_account`, `missing_fields`), `offsite_folder_invalid` (422, `folder_id`),
+    `wrong_password` (422), `secrets_key_missing` (409), `offsite_delivery_failed` (502).
+    """
+    secret = body.key_json.get_secret_value() if body.key_json is not None else None
+    status = await service.save(
+        who,
+        key_json=secret,
+        folder_id=body.folder_id,
+        admin_password=body.password.get_secret_value(),
+    )
+    return offsite_out(status)
+
+
+@router.post("/offsite/check", response_model=OffsiteCheckOut)
+async def check_offsite_connector(who: Writer, service: OffsiteDep) -> OffsiteCheckOut:
+    """«Проверить»: ключ из хранилища → токен Google → папка (общий диск, право добавлять файлы).
+
+    Ничего не пишет на Drive. Итог — 200 с `reason`; ошибка: `offsite_not_configured` (409).
+    """
+    return OffsiteCheckOut.model_validate(asdict(await service.check(who)))

@@ -44,6 +44,8 @@ ROOTS = (
     "BotProfileOut",
     "ActionResult",
     "SmtpStatusOut",
+    "OffsiteStatusOut",
+    "OffsiteCheckOut",
     "SmtpCheckOut",
     "EmailLogItem",
     "EmailQueuedOut",
@@ -82,6 +84,8 @@ ROOTS = (
     "NoteOut",
     "TeamMember",
     "AssistOut",
+    # Чаты · С клиентами (B-D18-1): диалоги, открытые сотруднику (реестр, участие, зона «Счета и оплаты»).
+    "DialogPage",
 )
 
 HEADER = (

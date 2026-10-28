@@ -1,0 +1,203 @@
+"""«Повторить отправку в ERP» (B-082, W16-D1-2b): заявка с ошибкой — снова `pending`, одна задача с
+тем же `crm_request_id`; двойной клик — одна задача (блокировка строки); другие состояния — 409.
+
+Мутационная проверка (описание PR): без `with_for_update` в `RequestRetryService.retry` тест
+`test_double_retry_queues_one_task` красный (обе попытки видят `failed` и ставят две задачи).
+"""
+
+import asyncio
+from typing import Any
+
+import pytest
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+
+from app.domain.backoffice import BackofficeMode
+from app.domain.errors import ConflictError, NotFoundError, Reason
+from app.models.auth import AuditLog
+from app.models.clients import Client
+from app.models.deals import Deal
+from app.security.principal import Principal
+from app.services.request_retry import RequestRetryService
+from tests.integration.crm_helpers import make_user
+
+pytestmark = pytest.mark.integration
+
+
+class SlowQueue:
+    """Подставная очередь: запоминает поставленные задачи. Окно гонки двух повторов расширяет пауза
+    в `audit.record` (тест двойного повтора), а не очередь."""
+
+    def __init__(self) -> None:
+        self.calls: list[tuple[int, int, int]] = []
+
+    async def __call__(self, deal_id: int, client_id: int, user_id: int) -> None:
+        self.calls.append((deal_id, client_id, user_id))
+
+
+async def _erp() -> BackofficeMode:
+    return BackofficeMode.ERP
+
+
+async def _local() -> BackofficeMode:
+    return BackofficeMode.LOCAL
+
+
+class BrokenQueue:
+    """Очередь отказала (не «уже ждёт»): Postgres очереди недоступен и т. п."""
+
+    async def __call__(self, deal_id: int, client_id: int, user_id: int) -> None:
+        raise RuntimeError("procrastinate: connection refused")
+
+
+async def _request(
+    sessions: async_sessionmaker[AsyncSession],
+    *,
+    status: str | None = "failed",
+    error: str | None = "erp_unavailable",
+    summary: str | None = "Нужны 20 комплектов",
+) -> int:
+    async with sessions() as session, session.begin():
+        client = Client(name="ООО Повтор")
+        session.add(client)
+        await session.flush()
+        deal = Deal(
+            client_id=client.id,
+            title="Заявка: ООО Повтор",
+            stage="open",
+            request_summary=summary,
+            erp_request_status=status,
+            erp_request_error=error,
+        )
+        session.add(deal)
+        await session.flush()
+        return deal.id
+
+
+async def _who(sessions: async_sessionmaker[AsyncSession]) -> Principal:
+    account, _ = await make_user(sessions, "retry-manager@example.com", ["manager"])
+    return Principal(account.id, "Менеджер", ("manager",))
+
+
+async def test_failed_request_goes_back_to_pending_with_one_task(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    who = await _who(sessions)
+    deal_id = await _request(sessions)
+    queue = SlowQueue()
+
+    result = await RequestRetryService(sessions, queue, backoffice_mode=_erp).retry(who, deal_id)
+
+    assert result.erp_request_status == "pending"
+    assert [call[0] for call in queue.calls] == [deal_id], "та же заявка — тот же crm_request_id"
+    async with sessions() as session:
+        deal = await session.get(Deal, deal_id)
+        assert deal is not None
+        assert (deal.erp_request_status, deal.erp_request_error) == ("pending", None)
+        actions = (await session.scalars(select(AuditLog.action))).all()
+        assert "deal.erp_request_retry" in actions
+
+
+async def test_double_retry_queues_one_task(
+    sessions: async_sessionmaker[AsyncSession], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Пауза между сменой статуса и коммитом (в записи аудита) — окно гонки: без блокировки строки
+    обе попытки читают `failed`."""
+    from app.security import audit
+
+    original = audit.record
+
+    async def slow_record(*args: Any, **kwargs: Any) -> None:
+        await asyncio.sleep(0.3)
+        await original(*args, **kwargs)
+
+    monkeypatch.setattr(audit, "record", slow_record)
+    who = await _who(sessions)
+    deal_id = await _request(sessions)
+    queue = SlowQueue()
+    service = RequestRetryService(sessions, queue, backoffice_mode=_erp)
+
+    results = await asyncio.gather(
+        service.retry(who, deal_id), service.retry(who, deal_id), return_exceptions=True
+    )
+
+    assert len(queue.calls) == 1
+    errors = [r for r in results if isinstance(r, Exception)]
+    assert len(errors) == 1
+    assert isinstance(errors[0], ConflictError)
+    assert errors[0].details["reason"] == Reason.REQUEST_NOT_FAILED
+
+
+@pytest.mark.parametrize("status", ["pending", "done", None])
+async def test_request_not_in_error_is_409(
+    sessions: async_sessionmaker[AsyncSession], status: str | None
+) -> None:
+    who = await _who(sessions)
+    deal_id = await _request(sessions, status=status, error=None)
+    queue = SlowQueue()
+
+    with pytest.raises(ConflictError) as caught:
+        await RequestRetryService(sessions, queue, backoffice_mode=_erp).retry(who, deal_id)
+
+    assert caught.value.details["reason"] == Reason.REQUEST_NOT_FAILED
+    assert queue.calls == []
+
+
+async def test_permanent_conflict_is_not_retried(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    who = await _who(sessions)
+    deal_id = await _request(sessions, error="erp_request_conflict")
+    queue = SlowQueue()
+
+    with pytest.raises(ConflictError) as caught:
+        await RequestRetryService(sessions, queue, backoffice_mode=_erp).retry(who, deal_id)
+
+    assert caught.value.details["reason"] == Reason.REQUEST_NOT_RETRYABLE
+    assert "создайте заявку заново" in caught.value.message
+    assert queue.calls == []
+
+
+async def test_deal_without_a_request_is_404(sessions: async_sessionmaker[AsyncSession]) -> None:
+    who = await _who(sessions)
+    deal_id = await _request(sessions, summary=None)
+    with pytest.raises(NotFoundError):
+        await RequestRetryService(sessions, SlowQueue(), backoffice_mode=_erp).retry(who, deal_id)
+
+
+async def test_queue_failure_returns_request_to_error_and_retry_stays_available(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    """Мутационная проверка: без `try` вокруг постановки ответ — исключение (500), заявка
+    остаётся `pending` без задачи и без кнопки повтора."""
+    who = await _who(sessions)
+    deal_id = await _request(sessions)
+    result = await RequestRetryService(sessions, BrokenQueue(), backoffice_mode=_erp).retry(
+        who, deal_id
+    )
+    assert result.erp_request_status == "failed"
+    async with sessions() as session:
+        deal = await session.get(Deal, deal_id)
+        assert deal is not None
+        assert (deal.erp_request_status, deal.erp_request_error) == ("failed", "enqueue_failed")
+        actions = (
+            await session.scalars(select(AuditLog.action).where(AuditLog.entity_id == str(deal_id)))
+        ).all()
+    assert "deal.erp_request_failed" in actions
+
+    queue = SlowQueue()
+    again = await RequestRetryService(sessions, queue, backoffice_mode=_erp).retry(who, deal_id)
+    assert again.erp_request_status == "pending"
+    assert len(queue.calls) == 1
+
+
+async def test_retry_without_erp_backoffice_is_409(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    who = await _who(sessions)
+    deal_id = await _request(sessions)
+    queue = SlowQueue()
+    with pytest.raises(ConflictError) as caught:
+        await RequestRetryService(sessions, queue, backoffice_mode=_local).retry(who, deal_id)
+    assert caught.value.details["reason"] == Reason.ERP_NOT_CONFIGURED
+    assert queue.calls == []

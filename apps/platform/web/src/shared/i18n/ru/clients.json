@@ -1,0 +1,118 @@
+{
+  "subtitle": "Компании с контактами, перепиской, заявками и документами.",
+  "search": {
+    "label": "Поиск по названию и ИНН",
+    "placeholder": "Название или ИНН"
+  },
+  "columns": {
+    "name": "Клиент",
+    "inn": "ИНН",
+    "requests": "Открытые заявки",
+    "erp": "Бэк-офис",
+    "last": "Последняя активность"
+  },
+  "caption": "Клиенты",
+  "tableScroll": "Таблица клиентов",
+  "listLabel": "Клиенты",
+  "open": "Открыть карточку {{name}}",
+  "inErp": "Передан",
+  "notInErp": "Не передан",
+  "handoff": {
+    "pending": "Передаётся",
+    "failed": "Ошибка передачи",
+    "done": "Передан"
+  },
+  "empty": {
+    "title": "Клиентов пока нет",
+    "text": "Клиент появляется, когда из лида создают заявку.",
+    "filteredTitle": "Ничего не нашли",
+    "filteredText": "Проверьте название или ИНН."
+  },
+  "loadError": {
+    "title": "Не удалось загрузить клиентов",
+    "text": "Сервер не ответил. Повторите чуть позже."
+  },
+  "retry": "Повторить",
+  "card": {
+    "label": "Карточка клиента",
+    "close": "Закрыть",
+    "inn": "ИНН",
+    "noInn": "ИНН не указан",
+    "segment": "Сегмент",
+    "erp": "Бэк-офис",
+    "newRequest": "Новая заявка для клиента",
+    "contacts": "Контакты",
+    "noContacts": "Контактов пока нет",
+    "primary": "основной",
+    "channels": {
+      "telegram": "Telegram",
+      "phone": "Телефон",
+      "email": "Почта"
+    },
+    "noChannels": "нет каналов связи",
+    "preferred": "Предпочитает: {{channel}}",
+    "conversation": "Переписка",
+    "noLeads": "Переписки нет",
+    "openConversation": "{{name}} — открыть переписку в «Ждут ответа»",
+    "requests": "Заявки и проекты",
+    "noRequests": "Заявок пока нет",
+    "noNumber": "номер ещё не присвоен",
+    "urgent": "Срочная",
+    "clientSees": "Клиент видит: «{{text}}»",
+    "transfer": {
+      "pending": "Передаётся в бэк-офис",
+      "failed": "Не передана в бэк-офис: {{reason}}"
+    },
+    "retry": "Повторить отправку в ERP",
+    "retryLabel": "Повторить отправку в ERP заявки «{{title}}»",
+    "retried": "Заявка снова отправлена в ERP",
+    "documents": "Документы",
+    "noDocuments": "Документов пока нет",
+    "docTypes": {
+      "contract": "Договор",
+      "proposal": "КП",
+      "letter": "Письмо",
+      "invoice": "Счёт",
+      "act": "Акт",
+      "other": "Документ"
+    },
+    "hiddenFromClient": "клиент не видит",
+    "invitation": "Приглашение в кабинет",
+    "noInvitation": "Приглашения ещё не было",
+    "resend": "Отправить повторно другим каналом",
+    "resendChannel": "Канал",
+    "resendDone": "Приглашение отправлено",
+    "resendChannels": {
+      "email": "Почта",
+      "telegram": "Telegram",
+      "both": "Почта и Telegram"
+    },
+    "partial": "Часть карточки не загрузилась: {{parts}}. Повторите чуть позже.",
+    "parts": {
+      "contacts": "контакты",
+      "requests": "заявки",
+      "documents": "документы"
+    }
+  },
+  "clientSees": {
+    "in_work": "Принято в работу, считаем",
+    "awaiting_decision": "Ждёт вашего решения",
+    "contract_review": "Согласуйте редакцию договора",
+    "contract_signing": "Договор на подписании",
+    "awaiting_payment": "Ожидает оплаты",
+    "checking_payment": "Проверяем оплату",
+    "fulfilling": "Выполняется",
+    "awaiting_acceptance": "Ждёт вашей приёмки",
+    "done": "Выполнено",
+    "rejected": "Отклонено",
+    "quote_expired": "Срок КП истёк"
+  },
+  "transferErrors": {
+    "erp_unavailable": "бэк-офис не ответил",
+    "erp_request_conflict": "данные заявки изменились после отправки — создайте заявку заново",
+    "handoff_no_consent": "нет согласия клиента на данные",
+    "erp_inn_conflict": "этот ИНН уже у другого клиента",
+    "enqueue_failed": "не удалось поставить в очередь",
+    "other": "причина не определена"
+  }
+}

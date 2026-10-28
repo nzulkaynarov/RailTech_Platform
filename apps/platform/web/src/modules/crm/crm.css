@@ -1,0 +1,202 @@
+/* Клиенты · Лиды, Клиенты и «Создать заявку» (D1-2b). Значения — макет v3: рамка #f0f0f0, вторичный #595959,
+   выбранная строка #e6f4ff, ошибка #a8071a. Статус — словом (StatusTag), не цветом. */
+.pf-crm {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.pf-crm-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px 16px;
+}
+.pf-crm-filter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.pf-crm-filter > label {
+  color: #595959;
+  font-size: 14px;
+  white-space: nowrap;
+}
+.pf-crm-search {
+  flex: 1 1 260px;
+  max-width: 420px;
+}
+.pf-crm-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.pf-crm-table th,
+.pf-crm-table td {
+  padding: 10px 12px;
+  text-align: left;
+  vertical-align: middle;
+  border-bottom: 1px solid #f0f0f0;
+}
+.pf-crm-table th {
+  color: #595959;
+  font-weight: 500;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.pf-crm-table td.num,
+.pf-crm-table th.num {
+  text-align: right;
+}
+.pf-crm-table tr[data-selected="true"],
+.pf-crm-item[data-selected="true"] {
+  background: #e6f4ff;
+}
+.pf-crm-name {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+}
+.pf-crm-link {
+  color: #0958d9;
+  text-decoration: none;
+}
+.pf-crm-link:hover {
+  text-decoration: underline;
+}
+.pf-crm-need {
+  min-width: 140px;
+  max-width: 320px;
+  overflow-wrap: break-word;
+}
+.pf-crm-table td:first-child {
+  min-width: 150px;
+}
+.pf-crm-wrap {
+  overflow-wrap: anywhere;
+}
+.pf-crm-pager {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 12px 16px;
+}
+.pf-crm-list,
+.pf-crm-entries,
+.pf-crm-plain,
+.pf-crm-messages {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pf-crm-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+.pf-crm-item-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.pf-crm-item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  color: #595959;
+  font-size: 13px;
+}
+.pf-crm-entries {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.pf-crm-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f0f0f0;
+}
+.pf-crm-entry:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+.pf-crm-plain {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.pf-crm-messages {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pf-crm-message {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+}
+.pf-crm-message[data-author="lead"] {
+  background: #fafafa;
+}
+.pf-crm-message-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.pf-req-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+.pf-req-group > legend {
+  margin-bottom: 8px;
+  padding: 0;
+  font-weight: 500;
+  font-size: 14px;
+  color: #1f1f1f;
+}
+.pf-req-error {
+  color: #a8071a;
+  font-size: 13px;
+}
+/* Кнопки формы и карточки: в боковом окне — под содержимым, на мобильном листе — прижаты к низу */
+.pf-crm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.pf-crm-actions[data-sheet="true"] {
+  position: sticky;
+  bottom: -16px;
+  margin: 0 -16px -16px;
+  padding: 12px 16px;
+  background: #fff;
+  border-top: 1px solid #f0f0f0;
+  z-index: 1;
+}
+.pf-crm-actions[data-sheet="true"] > * {
+  flex: 1 1 0;
+}
+@media (max-width: 767px) {
+  .pf-crm-search {
+    flex-basis: 100%;
+    max-width: none;
+  }
+  .pf-crm-filter {
+    flex-wrap: wrap;
+  }
+}

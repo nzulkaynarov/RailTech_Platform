@@ -7,11 +7,13 @@ import { CalcScreen } from "./calc/CalcScreen";
 import { RequestsScreen } from "./calc/RequestsScreen";
 import { CatalogScreen } from "./catalog/CatalogScreen";
 import { DocsScreen } from "./docs/DocsScreen";
+import { OrderScreen } from "./stock/OrderScreen";
+import { StockScreen } from "./stock/StockScreen";
 
 /**
  * Модуль «Расчёт» (ERP). «Заявки в расчёте» и «Мои расчёты» — список заданий на расчёт, карточка `/erp/calc/ЗВ-…` (и
- * `/erp/requests/ЗВ-…`) — расчёт по заявке (D2-1, SPEC-v3 §7.4); «Номенклатура и поставщики» и «Техдокументация» (D2-3) —
- * настоящие экраны; склад — заглушка каркаса до D2-2.
+ * `/erp/requests/ЗВ-…`) — расчёт по заявке (D2-1, SPEC-v3 §7.4); «Склад» (остатки и резервы, заказы поставщикам, приёмка,
+ * отгрузки; D2-2) — `/erp/stock`, карточка заказа `/erp/stock/ЗП-…`; «Номенклатура и поставщики» и «Техдокументация» (D2-3).
  */
 export function Component() {
   const location = useLocation();
@@ -27,6 +29,13 @@ export function Component() {
         ) : (
           <RequestsScreen mine={match.section.key === "calc"} />
         )}
+      </RequireAccess>
+    );
+  }
+  if (match?.module.code === "erp" && match.section.key === "stock") {
+    return (
+      <RequireAccess rule={match.section.access}>
+        {match.objectId ? <OrderScreen number={match.objectId} /> : <StockScreen />}
       </RequireAccess>
     );
   }

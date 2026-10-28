@@ -83,7 +83,7 @@ for f in prod dev; do
   [[ "$(jq -r '.services["s3-init"].entrypoint | join(" ")' "$j")" == "sh /init.sh" ]] || fail "$f: entrypoint s3-init не sh /init.sh"
   [[ "$(jq -r '[.services["s3-init"].volumes[] | select(.target == "/init.sh" and .read_only == true)] | length' "$j")" == 1 ]] || fail "$f: init.sh не смонтирован в s3-init только на чтение"
   buckets="$(jq -r '.services["s3-init"].environment.S3_BUCKETS' "$j")"
-  for b in langfuse kb-sources client-documents tg-attachments erp-private erp-public erp-temp eds-private backups wal; do
+  for b in langfuse kb-sources client-documents tg-attachments erp-private erp-public erp-temp eds-private backups wal offsite offsite-config; do
     [[ " $buckets " == *" $b "* ]] || fail "$f: s3-init не создаёт бакет $b"
   done
   [[ "$(jq -r '.services["s3-init"].depends_on.rustfs.condition' "$j")" == service_healthy ]] || fail "$f: s3-init не ждёт rustfs"

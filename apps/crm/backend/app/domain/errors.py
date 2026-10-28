@@ -98,6 +98,12 @@ class Reason(StrEnum):
     SMTP_AUTH_FAILED = "smtp_auth_failed"
     SMTP_TLS_FAILED = "smtp_tls_failed"
     SMTP_REJECTED = "smtp_rejected"
+    # Внешняя копия бэкапов на Google Drive (OPS-GDRIVE-2): ключ или ID папки не те, нет
+    # настройки, ключ не дошёл до сервиса копирования (хранилище RustFS недоступно).
+    OFFSITE_KEY_INVALID = "offsite_key_invalid"
+    OFFSITE_FOLDER_INVALID = "offsite_folder_invalid"
+    OFFSITE_NOT_CONFIGURED = "offsite_not_configured"
+    OFFSITE_DELIVERY_FAILED = "offsite_delivery_failed"
     # Источники лидов (M3-CRM-05): ручное создание и форма «Запрос» с сайта.
     LEAD_EXISTS = "lead_exists"
     CLIENT_EXISTS = "client_exists"
@@ -164,6 +170,10 @@ class Reason(StrEnum):
     # ERP: тот же ключ идемпотентности заявки с другим телом (409 `IDEMPOTENCY_CONFLICT`) — заявка
     # не создана, автоповтора нет.
     ERP_REQUEST_CONFLICT = "erp_request_conflict"
+    # «Повторить отправку в ERP» (B-082): заявка не в ошибке или ошибка постоянная (тело заявки
+    # изменилось после первой отправки — ERP ответила `IDEMPOTENCY_CONFLICT`).
+    REQUEST_NOT_FAILED = "request_not_failed"
+    REQUEST_NOT_RETRYABLE = "request_not_retryable"
 
 
 class DomainError(Exception):

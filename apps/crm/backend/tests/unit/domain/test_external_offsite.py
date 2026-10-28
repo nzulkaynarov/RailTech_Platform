@@ -144,8 +144,8 @@ def test_not_configured_says_who_fixes_and_what_to_do(reason: str) -> None:
     assert result.summary.startswith("Внешняя копия бэкапов на Google Drive не настроена")
     assert result.hint
     assert "Кто исправляет: владелец" in result.hint
-    assert "/opt/rt/secrets/gdrive-sa.json" in result.hint
-    assert "OFFSITE_GDRIVE_FOLDER_ID" in result.hint
+    assert "Admin → Подключения" in result.hint
+    assert "загрузить JSON-ключ" in result.hint
     assert "docs/runbooks/offsite-gdrive.md" in result.hint
     assert result.metrics["reason"] == reason
 

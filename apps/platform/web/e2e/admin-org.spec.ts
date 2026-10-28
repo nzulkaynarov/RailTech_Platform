@@ -93,7 +93,8 @@ test.describe("Оргструктура: выдача ролей", () => {
     }
     for (const route of visible) {
       await spaGoto(page, route);
-      await expect(page.getByRole("heading", { level: 2 }), route).toBeVisible();
+      // экран раздела (настоящий или заглушка с мостом) — свой заголовок; «Клиенты» — настоящий экран (D1-2b), без h2 заглушки
+      await expect(page.getByRole("heading", { level: 1 }), route).toBeVisible();
       await expect(page.getByRole("heading", { level: 1, name: "Нет доступа" }), route).toHaveCount(
         0,
       );

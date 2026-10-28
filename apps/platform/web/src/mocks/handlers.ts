@@ -12,12 +12,14 @@ import { adminIntegrationsHandlers } from "./adminIntegrations";
 import { adminCompanyHandlers } from "./adminCompany";
 import { adminRolesHandlers } from "./adminRoles";
 import { botKbHandlers } from "./botKb";
+import { crmLeadsHandlers } from "./crmLeads";
 import { crmMessagesHandlers } from "./crmMessages";
 import { edsApprovalsHandlers } from "./edsApprovals";
 import { erpCatalogHandlers } from "./erpCatalog";
 import { bridgeHandlers } from "./bridgeHandlers";
 import { edsLettersHandlers } from "./edsLetters";
 import { erpCalcHandlers } from "./erpCalc";
+import { erpStockHandlers } from "./erpStock";
 import { adminUsersHandlers } from "./adminUsers";
 import { edsDocumentsHandlers } from "./edsDocuments";
 import { eventStreamHandlers } from "./eventStream";
@@ -156,6 +158,7 @@ export const handlers = [
   ...setupHandlers,
   ...botKbHandlers,
   ...crmMessagesHandlers,
+  ...crmLeadsHandlers,
   ...bridgeHandlers,
   ...ticketsHandlers,
   ...edsDocumentsHandlers,
@@ -163,6 +166,7 @@ export const handlers = [
   ...edsApprovalsHandlers,
   ...erpCatalogHandlers,
   ...erpCalcHandlers,
+  ...erpStockHandlers,
 
   getGetHealthMockHandler({
     status: "ok",

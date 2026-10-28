@@ -24928,6 +24928,1785 @@
                 }
             }
         },
+        "/api/v1/stock/adjustments/": {
+            "post": {
+                "operationId": "stock_adjust",
+                "description": "POST /api/v1/stock/adjustments/ — оприходовать или списать вручную (начальные остатки, инвентаризация).",
+                "summary": "Корректировка остатка: оприходовать или списать",
+                "tags": [
+                    "Stock"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StockAdjustInRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StockAdjustInRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StockAdjustInRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockProduct"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Тело не прошло проверку"
+                    },
+                    "403": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Нет права или не сотрудник"
+                    },
+                    "404": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Объекта нет"
+                    },
+                    "409": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Состояние не позволяет (мало остатка, резерв, статус)"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/stock/balances/": {
+            "get": {
+                "operationId": "stock_balances_list",
+                "description": "GET /api/v1/stock/balances/ — остатки и резервы по номенклатуре.",
+                "summary": "Остатки и резервы по номенклатуре",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "only",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "incoming",
+                                "reserved"
+                            ]
+                        },
+                        "description": "Только с резервом / с приходом"
+                    },
+                    {
+                        "in": "query",
+                        "name": "q",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Слова названия, артикула, SKU; ищет по всей номенклатуре"
+                    }
+                ],
+                "tags": [
+                    "Stock"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockBalanceList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "403": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Нет права или не сотрудник"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/stock/balances/{product_id}/": {
+            "get": {
+                "operationId": "stock_product_detail",
+                "description": "GET /api/v1/stock/balances/<product_id>/ — товар: ячейки, резервы по проектам, приход, движения.",
+                "summary": "Товар на складе",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "product_id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Stock"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockProduct"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "403": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Нет права или не сотрудник"
+                    },
+                    "404": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Объекта нет"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/stock/orders/": {
+            "get": {
+                "operationId": "stock_orders_list",
+                "description": "GET/POST /api/v1/stock/orders/ — заказы поставщикам; POST — создать черновик.",
+                "summary": "Заказы поставщикам",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "number",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Точный номер ЗП-ГГГГ-NNN"
+                    },
+                    {
+                        "in": "query",
+                        "name": "overdue",
+                        "schema": {
+                            "type": "boolean"
+                        },
+                        "description": "Только просроченные"
+                    },
+                    {
+                        "in": "query",
+                        "name": "q",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Номер, поставщик, название позиции"
+                    },
+                    {
+                        "in": "query",
+                        "name": "status",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "cancelled",
+                                "confirmed",
+                                "draft",
+                                "received",
+                                "sent"
+                            ]
+                        },
+                        "description": "Статус заказа"
+                    },
+                    {
+                        "in": "query",
+                        "name": "supplier_id",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "tags": [
+                    "Stock"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/OrderList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "403": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Нет права, не сотрудник или нет права на цены поставщиков"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            },
+            "post": {
+                "operationId": "stock_order_create",
+                "description": "GET/POST /api/v1/stock/orders/ — заказы поставщикам; POST — создать черновик.",
+                "summary": "Создать заказ поставщику (черновик)",
+                "tags": [
+                    "Stock"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/OrderCreateInRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/OrderCreateInRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/OrderCreateInRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/OrderDetail"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Тело не прошло проверку"
+                    },
+                    "403": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Нет права, не сотрудник или нет права на цены поставщиков"
+                    },
+                    "404": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Заказа, строки, поставщика или заявки нет"
+                    },
+                    "409": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Состояние не позволяет (недопустимый переход статуса, нет адреса, письмо не ушло — `EMAIL_FAILED`, мало товара)"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/stock/orders/{order_id}/": {
+            "get": {
+                "operationId": "stock_order_detail",
+                "description": "GET/PATCH /api/v1/stock/orders/<id>/ — карточка заказа; правка (состав — только в черновике).",
+                "summary": "Заказ поставщику",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "order_id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Stock"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/OrderDetail"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "403": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Нет права, не сотрудник или нет права на цены поставщиков"
+                    },
+                    "404": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Заказа, строки, поставщика или заявки нет"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            },
+            "patch": {
+                "operationId": "stock_order_update",
+                "description": "GET/PATCH /api/v1/stock/orders/<id>/ — карточка заказа; правка (состав — только в черновике).",
+                "summary": "Изменить заказ (состав — в черновике; ожидаемая дата и примечание — пока заказ не закрыт)",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "order_id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Stock"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedOrderPatchInRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedOrderPatchInRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatchedOrderPatchInRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/OrderDetail"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Тело не прошло проверку"
+                    },
+                    "403": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Нет права, не сотрудник или нет права на цены поставщиков"
+                    },
+                    "404": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Заказа, строки, поставщика или заявки нет"
+                    },
+                    "409": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Состояние не позволяет (недопустимый переход статуса, нет адреса, письмо не ушло — `EMAIL_FAILED`, мало товара)"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/stock/orders/{order_id}/cancel/": {
+            "post": {
+                "operationId": "stock_order_cancel",
+                "description": "POST /api/v1/stock/orders/<id>/cancel/ — отменить заказ (если по нему ещё ничего не принято).",
+                "summary": "Отменить заказ",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "order_id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Stock"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/OrderCancelInRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/OrderCancelInRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/OrderCancelInRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/OrderDetail"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Тело не прошло проверку"
+                    },
+                    "403": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Нет права, не сотрудник или нет права на цены поставщиков"
+                    },
+                    "404": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Заказа, строки, поставщика или заявки нет"
+                    },
+                    "409": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Состояние не позволяет (недопустимый переход статуса, нет адреса, письмо не ушло — `EMAIL_FAILED`, мало товара)"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/stock/orders/{order_id}/confirm/": {
+            "post": {
+                "operationId": "stock_order_confirm",
+                "description": "POST /api/v1/stock/orders/<id>/confirm/ — поставщик подтвердил (отправлен → подтверждён); нужна ожидаемая дата.",
+                "summary": "Отметить подтверждение поставщика",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "order_id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Stock"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/OrderConfirmInRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/OrderConfirmInRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/OrderConfirmInRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/OrderDetail"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Тело не прошло проверку"
+                    },
+                    "403": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Нет права, не сотрудник или нет права на цены поставщиков"
+                    },
+                    "404": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Заказа, строки, поставщика или заявки нет"
+                    },
+                    "409": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Состояние не позволяет (недопустимый переход статуса, нет адреса, письмо не ушло — `EMAIL_FAILED`, мало товара)"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/stock/orders/{order_id}/receipts/": {
+            "post": {
+                "operationId": "stock_order_receive",
+                "description": "POST /api/v1/stock/orders/<id>/receipts/ — приёмка по строкам заказа (частичная); остаток склада растёт.",
+                "summary": "Принять товар от поставщика по строкам заказа",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "order_id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Stock"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ReceiptInRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ReceiptInRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ReceiptInRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/OrderDetail"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Тело не прошло проверку"
+                    },
+                    "403": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Нет права, не сотрудник или нет права на цены поставщиков"
+                    },
+                    "404": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Заказа, строки, поставщика или заявки нет"
+                    },
+                    "409": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Состояние не позволяет (недопустимый переход статуса, нет адреса, письмо не ушло — `EMAIL_FAILED`, мало товара)"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/stock/orders/{order_id}/send/": {
+            "post": {
+                "operationId": "stock_order_send",
+                "description": "POST /api/v1/stock/orders/<id>/send/ — отправить поставщику письмом (черновик → отправлен).",
+                "summary": "Отправить заказ поставщику (письмо)",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "order_id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Stock"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/OrderSendInRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/OrderSendInRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/OrderSendInRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/OrderDetail"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Тело не прошло проверку"
+                    },
+                    "403": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Нет права, не сотрудник или нет права на цены поставщиков"
+                    },
+                    "404": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Заказа, строки, поставщика или заявки нет"
+                    },
+                    "409": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Состояние не позволяет (недопустимый переход статуса, нет адреса, письмо не ушло — `EMAIL_FAILED`, мало товара)"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/stock/orders/from-deal/": {
+            "post": {
+                "operationId": "stock_order_from_deal",
+                "description": "POST /api/v1/stock/orders/from-deal/ — черновик ЗП на дефицит проекта.",
+                "summary": "Черновик заказа на дефицит проекта",
+                "tags": [
+                    "Stock"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/OrderFromDealInRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/OrderFromDealInRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/OrderFromDealInRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/OrderDetail"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Тело не прошло проверку"
+                    },
+                    "403": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Нет права, не сотрудник или нет права на цены поставщиков"
+                    },
+                    "404": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Заказа, строки, поставщика или заявки нет"
+                    },
+                    "409": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Состояние не позволяет (недопустимый переход статуса, нет адреса, письмо не ушло — `EMAIL_FAILED`, мало товара)"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/stock/overdue/": {
+            "get": {
+                "operationId": "stock_overdue_list",
+                "description": "GET /api/v1/stock/overdue/ — просроченные заказы (источник вида очереди `supplier_overdue`).",
+                "summary": "Просроченные заказы поставщикам",
+                "tags": [
+                    "Stock"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/OverdueList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "403": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Нет права, не сотрудник или нет права на цены поставщиков"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/stock/price-requests/": {
+            "get": {
+                "operationId": "stock_price_requests_list",
+                "description": "GET/POST /api/v1/stock/price-requests/ — журнал запросов цены; POST — запросить цену у поставщика письмом.",
+                "summary": "Журнал запросов цены у поставщиков",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "deal_id",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "supplier_id",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "tags": [
+                    "Stock"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PriceRequestList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "403": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Нет права, не сотрудник или нет права на цены поставщиков"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            },
+            "post": {
+                "operationId": "stock_price_request_create",
+                "description": "GET/POST /api/v1/stock/price-requests/ — журнал запросов цены; POST — запросить цену у поставщика письмом.",
+                "summary": "Запросить цену у поставщика (письмо) по строкам расчёта",
+                "tags": [
+                    "Stock"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PriceRequestInRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PriceRequestInRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PriceRequestInRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PriceRequest"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Тело не прошло проверку"
+                    },
+                    "403": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Нет права, не сотрудник или нет права на цены поставщиков"
+                    },
+                    "404": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Заказа, строки, поставщика или заявки нет"
+                    },
+                    "409": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Состояние не позволяет (недопустимый переход статуса, нет адреса, письмо не ушло — `EMAIL_FAILED`, мало товара)"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/stock/price-requests/{request_id}/answer/": {
+            "post": {
+                "operationId": "stock_price_request_answer",
+                "description": "POST /api/v1/stock/price-requests/<id>/answer/ — отметить, что поставщик ответил (цена внесена в расчёт).",
+                "summary": "Отметить ответ поставщика",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "request_id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Stock"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PriceRequestAnswerInRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PriceRequestAnswerInRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PriceRequestAnswerInRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PriceRequest"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Тело не прошло проверку"
+                    },
+                    "403": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Нет права, не сотрудник или нет права на цены поставщиков"
+                    },
+                    "404": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Заказа, строки, поставщика или заявки нет"
+                    },
+                    "409": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Состояние не позволяет (недопустимый переход статуса, нет адреса, письмо не ушло — `EMAIL_FAILED`, мало товара)"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/stock/receipts/": {
+            "get": {
+                "operationId": "stock_receipts_list",
+                "description": "GET /api/v1/stock/receipts/ — «Приёмка»: ждут товара и последние приёмки.",
+                "summary": "Приёмка: ожидаемые строки и последние приёмки",
+                "tags": [
+                    "Stock"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Receipts"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "403": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Нет права, не сотрудник или нет права на цены поставщиков"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/stock/reservations/": {
+            "get": {
+                "operationId": "stock_reservations_list",
+                "description": "GET/POST /api/v1/stock/reservations/ — резервы; POST — зарезервировать (или изменить количество) под строку расчёта.",
+                "summary": "Резервы под проекты",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "deal_id",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "product_id",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "status",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "active",
+                                "fulfilled",
+                                "released"
+                            ]
+                        },
+                        "description": "По умолчанию — действующие"
+                    }
+                ],
+                "tags": [
+                    "Stock"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockReservationList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "403": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Нет права или не сотрудник"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            },
+            "post": {
+                "operationId": "stock_reserve",
+                "description": "GET/POST /api/v1/stock/reservations/ — резервы; POST — зарезервировать (или изменить количество) под строку расчёта.",
+                "summary": "Зарезервировать товар под строку расчёта",
+                "tags": [
+                    "Stock"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StockReserveInRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StockReserveInRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StockReserveInRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockReservation"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Тело не прошло проверку"
+                    },
+                    "403": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Нет права или не сотрудник"
+                    },
+                    "404": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Объекта нет"
+                    },
+                    "409": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Состояние не позволяет (мало остатка, резерв, статус)"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/stock/reservations/{reservation_id}/": {
+            "delete": {
+                "operationId": "stock_reservation_release",
+                "description": "DELETE /api/v1/stock/reservations/<id>/ — снять резерв.",
+                "summary": "Снять резерв",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "reservation_id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Stock"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockReservation"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Тело не прошло проверку"
+                    },
+                    "403": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Нет права или не сотрудник"
+                    },
+                    "404": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Объекта нет"
+                    },
+                    "409": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Состояние не позволяет (мало остатка, резерв, статус)"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/stock/shipments/": {
+            "get": {
+                "operationId": "stock_shipments_list",
+                "description": "GET/POST /api/v1/stock/shipments/ — отгрузки по проектам; POST — отгрузить со склада по резервам заявки.",
+                "summary": "Отгрузки по проектам",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "deal_id",
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "tags": [
+                    "Stock"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockShipmentList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "403": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Нет права или не сотрудник"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            },
+            "post": {
+                "operationId": "stock_ship",
+                "description": "GET/POST /api/v1/stock/shipments/ — отгрузки по проектам; POST — отгрузить со склада по резервам заявки.",
+                "summary": "Отгрузить со склада по резервам заявки (накладная ОТГ)",
+                "tags": [
+                    "Stock"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StockShipInRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StockShipInRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StockShipInRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockShipment"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Тело не прошло проверку"
+                    },
+                    "403": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Нет права или не сотрудник"
+                    },
+                    "404": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Объекта нет"
+                    },
+                    "409": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Состояние не позволяет (мало остатка, резерв, статус)"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/stock/suppliers/": {
+            "get": {
+                "operationId": "stock_suppliers_list",
+                "description": "GET /api/v1/stock/suppliers/?q= — внешние поставщики для выбора (запрос цены, заказ).",
+                "summary": "Поставщики для выбора",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "q",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Название или ИНН"
+                    }
+                ],
+                "tags": [
+                    "Stock"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockSupplierList"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "403": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/StockError"
+                                }
+                            }
+                        },
+                        "description": "Нет права или не сотрудник"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
         "/api/v1/system-settings/": {
             "get": {
                 "operationId": "system_settings_retrieve",
@@ -26518,13 +28297,18 @@
                     },
                     "cost": {
                         "type": "boolean"
+                    },
+                    "stock": {
+                        "type": "boolean",
+                        "description": "Резервы и запросы цены у поставщиков (`supply.manage`, D2-2)"
                     }
                 },
                 "required": [
                     "build",
                     "cost",
                     "goods",
-                    "services"
+                    "services",
+                    "stock"
                 ]
             },
             "CalcSheet": {
@@ -26595,19 +28379,28 @@
                 "properties": {
                     "on_hand": {
                         "type": "integer",
-                        "nullable": true
+                        "nullable": true,
+                        "description": "На складе всего; null — у строки нет карточки каталога"
+                    },
+                    "free": {
+                        "type": "integer",
+                        "nullable": true,
+                        "description": "Свободно: остаток минус резервы всех проектов (D2-2)"
                     },
                     "cell": {
                         "type": "string",
-                        "nullable": true
+                        "nullable": true,
+                        "description": "Ячейка с наибольшим остатком (D2-2)"
                     },
                     "reserved": {
                         "type": "integer",
-                        "nullable": true
+                        "nullable": true,
+                        "description": "Зарезервировано за этой строкой (D2-2)"
                     }
                 },
                 "required": [
                     "cell",
+                    "free",
                     "on_hand",
                     "reserved"
                 ]
@@ -31057,6 +32850,75 @@
                     "name"
                 ]
             },
+            "DoneReceipt": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "order_id": {
+                        "type": "integer"
+                    },
+                    "order_number": {
+                        "type": "string"
+                    },
+                    "supplier_name": {
+                        "type": "string"
+                    },
+                    "received_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "received_by_name": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "supplier_doc": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "quantity": {
+                        "type": "integer"
+                    },
+                    "lines": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DoneReceiptLine"
+                        }
+                    }
+                },
+                "required": [
+                    "id",
+                    "lines",
+                    "order_id",
+                    "order_number",
+                    "quantity",
+                    "received_at",
+                    "received_by_name",
+                    "supplier_doc",
+                    "supplier_name"
+                ]
+            },
+            "DoneReceiptLine": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string"
+                    },
+                    "quantity": {
+                        "type": "integer"
+                    },
+                    "cell": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "cell",
+                    "name",
+                    "quantity"
+                ]
+            },
             "EmailTemplate": {
                 "type": "object",
                 "description": "DB-editable email template — Platform-Operator admin CRUD.",
@@ -32803,6 +34665,672 @@
                 "required": [
                     "company_name",
                     "contact_name"
+                ]
+            },
+            "OrderActions": {
+                "type": "object",
+                "properties": {
+                    "edit": {
+                        "type": "boolean"
+                    },
+                    "send": {
+                        "type": "boolean"
+                    },
+                    "confirm": {
+                        "type": "boolean"
+                    },
+                    "receive": {
+                        "type": "boolean"
+                    },
+                    "cancel": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "cancel",
+                    "confirm",
+                    "edit",
+                    "receive",
+                    "send"
+                ]
+            },
+            "OrderCancelInRequest": {
+                "type": "object",
+                "properties": {
+                    "reason": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 500
+                    }
+                }
+            },
+            "OrderConfirmInRequest": {
+                "type": "object",
+                "properties": {
+                    "expected_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    }
+                }
+            },
+            "OrderCreateInRequest": {
+                "type": "object",
+                "properties": {
+                    "supplier_id": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "expected_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "note": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 5000
+                    },
+                    "currency": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 3
+                    },
+                    "lines": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/OrderLineInRequest"
+                        }
+                    }
+                },
+                "required": [
+                    "lines",
+                    "supplier_id"
+                ]
+            },
+            "OrderDetail": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "number": {
+                        "type": "string",
+                        "description": "ЗП-ГГГГ-NNN"
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/SupplierOrderStatusEnum"
+                    },
+                    "supplier": {
+                        "$ref": "#/components/schemas/OrderSupplier"
+                    },
+                    "expected_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "overdue": {
+                        "type": "boolean",
+                        "description": "Ожидаемая дата прошла, заказ отправлен или подтверждён, но не получен"
+                    },
+                    "days_overdue": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "currency": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "lines_count": {
+                        "type": "integer"
+                    },
+                    "quantity": {
+                        "type": "integer"
+                    },
+                    "received_quantity": {
+                        "type": "integer"
+                    },
+                    "receipt_state": {
+                        "$ref": "#/components/schemas/SupplierOrderReceiptStateEnum"
+                    },
+                    "total": {
+                        "type": "string",
+                        "format": "decimal",
+                        "pattern": "^-?\\d{0,14}(?:\\.\\d{0,2})?$",
+                        "nullable": true,
+                        "description": "Сумма заказа — только с правом видеть цены поставщиков"
+                    },
+                    "projects": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/StockDealRef"
+                        }
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "created_by_name": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "actions": {
+                        "$ref": "#/components/schemas/OrderActions"
+                    },
+                    "note": {
+                        "type": "string"
+                    },
+                    "sent_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "sent_to": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "confirmed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "received_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "cancelled_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "cancel_reason": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "lines": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/OrderLine"
+                        }
+                    },
+                    "receipts": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/OrderReceipt"
+                        }
+                    },
+                    "log": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/OrderLog"
+                        }
+                    },
+                    "rights": {
+                        "$ref": "#/components/schemas/OrderRights"
+                    }
+                },
+                "required": [
+                    "actions",
+                    "cancel_reason",
+                    "cancelled_at",
+                    "confirmed_at",
+                    "created_at",
+                    "created_by_name",
+                    "currency",
+                    "days_overdue",
+                    "expected_date",
+                    "id",
+                    "lines",
+                    "lines_count",
+                    "log",
+                    "note",
+                    "number",
+                    "overdue",
+                    "projects",
+                    "quantity",
+                    "receipt_state",
+                    "receipts",
+                    "received_at",
+                    "received_quantity",
+                    "rights",
+                    "sent_at",
+                    "sent_to",
+                    "status",
+                    "supplier",
+                    "total"
+                ]
+            },
+            "OrderFromDealInRequest": {
+                "type": "object",
+                "properties": {
+                    "deal_id": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "supplier_id": {
+                        "type": "integer",
+                        "minimum": 1
+                    }
+                },
+                "required": [
+                    "deal_id",
+                    "supplier_id"
+                ]
+            },
+            "OrderLine": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "position": {
+                        "type": "integer"
+                    },
+                    "product_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "article": {
+                        "type": "string"
+                    },
+                    "unit": {
+                        "type": "string"
+                    },
+                    "quantity": {
+                        "type": "integer"
+                    },
+                    "received_quantity": {
+                        "type": "integer"
+                    },
+                    "unit_price": {
+                        "type": "string",
+                        "format": "decimal",
+                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$",
+                        "nullable": true
+                    },
+                    "line_total": {
+                        "type": "string",
+                        "format": "decimal",
+                        "pattern": "^-?\\d{0,14}(?:\\.\\d{0,2})?$",
+                        "nullable": true
+                    },
+                    "deal": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/StockDealRef"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "quote_item_id": {
+                        "type": "integer",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "article",
+                    "deal",
+                    "id",
+                    "line_total",
+                    "name",
+                    "position",
+                    "product_id",
+                    "quantity",
+                    "quote_item_id",
+                    "received_quantity",
+                    "unit",
+                    "unit_price"
+                ]
+            },
+            "OrderLineInRequest": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "description": "Строка этого заказа (правка); без id — новая"
+                    },
+                    "product_id": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "name": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 500
+                    },
+                    "article": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 120
+                    },
+                    "unit": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 32
+                    },
+                    "quantity": {
+                        "type": "integer",
+                        "maximum": 10000000,
+                        "minimum": 1
+                    },
+                    "unit_price": {
+                        "type": "string",
+                        "format": "decimal",
+                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$",
+                        "nullable": true,
+                        "description": "Цена поставщика за единицу; ставит только держатель права видеть цены поставщиков"
+                    },
+                    "deal_id": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "nullable": true
+                    },
+                    "quote_item_id": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "product_id",
+                    "quantity"
+                ]
+            },
+            "OrderList": {
+                "type": "object",
+                "properties": {
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/OrderRow"
+                        }
+                    },
+                    "rights": {
+                        "$ref": "#/components/schemas/OrderRights"
+                    }
+                },
+                "required": [
+                    "results",
+                    "rights"
+                ]
+            },
+            "OrderLog": {
+                "type": "object",
+                "properties": {
+                    "kind": {
+                        "$ref": "#/components/schemas/OrderLogKindEnum"
+                    },
+                    "at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "by_name": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "detail": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "at",
+                    "by_name",
+                    "detail",
+                    "kind"
+                ]
+            },
+            "OrderLogKindEnum": {
+                "enum": [
+                    "created",
+                    "edited",
+                    "sent",
+                    "confirmed",
+                    "receipt",
+                    "received",
+                    "cancelled",
+                    "overdue"
+                ],
+                "type": "string",
+                "description": "* `created` - created\n* `edited` - edited\n* `sent` - sent\n* `confirmed` - confirmed\n* `receipt` - receipt\n* `received` - received\n* `cancelled` - cancelled\n* `overdue` - overdue"
+            },
+            "OrderReceipt": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "received_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "received_by_name": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "supplier_doc": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "note": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "lines": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ReceiptLine"
+                        }
+                    }
+                },
+                "required": [
+                    "id",
+                    "lines",
+                    "note",
+                    "received_at",
+                    "received_by_name",
+                    "supplier_doc"
+                ]
+            },
+            "OrderRights": {
+                "type": "object",
+                "properties": {
+                    "manage": {
+                        "type": "boolean",
+                        "description": "Резервы, корректировки, заказы поставщикам, приёмка (`supply.manage`)"
+                    },
+                    "ship": {
+                        "type": "boolean",
+                        "description": "Отгрузки по проектам (`fulfillment.manage`)"
+                    },
+                    "prices": {
+                        "type": "boolean",
+                        "description": "Видит цены поставщиков (`quote.view_cost_margin` или зона товаров)"
+                    }
+                },
+                "required": [
+                    "manage",
+                    "prices",
+                    "ship"
+                ]
+            },
+            "OrderRow": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "number": {
+                        "type": "string",
+                        "description": "ЗП-ГГГГ-NNN"
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/SupplierOrderStatusEnum"
+                    },
+                    "supplier": {
+                        "$ref": "#/components/schemas/OrderSupplier"
+                    },
+                    "expected_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "overdue": {
+                        "type": "boolean",
+                        "description": "Ожидаемая дата прошла, заказ отправлен или подтверждён, но не получен"
+                    },
+                    "days_overdue": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "currency": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "lines_count": {
+                        "type": "integer"
+                    },
+                    "quantity": {
+                        "type": "integer"
+                    },
+                    "received_quantity": {
+                        "type": "integer"
+                    },
+                    "receipt_state": {
+                        "$ref": "#/components/schemas/SupplierOrderReceiptStateEnum"
+                    },
+                    "total": {
+                        "type": "string",
+                        "format": "decimal",
+                        "pattern": "^-?\\d{0,14}(?:\\.\\d{0,2})?$",
+                        "nullable": true,
+                        "description": "Сумма заказа — только с правом видеть цены поставщиков"
+                    },
+                    "projects": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/StockDealRef"
+                        }
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "created_by_name": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "actions": {
+                        "$ref": "#/components/schemas/OrderActions"
+                    }
+                },
+                "required": [
+                    "actions",
+                    "created_at",
+                    "created_by_name",
+                    "currency",
+                    "days_overdue",
+                    "expected_date",
+                    "id",
+                    "lines_count",
+                    "number",
+                    "overdue",
+                    "projects",
+                    "quantity",
+                    "receipt_state",
+                    "received_quantity",
+                    "status",
+                    "supplier",
+                    "total"
+                ]
+            },
+            "OrderSendInRequest": {
+                "type": "object",
+                "properties": {
+                    "to_email": {
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "format": "email",
+                                "default": ""
+                            },
+                            {
+                                "type": "string",
+                                "maxLength": 0
+                            }
+                        ]
+                    }
+                }
+            },
+            "OrderSupplier": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "email": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Только в карточке заказа"
+                    }
+                },
+                "required": [
+                    "id",
+                    "name"
+                ]
+            },
+            "OverdueList": {
+                "type": "object",
+                "properties": {
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/OverdueOrder"
+                        }
+                    }
+                },
+                "required": [
+                    "results"
+                ]
+            },
+            "OverdueOrder": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "number": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/SupplierOrderStatusEnum"
+                    },
+                    "supplier_name": {
+                        "type": "string"
+                    },
+                    "expected_date": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "days_overdue": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "days_overdue",
+                    "expected_date",
+                    "id",
+                    "number",
+                    "status",
+                    "supplier_name"
                 ]
             },
             "OwnCompanyCreated": {
@@ -34979,6 +37507,35 @@
                     }
                 }
             },
+            "PatchedOrderPatchInRequest": {
+                "type": "object",
+                "properties": {
+                    "supplier_id": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "expected_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "note": {
+                        "type": "string",
+                        "maxLength": 5000
+                    },
+                    "currency": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 3
+                    },
+                    "lines": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/OrderLineInRequest"
+                        }
+                    }
+                }
+            },
             "PatchedProductRequest": {
                 "type": "object",
                 "description": "Strip supplier-cost fields (offers / base_price) from viewers who don't own\nthe product. Only the OWNING seller's team + platform admins see cost & supplier\nidentity — clients, other sellers and anon never do (C1 cost-leak fix). React was\nonly hiding these client-side; the data still travelled in the API response.",
@@ -35738,6 +38295,68 @@
                     "reference"
                 ]
             },
+            "PendingReceiptLine": {
+                "type": "object",
+                "properties": {
+                    "order_id": {
+                        "type": "integer"
+                    },
+                    "order_number": {
+                        "type": "string"
+                    },
+                    "supplier_name": {
+                        "type": "string"
+                    },
+                    "expected_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "overdue": {
+                        "type": "boolean"
+                    },
+                    "order_line_id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "article": {
+                        "type": "string"
+                    },
+                    "unit": {
+                        "type": "string"
+                    },
+                    "quantity": {
+                        "type": "integer"
+                    },
+                    "received_quantity": {
+                        "type": "integer"
+                    },
+                    "deal": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/StockDealRef"
+                            }
+                        ],
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "article",
+                    "deal",
+                    "expected_date",
+                    "name",
+                    "order_id",
+                    "order_line_id",
+                    "order_number",
+                    "overdue",
+                    "quantity",
+                    "received_quantity",
+                    "supplier_name",
+                    "unit"
+                ]
+            },
             "PlatformUserCreateRequest": {
                 "type": "object",
                 "description": "Вход формы «Новый пользователь» в операторской панели.\n\nОтдельный сериализатор, а не `UserSerializer`: у того `role` лежит в `read_only_fields`\n(правильно для правки — роль меняется отдельным действием с проверкой инвариантов), а\n`username` обязателен на уровне модели. Форма же спрашивает email и роль — и обе должны\nдействовать. Роль принимаем КОДОМ (Rule 2), как и весь остальной фронт.",
@@ -35771,6 +38390,191 @@
                 "required": [
                     "email"
                 ]
+            },
+            "PriceRequest": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "supplier": {
+                        "$ref": "#/components/schemas/OrderSupplier"
+                    },
+                    "deal_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "deal_number": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "requested_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "requested_by_name": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "to_email": {
+                        "type": "string"
+                    },
+                    "subject": {
+                        "type": "string"
+                    },
+                    "note": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/PriceRequestStatusEnum"
+                    },
+                    "error": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "answered_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "answered_by_name": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "answer_note": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "lines": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PriceRequestLine"
+                        }
+                    }
+                },
+                "required": [
+                    "answer_note",
+                    "answered_at",
+                    "answered_by_name",
+                    "deal_id",
+                    "deal_number",
+                    "error",
+                    "id",
+                    "lines",
+                    "note",
+                    "requested_at",
+                    "requested_by_name",
+                    "status",
+                    "subject",
+                    "supplier",
+                    "to_email"
+                ]
+            },
+            "PriceRequestAnswerInRequest": {
+                "type": "object",
+                "properties": {
+                    "note": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 1000
+                    }
+                }
+            },
+            "PriceRequestInRequest": {
+                "type": "object",
+                "properties": {
+                    "deal_id": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "supplier_id": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "line_ids": {
+                        "type": "array",
+                        "items": {
+                            "type": "integer",
+                            "minimum": 1
+                        },
+                        "description": "Строки расчёта",
+                        "maxItems": 100
+                    },
+                    "note": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 1000
+                    },
+                    "to_email": {
+                        "oneOf": [
+                            {
+                                "type": "string",
+                                "format": "email",
+                                "default": ""
+                            },
+                            {
+                                "type": "string",
+                                "maxLength": 0
+                            }
+                        ]
+                    }
+                },
+                "required": [
+                    "deal_id",
+                    "line_ids",
+                    "supplier_id"
+                ]
+            },
+            "PriceRequestLine": {
+                "type": "object",
+                "properties": {
+                    "quote_item_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "article": {
+                        "type": "string"
+                    },
+                    "quantity": {
+                        "type": "integer"
+                    },
+                    "unit": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "article",
+                    "name",
+                    "quantity",
+                    "quote_item_id",
+                    "unit"
+                ]
+            },
+            "PriceRequestList": {
+                "type": "object",
+                "properties": {
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PriceRequest"
+                        }
+                    }
+                },
+                "required": [
+                    "results"
+                ]
+            },
+            "PriceRequestStatusEnum": {
+                "enum": [
+                    "sent",
+                    "failed"
+                ],
+                "type": "string",
+                "description": "* `sent` - sent\n* `failed` - failed"
             },
             "PriceVisibilityEnum": {
                 "enum": [
@@ -38095,6 +40899,101 @@
                     "product_id"
                 ]
             },
+            "ReceiptInRequest": {
+                "type": "object",
+                "properties": {
+                    "lines": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ReceiptLineInRequest"
+                        }
+                    },
+                    "supplier_doc": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 100
+                    },
+                    "note": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 500
+                    }
+                },
+                "required": [
+                    "lines"
+                ]
+            },
+            "ReceiptLine": {
+                "type": "object",
+                "properties": {
+                    "order_line_id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "quantity": {
+                        "type": "integer"
+                    },
+                    "cell": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "cell",
+                    "name",
+                    "order_line_id",
+                    "quantity"
+                ]
+            },
+            "ReceiptLineInRequest": {
+                "type": "object",
+                "properties": {
+                    "order_line_id": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "quantity": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "cell": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 32
+                    }
+                },
+                "required": [
+                    "order_line_id",
+                    "quantity"
+                ]
+            },
+            "Receipts": {
+                "type": "object",
+                "properties": {
+                    "pending": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PendingReceiptLine"
+                        }
+                    },
+                    "done": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DoneReceipt"
+                        }
+                    },
+                    "rights": {
+                        "$ref": "#/components/schemas/StockRights"
+                    }
+                },
+                "required": [
+                    "done",
+                    "pending",
+                    "rights"
+                ]
+            },
             "RecentDocument": {
                 "type": "object",
                 "properties": {
@@ -38585,6 +41484,608 @@
                     "roles"
                 ]
             },
+            "StockAdjustInRequest": {
+                "type": "object",
+                "properties": {
+                    "product_id": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "quantity": {
+                        "type": "integer",
+                        "description": "Плюс — оприходовать, минус — списать; не ноль"
+                    },
+                    "cell": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 32
+                    },
+                    "note": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 500
+                    }
+                },
+                "required": [
+                    "product_id",
+                    "quantity"
+                ]
+            },
+            "StockBalanceList": {
+                "type": "object",
+                "properties": {
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/StockRow"
+                        }
+                    },
+                    "rights": {
+                        "$ref": "#/components/schemas/StockRights"
+                    }
+                },
+                "required": [
+                    "results",
+                    "rights"
+                ]
+            },
+            "StockCell": {
+                "type": "object",
+                "properties": {
+                    "cell": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Пусто — товар лежит без ячейки"
+                    },
+                    "on_hand": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "cell",
+                    "on_hand"
+                ]
+            },
+            "StockDealRef": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "number": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Номер ЗВ/ПР (`Deal.number`)"
+                    },
+                    "client_name": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "client_name",
+                    "id",
+                    "number"
+                ]
+            },
+            "StockError": {
+                "type": "object",
+                "properties": {
+                    "detail": {
+                        "type": "string",
+                        "description": "Код отказа (`UPPER_SNAKE`)"
+                    },
+                    "fields": {
+                        "type": "object",
+                        "additionalProperties": {},
+                        "description": "`VALIDATION_FAILED`: ошибки полей тела запроса — поле → список кодов или вложенные ошибки"
+                    },
+                    "free": {
+                        "type": "integer",
+                        "description": "`NOT_ENOUGH_STOCK`: сколько можно взять"
+                    },
+                    "max": {
+                        "type": "integer",
+                        "description": "`QUANTITY_OUT_OF_RANGE`: наибольшее допустимое количество"
+                    },
+                    "reserved": {
+                        "type": "integer",
+                        "description": "`BELOW_RESERVED`: сколько в резервах"
+                    },
+                    "on_hand": {
+                        "type": "integer"
+                    },
+                    "shipped": {
+                        "type": "integer",
+                        "description": "`BELOW_SHIPPED`: уже отгружено"
+                    },
+                    "current": {
+                        "type": "string",
+                        "description": "`TRANSITION_NOT_ALLOWED`, `ORDER_NOT_CONFIRMED`: текущий статус"
+                    },
+                    "target": {
+                        "type": "string",
+                        "description": "`TRANSITION_NOT_ALLOWED`: куда хотели перейти"
+                    }
+                },
+                "required": [
+                    "detail"
+                ]
+            },
+            "StockIncomingOrder": {
+                "type": "object",
+                "properties": {
+                    "order_id": {
+                        "type": "integer"
+                    },
+                    "number": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/SupplierOrderStatusEnum"
+                    },
+                    "supplier_name": {
+                        "type": "string"
+                    },
+                    "expected_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "quantity_left": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "expected_date",
+                    "number",
+                    "order_id",
+                    "quantity_left",
+                    "status",
+                    "supplier_name"
+                ]
+            },
+            "StockMovement": {
+                "type": "object",
+                "properties": {
+                    "kind": {
+                        "$ref": "#/components/schemas/StockMovementKindEnum"
+                    },
+                    "quantity": {
+                        "type": "integer",
+                        "description": "Плюс — приход, минус — расход"
+                    },
+                    "cell": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "by_name": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "note": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "at",
+                    "by_name",
+                    "cell",
+                    "kind",
+                    "note",
+                    "quantity"
+                ]
+            },
+            "StockMovementKindEnum": {
+                "enum": [
+                    "receipt",
+                    "shipment",
+                    "adjustment"
+                ],
+                "type": "string",
+                "description": "* `receipt` - receipt\n* `shipment` - shipment\n* `adjustment` - adjustment"
+            },
+            "StockProduct": {
+                "type": "object",
+                "properties": {
+                    "product_id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "article": {
+                        "type": "string"
+                    },
+                    "unit": {
+                        "type": "string"
+                    },
+                    "on_hand": {
+                        "type": "integer"
+                    },
+                    "reserved": {
+                        "type": "integer",
+                        "description": "Остаток резервов действующих проектов"
+                    },
+                    "free": {
+                        "type": "integer",
+                        "description": "Свободный остаток: остаток − резервы"
+                    },
+                    "incoming": {
+                        "type": "integer",
+                        "description": "Ожидается по отправленным и подтверждённым заказам поставщикам"
+                    },
+                    "next_expected": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "cells": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/StockCell"
+                        }
+                    },
+                    "reservations": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/StockReservation"
+                        }
+                    },
+                    "incoming_orders": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/StockIncomingOrder"
+                        }
+                    },
+                    "movements": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/StockMovement"
+                        }
+                    },
+                    "rights": {
+                        "$ref": "#/components/schemas/StockRights"
+                    }
+                },
+                "required": [
+                    "article",
+                    "cells",
+                    "free",
+                    "incoming",
+                    "incoming_orders",
+                    "movements",
+                    "name",
+                    "next_expected",
+                    "on_hand",
+                    "product_id",
+                    "reservations",
+                    "reserved",
+                    "rights",
+                    "unit"
+                ]
+            },
+            "StockReservation": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "product_id": {
+                        "type": "integer"
+                    },
+                    "product_name": {
+                        "type": "string"
+                    },
+                    "deal": {
+                        "$ref": "#/components/schemas/StockDealRef"
+                    },
+                    "quote_item_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "quantity": {
+                        "type": "integer"
+                    },
+                    "shipped_quantity": {
+                        "type": "integer"
+                    },
+                    "remaining": {
+                        "type": "integer"
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/StockReservationStatusEnum"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "created_by_name": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "created_at",
+                    "created_by_name",
+                    "deal",
+                    "id",
+                    "product_id",
+                    "product_name",
+                    "quantity",
+                    "quote_item_id",
+                    "remaining",
+                    "shipped_quantity",
+                    "status"
+                ]
+            },
+            "StockReservationList": {
+                "type": "object",
+                "properties": {
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/StockReservation"
+                        }
+                    }
+                },
+                "required": [
+                    "results"
+                ]
+            },
+            "StockReservationStatusEnum": {
+                "enum": [
+                    "active",
+                    "released",
+                    "fulfilled"
+                ],
+                "type": "string",
+                "description": "* `active` - active\n* `released` - released\n* `fulfilled` - fulfilled"
+            },
+            "StockReserveInRequest": {
+                "type": "object",
+                "properties": {
+                    "deal_id": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "quote_item_id": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "quantity": {
+                        "type": "integer",
+                        "minimum": 1
+                    }
+                },
+                "required": [
+                    "deal_id",
+                    "quantity",
+                    "quote_item_id"
+                ]
+            },
+            "StockRights": {
+                "type": "object",
+                "properties": {
+                    "manage": {
+                        "type": "boolean",
+                        "description": "Резервы, корректировки, заказы поставщикам, приёмка (`supply.manage`)"
+                    },
+                    "ship": {
+                        "type": "boolean",
+                        "description": "Отгрузки по проектам (`fulfillment.manage`)"
+                    }
+                },
+                "required": [
+                    "manage",
+                    "ship"
+                ]
+            },
+            "StockRow": {
+                "type": "object",
+                "properties": {
+                    "product_id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "article": {
+                        "type": "string"
+                    },
+                    "unit": {
+                        "type": "string"
+                    },
+                    "on_hand": {
+                        "type": "integer"
+                    },
+                    "reserved": {
+                        "type": "integer",
+                        "description": "Остаток резервов действующих проектов"
+                    },
+                    "free": {
+                        "type": "integer",
+                        "description": "Свободный остаток: остаток − резервы"
+                    },
+                    "incoming": {
+                        "type": "integer",
+                        "description": "Ожидается по отправленным и подтверждённым заказам поставщикам"
+                    },
+                    "next_expected": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "cells": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/StockCell"
+                        }
+                    }
+                },
+                "required": [
+                    "article",
+                    "cells",
+                    "free",
+                    "incoming",
+                    "name",
+                    "next_expected",
+                    "on_hand",
+                    "product_id",
+                    "reserved",
+                    "unit"
+                ]
+            },
+            "StockShipInRequest": {
+                "type": "object",
+                "properties": {
+                    "deal_id": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "lines": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/StockShipLineInRequest"
+                        }
+                    },
+                    "tracking": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 128
+                    },
+                    "carrier": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 128
+                    },
+                    "note": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 500
+                    }
+                },
+                "required": [
+                    "deal_id",
+                    "lines"
+                ]
+            },
+            "StockShipLineInRequest": {
+                "type": "object",
+                "properties": {
+                    "reservation_id": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "quantity": {
+                        "type": "integer",
+                        "minimum": 1
+                    }
+                },
+                "required": [
+                    "quantity",
+                    "reservation_id"
+                ]
+            },
+            "StockShipment": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "number": {
+                        "type": "string",
+                        "description": "Внутренняя накладная ОТГ-ГГГГ-NNN"
+                    },
+                    "deal": {
+                        "$ref": "#/components/schemas/StockDealRef"
+                    },
+                    "tracking": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "carrier": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "note": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "shipped_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "shipped_by_name": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "lines": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/StockShipmentLine"
+                        }
+                    }
+                },
+                "required": [
+                    "carrier",
+                    "deal",
+                    "id",
+                    "lines",
+                    "note",
+                    "number",
+                    "shipped_at",
+                    "shipped_by_name",
+                    "tracking"
+                ]
+            },
+            "StockShipmentLine": {
+                "type": "object",
+                "properties": {
+                    "product_id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "quantity": {
+                        "type": "integer"
+                    },
+                    "cell": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "cell",
+                    "name",
+                    "product_id",
+                    "quantity"
+                ]
+            },
+            "StockShipmentList": {
+                "type": "object",
+                "properties": {
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/StockShipment"
+                        }
+                    },
+                    "rights": {
+                        "$ref": "#/components/schemas/StockRights"
+                    }
+                },
+                "required": [
+                    "results",
+                    "rights"
+                ]
+            },
             "StockStatus": {
                 "type": "object",
                 "properties": {
@@ -38609,6 +42110,46 @@
                     "code",
                     "id",
                     "name"
+                ]
+            },
+            "StockSupplier": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "inn": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "email": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Адрес для писем: почта компании или основного контакта"
+                    }
+                },
+                "required": [
+                    "email",
+                    "id",
+                    "inn",
+                    "name"
+                ]
+            },
+            "StockSupplierList": {
+                "type": "object",
+                "properties": {
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/StockSupplier"
+                        }
+                    }
+                },
+                "required": [
+                    "results"
                 ]
             },
             "SupplierOffer": {
@@ -38848,6 +42389,26 @@
                     "product",
                     "supplier"
                 ]
+            },
+            "SupplierOrderReceiptStateEnum": {
+                "enum": [
+                    "none",
+                    "partial",
+                    "full"
+                ],
+                "type": "string",
+                "description": "* `none` - none\n* `partial` - partial\n* `full` - full"
+            },
+            "SupplierOrderStatusEnum": {
+                "enum": [
+                    "draft",
+                    "sent",
+                    "confirmed",
+                    "received",
+                    "cancelled"
+                ],
+                "type": "string",
+                "description": "* `draft` - draft\n* `sent` - sent\n* `confirmed` - confirmed\n* `received` - received\n* `cancelled` - cancelled"
             },
             "SystemRoleLookup": {
                 "type": "object",

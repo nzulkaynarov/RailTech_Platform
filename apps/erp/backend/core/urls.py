@@ -15,6 +15,15 @@ from integration.bus_journal_views import (
 )
 from integration.public_views import PublicDocumentLinkView
 from integration.staff_views import CrmPairingCodeView, CrmPairingStatusView
+from inventory.views import (
+    StockAdjustView,
+    StockBalanceListView,
+    StockProductView,
+    StockReservationListView,
+    StockReservationView,
+    StockShipmentListView,
+    StockSupplierListView,
+)
 from portal.exceptions import portal_not_found
 from portal.public_views import (
     PublicDocumentView,
@@ -28,6 +37,19 @@ from portal.public_views import (
 from rest_framework.permissions import IsAdminUser
 from rest_framework.routers import DefaultRouter
 from rt_bus.django.views import bus_view
+from supply.views import (
+    OrderCancelView,
+    OrderConfirmView,
+    OrderFromDealView,
+    OrderListView,
+    OrderReceiptView,
+    OrderSendView,
+    OrderView,
+    OverdueListView,
+    PriceRequestAnswerView,
+    PriceRequestListView,
+    ReceiptListView,
+)
 
 from accounts.views import (
     CompanyRoleViewSet,
@@ -291,6 +313,31 @@ urlpatterns = (
         path("api/v1/calc/<int:deal_id>/lines/<int:item_id>/visa/", CalcLineVisaView.as_view(), name="calc-line-visa"),
         path("api/v1/calc/<int:deal_id>/ready/", CalcReadyView.as_view(), name="calc-ready"),
         path("api/v1/calc/<int:deal_id>/parse/", CalcParseView.as_view(), name="calc-parse"),
+        # D2-2 — «Склад» Платформы: остатки, резервы, заказы поставщикам, приёмка, отгрузки, запросы цен.
+        path("api/v1/stock/balances/", StockBalanceListView.as_view(), name="stock-balances"),
+        path("api/v1/stock/balances/<int:product_id>/", StockProductView.as_view(), name="stock-product"),
+        path("api/v1/stock/adjustments/", StockAdjustView.as_view(), name="stock-adjust"),
+        path("api/v1/stock/reservations/", StockReservationListView.as_view(), name="stock-reservations"),
+        path(
+            "api/v1/stock/reservations/<int:reservation_id>/", StockReservationView.as_view(), name="stock-reservation"
+        ),
+        path("api/v1/stock/shipments/", StockShipmentListView.as_view(), name="stock-shipments"),
+        path("api/v1/stock/suppliers/", StockSupplierListView.as_view(), name="stock-suppliers"),
+        path("api/v1/stock/orders/", OrderListView.as_view(), name="stock-orders"),
+        path("api/v1/stock/orders/from-deal/", OrderFromDealView.as_view(), name="stock-order-from-deal"),
+        path("api/v1/stock/orders/<int:order_id>/", OrderView.as_view(), name="stock-order"),
+        path("api/v1/stock/orders/<int:order_id>/send/", OrderSendView.as_view(), name="stock-order-send"),
+        path("api/v1/stock/orders/<int:order_id>/confirm/", OrderConfirmView.as_view(), name="stock-order-confirm"),
+        path("api/v1/stock/orders/<int:order_id>/cancel/", OrderCancelView.as_view(), name="stock-order-cancel"),
+        path("api/v1/stock/orders/<int:order_id>/receipts/", OrderReceiptView.as_view(), name="stock-order-receive"),
+        path("api/v1/stock/receipts/", ReceiptListView.as_view(), name="stock-receipts"),
+        path("api/v1/stock/overdue/", OverdueListView.as_view(), name="stock-overdue"),
+        path("api/v1/stock/price-requests/", PriceRequestListView.as_view(), name="stock-price-requests"),
+        path(
+            "api/v1/stock/price-requests/<int:request_id>/answer/",
+            PriceRequestAnswerView.as_view(),
+            name="stock-price-request-answer",
+        ),
         # Витрина интегрированного тарифа ГТК: платежи по коду ТН ВЭД и стране происхождения.
         path("api/v1/master-data/hs-codes/<str:code>/duties/", hs_code_duties, name="hs-code-duties"),
         path("api/v1/crm/analytics/dashboard/", DashboardAnalyticsView.as_view(), name="dashboard-analytics"),

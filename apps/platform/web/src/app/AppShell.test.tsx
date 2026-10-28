@@ -132,7 +132,7 @@ describe("каркас на 1440", () => {
     expect(screen.getByText(/Выберите «Все роли» в меню профиля/)).toBeVisible();
   });
 
-  it("рейл — модули роли, подменю — разделы активного модуля, главное действие неактивно", async () => {
+  it("рейл — модули роли, подменю — разделы активного модуля, главное действие ведёт к лидам", async () => {
     signIn("manager@demo.example");
     renderAt("/crm/leads");
     expect(await screen.findByRole("heading", { level: 1, name: "Лиды" })).toBeVisible();
@@ -158,9 +158,18 @@ describe("каркас на 1440", () => {
       within(menu)
         .getAllByRole("link")
         .map((a) => a.textContent.replace(/\d+, требует действия|\d+$/, "")),
-    ).toEqual(["Ждут ответа", "Лиды", "Клиенты", "Заявки", "Каналы связи", "База знаний бота"]);
-    const action = within(menu).getByRole("button", { name: /Создать заявку/ });
-    expect(action).toBeDisabled();
+    ).toEqual([
+      "Ждут ответа",
+      "Лиды",
+      "Клиенты",
+      "Заявки",
+      "Каналы связи",
+      "База знаний бота",
+      "Создать заявку",
+    ]);
+    // «Создать заявку» — настоящий экран (D1-2b): кнопка ведёт к лидам, которые просят КП
+    const action = within(menu).getByRole("link", { name: /Создать заявку/ });
+    expect(action).toHaveAttribute("href", "/crm/leads?status=wants_quote");
   });
 
   it("раздел вне роли — Forbidden, раздела нет в подменю, бокового окна нет", async () => {

@@ -49,12 +49,12 @@ describe("Dashboard · Моя очередь", () => {
     expect(loading.tagName).toBe("DIV");
   });
 
-  it("директор: подзаголовок с числом решений, четыре счётчика и три строки очереди", async () => {
+  it("директор: подзаголовок с числом решений, четыре счётчика и строки очереди (в том числе просроченный заказ поставщику)", async () => {
     signInAs("director@demo.example");
     renderApp("/dashboard/queue");
     const page = await main();
 
-    expect(await within(page).findByText(/Директор · .* · 3 решения/)).toBeVisible();
+    expect(await within(page).findByText(/Директор · .* · 4 решения/)).toBeVisible();
     const cards = within(page).getByRole("region", { name: "Счётчики очереди" });
     expect(within(cards).getAllByRole("link")).toHaveLength(4);
     expect(within(cards).getByRole("link", { name: /Входящие без резолюции/ })).toHaveAttribute(
@@ -64,11 +64,13 @@ describe("Dashboard · Моя очередь", () => {
 
     const queue = await within(page).findByRole("region", { name: "Что сделать сейчас" });
     const rows = within(queue).getAllByRole("listitem");
-    expect(rows).toHaveLength(3);
-    expect(within(rows[0] as HTMLElement).getByText("срок сегодня")).toBeVisible();
-    expect(within(rows[1] as HTMLElement).getByText("завтра")).toBeVisible();
-    expect(within(rows[2] as HTMLElement).getByText("служебка")).toBeVisible();
-    const open = within(rows[0] as HTMLElement).getByRole("link", { name: /Открыть/ });
+    expect(rows).toHaveLength(4);
+    // D2-2: просроченный заказ поставщику (erp.stock: полный) — первым, он уже просрочен.
+    expect(within(rows[0] as HTMLElement).getByText(/Просрочен заказ ЗП-\d{4}-029/)).toBeVisible();
+    expect(within(rows[1] as HTMLElement).getByText("срок сегодня")).toBeVisible();
+    expect(within(rows[2] as HTMLElement).getByText("завтра")).toBeVisible();
+    expect(within(rows[3] as HTMLElement).getByText("служебка")).toBeVisible();
+    const open = within(rows[1] as HTMLElement).getByRole("link", { name: /Открыть/ });
     expect(open).toHaveAttribute(
       "href",
       "/eds/inbox/%D0%92%D0%A5-104%2F26?panel=open&tab=resolution",
@@ -87,7 +89,35 @@ describe("Dashboard · Моя очередь", () => {
     expect(within(page).queryByRole("status")).toBeNull();
   });
 
+  it("снабженец: просроченный заказ поставщику — строка «Моих задач» с переходом на карточку ЗП (D2-2)", async () => {
+    signInAs("supply@demo.example");
+    renderApp("/dashboard/queue");
+    const page = await main();
+
+    const row = (await within(page).findByText(/Просрочен заказ ЗП-\d{4}-029/)).closest("li");
+    if (!row) throw new Error("нет строки очереди");
+    expect(within(row).getByText("просрочено")).toBeVisible();
+    expect(within(row).getByText(/ООО «Вымышленная Сталь» · 3 дн\. просрочки/)).toBeVisible();
+    expect(within(row).getByRole("link", { name: /Открыть/ })).toHaveAttribute(
+      "href",
+      expect.stringMatching(/^\/erp\/stock\/%D0%97%D0%9F-\d{4}-029$/),
+    );
+  });
+
+  it("менеджер (склад — только чтение) строки о просроченных заказах не получает", async () => {
+    signInAs("manager@demo.example");
+    renderApp("/dashboard/queue");
+    const page = await main();
+    await within(page).findByText("Взять в работу лида L-2041");
+    expect(within(page).queryByText(/Просрочен заказ/)).toBeNull();
+  });
+
   it("пустая очередь снабженца — по разделам каталога, не директорский текст", async () => {
+    server.use(
+      http.get("*/queue", () =>
+        HttpResponse.json({ items: [], sources: { crm: "ok", erp: "ok" } }),
+      ),
+    );
     signInAs("supply@demo.example");
     renderApp("/dashboard/queue");
     const page = await main();
@@ -107,6 +137,11 @@ describe("Dashboard · Моя очередь", () => {
     ["accountant@demo.example", "Платёжек на подтверждение и счетов к выставлению нет"],
     ["admin@demo.example", "Задач для вас нет"],
   ])("пустая очередь %s: свой текст", async (email, title) => {
+    server.use(
+      http.get("*/queue", () =>
+        HttpResponse.json({ items: [], sources: { crm: "ok", erp: "ok" } }),
+      ),
+    );
     signInAs(email);
     renderApp("/dashboard/queue");
     const page = await main();
@@ -178,6 +213,7 @@ describe("Dashboard · Моя очередь", () => {
     // письмо, КП и служебка — «Открыть» с адресом объекта и вкладкой решения; «Где сделать» у них нет
     const open = within(page).getAllByRole("link", { name: /^Открыть:/ });
     expect(open.map((link) => link.getAttribute("href"))).toEqual([
+      "/erp/stock/%D0%97%D0%9F-2026-029", // просроченный заказ поставщику (D2-2) — экран «Склад»
       "/eds/inbox/%D0%92%D0%A5-104%2F26?panel=open&tab=resolution",
       "/eds/drafts/%D0%9A%D0%9F-2026%2F118?panel=open&tab=approve",
       "/eds/approvals/%D0%A1%D0%97-2026%2F031?panel=open&tab=agree",

@@ -3,6 +3,7 @@ import { afterEach, beforeEach, expect } from "vitest";
 
 import { usePanelsStore } from "../app/shell/panelsStore";
 import { resetCalcMock } from "../mocks/erpCalc";
+import { resetStockMock } from "../mocks/erpStock";
 import { endSession } from "../mocks/mockSession";
 import i18n from "../shared/i18n";
 import { setViewportWidth } from "./viewport";
@@ -17,6 +18,7 @@ export function setupCalcTests(width = 1440): void {
     window.localStorage.clear();
     window.sessionStorage.clear();
     resetCalcMock();
+    resetStockMock();
     usePanelsStore.setState({ entries: {} });
     setViewportWidth(width);
     missing.length = 0;

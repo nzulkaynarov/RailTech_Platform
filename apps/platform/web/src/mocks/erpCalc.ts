@@ -13,6 +13,7 @@ import type {
   Me,
 } from "../shared/api/generated/model";
 import { CATALOG, type MockCalc, type MockLine, PARSE_PROPOSAL, seedCalcs } from "./fixtures/calc";
+import { stockOfLine } from "./erpStock";
 import { buildMe, readSession } from "./mockSession";
 
 /**
@@ -55,7 +56,12 @@ export function resetCalcMock(): void {
   }
 }
 
-function failure(status: number, code: string, message: string, details?: Record<string, unknown>) {
+export function failure(
+  status: number,
+  code: string,
+  message: string,
+  details?: Record<string, unknown>,
+) {
   const source = details?.["source"] === "erp" ? "erp" : "bff";
   const rest = details
     ? Object.fromEntries(Object.entries(details).filter(([k]) => k !== "source"))
@@ -66,27 +72,27 @@ function failure(status: number, code: string, message: string, details?: Record
   );
 }
 
-const forbidden = (resource: string, need: "read" | "full") =>
+export const forbidden = (resource: string, need: "read" | "full") =>
   failure(403, "FORBIDDEN", "Раздел или действие не положены вашей роли.", { resource, need });
 
-function me(): Me | null {
+export function me(): Me | null {
   const session = readSession();
   if (!session) return null;
   // Права операций — по объединению ролей, как в BFF.
   return buildMe({ ...session, activeRole: null }) ?? null;
 }
 
-function level(user: Me, resource: string): "read" | "full" | undefined {
+export function level(user: Me, resource: string): "read" | "full" | undefined {
   return (user.resources as Record<string, "read" | "full" | undefined>)[resource];
 }
 
-function fields(user: Me): Set<string> {
+export function fields(user: Me): Set<string> {
   return new Set(user.restricted_fields ?? []);
 }
 
-type Guard = { user: Me } | { error: Response };
+export type Guard = { user: Me } | { error: Response };
 
-function guard(resource: string, need: "read" | "full"): Guard {
+export function guard(resource: string, need: "read" | "full"): Guard {
   const user = me();
   if (!user) return { error: failure(401, "SESSION_EXPIRED", "Сессия истекла") };
   const held = level(user, resource);
@@ -99,13 +105,22 @@ function guard(resource: string, need: "read" | "full"): Guard {
 const zoneOf = (line: MockLine): "goods" | "services" =>
   line.kind === "service" ? "services" : "goods";
 
-function canZone(user: Me, zone: "goods" | "services"): boolean {
+export function canZone(user: Me, zone: "goods" | "services"): boolean {
   return level(user, zone === "goods" ? "erp.calc.goods" : "erp.calc.services") === "full";
+}
+
+/** Склад строки-товара: из мока склада (D2-2), иначе исходное наличие строки. */
+function stockInfo(line: MockLine) {
+  const fromStock = stockOfLine(line.productId, line.id);
+  if (fromStock) return fromStock;
+  const onHand = line.onHand ?? 0;
+  return { onHand, free: onHand, reserved: 0, cell: null, available: onHand };
 }
 
 function lineKind(line: MockLine): CalcLine["kind"] {
   if (line.kind === "service") return "service";
-  return line.onHand !== null && line.onHand >= line.quantity && line.onHand > 0
+  const { available } = stockInfo(line);
+  return line.onHand !== null && available >= line.quantity && available > 0
     ? "goods"
     : "goods_to_order";
 }
@@ -142,7 +157,20 @@ function presentLine(line: MockLine, user: Me, editable: boolean): CalcLine {
     group: GROUP[kind],
     quantity: line.quantity,
     unit: line.unit,
-    stock: { on_hand: line.kind === "service" ? null : line.onHand, cell: null, reserved: null },
+    stock:
+      line.kind === "service"
+        ? { on_hand: null, free: null, cell: null, reserved: null }
+        : line.productId === null
+          ? { on_hand: line.onHand, free: null, cell: null, reserved: null }
+          : (() => {
+              const info = stockInfo(line);
+              return {
+                on_hand: info.onHand,
+                free: info.free,
+                cell: info.cell,
+                reserved: info.reserved,
+              };
+            })(),
     supplier: line.supplier
       ? {
           name: line.supplier.name,
@@ -249,6 +277,7 @@ function present(calc: MockCalc, user: Me): CalcSheet {
       services: canZone(user, "services"),
       build: level(user, "erp.calc") === "full",
       cost,
+      stock: level(user, "erp.stock") === "full",
     },
   };
 }
@@ -275,13 +304,50 @@ function find(calcs: MockCalc[], number: string): MockCalc | undefined {
   return calcs.find((c) => c.number === decodeURIComponent(number));
 }
 
+/** Строка расчёта по номеру заявки и id: для запроса цены и склада (D2-2). */
+export function lookupCalcLine(
+  number: string,
+  lineId: number,
+): {
+  name: string;
+  article: string;
+  quantity: number;
+  unit: string;
+  productId: number | null;
+  client: string;
+} | null {
+  const calc = find(read(), number);
+  const line = calc?.lines.find((l) => l.id === lineId);
+  return calc && line
+    ? {
+        name: line.name,
+        article: line.article,
+        quantity: line.quantity,
+        unit: line.unit,
+        productId: line.productId,
+        client: calc.client,
+      }
+    : null;
+}
+
+/** Расчёт по номеру заявки для сотрудника — ответ `PUT|DELETE …/lines/{id}/reserve` (мок склада). */
+export function calcSheetByNumber(number: string, user: Me): CalcSheet | null {
+  const calc = find(read(), number);
+  return calc ? present(calc, user) : null;
+}
+
+/** Номера строк-товаров расчёта: резерв и склад привязываются к ним. */
+export function calcLineIds(number: string): number[] {
+  return find(read(), number)?.lines.map((l) => l.id) ?? [];
+}
+
 const notFound = () =>
   failure(404, "NOT_FOUND", "Заявки нет среди заявок с заданием расчёта.", {
     source: "erp",
     reason: "calc_task_not_found",
   });
 
-const conflict = (reason: string, message: string, extra: Record<string, unknown> = {}) =>
+export const conflict = (reason: string, message: string, extra: Record<string, unknown> = {}) =>
   failure(409, "CONFLICT", message, { source: "erp", reason, ...extra });
 
 let nextId = 900;

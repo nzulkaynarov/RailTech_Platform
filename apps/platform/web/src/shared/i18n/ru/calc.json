@@ -71,7 +71,8 @@
       ]
     },
     "request": "Текст заявки",
-    "requestEmpty": "Текста заявки нет."
+    "requestEmpty": "Текста заявки нет.",
+    "requestPrice": "Запросить цену у поставщика"
   },
   "lines": {
     "title": "Строки расчёта",
@@ -127,7 +128,14 @@
     "totals": "Итого",
     "noVat": "без НДС",
     "saved": "Сохранено",
-    "mobileCost": "Себестоимость {{value}} · наценка {{markup}} %"
+    "mobileCost": "Себестоимость {{value}} · наценка {{markup}} %",
+    "cell": "Ячейка {{cell}}",
+    "free": "Свободно · {{count}}",
+    "reservedTag": "Резерв · {{count}}",
+    "reserve": "Зарезервировать {{count}}",
+    "reserveLabel": "Зарезервировать {{count}} для «{{name}}»",
+    "release": "Снять резерв",
+    "releaseLabel": "Снять резерв строки «{{name}}»"
   },
   "add": {
     "button": "Добавить строку",

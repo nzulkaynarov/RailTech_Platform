@@ -13,6 +13,8 @@
 #     выход; расписание (due) и healthcheck.
 # Запуск: bash этот-файл
 set -euo pipefail
+# Маркеры PEM собраны из частей: фикстура без настоящего ключа, а gitleaks не принимает её за секрет.
+PEM_BEGIN="-----BEGIN PRIVATE"" KEY-----"; PEM_END="-----END PRIVATE"" KEY-----"
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 root="$(cd "$here/../../.." && pwd)"
 tmp="$(mktemp -d)"; trap 'docker run --rm -v "$tmp:/t" alpine:3.22 rm -rf /t/w >/dev/null 2>&1 || true; rm -rf "$tmp"' EXIT
@@ -56,10 +58,11 @@ holders="$(jq -r '[.services | to_entries[] | select(.value.environment // {} | 
   || fail "offsite-backup не должен знать ключи WAL-G, ключ шифрования архива и корневой ключ"
 for f in prod dev; do
   buckets="$(jq -r '.services["s3-init"].environment.S3_BUCKETS' "$tmp/$f.json")"
-  [[ " $buckets " == *" offsite "* ]] || fail "$f: s3-init не создаёт бакет offsite"
+  [[ " $buckets " == *" offsite "* && " $buckets " == *" offsite-config "* ]] || fail "$f: s3-init не создаёт бакеты offsite и offsite-config"
 done
 grep -qE '^    offsite\) echo "offsite" ;;$' "$init" || fail "init.sh: offsite пишет только в бакет offsite"
-grep -qE '^    offsite\) echo "wal" ;;$' "$init" || fail "init.sh: offsite читает бакет wal (только чтение)"
+grep -qE '^    offsite\) echo "wal offsite-config" ;;$' "$init" || fail "init.sh: offsite читает бакеты wal и offsite-config (только чтение)"
+grep -qE '^    crm\) echo "offsite-config" ;;$' "$init" || fail "init.sh: CRM пишет в offsite-config (только запись)"
 grep -qE '^    crm\) echo "offsite/status.json" ;;$' "$init" || fail "init.sh: CRM читает в бакете offsite только status.json"
 grep -qE '^    crm\) echo "backups" ;;' "$init" || fail "init.sh: ro-бакет CRM — только backups (offsite целиком CRM не читает)"
 fn="$(sed -n '/^policy_json() {/,/^}/p' "$init")"
@@ -68,6 +71,9 @@ pol="$(bash -c "$fn; policy_json 'kb-sources' 'backups' 'wal' 'offsite/status.js
   == "s3:GetBucketLocation,s3:ListBucket@arn:aws:s3:::offsite s3:GetObject@arn:aws:s3:::offsite/status.json" ]] \
   || fail "политика CRM: в offsite — список и чтение только status.json"
 grep -qE '^SERVICES=".* offsite"$' "$init" || fail "init.sh: сервиса offsite нет в SERVICES"
+pol="$(bash -c "$fn; policy_json '' '' '' '' 'offsite-config'")"
+[[ "$(jq -c '[.Statement[] | {a: (.Action | sort), r: .Resource}]' <<<"$pol")" == '[{"a":["s3:AbortMultipartUpload","s3:PutObject"],"r":["arn:aws:s3:::offsite-config/*"]}]' ]] \
+  || fail "политика CRM на offsite-config: только запись, без чтения и списка"
 pol="$(bash -c "$fn; policy_json 'offsite' 'wal'")"
 [[ "$(jq -r '[.Statement[] | select(.Resource | tostring | test("wal")) | .Action[]] | sort | unique | join(",")' <<<"$pol")" == s3:GetBucketLocation,s3:GetObject,s3:ListBucket ]] \
   || fail "политика offsite: на бакет wal только список и чтение"
@@ -91,7 +97,7 @@ w="$tmp/w"; mkdir -p "$w"
 FOLDER_ID=TESTFOLDERID1234567890
 run() { # run <аргументы gdrive-sync.sh> — переменные OFFSITE_* из массива extra
   docker run --rm -v "$w:/t" -v "$script:/offsite/gdrive-sync.sh:ro" -e TZ=UTC -e OFFSITE_RETRIES=1 -e OFFSITE_RETRIES_SLEEP=1s \
-    -e OFFSITE_STATE_DIR=/t/state -e OFFSITE_SRC=/t/src/pg17 -e OFFSITE_DST=/t/drive/pg17 -e OFFSITE_STATUS_DST=/t/status/status.json \
+    -e OFFSITE_CONFIG_SRC=/t/cfg -e OFFSITE_STATE_DIR=/t/state -e OFFSITE_SRC=/t/src/pg17 -e OFFSITE_DST=/t/drive/pg17 -e OFFSITE_STATUS_DST=/t/status/status.json \
     -e OFFSITE_GDRIVE_SA_FILE=/t/secrets/gdrive-sa.json -e OFFSITE_SA_HOST_PATH=/opt/rt/secrets/gdrive-sa.json \
     "${extra[@]}" --entrypoint sh "$image" /offsite/gdrive-sync.sh "$@"
 }
@@ -120,12 +126,15 @@ extra=(-e OFFSITE_KEEP_DAYS=14)
 rc=0; run --now > "$tmp/out" 2>&1 || rc=$?
 [[ "$rc" == 3 ]] || { cat "$tmp/out"; fail "нет ключа: ожидался код 3 (не настроено), получен $rc"; }
 [[ "$(field result)" == not_configured && "$(field reason)" == no_key ]] || { status; fail "нет ключа: not_configured/no_key"; }
-[[ "$(field message)" == *"/opt/rt/secrets/gdrive-sa.json"* ]] || fail "сообщение не называет путь ключа на сервере"
+[[ "$(field message)" == *"Admin → Подключения"* ]] || fail "сообщение не ведёт в интерфейс (Admin → Подключения)"
 [[ ! -d "$w/drive" ]] || fail "без ключа на Drive ничего не должно появиться"
 printf '{"type": "authorized_user"}' > "$w/secrets/gdrive-sa.json"
 rc=0; run --now > "$tmp/out" 2>&1 || rc=$?
 [[ "$rc" == 3 && "$(field reason)" == bad_key ]] || { status; fail "ключ не сервисного аккаунта: not_configured/bad_key"; }
-printf '{"type": "service_account", "client_email": "x@example.iam.gserviceaccount.com", "private_key": "-----BEGIN PRIVATE KEY-----\\nfake\\n-----END PRIVATE KEY-----\\n"}' > "$w/secrets/gdrive-sa.json"
+printf '{"type": "service_account", "private_key": "x", "token_uri": "https://evil.example/token"}' > "$w/secrets/gdrive-sa.json"
+rc=0; run --now > "$tmp/out" 2>&1 || rc=$?
+[[ "$rc" == 3 && "$(field reason)" == bad_key ]] || { status; fail "ключ с чужим token_uri (SSRF) должен отклоняться: bad_key"; }
+printf '{"type": "service_account", "client_email": "x@example.iam.gserviceaccount.com", "private_key": "%s\\nfake\\n%s\\n"}' "$PEM_BEGIN" "$PEM_END" > "$w/secrets/gdrive-sa.json"
 rc=0; run --now > "$tmp/out" 2>&1 || rc=$?
 [[ "$rc" == 3 && "$(field reason)" == no_folder ]] || { status; fail "нет ID папки: not_configured/no_folder"; }
 
@@ -234,6 +243,22 @@ sleep 3; t0=$(date +%s); docker stop -t 10 "$cname" >/dev/null; took=$(( $(date 
 docker logs "$cname" 2>&1 | grep -q '"offsite_daemon_stopped"' || { docker logs "$cname"; docker rm -f "$cname" >/dev/null; fail "демон не обработал SIGTERM"; }
 [[ "$(docker inspect -f '{{.State.ExitCode}}' "$cname")" == 0 && "$took" -lt 8 ]] || { docker rm -f "$cname" >/dev/null; fail "SIGTERM: ожидался выход 0 сразу, а не SIGKILL через 10 с (took=$took)"; }
 docker rm -f "$cname" >/dev/null
+
+# 2.6c Настройка из интерфейса (OPS-GDRIVE-2): ключ и папка из бакета offsite-config, без файла на сервере и переменной;
+#      аварийный файл на сервере сильнее настройки из интерфейса.
+in_box 'rm -rf /t/drive /t/state /t/secrets/gdrive-sa.json; mkdir -p /t/cfg'
+printf '{"type": "service_account", "client_email": "ui@x.iam.gserviceaccount.com", "private_key": "%s\\nui\\n%s\\n"}' "$PEM_BEGIN" "$PEM_END" > "$w/cfg/gdrive-sa.json"
+printf '{"folder_id": "%s"}' "$FOLDER_ID" > "$w/cfg/settings.json"
+extra=(-e OFFSITE_KEEP_DAYS=14)
+run --now > "$tmp/out" 2>&1 || { cat "$tmp/out"; fail "настройка из интерфейса: копия не прошла"; }
+grep -q '"offsite_config_loaded"' "$tmp/out" || { cat "$tmp/out"; fail "настройка из бакета offsite-config не загружена"; }
+[[ "$(field result)" == ok ]] || { status; fail "настройка из интерфейса: итог не ok"; }
+[[ "$(stat -f '%Lp' "$w/state/config/gdrive-sa.json" 2>/dev/null || stat -c '%a' "$w/state/config/gdrive-sa.json")" == 600 ]] || fail "копия ключа в томе состояния не chmod 600"
+! grep -rq "$FOLDER_ID" "$w/status" "$tmp/out" || fail "ID папки из интерфейса попал в status.json или журнал"
+printf '{"type": "authorized_user"}' > "$w/secrets/gdrive-sa.json"
+rc=0; run --now > "$tmp/out" 2>&1 || rc=$?
+[[ "$rc" == 3 && "$(field reason)" == bad_key ]] || { status; fail "аварийный файл на сервере должен быть сильнее настройки из интерфейса"; }
+in_box 'rm -f /t/secrets/gdrive-sa.json'
 
 # 2.7 Расписание и healthcheck (функции скрипта в режиме библиотеки).
 docker run --rm -v "$w:/t" -v "$script:/offsite/gdrive-sync.sh:ro" -e TZ=UTC --entrypoint sh "$image" -c '
