@@ -13,7 +13,7 @@ tag="${1:?usage: deploy.sh <тег-образов>}"
 rel="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 [[ "$(basename "$rel")" == "$tag" ]] || log "внимание: каталог релиза ($(basename "$rel")) не совпадает с тегом образов ($tag)"
 
-# Автоматические секреты (REDIS_PROBE_PASSWORD, W15-H8b) создаются здесь, до проверки CHANGE_ME: руками их на сервере не вписывают.
+# Автоматические секреты (REDIS_PROBE_PASSWORD, W15-H8b; ключ S3 offsite-backup S3_OFFSITE_*, OPS-GDRIVE) создаются здесь, до проверки CHANGE_ME: руками их на сервере не вписывают.
 [[ ! -f "$RT_ENV_FILE" ]] || "$rel/infra/deploy/make-env-prod.sh" ensure-secrets "$RT_ENV_FILE"
 require_env_file
 # Домен Платформы (INF-P0-5): без него Caddy не получит сертификат, а compose упал бы на `:?` уже при разборе конфигурации.
@@ -24,6 +24,11 @@ export RT_IMAGE_TAG="$tag"
 # Дата выкладки — в «О системе» Платформы (W-REL); первая выкладка этого релиза, повтор её не меняет.
 RT_RELEASE_DATE="$(release_date "$rel")"
 export RT_RELEASE_DATE
+# Каталог секретов владельца (ключ сервисного аккаунта Google для offsite-backup, OPS-GDRIVE): создаём сами, от deploy и chmod 700, —
+# иначе Docker создал бы его при монтировании от root, и владелец не смог бы положить ключ без sudo. Пустой каталог — копия «не настроена».
+export RT_SECRETS_DIR
+install -d -m 700 "$RT_SECRETS_DIR" 2>/dev/null \
+  || log "внимание: не удалось создать $RT_SECRETS_DIR (права на $RT_ROOT?): внешняя копия останется «не настроена», остальное не затронуто"
 prev="$(state_get current_tag)"
 
 log "тег $tag, релиз $rel, предыдущий: ${prev:-нет}"
@@ -31,7 +36,7 @@ compose "$rel" config -q
 
 log "pull образов"
 # Сбой сети к ghcr.io плавающий (TLS handshake timeout): до пяти попыток с паузами 5/10/20/40 с, затем прежнее поведение — ошибка (set -e).
-retry "pull образов" compose "$rel" pull crm-api crm-web erp-backend erp-web cabinet-web litellm platform-bff platform-web eds-api
+retry "pull образов" compose "$rel" pull crm-api crm-web erp-backend erp-web cabinet-web litellm platform-bff platform-web eds-api offsite-backup
 
 # Прод-CPU — база x86-64 v1 (servers.md): образ, которому нужен v2, ловим здесь, до дампа и миграций.
 log "проверка базы CPU образов (cpu-baseline-check.sh)"

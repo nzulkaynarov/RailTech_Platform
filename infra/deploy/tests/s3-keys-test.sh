@@ -16,7 +16,7 @@ tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
 fail() { echo "FAIL: $*"; exit 1; }
 base="$root/infra/compose/base.yml"; prod="$root/infra/compose/prod.yml"; dev="$root/infra/compose/dev.yml"
 init="$root/infra/s3/init.sh"
-names=(ROOT ERP CRM EDS LANGFUSE WAL BACKUP)
+names=(ROOT ERP CRM EDS LANGFUSE WAL BACKUP OFFSITE)
 
 # 1. Примеры.
 for example in "$root/.env.example" "$root/infra/.env.prod.example"; do
@@ -73,6 +73,9 @@ for f in prod dev; do
   done
   # Ключи wal и backup — только у s3-init: потребляет их VPS 2 по своим переменным (db.yml), а не стек VPS 1.
   [[ "$(holders 'ak-WAL|sk-WAL|ak-BACKUP|sk-BACKUP')" == s3-init ]] || fail "$f: ключи WAL-G/бэкапа у лишних сервисов: $(holders 'ak-WAL|sk-WAL|ak-BACKUP|sk-BACKUP')"
+  # Ключ внешней копии (OPS-GDRIVE) — у s3-init и у offsite-backup (только прод; на стенде сервиса нет).
+  want_offsite=s3-init; [[ "$f" == dev ]] || want_offsite=offsite-backup,s3-init
+  [[ "$(holders 'ak-OFFSITE|sk-OFFSITE')" == "$want_offsite" ]] || fail "$f: ключ offsite у лишних сервисов: $(holders 'ak-OFFSITE|sk-OFFSITE')"
 
   # 3. s3-init.
   image="$(jq -r '.services["s3-init"].image' "$j")"
@@ -95,6 +98,7 @@ grep -qE '^    erp\) echo "erp-private erp-public erp-temp" ;;$' "$init" || fail
 grep -qE '^    crm\) echo "kb-sources client-documents tg-attachments" ;;$' "$init" || fail "init.sh: бакеты CRM"
 grep -qE '^    eds\) echo "eds-private" ;;' "$init" || fail "init.sh: EDS не ограничен бакетом eds-private"
 grep -qE '^    crm\) echo "backups" ;;' "$init" || fail "init.sh: CRM должен читать бакет backups (только чтение)"
+grep -qE '^    crm\) echo "offsite/status.json" ;;$' "$init" || fail "init.sh: CRM читает в offsite только status.json"
 grep -qE '^    crm\) echo "wal" ;;' "$init" || fail "init.sh: CRM должен видеть список бакета wal (без чтения объектов)"
 grep -qE '^    wal\) echo "wal" ;;$' "$init" || fail "init.sh: WAL-G не ограничен бакетом wal"
 grep -qE '^    backup\) echo "backups" ;;$' "$init" || fail "init.sh: бэкап не ограничен бакетом backups"
@@ -132,7 +136,7 @@ for n in "${names[@]}"; do
   done
 done
 all="$(grep -E '^S3_[A-Z]+_(ACCESS|SECRET)_KEY=' "$file" | cut -d= -f2- | sort)"
-[[ "$(wc -l <<<"$all" | tr -d ' ')" == 14 && "$(uniq -d <<<"$all" | wc -l | tr -d ' ')" == 0 ]] || fail "ключи S3 не уникальны"
+[[ "$(wc -l <<<"$all" | tr -d ' ')" == 16 && "$(uniq -d <<<"$all" | wc -l | tr -d ' ')" == 0 ]] || fail "ключи S3 не уникальны"
 val() { grep "^$1=" "$file" | cut -d= -f2-; }
 [[ "$(val BACKUP_RUSTFS_ACCESS_KEY)" == "$(val S3_BACKUP_ACCESS_KEY)" && "$(val BACKUP_RUSTFS_SECRET_KEY)" == "$(val S3_BACKUP_SECRET_KEY)" ]] || fail "BACKUP_RUSTFS_* не равны ключу сервиса backup"
 [[ "$(val WAL_S3_ACCESS_KEY)" == "$(val S3_WAL_ACCESS_KEY)" && "$(val WAL_S3_SECRET_KEY)" == "$(val S3_WAL_SECRET_KEY)" ]] || fail "WAL_S3_* не равны ключу сервиса wal"
