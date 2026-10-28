@@ -94,13 +94,14 @@ export const STATUS_TONE = {
     passed_to_accountant: "blue",
     paid: "green",
   },
-  /** Лид (`platform_status`, CRM-02: new, dialog, wants_quote, no_answer, client; «Отказ» в нём нет — не выдумываем) */
+  /** Лид (`platform_status`, CRM-02: new, dialog, wants_quote, no_answer, client; `lost` — «Отказ», D1-2) */
   lead: {
     new: "blue",
     dialog: "cyan",
     wants_quote: "gold",
     no_answer: "red",
     client: "green",
+    lost: "default",
   },
   /** Стадия заявки/проекта */
   stage: {

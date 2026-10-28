@@ -2222,6 +2222,90 @@ components:
       - date_to
       title: DeputyIn
       type: object
+    DialogAccess:
+      description: Почему сотруднику открыт диалог (поле `access` в `GET /chats`).
+      enum:
+      - registry
+      - participant
+      - invoiced
+      title: DialogAccess
+      type: string
+    DialogOut:
+      description: Диалог лида без данных реестра (оценка, квалификация, стадия — в карточке лида).
+      properties:
+        access:
+          $ref: '#/components/schemas/DialogAccess'
+          description: 'Почему диалог открыт: `registry` — реестр лидов (`leads:read`), `participant` — сотрудник участвует
+            (ответственный за лида, клиента или сделку, автор ответа), `invoiced` — зона «Счета и оплаты» (`chats:invoiced`)'
+        assigned_user_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Assigned User Id
+        client_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Client Id
+        display_name:
+          title: Display Name
+          type: string
+        invoiced:
+          description: По сделке клиента ERP выставила счёт
+          title: Invoiced
+          type: boolean
+        language:
+          title: Language
+          type: string
+        last_lead_msg_at:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          description: Последнее сообщение клиента
+          title: Last Lead Msg At
+        last_message_at:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          description: Последнее сообщение в диалоге (клиента, бота или сотрудника)
+          title: Last Message At
+        lead_id:
+          title: Lead Id
+          type: integer
+        source:
+          description: 'Канал лида: telegram, web, phone, email, referral'
+          title: Source
+          type: string
+      required:
+      - lead_id
+      - display_name
+      - source
+      - language
+      - client_id
+      - assigned_user_id
+      - last_lead_msg_at
+      - last_message_at
+      - invoiced
+      - access
+      title: DialogOut
+      type: object
+    DialogPage:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/DialogOut'
+          title: Items
+          type: array
+        total:
+          title: Total
+          type: integer
+      required:
+      - items
+      - total
+      title: DialogPage
+      type: object
     DocumentOut:
       properties:
         client_id:
@@ -3422,6 +3506,11 @@ components:
       type: object
     IdentityOut:
       properties:
+        id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Id
         lead_id:
           anyOf:
           - type: integer
@@ -3832,6 +3921,12 @@ components:
         id:
           title: Id
           type: integer
+        last_lead_msg_at:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          title: Last Lead Msg At
         stage:
           title: Stage
           type: string
@@ -4946,6 +5041,116 @@ components:
       - created_at
       title: NoticeOut
       type: object
+    OffsiteCheckOut:
+      description: 'Итог «Проверить» внешней копии (OPS-GDRIVE-2): `reason` — `ok` или что исправить владельцу
+
+        (`key_rejected`, `drive_api_disabled`, `folder_not_found`, `not_folder`, `not_shared_drive`,
+
+        `read_only`), `network` — Google не ответил (хостинг).'
+      properties:
+        checked_at:
+          format: date-time
+          title: Checked At
+          type: string
+        folder_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Folder Name
+        ok:
+          title: Ok
+          type: boolean
+        reason:
+          title: Reason
+          type: string
+      required:
+      - ok
+      - reason
+      - folder_name
+      - checked_at
+      title: OffsiteCheckOut
+      type: object
+    OffsiteConnectorIn:
+      additionalProperties: false
+      description: 'Сохранение: `key_json` — содержимое JSON-ключа сервисного аккаунта (`null` — оставить
+
+        прежний), `folder_id` — ID папки общего диска или её адрес, `password` — пароль админа.'
+      properties:
+        folder_id:
+          maxLength: 512
+          minLength: 1
+          title: Folder Id
+          type: string
+        key_json:
+          anyOf:
+          - format: password
+            maxLength: 16384
+            minLength: 1
+            type: string
+            writeOnly: true
+          - type: 'null'
+          title: Key Json
+        password:
+          format: password
+          maxLength: 256
+          minLength: 1
+          title: Password
+          type: string
+          writeOnly: true
+      required:
+      - folder_id
+      - password
+      title: OffsiteConnectorIn
+      type: object
+    OffsiteStatusOut:
+      description: 'Внешняя копия бэкапов на Google Drive: ключ не возвращается — адрес аккаунта и `key_suffix`
+
+        (последние 4 символа ID ключа); `delivered_at` — когда ключ и папка ушли сервису копирования.'
+      properties:
+        client_email:
+          title: Client Email
+          type: string
+        configured:
+          title: Configured
+          type: boolean
+        delivered_at:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          title: Delivered At
+        folder_id:
+          title: Folder Id
+          type: string
+        key_suffix:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Key Suffix
+        key_updated_at:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          title: Key Updated At
+        last_check:
+          anyOf:
+          - $ref: '#/components/schemas/OffsiteCheckOut'
+          - type: 'null'
+        secrets_enabled:
+          title: Secrets Enabled
+          type: boolean
+      required:
+      - configured
+      - folder_id
+      - client_email
+      - key_suffix
+      - key_updated_at
+      - delivered_at
+      - last_check
+      - secrets_enabled
+      title: OffsiteStatusOut
+      type: object
     PasswordReset:
       properties:
         temporary_password:
@@ -5586,6 +5791,10 @@ components:
       - smtp_auth_failed
       - smtp_tls_failed
       - smtp_rejected
+      - offsite_key_invalid
+      - offsite_folder_invalid
+      - offsite_not_configured
+      - offsite_delivery_failed
       - lead_exists
       - client_exists
       - contact_required
@@ -5640,6 +5849,8 @@ components:
       - request_not_allowed
       - request_key_reused
       - erp_request_conflict
+      - request_not_failed
+      - request_not_retryable
       title: Reason
       type: string
     ReasonCount:
@@ -5881,6 +6092,28 @@ components:
       - client_id
       - deal_id
       title: RequestCreated
+      type: object
+    RequestRetried:
+      description: '«Повторить отправку в ERP» (B-082): заявка снова `pending`, задача поставлена.'
+      properties:
+        client_id:
+          title: Client Id
+          type: integer
+        deal_id:
+          title: Deal Id
+          type: integer
+        erp_request_status:
+          default: pending
+          enum:
+          - pending
+          - done
+          - failed
+          title: Erp Request Status
+          type: string
+      required:
+      - deal_id
+      - client_id
+      title: RequestRetried
       type: object
     ResetPasswordRequest:
       properties:
@@ -7864,7 +8097,7 @@ components:
       type: http
 info:
   title: RailTech CRM API
-  version: 0.14.0
+  version: 0.16.0
 openapi: 3.1.0
 paths:
   /api/v1/admin/ai-spend:
@@ -8730,6 +8963,67 @@ paths:
       summary: Overview
       tags:
       - bus
+  /api/v1/chats:
+    get:
+      operationId: list_dialogs
+      parameters:
+      - description: Диалоги клиента CRM
+        in: query
+        name: client_id
+        required: false
+        schema:
+          anyOf:
+          - exclusiveMinimum: 0
+            type: integer
+          - type: 'null'
+          description: Диалоги клиента CRM
+          title: Client Id
+      - description: Диалоги клиента сделки ERP (запросить платёжку)
+        in: query
+        name: erp_deal_id
+        required: false
+        schema:
+          anyOf:
+          - exclusiveMinimum: 0
+            type: integer
+          - type: 'null'
+          description: Диалоги клиента сделки ERP (запросить платёжку)
+          title: Erp Deal Id
+      - in: query
+        name: limit
+        required: false
+        schema:
+          default: 50
+          maximum: 200
+          minimum: 1
+          title: Limit
+          type: integer
+      - in: query
+        name: offset
+        required: false
+        schema:
+          default: 0
+          minimum: 0
+          title: Offset
+          type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DialogPage'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: List Dialogs
+      tags:
+      - chats
   /api/v1/clients:
     get:
       operationId: list_clients
@@ -9650,6 +9944,43 @@ paths:
       summary: Update Deal
       tags:
       - deals
+  /api/v1/deals/{deal_id}/actions/retry_request:
+    post:
+      description: '«Повторить отправку в ERP» (B-082): заявка с ошибкой передачи снова уходит в ERP той же
+
+        задачей и с тем же `crm_request_id`. Не в ошибке — 409 `request_not_failed`; постоянная
+
+        ошибка (`erp_request_conflict`) — 409 `request_not_retryable`; бэк-офис не ERP — 409
+
+        `erp_not_configured`. Очередь отказала — 200 с `erp_request_status = failed` (заявка снова в
+
+        ошибке `enqueue_failed`, повтор доступен).'
+      operationId: retry_request
+      parameters:
+      - in: path
+        name: deal_id
+        required: true
+        schema:
+          title: Deal Id
+          type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestRetried'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Retry Request
+      tags:
+      - clients
   /api/v1/documents:
     get:
       operationId: list_documents
@@ -10209,6 +10540,95 @@ paths:
       security:
       - HTTPBearer: []
       summary: Rotate Erp Keys
+      tags:
+      - integrations
+  /api/v1/integrations/offsite:
+    get:
+      description: 'Внешняя копия бэкапов на Google Drive (OPS-GDRIVE-2): папка, адрес сервисного аккаунта,
+
+        последние символы ID ключа, доставка сервису копирования, итог последней проверки. Ключ не
+
+        возвращается никогда. Состояние самой копии — строка `offsite_backup` внешних сервисов.'
+      operationId: get_offsite_status
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OffsiteStatusOut'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Get Offsite Status
+      tags:
+      - integrations
+    put:
+      description: 'Сохранить ключ сервисного аккаунта и папку (после пароля админа) и сразу проверить у Google.
+
+
+        Ключ доставляется сервису копирования (бакет `offsite-config`, у CRM — только запись) и
+
+        хранится зашифрованным; `key_json = null` — оставить прежний. Итог проверки — `last_check`.
+
+        Ошибки: `offsite_key_invalid` (422, `key_json`; `details.problem`: `not_json`,
+
+        `not_service_account`, `missing_fields`), `offsite_folder_invalid` (422, `folder_id`),
+
+        `wrong_password` (422), `secrets_key_missing` (409), `offsite_delivery_failed` (502).'
+      operationId: put_offsite_connector
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OffsiteConnectorIn'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OffsiteStatusOut'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Put Offsite Connector
+      tags:
+      - integrations
+  /api/v1/integrations/offsite/check:
+    post:
+      description: '«Проверить»: ключ из хранилища → токен Google → папка (общий диск, право добавлять файлы).
+
+
+        Ничего не пишет на Drive. Итог — 200 с `reason`; ошибка: `offsite_not_configured` (409).'
+      operationId: check_offsite_connector
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OffsiteCheckOut'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Check Offsite Connector
       tags:
       - integrations
   /api/v1/integrations/smtp:
@@ -11102,6 +11522,17 @@ paths:
           - type: 'null'
           description: 'Просроченные: открытая передача с истёкшим SLA ответа'
           title: Overdue
+      - description: Канал лида (источник), через запятую
+        in: query
+        name: source
+        required: false
+        schema:
+          anyOf:
+          - pattern: ^[a-z][a-z_]{0,15}(,[a-z][a-z_]{0,15})*$
+            type: string
+          - type: 'null'
+          description: Канал лида (источник), через запятую
+          title: Source
       responses:
         '200':
           content:
@@ -13429,8 +13860,8 @@ paths:
       operationId: team
       parameters:
       - description: 'Раздел каталога (`erp.calc.goods`, `eds.payments`, …): сотрудники с этим разделом. Нужен `level`. Право
-          — чтение сотрудников (`users:read`, раздел `admin` не ниже чтения); без `section` — `leads:read`. Раздела нет в
-          каталоге — 422.'
+          — чтение сотрудников (`users:read`, раздел `admin` не ниже чтения); без `section` — `leads:read` или `chats:read`.
+          Раздела нет в каталоге — 422.'
         in: query
         name: section
         required: false
@@ -13440,8 +13871,8 @@ paths:
             type: string
           - type: 'null'
           description: 'Раздел каталога (`erp.calc.goods`, `eds.payments`, …): сотрудники с этим разделом. Нужен `level`.
-            Право — чтение сотрудников (`users:read`, раздел `admin` не ниже чтения); без `section` — `leads:read`. Раздела
-            нет в каталоге — 422.'
+            Право — чтение сотрудников (`users:read`, раздел `admin` не ниже чтения); без `section` — `leads:read` или `chats:read`.
+            Раздела нет в каталоге — 422.'
           title: Section
       - description: 'Уровень раздела не ниже: `full` или `read` (`full` ⊇ `read`).'
         in: query

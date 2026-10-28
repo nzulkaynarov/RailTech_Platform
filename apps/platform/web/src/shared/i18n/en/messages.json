@@ -130,7 +130,9 @@
     "delivery": {
       "sending": "Sending…",
       "unconfirmedFinal": "Delivery not confirmed — check with the client whether the reply arrived"
-    }
+    },
+    "toRequest": "To request",
+    "toRequestLabel": "To request: {{name}} as the director letter"
   },
   "composer": {
     "mode": "Who we write to",

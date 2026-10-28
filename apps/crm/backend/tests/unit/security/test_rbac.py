@@ -123,8 +123,10 @@ def test_accountant_reads_the_company_summary_spend_without_working_the_leads() 
     got = _rights([], ["ACCOUNTANT"])
 
     assert ("spend", "read") in got  # dashboard.summary read
-    assert {("leads", "reply"), ("leads", "note")} <= got  # chats.external full
-    assert ("leads", "take") not in got
+    # B-D18-1: переписка (chats.external full) и зона «Счета и оплаты» (eds.payments full) — без
+    # реестра лидов: ни чтения очереди и лидов, ни работы с ними.
+    assert {("chats", "read"), ("chats", "reply"), ("chats", "note"), ("chats", "invoiced")} <= got
+    assert not {a for r, a in got if r == "leads"}
     assert ("clients", "write") not in got
 
 

@@ -74,3 +74,11 @@ class RequestCreated(BaseModel):
     erp_request_status: Literal["pending", "done", "failed"] = "pending"
     # False — повтор с тем же `request_key`: заявка уже была создана (ответ 200, а не 201).
     created: bool = True
+
+
+class RequestRetried(BaseModel):
+    """«Повторить отправку в ERP» (B-082): заявка снова `pending`, задача поставлена."""
+
+    deal_id: int
+    client_id: int
+    erp_request_status: Literal["pending", "done", "failed"] = "pending"

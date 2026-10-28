@@ -234,6 +234,10 @@ def transition_deal_stage(
         deal_numbers.promote_to_project(deal)  # КП принято: ЗВ-ГГГГ-NNN → ПР-ГГГГ-NNN (ERP-09)
     deal.stage = target_stage
     deal.save(update_fields=["stage"])
+    if target_stage_code == DealStageCode.CLOSED_LOST:
+        from inventory.services import stock as stock_service
+
+        stock_service.release_for_lost_deal(deal)  # резервы проигранной заявки возвращаются в свободный остаток (D2-2)
     _publish_stage_events(deal, old_stage_code or None, lost_reason=lost_reason)
 
     from core.audit import log_admin_action

@@ -92,7 +92,7 @@ for img in rt-db-postgres rt-db-backup; do
   grep -q "image: $img:local" "$root/infra/compose/db.yml" || fail "db.yml: образ $img:local не найден — таблица проверки устарела"
 done
 for n in $("$qcheck" list pulled); do
-  [[ -n "$("$qcheck" ref "$n")" ]] || fail "сторонний образ $n не найден в infra/compose/base.yml"
+  [[ -n "$("$qcheck" ref "$n")" ]] || fail "сторонний образ $n не найден в infra/compose/base.yml и prod.yml"
 done
 # в матрице ci.yml нет лишних образов
 while read -r img; do

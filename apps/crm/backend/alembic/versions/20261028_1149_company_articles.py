@@ -5,7 +5,7 @@
 кто правит раздел «Настройки · Статьи компании»; опубликованные — все сотрудники.
 
 Revision ID: 5153a46e65f4
-Revises: 9362ca08ba13
+Revises: aa1221ec032b
 Create Date: 2026-10-28 11:49:57.210389+00:00
 """
 
@@ -15,7 +15,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "5153a46e65f4"
-down_revision: str | Sequence[str] | None = "9362ca08ba13"
+down_revision: str | Sequence[str] | None = "aa1221ec032b"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

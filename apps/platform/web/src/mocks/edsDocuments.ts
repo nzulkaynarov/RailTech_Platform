@@ -298,7 +298,7 @@ function backendDown(doc: MockDocument, created: boolean): Response {
  * Файл из multipart без `request.formData()`: в jsdom (vitest) разбор форм в Node не знает чужой `File`, а мок работает и там,
  * и в браузере. Размер — по числу байт содержимого части.
  */
-async function parseUploadedFile(
+export async function parseUploadedFile(
   request: Request,
 ): Promise<{ name: string; size: number; type: string } | null> {
   const boundary = /boundary=([^;]+)/.exec(request.headers.get("content-type") ?? "")?.[1];
@@ -439,7 +439,11 @@ export const edsDocumentsHandlers = [
     if (!doc || (doc.ownerId !== ownerId() && !allows(held, REGISTRY))) {
       return fail(404, "NOT_FOUND", "Документ не найден.");
     }
-    if (doc.ownerId !== ownerId()) {
+    // Чужой черновик EDS не показывает никому (#298) — «не найден»; чужой возвращённый — «только автор».
+    if (doc.ownerId !== ownerId() && doc.status === "draft") {
+      return fail(404, "NOT_FOUND", "Документ не найден.");
+    }
+    if (doc.ownerId !== ownerId() && doc.status === "returned") {
       return fail(403, "FORBIDDEN", "Править документ может только его автор.", {
         reason: "not_author",
       });

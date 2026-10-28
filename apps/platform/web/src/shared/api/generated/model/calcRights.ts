@@ -15,4 +15,6 @@ export interface CalcRights {
   build: boolean;
   /** Видеть себестоимость и наценку по строкам */
   cost: boolean;
+  /** Резерв строки и «Запросить цену у поставщика» (D2-2: `erp.stock` полный) */
+  stock?: boolean;
 }

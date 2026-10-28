@@ -259,8 +259,9 @@ services:
     environment:
       S3_ENDPOINT: http://rustfs:9000
       # CRM: kb-sources client-documents tg-attachments (app/config.py); Langfuse: langfuse; ERP: erp-private erp-public
-      # erp-temp; EDS: eds-private; VPS 2: wal (WAL-G), backups (дампы). Список доступов по сервисам — в init.sh.
-      S3_BUCKETS: langfuse kb-sources client-documents tg-attachments erp-private erp-public erp-temp eds-private backups wal
+      # erp-temp; EDS: eds-private; VPS 2: wal (WAL-G), backups (дампы); offsite — отметка внешней копии на Google Drive
+      # (offsite-backup, OPS-GDRIVE); offsite-config — ключ и папка внешней копии из интерфейса (OPS-GDRIVE-2). Доступы — в init.sh.
+      S3_BUCKETS: langfuse kb-sources client-documents tg-attachments erp-private erp-public erp-temp eds-private backups wal offsite offsite-config
       S3_ROOT_ACCESS_KEY: ${S3_ROOT_ACCESS_KEY:?set in .env}
       S3_ROOT_SECRET_KEY: ${S3_ROOT_SECRET_KEY:?set in .env}
       S3_ERP_ACCESS_KEY: ${S3_ERP_ACCESS_KEY:?set in .env}
@@ -275,6 +276,8 @@ services:
       S3_WAL_SECRET_KEY: ${S3_WAL_SECRET_KEY:?set in .env}
       S3_BACKUP_ACCESS_KEY: ${S3_BACKUP_ACCESS_KEY:?set in .env}
       S3_BACKUP_SECRET_KEY: ${S3_BACKUP_SECRET_KEY:?set in .env}
+      S3_OFFSITE_ACCESS_KEY: ${S3_OFFSITE_ACCESS_KEY:?set in .env}
+      S3_OFFSITE_SECRET_KEY: ${S3_OFFSITE_SECRET_KEY:?set in .env}
     healthcheck:
       disable: true
     depends_on:

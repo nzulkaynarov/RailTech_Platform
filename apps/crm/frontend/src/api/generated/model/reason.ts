@@ -82,6 +82,10 @@ export const Reason = {
   smtp_auth_failed: "smtp_auth_failed",
   smtp_tls_failed: "smtp_tls_failed",
   smtp_rejected: "smtp_rejected",
+  offsite_key_invalid: "offsite_key_invalid",
+  offsite_folder_invalid: "offsite_folder_invalid",
+  offsite_not_configured: "offsite_not_configured",
+  offsite_delivery_failed: "offsite_delivery_failed",
   lead_exists: "lead_exists",
   client_exists: "client_exists",
   contact_required: "contact_required",
@@ -136,4 +140,6 @@ export const Reason = {
   request_not_allowed: "request_not_allowed",
   request_key_reused: "request_key_reused",
   erp_request_conflict: "erp_request_conflict",
+  request_not_failed: "request_not_failed",
+  request_not_retryable: "request_not_retryable",
 } as const;

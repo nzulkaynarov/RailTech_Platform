@@ -1,0 +1,413 @@
+{
+  "title": "Ombor",
+  "subtitle": "Qoldiqlar va zaxiralar, yetkazib beruvchilarga buyurtmalar, qabul qilish va loyihalar bo‘yicha jo‘natmalar",
+  "common": {
+    "cancel": "Bekor qilish"
+  },
+  "tabs": {
+    "balances": "Qoldiq va zaxiralar",
+    "orders": "Yetkazib beruvchilarga buyurtmalar",
+    "receipts": "Qabul qilish",
+    "shipments": "Jo‘natmalar"
+  },
+  "load": {
+    "retry": "Qayta urinish",
+    "loadError": {
+      "title": "Yuklab bo‘lmadi",
+      "text": "Sahifani yangilang yoki keyinroq qayta urining."
+    },
+    "unavailable": {
+      "title": "ERP javob bermayapti",
+      "text": "Ombor ma’lumotlari hozir mavjud emas. Bir daqiqadan keyin qayta urining."
+    },
+    "forbidden": {
+      "title": "Ruxsat yo‘q",
+      "text": "Ombor «Ombor» bo‘limi bor rollarga ochiq. Kerak bo‘lsa, administratorga yozing."
+    }
+  },
+  "errors": {
+    "forbidden": "Bu amal rolingizga ruxsat etilmagan.",
+    "unavailable": "ERP hozir javob bermayapti. Keyinroq qayta urining.",
+    "other": "Bajarilmadi: {{message}}",
+    "not_enough_stock": "Omborda bunchalik bo‘sh tovar yo‘q (bo‘sh: {{free}}).",
+    "below_reserved": "Qoldiq loyihalar zaxirasidan kam bo‘lishi mumkin emas.",
+    "below_shipped": "Zaxira allaqachon jo‘natilganidan kam bo‘lishi mumkin emas.",
+    "transition_not_allowed": "Buyurtma allaqachon boshqa holatda: ekranni yangilang.",
+    "order_not_draft": "Tarkib va yetkazib beruvchini faqat qoralamada o‘zgartirish mumkin.",
+    "order_closed": "Buyurtma yopilgan: uni o‘zgartirib bo‘lmaydi.",
+    "order_not_confirmed": "Tovarni tasdiqlangan buyurtma bo‘yicha qabul qilish mumkin.",
+    "order_has_receipts": "Buyurtma bo‘yicha qabul bor: uni bekor qilib bo‘lmaydi.",
+    "expected_date_required": "Kutilayotgan yetkazib berish sanasini kiriting.",
+    "supplier_email_required": "Yetkazib beruvchida pochta yo‘q: xat uchun manzil kiriting.",
+    "email_failed": "Yetkazib beruvchiga xat ketmadi, buyurtma holati o‘zgarmadi. Keyinroq qayta urining.",
+    "fulfillment_not_ready": "Loyiha hali imzolanmagan: jo‘natish shartnoma imzolanganidan keyin mumkin.",
+    "product_required": "Avval qatorni katalog kartochkasiga moslang.",
+    "no_shortage": "Taqchillik yo‘q: hammasi zaxirada yoki allaqachon buyurtma qilingan.",
+    "deal_closed": "Ariza yopilgan: zaxira olinmaydi.",
+    "line_not_actual": "Qator KPning avvalgi versiyasiga tegishli.",
+    "line_not_goods": "Xizmat tovar yetkazib beruvchisidan so‘ralmaydi.",
+    "reservation_not_active": "Zaxira allaqachon olib tashlangan yoki jo‘natilgan.",
+    "reservation_not_found": "Zaxira yo‘q.",
+    "already_answered": "Yetkazib beruvchining javobi allaqachon belgilangan.",
+    "request_not_sent": "Xat ketmagan: belgilash uchun javob yo‘q.",
+    "service_not_stocked": "Xizmatlar omborga qabul qilinmaydi.",
+    "calc_not_started": "Hisob-kitob hali boshlanmagan.",
+    "quantity_out_of_range": "Miqdor ruxsat etilganidan tashqarida: {{max}} dan oshmasin.",
+    "prices_forbidden": "Yetkazib beruvchi narxlarini ularga kirish huquqi bor xodim kiritadi.",
+    "calc_task_not_found": "Hisob-kitob topshirig‘i bor arizalar orasida bunday raqamli ariza yo‘q.",
+    "order_not_found": "Bunday raqamli buyurtma yo‘q.",
+    "line_not_found": "Bunday qator yo‘q.",
+    "request_and_line_together": "Ariza va hisob-kitob qatori birga ko‘rsatiladi.",
+    "nothing_to_change": "O‘zgartirish uchun hech narsa yo‘q.",
+    "role_not_permitted": "Bu amal rolingizga ruxsat etilmagan.",
+    "supplier_not_found": "Bunday yetkazib beruvchi yo‘q.",
+    "product_not_found": "Bunday tovar yo‘q."
+  },
+  "balances": {
+    "search": "Tovarni nomi yoki artikuli bo‘yicha toping",
+    "only": "Faqat zaxirasi borlar",
+    "caption": "Nomenklatura bo‘yicha qoldiq va zaxiralar",
+    "scroll": "Qoldiq va zaxiralar jadvali",
+    "columns": {
+      "product": "Tovar",
+      "onHand": "Omborda",
+      "reserved": "Zaxira",
+      "free": "Bo‘sh",
+      "incoming": "Kutilmoqda",
+      "cells": "Katakchalar"
+    },
+    "open": "«{{name}}» tovarini ochish",
+    "free": "Bo‘sh · {{count}}",
+    "noFree": "Bo‘sh yo‘q",
+    "until": "{{date}} gacha",
+    "cellLine": "{{cell}}: {{count}}",
+    "card": "Omborda {{onHand}} · zaxirada {{reserved}}",
+    "empty": {
+      "title": "Ombor hozircha bo‘sh",
+      "text": "Qoldiq yetkazib beruvchidan qabul qilingandan yoki qo‘lda kiritilgandan keyin paydo bo‘ladi: tovarni qidiruv bilan toping va kirim qilish uchun oching."
+    },
+    "emptySearch": {
+      "title": "Hech narsa topilmadi",
+      "text": "Nom yoki artikuldan boshqa so‘zni sinab ko‘ring."
+    }
+  },
+  "product": {
+    "adjust": "Kirim yoki chiqim qilish",
+    "cells": "Katakchalar",
+    "noCells": "Tovar omborda yo‘q.",
+    "noCell": "Katakchasiz",
+    "reservations": "Loyihalar zaxirasi",
+    "noReservations": "Zaxira yo‘q.",
+    "release": "Olib tashlash",
+    "releaseLabel": "{{number}} zaxirasini olib tashlash",
+    "releaseConfirm": "{{number}} zaxirasi olib tashlansinmi? Tovar bo‘sh qoldiqqa qaytadi.",
+    "released": "Zaxira olib tashlandi",
+    "incoming": "Yetkazib beruvchilardan kutilmoqda",
+    "noIncoming": "Yo‘ldagi buyurtmalar yo‘q.",
+    "movements": "So‘nggi harakatlar",
+    "noMovements": "Harakatlar hali yo‘q.",
+    "kind": {
+      "receipt": "Qabul",
+      "shipment": "Jo‘natma",
+      "adjustment": "Tuzatish"
+    }
+  },
+  "adjust": {
+    "title": "Kirim yoki chiqim · {{name}}",
+    "quantity": "Miqdor",
+    "quantityHint": "Plyus — kirim, minus — chiqim. Qoldiq noldan va zaxiralardan pastga tushmaydi.",
+    "quantityRequired": "Nolga teng bo‘lmagan miqdorni kiriting",
+    "cell": "Katakcha",
+    "note": "Asos",
+    "submit": "Yozish",
+    "done": "Qoldiq o‘zgardi",
+    "consequence": [
+      "Katakchadagi qoldiq darhol o‘zgaradi.",
+      "Tovar harakatlari jurnaliga muallif va vaqt bilan yozuv qo‘shiladi.",
+      "Loyiha zaxiralariga tegilmaydi: qoldiq ularning yig‘indisidan pastga tushmaydi."
+    ]
+  },
+  "orders": {
+    "search": "Buyurtmani toping: raqam, yetkazib beruvchi, pozitsiya",
+    "statusFilter": "Holat",
+    "overdueOnly": "Faqat muddati o‘tganlar",
+    "create": "Buyurtma yaratish",
+    "caption": "Yetkazib beruvchilarga buyurtmalar",
+    "scroll": "Buyurtmalar jadvali",
+    "columns": {
+      "number": "YB raqami",
+      "supplier": "Yetkazib beruvchi",
+      "requests": "Arizalar va loyihalar",
+      "expected": "Kutilayotgan sana",
+      "status": "Holat",
+      "receipt": "Qabul",
+      "total": "Summa",
+      "action": "Amal"
+    },
+    "status": {
+      "draft": "Qoralama",
+      "sent": "Yuborilgan",
+      "confirmed": "Tasdiqlangan",
+      "received": "Olingan",
+      "cancelled": "Bekor qilingan"
+    },
+    "receipt": {
+      "none": "Qabul qilinmagan",
+      "partial": "qisman",
+      "full": "To‘liq qabul qilingan"
+    },
+    "receivedOf": "{{total}} dan {{received}}",
+    "overdueDays": "Muddati o‘tgan · {{count}} kun",
+    "open": "Ochish",
+    "openLabel": "{{number}} buyurtmasini ochish",
+    "empty": {
+      "title": "Yetkazib beruvchilarga buyurtmalar yo‘q",
+      "text": "Buyurtma arizadagi taqchillik uchun yoki qo‘lda yaratiladi: qoralama, so‘ng yetkazib beruvchiga xat bilan yuboriladi."
+    }
+  },
+  "create": {
+    "title": "Yetkazib beruvchiga yangi buyurtma",
+    "supplier": "Yetkazib beruvchi",
+    "supplierRequired": "Yetkazib beruvchini tanlang",
+    "noEmail": "pochta yo‘q",
+    "mode": "Tarkib",
+    "modeManual": "Qo‘lda",
+    "modeShortage": "Ariza taqchilligi uchun",
+    "request": "Ariza yoki loyiha raqami",
+    "requestHint": "Buyurtmaga KP tovar qatorlaridagi yetishmayotgani kiradi: miqdor minus zaxira minus allaqachon buyurtma qilingan.",
+    "requestRequired": "Ariza raqamini kiriting",
+    "expected": "Kutilayotgan sana",
+    "note": "Izoh",
+    "product": "Tovar",
+    "productLabel": "Tovar, {{n}}-qator",
+    "productRequired": "Tovarni tanlang",
+    "quantity": "Miqdor",
+    "quantityLabel": "Miqdor, {{n}}-qator",
+    "quantityRequired": "Miqdorni kiriting",
+    "price": "Narx",
+    "priceLabel": "Yetkazib beruvchining birlik narxi, {{n}}-qator",
+    "addLine": "Qator qo‘shish",
+    "removeLine": "{{n}}-qatorni olib tashlash",
+    "submit": "Qoralama yaratish",
+    "done": "{{number}} qoralamasi yaratildi",
+    "consequence": [
+      "YB-YYYY-NNN raqamli buyurtma qoralamasi yaratiladi.",
+      "«Yetkazib beruvchiga yuborish» tugmasini bosmaguningizcha yetkazib beruvchiga hech narsa ketmaydi.",
+      "Buyurtma qoralama ekan, tarkib va narxlarni tahrirlash mumkin."
+    ],
+    "productHint": "Nom yoki artikuldan kamida ikkita harf kiriting",
+    "productSearching": "Qidirilmoqda…",
+    "productNone": "Hech narsa topilmadi"
+  },
+  "order": {
+    "title": "Yetkazib beruvchiga buyurtma {{number}}",
+    "back": "Buyurtmalarga",
+    "action": {
+      "send": "Yetkazib beruvchiga yuborish",
+      "confirm": "Yetkazib beruvchi tasdiqladi",
+      "receive": "Tovarni qabul qilish",
+      "edit": "O‘zgartirish",
+      "cancel": "Buyurtmani bekor qilish"
+    },
+    "overdueBanner": "{{date}} gacha kutilgan, tovar olinmagan — {{count}} kun kechikish. Yetkazib beruvchi bilan bog‘laning va kutilayotgan sanani yangilang.",
+    "cancelledBanner": "Buyurtma bekor qilingan. Sabab: {{reason}}",
+    "details": "Buyurtma rekvizitlari",
+    "supplier": "Yetkazib beruvchi",
+    "email": "Yetkazib beruvchi pochtasi",
+    "expected": "Kutilayotgan sana",
+    "sent": "Yuborilgan",
+    "confirmed": "Tasdiqlangan",
+    "receivedAt": "Olingan",
+    "createdBy": "Yaratgan",
+    "note": "Izoh",
+    "linesTitle": "Buyurtma tarkibi",
+    "receiptsTitle": "Qabul qilishlar",
+    "logTitle": "Buyurtma jurnali",
+    "notFound": {
+      "title": "Buyurtma yo‘q",
+      "text": "Bunday raqamli buyurtma yo‘q yoki rolingizga ochiq emas.",
+      "action": "Buyurtmalarga"
+    },
+    "lines": {
+      "scroll": "Buyurtma tarkibi jadvali",
+      "caption": "{{number}} buyurtmasi tarkibi",
+      "position": "Pozitsiya",
+      "request": "Ariza uchun",
+      "quantity": "Buyurtma qilingan",
+      "received": "Qabul qilingan",
+      "price": "Narx",
+      "total": "Summa",
+      "totals": "Jami"
+    },
+    "receipts": {
+      "empty": "Qabul hali bo‘lmagan.",
+      "label": "Buyurtma bo‘yicha qabullar",
+      "doc": "yuk xati {{doc}}"
+    },
+    "log": {
+      "label": "Buyurtma jurnali",
+      "created": "Buyurtma yaratildi",
+      "edited": "Buyurtma o‘zgartirildi",
+      "sent": "Yetkazib beruvchiga yuborildi",
+      "confirmed": "Yetkazib beruvchi tasdiqladi",
+      "receipt": "Tovar qabul qilindi",
+      "received": "Buyurtma to‘liq qabul qilindi",
+      "cancelled": "Buyurtma bekor qilindi",
+      "overdue": "Buyurtma muddati o‘tdi"
+    },
+    "send": {
+      "title": "{{number}} buyurtmasini yetkazib beruvchiga yuborish",
+      "email": "Xat manzili",
+      "emailKnown": "Manzil yetkazib beruvchi kartochkasidan; boshqasini kiritish mumkin.",
+      "emailMissing": "Yetkazib beruvchida pochta yo‘q: xat uchun manzil kiriting.",
+      "submit": "Xatni yuborish",
+      "consequence": [
+        "Yetkazib beruvchiga buyurtma tarkibi bilan xat boradi; u sizning pochtangizga javob yoza oladi.",
+        "Holat «Yuborilgan» bo‘ladi, buyurtma jurnaliga yozuv qo‘shiladi.",
+        "Xat ketmasa, holat o‘zgarmaydi."
+      ]
+    },
+    "confirm": {
+      "title": "Yetkazib beruvchi {{number}} buyurtmasini tasdiqladi",
+      "date": "Tasdiqlangan yetkazib berish sanasi",
+      "dateHint": "Kechikishni kuzatish uchun kutilayotgan sana kerak.",
+      "submit": "Tasdiqlash",
+      "consequence": [
+        "Holat «Tasdiqlangan» bo‘ladi, yetkazib berish sanasi eslab qolinadi.",
+        "Tovar bu sanagacha kelmasa, buyurtma «Mening vazifalarim»da muddati o‘tgan sifatida chiqadi.",
+        "Keyin tovarni qatorlar bo‘yicha qabul qilish mumkin."
+      ]
+    },
+    "cancel": {
+      "title": "{{number}} buyurtmasini bekor qilish",
+      "reason": "Sabab",
+      "submit": "Buyurtmani bekor qilish",
+      "consequence": [
+        "Buyurtma yopiladi, yetkazib beruvchiga xat ketmaydi.",
+        "Buyurtma bo‘yicha hech narsa qabul qilinmagan bo‘lsa, bekor qilish mumkin.",
+        "Sabab buyurtma jurnalida saqlanadi."
+      ]
+    },
+    "receive": {
+      "title": "{{number}} buyurtmasi bo‘yicha tovarni qabul qilish",
+      "hint": "Har bir qator bo‘yicha qancha kelganini kiriting: bir qismini qabul qilib, qolganini keyinroq qabul qilish mumkin.",
+      "left": "{{total}} dan {{left}} qoldi",
+      "quantityLabel": "Qabul qilish, «{{name}}»",
+      "cell": "Katakcha",
+      "cellLabel": "«{{name}}» uchun katakcha",
+      "doc": "Yetkazib beruvchining yuk xati",
+      "submit": "Qabul qilish",
+      "consequence": [
+        "Ombor qoldig‘i qabul qilingan miqdorga oshadi.",
+        "Loyiha uchun buyurtma qilingan qator zaxira bilan unga biriktiriladi.",
+        "Hammasi qabul qilinganda buyurtma «Olingan» bo‘ladi."
+      ]
+    },
+    "edit": {
+      "title": "{{number}} buyurtmasini o‘zgartirish",
+      "date": "Kutilayotgan sana",
+      "note": "Izoh",
+      "quantityLabel": "Miqdor, «{{name}}»",
+      "remove": "Olib tashlash",
+      "removeLabel": "«{{name}}» qatorini olib tashlash",
+      "submit": "Saqlash"
+    },
+    "notice": {
+      "sent": "Buyurtma yetkazib beruvchiga yuborildi",
+      "confirmed": "Buyurtma tasdiqlandi",
+      "received": "Tovar qabul qilindi",
+      "cancelled": "Buyurtma bekor qilindi",
+      "edited": "Buyurtma saqlandi"
+    }
+  },
+  "receipts": {
+    "pendingTitle": "Tovar kutilmoqda",
+    "pendingCaption": "Tovar kutayotgan tasdiqlangan buyurtma qatorlari",
+    "pendingScroll": "Qabul kutayotgan qatorlar jadvali",
+    "doneTitle": "So‘nggi qabullar",
+    "doneEmpty": "Qabul hali bo‘lmagan.",
+    "doc": "yuk xati {{doc}}",
+    "columns": {
+      "order": "Buyurtma",
+      "supplier": "Yetkazib beruvchi",
+      "position": "Pozitsiya",
+      "left": "Qabul qilish qoldi",
+      "expected": "Kutilmoqda",
+      "action": "Amal"
+    },
+    "left": "{{total}} dan {{left}}",
+    "overdue": "Muddati o‘tgan",
+    "receive": "Qabul qilish",
+    "receiveLabel": "{{number}} buyurtmasi bo‘yicha «{{name}}» ni qabul qilish",
+    "empty": {
+      "title": "Hech narsa kutilmayapti",
+      "text": "Bu yerda tovari to‘liq qabul qilinmagan tasdiqlangan buyurtmalar qatorlari ko‘rinadi."
+    }
+  },
+  "shipments": {
+    "newTitle": "Loyiha bo‘yicha yangi jo‘natma",
+    "request": "Loyiha raqami",
+    "requestPlaceholder": "LH-2026-099",
+    "find": "Zaxiralarni topish",
+    "hint": "Loyiha raqamini kiriting: jo‘natish mumkin bo‘lgan zaxiralarni ko‘rsatamiz.",
+    "noReservations": {
+      "title": "Zaxira yo‘q",
+      "text": "{{request}} bo‘yicha ombordan jo‘natadigan narsa yo‘q: zaxira yo‘q yoki hammasi jo‘natilgan."
+    },
+    "reserved": "zaxirada {{total}} dan {{remaining}}",
+    "quantityLabel": "Jo‘natish, «{{name}}»",
+    "tracking": "Trek raqami",
+    "carrier": "Tashuvchi",
+    "submit": "Jo‘natish",
+    "done": "Jo‘natildi, yuk xati {{number}}",
+    "readOnly": "Jo‘natmani ombor huquqi bor xodim rasmiylashtiradi.",
+    "consequence": [
+      "Qoldiq va loyiha zaxirasi jo‘natilgan miqdorga kamayadi.",
+      "Trek bilan ichki yuk xati JN-YYYY-NNN beriladi.",
+      "KPning barcha tovari jo‘natilganda loyiha ijrosi «Jo‘natilgan» bo‘ladi."
+    ],
+    "listTitle": "Jo‘natmalar",
+    "caption": "Loyihalar bo‘yicha jo‘natmalar",
+    "scroll": "Jo‘natmalar jadvali",
+    "columns": {
+      "number": "Yuk xati",
+      "request": "Loyiha",
+      "lines": "Qatorlar",
+      "tracking": "Trek",
+      "when": "Qachon"
+    },
+    "empty": {
+      "title": "Jo‘natmalar hali bo‘lmagan",
+      "text": "Jo‘natma shartnoma imzolangandan keyin loyiha zaxiralari bo‘yicha rasmiylashtiriladi."
+    }
+  },
+  "priceRequest": {
+    "title": "Yetkazib beruvchidan narx so‘rash · {{number}}",
+    "supplier": "Yetkazib beruvchi",
+    "supplierPlaceholder": "Yetkazib beruvchini tanlang",
+    "email": "Xat manzili",
+    "emailHint": "Yetkazib beruvchida pochta yo‘q: xat yuboriladigan manzilni kiriting.",
+    "lines": "So‘rov qatorlari",
+    "noGoods": "Hisob-kitobda narx so‘rash mumkin bo‘lgan tovar yo‘q.",
+    "note": "Yetkazib beruvchiga izoh",
+    "submit": "So‘rovni yuborish",
+    "sent": "So‘rov {{email}} manziliga yuborildi",
+    "failed": "«{{name}}» ga xat ketmadi: so‘rov jurnalda «yuborilmagan» holatida qoldi.",
+    "consequence": [
+      "Yetkazib beruvchiga so‘rov qatorlari bilan xat boradi; u sizning pochtangizga javob yoza oladi.",
+      "Hisob-kitob jurnaliga yozuv qo‘shiladi: kim, qachon, kimga va qaysi qatorlar bo‘yicha.",
+      "Javobdagi narxni hisob-kitob qatoriga kiriting, so‘ng «Javob olindi» tugmasini bosing."
+    ],
+    "logTitle": "Yetkazib beruvchilardan narx so‘rovlari",
+    "logEmpty": "So‘rovlar hali bo‘lmagan.",
+    "status": {
+      "sent": "Javob kutilmoqda",
+      "answered": "Javob olindi",
+      "failed": "Yuborilmagan"
+    },
+    "entryMeta": "{{when}} · {{who}} → {{email}}",
+    "answerNote": "Javob: {{note}}",
+    "answer": "Javob olindi",
+    "answerLabel": "Javob olindi: yetkazib beruvchi «{{name}}»"
+  }
+}

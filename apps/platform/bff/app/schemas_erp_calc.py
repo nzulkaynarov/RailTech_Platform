@@ -88,6 +88,7 @@ class CalcQuote(BaseModel):
 
 class CalcStock(BaseModel):
     on_hand: int | None
+    free: int | None = None
     cell: str | None
     reserved: int | None
 
@@ -162,6 +163,7 @@ class CalcRights(BaseModel):
     services: bool
     build: bool
     cost: bool
+    stock: bool = False
 
 
 class CalcSheet(BaseModel):

@@ -161,7 +161,9 @@ CRM_BACKEND: Final[dict[str, dict[str, tuple[str, ...]]]] = {
     "eds.inbox": {},
     "eds.drafts": {},
     "eds.projects": {},
-    "eds.payments": {},
+    "eds.payments": {
+        "full": ("chats:invoiced",),
+    },
     "eds.memo.create": {},
     "eds.memo.approve": {},
     "erp.calc": {},
@@ -170,12 +172,12 @@ CRM_BACKEND: Final[dict[str, dict[str, tuple[str, ...]]]] = {
     "erp.stock": {},
     "chats.internal": {},
     "chats.external": {
-        "read": ("leads:read",),
+        "read": ("chats:read",),
         "full": (
-            "leads:read",
-            "leads:reply",
-            "leads:note",
-            "leads:assist",
+            "chats:read",
+            "chats:reply",
+            "chats:note",
+            "chats:assist",
         ),
     },
     "admin": {
@@ -307,7 +309,9 @@ EDS_BACKEND: Final[dict[str, dict[str, tuple[str, ...]]]] = {
     "dashboard.queue": {},
     "dashboard.summary": {},
     "crm.leads": {},
-    "crm.clients": {},
+    "crm.clients": {
+        "full": ("files.upload",),
+    },
     "eds.inbox": {
         "read": (
             "letters.read",

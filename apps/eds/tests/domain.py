@@ -30,6 +30,7 @@ ALL = [
     "registry.read",
     "registry.export",
     "payments.confirm",
+    "files.upload",
 ]
 
 
@@ -55,7 +56,7 @@ ROSTER: dict[str, Person] = {
         {"erp.calc.goods": "full", "erp.calc.services": "full", "eds.payments": "full", "admin": "read"},
     ),
     "registrar": Person(4, "Регина Регистраторова", ["letters.read", "letters.register", "memos.create"]),
-    "manager": Person(5, "Алия Каримова", ["letters.read", "registry.read", "memos.create"]),
+    "manager": Person(5, "Алия Каримова", ["letters.read", "registry.read", "memos.create", "files.upload"]),
     "accountant": Person(
         6,
         "Бахтиёр Бухгалтеров",

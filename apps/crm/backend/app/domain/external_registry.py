@@ -197,6 +197,22 @@ _AFTER_VENDORS: Final = (
         fix_path=None,
     ),
     ServiceSpec(
+        key="offsite_backup",
+        title="Внешняя копия бэкапов",
+        purpose=(
+            "Копия архива базы на корпоративном Google Drive вне наших серверов: восстановление, "
+            "если потеряны оба сервера"
+        ),
+        system="ensemble",
+        source="crm",
+        check=(
+            "отметка сервиса копирования offsite-backup: время, объём и итог последней попытки "
+            "(без доступа к архиву и к Drive)"
+        ),
+        tiers=("cheap",),
+        fix_path=None,
+    ),
+    ServiceSpec(
         key="redis_broker",
         title="Redis: брокер",
         purpose="Очереди и каналы ERP (Celery, Channels) и очереди Langfuse",

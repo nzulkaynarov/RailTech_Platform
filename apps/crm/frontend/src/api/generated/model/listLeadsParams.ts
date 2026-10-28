@@ -32,4 +32,8 @@ export type ListLeadsParams = {
    * Просроченные: открытая передача с истёкшим SLA ответа
    */
   overdue?: boolean | null;
+  /**
+   * Канал лида (источник), через запятую
+   */
+  source?: string | null;
 };

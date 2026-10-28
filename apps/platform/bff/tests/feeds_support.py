@@ -61,6 +61,8 @@ class FeedBackends:
                 "counts": {"new": 0, "in_progress": 0, "resolved": 0},
             },
             "documents": {"results": []},
+            # Просроченные заказы поставщикам (ERP `stock/overdue`, D2-2): пусто, пока нет строк
+            "overdue": {"results": []},
             "activity_logs": (403, {"detail": "PLATFORM_ADMIN_REQUIRED"}),
             "timeline": [],
             # EDS (D1-6): письма «Ждут резолюции», маршруты на моём шаге, реестр для поиска
@@ -104,6 +106,7 @@ class FeedBackends:
             ),
             "activity_logs": self._erp("activity_logs", router.get(f"{base}/crm/activity-logs/")),
             "timeline": self._erp("timeline", router.get(f"{base}/crm/timeline/")),
+            "overdue": self._erp("overdue", router.get(f"{base}/stock/overdue/")),
         }
         self.eds = {
             "letters": self._eds("letters", router.get(f"{EDS_URL}/api/v1/letters")),
