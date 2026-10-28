@@ -154,7 +154,8 @@
     "download": "{{name}} to‘lov topshiriqnomasini yuklab olish",
     "state": {
       "PENDING": "Tasdiqlashni kutmoqda",
-      "CONFIRMED": "To‘lov tasdiqlangan"
+      "CONFIRMED": "To‘lov tasdiqlangan",
+      "EXTRA": "Ortiqcha: hisob allaqachon to‘langan"
     },
     "source": {
       "CABINET": "Mijoz kabineti",

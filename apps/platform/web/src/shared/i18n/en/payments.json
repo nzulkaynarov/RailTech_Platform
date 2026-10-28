@@ -154,7 +154,8 @@
     "download": "Download payment order {{name}}",
     "state": {
       "PENDING": "Awaiting confirmation",
-      "CONFIRMED": "Payment confirmed"
+      "CONFIRMED": "Payment confirmed",
+      "EXTRA": "Extra: the invoice is already paid"
     },
     "source": {
       "CABINET": "Customer cabinet",

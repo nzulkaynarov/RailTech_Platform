@@ -213,5 +213,6 @@ def test_a_migrated_manager_and_accountant_keeps_the_same_rights(
     assert extra == {"spend:read"}  # бухгалтер видит «Сводку по компании» (dashboard.summary)
     erp_after = set(derived.erp_permissions)
     # quote.send — менеджер отправляет одобренное КП клиенту (C1-G-4, архитектор 2026-10-26)
-    assert erp_after - erp_before == {"contract.sign", "quote.send"}
+    # finance.view — чтение счетов и оплат без права действовать (Q-D2-4-1 п. 2, D2-4)
+    assert erp_after - erp_before == {"contract.sign", "quote.send", "finance.view"}
     assert erp_before - erp_after == {"quote.view_cost_margin"}

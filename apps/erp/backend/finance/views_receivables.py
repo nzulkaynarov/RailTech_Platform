@@ -1,7 +1,7 @@
 """Счета и оплаты бухгалтера (D2-4): доска по вкладкам, карточка, подтверждение оплаты, платёжка клиента, запрос платёжки.
 
-Чтение — сотрудник с `finance.invoice` или `finance.payment` (бухгалтер, руководитель); остальные роли бэк-офиса (снабжение,
-менеджер, инженер) не видят счетов клиентов — 403 `ROLE_NOT_PERMITTED`, даже если зайти в ERP напрямую, мимо Платформы.
+Чтение — сотрудник с `finance.view`, `finance.invoice` или `finance.payment` (бухгалтер, директор, менеджер); остальные роли
+бэк-офиса (снабжение, инженер) не видят счетов клиентов — 403 `ROLE_NOT_PERMITTED`, даже если зайти в ERP напрямую, мимо Платформы.
 Действия — `finance.payment`. Объектная проверка — в сервисе: счёт обязан существовать, быть открытым (`ISSUED`,
 `PARTIAL`, `OVERDUE`), платёжка — относиться к этому счёту. Тела отказов — `{"detail": "КОД"}` (CONVENTIONS ERP §5).
 """
@@ -30,7 +30,7 @@ from rest_framework.views import APIView
 from core.file_streaming import stream_file_field
 from core.permissions import RoleGatedViewMixin
 
-READ_PERMISSIONS = ("finance.invoice", "finance.payment")
+READ_PERMISSIONS = ("finance.view", "finance.invoice", "finance.payment")
 _NOT_FOUND = {"NOT_FOUND", "CONFIRMATION_NOT_FOUND"}
 _FORBIDDEN = {"ROLE_NOT_PERMITTED", "MEMBER_REQUIRED_FOR_ACTION"}
 _CONFLICT = {

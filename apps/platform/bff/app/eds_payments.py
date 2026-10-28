@@ -44,7 +44,7 @@ from app.schemas_eds_payments import (
 
 ERP_API = "/api/v1/finance/receivables/"
 MEMOS_COUNT_LIMIT = 100
-_DEFAULT_CURRENCY = "UZS"
+MEMOS_COUNT_PAGES = 50  # предохранитель: до 5000 служебок на счётчик
 
 # Отказы ERP, которые для бухгалтера — конфликт с состоянием счёта: код ERP -> (причина, текст).
 _CONFLICTS: dict[str, tuple[str, str]] = {
@@ -126,10 +126,11 @@ def payments_error(response: httpx.Response) -> PlatformError:
 
 
 def _dec(value: Any) -> Decimal:
+    """Сумма домена; нечисловое — `ValueError` (вызывающий отвечает `bad_response`, не «0.00»)."""
     try:
         return Decimal(str(value)).quantize(Decimal("0.01"), ROUND_HALF_UP)
-    except (InvalidOperation, ValueError):
-        return Decimal("0.00")
+    except (InvalidOperation, ValueError) as exc:
+        raise ValueError("amount is not a number") from exc
 
 
 def _s(value: Any) -> str:
@@ -180,7 +181,9 @@ class Receivable(BaseModel):
 
 
 def _money(amount: Any, currency: str | None) -> PaymentMoney:
-    return PaymentMoney(amount=_s(amount), currency=currency or _DEFAULT_CURRENCY)
+    if not currency:
+        raise ValueError("currency is missing")
+    return PaymentMoney(amount=_s(amount), currency=currency)
 
 
 def row_of(raw: dict[str, Any]) -> PaymentRow:
@@ -365,6 +368,12 @@ def parse_board(
 # ---------------------------------------------------------------------------
 
 
+def _required(money: PaymentMoney | None) -> PaymentMoney:
+    if money is None:
+        raise ValueError("payment amount is missing")
+    return money
+
+
 def _memo_money(value: Any) -> PaymentMoney | None:
     if not isinstance(value, dict) or not value.get("amount") or not value.get("currency"):
         return None
@@ -412,7 +421,7 @@ def memo_page(raw: Any) -> PaymentMemoPage:
             items=[memo_row(i) for i in raw["items"] if isinstance(i, dict)],
             next_cursor=raw.get("next_cursor"),
         )
-    except (ValidationError, KeyError, TypeError) as exc:
+    except (ValidationError, KeyError, TypeError, ValueError) as exc:
         raise backend_unavailable("eds", "bad_response") from exc
 
 
@@ -461,7 +470,7 @@ def memo_card(raw: Any, approval: Any | None) -> PaymentMemoCard:
             and "return" in decisions,
             payment=PaymentMemoPayment(
                 paid_on=_date(payment.get("paid_on")) or date.min,
-                amount=money or PaymentMoney(amount="0.00", currency=_DEFAULT_CURRENCY),
+                amount=_required(money),
                 receipt_file_id=payment.get("receipt_file_id"),
                 note=payment.get("note"),
                 paid_by=paid_by or EdsPerson(crm_user_id=0, full_name=""),
@@ -508,19 +517,32 @@ async def load_memo(proxy: EdsProxy, document_id: str) -> PaymentMemoCard:
 
 
 async def memos_to_pay_count(proxy: EdsProxy) -> int | None:
-    """Сколько служебок ждут оплаты (до 100); EDS не ответил — `None`, вкладка «Служебки к оплате»
-    без числа.
+    """Сколько служебок ждут оплаты: страницы EDS по курсору до конца (честное число).
+
+    EDS не ответил — `None`, вкладка «Служебки к оплате» без числа.
     """
-    try:
-        page = await proxy.request(
-            "GET",
-            f"{EDS_API}/documents",
-            params={"kind": "memo", "status": "to_accountant", "limit": MEMOS_COUNT_LIMIT},
-        )
-    except PlatformError:
-        return None
-    items = page.get("items") if isinstance(page, dict) else None
-    return len(items) if isinstance(items, list) else None
+    total = 0
+    cursor: str | None = None
+    for _ in range(MEMOS_COUNT_PAGES):
+        params: dict[str, Any] = {
+            "kind": "memo",
+            "status": "to_accountant",
+            "limit": MEMOS_COUNT_LIMIT,
+        }
+        if cursor:
+            params["cursor"] = cursor
+        try:
+            page = await proxy.request("GET", f"{EDS_API}/documents", params=params)
+        except PlatformError:
+            return None
+        items = page.get("items") if isinstance(page, dict) else None
+        if not isinstance(items, list):
+            return None
+        total += len(items)
+        cursor = page.get("next_cursor")
+        if not isinstance(cursor, str):
+            return total
+    return total
 
 
 async def build_board(

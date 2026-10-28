@@ -59,6 +59,7 @@ export const ErpPermission = {
   supplymanage: "supply.manage",
   fulfillmentmanage: "fulfillment.manage",
   fulfillmentact: "fulfillment.act",
+  financeview: "finance.view",
   financeinvoice: "finance.invoice",
   financepayment: "finance.payment",
   financerates: "finance.rates",

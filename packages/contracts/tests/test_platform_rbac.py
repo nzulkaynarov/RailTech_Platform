@@ -63,7 +63,7 @@ def test_catalog_codes_are_exactly_the_eds_v1_codes() -> None:
 @pytest.mark.parametrize(
     ("code", "expected"),
     [
-        ("DIRECTOR", EDS_CODES - {BUS}),
+        ("DIRECTOR", EDS_CODES - {BUS, "payments.confirm", "registry.export"}),
         ("MANAGER", {"letters.read", "registry.read", "memos.create"}),
         ("SUPPLY", {"registry.read", "memos.create"}),
         ("ENGINEER", {"registry.read", "memos.create"}),
@@ -74,9 +74,10 @@ def test_system_roles_and_templates_map_to_their_eds_codes(code: str, expected: 
     assert eds_permissions(role(code)) == expected
 
 
-def test_director_gets_every_eds_code_except_the_bus_journal() -> None:
+def test_director_gets_every_eds_code_except_the_bus_journal_the_payment_confirmation_and_the_export() -> None:
+    """D2-4 (Q-D2-4-1 п. 1): «Счета и оплаты» у директора — `read`; оплату и выгрузку реестра ведёт бухгалтер."""
     assert len(EDS_CODES) == 10
-    assert eds_permissions(role("DIRECTOR")) == EDS_CODES - {BUS}
+    assert eds_permissions(role("DIRECTOR")) == EDS_CODES - {BUS, "payments.confirm", "registry.export"}
 
 
 def test_bus_journal_is_admin_full_only() -> None:

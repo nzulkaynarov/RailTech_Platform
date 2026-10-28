@@ -1,6 +1,7 @@
 """D2-4: «Счета и оплаты» бухгалтера — доска вкладок, карточка, подтверждение оплаты, платёжка клиента, запрос платёжки.
 
-Матрица: бухгалтер (`finance.payment`) — действует; руководитель (`finance.invoice`) — читает и открывает карточку; сотрудник без
+Матрица: бухгалтер (`finance.payment`) — действует; роль только с `finance.view` (директор, менеджер) или `finance.invoice` —
+читает и открывает карточку, но не подтверждает оплату, не прикладывает и не запрашивает платёжку (403); сотрудник без
 прав на финансы (менеджер/снабжение) и участник чужой компании — 403 `ROLE_NOT_PERMITTED` на каждой операции, в том числе
 на чтении (прямой вызов ERP, мимо Платформы). Ответы сверяются со схемой `erp-internal.yaml`.
 """
@@ -63,7 +64,8 @@ def _invoice(base, number, code, *, total="112.00", paid="0", due=None, days_ago
 @pytest.fixture
 def world(base_world):  # noqa: F811
     own = Company.objects.get(name="Own Co")
-    base_world["head"] = _member(own, "head@own.test", ["finance.invoice", "quote.view_cost_margin"])
+    base_world["invoicer"] = _member(own, "invoicer@own.test", ["finance.invoice", "quote.view_cost_margin"])
+    base_world["viewer"] = _member(own, "viewer@own.test", ["finance.view"])  # директор, менеджер: читают счета
     base_world["supply"] = _member(own, "supply@own.test", ["catalog.manage", "supply.manage", "quote.build"])
     base_world["day"] = timezone.localdate()
     invoice = base_world["invoice"]
@@ -357,14 +359,32 @@ def test_anonymous_gets_401(world):
     assert _get(None, BASE).status_code == 401
 
 
-def test_head_reads_the_board_and_the_card_but_the_card_hides_the_actions_without_the_payment_right(world):
+def test_invoice_only_role_reads_the_board_and_the_card_but_the_card_hides_the_actions_without_the_payment_right(world):
     invoice = world["invoice"]
-    board = _get(world["head"], BASE, tab="awaiting")
+    board = _get(world["invoicer"], BASE, tab="awaiting")
     assert board.status_code == 200 and board.json()["count"] == 1
-    card = _get(world["head"], f"{BASE}{invoice.pk}/").json()
+    card = _get(world["invoicer"], f"{BASE}{invoice.pk}/").json()
     assert card["can_confirm"] is False and card["can_attach_proof"] is False and card["can_request_proof"] is False
-    assert _confirm(world["head"], invoice.pk).status_code == 403
+    assert _confirm(world["invoicer"], invoice.pk).status_code == 403
     assert _get(world["finance"], f"{BASE}{invoice.pk}/").json()["can_confirm"] is True
+
+
+def test_view_only_role_reads_the_board_and_the_card_but_every_action_is_a_403(world):
+    """Q-D2-4-1 п. 1: директор читает «Счета и оплаты» (`finance.view`), оплату подтверждает только бухгалтер."""
+    invoice = world["invoice"]
+    viewer = world["viewer"]
+    board = _get(viewer, BASE, tab="awaiting")
+    assert board.status_code == 200 and board.json()["count"] == 1
+    card = _get(viewer, f"{BASE}{invoice.pk}/")
+    assert card.status_code == 200
+    assert card.json()["can_confirm"] is False and card.json()["can_attach_proof"] is False
+    for method, tail, body, fmt in WRITE:
+        response = getattr(_client(viewer), method)(f"{BASE}{invoice.pk}/{tail}", body, format=fmt)
+        assert response.status_code == 403 and response.json()["detail"] == "ROLE_NOT_PERMITTED", tail
+    assert _confirm(viewer, invoice.pk).status_code == 403
+    assert _attach(viewer, invoice.pk).status_code == 403
+    invoice.refresh_from_db()
+    assert invoice.amount_paid == 0 and not Payment.objects.exists()
 
 
 def test_the_card_has_no_cost_or_margin_or_supplier_prices(world):
@@ -378,3 +398,23 @@ def test_the_card_has_no_cost_or_margin_or_supplier_prices(world):
 def test_board_response_matches_the_contract(world):
     response = _get(world["finance"], BASE, tab="all")
     _assert_schema(response, BASE, "get")
+
+
+def test_repeat_of_a_confirmed_proof_with_another_amount_or_date_is_a_conflict(world):
+    invoice = world["invoice"]
+    proof = _attach(world["finance"], invoice.pk).json()["confirmations"][0]["id"]
+    first = _confirm(world["finance"], invoice.pk, amount="30.00", confirmation_id=proof)
+    assert first.status_code == 200
+    other_amount = _confirm(world["finance"], invoice.pk, amount="31.00", confirmation_id=proof)
+    assert other_amount.status_code == 409 and other_amount.json()["detail"] == "PAYMENT_REFERENCE_CONFLICT"
+    other_date = _confirm(
+        world["finance"],
+        invoice.pk,
+        amount="30.00",
+        confirmation_id=proof,
+        paid_at=(timezone.localdate() - datetime.timedelta(days=1)).isoformat(),
+    )
+    assert other_date.status_code == 409
+    same = _confirm(world["finance"], invoice.pk, amount="30.00", confirmation_id=proof)
+    assert same.status_code == 200 and same.json()["replayed"] is True
+    assert Payment.objects.filter(invoice=invoice).count() == 1

@@ -93,6 +93,21 @@ async def test_repeat_with_the_same_data_is_idempotent_other_data_is_a_conflict(
     assert_error(other, 409, "CONFLICT", reason="already_paid")
 
 
+async def test_repeat_with_the_same_date_and_amount_but_another_receipt_is_a_conflict(
+    client: httpx.AsyncClient, staff: dict[str, Person]
+) -> None:
+    doc_id, _ = await to_accountant(client, staff)
+    first_receipt = (await upload(client, staff["accountant"], name="a.pdf")).json()
+    other_receipt = (await upload(client, staff["accountant"], name="b.pdf")).json()
+    assert (await pay(client, staff["accountant"], doc_id, receipt_file_id=first_receipt["id"])).status_code == 200
+    again = await pay(client, staff["accountant"], doc_id, receipt_file_id=first_receipt["id"])
+    assert again.status_code == 200
+    changed = await pay(client, staff["accountant"], doc_id, receipt_file_id=other_receipt["id"])
+    assert_error(changed, 409, "CONFLICT", reason="already_paid")
+    without = await pay(client, staff["accountant"], doc_id)
+    assert_error(without, 409, "CONFLICT", reason="already_paid")
+
+
 @pytest.mark.parametrize("who", ["manager", "supplier", "engineer", "registrar", "admin", "nobody"])
 async def test_roles_without_the_payment_right_get_403_directly(
     client: httpx.AsyncClient, staff: dict[str, Person], who: str
@@ -111,6 +126,27 @@ async def test_a_reader_with_only_registry_read_cannot_pay(
     doc_id, _ = await to_accountant(client, staff)
     assert_error(await pay(client, headers_of(30), doc_id), 403, "FORBIDDEN", permission="payments.confirm")
     assert (await client.get(f"/api/v1/documents/{doc_id}", headers=headers_of(30))).status_code == 200
+
+
+async def test_a_director_with_the_catalog_codes_reads_the_memo_but_cannot_pay(
+    client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
+) -> None:
+    """Q-D2-4-1 п. 1: «Счета и оплаты» у директора — read: все коды, кроме `payments.confirm` и `registry.export`."""
+    director_codes = [
+        "letters.read",
+        "letters.register",
+        "letters.resolve",
+        "memos.create",
+        "memos.approve",
+        "approvals.decide",
+        "registry.read",
+    ]
+    await seed_employee(container, 32, permissions={"eds": director_codes})
+    doc_id, _ = await to_accountant(client, staff)
+    assert_error(await pay(client, headers_of(32), doc_id), 403, "FORBIDDEN", permission="payments.confirm")
+    assert (await client.get(f"/api/v1/documents/{doc_id}", headers=headers_of(32))).status_code == 200
+    detail = (await client.get(f"/api/v1/documents/{doc_id}", headers=staff["accountant"].headers)).json()
+    assert detail["status"] == "to_accountant" and detail["payment"] is None
 
 
 async def test_pay_before_the_director_approves_or_for_a_memo_without_amount_is_a_conflict(

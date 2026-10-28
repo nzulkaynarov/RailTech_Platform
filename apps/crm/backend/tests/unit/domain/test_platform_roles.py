@@ -217,11 +217,14 @@ EXPECTED: dict[tuple[str, str], tuple[set[str], set[str]]] = {
     ("eds.drafts", "full"): (set(), {"quote.review"}),
     ("eds.projects", "read"): NOTHING,
     ("eds.projects", "full"): (set(), {"contract.manage", "contract.sign", "fulfillment.act"}),
-    ("eds.payments", "read"): NOTHING,
+    ("eds.payments", "read"): (set(), {"finance.view"}),  # Q-D2-4-1 п. 2
     (
         "eds.payments",
         "full",
-    ): (set(), {"finance.invoice", "finance.payment", "finance.rates", "data.export"}),
+    ): (
+        set(),
+        {"finance.view", "finance.invoice", "finance.payment", "finance.rates", "data.export"},
+    ),
     ("eds.memo.create", "read"): NOTHING,
     ("eds.memo.create", "full"): NOTHING,
     ("eds.memo.approve", "read"): NOTHING,
@@ -287,9 +290,16 @@ def test_every_restricted_field_gives_the_expected_erp_rights(name: str, erp: se
 # --- системные роли и шаблоны -------------------------------------------------------------------
 
 # Права ERP целых ролей, выписанные вручную.
-DIRECTOR_ERP = set(ERP_PERMISSIONS) - {"team.manage"}  # команду ведёт только администратор
+# Команду ведёт только администратор; счета директор читает (`finance.view`), но не выставляет
+# и не фиксирует оплаты (D2-4).
+DIRECTOR_ERP = set(ERP_PERMISSIONS) - {
+    "team.manage",
+    "finance.invoice",
+    "finance.payment",
+    "finance.rates",
+}
 ROLE_ERP: dict[str, set[str]] = {
-    "MANAGER": {"deal.manage", "quote.send"},
+    "MANAGER": {"deal.manage", "quote.send", "finance.view"},
     "DIRECTOR": DIRECTOR_ERP,
     "SUPPLY": {
         "deal.manage",
@@ -314,6 +324,7 @@ ROLE_ERP: dict[str, set[str]] = {
         "contract.manage",
         "contract.sign",
         "fulfillment.act",
+        "finance.view",
         "finance.invoice",
         "finance.payment",
         "finance.rates",
@@ -359,7 +370,8 @@ def test_the_two_system_roles_are_fixed_by_the_catalog() -> None:
     }
     director = dict(make_role("DIRECTOR").access)
     # R-1b (уточнение ADR-0012 п. 2): воронка и внешняя переписка — только чтение, лиды не берёт.
-    read_only = {"admin", "crm.leads", "chats.external"}
+    # D2-4: «Счета и оплаты» тоже чтение — оплату подтверждает бухгалтер.
+    read_only = {"admin", "crm.leads", "chats.external", "eds.payments"}
     assert {k for k, v in director.items() if v == "read"} == read_only
     assert {k: v for k, v in director.items() if k not in read_only} == {
         k: "full" for k in generated.RESOURCE_KEYS if k not in read_only
@@ -437,7 +449,8 @@ def test_director_keeps_everything_v1_gave_and_gains_full_where_it_had_read() ->
     v2 = dict(make_grant("DIRECTOR").access)
     assert all(v2[k] == v1[k] or (v1[k] == "read" and v2[k] == "full") for k in v1)
     raised = {k for k in v1 if v1[k] != v2[k]}
-    assert raised == {"crm.clients", "eds.payments"}
+    # D2-4: `eds.payments` у директора остаётся на чтении, как в v1
+    assert raised == {"crm.clients"}
     assert set(v2) - set(v1) == {"erp.calc.goods", "erp.calc.services", "company.settings"}
 
 
@@ -460,6 +473,7 @@ def test_union_takes_the_maximum_level_per_section_and_the_union_of_fields() -> 
     )
     assert derived.restricted_fields == ("cost_margin", "totals_only")
     assert set(derived.erp_permissions) == {
+        "finance.view",
         "finance.invoice",
         "finance.payment",
         "finance.rates",

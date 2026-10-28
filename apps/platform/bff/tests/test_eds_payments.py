@@ -30,7 +30,7 @@ from tests.roles import custom
 
 BASE = "/api/v1/eds"
 BOUNDARY = "demo-boundary-d24"
-READ_ONLY = custom(60, "Директор по SPEC (чтение)", {"eds.payments": "read"})
+READ_ONLY = custom(60, "Своя роль, раздел только на чтение", {"eds.payments": "read"})
 NO_PAYMENTS = custom(61, "Без счетов", {"dashboard.queue": "full", "eds.memo.create": "full"})
 FULL_PAYMENT = {"amount": "112000000.00", "date": TODAY}
 
@@ -100,7 +100,7 @@ async def test_roles_without_the_payments_section_get_403_everywhere_before_the_
     assert fake.issued == []
 
 
-@pytest.mark.parametrize("role", ["MANAGER", READ_ONLY])
+@pytest.mark.parametrize("role", ["MANAGER", "DIRECTOR", READ_ONLY])
 async def test_read_only_roles_read_but_every_action_is_403_before_the_domains(
     web: Web, fake: PaymentsFake, role: Any
 ) -> None:
@@ -143,8 +143,8 @@ async def test_session_and_csrf_are_required(web: Web, fake: PaymentsFake) -> No
 async def test_erp_refusal_for_a_role_without_finance_rights_is_a_403_from_erp(
     web: Web, fake: PaymentsFake
 ) -> None:
-    """Раздел каталога пропустил (чтение), а ERP не даёт счета без права на финансы: 403 `source =
-    erp`.
+    """Раздел каталога пропустил (чтение), а ERP не даёт счета без права на финансы (роль ERP без
+    `finance.view`, выданная вручную): 403 `source = erp`.
     """
     await web.login(["MANAGER"])
     fake.erp_status = 403
@@ -685,3 +685,50 @@ async def test_unknown_erp_status_is_a_503_bad_response_not_a_500(
     assert card.status_code == 503
     assert card.json()["source"] == "erp"
     assert board.status_code == 503
+
+
+async def test_non_numeric_amount_from_erp_is_bad_response_not_zero(
+    web: Web, fake: PaymentsFake, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from tests import eds_payments_support as support
+
+    original = support.erp_row
+    monkeypatch.setattr(support, "erp_row", lambda inv: {**original(inv), "amount_paid": "oops"})
+    await web.login(["ACCOUNTANT"])
+
+    card = await web.client.get(f"{BASE}/payments/142")
+    board = await web.client.get(f"{BASE}/payments", params={"tab": "all"})
+
+    assert card.status_code == 503
+    assert board.status_code == 503
+
+
+async def test_missing_currency_from_erp_is_bad_response_not_uzs(
+    web: Web, fake: PaymentsFake
+) -> None:
+    await web.login(["ACCOUNTANT"])
+    fake.invoices[142]["currency"] = None
+
+    response = await web.client.get(f"{BASE}/payments/142")
+
+    assert response.status_code == 503
+    assert response.json()["source"] == "erp"
+
+
+async def test_memo_counter_is_exact_across_eds_pages(
+    web: Web, fake: PaymentsFake, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app import eds_payments
+
+    monkeypatch.setattr(eds_payments, "MEMOS_COUNT_LIMIT", 2)
+    for n in range(4):
+        fake.documents[f"61000000-0000-4000-8000-0000000001{n:02d}"] = {
+            **fake.documents[PAY_DOC],
+            "id": f"61000000-0000-4000-8000-0000000001{n:02d}",
+            "number": f"СЗ-2026/9{n}",
+        }
+    await web.login(["ACCOUNTANT"])
+
+    board = (await web.client.get(f"{BASE}/payments")).json()
+
+    assert board["memos_to_pay"] == 5

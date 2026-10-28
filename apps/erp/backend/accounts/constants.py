@@ -57,6 +57,8 @@ class Permission(models.TextChoices):
     FULFILLMENT_MANAGE = "fulfillment.manage", "Вести отгрузки и накладные"
     FULFILLMENT_ACT = "fulfillment.act", "Оформлять акты"
     # Финансы
+    # D2-4 (Q-D2-4-1): чтение счетов и оплат без права действовать — директор, менеджер («Ч» в SPEC-v3 §4.2).
+    FINANCE_VIEW = "finance.view", "Видеть счета и оплаты клиентов"
     FINANCE_INVOICE = "finance.invoice", "Выставлять счета клиентам"
     FINANCE_PAYMENT = "finance.payment", "Фиксировать оплаты"
     # Курс КП вручную (с причиной) и фактическая закупка для отклонения маржи (M1-ERP-08)
@@ -83,7 +85,12 @@ PERMISSION_GROUPS = {
     "catalog": [Permission.CATALOG_MANAGE, Permission.CATALOG_PUBLISH],
     "supply": [Permission.SUPPLY_MANAGE],
     "fulfillment": [Permission.FULFILLMENT_MANAGE, Permission.FULFILLMENT_ACT],
-    "finance": [Permission.FINANCE_INVOICE, Permission.FINANCE_PAYMENT, Permission.FINANCE_RATES],
+    "finance": [
+        Permission.FINANCE_VIEW,
+        Permission.FINANCE_INVOICE,
+        Permission.FINANCE_PAYMENT,
+        Permission.FINANCE_RATES,
+    ],
     "settings": [Permission.SETTINGS_EDIT, Permission.SETTINGS_CHARGE_TEMPLATES, Permission.TEAM_MANAGE],
     "data": [Permission.DATA_EXPORT],
 }
@@ -123,6 +130,7 @@ ROLE_TEMPLATES = {
     ],
     BackofficeRoleCode.FULFILLMENT: [P.FULFILLMENT_MANAGE, P.FULFILLMENT_ACT],
     BackofficeRoleCode.FINANCE: [
+        P.FINANCE_VIEW,
         P.FINANCE_INVOICE,
         P.FINANCE_PAYMENT,
         P.FINANCE_RATES,

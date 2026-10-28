@@ -37,8 +37,8 @@ import { buildMe, readSession } from "./mockSession";
 
 /**
  * Моки EDS · Счета и оплаты бухгалтера (D2-4, BFF 0.26.0). Права — как в BFF: чтение — `eds.payments` (менеджер, директор,
- * бухгалтер), действия — полный. Счета отдаёт ERP только сотруднику с правами на финансы: роль с чтением получает 403
- * `source = erp` (служебки к оплате ей доступны). Ошибки ERP и EDS — те же коды и подкоды, что в BFF
+ * бухгалтер), действия — полный. Каталог даёт чтению право ERP `finance.view` (Q-D2-4-1 п. 2), поэтому роль с чтением видит доску
+ * и карточку; действия ей отказывает уже BFF (403 `bff`, `need = full`). Ошибки ERP и EDS — те же коды и подкоды, что в BFF
  * (`exceeds_balance`, `already_paid`, `exceeds_approved`), повтор подтверждения идемпотентен.
  */
 type Level = "read" | "full";
@@ -76,21 +76,6 @@ function guard(need: Level) {
   return { who };
 }
 
-/** ERP показывает счета только сотруднику с правами на финансы; здесь это полный доступ к разделу. */
-function erpGuard(need: Level) {
-  const ok = guard(need);
-  if (ok.error) return ok;
-  if (ok.who.level !== "full") {
-    return {
-      error: failure(403, "FORBIDDEN", "Раздел или действие не положены вашей роли.", "erp", {
-        backend_status: 403,
-        backend_code: "ROLE_NOT_PERMITTED",
-      }),
-    };
-  }
-  return ok;
-}
-
 const notFound = (message: string, source: "erp" | "eds" = "erp") =>
   failure(404, "NOT_FOUND", message, source, { backend_status: 404 });
 
@@ -109,8 +94,13 @@ function update(id: number, change: (card: PaymentCard) => PaymentCard): Payment
   return next;
 }
 
+/** Как в ERP: действия карточки — только с `finance.payment` (полный доступ к разделу); чтение — `finance.view`. */
 function withFlags(card: PaymentCard): PaymentCard {
-  const open = card.status !== "draft" && card.status !== "paid" && card.status !== "cancelled";
+  const open =
+    card.status !== "draft" &&
+    card.status !== "paid" &&
+    card.status !== "cancelled" &&
+    held()?.level === "full";
   return { ...card, can_confirm: open, can_attach_proof: open, can_request_proof: open };
 }
 
@@ -251,7 +241,7 @@ export const edsPaymentsHandlers = [
   }),
 
   http.get("*/eds/payments", ({ request }) => {
-    const ok = erpGuard("read");
+    const ok = guard("read");
     if (ok.error) return ok.error;
     const url = new URL(request.url);
     const tab = (url.searchParams.get("tab") ?? "awaiting") as Tab;
@@ -280,7 +270,7 @@ export const edsPaymentsHandlers = [
   }),
 
   http.get("*/eds/payments/:id", ({ params }) => {
-    const ok = erpGuard("read");
+    const ok = guard("read");
     if (ok.error) return ok.error;
     const card = findInvoice(Number(params["id"]));
     if (!card) return notFound("Счёт не найден.");
@@ -288,7 +278,7 @@ export const edsPaymentsHandlers = [
   }),
 
   http.post("*/eds/payments/:id/confirm", async ({ request, params }) => {
-    const ok = erpGuard("full");
+    const ok = guard("full");
     if (ok.error) return ok.error;
     const key = request.headers.get("idempotency-key");
     if (key && idempotent.has(key)) return HttpResponse.json(idempotent.get(key));
@@ -389,7 +379,7 @@ export const edsPaymentsHandlers = [
   }),
 
   http.post("*/eds/payments/:id/proofs", async ({ request, params }) => {
-    const ok = erpGuard("full");
+    const ok = guard("full");
     if (ok.error) return ok.error;
     const card = findInvoice(Number(params["id"]));
     if (!card) return notFound("Счёт не найден.");
@@ -450,7 +440,7 @@ export const edsPaymentsHandlers = [
   }),
 
   http.get("*/eds/payments/:id/proofs/:proofId/file", ({ params }) => {
-    const ok = erpGuard("read");
+    const ok = guard("read");
     if (ok.error) return ok.error;
     const card = findInvoice(Number(params["id"]));
     const proof = card?.proofs.find((p) => p.id === Number(params["proofId"]));
@@ -464,7 +454,7 @@ export const edsPaymentsHandlers = [
   }),
 
   http.post("*/eds/payments/:id/request-payment-doc", ({ params }) => {
-    const ok = erpGuard("full");
+    const ok = guard("full");
     if (ok.error) return ok.error;
     const card = findInvoice(Number(params["id"]));
     if (!card) return notFound("Счёт не найден.");

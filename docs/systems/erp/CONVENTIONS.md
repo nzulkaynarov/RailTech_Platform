@@ -183,7 +183,7 @@ Makefile · .env.example · docs/ (ADR и runbooks ERP в docs/runbooks/erp/ —
 | Каталог | `catalog.manage`, `catalog.publish` |
 | Снабжение | `supply.manage` (поставщики и их предложения; M4 добавит заказы поставщикам и приёмку) |
 | Исполнение и логистика | `fulfillment.manage` (отгрузки, накладные), `fulfillment.act` (акты: выставить из счёта, переоформить, отменить, напомнить) |
-| Финансы | `finance.invoice` (счета клиентам), `finance.payment` (фиксация оплат), `finance.rates` (договорной курс КП с причиной — `fx-override`; факт закупки для отклонения маржи — вместе с `supply.manage`; M1-ERP-08) |
+| Финансы | `finance.view` (читать счета и оплаты без права действовать — директор и менеджер Платформы, D2-4), `finance.invoice` (счета клиентам), `finance.payment` (фиксация оплат), `finance.rates` (договорной курс КП с причиной — `fx-override`; факт закупки для отклонения маржи — вместе с `supply.manage`; M1-ERP-08) |
 | Настройки и команда | `settings.edit` (реквизиты, бланк, шаблоны документов, нумерация, формулировки), `settings.charge_templates` (шаблоны статей расходов КП), `team.manage` (команда и роли) |
 | Данные | `data.export` |
 
@@ -195,7 +195,7 @@ Makefile · .env.example · docs/ (ADR и runbooks ERP в docs/runbooks/erp/ —
 | `CALCULATION` | Расчёт | `deal.manage`, `quote.build`, `quote.edit_pricing`, `quote.view_cost_margin`, `quote.send`, `quote.review`, `contract.manage` |
 | `CATALOG_SUPPLY` | Каталог и закупки | `catalog.manage`, `catalog.publish`, `supply.manage`, `quote.view_cost_margin` |
 | `FULFILLMENT` | Исполнение и логистика | `fulfillment.manage`, `fulfillment.act` |
-| `FINANCE` | Финансы | `finance.invoice`, `finance.payment`, `finance.rates`, `quote.view_cost_margin`, `data.export` |
+| `FINANCE` | Финансы | `finance.view`, `finance.invoice`, `finance.payment`, `finance.rates`, `quote.view_cost_margin`, `data.export` |
 | `HEAD` | Руководитель | все коды (визы КП, подпись договора, команда, настройки; одобрение КП директором — в EDS) |
 | `VIEWER` | Наблюдатель | — (только просмотр) |
 

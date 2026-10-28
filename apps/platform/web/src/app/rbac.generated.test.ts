@@ -53,7 +53,7 @@ const ORACLE: Record<string, string> = {
   "eds.inbox": "HFRHHR",
   "eds.drafts": "HFRHHH",
   "eds.projects": "HFRRRF",
-  "eds.payments": "HFRHHF",
+  "eds.payments": "HRRHHF",
   "eds.memo.create": "FFFFFF",
   "eds.memo.approve": "HFHHHH",
   "erp.calc": "HFHFFR",

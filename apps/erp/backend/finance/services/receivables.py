@@ -187,8 +187,8 @@ def confirm_payment(
 
     Полная оплата закрывает счёт (`PAID`, событие шины `invoice.paid`, стадия проекта «Оплата выполнена» выводится из
     оплаченных счетов — `integration.services.stages`), неполная — `PARTIAL` с видимым остатком. Сумма больше остатка —
-    `PAYMENT_EXCEEDS_BALANCE_DUE`, ничего не записывается. Повтор идемпотентен: тот же `confirmation_id` (платёжка уже
-    подтверждена), тот же `reference`, а по уже оплаченному счёту — та же сумма и дата возвращают прежний платёж.
+    `PAYMENT_EXCEEDS_BALANCE_DUE`, ничего не записывается. Повтор идемпотентен: тот же `confirmation_id` с той же суммой и датой
+    (платёжка уже подтверждена; другая сумма или дата — 409 `PAYMENT_REFERENCE_CONFLICT`), тот же `reference`, а по уже оплаченному счёту — та же сумма и дата возвращают прежний платёж.
     """
     from crm.services.billing import record_payment
 
@@ -210,7 +210,11 @@ def confirm_payment(
             if confirmation is None:
                 return None, "CONFIRMATION_NOT_FOUND"
             if confirmation.status == PaymentConfirmation.Status.CONFIRMED and confirmation.payment is not None:
-                return Confirmed(confirmation.payment, True), None
+                done = confirmation.payment
+                # Тот же платёж — повтор; другая сумма или дата по уже подтверждённой платёжке — конфликт, как у референса.
+                if done.amount == amount and done.paid_at == paid_at:
+                    return Confirmed(done, True), None
+                return None, "PAYMENT_REFERENCE_CONFLICT"
         if invoice.status_code == InvoiceStatusCode.PAID:
             last = invoice.payments.order_by("-id").first()
             if last is not None and last.amount == amount and last.paid_at == paid_at:

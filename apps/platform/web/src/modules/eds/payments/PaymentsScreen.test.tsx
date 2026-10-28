@@ -2,6 +2,7 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { describe, expect, it } from "vitest";
 
+import { findInvoice } from "../../../mocks/fixtures/payments";
 import { server } from "../../../test/server";
 import { panelEl, renderAt, setupPaymentTests, signIn } from "../../../test/paymentsKit";
 
@@ -109,7 +110,37 @@ describe("Счета и оплаты: список", () => {
     expect(screen.getByRole("button", { name: "Ждут оплаты" })).toBeVisible();
   });
 
-  it("менеджер (только чтение): счета ERP ему не показываются словами, служебки к оплате доступны", async () => {
+  it("менеджер и директор (только чтение): счета видны, карточка без формы; служебки к оплате доступны", async () => {
+    signIn("director@demo.example");
+    renderAt("/eds/payments");
+
+    // В строке — «Открыть», а не «Подтвердить»: оплату подтверждает бухгалтер.
+    expect(
+      await screen.findByRole("link", { name: "Открыть карточку счёта: СЧ-2026/142" }),
+    ).toBeVisible();
+    expect(screen.queryByRole("link", { name: /^Подтвердить оплату:/ })).toBeNull();
+    fireEvent.click(
+      await screen.findByRole("link", { name: "Показать счёт СЧ-2026/142 в боковом окне" }),
+    );
+    const panel = await panelEl();
+    expect(await within(panel).findByRole("heading", { name: "Только просмотр" })).toBeVisible();
+    expect(within(panel).queryByRole("form", { name: "Подтверждение оплаты" })).toBeNull();
+  });
+
+  it("роль без права ERP на счета (выдана вручную): счета ERP не показываются словами, служебки доступны", async () => {
+    server.use(
+      http.get("*/eds/payments", () =>
+        HttpResponse.json(
+          {
+            code: "FORBIDDEN",
+            message: "Раздел или действие не положены вашей роли.",
+            source: "erp",
+            details: { backend_status: 403, backend_code: "ROLE_NOT_PERMITTED" },
+          },
+          { status: 403 },
+        ),
+      ),
+    );
     signIn("manager@demo.example");
     renderAt("/eds/payments");
 
@@ -382,5 +413,41 @@ describe("Карточка счёта", () => {
 
     expect(await screen.findByRole("heading", { name: "Счёт не найден" })).toBeVisible();
     expect(screen.getByRole("link", { name: "К списку счетов" })).toBeVisible();
+  });
+});
+
+describe("Платёжка у оплаченного счёта", () => {
+  it("неподтверждённая платёжка по уже оплаченному счёту названа лишней, а не «Ждёт подтверждения»", async () => {
+    server.use(
+      http.get("*/eds/payments/:id", () => {
+        const proof = {
+          id: 5,
+          source: "EMAIL",
+          status: "PENDING",
+          original_name: "повтор.pdf",
+          claimed_amount: null,
+          claimed_date: null,
+          note: "",
+          received_at: "2026-10-27T15:00:00Z",
+          recorded_by: null,
+          payment_id: null,
+        };
+        return HttpResponse.json({
+          ...findInvoice(146),
+          proofs: [proof],
+          can_confirm: false,
+          can_attach_proof: false,
+          can_request_proof: false,
+        });
+      }),
+    );
+    signIn("accountant@demo.example");
+    renderAt("/eds/payments/146");
+
+    const lists = await screen.findAllByRole("list", { name: "Платёжки клиента" });
+    for (const list of lists) {
+      expect(within(list).getByText("Лишняя: счёт уже оплачен")).toBeVisible();
+      expect(within(list).queryByText("Ждёт подтверждения")).toBeNull();
+    }
   });
 });

@@ -253,15 +253,31 @@ test.describe("Счета и оплаты: бухгалтер", () => {
 test.describe("Счета и оплаты: чтение и закрытые роли", () => {
   test.skip(({ isMobile }) => isMobile, "сценарии на десктопе");
 
-  test("менеджер читает: счета ERP ему не показываются словами, служебки видны без кнопки «Оплачено»", async ({
+  test("директор читает: список и карточка счёта без формы «Подтвердить оплату»", async ({
+    page,
+  }) => {
+    await loginAndWait(page, "director@demo.example");
+    await openPayments(page);
+    await expect(page.getByRole("table", { name: "Счета" })).toBeVisible();
+    await page.getByRole("link", { name: "Показать счёт СЧ-2026/142 в боковом окне" }).click();
+    await expect(
+      page.locator(PANEL).getByRole("heading", { name: "Только просмотр" }),
+    ).toBeVisible();
+    await expect(confirmForm(page)).toHaveCount(0);
+    await expect(
+      page.locator(PANEL).getByRole("button", { name: "Подтвердить оплату" }),
+    ).toHaveCount(0);
+    await settledScreenshot(page, "director-readonly");
+    await expectNoViolations(page, "директор: счёт только для чтения");
+  });
+
+  test("менеджер читает: счета видны без формы, служебки видны без кнопки «Оплачено»", async ({
     page,
   }) => {
     await loginAndWait(page, "manager@demo.example");
     await openPayments(page);
-    await expect(
-      page.getByRole("heading", { name: "Счета клиентов вам не показываются" }),
-    ).toBeVisible();
-    await expectNoViolations(page, "менеджер: счета закрыты ERP");
+    await expect(page.getByRole("table", { name: "Счета" })).toBeVisible();
+    await expectNoViolations(page, "менеджер: счета только для чтения");
 
     await page.getByRole("link", { name: /^Служебки к оплате/ }).click();
     await row(page, "СЗ-2026/015").getByText("Оплата командировочных расходов").click();

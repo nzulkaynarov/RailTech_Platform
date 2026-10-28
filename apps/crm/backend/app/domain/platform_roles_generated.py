@@ -249,7 +249,9 @@ ERP_BACKEND: Final[dict[str, dict[str, tuple[str, ...]]]] = {
         ),
     },
     "eds.payments": {
+        "read": ("finance.view",),
         "full": (
+            "finance.view",
             "finance.invoice",
             "finance.payment",
             "finance.rates",
@@ -404,7 +406,7 @@ ROLE_ACCESS: Final[dict[str, dict[str, str]]] = {
         "eds.inbox": "full",
         "eds.drafts": "full",
         "eds.projects": "full",
-        "eds.payments": "full",
+        "eds.payments": "read",
         "eds.memo.create": "full",
         "eds.memo.approve": "full",
         "erp.calc": "full",

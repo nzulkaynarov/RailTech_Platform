@@ -463,7 +463,16 @@ class PaymentsFake(ApprovalsFake):
                 for d in self.documents.values()
                 if d["kind"] == "memo" and (wanted is None or d["status"] == wanted)
             ]
-            return httpx.Response(200, json={"items": items, "next_cursor": None})
+            start = int(request.url.params.get("cursor", 0))
+            limit = int(request.url.params.get("limit", 50))
+            following = start + limit
+            return httpx.Response(
+                200,
+                json={
+                    "items": items[start:following],
+                    "next_cursor": str(following) if following < len(items) else None,
+                },
+            )
         match = re.fullmatch(r"documents/([0-9a-f-]{36})/payment", tail)
         if request.method == "POST" and match:
             self.calls.append(request)

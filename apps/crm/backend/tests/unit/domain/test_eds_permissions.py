@@ -49,7 +49,8 @@ ACCOUNTANT = {
 BUS = "bus.manage"
 ROLE_EDS: dict[str, set[str]] = {
     "ADMIN": {"memos.create", BUS},
-    "DIRECTOR": set(EDS_PERMISSIONS) - {BUS},
+    # D2-4: «Счета и оплаты» у директора — read, оплату и выгрузку реестра ведёт бухгалтер
+    "DIRECTOR": set(EDS_PERMISSIONS) - {BUS, "payments.confirm", "registry.export"},
     "MANAGER": {"letters.read", "registry.read", "memos.create"},
     "SUPPLY": {"registry.read", "memos.create"},
     "ENGINEER": {"registry.read", "memos.create"},
@@ -104,8 +105,11 @@ def test_every_system_role_and_template_gives_the_expected_eds_codes(legacy: str
     assert list(codes) == sorted(codes), "список сортирован"
 
 
-def test_director_has_the_nine_document_codes_and_administrator_memos_and_bus_journal() -> None:
-    assert set(eds_permissions_of([make_grant("DIRECTOR")])) == set(EDS_PERMISSIONS) - {BUS}
+def test_director_reads_the_registry_but_neither_confirms_payments_nor_exports_it() -> None:
+    """D2-4 (Q-D2-4-1 п. 1): директор читает счета, оплату и выгрузку реестра ведёт бухгалтер."""
+    codes = set(eds_permissions_of([make_grant("DIRECTOR")]))
+    assert codes == set(EDS_PERMISSIONS) - {BUS, "payments.confirm", "registry.export"}
+    assert "registry.read" in codes
     assert eds_permissions_of([make_grant("ADMIN")]) == (BUS, "memos.create")
 
 

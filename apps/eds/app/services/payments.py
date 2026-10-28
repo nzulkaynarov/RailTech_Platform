@@ -85,6 +85,7 @@ async def pay(
             paid.paid_on == body.paid_on
             and f"{paid.amount:.2f}" == body.amount.amount
             and paid.currency == body.amount.currency
+            and paid.receipt_file_id == body.receipt_file_id
         )
         if same:
             return document

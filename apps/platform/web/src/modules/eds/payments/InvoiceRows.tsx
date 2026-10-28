@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useSearchParams } from "react-router";
 
+import { useAuth } from "../../../app/auth/useAuth";
 import { useViewport } from "../../../app/shell/useViewport";
 import type { PaymentRow } from "../../../shared/api/generated/model";
 import { useFormat } from "../../../shared/lib/useFormat";
@@ -61,7 +62,9 @@ function Amount({ row }: { row: PaymentRow }) {
 
 function ActionButton({ row }: { row: PaymentRow }) {
   const { t } = useTranslation("payments");
-  const action = rowAction(row);
+  const { me } = useAuth();
+  // Роль с чтением (директор, менеджер) счёт только открывает: оплату подтверждает бухгалтер.
+  const action = me.resources["eds.payments"] === "full" ? rowAction(row) : "open";
   return (
     <LinkButton
       size="small"

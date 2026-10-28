@@ -191,6 +191,23 @@ def grant_finance_rates(apps, schema_editor):
                 role.save(update_fields=["permissions"])
 
 
+# D2-4 (миграция accounts/0011): новый код `finance.view` — чтение счетов и оплат без права действовать. Системным ролям
+# «Финансы» и «Руководитель» своей компании; каталог после 0011 = ALL + ADDED_0004 + ADDED_0011.
+ADDED_0011 = ["finance.view"]
+ROLE_GRANTS_0011 = {"FINANCE": ["finance.view"], "HEAD": ["finance.view"]}
+
+
+def grant_finance_view(apps, schema_editor):
+    """Догнать системные роли «Финансы» и «Руководитель» до шаблона с `finance.view`."""
+    CompanyRole = apps.get_model("accounts", "CompanyRole")
+    for code, added in ROLE_GRANTS_0011.items():
+        for role in CompanyRole.objects.filter(code=code, is_system=True):
+            missing = [perm for perm in added if perm not in (role.permissions or [])]
+            if missing:
+                role.permissions = list(role.permissions or []) + missing
+                role.save(update_fields=["permissions"])
+
+
 def seed_backoffice_roles(apps, schema_editor):
     """Каталог прав M1-ERP-05: системные роли своей компании, переименование кодов, роли участникам."""
     for company_id in _own_company_ids(apps):

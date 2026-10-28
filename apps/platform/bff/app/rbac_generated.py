@@ -330,7 +330,7 @@ SYSTEM_ROLES: Final[dict[str, CatalogRole]] = {
             "eds.inbox": "full",
             "eds.drafts": "full",
             "eds.projects": "full",
-            "eds.payments": "full",
+            "eds.payments": "read",
             "eds.memo.create": "full",
             "eds.memo.approve": "full",
             "erp.calc": "full",
