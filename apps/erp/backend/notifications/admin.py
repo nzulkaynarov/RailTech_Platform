@@ -130,6 +130,7 @@ class EmailLogAdmin(ReadOnlyInspectionMixin, ModelAdmin):
     @display(
         description=_("Статус"),
         label={
+            EmailLog.STATUS_QUEUED: "info",
             EmailLog.STATUS_SENT: "success",
             EmailLog.STATUS_FAILED: "danger",
         },

@@ -8041,7 +8041,8 @@ export const getListEmailLogUrl = (params?: ListEmailLogParams) => {
 };
 
 /**
- * Журнал писем сотрудникам: последние `limit`, фильтр по статусу; тел писем в журнале нет.
+ * Журнал доставки почты ансамбля: последние `limit`, фильтр по статусу; источник (CRM, ERP,
+ * EDS) и назначение письма; тел писем в журнале нет (W18A-P1).
  * @summary List Email Log
  */
 export const listEmailLog = async (

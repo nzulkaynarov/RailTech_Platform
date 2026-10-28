@@ -7,7 +7,15 @@ from enum import StrEnum
 from typing import Annotated, Literal
 from uuid import UUID
 
-from pydantic import AnyUrl, AwareDatetime, BaseModel, ConfigDict, Field, RootModel
+from pydantic import (
+    AnyUrl,
+    AwareDatetime,
+    BaseModel,
+    ConfigDict,
+    EmailStr,
+    Field,
+    RootModel,
+)
 
 
 class ActAcceptedV1(BaseModel):
@@ -95,6 +103,24 @@ class Amount(RootModel[str]):
     root: Annotated[str, Field(pattern="^-?\\d+\\.\\d{2}$")]
 
 
+class Attachment(BaseModel):
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    filename: Annotated[str, Field(max_length=255, min_length=1)]
+    content_type: Annotated[
+        str, Field(max_length=127, pattern="^[a-z0-9.+-]+/[A-Za-z0-9.+-]+$")
+    ]
+    size: Annotated[int, Field(ge=0, le=20971520)]
+    """
+    Байт; не больше 20 МиБ на файл
+    """
+    sha256: Annotated[str, Field(pattern="^[0-9a-f]{64}$")]
+    """
+    Контрольная сумма содержимого: CRM сверяет скачанное
+    """
+
+
 class By(StrEnum):
     client = "client"
     company = "company"
@@ -131,6 +157,18 @@ class ClientActor(BaseModel):
     )
     type: Literal["client"]
     name: str | None = None
+
+
+class Content(BaseModel):
+    """
+    Тело письма шифртекстом: Fernet с ключом urlsafe_b64(HMAC-SHA256(секрет пары «erp → crm», "rt-mail/v1/content")); открытый текст — JSON {text, html|null, links: [{url, expires_at}]}. Первым шифрует первый секрет пары, CRM пробует каждый действующий
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    alg: Literal["fernet-pair-v1"]
+    ciphertext: Annotated[str, Field(max_length=4194304, min_length=1)]
 
 
 class ContractSigned(BaseModel):
@@ -636,6 +674,56 @@ class LineNo(RootModel[int]):
     root: Annotated[int, Field(ge=1)]
 
 
+class MailRequestedV1(BaseModel):
+    """
+    Тип uz.railtech.erp.mail.requested.v1, источник rt://erp. Поле data конверта (envelope.v1.json). Исходящую почту ансамбля отправляет только почтовый сервис CRM (W18A-P1, B-INB-6): ERP письмо сама не шлёт — она рендерит тему, текст и HTML своим шаблоном и публикует это событие в транзакции изменения; CRM доставляет его через SMTP из карточки «Почта» (журнал доставки, повторы, итог). Текст, HTML и ссылки на вложения лежат в content шифртекстом ключа пары «erp → crm» (одноразовые ссылки входа и приглашений не хранятся открыто ни в outbox, ни в inbox). Вложения — по ссылке на объект хранилища отправителя (подписанная ссылка на чтение с ограниченным сроком, ключи S3 у каждого сервиса свои), не байтами в событии. Повтор с тем же request_key второго письма не даёт. Итог доставки CRM публикует событиями uz.railtech.crm.mail.sent.v1 / mail.failed.v1, только если notify = true.
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    request_key: Annotated[str, Field(pattern="^[A-Za-z0-9._:/-]{1,128}$")]
+    """
+    Ключ идемпотентности отправителя: одно письмо на ключ. Повторная публикация с тем же ключом (новый id конверта) второго письма не даёт; итог несёт тот же ключ
+    """
+    purpose: Annotated[str, Field(pattern="^[a-z][a-z0-9_.-]{0,63}$")]
+    """
+    Назначение письма — код шаблона отправителя (quote_sent, portal_magic_link, setup_password…): видно в журнале доставки и в итоге
+    """
+    to: Annotated[list[ToItem], Field(max_length=10, min_length=1)]
+    """
+    Получатели (одно письмо всем адресам)
+    """
+    reply_to: Annotated[EmailStr | None, Field(max_length=255)] = None
+    """
+    Адрес для ответа, если не адрес отправителя карточки «Почта»
+    """
+    subject: Annotated[str, Field(max_length=255, min_length=1)]
+    """
+    Тема (без секретов: видна в журнале доставки)
+    """
+    language: Annotated[str | None, Field(pattern="^[a-z]{2}$")] = None
+    """
+    Язык письма (ru, uz, en) — для журнала
+    """
+    ref: Ref | None = None
+    """
+    Объект отправителя, к которому относится письмо (КП, документ, приглашение) — возвращается в итоге
+    """
+    notify: bool | None = None
+    """
+    Нужен ли отправителю итог доставки (uz.railtech.crm.mail.sent.v1 / mail.failed.v1); по умолчанию false
+    """
+    attachments: Annotated[list[Attachment] | None, Field(max_length=10)] = None
+    """
+    Метаданные вложений; ссылки на объекты хранилища — в content (links), в том же порядке
+    """
+    content: Content
+    """
+    Тело письма шифртекстом: Fernet с ключом urlsafe_b64(HMAC-SHA256(секрет пары «erp → crm», "rt-mail/v1/content")); открытый текст — JSON {text, html|null, links: [{url, expires_at}]}. Первым шифрует первый секрет пары, CRM пробует каждый действующий
+    """
+
+
 class Process(StrEnum):
     """
     Процесс заявки (ERP-07): v3 — заявка Платформы (резолюция, визы, одобрение КП в EDS); legacy — заявка, начатая до Платформы. Необязательное; нет — legacy
@@ -908,6 +996,18 @@ class QuoteVisaAuthor(BaseModel):
     full_name: Annotated[str, Field(max_length=255, min_length=1)]
 
 
+class Ref(BaseModel):
+    """
+    Объект отправителя, к которому относится письмо (КП, документ, приглашение) — возвращается в итоге
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    kind: Annotated[str, Field(pattern="^[a-z][a-z0-9_.-]{0,31}$")]
+    id: Annotated[str, Field(max_length=64, min_length=1)]
+
+
 class RequestCreated(BaseModel):
     model_config = ConfigDict(
         extra="ignore",
@@ -1000,6 +1100,10 @@ class Status1(StrEnum):
 class Status2(StrEnum):
     accepted = "accepted"
     disputed = "disputed"
+
+
+class ToItem(RootModel[EmailStr]):
+    root: Annotated[EmailStr, Field(max_length=255)]
 
 
 class Type(StrEnum):

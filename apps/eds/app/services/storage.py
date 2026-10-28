@@ -20,6 +20,11 @@ class ObjectStorage(Protocol):
 
     def stream(self, key: str) -> AsyncIterator[bytes]: ...
 
+    async def presign(self, key: str, ttl_seconds: int) -> str:
+        """Подписанная ссылка на чтение одного объекта со сроком — для вложения письма через почтовый сервис CRM
+        (W18A-P1): ключи S3 у каждого сервиса свои, CRM получает только ссылку."""
+        ...
+
 
 class S3Storage:
     def __init__(self, settings: Settings) -> None:
@@ -42,6 +47,13 @@ class S3Storage:
         async with self._client() as client:
             await client.put_object(Bucket=self._settings.s3_bucket, Key=key, Body=data, ContentType=content_type)
 
+    async def presign(self, key: str, ttl_seconds: int) -> str:
+        async with self._client() as client:
+            url: str = await client.generate_presigned_url(
+                "get_object", Params={"Bucket": self._settings.s3_bucket, "Key": key}, ExpiresIn=ttl_seconds
+            )
+            return url
+
     async def stream(self, key: str) -> AsyncIterator[bytes]:
         async with self._client() as client:
             response = await client.get_object(Bucket=self._settings.s3_bucket, Key=key)
@@ -58,6 +70,9 @@ class MemoryStorage:
 
     async def put(self, key: str, data: bytes, content_type: str) -> None:
         self.objects[key] = (data, content_type)
+
+    async def presign(self, key: str, ttl_seconds: int) -> str:
+        return f"memory://eds-private/{key}?expires={ttl_seconds}"
 
     async def stream(self, key: str) -> AsyncIterator[bytes]:
         data, _ = self.objects[key]

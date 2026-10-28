@@ -21,6 +21,9 @@ const rows: EmailLogItem[] = [
     requested_by: 1,
     created_at: "2026-10-13T04:00:00Z",
     sent_at: "2026-10-13T04:00:05Z",
+    source: "crm",
+    purpose: "invite",
+    attachments: 0,
   },
   {
     id: 1,
@@ -35,6 +38,9 @@ const rows: EmailLogItem[] = [
     requested_by: 1,
     created_at: "2026-10-13T03:00:00Z",
     sent_at: null,
+    source: "crm",
+    purpose: "test",
+    attachments: 0,
   },
 ];
 

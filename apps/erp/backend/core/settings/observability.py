@@ -1,55 +1,8 @@
-"""Email-каналы, логирование, Sentry и прочий хвост."""
+"""Ссылки в письмах, логирование, Sentry и прочий хвост."""
 
 import os
 
 from .ai import *  # noqa: F401,F403 — последовательная композиция настроек
-
-# ──────────────────────────────────────────────────────────────────────────
-# Email channels — one SMTP/ESP config per purpose.
-#
-# Why channels: transactional (1:1 invites / password / documents) and marketing
-# (digests / campaigns) SHOULD use different providers in production —
-# reputation of transactional mail tanks when marketing messages get flagged.
-# On day one, every channel falls back to the default SMTP above, so nothing
-# breaks; override EMAIL_<CH>_* env vars when you add Mailgun/SES/SendGrid.
-#
-# Channel is chosen in code (services.py), not in admin UI — transport config
-# is infra, not business data. Template text CAN be edited in admin later.
-# ──────────────────────────────────────────────────────────────────────────
-
-
-def _email_channel(prefix: str, *, default_from: str) -> dict:
-    """Build one channel config, falling back to the global EMAIL_* defaults.
-
-    prefix = 'TX' | 'MKT' | 'SYS' — matches env var naming:
-    EMAIL_TX_HOST, EMAIL_TX_FROM, EMAIL_TX_USER, etc.
-    """
-    env = os.environ.get
-    return {
-        "backend": env(f"EMAIL_{prefix}_BACKEND") or EMAIL_BACKEND,
-        "host": env(f"EMAIL_{prefix}_HOST") or EMAIL_HOST,
-        "port": int(env(f"EMAIL_{prefix}_PORT") or EMAIL_PORT),
-        "username": env(f"EMAIL_{prefix}_USER") or EMAIL_HOST_USER,
-        "password": env(f"EMAIL_{prefix}_PASSWORD") or EMAIL_HOST_PASSWORD,
-        "use_tls": (env(f"EMAIL_{prefix}_USE_TLS") or str(EMAIL_USE_TLS)) == "True",
-        "from_email": env(f"EMAIL_{prefix}_FROM") or default_from,
-    }
-
-
-EMAIL_CHANNELS = {
-    # Setup-password, invitations, documents.
-    "transactional": _email_channel("TX", default_from=DEFAULT_FROM_EMAIL),
-    # Digests, campaigns, broadcasts. Not used yet — reserved.
-    "marketing": _email_channel(
-        "MKT",
-        default_from=os.environ.get("EMAIL_MKT_FROM", DEFAULT_FROM_EMAIL),
-    ),
-    # Platform-internal alerts to ops (failed jobs, error reports).
-    "system": _email_channel(
-        "SYS",
-        default_from=os.environ.get("EMAIL_SYS_FROM", DEFAULT_FROM_EMAIL),
-    ),
-}
 
 # Frontend URL for email links (password setup, invitations, etc.)
 FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:5173")

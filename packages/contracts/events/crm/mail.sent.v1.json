@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://railtech.uz/contracts/events/crm/mail.sent.v1.json",
+  "title": "Письмо отправлено",
+  "description": "Тип uz.railtech.crm.mail.sent.v1, источник rt://crm. Поле data конверта (envelope.v1.json). Итог запроса uz.railtech.<домен>.mail.requested.v1 с notify = true: SMTP-релей карточки «Почта» принял письмо. Без текста письма и адресов — только ключ запроса, назначение и объект отправителя (W18A-P1).",
+  "type": "object",
+  "required": [
+    "requester",
+    "request_key",
+    "purpose",
+    "email_log_id",
+    "sent_at"
+  ],
+  "properties": {
+    "requester": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{0,31}$",
+      "description": "Кто запросил письмо (erp, eds) — подписчик применяет только свои итоги"
+    },
+    "request_key": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._:/-]{1,128}$",
+      "description": "Ключ идемпотентности из запроса"
+    },
+    "purpose": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_.-]{0,63}$"
+    },
+    "ref": {
+      "type": "object",
+      "required": [
+        "kind",
+        "id"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_.-]{0,31}$"
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        }
+      },
+      "additionalProperties": false,
+      "description": "Объект отправителя из запроса"
+    },
+    "email_log_id": {
+      "type": "integer",
+      "description": "Строка журнала доставки CRM"
+    },
+    "attempts": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Попыток SMTP"
+    },
+    "sent_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Когда SMTP-релей принял письмо"
+    }
+  },
+  "additionalProperties": false
+}

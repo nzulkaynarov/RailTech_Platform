@@ -23,12 +23,9 @@ _LOCMEM = "django.core.mail.backends.locmem.EmailBackend"
 
 
 @pytest.fixture(autouse=True)
-def _locmem_channels(settings):
-    """Force every email channel onto the in-memory backend so mail.outbox
-    captures sends. EMAIL_CHANNELS bakes the backend at settings import, and the
-    container sets EMAIL_BACKEND=console — overriding EMAIL_BACKEND alone is not
-    enough, the channel config itself must point at locmem."""
-    settings.EMAIL_CHANNELS = {name: {**cfg, "backend": _LOCMEM} for name, cfg in settings.EMAIL_CHANNELS.items()}
+def _locmem_mail(settings):
+    """Письма — в mail.outbox (боевой бэкенд ERP — событие почтовому сервису CRM, W18A-P1)."""
+    settings.EMAIL_BACKEND = _LOCMEM
 
 
 @pytest.fixture
@@ -127,7 +124,7 @@ def test_send_uses_db_template_and_logs():
     )
     assert len(mail.outbox) == 1
     assert mail.outbox[0].subject == "Override subject"
-    assert log.status == EmailLog.STATUS_SENT
+    assert log.status == EmailLog.STATUS_QUEUED
 
 
 @pytest.mark.django_db
@@ -206,7 +203,7 @@ def test_test_send_delivers_and_writes_email_log(platform_admin):
     resp = client.post(url, {"to_email": "qa@example.com"}, format="json")
     assert resp.status_code == 200, resp.content
     body = resp.json()
-    assert body["status"] == EmailLog.STATUS_SENT
+    assert body["status"] == EmailLog.STATUS_QUEUED
     assert body["email_log_id"] is not None
     assert len(mail.outbox) == 1
     assert mail.outbox[0].to == ["qa@example.com"]

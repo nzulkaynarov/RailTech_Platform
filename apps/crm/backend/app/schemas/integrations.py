@@ -207,7 +207,11 @@ class SmtpCheckOut(BaseModel):
 
 
 class EmailLogItem(BaseModel):
-    """Строка журнала писем; тела письма (временного пароля) в журнале нет."""
+    """Строка журнала доставки; тела письма (временного пароля, ссылок входа) в журнале нет.
+
+    `source` — система-источник: свои письма CRM или запросы ERP и EDS по шине (W18A-P1);
+    `purpose` — назначение (код шаблона отправителя), `attachments` — число вложений.
+    """
 
     id: int
     to_email: str
@@ -221,6 +225,9 @@ class EmailLogItem(BaseModel):
     requested_by: int | None
     created_at: datetime
     sent_at: datetime | None
+    source: Literal["crm", "erp", "eds"]
+    purpose: str | None
+    attachments: int
 
 
 class EmailQueuedOut(BaseModel):

@@ -34,7 +34,7 @@
     "telegram": { "title": "Telegram", "purpose": "Mijozlar boti, jamoa kanali va bot profili." },
     "mail": {
       "title": "Pochta",
-      "purpose": "Butun tizim uchun yagona SMTP: taklifnomalar, parolni tiklash, ogohlantirishlar."
+      "purpose": "Butun tizim uchun bitta jo‘natuvchi: xodimlarga, kabinet mijozlariga xatlar, ERP dan TK va hujjatlar, EDS xatlari."
     },
     "services": {
       "title": "Tashqi xizmatlar",
@@ -246,8 +246,11 @@
       "details": "{{server}} · {{ms}} ms"
     },
     "test": {
-      "button": "Sinov xati",
-      "queued": "{{email}} manziliga sinov xati navbatga qo‘yildi"
+      "button": "Yuborishni tekshirish",
+      "waiting": "{{email}} manziliga xat navbatda — pochta serveri javobini kutyapmiz…",
+      "late": "{{email}} manziliga xat hali navbatda. Natija quyidagi jurnalda chiqadi.",
+      "sent": "{{email}} manziliga xat yuborildi: pochta serveri uni qabul qildi.",
+      "failed": "{{email}} manziliga xat yuborilmadi."
     },
     "settings": {
       "button": "SMTPni sozlash",
@@ -263,12 +266,12 @@
       "smtpPasswordHint": "Avvalgisini o‘zgartirmaslik uchun bo‘sh qoldiring.",
       "submit": "Sozlamalarni saqlash",
       "step1": "CRM pochta sozlamalarini saqlaydi; SMTP paroli shifrlangan holda, ekranda oxirgi 4 belgi qoladi.",
-      "step2": "Xodimlarga xatlar shu server orqali ketadi.",
-      "step3": "Aloqani tekshiring va sinov xatini yuboring — shunda hammasi ishlayotgani ko‘rinadi.",
+      "step2": "Barcha xatlar — xodimlarga, kabinet mijozlariga, ERP dan TK va hujjatlar, EDS xatlari — shu server orqali ketadi.",
+      "step3": "Aloqani va yuborishni tekshiring — natija tugmalar ostida darhol chiqadi.",
       "saved": "Pochta sozlamalari saqlandi"
     },
     "log": {
-      "title": "Yuborilganlar jurnali",
+      "title": "Yetkazish jurnali",
       "filter": "Ko‘rsatish",
       "all": "Barcha xatlar",
       "status": {
@@ -278,7 +281,51 @@
         "skipped_no_smtp": "O‘tkazib yuborilgan: pochta sozlanmagan"
       },
       "empty": "Jurnalda hozircha xatlar yo‘q.",
-      "error": "Sabab: {{error}}"
+      "error": "Sabab: {{error}}",
+      "source": { "crm": "CRM", "erp": "ERP", "eds": "Hujjat aylanishi" },
+      "attachments_one": "ilova: {{count}}",
+      "attachments_other": "ilovalar: {{count}}"
+    },
+    "reason": {
+      "smtp_not_configured": "Pochta sozlanmagan — Sozlamalar · Ulanishlar · Pochta",
+      "secrets_key_missing": "Sirlarni shifrlash kaliti berilmagan",
+      "secrets_key_changed": "Sirlarni shifrlash kaliti o‘zgargan — xatni o‘qib bo‘lmaydi",
+      "rejected": "Pochta serveri xatni rad etdi",
+      "unavailable": "Pochta serveri mavjud emas",
+      "auth_failed": "Pochta serveriga kirib bo‘lmadi",
+      "tls_failed": "Himoyalangan ulanish o‘rnatilmadi",
+      "invalid_host": "Pochta serveri manzili noto‘g‘ri",
+      "attachment_unavailable": "Ilova mavjud emas",
+      "attachment_mismatch": "Ilova yuborilgani bilan mos kelmadi",
+      "attachment_too_large": "Ilova juda katta",
+      "attachment_foreign_host": "Ilova havolasi platforma omboriga olib bormaydi",
+      "content_unreadable": "Xat matni shifrdan ochilmadi (tizimlar aloqa kaliti)",
+      "body_expired": "Xat matni allaqachon o‘chirilgan",
+      "queue": "Xatni navbatga qo‘yib bo‘lmadi"
+    },
+    "purpose": {
+      "quote_sent": "Mijozga TK",
+      "generated_document": "Mijozga hujjat",
+      "portal_magic_link": "Kabinetga kirish havolasi",
+      "portal_invitation": "Kabinetga taklif",
+      "invite_member": "Kabinet jamoasiga taklif",
+      "setup_password": "Parol o‘rnatish",
+      "reset_password": "Parolni tiklash",
+      "invoice_issued": "Hisob-faktura chiqarildi",
+      "payment_received": "To‘lov qabul qilindi",
+      "payment_reminder": "To‘lov eslatmasi",
+      "act_awaiting_acceptance": "Imzolash uchun dalolatnoma",
+      "quote_acceptance_code": "TK tasdiqlash kodi",
+      "quote_accepted_contact": "TK qabul qilindi",
+      "account_created_by_operator": "Hisob yaratildi",
+      "invite": "Xodimga taklif",
+      "password_reset": "Vaqtinchalik parol",
+      "password_reset_link": "Parolni tiklash havolasi",
+      "service_alert": "Nosozlik haqida xabar",
+      "telegram_linked": "Telegram bog‘landi",
+      "test": "Yuborishni tekshirish",
+      "outgoing_letter": "Chiquvchi xat",
+      "erp_mail": "ERP xati"
     }
   },
   "services": {

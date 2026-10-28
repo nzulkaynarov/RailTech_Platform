@@ -18,7 +18,7 @@ import re
 
 import pytest
 from django.urls import URLPattern, URLResolver, get_resolver
-from portal.tests.conftest import LOCMEM_CHANNELS, PortalAPIClient
+from portal.tests.conftest import PortalAPIClient, break_mail_handoff
 from portal.tests.contract_support import (
     check_response,
     component,
@@ -421,11 +421,8 @@ def _assert_documented_error(response, path, method, status_code, code):
     assert str(status_code) in documented, f"{method.upper()} {path}: статус {status_code} не описан в контракте"
 
 
-def test_failed_invitation_is_503_delivery_failed_as_in_the_contract(portal_client, settings):
-    settings.EMAIL_CHANNELS = {
-        name: {**cfg, "backend": "django.core.mail.backends.smtp.EmailBackend", "host": "127.0.0.1", "port": 1}
-        for name, cfg in LOCMEM_CHANNELS.items()
-    }
+def test_failed_invitation_is_503_delivery_failed_as_in_the_contract(portal_client, settings, monkeypatch):
+    break_mail_handoff(settings, monkeypatch)
     response = portal_client.post(
         api("/team/invite"),
         {"name": "Коллега", "email": "colleague.guard@example.com", "language": "ru", "channels": ["email"]},

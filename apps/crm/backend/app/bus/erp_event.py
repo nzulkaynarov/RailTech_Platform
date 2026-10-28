@@ -31,6 +31,9 @@ NOT_FOR_CRM: Final = frozenset(
         "uz.railtech.erp.contract.status_changed.v1",
     }
 )
+#: Типы ERP со своим обработчиком вне `ErpEventsService`: запрос письма почтовому сервису CRM
+#: (W18A-P1, `app/services/mail_requests.py`) — не событие сделки, ленты и бота.
+OWN_HANDLER: Final = frozenset({"uz.railtech.erp.mail.requested.v1"})
 _NAME: Final = re.compile(r"^uz\.railtech\.erp\.(?P<name>[a-z_]+\.[a-z_]+)\.v\d+$")
 
 
@@ -47,7 +50,10 @@ def erp_types() -> list[str]:
     return sorted(
         t
         for t in TYPES
-        if t.startswith(ERP_DOMAIN_PREFIX) and t not in INLINE_TYPES and t not in NOT_FOR_CRM
+        if t.startswith(ERP_DOMAIN_PREFIX)
+        and t not in INLINE_TYPES
+        and t not in NOT_FOR_CRM
+        and t not in OWN_HANDLER
     )
 
 

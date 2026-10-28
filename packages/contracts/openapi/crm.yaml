@@ -2471,8 +2471,16 @@ components:
       title: DryRunRowOut
       type: object
     EmailLogItem:
-      description: Строка журнала писем; тела письма (временного пароля) в журнале нет.
+      description: 'Строка журнала доставки; тела письма (временного пароля, ссылок входа) в журнале нет.
+
+
+        `source` — система-источник: свои письма CRM или запросы ERP и EDS по шине (W18A-P1);
+
+        `purpose` — назначение (код шаблона отправителя), `attachments` — число вложений.'
       properties:
+        attachments:
+          title: Attachments
+          type: integer
         attempts:
           title: Attempts
           type: integer
@@ -2491,6 +2499,11 @@ components:
         lang:
           title: Lang
           type: string
+        purpose:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Purpose
         requested_by:
           anyOf:
           - type: integer
@@ -2502,6 +2515,13 @@ components:
             type: string
           - type: 'null'
           title: Sent At
+        source:
+          enum:
+          - crm
+          - erp
+          - eds
+          title: Source
+          type: string
         status:
           enum:
           - queued
@@ -2537,6 +2557,9 @@ components:
       - requested_by
       - created_at
       - sent_at
+      - source
+      - purpose
+      - attachments
       title: EmailLogItem
       type: object
     EmailQueuedOut:
@@ -10719,7 +10742,9 @@ paths:
       - integrations
   /api/v1/integrations/smtp/log:
     get:
-      description: 'Журнал писем сотрудникам: последние `limit`, фильтр по статусу; тел писем в журнале нет.'
+      description: 'Журнал доставки почты ансамбля: последние `limit`, фильтр по статусу; источник (CRM, ERP,
+
+        EDS) и назначение письма; тел писем в журнале нет (W18A-P1).'
       operationId: list_email_log
       parameters:
       - in: query

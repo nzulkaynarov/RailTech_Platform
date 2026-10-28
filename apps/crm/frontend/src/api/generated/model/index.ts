@@ -108,6 +108,7 @@ export * from "./dryRunResponseByCodeCandidate";
 export * from "./dryRunResponseByCodeCurrent";
 export * from "./dryRunRowOut";
 export * from "./emailLogItem";
+export * from "./emailLogItemSource";
 export * from "./emailLogItemStatus";
 export * from "./emailQueuedOut";
 export * from "./emailQueuedOutStatus";

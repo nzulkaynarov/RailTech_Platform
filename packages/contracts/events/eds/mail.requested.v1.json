@@ -1,0 +1,137 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://railtech.uz/contracts/events/eds/mail.requested.v1.json",
+  "title": "Запрошена отправка письма",
+  "description": "Тип uz.railtech.eds.mail.requested.v1, источник rt://eds. Поле data конверта (envelope.v1.json). Исходящую почту ансамбля отправляет только почтовый сервис CRM (W18A-P1, B-INB-6): EDS письмо сама не шлёт — она рендерит тему, текст и HTML своим шаблоном и публикует это событие в транзакции изменения; CRM доставляет его через SMTP из карточки «Почта» (журнал доставки, повторы, итог). Текст, HTML и ссылки на вложения лежат в content шифртекстом ключа пары «eds → crm» (одноразовые ссылки входа и приглашений не хранятся открыто ни в outbox, ни в inbox). Вложения — по ссылке на объект хранилища отправителя (подписанная ссылка на чтение с ограниченным сроком, ключи S3 у каждого сервиса свои), не байтами в событии. Повтор с тем же request_key второго письма не даёт. Итог доставки CRM публикует событиями uz.railtech.crm.mail.sent.v1 / mail.failed.v1, только если notify = true.",
+  "type": "object",
+  "required": [
+    "request_key",
+    "purpose",
+    "to",
+    "subject",
+    "content"
+  ],
+  "properties": {
+    "request_key": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._:/-]{1,128}$",
+      "description": "Ключ идемпотентности отправителя: одно письмо на ключ. Повторная публикация с тем же ключом (новый id конверта) второго письма не даёт; итог несёт тот же ключ"
+    },
+    "purpose": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_.-]{0,63}$",
+      "description": "Назначение письма — код шаблона отправителя (quote_sent, portal_magic_link, setup_password…): видно в журнале доставки и в итоге"
+    },
+    "to": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 10,
+      "items": {
+        "type": "string",
+        "format": "email",
+        "maxLength": 255
+      },
+      "description": "Получатели (одно письмо всем адресам)"
+    },
+    "reply_to": {
+      "type": "string",
+      "format": "email",
+      "maxLength": 255,
+      "description": "Адрес для ответа, если не адрес отправителя карточки «Почта»"
+    },
+    "subject": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255,
+      "description": "Тема (без секретов: видна в журнале доставки)"
+    },
+    "language": {
+      "type": "string",
+      "pattern": "^[a-z]{2}$",
+      "description": "Язык письма (ru, uz, en) — для журнала"
+    },
+    "ref": {
+      "type": "object",
+      "description": "Объект отправителя, к которому относится письмо (КП, документ, приглашение) — возвращается в итоге",
+      "required": [
+        "kind",
+        "id"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_.-]{0,31}$"
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        }
+      },
+      "additionalProperties": false
+    },
+    "notify": {
+      "type": "boolean",
+      "description": "Нужен ли отправителю итог доставки (uz.railtech.crm.mail.sent.v1 / mail.failed.v1); по умолчанию false"
+    },
+    "attachments": {
+      "type": "array",
+      "maxItems": 10,
+      "description": "Метаданные вложений; ссылки на объекты хранилища — в content (links), в том же порядке",
+      "items": {
+        "type": "object",
+        "required": [
+          "filename",
+          "content_type",
+          "size",
+          "sha256"
+        ],
+        "properties": {
+          "filename": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "content_type": {
+            "type": "string",
+            "pattern": "^[a-z0-9.+-]+/[A-Za-z0-9.+-]+$",
+            "maxLength": 127
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 20971520,
+            "description": "Байт; не больше 20 МиБ на файл"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "description": "Контрольная сумма содержимого: CRM сверяет скачанное"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "content": {
+      "type": "object",
+      "description": "Тело письма шифртекстом: Fernet с ключом urlsafe_b64(HMAC-SHA256(секрет пары «eds → crm», \"rt-mail/v1/content\")); открытый текст — JSON {text, html|null, links: [{url, expires_at}]}. Первым шифрует первый секрет пары, CRM пробует каждый действующий",
+      "required": [
+        "alg",
+        "ciphertext"
+      ],
+      "properties": {
+        "alg": {
+          "type": "string",
+          "const": "fernet-pair-v1"
+        },
+        "ciphertext": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4194304
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,7 @@
+W18A-P1 «Почта: исходящая — один отправитель», e2e/admin-integrations.spec.ts на сборке (vite build --mode mock, MSW), chromium, 2026-10-28
+Почта: итог отправки и журнал доставки 1440: axe violations=0 (wcag2a, wcag2aa, wcag21a, wcag21aa)
+Почта: итог отправки и журнал доставки 390: axe violations=0
+администратор: обзор и все карточки (в т. ч. «Почта») 1440: axe violations=0
+администратор: обзор и все карточки (в т. ч. «Почта») 390: axe violations=0
+директор: просмотр 1440 и 390: axe violations=0
+Спек целиком: 15 passed

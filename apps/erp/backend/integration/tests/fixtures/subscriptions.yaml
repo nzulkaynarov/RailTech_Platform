@@ -16,3 +16,4 @@ subscribers:
     types:
       - uz.railtech.crm.client.updated.v1
       - uz.railtech.crm.contact.*.v1
+      - uz.railtech.crm.mail.*.v1
