@@ -8,8 +8,7 @@
 """
 
 import asyncio
-import contextlib
-from collections.abc import Iterator
+from collections.abc import Awaitable, Callable, Iterator
 from datetime import timedelta
 from types import SimpleNamespace
 from typing import Any
@@ -42,6 +41,23 @@ def bus(sessions: async_sessionmaker[AsyncSession]) -> Iterator[Any]:
     runtime.set_bus(stand)
     yield stand
     runtime.set_bus(None)
+
+
+class Barrier:
+    """Встреча двух запросов без порогов времени: ждём, пока второй тоже дойдёт до этой точки
+    или пока условие `alternative` не скажет, что он туда не дойдёт (стоит за блокировкой)."""
+
+    def __init__(self) -> None:
+        self.count = 0
+        self.both = asyncio.Event()
+
+    async def meet(self, alternative: Callable[[], Awaitable[bool]]) -> None:
+        self.count += 1
+        if self.count >= 2:
+            self.both.set()
+        # Состояние базы событием не приходит — опрос условия, не таймер.
+        while not self.both.is_set() and not await alternative():  # noqa: ASYNC110
+            await asyncio.sleep(0.005)
 
 
 class GatedSender:
@@ -146,24 +162,35 @@ async def test_a_parallel_retry_with_the_same_key_does_not_send_twice(
 async def test_two_simultaneous_requests_send_one_message(
     sessions: async_sessionmaker[AsyncSession], bus: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Настоящая гонка: оба запроса доходят до поиска ключа при резерве одновременно (встреча до
-    1 с). С блокировкой второй ждёт её в базе и видит строку первого; без блокировки оба не нашли
-    бы ключ и отправили бы два сообщения (мутационная проверка)."""
+    """Гонка без порогов времени. Оба запроса встречаются до и после поиска ключа при резерве
+    (`Barrier`): без блокировки оба не находят ключ и шлют два сообщения (мутационная проверка).
+    С блокировкой второй встаёт в ожидание advisory-блокировки (`pg_locks`, не выдана) — первый
+    идёт дальше, второй затем видит его строку и получает 409 `reply_in_progress`."""
     sender = GatedSender()
     sender.release.set()
     service, who, lead_id = await setup(sessions, sender, 7002)
     real = crm_repo.reply_by_key
-    met = asyncio.Event()
-    arrivals = 0
+    arrived, looked = Barrier(), Barrier()
+
+    async def other_waits_for_the_lock() -> bool:
+        async with sessions() as probe:
+            waiting = await probe.scalar(
+                text(
+                    "SELECT count(*) FROM pg_locks l JOIN pg_database d ON d.oid = l.database "
+                    "WHERE l.locktype = 'advisory' AND NOT l.granted "
+                    "AND d.datname = current_database()"
+                )
+            )
+        return bool(waiting)
 
     async def meet_then_lookup(session: AsyncSession, lead: int, key: str) -> Message | None:
-        nonlocal arrivals
-        arrivals += 1
-        if arrivals >= 2:
-            met.set()
-        with contextlib.suppress(TimeoutError):
-            await asyncio.wait_for(met.wait(), 1.0)
-        return await real(session, lead, key)
+        # Обе точки встречи — до поиска ключа и после него: без блокировки оба запроса ищут ключ
+        # раньше, чем кто-то из них запишет строку. С блокировкой второй стоит в `pg_locks` —
+        # это и есть встреча: первый идёт дальше, второй потом видит его строку.
+        await arrived.meet(other_waits_for_the_lock)
+        found = await real(session, lead, key)
+        await looked.meet(other_waits_for_the_lock)
+        return found
 
     monkeypatch.setattr(lead_messenger, "crm_repo", SimpleNamespace(reply_by_key=meet_then_lookup))
 
