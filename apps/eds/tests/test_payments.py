@@ -131,7 +131,7 @@ async def test_a_reader_with_only_registry_read_cannot_pay(
 async def test_a_director_with_the_catalog_codes_reads_the_memo_but_cannot_pay(
     client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
 ) -> None:
-    """Q-D2-4-1 п. 1: «Счета и оплаты» у директора — read: все коды, кроме `payments.confirm` и `registry.export`."""
+    """Q-D2-4-1 п. 1: «Счета и оплаты» у директора — read: все коды, кроме `payments.confirm`."""
     director_codes = [
         "letters.read",
         "letters.register",
@@ -140,6 +140,7 @@ async def test_a_director_with_the_catalog_codes_reads_the_memo_but_cannot_pay(
         "memos.approve",
         "approvals.decide",
         "registry.read",
+        "registry.export",
     ]
     await seed_employee(container, 32, permissions={"eds": director_codes})
     doc_id, _ = await to_accountant(client, staff)

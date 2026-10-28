@@ -182,6 +182,25 @@ async def test_export_csv_and_xlsx_with_filters_and_journal(
     assert [c for _, _, c in actions] == ["csv, строк: 2", "xlsx, строк: 1"]
 
 
+async def test_a_director_with_the_catalog_codes_exports_the_registry(
+    client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
+) -> None:
+    """Q-D2-4-1 п. 1: «Счета и оплаты» у директора — read, но выгрузка реестра остаётся (раздел «Проекты»)."""
+    from tests.helpers import seed_employee
+    from tests.test_review_rules import headers_of
+
+    codes = ["letters.read", "letters.register", "letters.resolve", "memos.create", "memos.approve"]
+    await seed_employee(
+        container, 33, permissions={"eds": [*codes, "approvals.decide", "registry.read", "registry.export"]}
+    )
+    await fill(client, container, staff)
+    response = await client.get("/api/v1/registry/export", params={"format": "csv"}, headers=headers_of(33))
+    assert response.status_code == 200
+    # без `registry.export` (например, только чтение реестра) — по-прежнему 403
+    await seed_employee(container, 34, permissions={"eds": [*codes, "registry.read"]})
+    assert_error(await client.get("/api/v1/registry/export", headers=headers_of(34)), 403, "FORBIDDEN")
+
+
 async def test_export_needs_its_own_permission(client: httpx.AsyncClient, staff: dict[str, Person]) -> None:
     assert_error(await client.get("/api/v1/registry/export", headers=staff["manager"].headers), 403, "FORBIDDEN")
     bad = await client.get("/api/v1/registry/export", params={"format": "pdf"}, headers=staff["accountant"].headers)

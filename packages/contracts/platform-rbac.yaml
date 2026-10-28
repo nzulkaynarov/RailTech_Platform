@@ -168,16 +168,18 @@ resources:
     label: { ru: "Документы · Проекты: договор, счёт, акт, сканы", uz: "Hujjatlar · Loyihalar: shartnoma, hisob, dalolatnoma, skanlar", en: "Documents · Projects: contract, invoice, act, scans" }
     backend:
       erp: { full: [contract.manage, contract.sign, fulfillment.act] }
-      eds: { read: [registry.read], full: [registry.read] }
+      # registry.export — выгрузка реестра «Все документы»: у директора и бухгалтера (раздел «Проекты» у обоих full), не привязана
+      # к «Счетам и оплатам» (решение архитектора, Q-D2-4-1 п. 1: директор их только читает, выгрузку сохраняет).
+      eds: { read: [registry.read], full: [registry.read, registry.export] }
   - key: eds.payments
     module: eds
     label: { ru: "Документы · Счета и оплаты · подтвердить оплату, запросить платёжку", uz: "Hujjatlar · Hisoblar va to‘lovlar · to‘lovni tasdiqlash, to‘lov topshiriqnomasini so‘rash", en: "Documents · Invoices & payments · confirm payment, request a payment order" }
     backend:
       erp: { read: [finance.view], full: [finance.view, finance.invoice, finance.payment, finance.rates, data.export] }
       # finance.view (Q-D2-4-1): чтение доски и карточки счетов без права действовать — директор и менеджер («Ч»).
-      # data.export ERP ↔ registry.export EDS: выгрузка реестра — у того, кто выгружает данные «Счетов и оплат».
+      # data.export ERP — выгрузка данных «Счетов и оплат» (у бухгалтера); выгрузка реестра EDS (registry.export) — в «Проектах».
       # payments.confirm — шаг «бухгалтер» маршрута служебной записки с суммой (решение архитектора, волна 12).
-      eds: { read: [registry.read], full: [registry.read, registry.export, payments.confirm] }
+      eds: { read: [registry.read], full: [registry.read, payments.confirm] }
   - key: eds.memo.create
     module: eds
     label: { ru: "Документы · Служебная записка · создать", uz: "Hujjatlar · Xizmat xati · yaratish", en: "Documents · Memo · create" }

@@ -95,9 +95,9 @@ async def test_director_gets_an_eds_token_with_the_document_codes(
     assert claims["exp"] - claims["iat"] == 60
     assert uuid.UUID(claims["jti"]).version == 4
     # журнал шины (`bus.manage`) — раздел `admin: full`, у директора `admin: read` (W13-A2)
-    # «Счета и оплаты» у директора — read (D2-4): без подтверждения оплаты и выгрузки реестра
+    # «Счета и оплаты» у директора — read (D2-4): без подтверждения оплаты
     assert claims["permissions"] == sorted(
-        set(EDS_PERMISSIONS) - {"bus.manage", "payments.confirm", "registry.export"}
+        set(EDS_PERMISSIONS) - {"bus.manage", "payments.confirm"}
     )
     assert redirect_url == "", "у EDS нет внешнего маршрута"
 

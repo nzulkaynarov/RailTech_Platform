@@ -135,6 +135,7 @@ async def test_created_user_carries_the_eds_permissions_of_the_roles(
                 "memos.approve",
                 "approvals.decide",
                 "registry.read",
+                "registry.export",
             ]
         ),
         ACCOUNTANT,

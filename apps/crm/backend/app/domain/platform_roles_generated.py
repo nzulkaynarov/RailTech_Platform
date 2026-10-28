@@ -320,13 +320,15 @@ EDS_BACKEND: Final[dict[str, dict[str, tuple[str, ...]]]] = {
     },
     "eds.projects": {
         "read": ("registry.read",),
-        "full": ("registry.read",),
+        "full": (
+            "registry.read",
+            "registry.export",
+        ),
     },
     "eds.payments": {
         "read": ("registry.read",),
         "full": (
             "registry.read",
-            "registry.export",
             "payments.confirm",
         ),
     },
