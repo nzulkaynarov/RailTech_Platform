@@ -306,3 +306,134 @@ def test_portal_client_signature_reads_as_client_agreed(pw):  # noqa: F811
     assert error is None and updated.status.code == S.PENDING_MANAGER
     assert contract_flow.contract_v3_status(updated) == "client_agreed"
     assert bus_support.only("contract.status_changed")["data"]["payload"]["status"] == "client_agreed"
+
+
+# ── Старая подпись кликом закрыта: «Подписан» только по скану (ревью #303) ─────────────────────────────
+
+
+def _contact(pw):  # noqa: F811
+    from parties.models import Contact
+
+    return Contact.objects.create(company=pw.client, name="Контакт клиента", can_act=True, language="ru")
+
+
+@pytest.mark.parametrize("status", [S.DRAFT, S.PENDING_CLIENT, S.PENDING_MANAGER])
+def test_click_signature_of_the_seller_is_closed_with_a_code(pw, status):  # noqa: F811
+    contract = contract_in(pw, status)
+    response = api(pw.admin).post(f"/api/v1/crm/contracts/{contract.id}/sign-manager/")
+    assert response.status_code == 409 and response.json() == {"detail": "CONTRACT_SIGN_VIA_SCAN"}
+    contract.refresh_from_db()
+    assert contract.status.code == status and contract.manager_signed_at is None and contract.manager_signer is None
+    assert not bus_support.published("contract.signed")
+    assert crm_services.sign_contract_by_manager(contract.id, pw.admin) == (None, "CONTRACT_SIGN_VIA_SCAN")
+
+
+@pytest.mark.parametrize("status", [S.ISSUED_EXTERNAL, S.SIGNED, S.REJECTED, S.CANCELLED])
+def test_click_signature_keeps_the_old_code_for_the_other_statuses(pw, status):  # noqa: F811
+    contract = contract_in(pw, status)
+    response = api(pw.admin).post(f"/api/v1/crm/contracts/{contract.id}/sign-manager/")
+    assert response.status_code == 400 and response.json() == {"detail": "CONTRACT_MANAGER_SIGN_NOT_ALLOWED"}
+
+
+def test_click_signature_still_checks_the_right_first(pw):  # noqa: F811
+    contract = contract_in(pw, S.PENDING_MANAGER)
+    assert api(pw.manager).post(f"/api/v1/crm/contracts/{contract.id}/sign-manager/").status_code == 403
+    assert crm_services.sign_contract_by_manager(contract.id, pw.manager)[1] == "MEMBER_REQUIRED_FOR_ACTION"
+
+
+def test_portal_signature_never_signs_around_the_operator_and_the_scan(pw):  # noqa: F811
+    """Раньше при проставленной подписи продавца клиент в портале давал SIGNED и закрывал сделку без оператора и скана."""
+    from django.utils import timezone
+
+    contract = contract_in(pw, S.PENDING_CLIENT, manager_signed_at=timezone.now())
+    updated, error = crm_services.sign_contract_by_client(contract.id, portal_contact=_contact(pw))
+    assert error is None and updated.status.code == S.PENDING_MANAGER
+    assert contract_flow.contract_v3_status(updated) == "client_agreed"
+    deal = Deal.objects.get(pk=pw.deal.pk)
+    assert deal.stage.code == DealStageCode.CONTRACT_SIGNED, "сделка не закрыта"
+    assert not bus_support.published("contract.signed") or all(
+        e["data"]["payload"].get("signed_by") != "both" for e in bus_support.published("contract.signed")
+    )
+    # дальше — только оператор и скан
+    assert (
+        api(pw.accountant)
+        .post(f"/api/v1/crm/contracts/{contract.id}/attach-scan/", {"file": scan()}, format="multipart")
+        .status_code
+        == 409
+    )
+    assert contract_flow.apply_transition(contract.id, "mark_issued", pw.accountant)[1] is None
+    signed, error = contract_flow.apply_transition(contract.id, "attach_scan", pw.accountant, scan=scan())
+    assert error is None and signed.status.code == S.SIGNED
+
+
+def test_revise_drops_every_previous_signature(pw):  # noqa: F811
+    from django.utils import timezone
+
+    contract = contract_in(
+        pw,
+        S.REJECTED,
+        client_signed_at=timezone.now(),
+        client_signer=pw.admin,
+        manager_signed_at=timezone.now(),
+        manager_signer=pw.accountant,
+    )
+    revised, error = contract_flow.apply_transition(contract.id, "revise", pw.accountant)
+    assert error is None and revised.status.code == S.DRAFT
+    revised.refresh_from_db()
+    assert (revised.client_signed_at, revised.client_signer, revised.manager_signed_at, revised.manager_signer) == (
+        None,
+        None,
+        None,
+        None,
+    )
+
+
+UPLOAD = "/api/v1/crm/contracts/{id}/upload-signed/"
+
+
+@pytest.mark.parametrize("status", [S.SIGNED, S.CANCELLED])
+def test_upload_signed_is_locked_once_the_contract_is_signed(pw, status):  # noqa: F811
+    contract = contract_in(pw, status)
+    response = api(pw.accountant).post(UPLOAD.format(id=contract.id), {"file": scan()}, format="multipart")
+    assert response.status_code == 409 and response.json() == {"detail": "CONTRACT_SCAN_LOCKED"}
+    contract.refresh_from_db()
+    assert not contract.signed_file
+
+
+@pytest.mark.parametrize(
+    ("name", "content", "ctype"),
+    [
+        ("fake.pdf", b"not a pdf at all", "application/pdf"),
+        ("note.docx", b"PK\x03\x04docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
+        ("empty.pdf", b"", "application/pdf"),
+    ],
+)
+def test_upload_signed_checks_the_signature_like_a_scan(pw, name, content, ctype):  # noqa: F811
+    contract = contract_in(pw, S.ISSUED_EXTERNAL)
+    response = api(pw.accountant).post(
+        UPLOAD.format(id=contract.id), {"file": scan(name, content, ctype)}, format="multipart"
+    )
+    assert response.status_code == 400, response.content
+    contract.refresh_from_db()
+    assert not contract.signed_file
+
+
+def test_upload_signed_stores_the_file_and_writes_the_journal(pw):  # noqa: F811
+    contract = contract_in(pw, S.ISSUED_EXTERNAL)
+    response = api(pw.accountant).post(UPLOAD.format(id=contract.id), {"file": scan()}, format="multipart")
+    assert response.status_code == 200, response.content
+    contract.refresh_from_db()
+    assert contract.signed_file and contract.status.code == S.ISSUED_EXTERNAL, "статус не меняется: подписывает скан"
+    entry = ActivityLog.objects.get(event_code="contract.signed_file_uploaded", deal=pw.deal)
+    assert entry.user_id == pw.accountant.pk and entry.entity_type == "contract" and entry.entity_id == contract.id
+
+
+def test_generate_from_quote_locks_the_quote_row(pw):  # noqa: F811
+    """Два параллельных «сформировать проект» не создадут два договора: строка КП берётся под `FOR UPDATE`."""
+    from django.db import connection
+    from django.test.utils import CaptureQueriesContext
+
+    with CaptureQueriesContext(connection) as queries:
+        crm_services.generate_contract_from_quote(pw.quote.id, actor=pw.accountant, send_to_client=False)
+    locks = [q["sql"] for q in queries if "FOR UPDATE" in q["sql"] and "quote" in q["sql"].lower()]
+    assert locks, "КП не заблокировано"

@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from decimal import Decimal
 from typing import Any, Optional
 
+from django.db import transaction
 from django.db.models import Q, QuerySet
 from django.utils import timezone
 
@@ -109,6 +110,39 @@ def project_is_done(deal) -> bool:
         return False
     acts = _live_acts(deal)
     return bool(acts) and all(a.status_code == ActStatusCode.SIGNED for a in acts)
+
+
+PROJECT_DONE = "project.done"
+
+
+@transaction.atomic
+def log_project_done_once(deal, actor=None) -> bool:
+    """Проект стал «Выполнено» (акт подписан и счета оплачены): ровно одна запись `project.done` в журнале сделки.
+
+    Зовётся из каждого места, где последним может оказаться недостающее условие: скан подписанного акта
+    (`act_flow.attach_act_scan`), приёмка акта заказчиком в портале (`billing.sign_act`) и оплата счёта
+    (`billing.record_payment`) — порядок «акт, потом оплата» и «оплата, потом акт» даёт один результат. Строка сделки
+    берётся под `select_for_update`: две транзакции, каждая из которых записала своё условие, проверяют итог по очереди,
+    и вторая видит запись первой; повтор не пишет второй раз. `True` — запись создана сейчас.
+    """
+    locked = Deal.objects.select_for_update(of=("self",)).get(pk=deal.pk)
+    if not project_is_done(locked):
+        return False
+    if ActivityLog.objects.filter(deal=locked, event_code=PROJECT_DONE).exists():
+        return False
+    ActivityLog.objects.create(
+        action="Проект выполнен",
+        detail=f"Сделка #{locked.id}: акт подписан, счета оплачены",
+        event_code="project.done",
+        event_params={"deal_id": locked.id},
+        user=actor,
+        level="SUCCESS",
+        entity_type="deal",
+        entity_id=locked.id,
+        deal=locked,
+        company_id=locked.company_id,
+    )
+    return True
 
 
 def project_step(deal) -> str:

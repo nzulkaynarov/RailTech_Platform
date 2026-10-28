@@ -400,7 +400,8 @@
     "selected": "Tanlangan fayl: {{name}}, {{size}}",
     "tooLarge": "Fayl 20 MB dan katta.",
     "wrongType": "PDF yoki rasm kerak: JPG, PNG, WEBP.",
-    "generating": "Fayl hali tayyorlanmoqda. Bir necha soniyadan keyin qayta urinib ko‘ring."
+    "generating": "Fayl hali tayyorlanmoqda. Bir necha soniyadan keyin qayta urinib ko‘ring.",
+    "remove": "Faylni olib tashlash"
   },
   "errors": {
     "contract_transition_not_allowed": "Shartnoma allaqachon boshqa holatda. Sahifani yangilang.",

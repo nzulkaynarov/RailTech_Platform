@@ -1,9 +1,9 @@
-import { Button, Input } from "antd";
-import { useId, useRef, useState } from "react";
+import { Button, Input, Upload } from "antd";
+import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { ErrorNote, FormField } from "../../../shared/ui/FormParts";
-import { MAX_SCAN_BYTES, scanProblem } from "./model";
+import { scanProblem } from "./model";
 
 const ACCEPT = ".pdf,.jpg,.jpeg,.png,.webp";
 
@@ -40,7 +40,6 @@ export function ScanForm({
 }) {
   const { t, i18n } = useTranslation("projects");
   const id = useId();
-  const input = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const problem = file ? scanProblem(file) : null;
   const ready = file !== null && problem === null;
@@ -54,21 +53,23 @@ export function ScanForm({
         if (file && ready && !busy) onSubmit(file);
       }}
     >
-      <FormField
-        id={id}
-        label={labels.label}
-        hint={`${labels.hint} (${String(MAX_SCAN_BYTES / 1024 / 1024)} MB)`}
-      >
-        <input
+      <FormField id={id} label={labels.label} hint={labels.hint}>
+        <Upload
           id={id}
-          ref={input}
-          type="file"
           accept={ACCEPT}
-          aria-describedby={`${id}-hint`}
-          onChange={(event) => {
-            setFile(event.target.files?.[0] ?? null);
+          maxCount={1}
+          beforeUpload={(chosen) => {
+            setFile(chosen);
+            return false; // файл не уходит сам: его отправляет кнопка «Прикрепить скан → Подписан»
           }}
-        />
+          onRemove={() => {
+            setFile(null);
+          }}
+          fileList={file ? [{ uid: "scan", name: file.name, status: "done" }] : []}
+          locale={{ removeFile: t("files.remove") }}
+        >
+          <Button>{t("files.choose")}</Button>
+        </Upload>
       </FormField>
       {file ? (
         <p className="pf-hint" role="status">

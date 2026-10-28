@@ -580,6 +580,33 @@ async def test_pdf_streams_for_every_reader(web: Web, erp: ProjectsFake, role: s
     assert response.headers["content-disposition"].startswith("attachment")
 
 
+async def test_files_are_attachments_with_our_own_name_and_a_sandbox_policy(
+    web: Web, erp: ProjectsFake
+) -> None:
+    """Скан — файл человека: имя из ответа ERP не доверяется, файл не открывается."""
+    await _as(web, "DIRECTOR")
+    erp.cards[DEAL] = card(contract=contract_card(has_scan=True, status="signed"))
+    erp.files[f"contracts/{CONTRACT_ID}/download-signed/"] = b"%PDF-1.4 fake"
+    hostile = httpx.Response(
+        200,
+        content=b"<html><script>alert(1)</script>",
+        headers={"Content-Disposition": 'inline; filename="../../x<script>.html"'},
+    )
+    erp.answer("GET", rf"contracts/{CONTRACT_ID}/download-signed/", hostile)
+    for variant, name in (
+        ("pdf", f"contract-{CONTRACT_ID}-pdf.pdf"),
+        ("scan", f"contract-{CONTRACT_ID}-scan"),
+    ):
+        response = await web.client.get(
+            f"{BASE}/{NUMBER}/files/contract/{CONTRACT_ID}?variant={variant}"
+        )
+        assert response.status_code == 200
+        assert response.headers["content-disposition"] == f'attachment; filename="{name}"', variant
+        assert response.headers["content-security-policy"] == "default-src 'none'; sandbox"
+        assert response.headers["x-content-type-options"] == "nosniff"
+        assert "<script" not in response.headers["content-disposition"]
+
+
 async def test_scan_is_always_a_download_and_only_when_it_exists(
     web: Web, erp: ProjectsFake
 ) -> None:

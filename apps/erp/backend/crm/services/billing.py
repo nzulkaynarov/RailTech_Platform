@@ -417,6 +417,10 @@ def record_payment(
 
         # Событие шины (rt_bus) в транзакции платежа: сбой публикации откатывает и платёж.
         events.publish_invoice_event("invoice.paid", invoice)
+        # Оплата может оказаться последним условием «Выполнено» (акт подписан раньше): запись `project.done` — здесь же.
+        from .projects import log_project_done_once
+
+        log_project_done_once(invoice.deal, actor)
 
     marker = "[MANUAL_MODE] " if manual else ""
     ActivityLog.objects.create(
@@ -743,6 +747,9 @@ def sign_act(
     from .deal_notifications import notify_act_signed
 
     transaction.on_commit(lambda: notify_act_signed(act, actor))
+    from .projects import log_project_done_once
+
+    log_project_done_once(act.deal, actor)  # приёмка заказчиком в портале может закрыть проект (оплата уже была)
     # Перерисовать PDF акта после приёмки: кэшированный файл создан при выпуске и не знает о
     # подписи заказчика (глазами 17-08 — скачанный «подписанный» акт с пустыми линиями).
     from ..tasks import render_document_pdf

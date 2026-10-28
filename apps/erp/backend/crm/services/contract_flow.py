@@ -264,9 +264,12 @@ def apply_transition(
             contract.client_signed_at = now
             fields.append("client_signed_at")
         elif action == "revise":
+            # Новая редакция: прежние подписи (клиента и продавца) не переносятся.
             contract.client_signed_at = None
             contract.client_signer = None
-            fields += ["client_signed_at", "client_signer"]
+            contract.manager_signed_at = None
+            contract.manager_signer = None
+            fields += ["client_signed_at", "client_signer", "manager_signed_at", "manager_signer"]
         elif action == "attach_scan":
             contract.signed_file = scan
             contract.manager_signed_at = now

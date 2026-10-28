@@ -68,7 +68,12 @@ def generate_contract_from_quote(
     # (superuser/internal actor=None bypass).
     if actor is not None and not (getattr(actor, "is_superuser", False) or is_seller(actor)):
         return None, "MEMBER_REQUIRED_FOR_ACTION"
-    quote = Quote.objects.select_related("deal__company", "status", "quote_currency").get(pk=quote_id)
+    # Строка КП под блокировкой: два параллельных «сформировать проект» не создадут два договора (D2-5).
+    quote = (
+        Quote.objects.select_for_update(of=("self",))
+        .select_related("deal__company", "status", "quote_currency")
+        .get(pk=quote_id)
+    )
 
     if not quote.status or quote.status.code not in {QuoteStatusCode.APPROVED, QuoteStatusCode.SENT}:
         return None, "CONTRACT_NEEDS_APPROVAL"
@@ -350,11 +355,12 @@ def sign_contract_by_client(
     with document_events.watch_document_issue("contract", contract):  # document.created на выпуске (шина rt_bus)
         contract.client_signer = client_user
         contract.client_signed_at = timezone.now()
-        contract.status = _cstatus(
-            ContractStatusCode.SIGNED if contract.manager_signed_at else ContractStatusCode.PENDING_MANAGER
-        )
+        # D2-5: согласие клиента никогда не даёт «Подписан» само: договор подписывают вне платформы (у оператора ЭДО),
+        # «Подписан» ставит только скан (`contract_flow.apply_transition("attach_scan")`). Раньше при уже стоявшей
+        # подписи продавца статус сразу становился SIGNED — в обход «выставлен у оператора → скан».
+        contract.status = _cstatus(ContractStatusCode.PENDING_MANAGER)
         contract.save(update_fields=["client_signer", "client_signed_at", "status", "updated_at"])
-    events.publish_contract_signed(contract, by="both" if contract.manager_signed_at else "client")
+    events.publish_contract_signed(contract, by="client")
     publish_current_status(
         contract, client_user
     )  # статус «Согласован клиентом» / «Подписан» — проекция реестра EDS (D2-5)
@@ -381,19 +387,17 @@ def sign_contract_by_manager(
     contract_id: int,
     manager_user: CustomUser,
 ) -> Tuple[Optional["Contract"], Optional[str]]:  # noqa: F821
-    """Click-to-sign by seller-side company manager. MANUAL MODE — to be replaced by E-IMZO.
-    See memory `tech_debt_payment_esign.md`.
+    """Подпись продавца кликом закрыта (D2-5, SPEC-v3 §2.4): `CONTRACT_SIGN_VIA_SCAN`.
 
-    Seller side is represented by any member with can_sell on the deal.company
-    itself (self-service intra-company deals).
+    Договор подписывают вне платформы (оператор ЭДО или бумага); система фиксирует статусы «Выставлен у оператора» и
+    «Подписан (скан)» (`crm.services.contract_flow`). Прежний клик давал SIGNED без оператора и скана, а вместе с
+    подписью клиента в портале — закрывал сделку в обход обеих проверок. Функция сохранена ради прежних вызывающих:
+    права проверяются как раньше, дальше — отказ с кодом (HTTP 409 у `sign-manager/`); подписанный, отменённый
+    и отклонённый договор по-прежнему отвечают `CONTRACT_MANAGER_SIGN_NOT_ALLOWED`.
     """
-    from django.utils import timezone
-
     from ..models import Contract
 
     contract = Contract.objects.select_for_update().select_related("deal").get(pk=contract_id)
-    # Seller-side capability via the shared predicate (own-company staff). Same source of truth
-    # as the serializer's sign hint.
     if not (getattr(manager_user, "is_superuser", False) or viewer_can_sign_manager(manager_user, contract)):
         return None, "MEMBER_REQUIRED_FOR_ACTION"
     if contract.status_code not in {
@@ -402,30 +406,7 @@ def sign_contract_by_manager(
         ContractStatusCode.PENDING_CLIENT,
     }:
         return None, "CONTRACT_MANAGER_SIGN_NOT_ALLOWED"
-    from integration.services import document_events, events
-
-    with document_events.watch_document_issue("contract", contract):  # document.created на выпуске (шина rt_bus)
-        contract.manager_signer = manager_user
-        contract.manager_signed_at = timezone.now()
-        contract.status = _cstatus(
-            ContractStatusCode.SIGNED if contract.client_signed_at else ContractStatusCode.PENDING_CLIENT
-        )
-        contract.save(update_fields=["manager_signer", "manager_signed_at", "status", "updated_at"])
-    events.publish_contract_signed(contract, by="both" if contract.client_signed_at else "company")
-    publish_current_status(contract, manager_user)
-    ActivityLog.objects.create(
-        action="[MANUAL_MODE] Подписан договор (сторона продавца)",
-        detail=f"Договор {contract.number} / сделка #{contract.deal_id}",
-        event_code="contract.signed_manager",
-        event_params={"number": contract.number, "deal_id": contract.deal_id, "manual": True},
-        user=manager_user,
-        level="INFO",
-        deal=contract.deal,
-        company_id=contract.deal.company_id,
-    )
-    _finalize_if_signed(contract)
-    _rerender_pdf_after_signature(contract)
-    return contract, None
+    return None, "CONTRACT_SIGN_VIA_SCAN"
 
 
 def _contract_seller_recipient(contract):

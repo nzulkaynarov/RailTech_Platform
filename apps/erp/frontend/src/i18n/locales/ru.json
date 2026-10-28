@@ -2948,6 +2948,10 @@
       }
     },
     "contract": {
+      "signed_file_uploaded": {
+        "title": "Загружен файл подписанного экземпляра договора",
+        "detail": "Договор {{number}} по сделке #{{deal_id}}"
+      },
       "created": {
         "title": "Создан договор",
         "detail": "Договор {{number}} по сделке #{{deal_id}}"

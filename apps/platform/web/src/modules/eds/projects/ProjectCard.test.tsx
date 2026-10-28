@@ -165,12 +165,13 @@ describe("Проект: договор (вкладка в боковом окн�
     ).toBeDisabled();
 
     // правильное расширение, но не та сигнатура — отказ ERP словами
-    pick(input, new File(["not a pdf at all"], "fake.pdf", { type: "application/pdf" }));
-    await waitFor(() => {
-      expect(
-        within(panel).getByRole("button", { name: "Прикрепить скан → Подписан" }),
-      ).toBeEnabled();
-    });
+    // после выбора AntD Upload пересоздаёт поле файла: берём его заново
+    pick(
+      within(panel).getByLabelText("Скан подписанного договора"),
+      new File(["not a pdf at all"], "fake.pdf", { type: "application/pdf" }),
+    );
+    await within(panel).findAllByText(/fake\.pdf/);
+    expect(within(panel).getByRole("button", { name: "Прикрепить скан → Подписан" })).toBeEnabled();
     fireEvent.click(within(panel).getByRole("button", { name: "Прикрепить скан → Подписан" }));
     expect(await within(panel).findByText(/Файл не похож на скан/)).toBeVisible();
     expect(within(panel).getAllByText("Выставлен у оператора").length).toBeGreaterThan(0);

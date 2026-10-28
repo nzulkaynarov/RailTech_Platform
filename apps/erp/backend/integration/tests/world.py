@@ -98,6 +98,21 @@ def add_quote(deal, version, status_code, total, *, currency=None, sent=None, va
     return quote
 
 
+def sign_via_scan(contract_id, actor=None):
+    """Договор «Подписан» тем единственным путём, что остался после D2-5: «Выставлен у оператора» → скан (подпись кликом закрыта)."""
+    from django.core.files.uploadedfile import SimpleUploadedFile
+
+    from crm.services import contract_flow
+
+    for action, extra in (
+        ("mark_issued", {}),
+        ("attach_scan", {"scan": SimpleUploadedFile("scan.pdf", b"%PDF-1.4 demo scan", "application/pdf")}),
+    ):
+        contract, error = contract_flow.apply_transition(contract_id, action, actor, **extra)
+        assert error is None, f"{action}: {error}"
+    return contract
+
+
 def add_contract(deal, quote, status_code=ContractStatusCode.SIGNED, **fields) -> Contract:
     if status_code == ContractStatusCode.SIGNED:
         fields.setdefault("client_signed_at", timezone.now())

@@ -89,7 +89,8 @@ def test_sign_goes_through_the_service_and_waits_for_the_company_signature(
     assert contract.deal.stage.code == stage_before  # сделку двигает сервис по двусторонней подписи, не портал
 
 
-def test_sign_after_the_company_closes_the_deal_through_the_service(contract_world, portal_client):
+def test_sign_after_the_company_does_not_sign_around_the_operator_and_the_scan(contract_world, portal_client):
+    """D2-5: согласие клиента не даёт «Подписан» даже при проставленной подписи продавца: нужны оператор и скан."""
     contract = contract_world["contracts"]["signed_by_company"]
     deal = contract.deal
     deal.stage = DealStage.objects.get(code=DealStageCode.CONTRACT_SIGNED)
@@ -97,11 +98,11 @@ def test_sign_after_the_company_closes_the_deal_through_the_service(contract_wor
 
     response = post(portal_client, f"/contracts/{contract.pk}/sign")
 
-    assert response.status_code == 200 and response.json()["status"] == "signed"
+    assert response.status_code == 200 and response.json()["status"] == "signed_by_client"
     contract.refresh_from_db()
-    assert contract.status.code == ContractStatusCode.SIGNED and contract.is_fully_signed
+    assert contract.status.code == ContractStatusCode.PENDING_MANAGER and not contract.signed_file
     deal.refresh_from_db()
-    assert deal.stage.code == DealStageCode.CLOSED_WON  # `_finalize_if_signed` обеих подписей
+    assert deal.stage.code == DealStageCode.CONTRACT_SIGNED  # сделку закроет только скан подписанного договора
 
 
 @pytest.mark.parametrize("key", ["signed_by_client", "signed"])

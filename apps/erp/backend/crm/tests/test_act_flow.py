@@ -6,6 +6,7 @@
 """
 
 import pytest
+from django.utils import timezone
 from integration.tests import bus_support
 from integration.tests import world as w
 
@@ -62,6 +63,81 @@ def test_project_is_not_done_while_an_invoice_is_unpaid(pw):  # noqa: F811
     deal = projects.project_queryset().get(pk=pw.deal.pk)
     assert not projects.project_is_done(deal)
     assert not ActivityLog.objects.filter(event_code="project.done").exists()
+
+
+def _done_entries(deal):
+    return ActivityLog.objects.filter(event_code="project.done", deal=deal).count()
+
+
+def _pay(pw, invoice):  # noqa: F811
+    from decimal import Decimal
+
+    from crm.services.billing import record_payment
+
+    return record_payment(
+        invoice.id, actor=pw.admin, amount=Decimal("5000000"), reference="p-1", paid_at=timezone.now().date()
+    )
+
+
+def test_done_when_the_payment_comes_after_the_signed_scan(pw):  # noqa: F811
+    """Порядок «скан акта → оплата»: последним условием оказывается оплата — запись `project.done` пишет она."""
+    act = _act(pw, invoice_status=InvoiceStatusCode.ISSUED)
+    _post(pw.accountant, act, "attach-scan", {"file": scan()}, "multipart")
+    assert _done_entries(pw.deal) == 0
+    payment, error = _pay(pw, act.invoice)
+    assert error is None, error
+    deal = projects.project_queryset().get(pk=pw.deal.pk)
+    assert projects.project_is_done(deal) and projects.project_step(deal) == "DONE"
+    assert _done_entries(deal) == 1
+
+
+def test_done_when_the_scan_comes_after_the_payment(pw):  # noqa: F811
+    """Порядок «оплата → скан акта»: последним оказывается скан."""
+    act = _act(pw, invoice_status=InvoiceStatusCode.ISSUED)
+    _, error = _pay(pw, act.invoice)
+    assert error is None, error
+    assert _done_entries(pw.deal) == 0
+    _post(pw.accountant, act, "attach-scan", {"file": scan()}, "multipart")
+    assert _done_entries(pw.deal) == 1
+
+
+def test_project_done_is_logged_once_however_often_it_is_checked(pw):  # noqa: F811
+    act = _act(pw, invoice_status=InvoiceStatusCode.ISSUED)
+    _post(pw.accountant, act, "attach-scan", {"file": scan()}, "multipart")
+    _pay(pw, act.invoice)
+    assert _done_entries(pw.deal) == 1
+    assert projects.log_project_done_once(pw.deal, pw.accountant) is False
+    assert _post(pw.accountant, act, "attach-scan", {"file": scan()}, "multipart").status_code == 409
+    assert _pay(pw, act.invoice)[1] is None  # повтор той же оплаты — прежний платёж, не новая запись
+    assert _done_entries(pw.deal) == 1
+
+
+def test_done_when_the_customer_accepts_the_act_in_the_portal(pw):  # noqa: F811
+    """Приёмка акта заказчиком в портале (`billing.sign_act`) — третий путь к «Выполнено»; счёт уже оплачен."""
+    from parties.models import Contact
+
+    from crm.services.billing import sign_act
+
+    act = _act(pw)
+    contact = Contact.objects.create(company=pw.client, name="Контакт клиента", can_act=True, language="ru")
+    signed, error = sign_act(act.id, portal_contact=contact)
+    assert error is None, error
+    assert signed.status.code == A.SIGNED
+    assert _done_entries(pw.deal) == 1
+    assert projects.log_project_done_once(pw.deal) is False
+
+
+def test_portal_acceptance_while_an_invoice_is_unpaid_does_not_close_the_project(pw):  # noqa: F811
+    from parties.models import Contact
+
+    from crm.services.billing import sign_act
+
+    act = _act(pw, invoice_status=InvoiceStatusCode.ISSUED)
+    contact = Contact.objects.create(company=pw.client, name="Контакт клиента", can_act=True, language="ru")
+    assert sign_act(act.id, portal_contact=contact)[1] is None
+    assert _done_entries(pw.deal) == 0
+    _pay(pw, act.invoice)
+    assert _done_entries(pw.deal) == 1
 
 
 @pytest.mark.parametrize("status", [s for s in ALL if s != A.ISSUED])

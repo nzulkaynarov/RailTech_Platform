@@ -283,9 +283,18 @@ class Command(BaseCommand):
         contract, err = crm_services.sign_contract_by_client(contract.id, portal_contact=client_contact)
         if err:
             raise Exception(f"sign_contract_by_client failed: {err}")
-        contract, err = crm_services.sign_contract_by_manager(contract.id, manager)
-        if err:
-            raise Exception(f"sign_contract_by_manager failed: {err}")
+        # Подпись кликом закрыта (D2-5): «Выставлен у оператора» → скан подписанного договора.
+        from django.core.files.uploadedfile import SimpleUploadedFile
+
+        from crm.services import contract_flow
+
+        for action, extra in (
+            ("mark_issued", {}),
+            ("attach_scan", {"scan": SimpleUploadedFile("scan.pdf", b"%PDF-1.4 smoke scan", "application/pdf")}),
+        ):
+            contract, err = contract_flow.apply_transition(contract.id, action, None, **extra)
+            if err:
+                raise Exception(f"{action} failed: {err}")
         info(f"contract status={contract.status_code} (expected SIGNED)")
 
         step(8, "Generate invoice, record payment, generate act")

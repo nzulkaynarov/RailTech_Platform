@@ -4379,7 +4379,7 @@ export interface paths {
         put?: never;
         /**
          * Upload signed copy
-         * @description Contracts -- generated from approved quotes, double-signed.
+         * @description Файл подписанного экземпляра к договору, который ещё не подписан. На «Подписан» и «Отменён» — 409 `CONTRACT_SCAN_LOCKED`: подписанный скан не заменяется. Тип проверяется как у скана (PDF, jpg, png, webp по сигнатуре, до 20 МБ), загрузка пишется в журнал. Статус не меняет: «Подписан» ставит `attach-scan`.
          */
         post: operations["crm_contracts_upload_signed_create"];
         delete?: never;

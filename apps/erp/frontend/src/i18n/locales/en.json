@@ -2937,6 +2937,10 @@
       }
     },
     "contract": {
+      "signed_file_uploaded": {
+        "title": "Signed copy of the contract uploaded",
+        "detail": "Contract {{number}} for deal #{{deal_id}}"
+      },
       "created": {
         "title": "Contract created",
         "detail": "Contract {{number}} for deal #{{deal_id}}"

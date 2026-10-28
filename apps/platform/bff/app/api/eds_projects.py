@@ -8,8 +8,10 @@ BFF не решает: проект, статусы, действия и их д
 разбора multipart.
 """
 
+import re
 from typing import Annotated, Literal
 
+import httpx
 from fastapi import APIRouter, Depends, Path, Query, Request, Response, status
 from fastapi.responses import JSONResponse, StreamingResponse
 
@@ -71,6 +73,20 @@ async def _scan_body(request: Request) -> tuple[bytes, str]:
         if len(body) > MAX_BODY_BYTES:
             raise _too_large()
     return bytes(body), content_type
+
+
+_SAFE_EXTENSIONS = frozenset({"pdf", "jpg", "jpeg", "png", "webp"})
+
+
+def _attachment_name(kind: str, doc_id: int, variant: str, upstream: httpx.Headers) -> str:
+    """`attachment; filename="contract-12-scan.pdf"`; расширение — из белого списка."""
+    given = upstream.get("content-disposition") or ""
+    found = re.search(r'filename\*?=(?:UTF-8\'\')?"?[^";]*\.([A-Za-z0-9]{2,5})"?\s*(?:;|$)', given)
+    ext = found.group(1).lower() if found else ""
+    if ext not in _SAFE_EXTENSIONS:
+        ext = "pdf" if variant == "pdf" else ""
+    name = f"{kind}-{doc_id}-{variant}" + (f".{ext}" if ext else "")
+    return f'attachment; filename="{name}"'
 
 
 # --- список и карточка -------------------------------------------------------------------------
@@ -194,9 +210,12 @@ async def download_file(
             raise project_error(upstream)
         finally:
             await upstream.aclose()
-    # Скан загрузил человек: тип не доверяется, файл скачивается. Наш PDF отдаётся как PDF.
+    # Скан загрузил человек: тип не доверяется, файл скачивается, а не открывается.
+    # Имя — своё (вид, id, вариант, расширение из белого списка), не из ответа ERP;
+    # содержимое не исполняется: `sandbox`.
     headers = {
-        "Content-Disposition": upstream.headers.get("content-disposition") or "attachment",
+        "Content-Disposition": _attachment_name(kind, doc_id, variant_, upstream.headers),
+        "Content-Security-Policy": "default-src 'none'; sandbox",
         "X-Content-Type-Options": "nosniff",
         "Cache-Control": "private, no-store",
     }

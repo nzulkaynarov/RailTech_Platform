@@ -400,7 +400,8 @@
     "selected": "Selected file: {{name}}, {{size}}",
     "tooLarge": "The file is larger than 20 MB.",
     "wrongType": "A PDF or an image is needed: JPG, PNG, WEBP.",
-    "generating": "The file is still being prepared. Try again in a few seconds."
+    "generating": "The file is still being prepared. Try again in a few seconds.",
+    "remove": "Remove the file"
   },
   "errors": {
     "contract_transition_not_allowed": "The contract is already in another status. Refresh the page.",

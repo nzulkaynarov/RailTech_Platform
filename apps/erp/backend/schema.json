@@ -12145,7 +12145,7 @@
         "/api/v1/crm/contracts/{id}/upload-signed/": {
             "post": {
                 "operationId": "crm_contracts_upload_signed_create",
-                "description": "Contracts -- generated from approved quotes, double-signed.",
+                "description": "Файл подписанного экземпляра к договору, который ещё не подписан. На «Подписан» и «Отменён» — 409 `CONTRACT_SCAN_LOCKED`: подписанный скан не заменяется. Тип проверяется как у скана (PDF, jpg, png, webp по сигнатуре, до 20 МБ), загрузка пишется в журнал. Статус не меняет: «Подписан» ставит `attach-scan`.",
                 "summary": "Upload signed copy",
                 "parameters": [
                     {

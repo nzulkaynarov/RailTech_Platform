@@ -12,8 +12,8 @@ from core.file_streaming import stream_file_field
 from core.optimistic_locking import OptimisticLockingMixin
 from core.permissions import ADMIN_ONLY, IsCompanyMemberOrPlatformAdmin, IsPlatformAdmin, RoleGatedViewMixin
 from crm import services as crm_services
-from crm.constants import DEFAULT_INVOICE_DUE_DAYS, InvoiceStatusCode
-from crm.models import Act, Contract, Fulfillment, Invoice, Payment
+from crm.constants import DEFAULT_INVOICE_DUE_DAYS, ContractStatusCode, InvoiceStatusCode
+from crm.models import Act, ActivityLog, Contract, Fulfillment, Invoice, Payment
 from crm.serializers import (
     ActSerializer,
     ContractSerializer,
@@ -243,28 +243,51 @@ class ContractViewSet(RoleGatedViewMixin, OptimisticLockingMixin, ContractFlowMi
     def sign_manager(self, request, pk=None):
         contract, err = crm_services.sign_contract_by_manager(int(pk), request.user)
         if err:
-            return Response({"detail": err}, status=400)
+            # D2-5: подпись кликом закрыта, подписывает скан (`attach-scan`): 409 с кодом, а не «неверный запрос».
+            return Response({"detail": err}, status=409 if err == "CONTRACT_SIGN_VIA_SCAN" else 400)
         return Response(ContractSerializer(contract).data)
 
-    @extend_schema(summary="Upload signed copy", tags=["CRM"])
+    @extend_schema(
+        summary="Upload signed copy",
+        description=(
+            "Файл подписанного экземпляра к договору, который ещё не подписан. На «Подписан» и «Отменён» — 409 "
+            "`CONTRACT_SCAN_LOCKED`: подписанный скан не заменяется. Тип проверяется как у скана (PDF, jpg, png, webp "
+            "по сигнатуре, до 20 МБ), загрузка пишется в журнал. Статус не меняет: «Подписан» ставит `attach-scan`."
+        ),
+        tags=["CRM"],
+    )
     @action(detail=True, methods=["post"], url_path="upload-signed", parser_classes=[MultiPartParser, FormParser])
     def upload_signed(self, request, pk=None):
         contract = self.get_object()
         file_obj = request.FILES.get("file")
         if not file_obj:
             return Response({"detail": "NO_FILE_PROVIDED"}, status=400)
+        if contract.status_code in (ContractStatusCode.SIGNED, ContractStatusCode.CANCELLED):
+            return Response({"detail": "CONTRACT_SCAN_LOCKED"}, status=409)
 
         from django.core.exceptions import ValidationError
 
-        from core.validators import validate_document_upload
+        from core.validators import validate_scan_upload
 
         try:
-            validate_document_upload(file_obj)
+            validate_scan_upload(file_obj)
         except ValidationError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         contract.signed_file = file_obj
         contract.save(update_fields=["signed_file", "updated_at"])
+        ActivityLog.objects.create(
+            action="Загружен файл подписанного экземпляра договора",
+            detail=f"Договор {contract.number} / сделка #{contract.deal_id}",
+            event_code="contract.signed_file_uploaded",
+            event_params={"number": contract.number, "deal_id": contract.deal_id},
+            user=request.user,
+            level="INFO",
+            entity_type="contract",
+            entity_id=contract.id,
+            deal=contract.deal,
+            company_id=contract.deal.company_id,
+        )
         return Response(ContractSerializer(contract).data)
 
     @extend_schema(summary="Cancel contract", tags=["CRM"])

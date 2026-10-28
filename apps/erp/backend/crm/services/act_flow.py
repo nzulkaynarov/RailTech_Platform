@@ -91,7 +91,9 @@ def attach_act_scan(act_id: int, actor: Optional[CustomUser], scan) -> Tuple[Opt
     from .deal_notifications import notify_act_signed
 
     transaction.on_commit(lambda: notify_act_signed(act, actor))
-    _log_project_done_once(act.deal, actor)
+    from .projects import log_project_done_once
+
+    log_project_done_once(act.deal, actor)
     return act, None
 
 
@@ -109,29 +111,3 @@ def record_act_return(act_id: int, actor: Optional[CustomUser], reason: str) -> 
     if act.status_code != ActStatusCode.ISSUED:
         return None, "ACT_SIGN_NOT_ALLOWED"
     return apply_act_return(act, actor, clean), None
-
-
-PROJECT_DONE = "project.done"
-
-
-def _log_project_done_once(deal, actor) -> None:
-    """Акт подписан: если и счета оплачены, проект «Выполнено» — одна запись в журнале сделки (не повторяется)."""
-    from .projects import project_is_done
-
-    deal.refresh_from_db()
-    if not project_is_done(deal):
-        return
-    if ActivityLog.objects.filter(deal=deal, event_code=PROJECT_DONE).exists():
-        return
-    ActivityLog.objects.create(
-        action="Проект выполнен",
-        detail=f"Сделка #{deal.id}: акт подписан, счета оплачены",
-        event_code="project.done",
-        event_params={"deal_id": deal.id},
-        user=actor,
-        level="SUCCESS",
-        entity_type="deal",
-        entity_id=deal.id,
-        deal=deal,
-        company_id=deal.company_id,
-    )
