@@ -4,6 +4,14 @@ from django.urls import include, path, re_path
 from drf_spectacular.utils import extend_schema
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 from finance.views import DealMarginDeviationView, DealPurchaseActualDetailView, DealPurchaseActualsView
+from finance.views_receivables import (
+    ReceivableBoardView,
+    ReceivableCardView,
+    ReceivableConfirmationFileView,
+    ReceivableConfirmationsView,
+    ReceivableConfirmPaymentView,
+    ReceivableRequestPaymentDocView,
+)
 from integration.bus import get_bus
 from integration.bus_journal_views import (
     BusDeliveriesView,
@@ -286,6 +294,29 @@ urlpatterns = (
             "api/v1/finance/deals/<int:deal_id>/purchase-actuals/<str:currency>/",
             DealPurchaseActualDetailView.as_view(),
             name="deal-purchase-actual-detail",
+        ),
+        # D2-4 — «Счета и оплаты» бухгалтера: доска по вкладкам, карточка, подтверждение оплаты, платёжка клиента.
+        path("api/v1/finance/receivables/", ReceivableBoardView.as_view(), name="receivables-board"),
+        path("api/v1/finance/receivables/<int:invoice_id>/", ReceivableCardView.as_view(), name="receivable-card"),
+        path(
+            "api/v1/finance/receivables/<int:invoice_id>/confirm-payment/",
+            ReceivableConfirmPaymentView.as_view(),
+            name="receivable-confirm-payment",
+        ),
+        path(
+            "api/v1/finance/receivables/<int:invoice_id>/confirmations/",
+            ReceivableConfirmationsView.as_view(),
+            name="receivable-confirmations",
+        ),
+        path(
+            "api/v1/finance/receivables/<int:invoice_id>/confirmations/<int:confirmation_id>/file/",
+            ReceivableConfirmationFileView.as_view(),
+            name="receivable-confirmation-file",
+        ),
+        path(
+            "api/v1/finance/receivables/<int:invoice_id>/request-payment-doc/",
+            ReceivableRequestPaymentDocView.as_view(),
+            name="receivable-request-payment-doc",
         ),
         # CRM Phase A — counterparty / deal activity timeline (read-only).
         path("api/v1/crm/timeline/", TimelineView.as_view(), name="crm-timeline"),

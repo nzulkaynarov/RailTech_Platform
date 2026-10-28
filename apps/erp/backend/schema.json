@@ -18558,6 +18558,478 @@
                 }
             }
         },
+        "/api/v1/finance/receivables/": {
+            "get": {
+                "operationId": "finance_receivables_board",
+                "description": "GET — счета вкладки «Счетов и оплат» и число счетов на каждой вкладке.",
+                "summary": "Счета и оплаты: таблица вкладки",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "limit",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "Строк на странице, 1–100 (по умолчанию 50)."
+                    },
+                    {
+                        "in": "query",
+                        "name": "offset",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "Сколько строк пропустить."
+                    },
+                    {
+                        "in": "query",
+                        "name": "q",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Поиск по номеру счёта и названию клиента."
+                    },
+                    {
+                        "in": "query",
+                        "name": "tab",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "all",
+                                "awaiting",
+                                "overdue",
+                                "proofs",
+                                "to_issue"
+                            ]
+                        },
+                        "description": "Вкладка; по умолчанию `awaiting`."
+                    }
+                ],
+                "tags": [
+                    "Finance"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ReceivableBoard"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "TAB_INVALID / PAGINATION_INVALID",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BadRequest"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "ROLE_NOT_PERMITTED",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/finance/receivables/{invoice_id}/": {
+            "get": {
+                "operationId": "finance_receivables_card",
+                "description": "GET — карточка счёта: платёжки, платежи, остаток, журнал.",
+                "summary": "Счета и оплаты: карточка счёта",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "invoice_id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Finance"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ReceivableCard"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "403": {
+                        "description": "ROLE_NOT_PERMITTED",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "NOT_FOUND",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/finance/receivables/{invoice_id}/confirm-payment/": {
+            "post": {
+                "operationId": "finance_receivables_confirm_payment",
+                "description": "POST — «Подтвердить оплату» (полная или частичная) по выписке банка.",
+                "summary": "Подтвердить оплату счёта (сумма и дата по выписке)",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "invoice_id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Finance"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ConfirmPaymentRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ConfirmPaymentRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ConfirmPaymentRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ReceivableCard"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "NOT_FOUND / CONFIRMATION_NOT_FOUND (404); ROLE_NOT_PERMITTED / MEMBER_REQUIRED_FOR_ACTION (403); PAYMENT_EXCEEDS_BALANCE_DUE / INVOICE_NOT_ISSUED / INVOICE_NOT_OPEN / INVOICE_CANCELLED / INVOICE_ALREADY_PAID / PAYMENT_REFERENCE_CONFLICT (409); PAYMENT_DATE_IN_FUTURE / PAYMENT_AMOUNT_MUST_BE_POSITIVE (400)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BadRequest"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "ROLE_NOT_PERMITTED / MEMBER_REQUIRED_FOR_ACTION",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "NOT_FOUND / CONFIRMATION_NOT_FOUND",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "PAYMENT_EXCEEDS_BALANCE_DUE / INVOICE_ALREADY_PAID / ...",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/finance/receivables/{invoice_id}/confirmations/": {
+            "post": {
+                "operationId": "finance_receivables_attach_confirmation",
+                "description": "POST — приложить платёжку клиента (файл) к открытому счёту.",
+                "summary": "Приложить платёжку клиента к счёту",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "invoice_id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Finance"
+                ],
+                "requestBody": {
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AttachConfirmationRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ReceivableCard"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "Файл не принят или поле неверно",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BadRequest"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "ROLE_NOT_PERMITTED / MEMBER_REQUIRED_FOR_ACTION",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "NOT_FOUND",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "INVOICE_NOT_OPEN",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/finance/receivables/{invoice_id}/confirmations/{confirmation_id}/file/": {
+            "get": {
+                "operationId": "finance_receivables_confirmation_file",
+                "description": "GET — файл платёжки клиента потоком (приватное хранилище, только после проверки права и привязки к счёту).",
+                "summary": "Файл платёжки клиента",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "confirmation_id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    },
+                    {
+                        "in": "path",
+                        "name": "invoice_id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Finance"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Содержимое файла"
+                    },
+                    "403": {
+                        "description": "ROLE_NOT_PERMITTED",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Платёжки нет или она относится к другому счёту",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/finance/receivables/{invoice_id}/request-payment-doc/": {
+            "post": {
+                "operationId": "finance_receivables_request_payment_doc",
+                "description": "POST — отметить «платёжку запросили у клиента» (запись в журнале счёта).",
+                "summary": "Отметить запрос платёжки у клиента",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "invoice_id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "Finance"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ReceivableCard"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "403": {
+                        "description": "ROLE_NOT_PERMITTED / MEMBER_REQUIRED_FOR_ACTION",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "NOT_FOUND",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "INVOICE_NOT_OPEN",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
         "/api/v1/integration/bus/deliveries/": {
             "get": {
                 "operationId": "busDeliveries",
@@ -23053,6 +23525,43 @@
                     "role_ids"
                 ]
             },
+            "AttachConfirmationRequest": {
+                "type": "object",
+                "properties": {
+                    "file": {
+                        "type": "string",
+                        "format": "binary",
+                        "description": "Платёжное поручение: PDF, изображение или документ, до 20 МБ."
+                    },
+                    "source": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/SourceEnum"
+                            }
+                        ],
+                        "default": "MANUAL"
+                    },
+                    "claimed_amount": {
+                        "type": "string",
+                        "format": "decimal",
+                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$",
+                        "nullable": true
+                    },
+                    "claimed_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "note": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": 500
+                    }
+                },
+                "required": [
+                    "file"
+                ]
+            },
             "Attachment": {
                 "type": "object",
                 "properties": {
@@ -25221,6 +25730,37 @@
                     "title"
                 ]
             },
+            "ConfirmPaymentRequest": {
+                "type": "object",
+                "properties": {
+                    "amount": {
+                        "type": "string",
+                        "format": "decimal",
+                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$",
+                        "description": "Сумма по выписке; не больше остатка."
+                    },
+                    "paid_at": {
+                        "type": "string",
+                        "format": "date",
+                        "description": "Дата поступления по выписке; не позже сегодняшней."
+                    },
+                    "reference": {
+                        "type": "string",
+                        "default": "",
+                        "description": "Номер операции банка.",
+                        "maxLength": 255
+                    },
+                    "confirmation_id": {
+                        "type": "integer",
+                        "nullable": true,
+                        "description": "Платёжка клиента, которую подтверждает платёж."
+                    }
+                },
+                "required": [
+                    "amount",
+                    "paid_at"
+                ]
+            },
             "Contact": {
                 "type": "object",
                 "properties": {
@@ -26376,6 +26916,19 @@
                     "code",
                     "name"
                 ]
+            },
+            "DisplayStatusEnum": {
+                "enum": [
+                    "draft",
+                    "issued",
+                    "proof_received",
+                    "partially_paid",
+                    "paid",
+                    "overdue",
+                    "cancelled"
+                ],
+                "type": "string",
+                "description": "* `draft` - draft\n* `issued` - issued\n* `proof_received` - proof_received\n* `partially_paid` - partially_paid\n* `paid` - paid\n* `overdue` - overdue\n* `cancelled` - cancelled"
             },
             "DisplayTypeEnum": {
                 "enum": [
@@ -33301,6 +33854,503 @@
                     "product_id"
                 ]
             },
+            "ReceivableBoard": {
+                "type": "object",
+                "properties": {
+                    "tab": {
+                        "$ref": "#/components/schemas/TabEnum"
+                    },
+                    "count": {
+                        "type": "integer",
+                        "description": "Всего счетов на вкладке."
+                    },
+                    "counts": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ReceivableCounts"
+                            }
+                        ],
+                        "description": "Счета на каждой вкладке (вкладки не пересекаются)."
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ReceivableRow"
+                        }
+                    }
+                },
+                "required": [
+                    "count",
+                    "counts",
+                    "results",
+                    "tab"
+                ]
+            },
+            "ReceivableCard": {
+                "type": "object",
+                "properties": {
+                    "display_status": {
+                        "$ref": "#/components/schemas/DisplayStatusEnum"
+                    },
+                    "id": {
+                        "type": "integer"
+                    },
+                    "number": {
+                        "type": "string"
+                    },
+                    "deal_id": {
+                        "type": "integer"
+                    },
+                    "deal_title": {
+                        "type": "string"
+                    },
+                    "deal_year": {
+                        "type": "integer",
+                        "description": "Год создания сделки: из него и id BFF составляет номер ЗВ/ПР (ERP-09)."
+                    },
+                    "client_id": {
+                        "type": "integer"
+                    },
+                    "client_name": {
+                        "type": "string"
+                    },
+                    "currency": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "total_incl_vat": {
+                        "type": "string",
+                        "format": "decimal",
+                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$"
+                    },
+                    "amount_paid": {
+                        "type": "string",
+                        "format": "decimal",
+                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$"
+                    },
+                    "balance_due": {
+                        "type": "string",
+                        "format": "decimal",
+                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$"
+                    },
+                    "issued_at": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "due_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "status": {
+                        "type": "string",
+                        "description": "Код статуса счёта ERP: DRAFT, ISSUED, PARTIAL, PAID, OVERDUE, CANCELLED."
+                    },
+                    "is_overdue": {
+                        "type": "boolean",
+                        "description": "Срок оплаты прошёл, остаток есть (вычисляется по сроку, не хранится)."
+                    },
+                    "days_overdue": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "has_pending_proof": {
+                        "type": "boolean",
+                        "description": "Есть платёжка клиента, которую бухгалтер ещё не подтвердил."
+                    },
+                    "proof_received_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "subtotal_excl_vat": {
+                        "type": "string",
+                        "format": "decimal",
+                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$"
+                    },
+                    "vat_amount": {
+                        "type": "string",
+                        "format": "decimal",
+                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$"
+                    },
+                    "notes": {
+                        "type": "string"
+                    },
+                    "has_pdf": {
+                        "type": "boolean"
+                    },
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ReceivableItem"
+                        }
+                    },
+                    "payments": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ReceivablePayment"
+                        }
+                    },
+                    "confirmations": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ReceivableConfirmation"
+                        }
+                    },
+                    "history": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ReceivableHistory"
+                        }
+                    },
+                    "payment_doc_requested_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "can_confirm": {
+                        "type": "boolean",
+                        "description": "Сотрудник вправе подтвердить оплату, счёт открыт и остаток есть."
+                    },
+                    "can_attach_proof": {
+                        "type": "boolean"
+                    },
+                    "can_request_proof": {
+                        "type": "boolean"
+                    },
+                    "replayed": {
+                        "type": "boolean",
+                        "description": "Повтор подтверждения: платёж уже был записан, ничего не добавлено."
+                    }
+                },
+                "required": [
+                    "amount_paid",
+                    "balance_due",
+                    "can_attach_proof",
+                    "can_confirm",
+                    "can_request_proof",
+                    "client_id",
+                    "client_name",
+                    "confirmations",
+                    "currency",
+                    "days_overdue",
+                    "deal_id",
+                    "deal_title",
+                    "deal_year",
+                    "display_status",
+                    "due_date",
+                    "has_pdf",
+                    "has_pending_proof",
+                    "history",
+                    "id",
+                    "is_overdue",
+                    "issued_at",
+                    "items",
+                    "notes",
+                    "number",
+                    "payment_doc_requested_at",
+                    "payments",
+                    "proof_received_at",
+                    "replayed",
+                    "status",
+                    "subtotal_excl_vat",
+                    "total_incl_vat",
+                    "vat_amount"
+                ]
+            },
+            "ReceivableConfirmation": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "source": {
+                        "$ref": "#/components/schemas/SourceEnum"
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/ReceivableConfirmationStatusEnum"
+                    },
+                    "original_name": {
+                        "type": "string"
+                    },
+                    "claimed_amount": {
+                        "type": "string",
+                        "format": "decimal",
+                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$",
+                        "nullable": true
+                    },
+                    "claimed_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "note": {
+                        "type": "string"
+                    },
+                    "received_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "recorded_by": {
+                        "type": "string",
+                        "nullable": true,
+                        "description": "Кто приложил: сотрудник; пусто — клиент (кабинет, бот)."
+                    },
+                    "payment_id": {
+                        "type": "integer",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "claimed_amount",
+                    "claimed_date",
+                    "id",
+                    "note",
+                    "original_name",
+                    "payment_id",
+                    "received_at",
+                    "recorded_by",
+                    "source",
+                    "status"
+                ]
+            },
+            "ReceivableConfirmationStatusEnum": {
+                "enum": [
+                    "PENDING",
+                    "CONFIRMED"
+                ],
+                "type": "string",
+                "description": "* `PENDING` - PENDING\n* `CONFIRMED` - CONFIRMED"
+            },
+            "ReceivableCounts": {
+                "type": "object",
+                "properties": {
+                    "to_issue": {
+                        "type": "integer"
+                    },
+                    "awaiting": {
+                        "type": "integer"
+                    },
+                    "proofs": {
+                        "type": "integer"
+                    },
+                    "overdue": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "awaiting",
+                    "overdue",
+                    "proofs",
+                    "to_issue"
+                ]
+            },
+            "ReceivableHistory": {
+                "type": "object",
+                "properties": {
+                    "at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "code": {
+                        "type": "string"
+                    },
+                    "text": {
+                        "type": "string"
+                    },
+                    "by": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "at",
+                    "by",
+                    "code",
+                    "text"
+                ]
+            },
+            "ReceivableItem": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "quantity": {
+                        "type": "integer"
+                    },
+                    "unit_price_excl_vat": {
+                        "type": "string",
+                        "format": "decimal",
+                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$"
+                    },
+                    "line_total_excl_vat": {
+                        "type": "string",
+                        "format": "decimal",
+                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$"
+                    }
+                },
+                "required": [
+                    "description",
+                    "id",
+                    "line_total_excl_vat",
+                    "quantity",
+                    "unit_price_excl_vat"
+                ]
+            },
+            "ReceivablePayment": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "amount": {
+                        "type": "string",
+                        "format": "decimal",
+                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$"
+                    },
+                    "paid_at": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "method": {
+                        "type": "string"
+                    },
+                    "reference": {
+                        "type": "string"
+                    },
+                    "receipt_number": {
+                        "type": "string"
+                    },
+                    "has_proof": {
+                        "type": "boolean"
+                    },
+                    "recorded_by": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "amount",
+                    "created_at",
+                    "has_proof",
+                    "id",
+                    "method",
+                    "paid_at",
+                    "receipt_number",
+                    "recorded_by",
+                    "reference"
+                ]
+            },
+            "ReceivableRow": {
+                "type": "object",
+                "properties": {
+                    "display_status": {
+                        "$ref": "#/components/schemas/DisplayStatusEnum"
+                    },
+                    "id": {
+                        "type": "integer"
+                    },
+                    "number": {
+                        "type": "string"
+                    },
+                    "deal_id": {
+                        "type": "integer"
+                    },
+                    "deal_title": {
+                        "type": "string"
+                    },
+                    "deal_year": {
+                        "type": "integer",
+                        "description": "Год создания сделки: из него и id BFF составляет номер ЗВ/ПР (ERP-09)."
+                    },
+                    "client_id": {
+                        "type": "integer"
+                    },
+                    "client_name": {
+                        "type": "string"
+                    },
+                    "currency": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "total_incl_vat": {
+                        "type": "string",
+                        "format": "decimal",
+                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$"
+                    },
+                    "amount_paid": {
+                        "type": "string",
+                        "format": "decimal",
+                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$"
+                    },
+                    "balance_due": {
+                        "type": "string",
+                        "format": "decimal",
+                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$"
+                    },
+                    "issued_at": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "due_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "status": {
+                        "type": "string",
+                        "description": "Код статуса счёта ERP: DRAFT, ISSUED, PARTIAL, PAID, OVERDUE, CANCELLED."
+                    },
+                    "is_overdue": {
+                        "type": "boolean",
+                        "description": "Срок оплаты прошёл, остаток есть (вычисляется по сроку, не хранится)."
+                    },
+                    "days_overdue": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "has_pending_proof": {
+                        "type": "boolean",
+                        "description": "Есть платёжка клиента, которую бухгалтер ещё не подтвердил."
+                    },
+                    "proof_received_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "amount_paid",
+                    "balance_due",
+                    "client_id",
+                    "client_name",
+                    "currency",
+                    "days_overdue",
+                    "deal_id",
+                    "deal_title",
+                    "deal_year",
+                    "display_status",
+                    "due_date",
+                    "has_pending_proof",
+                    "id",
+                    "is_overdue",
+                    "issued_at",
+                    "number",
+                    "proof_received_at",
+                    "status",
+                    "total_incl_vat"
+                ]
+            },
             "RecentDocument": {
                 "type": "object",
                 "properties": {
@@ -33697,6 +34747,16 @@
                     "detail",
                     "fields"
                 ]
+            },
+            "SourceEnum": {
+                "enum": [
+                    "CABINET",
+                    "BOT",
+                    "EMAIL",
+                    "MANUAL"
+                ],
+                "type": "string",
+                "description": "* `CABINET` - CABINET\n* `BOT` - BOT\n* `EMAIL` - EMAIL\n* `MANUAL` - MANUAL"
             },
             "SsoExchangeRequestRequest": {
                 "type": "object",
@@ -34256,6 +35316,17 @@
                     "current_password",
                     "secret"
                 ]
+            },
+            "TabEnum": {
+                "enum": [
+                    "to_issue",
+                    "awaiting",
+                    "proofs",
+                    "overdue",
+                    "all"
+                ],
+                "type": "string",
+                "description": "* `to_issue` - to_issue\n* `awaiting` - awaiting\n* `proofs` - proofs\n* `overdue` - overdue\n* `all` - all"
             },
             "TimelineEntry": {
                 "type": "object",

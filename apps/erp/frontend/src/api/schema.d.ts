@@ -6194,6 +6194,126 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/finance/receivables/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Счета и оплаты: таблица вкладки
+         * @description GET — счета вкладки «Счетов и оплат» и число счетов на каждой вкладке.
+         */
+        get: operations["finance_receivables_board"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/finance/receivables/{invoice_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Счета и оплаты: карточка счёта
+         * @description GET — карточка счёта: платёжки, платежи, остаток, журнал.
+         */
+        get: operations["finance_receivables_card"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/finance/receivables/{invoice_id}/confirm-payment/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Подтвердить оплату счёта (сумма и дата по выписке)
+         * @description POST — «Подтвердить оплату» (полная или частичная) по выписке банка.
+         */
+        post: operations["finance_receivables_confirm_payment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/finance/receivables/{invoice_id}/confirmations/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Приложить платёжку клиента к счёту
+         * @description POST — приложить платёжку клиента (файл) к открытому счёту.
+         */
+        post: operations["finance_receivables_attach_confirmation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/finance/receivables/{invoice_id}/confirmations/{confirmation_id}/file/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Файл платёжки клиента
+         * @description GET — файл платёжки клиента потоком (приватное хранилище, только после проверки права и привязки к счёту).
+         */
+        get: operations["finance_receivables_confirmation_file"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/finance/receivables/{invoice_id}/request-payment-doc/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Отметить запрос платёжки у клиента
+         * @description POST — отметить «платёжку запросили у клиента» (запись в журнале счёта).
+         */
+        post: operations["finance_receivables_request_payment_doc"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/integration/bus/deliveries/": {
         parameters: {
             query?: never;
@@ -7492,6 +7612,21 @@ export interface components {
             member_id: number;
             role_ids: number[];
         };
+        AttachConfirmationRequest: {
+            /**
+             * Format: binary
+             * @description Платёжное поручение: PDF, изображение или документ, до 20 МБ.
+             */
+            file: string;
+            /** @default MANUAL */
+            source: components["schemas"]["SourceEnum"];
+            /** Format: decimal */
+            claimed_amount?: string | null;
+            /** Format: date */
+            claimed_date?: string | null;
+            /** @default  */
+            note: string;
+        };
         Attachment: {
             readonly id: number;
             /**
@@ -8675,6 +8810,25 @@ export interface components {
             /** Порядок */
             sort_order?: number;
         };
+        ConfirmPaymentRequest: {
+            /**
+             * Format: decimal
+             * @description Сумма по выписке; не больше остатка.
+             */
+            amount: string;
+            /**
+             * Format: date
+             * @description Дата поступления по выписке; не позже сегодняшней.
+             */
+            paid_at: string;
+            /**
+             * @description Номер операции банка.
+             * @default
+             */
+            reference: string;
+            /** @description Платёжка клиента, которую подтверждает платёж. */
+            confirmation_id?: number | null;
+        };
         Contact: {
             readonly id: number;
             /**
@@ -9259,6 +9413,17 @@ export interface components {
              */
             seller_pays_delivery?: boolean;
         };
+        /**
+         * @description * `draft` - draft
+         *     * `issued` - issued
+         *     * `proof_received` - proof_received
+         *     * `partially_paid` - partially_paid
+         *     * `paid` - paid
+         *     * `overdue` - overdue
+         *     * `cancelled` - cancelled
+         * @enum {string}
+         */
+        DisplayStatusEnum: "draft" | "issued" | "proof_received" | "partially_paid" | "paid" | "overdue" | "cancelled";
         /**
          * @description * `ITEM` - Позиция
          *     * `SECTION` - Раздел
@@ -13130,6 +13295,152 @@ export interface components {
         ReassignProductRequest: {
             product_id: number | null;
         };
+        ReceivableBoard: {
+            tab: components["schemas"]["TabEnum"];
+            /** @description Всего счетов на вкладке. */
+            count: number;
+            /** @description Счета на каждой вкладке (вкладки не пересекаются). */
+            counts: components["schemas"]["ReceivableCounts"];
+            results: components["schemas"]["ReceivableRow"][];
+        };
+        ReceivableCard: {
+            display_status: components["schemas"]["DisplayStatusEnum"];
+            id: number;
+            number: string;
+            deal_id: number;
+            deal_title: string;
+            /** @description Год создания сделки: из него и id BFF составляет номер ЗВ/ПР (ERP-09). */
+            deal_year: number;
+            client_id: number;
+            client_name: string;
+            currency: string | null;
+            /** Format: decimal */
+            total_incl_vat: string;
+            /** Format: decimal */
+            amount_paid: string;
+            /** Format: decimal */
+            balance_due: string;
+            /** Format: date */
+            issued_at: string | null;
+            /** Format: date */
+            due_date: string | null;
+            /** @description Код статуса счёта ERP: DRAFT, ISSUED, PARTIAL, PAID, OVERDUE, CANCELLED. */
+            status: string;
+            /** @description Срок оплаты прошёл, остаток есть (вычисляется по сроку, не хранится). */
+            is_overdue: boolean;
+            days_overdue: number | null;
+            /** @description Есть платёжка клиента, которую бухгалтер ещё не подтвердил. */
+            has_pending_proof: boolean;
+            /** Format: date-time */
+            proof_received_at: string | null;
+            /** Format: decimal */
+            subtotal_excl_vat: string;
+            /** Format: decimal */
+            vat_amount: string;
+            notes: string;
+            has_pdf: boolean;
+            items: components["schemas"]["ReceivableItem"][];
+            payments: components["schemas"]["ReceivablePayment"][];
+            confirmations: components["schemas"]["ReceivableConfirmation"][];
+            history: components["schemas"]["ReceivableHistory"][];
+            /** Format: date-time */
+            payment_doc_requested_at: string | null;
+            /** @description Сотрудник вправе подтвердить оплату, счёт открыт и остаток есть. */
+            can_confirm: boolean;
+            can_attach_proof: boolean;
+            can_request_proof: boolean;
+            /** @description Повтор подтверждения: платёж уже был записан, ничего не добавлено. */
+            replayed: boolean;
+        };
+        ReceivableConfirmation: {
+            id: number;
+            source: components["schemas"]["SourceEnum"];
+            status: components["schemas"]["ReceivableConfirmationStatusEnum"];
+            original_name: string;
+            /** Format: decimal */
+            claimed_amount: string | null;
+            /** Format: date */
+            claimed_date: string | null;
+            note: string;
+            /** Format: date-time */
+            received_at: string;
+            /** @description Кто приложил: сотрудник; пусто — клиент (кабинет, бот). */
+            recorded_by: string | null;
+            payment_id: number | null;
+        };
+        /**
+         * @description * `PENDING` - PENDING
+         *     * `CONFIRMED` - CONFIRMED
+         * @enum {string}
+         */
+        ReceivableConfirmationStatusEnum: "PENDING" | "CONFIRMED";
+        ReceivableCounts: {
+            to_issue: number;
+            awaiting: number;
+            proofs: number;
+            overdue: number;
+        };
+        ReceivableHistory: {
+            /** Format: date-time */
+            at: string;
+            code: string;
+            text: string;
+            by: string | null;
+        };
+        ReceivableItem: {
+            id: number;
+            description: string;
+            quantity: number;
+            /** Format: decimal */
+            unit_price_excl_vat: string;
+            /** Format: decimal */
+            line_total_excl_vat: string;
+        };
+        ReceivablePayment: {
+            id: number;
+            /** Format: decimal */
+            amount: string;
+            /** Format: date */
+            paid_at: string;
+            method: string;
+            reference: string;
+            receipt_number: string;
+            has_proof: boolean;
+            recorded_by: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        ReceivableRow: {
+            display_status: components["schemas"]["DisplayStatusEnum"];
+            id: number;
+            number: string;
+            deal_id: number;
+            deal_title: string;
+            /** @description Год создания сделки: из него и id BFF составляет номер ЗВ/ПР (ERP-09). */
+            deal_year: number;
+            client_id: number;
+            client_name: string;
+            currency: string | null;
+            /** Format: decimal */
+            total_incl_vat: string;
+            /** Format: decimal */
+            amount_paid: string;
+            /** Format: decimal */
+            balance_due: string;
+            /** Format: date */
+            issued_at: string | null;
+            /** Format: date */
+            due_date: string | null;
+            /** @description Код статуса счёта ERP: DRAFT, ISSUED, PARTIAL, PAID, OVERDUE, CANCELLED. */
+            status: string;
+            /** @description Срок оплаты прошёл, остаток есть (вычисляется по сроку, не хранится). */
+            is_overdue: boolean;
+            days_overdue: number | null;
+            /** @description Есть платёжка клиента, которую бухгалтер ещё не подтвердил. */
+            has_pending_proof: boolean;
+            /** Format: date-time */
+            proof_received_at: string | null;
+        };
         RecentDocument: {
             type: components["schemas"]["TypeEnum"];
             id: number;
@@ -13265,6 +13576,14 @@ export interface components {
             detail: string;
             fields: string[];
         };
+        /**
+         * @description * `CABINET` - CABINET
+         *     * `BOT` - BOT
+         *     * `EMAIL` - EMAIL
+         *     * `MANUAL` - MANUAL
+         * @enum {string}
+         */
+        SourceEnum: "CABINET" | "BOT" | "EMAIL" | "MANUAL";
         SsoExchangeRequestRequest: {
             token: string;
         };
@@ -13548,6 +13867,15 @@ export interface components {
             code: string;
             current_password: string;
         };
+        /**
+         * @description * `to_issue` - to_issue
+         *     * `awaiting` - awaiting
+         *     * `proofs` - proofs
+         *     * `overdue` - overdue
+         *     * `all` - all
+         * @enum {string}
+         */
+        TabEnum: "to_issue" | "awaiting" | "proofs" | "overdue" | "all";
         TimelineEntry: {
             readonly id: number;
             /**
@@ -24782,6 +25110,308 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFoundResponse"];
+        };
+    };
+    finance_receivables_board: {
+        parameters: {
+            query?: {
+                /** @description Строк на странице, 1–100 (по умолчанию 50). */
+                limit?: number;
+                /** @description Сколько строк пропустить. */
+                offset?: number;
+                /** @description Поиск по номеру счёта и названию клиента. */
+                q?: string;
+                /** @description Вкладка; по умолчанию `awaiting`. */
+                tab?: "all" | "awaiting" | "overdue" | "proofs" | "to_issue";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReceivableBoard"];
+                };
+            };
+            /** @description TAB_INVALID / PAGINATION_INVALID */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description ROLE_NOT_PERMITTED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
+    finance_receivables_card: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invoice_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReceivableCard"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description ROLE_NOT_PERMITTED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
+    finance_receivables_confirm_payment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invoice_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmPaymentRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ConfirmPaymentRequest"];
+                "multipart/form-data": components["schemas"]["ConfirmPaymentRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReceivableCard"];
+                };
+            };
+            /** @description NOT_FOUND / CONFIRMATION_NOT_FOUND (404); ROLE_NOT_PERMITTED / MEMBER_REQUIRED_FOR_ACTION (403); PAYMENT_EXCEEDS_BALANCE_DUE / INVOICE_NOT_ISSUED / INVOICE_NOT_OPEN / INVOICE_CANCELLED / INVOICE_ALREADY_PAID / PAYMENT_REFERENCE_CONFLICT (409); PAYMENT_DATE_IN_FUTURE / PAYMENT_AMOUNT_MUST_BE_POSITIVE (400) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description ROLE_NOT_PERMITTED / MEMBER_REQUIRED_FOR_ACTION */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description NOT_FOUND / CONFIRMATION_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description PAYMENT_EXCEEDS_BALANCE_DUE / INVOICE_ALREADY_PAID / ... */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
+    finance_receivables_attach_confirmation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invoice_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["AttachConfirmationRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReceivableCard"];
+                };
+            };
+            /** @description Файл не принят или поле неверно */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description ROLE_NOT_PERMITTED / MEMBER_REQUIRED_FOR_ACTION */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description INVOICE_NOT_OPEN */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
+    finance_receivables_confirmation_file: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                confirmation_id: number;
+                invoice_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Содержимое файла */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description ROLE_NOT_PERMITTED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description Платёжки нет или она относится к другому счёту */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
+    finance_receivables_request_payment_doc: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invoice_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReceivableCard"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description ROLE_NOT_PERMITTED / MEMBER_REQUIRED_FOR_ACTION */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description INVOICE_NOT_OPEN */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
         };
     };
     busDeliveries: {
