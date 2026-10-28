@@ -610,6 +610,8 @@ paths:
       description: |
         `mine=1` (по умолчанию) — маршруты, текущий шаг которых ждёт этого сотрудника (назначен по `crm_user_id` или он
         держит право шага). `mine=0` — без `registry.read` маршруты, где сотрудник автор или участник; с `registry.read` — все.
+        Участник маршрута видит его всегда; остальные — маршрут документа, только если виден сам документ (исходящее письмо
+        без `letters.read` и чужой черновик скрыты и при `registry.read`); КП — с `registry.read`.
       x-rt-permissions: [memos.create, memos.approve, approvals.decide, payments.confirm, registry.read]
       parameters:
         - name: mine
@@ -659,6 +661,7 @@ paths:
       summary: Карточка маршрута (шаги, чек-лист КП, снимок КП)
       description: |
         Автор объекта, участник маршрута (в том числе держатель права шага) или сотрудник с `registry.read`; иначе 404.
+        Маршрут документа виден неучастнику, только если ему виден сам документ (D1-10); участнику — всегда.
         Снимок КП (`quote`) с себестоимостью и маржой — только тем, кто решает шаг маршрута КП (`approvals.decide`).
       x-rt-permissions: [memos.create, memos.approve, approvals.decide, payments.confirm, registry.read]
       parameters:

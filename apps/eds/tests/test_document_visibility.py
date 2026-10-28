@@ -5,13 +5,18 @@
 к оплате, директор — всё, кроме чужих черновиков.
 """
 
+import uuid
 from dataclasses import dataclass
 from typing import Any
 
 import httpx
 import pytest
 
+from app import clock
+from app.container import Container
+from app.models import ApprovalRoute, ApprovalStep
 from tests.domain import Person
+from tests.helpers import seed_employee
 from tests.test_api_auth import assert_error
 from tests.test_documents import WITH_AMOUNT, create, decide, submit
 from tests.test_files import upload
@@ -123,3 +128,81 @@ async def test_author_keeps_own_draft_and_returned_document_without_registry_rea
     assert (await client.get(f"/api/v1/documents/{mine['id']}", headers=admin.headers)).status_code == 200
     for doc_id in made.ids.values():
         assert_error(await client.get(f"/api/v1/documents/{doc_id}", headers=admin.headers), 404, "NOT_FOUND")
+
+
+async def sent_letter_route(client: httpx.AsyncClient, container: Container, staff: dict[str, Person]) -> str:
+    """Маршрут, привязанный к исходящему письму. EDS сам таких маршрутов не создаёт (письмо уходит без согласования),
+    поэтому строка пишется напрямую: предикат видимости не должен зависеть от того, кто и как создал маршрут."""
+    letter = await create(
+        client,
+        staff["registrar"],
+        kind="letter_out",
+        subject="Письмо на согласовании",
+        recipient={"name": "ООО «Пример»"},
+    )
+    assert (await submit(client, staff["registrar"], letter["id"])).status_code == 200
+    route_id = uuid.uuid4()
+    async with container.session_factory() as session, session.begin():
+        session.add(
+            ApprovalRoute(
+                id=route_id,
+                template="memo",
+                title="Письмо на согласовании",
+                status="open",
+                round=1,
+                current_step=1,
+                document_id=uuid.UUID(letter["id"]),
+                created_at=clock.now(),
+            )
+        )
+        await session.flush()
+        session.add(
+            ApprovalStep(approval_id=route_id, index=1, label="Директор", assignee_crm_user_id=3, status="current")
+        )
+    return str(route_id)
+
+
+async def route_ids(client: httpx.AsyncClient, who: Person) -> list[str]:
+    response = await client.get("/api/v1/approvals", params={"limit": 100, "mine": 0}, headers=who.headers)
+    assert response.status_code == 200, response.text
+    return [i["id"] for i in response.json()["items"]]
+
+
+@pytest.mark.parametrize("who", ["supplier", "engineer"])
+async def test_route_of_outgoing_letter_is_hidden_without_letters_read(
+    client: httpx.AsyncClient, container: Container, staff: dict[str, Person], who: str
+) -> None:
+    """`registry.read` без `letters.read` и не участник: маршрута письма нет ни в списке, ни по id (404)."""
+    approval_id = await sent_letter_route(client, container, staff)
+    assert approval_id not in await route_ids(client, staff[who])
+    assert_error(await client.get(f"/api/v1/approvals/{approval_id}", headers=staff[who].headers), 404, "NOT_FOUND")
+
+
+@pytest.mark.parametrize("who", ["director", "accountant", "manager", "registrar"])
+async def test_route_of_outgoing_letter_is_visible_to_participants_and_letter_readers(
+    client: httpx.AsyncClient, container: Container, staff: dict[str, Person], who: str
+) -> None:
+    """Директор (шаг маршрута), читатели писем с `registry.read` и автор-регистратор видят маршрут."""
+    approval_id = await sent_letter_route(client, container, staff)
+    assert approval_id in await route_ids(client, staff[who])
+    assert (await client.get(f"/api/v1/approvals/{approval_id}", headers=staff[who].headers)).status_code == 200
+
+
+async def test_participant_sees_route_even_without_letters_read(
+    client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
+) -> None:
+    approval_id = await sent_letter_route(client, container, staff)
+    # директор лишился `letters.read`, но шаг по-прежнему его: участник видит маршрут всегда
+    await seed_employee(
+        container,
+        3,
+        full_name="Рустам Директоров",
+        email="user3@example.com",
+        permissions={"eds": ["approvals.decide", "memos.approve", "registry.read"]},
+    )
+    director = staff["director"]
+    assert approval_id in await route_ids(client, director)
+    assert (await client.get(f"/api/v1/approvals/{approval_id}", headers=director.headers)).status_code == 200
+    # а документ-письмо ему как не читателю писем не виден
+    ids = (await client.get("/api/v1/documents", headers=director.headers)).json()["items"]
+    assert all(i["kind"] != "letter_out" for i in ids)

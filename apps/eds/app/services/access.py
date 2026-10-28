@@ -6,7 +6,7 @@
 
 import uuid
 
-from sqlalchemy import ColumnElement, and_, any_, exists, not_, or_, select, true
+from sqlalchemy import ColumnElement, and_, any_, exists, literal, not_, or_, select, true
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import ApprovalRoute, ApprovalStep, Document, Employee
@@ -73,14 +73,18 @@ def document_visible(employee: Employee) -> ColumnElement[bool]:
 
 
 def route_visible(employee: Employee) -> ColumnElement[bool]:
-    """Условие видимости для запроса по `ApprovalRoute` (автор документа, участник, `registry.read`)."""
-    if has(employee, EdsPermission.REGISTRY_READ):
-        return true()
-    in_route = exists(select(1).where(ApprovalStep.approval_id == ApprovalRoute.id, participates_in(employee)))
-    own_document = exists(
-        select(1).where(Document.id == ApprovalRoute.document_id, Document.author_crm_user_id == employee.crm_user_id)
+    """Условие видимости для запроса по `ApprovalRoute` (D1-10).
+
+    Участник маршрута видит его всегда (он должен видеть, что согласует). Остальные — маршрут документа, только если
+    им виден сам документ (`document_visible`: например, маршрут исходящего письма без `letters.read` скрыт даже при
+    `registry.read`); маршрут без документа (КП) — с `registry.read`.
+    """
+    participant = exists(select(1).where(ApprovalStep.approval_id == ApprovalRoute.id, participates_in(employee)))
+    document_seen = exists(
+        select(1).where(Document.id == ApprovalRoute.document_id, document_visible(employee)),
     )
-    return or_(in_route, own_document)
+    quote_seen = and_(ApprovalRoute.document_id.is_(None), literal(has(employee, EdsPermission.REGISTRY_READ)))
+    return or_(participant, document_seen, quote_seen)
 
 
 async def can_view_document(session: AsyncSession, employee: Employee, document_id: uuid.UUID) -> bool:
