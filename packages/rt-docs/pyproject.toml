@@ -1,0 +1,69 @@
+[project]
+name = "rt-docs"
+version = "0.1.0"
+description = "rt_docs: документы RailTech Platform — тело JSON (packages/contracts/documents) → HTML → PDF (WeasyPrint), бланк, плотность и «Подогнать», DOCX, форматтеры ru/uz (ADR-0020)"
+readme = "README.md"
+requires-python = ">=3.12"
+# Без фреймворков: EDS ставит пакет uv по пути, ERP — копией в образ (D-DOC2, D-DOC3). Системные библиотеки WeasyPrint
+# (pango, harfbuzz) — в образе потребителя; шрифты вшиты в пакет (rt_docs/fonts, OFL-1.1).
+dependencies = [
+    "jsonschema>=4.26.0",
+    "python-docx>=1.2.0",
+    "pyyaml>=6.0.3",
+    "referencing>=0.36.2",
+    "weasyprint>=69,<70",  # rt_docs.pdf опирается на внутренности 69 — проверка версии при импорте (engine.py)
+]
+
+[dependency-groups]
+dev = [
+    "mypy>=2.4.0",
+    "pypdf>=6.1.0",
+    "pytest>=9.1.1",
+    "ruff>=0.17.0",
+    "types-jsonschema>=4.26.0",
+    "types-pyyaml>=6.0.12.20260906",
+]
+
+[tool.uv]
+# Та же версия движка, что в образе ERP (apps/erp/backend/requirements.txt): одна вёрстка PDF во всём ансамбле.
+constraint-dependencies = ["weasyprint==69.0"]
+
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["rt_docs"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = ["-ra", "--strict-markers"]
+markers = ["pdf: рендер WeasyPrint — нужны pango и harfbuzz (make test: одноразовый контейнер docker/test.Dockerfile)"]
+filterwarnings = ["error"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B", "UP", "SIM", "S", "BLE", "C4", "PT", "RUF", "T20", "N"]
+ignore = ["RUF001", "RUF002", "RUF003", "SIM905"]
+
+[tool.ruff.lint.per-file-ignores]
+# PT018: составные assert в эталонных тестах читаются как одно правило DoD («шапка и итоги на одной странице»).
+"tests/**" = ["S101", "S311", "PT018"]
+"scripts/**" = ["T201"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["rt_docs", "tests"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+mypy_path = "."
+explicit_package_bases = true
+
+[[tool.mypy.overrides]]
+module = ["weasyprint.*", "fontTools.*", "docx.*"]
+ignore_missing_imports = true

@@ -1,5 +1,5 @@
 # Контракты — `packages/contracts`
-Статус: действует · Владелец: лид · Обновлено: 2026-10-26
+Статус: действует · Владелец: лид · Обновлено: 2026-10-28
 
 Источник истины шва ансамбля (ORCHESTRATOR §3.3: **контракт раньше кода**; события — только через шину `rt_bus`, §3.14). Объяснение — `docs/architecture/CONTRACTS.md` (шина — §9);
 здесь — машиночитаемые файлы и генерация клиентов. Версия 0 (M0-INF-02).
@@ -19,6 +19,7 @@
 | `bus/subscriptions.yaml` (+ `.schema.json`) | Подписки `rt_bus`: подписчик → адрес приёмника → маски типов (§9.5) | `rt-bus` у каждого сервиса (`RT_BUS_SUBSCRIPTIONS`) |
 | `generated/python/` | Пакет `rt-contracts` (`import rt_contracts.events`): `Envelope`, модель `data` на тип, `TYPES` — **генерируется** (`scripts/gen_python.py`) | ERP, CRM, BFF (B3–B5) |
 | `events.schema.json` + `examples/events/*.json` | **Устаревает** (L7): прежний вебхук ERP → CRM (§3). Не править; удаляют B3 (ERP, монтирование в `infra/deploy`) и B4 (копия CRM и сами файлы) | ERP (M3-ERP-02); CRM приёмник (M3-CRM-04) — до B3/B4 |
+| `documents/body.schema.json`, `documents/variables.yaml` (+ `.schema.json`), `documents/examples/*.json` | Тело документа (JSON блочного редактора, параметры страницы) и каталог видов, переменных и блоков с замком (ru/uz/en) — ADR-0020, `docs/architecture/CONTRACTS.md` §11; совместимость — `scripts/documents_compat.py` | `packages/rt-docs` (рендер PDF/DOCX, D-DOC1); EDS и ERP — D-DOC2, D-DOC3; редактор Платформы |
 | `mcp-tools.json` | Инструменты `erp-mcp` для агента CRM с контекстом `X-Agent-Context`; схема — `mcp-tools.schema.json` (запрещает идентификаторы клиента в аргументах) | ERP (M3-ERP-03); бот CRM (M3-CRM-07) |
 | `docs/architecture/sso-token.md` (документ, перенесён в `docs/` — машиночитаемой схемы у токена нет) | SSO-токен сотрудника: claims, передача, проверка, отзыв | ERP (M3-ERP-04); CRM (M3-CRM-06) |
 
@@ -32,11 +33,11 @@
 обязательное поле ответа, новое обязательное поле запроса, суженный enum, мажор, исключения) и `tests/test_events_compat.py`.
 make contracts                        # из корня: lint + generate + typecheck + test + compat + openapi-compat (ниже)
 make -C packages/contracts install    # pnpm install --frozen-lockfile; uv sync --locked (Python 3.12, pyproject.toml + uv.lock)
-make -C packages/contracts lint       # redocly (OpenAPI), ajv (старая схема событий, erp-mcp, Платформа), @asyncapi/parser, ruff
+make -C packages/contracts lint       # redocly (OpenAPI), ajv (старая схема событий, erp-mcp, Платформа, documents), @asyncapi/parser, ruff
 make -C packages/contracts generate   # openapi-typescript → generated/*.d.ts; orval → generated/crm/; модели → generated/python/
 make -C packages/contracts typecheck  # tsc по сгенерированному
 make -C packages/contracts test       # pytest: схемы, примеры, AsyncAPI ↔ файлы, подписки, модели; правила совместимости
-make -C packages/contracts compat     # совместимость events/** и bus/subscriptions.schema.json с CONTRACTS_BASE_REF (origin/main)
+make -C packages/contracts compat     # совместимость events/**, bus/subscriptions.schema.json и documents/ с CONTRACTS_BASE_REF (origin/main)
 make -C packages/contracts openapi-compat  # oasdiff: ломающие изменения openapi/*.yaml против той же базы (нужен Docker или OASDIFF_BIN)
 ```
 
