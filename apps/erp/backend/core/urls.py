@@ -128,6 +128,8 @@ from crm.views import (
     NumberingSchemePreviewView,
     NumberingSchemeView,
     PaymentViewSet,
+    ProjectDetailView,
+    ProjectListView,
     QuoteChargeViewSet,
     QuoteItemViewSet,
     QuoteRequestDiffView,
@@ -235,6 +237,9 @@ urlpatterns = (
     [
         path("admin/accounts/company/wizard/", CompanyWizardView.as_view(WIZARD_FORMS), name="company-wizard"),
         path("admin/", admin.site.urls),
+        # D2-5: Все проекты — только чтение; пути раньше роутера, чтобы `crm/projects/<id>/` не искал вьюсет.
+        path("api/v1/crm/projects/", ProjectListView.as_view(), name="project-list"),
+        path("api/v1/crm/projects/<int:deal_id>/", ProjectDetailView.as_view(), name="project-detail"),
         path("api/v1/", include(router.urls)),
         path("api/portal/v1/", include("portal.urls")),
         re_path(r"^api/portal/", portal_not_found, name="portal-not-found"),  # FIX-54: JSON 404 вместо HTML Django

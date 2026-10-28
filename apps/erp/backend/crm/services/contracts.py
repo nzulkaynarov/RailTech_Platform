@@ -8,6 +8,7 @@ from crm.services.pdf_storage import save_rendered_pdf
 
 from ..constants import ContractStatusCode, QuoteStatusCode
 from ..models import ActivityLog, Quote
+from .contract_flow import publish_current_status
 
 # ──────────────────────────────────────────────────────────────────────────
 # Contracts
@@ -52,8 +53,13 @@ def generate_contract_from_quote(
     quote_id: int,
     actor: Optional[CustomUser] = None,
     notes: str = "",
+    send_to_client: bool = True,
 ) -> Tuple[Optional["Contract"], Optional[str]]:  # noqa: F821
-    """Create a Contract tied to an approved Quote, render its PDF."""
+    """Create a Contract tied to an approved Quote, render its PDF.
+
+    `send_to_client=False` (D2-5, Платформа) оставляет проект в `DRAFT`: клиенту он не виден и не уведомляется, на согласование
+    его отправляет бухгалтер действием `send_to_client` (`crm/services/contract_flow.py`). По умолчанию — прежнее
+    поведение: договор сразу `PENDING_CLIENT` (так он рождается и после акцепта КП клиентом)."""
     from accounts.services import is_seller
 
     from ..models import Contract
@@ -62,7 +68,12 @@ def generate_contract_from_quote(
     # (superuser/internal actor=None bypass).
     if actor is not None and not (getattr(actor, "is_superuser", False) or is_seller(actor)):
         return None, "MEMBER_REQUIRED_FOR_ACTION"
-    quote = Quote.objects.select_related("deal__company", "status", "quote_currency").get(pk=quote_id)
+    # Строка КП под блокировкой: два параллельных «сформировать проект» не создадут два договора (D2-5).
+    quote = (
+        Quote.objects.select_for_update(of=("self",))
+        .select_related("deal__company", "status", "quote_currency")
+        .get(pk=quote_id)
+    )
 
     if not quote.status or quote.status.code not in {QuoteStatusCode.APPROVED, QuoteStatusCode.SENT}:
         return None, "CONTRACT_NEEDS_APPROVAL"
@@ -77,6 +88,7 @@ def generate_contract_from_quote(
         .first()
     )
 
+    created = not contract
     if not contract:
         # Seller company = the КП author's owning company → its prefix + per-company counter.
         from .document_blocks import frozen_body_for
@@ -113,8 +125,9 @@ def generate_contract_from_quote(
     # fires only on success; the download endpoint renders lazily if this races behind.
     from integration.services import document_events
 
+    was_draft = contract.status_code == ContractStatusCode.DRAFT
     with document_events.watch_document_issue("contract", contract):  # document.created на выпуске (шина rt_bus)
-        if contract.status_code == ContractStatusCode.DRAFT:
+        if was_draft and send_to_client:
             contract.status = _cstatus(ContractStatusCode.PENDING_CLIENT)
         contract.save(update_fields=["status", "updated_at"])
 
@@ -133,9 +146,12 @@ def generate_contract_from_quote(
         deal=quote.deal,
         company_id=quote.deal.company_id,
     )
+    if created or (was_draft and send_to_client):
+        publish_current_status(contract, actor)  # `contract.status_changed` — проекция реестра EDS (D2-5)
     # P1: a created contract must not be silent — tell BOTH parties it awaits signature
     # (previously generate set PENDING_CLIENT and nobody was notified → dead-end after accept).
-    _notify_contract_pending(contract)
+    if send_to_client:
+        _notify_contract_pending(contract)
     return contract, None
 
 
@@ -339,11 +355,15 @@ def sign_contract_by_client(
     with document_events.watch_document_issue("contract", contract):  # document.created на выпуске (шина rt_bus)
         contract.client_signer = client_user
         contract.client_signed_at = timezone.now()
-        contract.status = _cstatus(
-            ContractStatusCode.SIGNED if contract.manager_signed_at else ContractStatusCode.PENDING_MANAGER
-        )
+        # D2-5: согласие клиента никогда не даёт «Подписан» само: договор подписывают вне платформы (у оператора ЭДО),
+        # «Подписан» ставит только скан (`contract_flow.apply_transition("attach_scan")`). Раньше при уже стоявшей
+        # подписи продавца статус сразу становился SIGNED — в обход «выставлен у оператора → скан».
+        contract.status = _cstatus(ContractStatusCode.PENDING_MANAGER)
         contract.save(update_fields=["client_signer", "client_signed_at", "status", "updated_at"])
-    events.publish_contract_signed(contract, by="both" if contract.manager_signed_at else "client")
+    events.publish_contract_signed(contract, by="client")
+    publish_current_status(
+        contract, client_user
+    )  # статус «Согласован клиентом» / «Подписан» — проекция реестра EDS (D2-5)
     event_params = {"number": contract.number, "deal_id": contract.deal_id, "manual": True}
     if portal_contact is not None:
         event_params.update({"channel": "portal", "contact_id": portal_contact.pk})
@@ -367,19 +387,17 @@ def sign_contract_by_manager(
     contract_id: int,
     manager_user: CustomUser,
 ) -> Tuple[Optional["Contract"], Optional[str]]:  # noqa: F821
-    """Click-to-sign by seller-side company manager. MANUAL MODE — to be replaced by E-IMZO.
-    See memory `tech_debt_payment_esign.md`.
+    """Подпись продавца кликом закрыта (D2-5, SPEC-v3 §2.4): `CONTRACT_SIGN_VIA_SCAN`.
 
-    Seller side is represented by any member with can_sell on the deal.company
-    itself (self-service intra-company deals).
+    Договор подписывают вне платформы (оператор ЭДО или бумага); система фиксирует статусы «Выставлен у оператора» и
+    «Подписан (скан)» (`crm.services.contract_flow`). Прежний клик давал SIGNED без оператора и скана, а вместе с
+    подписью клиента в портале — закрывал сделку в обход обеих проверок. Функция сохранена ради прежних вызывающих:
+    права проверяются как раньше, дальше — отказ с кодом (HTTP 409 у `sign-manager/`); подписанный, отменённый
+    и отклонённый договор по-прежнему отвечают `CONTRACT_MANAGER_SIGN_NOT_ALLOWED`.
     """
-    from django.utils import timezone
-
     from ..models import Contract
 
     contract = Contract.objects.select_for_update().select_related("deal").get(pk=contract_id)
-    # Seller-side capability via the shared predicate (own-company staff). Same source of truth
-    # as the serializer's sign hint.
     if not (getattr(manager_user, "is_superuser", False) or viewer_can_sign_manager(manager_user, contract)):
         return None, "MEMBER_REQUIRED_FOR_ACTION"
     if contract.status_code not in {
@@ -388,29 +406,7 @@ def sign_contract_by_manager(
         ContractStatusCode.PENDING_CLIENT,
     }:
         return None, "CONTRACT_MANAGER_SIGN_NOT_ALLOWED"
-    from integration.services import document_events, events
-
-    with document_events.watch_document_issue("contract", contract):  # document.created на выпуске (шина rt_bus)
-        contract.manager_signer = manager_user
-        contract.manager_signed_at = timezone.now()
-        contract.status = _cstatus(
-            ContractStatusCode.SIGNED if contract.client_signed_at else ContractStatusCode.PENDING_CLIENT
-        )
-        contract.save(update_fields=["manager_signer", "manager_signed_at", "status", "updated_at"])
-    events.publish_contract_signed(contract, by="both" if contract.client_signed_at else "company")
-    ActivityLog.objects.create(
-        action="[MANUAL_MODE] Подписан договор (сторона продавца)",
-        detail=f"Договор {contract.number} / сделка #{contract.deal_id}",
-        event_code="contract.signed_manager",
-        event_params={"number": contract.number, "deal_id": contract.deal_id, "manual": True},
-        user=manager_user,
-        level="INFO",
-        deal=contract.deal,
-        company_id=contract.deal.company_id,
-    )
-    _finalize_if_signed(contract)
-    _rerender_pdf_after_signature(contract)
-    return contract, None
+    return None, "CONTRACT_SIGN_VIA_SCAN"
 
 
 def _contract_seller_recipient(contract):
@@ -489,6 +485,7 @@ def cancel_contract(
     # Причина и автор в `contract.notes` не пишутся: поле печатается в PDF договора («Дополнительные
     # условия») и уходит клиенту. След — в журнале (как у force-варианта).
     contract.save(update_fields=["status", "updated_at"])
+    publish_current_status(contract, actor, reason=(reason or "").strip() if isinstance(reason, str) else "")
     reason = reason.strip() if isinstance(reason, str) else ""
     log_admin_action(
         entity_type="contract",
@@ -537,6 +534,7 @@ def force_cancel_contract(
     # Причина и e-mail администратора в `contract.notes` не пишутся: поле печатается в PDF договора
     # («Дополнительные условия») и уходит клиенту — как и у force-approve КП. Весь след — в журнале ниже.
     contract.save(update_fields=["status", "updated_at"])
+    publish_current_status(contract, admin_user, reason=reason)
     # Structured, entity-scoped audit (G2 Gap A) — route through log_admin_action so the
     # override carries reason + entity_type/id + before/after and surfaces on the contract
     # timeline and the «Журнал доступа» page (not a bare, unscoped ActivityLog).

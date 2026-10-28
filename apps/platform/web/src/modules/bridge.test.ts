@@ -171,9 +171,9 @@ describe("исполнимость адреса: есть ли экран в П�
   });
 
   it("раздел с родным экраном исполним, а стоит убрать запись моста — адрес становится исполнимым сам", () => {
-    const key = "eds.projects";
+    const key = "eds.outbox";
     const entry = BRIDGE[key];
-    const path = "/eds/projects/%D0%9F%D0%A0-2026-099";
+    const path = "/eds/outbox/%D0%9A%D0%9F-2026%2F118";
     expect(isActionable(path)).toBe(false);
     // имитация переноса раздела: запись моста удалена
     Reflect.deleteProperty(BRIDGE, key);

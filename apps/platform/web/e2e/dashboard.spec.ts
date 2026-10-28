@@ -179,17 +179,11 @@ test.describe("Центр уведомлений", () => {
     await settledScreenshot(page, "dashboard-notifications");
     await expectNoViolations(page, "notifications popover");
 
-    // Договор: раздела с экраном ещё нет — вместо заглушки «Где посмотреть» с мостом, окно остаётся открытым
-    await center.getByRole("button", { name: /Где посмотреть: .*ДОГ-2026\/091/ }).click();
-    const where = center.getByRole("region", { name: "Где посмотреть" });
-    await expect(where.getByRole("link", { name: /Открыть в старом ERP/ })).toHaveAttribute(
-      "href",
-      "http://erp.localhost:8088/#crm-deals",
-    );
-    await expect(page).toHaveURL(/\/dashboard\/queue/);
+    // Договор: у раздела «Проекты» есть экран (D2-5) — уведомление ведёт в карточку проекта на вкладку договора, счётчик уменьшается
+    await center.getByRole("link", { name: /ДОГ-2026\/091/ }).click();
+    await expect(page).toHaveURL(/\/eds\/projects\/.*tab=contract/);
     await expect(page.getByRole("button", { name: "Центр уведомлений, 2 новых" })).toBeVisible();
-    await settledScreenshot(page, "notification-where");
-    await expectNoViolations(page, "notification where");
+    await expectNoViolations(page, "notification opens the project");
   });
 
   test("с клавиатуры: Enter на колокольчике → фокус в диалоге → Tab внутри → Escape возвращает на колокольчик", async ({
@@ -270,8 +264,8 @@ test(
     await settledScreenshot(page, "dashboard-notifications");
     await expectNoViolations(page, "notifications popover 390");
 
-    await center.getByRole("button", { name: /Где посмотреть: .*ДОГ-2026\/091/ }).click();
-    await expect(center.getByRole("region", { name: "Где посмотреть" })).toBeVisible();
+    await center.getByRole("link", { name: /ДОГ-2026\/091/ }).click();
+    await expect(page).toHaveURL(/\/eds\/projects\/.*(sheet|tab)=contract/);
   },
 );
 

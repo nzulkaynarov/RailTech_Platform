@@ -343,7 +343,8 @@ export const handlers = [
         const contract = byId(db.contracts, params.id);
         if (!contract) return error(404, 'NOT_FOUND');
         if (contract.status !== 'sent' && contract.status !== 'signed_by_company') return error(409, 'CONTRACT_FINALIZED');
-        contract.status = contract.status === 'signed_by_company' ? 'signed' : 'signed_by_client';
+        // D2-5: согласие клиента не подписывает договор: «Подписан» ставит скан у сотрудника, клиенту — «Вы согласовали, ждём подписания».
+        contract.status = 'signed_by_client';
         contract.signed_by_client_at = new Date().toISOString();
         return json(contract);
       },

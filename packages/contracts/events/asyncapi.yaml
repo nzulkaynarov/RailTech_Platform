@@ -186,6 +186,12 @@ channels:
     messages:
       uz.railtech.erp.contract.signed.v1:
         $ref: '#/components/messages/uz.railtech.erp.contract.signed.v1'
+  uz.railtech.erp.contract.status_changed.v1:
+    address: uz.railtech.erp.contract.status_changed.v1
+    title: Договор сменил статус
+    messages:
+      uz.railtech.erp.contract.status_changed.v1:
+        $ref: '#/components/messages/uz.railtech.erp.contract.status_changed.v1'
   uz.railtech.erp.deal.lost.v1:
     address: uz.railtech.erp.deal.lost.v1
     title: Сделка проиграна
@@ -530,6 +536,15 @@ operations:
       $ref: '#/channels/uz.railtech.erp.contract.signed.v1'
     messages:
       - $ref: '#/channels/uz.railtech.erp.contract.signed.v1/messages/uz.railtech.erp.contract.signed.v1'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.erp.contract.status_changed.v1:
+    action: send
+    summary: rt://erp публикует uz.railtech.erp.contract.status_changed.v1
+    channel:
+      $ref: '#/channels/uz.railtech.erp.contract.status_changed.v1'
+    messages:
+      - $ref: '#/channels/uz.railtech.erp.contract.status_changed.v1/messages/uz.railtech.erp.contract.status_changed.v1'
     bindings:
       $ref: '#/components/operationBindings/delivery'
   publish.uz.railtech.erp.deal.lost.v1:
@@ -1361,6 +1376,31 @@ components:
                   const: rt://contracts/events/erp/contract.signed/v1
                 data:
                   $ref: './erp/contract.signed.v1.json'
+    uz.railtech.erp.contract.status_changed.v1:
+      name: uz.railtech.erp.contract.status_changed.v1
+      title: Договор сменил статус
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://erp
+                type:
+                  const: uz.railtech.erp.contract.status_changed.v1
+                dataschema:
+                  const: rt://contracts/events/erp/contract.status_changed/v1
+                data:
+                  $ref: './erp/contract.status_changed.v1.json'
     uz.railtech.erp.deal.lost.v1:
       name: uz.railtech.erp.deal.lost.v1
       title: Сделка проиграна

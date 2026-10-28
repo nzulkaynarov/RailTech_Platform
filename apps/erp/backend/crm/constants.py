@@ -64,6 +64,11 @@ class ContractStatusCode(models.TextChoices):
     PENDING_MANAGER = "PENDING_MANAGER", "Ожидает подписи менеджера"
     SIGNED = "SIGNED", "Подписан сторонами"
     CANCELLED = "CANCELLED", "Отменён"
+    # D2-5, статусы договора SPEC-v3 §2.4 (договор подписывают ВНЕ платформы, у оператора ЭДО): «Выставлен у оператора» и
+    # «Отклонён клиентом». «Проект» = DRAFT (не отправлен клиенту) и PENDING_CLIENT (у клиента на согласовании редакции),
+    # «Согласован клиентом» = PENDING_MANAGER (подпись клиента проставлена), «Подписан (скан)» = SIGNED.
+    ISSUED_EXTERNAL = "ISSUED_EXTERNAL", "Выставлен у оператора"
+    REJECTED = "REJECTED", "Отклонён клиентом"
 
 
 class InvoiceStatusCode(models.TextChoices):

@@ -202,6 +202,19 @@ import type {
   PriceRequest,
   PriceRequestList,
   Profile,
+  ProjectAct,
+  ProjectActRef,
+  ProjectCard,
+  ProjectContract,
+  ProjectContractRef,
+  ProjectFileGenerating,
+  ProjectFulfillment,
+  ProjectInvoiceRef,
+  ProjectMoney,
+  ProjectPage,
+  ProjectPerson,
+  ProjectQuote,
+  ProjectQuoteRef,
   ProviderKeyResult,
   Queue,
   QueueCards,
@@ -1772,6 +1785,10 @@ export const getListEdsDocumentsResponseMock = (
     due_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
     created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
     openable: faker.datatype.boolean(),
+    project_ref: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
   })),
   next_cursor: faker.helpers.arrayElement([
     faker.string.alpha({ length: { min: 10, max: 20 } }),
@@ -2148,6 +2165,2483 @@ export const getUpdateEdsDocumentResponseMock = (
   updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
   ...overrideResponse,
 });
+
+export const getListEdsProjectsResponseProjectMoneyMock = (
+  overrideResponse: Partial<ProjectMoney> = {},
+): ProjectMoney => ({
+  ...{
+    amount: faker.helpers.fromRegExp("^-?\\d+\\.\\d{2}$"),
+    currency: faker.helpers.fromRegExp("^[A-Z]{3}$"),
+  },
+  ...overrideResponse,
+});
+
+export const getListEdsProjectsResponseProjectPersonMock = (
+  overrideResponse: Partial<ProjectPerson> = {},
+): ProjectPerson => ({
+  ...{ id: faker.number.int(), name: faker.string.alpha({ length: { min: 10, max: 20 } }) },
+  ...overrideResponse,
+});
+
+export const getListEdsProjectsResponseProjectQuoteRefMock = (
+  overrideResponse: Partial<ProjectQuoteRef> = {},
+): ProjectQuoteRef => ({
+  ...{
+    id: faker.number.int(),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: "accepted",
+    version: faker.number.int(),
+  },
+  ...overrideResponse,
+});
+
+export const getListEdsProjectsResponseProjectContractRefMock = (
+  overrideResponse: Partial<ProjectContractRef> = {},
+): ProjectContractRef => ({
+  ...{
+    id: faker.number.int(),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement([
+      "project",
+      "client_agreed",
+      "issued_at_operator",
+      "signed",
+      "rejected",
+      "cancelled",
+    ] as const),
+    sent_to_client: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
+export const getListEdsProjectsResponseProjectInvoiceRefMock = (
+  overrideResponse: Partial<ProjectInvoiceRef> = {},
+): ProjectInvoiceRef => ({
+  ...{
+    id: faker.number.int(),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement([
+      "to_issue",
+      "issued",
+      "partial",
+      "paid",
+      "overdue",
+      "cancelled",
+    ] as const),
+    count: faker.number.int(),
+  },
+  ...overrideResponse,
+});
+
+export const getListEdsProjectsResponseProjectActRefMock = (
+  overrideResponse: Partial<ProjectActRef> = {},
+): ProjectActRef => ({
+  ...{
+    id: faker.number.int(),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement([
+      "project",
+      "returned",
+      "issued",
+      "signed",
+      "cancelled",
+    ] as const),
+  },
+  ...overrideResponse,
+});
+
+export const getListEdsProjectsResponseMock = (
+  overrideResponse: Partial<Extract<ProjectPage, object>> = {},
+): ProjectPage => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    request_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    client_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    step: faker.helpers.arrayElement(["CONTRACT", "PAYMENT", "DONE"] as const),
+    client_status: faker.helpers.arrayElement([
+      "contract_review",
+      "contract_signing",
+      "awaiting_payment",
+      "fulfilling",
+      "awaiting_acceptance",
+      "done",
+    ] as const),
+    total: faker.helpers.arrayElement([{ ...getListEdsProjectsResponseProjectMoneyMock() }, null]),
+    due_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    manager: faker.helpers.arrayElement([
+      { ...getListEdsProjectsResponseProjectPersonMock() },
+      null,
+    ]),
+    responsible: faker.helpers.arrayElement([
+      { ...getListEdsProjectsResponseProjectPersonMock() },
+      null,
+    ]),
+    documents: {
+      quote: faker.helpers.arrayElement([
+        { ...getListEdsProjectsResponseProjectQuoteRefMock() },
+        null,
+      ]),
+      contract: faker.helpers.arrayElement([
+        { ...getListEdsProjectsResponseProjectContractRefMock() },
+        null,
+      ]),
+      invoice: faker.helpers.arrayElement([
+        { ...getListEdsProjectsResponseProjectInvoiceRefMock() },
+        null,
+      ]),
+      act: faker.helpers.arrayElement([{ ...getListEdsProjectsResponseProjectActRefMock() }, null]),
+    },
+    problems: faker.helpers.arrayElements([
+      "no_contract",
+      "contract_rejected",
+      "act_returned",
+      "invoice_overdue",
+    ] as const),
+    created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  })),
+  total: faker.number.int(),
+  offset: faker.number.int(),
+  limit: faker.number.int(),
+  ...overrideResponse,
+});
+
+export const getGetEdsProjectResponseProjectMoneyMock = (
+  overrideResponse: Partial<ProjectMoney> = {},
+): ProjectMoney => ({
+  ...{
+    amount: faker.helpers.fromRegExp("^-?\\d+\\.\\d{2}$"),
+    currency: faker.helpers.fromRegExp("^[A-Z]{3}$"),
+  },
+  ...overrideResponse,
+});
+
+export const getGetEdsProjectResponseProjectPersonMock = (
+  overrideResponse: Partial<ProjectPerson> = {},
+): ProjectPerson => ({
+  ...{ id: faker.number.int(), name: faker.string.alpha({ length: { min: 10, max: 20 } }) },
+  ...overrideResponse,
+});
+
+export const getGetEdsProjectResponseProjectQuoteRefMock = (
+  overrideResponse: Partial<ProjectQuoteRef> = {},
+): ProjectQuoteRef => ({
+  ...{
+    id: faker.number.int(),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: "accepted",
+    version: faker.number.int(),
+  },
+  ...overrideResponse,
+});
+
+export const getGetEdsProjectResponseProjectContractRefMock = (
+  overrideResponse: Partial<ProjectContractRef> = {},
+): ProjectContractRef => ({
+  ...{
+    id: faker.number.int(),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement([
+      "project",
+      "client_agreed",
+      "issued_at_operator",
+      "signed",
+      "rejected",
+      "cancelled",
+    ] as const),
+    sent_to_client: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
+export const getGetEdsProjectResponseProjectInvoiceRefMock = (
+  overrideResponse: Partial<ProjectInvoiceRef> = {},
+): ProjectInvoiceRef => ({
+  ...{
+    id: faker.number.int(),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement([
+      "to_issue",
+      "issued",
+      "partial",
+      "paid",
+      "overdue",
+      "cancelled",
+    ] as const),
+    count: faker.number.int(),
+  },
+  ...overrideResponse,
+});
+
+export const getGetEdsProjectResponseProjectActRefMock = (
+  overrideResponse: Partial<ProjectActRef> = {},
+): ProjectActRef => ({
+  ...{
+    id: faker.number.int(),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement([
+      "project",
+      "returned",
+      "issued",
+      "signed",
+      "cancelled",
+    ] as const),
+  },
+  ...overrideResponse,
+});
+
+export const getGetEdsProjectResponseProjectQuoteMock = (
+  overrideResponse: Partial<ProjectQuote> = {},
+): ProjectQuote => ({
+  ...{
+    id: faker.number.int(),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: "accepted",
+    version: faker.number.int(),
+    outgoing_number: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  },
+  ...overrideResponse,
+});
+
+export const getGetEdsProjectResponseProjectContractMock = (
+  overrideResponse: Partial<ProjectContract> = {},
+): ProjectContract => ({
+  ...{
+    id: faker.number.int(),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement([
+      "project",
+      "client_agreed",
+      "issued_at_operator",
+      "signed",
+      "rejected",
+      "cancelled",
+    ] as const),
+    sent_to_client: faker.datatype.boolean(),
+    total: faker.helpers.arrayElement([{ ...getGetEdsProjectResponseProjectMoneyMock() }, null]),
+    created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    client_agreed_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    signed_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    has_pdf: faker.datatype.boolean(),
+    has_scan: faker.datatype.boolean(),
+    actions: faker.helpers.arrayElements([
+      "send_to_client",
+      "client_agreed",
+      "reject",
+      "revise",
+      "mark_issued",
+      "attach_scan",
+    ] as const),
+    history: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        at: faker.date.past().toISOString().slice(0, 19) + "Z",
+        code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        actor_name: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        document: faker.helpers.arrayElement([
+          faker.helpers.arrayElement(["contract", "act", "invoice", "quote", "project"] as const),
+          null,
+        ]),
+        number: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      }),
+    ),
+  },
+  ...overrideResponse,
+});
+
+export const getGetEdsProjectResponseProjectActMock = (
+  overrideResponse: Partial<ProjectAct> = {},
+): ProjectAct => ({
+  ...{
+    id: faker.number.int(),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement([
+      "project",
+      "returned",
+      "issued",
+      "signed",
+      "cancelled",
+    ] as const),
+    total: faker.helpers.arrayElement([{ ...getGetEdsProjectResponseProjectMoneyMock() }, null]),
+    issued_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    signed_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    rejection_reason: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    has_pdf: faker.datatype.boolean(),
+    has_scan: faker.datatype.boolean(),
+    actions: faker.helpers.arrayElements(["attach_scan", "return", "reissue"] as const),
+    history: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        at: faker.date.past().toISOString().slice(0, 19) + "Z",
+        code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        actor_name: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        document: faker.helpers.arrayElement([
+          faker.helpers.arrayElement(["contract", "act", "invoice", "quote", "project"] as const),
+          null,
+        ]),
+        number: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      }),
+    ),
+  },
+  ...overrideResponse,
+});
+
+export const getGetEdsProjectResponseProjectFulfillmentMock = (
+  overrideResponse: Partial<ProjectFulfillment> = {},
+): ProjectFulfillment => ({
+  ...{
+    status: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    status_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    expected_delivery_date: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 10),
+      null,
+    ]),
+    shipped_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    delivered_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    accepted_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    tracking_number: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    carrier: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getGetEdsProjectResponseMock = (
+  overrideResponse: Partial<Extract<ProjectCard, object>> = {},
+): ProjectCard => ({
+  number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  request_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  client_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  step: faker.helpers.arrayElement(["CONTRACT", "PAYMENT", "DONE"] as const),
+  client_status: faker.helpers.arrayElement([
+    "contract_review",
+    "contract_signing",
+    "awaiting_payment",
+    "fulfilling",
+    "awaiting_acceptance",
+    "done",
+  ] as const),
+  total: faker.helpers.arrayElement([{ ...getGetEdsProjectResponseProjectMoneyMock() }, null]),
+  due_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  manager: faker.helpers.arrayElement([{ ...getGetEdsProjectResponseProjectPersonMock() }, null]),
+  responsible: faker.helpers.arrayElement([
+    { ...getGetEdsProjectResponseProjectPersonMock() },
+    null,
+  ]),
+  documents: {
+    quote: faker.helpers.arrayElement([{ ...getGetEdsProjectResponseProjectQuoteRefMock() }, null]),
+    contract: faker.helpers.arrayElement([
+      { ...getGetEdsProjectResponseProjectContractRefMock() },
+      null,
+    ]),
+    invoice: faker.helpers.arrayElement([
+      { ...getGetEdsProjectResponseProjectInvoiceRefMock() },
+      null,
+    ]),
+    act: faker.helpers.arrayElement([{ ...getGetEdsProjectResponseProjectActRefMock() }, null]),
+  },
+  problems: faker.helpers.arrayElements([
+    "no_contract",
+    "contract_rejected",
+    "act_returned",
+    "invoice_overdue",
+  ] as const),
+  created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  quote: faker.helpers.arrayElement([{ ...getGetEdsProjectResponseProjectQuoteMock() }, null]),
+  contract: faker.helpers.arrayElement([
+    { ...getGetEdsProjectResponseProjectContractMock() },
+    null,
+  ]),
+  can_create_contract: faker.datatype.boolean(),
+  invoices: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.number.int(),
+      number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      status: faker.helpers.arrayElement([
+        "to_issue",
+        "issued",
+        "partial",
+        "paid",
+        "overdue",
+        "cancelled",
+      ] as const),
+      total: faker.helpers.arrayElement([{ ...getGetEdsProjectResponseProjectMoneyMock() }, null]),
+      paid: faker.helpers.arrayElement([{ ...getGetEdsProjectResponseProjectMoneyMock() }, null]),
+      balance_due: faker.helpers.arrayElement([
+        { ...getGetEdsProjectResponseProjectMoneyMock() },
+        null,
+      ]),
+      issued_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      due_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      has_pdf: faker.datatype.boolean(),
+    }),
+  ),
+  act: faker.helpers.arrayElement([{ ...getGetEdsProjectResponseProjectActMock() }, null]),
+  act_blocker: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(["no_invoice", "act_exists", "forbidden"] as const),
+    null,
+  ]),
+  fulfillment: faker.helpers.arrayElement([
+    { ...getGetEdsProjectResponseProjectFulfillmentMock() },
+    null,
+  ]),
+  delivery_lines: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => ({
+    line_no: faker.number.int(),
+    title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    quantity: faker.helpers.arrayElement([faker.number.int(), null]),
+    unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    eta: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    shipped_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    tracking: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  })),
+  journal: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      actor_name: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      document: faker.helpers.arrayElement([
+        faker.helpers.arrayElement(["contract", "act", "invoice", "quote", "project"] as const),
+        null,
+      ]),
+      number: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    }),
+  ),
+  ...overrideResponse,
+});
+
+export const getCreateEdsProjectContractResponseProjectMoneyMock = (
+  overrideResponse: Partial<ProjectMoney> = {},
+): ProjectMoney => ({
+  ...{
+    amount: faker.helpers.fromRegExp("^-?\\d+\\.\\d{2}$"),
+    currency: faker.helpers.fromRegExp("^[A-Z]{3}$"),
+  },
+  ...overrideResponse,
+});
+
+export const getCreateEdsProjectContractResponseProjectPersonMock = (
+  overrideResponse: Partial<ProjectPerson> = {},
+): ProjectPerson => ({
+  ...{ id: faker.number.int(), name: faker.string.alpha({ length: { min: 10, max: 20 } }) },
+  ...overrideResponse,
+});
+
+export const getCreateEdsProjectContractResponseProjectQuoteRefMock = (
+  overrideResponse: Partial<ProjectQuoteRef> = {},
+): ProjectQuoteRef => ({
+  ...{
+    id: faker.number.int(),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: "accepted",
+    version: faker.number.int(),
+  },
+  ...overrideResponse,
+});
+
+export const getCreateEdsProjectContractResponseProjectContractRefMock = (
+  overrideResponse: Partial<ProjectContractRef> = {},
+): ProjectContractRef => ({
+  ...{
+    id: faker.number.int(),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement([
+      "project",
+      "client_agreed",
+      "issued_at_operator",
+      "signed",
+      "rejected",
+      "cancelled",
+    ] as const),
+    sent_to_client: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
+export const getCreateEdsProjectContractResponseProjectInvoiceRefMock = (
+  overrideResponse: Partial<ProjectInvoiceRef> = {},
+): ProjectInvoiceRef => ({
+  ...{
+    id: faker.number.int(),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement([
+      "to_issue",
+      "issued",
+      "partial",
+      "paid",
+      "overdue",
+      "cancelled",
+    ] as const),
+    count: faker.number.int(),
+  },
+  ...overrideResponse,
+});
+
+export const getCreateEdsProjectContractResponseProjectActRefMock = (
+  overrideResponse: Partial<ProjectActRef> = {},
+): ProjectActRef => ({
+  ...{
+    id: faker.number.int(),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement([
+      "project",
+      "returned",
+      "issued",
+      "signed",
+      "cancelled",
+    ] as const),
+  },
+  ...overrideResponse,
+});
+
+export const getCreateEdsProjectContractResponseProjectQuoteMock = (
+  overrideResponse: Partial<ProjectQuote> = {},
+): ProjectQuote => ({
+  ...{
+    id: faker.number.int(),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: "accepted",
+    version: faker.number.int(),
+    outgoing_number: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  },
+  ...overrideResponse,
+});
+
+export const getCreateEdsProjectContractResponseProjectContractMock = (
+  overrideResponse: Partial<ProjectContract> = {},
+): ProjectContract => ({
+  ...{
+    id: faker.number.int(),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement([
+      "project",
+      "client_agreed",
+      "issued_at_operator",
+      "signed",
+      "rejected",
+      "cancelled",
+    ] as const),
+    sent_to_client: faker.datatype.boolean(),
+    total: faker.helpers.arrayElement([
+      { ...getCreateEdsProjectContractResponseProjectMoneyMock() },
+      null,
+    ]),
+    created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    client_agreed_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    signed_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    has_pdf: faker.datatype.boolean(),
+    has_scan: faker.datatype.boolean(),
+    actions: faker.helpers.arrayElements([
+      "send_to_client",
+      "client_agreed",
+      "reject",
+      "revise",
+      "mark_issued",
+      "attach_scan",
+    ] as const),
+    history: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        at: faker.date.past().toISOString().slice(0, 19) + "Z",
+        code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        actor_name: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        document: faker.helpers.arrayElement([
+          faker.helpers.arrayElement(["contract", "act", "invoice", "quote", "project"] as const),
+          null,
+        ]),
+        number: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      }),
+    ),
+  },
+  ...overrideResponse,
+});
+
+export const getCreateEdsProjectContractResponseProjectActMock = (
+  overrideResponse: Partial<ProjectAct> = {},
+): ProjectAct => ({
+  ...{
+    id: faker.number.int(),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement([
+      "project",
+      "returned",
+      "issued",
+      "signed",
+      "cancelled",
+    ] as const),
+    total: faker.helpers.arrayElement([
+      { ...getCreateEdsProjectContractResponseProjectMoneyMock() },
+      null,
+    ]),
+    issued_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    signed_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    rejection_reason: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    has_pdf: faker.datatype.boolean(),
+    has_scan: faker.datatype.boolean(),
+    actions: faker.helpers.arrayElements(["attach_scan", "return", "reissue"] as const),
+    history: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        at: faker.date.past().toISOString().slice(0, 19) + "Z",
+        code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        actor_name: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        document: faker.helpers.arrayElement([
+          faker.helpers.arrayElement(["contract", "act", "invoice", "quote", "project"] as const),
+          null,
+        ]),
+        number: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      }),
+    ),
+  },
+  ...overrideResponse,
+});
+
+export const getCreateEdsProjectContractResponseProjectFulfillmentMock = (
+  overrideResponse: Partial<ProjectFulfillment> = {},
+): ProjectFulfillment => ({
+  ...{
+    status: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    status_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    expected_delivery_date: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 10),
+      null,
+    ]),
+    shipped_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    delivered_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    accepted_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    tracking_number: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    carrier: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getCreateEdsProjectContractResponseMock = (
+  overrideResponse: Partial<Extract<ProjectCard, object>> = {},
+): ProjectCard => ({
+  number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  request_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  client_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  step: faker.helpers.arrayElement(["CONTRACT", "PAYMENT", "DONE"] as const),
+  client_status: faker.helpers.arrayElement([
+    "contract_review",
+    "contract_signing",
+    "awaiting_payment",
+    "fulfilling",
+    "awaiting_acceptance",
+    "done",
+  ] as const),
+  total: faker.helpers.arrayElement([
+    { ...getCreateEdsProjectContractResponseProjectMoneyMock() },
+    null,
+  ]),
+  due_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  manager: faker.helpers.arrayElement([
+    { ...getCreateEdsProjectContractResponseProjectPersonMock() },
+    null,
+  ]),
+  responsible: faker.helpers.arrayElement([
+    { ...getCreateEdsProjectContractResponseProjectPersonMock() },
+    null,
+  ]),
+  documents: {
+    quote: faker.helpers.arrayElement([
+      { ...getCreateEdsProjectContractResponseProjectQuoteRefMock() },
+      null,
+    ]),
+    contract: faker.helpers.arrayElement([
+      { ...getCreateEdsProjectContractResponseProjectContractRefMock() },
+      null,
+    ]),
+    invoice: faker.helpers.arrayElement([
+      { ...getCreateEdsProjectContractResponseProjectInvoiceRefMock() },
+      null,
+    ]),
+    act: faker.helpers.arrayElement([
+      { ...getCreateEdsProjectContractResponseProjectActRefMock() },
+      null,
+    ]),
+  },
+  problems: faker.helpers.arrayElements([
+    "no_contract",
+    "contract_rejected",
+    "act_returned",
+    "invoice_overdue",
+  ] as const),
+  created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  quote: faker.helpers.arrayElement([
+    { ...getCreateEdsProjectContractResponseProjectQuoteMock() },
+    null,
+  ]),
+  contract: faker.helpers.arrayElement([
+    { ...getCreateEdsProjectContractResponseProjectContractMock() },
+    null,
+  ]),
+  can_create_contract: faker.datatype.boolean(),
+  invoices: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.number.int(),
+      number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      status: faker.helpers.arrayElement([
+        "to_issue",
+        "issued",
+        "partial",
+        "paid",
+        "overdue",
+        "cancelled",
+      ] as const),
+      total: faker.helpers.arrayElement([
+        { ...getCreateEdsProjectContractResponseProjectMoneyMock() },
+        null,
+      ]),
+      paid: faker.helpers.arrayElement([
+        { ...getCreateEdsProjectContractResponseProjectMoneyMock() },
+        null,
+      ]),
+      balance_due: faker.helpers.arrayElement([
+        { ...getCreateEdsProjectContractResponseProjectMoneyMock() },
+        null,
+      ]),
+      issued_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      due_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      has_pdf: faker.datatype.boolean(),
+    }),
+  ),
+  act: faker.helpers.arrayElement([
+    { ...getCreateEdsProjectContractResponseProjectActMock() },
+    null,
+  ]),
+  act_blocker: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(["no_invoice", "act_exists", "forbidden"] as const),
+    null,
+  ]),
+  fulfillment: faker.helpers.arrayElement([
+    { ...getCreateEdsProjectContractResponseProjectFulfillmentMock() },
+    null,
+  ]),
+  delivery_lines: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => ({
+    line_no: faker.number.int(),
+    title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    quantity: faker.helpers.arrayElement([faker.number.int(), null]),
+    unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    eta: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    shipped_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    tracking: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  })),
+  journal: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      actor_name: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      document: faker.helpers.arrayElement([
+        faker.helpers.arrayElement(["contract", "act", "invoice", "quote", "project"] as const),
+        null,
+      ]),
+      number: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    }),
+  ),
+  ...overrideResponse,
+});
+
+export const getActEdsProjectContractResponseProjectMoneyMock = (
+  overrideResponse: Partial<ProjectMoney> = {},
+): ProjectMoney => ({
+  ...{
+    amount: faker.helpers.fromRegExp("^-?\\d+\\.\\d{2}$"),
+    currency: faker.helpers.fromRegExp("^[A-Z]{3}$"),
+  },
+  ...overrideResponse,
+});
+
+export const getActEdsProjectContractResponseProjectPersonMock = (
+  overrideResponse: Partial<ProjectPerson> = {},
+): ProjectPerson => ({
+  ...{ id: faker.number.int(), name: faker.string.alpha({ length: { min: 10, max: 20 } }) },
+  ...overrideResponse,
+});
+
+export const getActEdsProjectContractResponseProjectQuoteRefMock = (
+  overrideResponse: Partial<ProjectQuoteRef> = {},
+): ProjectQuoteRef => ({
+  ...{
+    id: faker.number.int(),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: "accepted",
+    version: faker.number.int(),
+  },
+  ...overrideResponse,
+});
+
+export const getActEdsProjectContractResponseProjectContractRefMock = (
+  overrideResponse: Partial<ProjectContractRef> = {},
+): ProjectContractRef => ({
+  ...{
+    id: faker.number.int(),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement([
+      "project",
+      "client_agreed",
+      "issued_at_operator",
+      "signed",
+      "rejected",
+      "cancelled",
+    ] as const),
+    sent_to_client: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
+export const getActEdsProjectContractResponseProjectInvoiceRefMock = (
+  overrideResponse: Partial<ProjectInvoiceRef> = {},
+): ProjectInvoiceRef => ({
+  ...{
+    id: faker.number.int(),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement([
+      "to_issue",
+      "issued",
+      "partial",
+      "paid",
+      "overdue",
+      "cancelled",
+    ] as const),
+    count: faker.number.int(),
+  },
+  ...overrideResponse,
+});
+
+export const getActEdsProjectContractResponseProjectActRefMock = (
+  overrideResponse: Partial<ProjectActRef> = {},
+): ProjectActRef => ({
+  ...{
+    id: faker.number.int(),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement([
+      "project",
+      "returned",
+      "issued",
+      "signed",
+      "cancelled",
+    ] as const),
+  },
+  ...overrideResponse,
+});
+
+export const getActEdsProjectContractResponseProjectQuoteMock = (
+  overrideResponse: Partial<ProjectQuote> = {},
+): ProjectQuote => ({
+  ...{
+    id: faker.number.int(),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: "accepted",
+    version: faker.number.int(),
+    outgoing_number: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  },
+  ...overrideResponse,
+});
+
+export const getActEdsProjectContractResponseProjectContractMock = (
+  overrideResponse: Partial<ProjectContract> = {},
+): ProjectContract => ({
+  ...{
+    id: faker.number.int(),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement([
+      "project",
+      "client_agreed",
+      "issued_at_operator",
+      "signed",
+      "rejected",
+      "cancelled",
+    ] as const),
+    sent_to_client: faker.datatype.boolean(),
+    total: faker.helpers.arrayElement([
+      { ...getActEdsProjectContractResponseProjectMoneyMock() },
+      null,
+    ]),
+    created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    client_agreed_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    signed_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    has_pdf: faker.datatype.boolean(),
+    has_scan: faker.datatype.boolean(),
+    actions: faker.helpers.arrayElements([
+      "send_to_client",
+      "client_agreed",
+      "reject",
+      "revise",
+      "mark_issued",
+      "attach_scan",
+    ] as const),
+    history: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        at: faker.date.past().toISOString().slice(0, 19) + "Z",
+        code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        actor_name: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        document: faker.helpers.arrayElement([
+          faker.helpers.arrayElement(["contract", "act", "invoice", "quote", "project"] as const),
+          null,
+        ]),
+        number: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      }),
+    ),
+  },
+  ...overrideResponse,
+});
+
+export const getActEdsProjectContractResponseProjectActMock = (
+  overrideResponse: Partial<ProjectAct> = {},
+): ProjectAct => ({
+  ...{
+    id: faker.number.int(),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement([
+      "project",
+      "returned",
+      "issued",
+      "signed",
+      "cancelled",
+    ] as const),
+    total: faker.helpers.arrayElement([
+      { ...getActEdsProjectContractResponseProjectMoneyMock() },
+      null,
+    ]),
+    issued_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    signed_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    rejection_reason: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    has_pdf: faker.datatype.boolean(),
+    has_scan: faker.datatype.boolean(),
+    actions: faker.helpers.arrayElements(["attach_scan", "return", "reissue"] as const),
+    history: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        at: faker.date.past().toISOString().slice(0, 19) + "Z",
+        code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        actor_name: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        document: faker.helpers.arrayElement([
+          faker.helpers.arrayElement(["contract", "act", "invoice", "quote", "project"] as const),
+          null,
+        ]),
+        number: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      }),
+    ),
+  },
+  ...overrideResponse,
+});
+
+export const getActEdsProjectContractResponseProjectFulfillmentMock = (
+  overrideResponse: Partial<ProjectFulfillment> = {},
+): ProjectFulfillment => ({
+  ...{
+    status: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    status_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    expected_delivery_date: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 10),
+      null,
+    ]),
+    shipped_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    delivered_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    accepted_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    tracking_number: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    carrier: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getActEdsProjectContractResponseMock = (
+  overrideResponse: Partial<Extract<ProjectCard, object>> = {},
+): ProjectCard => ({
+  number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  request_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  client_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  step: faker.helpers.arrayElement(["CONTRACT", "PAYMENT", "DONE"] as const),
+  client_status: faker.helpers.arrayElement([
+    "contract_review",
+    "contract_signing",
+    "awaiting_payment",
+    "fulfilling",
+    "awaiting_acceptance",
+    "done",
+  ] as const),
+  total: faker.helpers.arrayElement([
+    { ...getActEdsProjectContractResponseProjectMoneyMock() },
+    null,
+  ]),
+  due_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  manager: faker.helpers.arrayElement([
+    { ...getActEdsProjectContractResponseProjectPersonMock() },
+    null,
+  ]),
+  responsible: faker.helpers.arrayElement([
+    { ...getActEdsProjectContractResponseProjectPersonMock() },
+    null,
+  ]),
+  documents: {
+    quote: faker.helpers.arrayElement([
+      { ...getActEdsProjectContractResponseProjectQuoteRefMock() },
+      null,
+    ]),
+    contract: faker.helpers.arrayElement([
+      { ...getActEdsProjectContractResponseProjectContractRefMock() },
+      null,
+    ]),
+    invoice: faker.helpers.arrayElement([
+      { ...getActEdsProjectContractResponseProjectInvoiceRefMock() },
+      null,
+    ]),
+    act: faker.helpers.arrayElement([
+      { ...getActEdsProjectContractResponseProjectActRefMock() },
+      null,
+    ]),
+  },
+  problems: faker.helpers.arrayElements([
+    "no_contract",
+    "contract_rejected",
+    "act_returned",
+    "invoice_overdue",
+  ] as const),
+  created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  quote: faker.helpers.arrayElement([
+    { ...getActEdsProjectContractResponseProjectQuoteMock() },
+    null,
+  ]),
+  contract: faker.helpers.arrayElement([
+    { ...getActEdsProjectContractResponseProjectContractMock() },
+    null,
+  ]),
+  can_create_contract: faker.datatype.boolean(),
+  invoices: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.number.int(),
+      number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      status: faker.helpers.arrayElement([
+        "to_issue",
+        "issued",
+        "partial",
+        "paid",
+        "overdue",
+        "cancelled",
+      ] as const),
+      total: faker.helpers.arrayElement([
+        { ...getActEdsProjectContractResponseProjectMoneyMock() },
+        null,
+      ]),
+      paid: faker.helpers.arrayElement([
+        { ...getActEdsProjectContractResponseProjectMoneyMock() },
+        null,
+      ]),
+      balance_due: faker.helpers.arrayElement([
+        { ...getActEdsProjectContractResponseProjectMoneyMock() },
+        null,
+      ]),
+      issued_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      due_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      has_pdf: faker.datatype.boolean(),
+    }),
+  ),
+  act: faker.helpers.arrayElement([{ ...getActEdsProjectContractResponseProjectActMock() }, null]),
+  act_blocker: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(["no_invoice", "act_exists", "forbidden"] as const),
+    null,
+  ]),
+  fulfillment: faker.helpers.arrayElement([
+    { ...getActEdsProjectContractResponseProjectFulfillmentMock() },
+    null,
+  ]),
+  delivery_lines: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => ({
+    line_no: faker.number.int(),
+    title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    quantity: faker.helpers.arrayElement([faker.number.int(), null]),
+    unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    eta: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    shipped_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    tracking: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  })),
+  journal: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      actor_name: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      document: faker.helpers.arrayElement([
+        faker.helpers.arrayElement(["contract", "act", "invoice", "quote", "project"] as const),
+        null,
+      ]),
+      number: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    }),
+  ),
+  ...overrideResponse,
+});
+
+export const getScanEdsProjectContractResponseProjectMoneyMock = (
+  overrideResponse: Partial<ProjectMoney> = {},
+): ProjectMoney => ({
+  ...{
+    amount: faker.helpers.fromRegExp("^-?\\d+\\.\\d{2}$"),
+    currency: faker.helpers.fromRegExp("^[A-Z]{3}$"),
+  },
+  ...overrideResponse,
+});
+
+export const getScanEdsProjectContractResponseProjectPersonMock = (
+  overrideResponse: Partial<ProjectPerson> = {},
+): ProjectPerson => ({
+  ...{ id: faker.number.int(), name: faker.string.alpha({ length: { min: 10, max: 20 } }) },
+  ...overrideResponse,
+});
+
+export const getScanEdsProjectContractResponseProjectQuoteRefMock = (
+  overrideResponse: Partial<ProjectQuoteRef> = {},
+): ProjectQuoteRef => ({
+  ...{
+    id: faker.number.int(),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: "accepted",
+    version: faker.number.int(),
+  },
+  ...overrideResponse,
+});
+
+export const getScanEdsProjectContractResponseProjectContractRefMock = (
+  overrideResponse: Partial<ProjectContractRef> = {},
+): ProjectContractRef => ({
+  ...{
+    id: faker.number.int(),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement([
+      "project",
+      "client_agreed",
+      "issued_at_operator",
+      "signed",
+      "rejected",
+      "cancelled",
+    ] as const),
+    sent_to_client: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
+export const getScanEdsProjectContractResponseProjectInvoiceRefMock = (
+  overrideResponse: Partial<ProjectInvoiceRef> = {},
+): ProjectInvoiceRef => ({
+  ...{
+    id: faker.number.int(),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement([
+      "to_issue",
+      "issued",
+      "partial",
+      "paid",
+      "overdue",
+      "cancelled",
+    ] as const),
+    count: faker.number.int(),
+  },
+  ...overrideResponse,
+});
+
+export const getScanEdsProjectContractResponseProjectActRefMock = (
+  overrideResponse: Partial<ProjectActRef> = {},
+): ProjectActRef => ({
+  ...{
+    id: faker.number.int(),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement([
+      "project",
+      "returned",
+      "issued",
+      "signed",
+      "cancelled",
+    ] as const),
+  },
+  ...overrideResponse,
+});
+
+export const getScanEdsProjectContractResponseProjectQuoteMock = (
+  overrideResponse: Partial<ProjectQuote> = {},
+): ProjectQuote => ({
+  ...{
+    id: faker.number.int(),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: "accepted",
+    version: faker.number.int(),
+    outgoing_number: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  },
+  ...overrideResponse,
+});
+
+export const getScanEdsProjectContractResponseProjectContractMock = (
+  overrideResponse: Partial<ProjectContract> = {},
+): ProjectContract => ({
+  ...{
+    id: faker.number.int(),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement([
+      "project",
+      "client_agreed",
+      "issued_at_operator",
+      "signed",
+      "rejected",
+      "cancelled",
+    ] as const),
+    sent_to_client: faker.datatype.boolean(),
+    total: faker.helpers.arrayElement([
+      { ...getScanEdsProjectContractResponseProjectMoneyMock() },
+      null,
+    ]),
+    created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    client_agreed_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    signed_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    has_pdf: faker.datatype.boolean(),
+    has_scan: faker.datatype.boolean(),
+    actions: faker.helpers.arrayElements([
+      "send_to_client",
+      "client_agreed",
+      "reject",
+      "revise",
+      "mark_issued",
+      "attach_scan",
+    ] as const),
+    history: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        at: faker.date.past().toISOString().slice(0, 19) + "Z",
+        code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        actor_name: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        document: faker.helpers.arrayElement([
+          faker.helpers.arrayElement(["contract", "act", "invoice", "quote", "project"] as const),
+          null,
+        ]),
+        number: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      }),
+    ),
+  },
+  ...overrideResponse,
+});
+
+export const getScanEdsProjectContractResponseProjectActMock = (
+  overrideResponse: Partial<ProjectAct> = {},
+): ProjectAct => ({
+  ...{
+    id: faker.number.int(),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement([
+      "project",
+      "returned",
+      "issued",
+      "signed",
+      "cancelled",
+    ] as const),
+    total: faker.helpers.arrayElement([
+      { ...getScanEdsProjectContractResponseProjectMoneyMock() },
+      null,
+    ]),
+    issued_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    signed_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    rejection_reason: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    has_pdf: faker.datatype.boolean(),
+    has_scan: faker.datatype.boolean(),
+    actions: faker.helpers.arrayElements(["attach_scan", "return", "reissue"] as const),
+    history: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        at: faker.date.past().toISOString().slice(0, 19) + "Z",
+        code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        actor_name: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        document: faker.helpers.arrayElement([
+          faker.helpers.arrayElement(["contract", "act", "invoice", "quote", "project"] as const),
+          null,
+        ]),
+        number: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      }),
+    ),
+  },
+  ...overrideResponse,
+});
+
+export const getScanEdsProjectContractResponseProjectFulfillmentMock = (
+  overrideResponse: Partial<ProjectFulfillment> = {},
+): ProjectFulfillment => ({
+  ...{
+    status: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    status_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    expected_delivery_date: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 10),
+      null,
+    ]),
+    shipped_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    delivered_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    accepted_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    tracking_number: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    carrier: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getScanEdsProjectContractResponseMock = (
+  overrideResponse: Partial<Extract<ProjectCard, object>> = {},
+): ProjectCard => ({
+  number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  request_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  client_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  step: faker.helpers.arrayElement(["CONTRACT", "PAYMENT", "DONE"] as const),
+  client_status: faker.helpers.arrayElement([
+    "contract_review",
+    "contract_signing",
+    "awaiting_payment",
+    "fulfilling",
+    "awaiting_acceptance",
+    "done",
+  ] as const),
+  total: faker.helpers.arrayElement([
+    { ...getScanEdsProjectContractResponseProjectMoneyMock() },
+    null,
+  ]),
+  due_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  manager: faker.helpers.arrayElement([
+    { ...getScanEdsProjectContractResponseProjectPersonMock() },
+    null,
+  ]),
+  responsible: faker.helpers.arrayElement([
+    { ...getScanEdsProjectContractResponseProjectPersonMock() },
+    null,
+  ]),
+  documents: {
+    quote: faker.helpers.arrayElement([
+      { ...getScanEdsProjectContractResponseProjectQuoteRefMock() },
+      null,
+    ]),
+    contract: faker.helpers.arrayElement([
+      { ...getScanEdsProjectContractResponseProjectContractRefMock() },
+      null,
+    ]),
+    invoice: faker.helpers.arrayElement([
+      { ...getScanEdsProjectContractResponseProjectInvoiceRefMock() },
+      null,
+    ]),
+    act: faker.helpers.arrayElement([
+      { ...getScanEdsProjectContractResponseProjectActRefMock() },
+      null,
+    ]),
+  },
+  problems: faker.helpers.arrayElements([
+    "no_contract",
+    "contract_rejected",
+    "act_returned",
+    "invoice_overdue",
+  ] as const),
+  created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  quote: faker.helpers.arrayElement([
+    { ...getScanEdsProjectContractResponseProjectQuoteMock() },
+    null,
+  ]),
+  contract: faker.helpers.arrayElement([
+    { ...getScanEdsProjectContractResponseProjectContractMock() },
+    null,
+  ]),
+  can_create_contract: faker.datatype.boolean(),
+  invoices: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.number.int(),
+      number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      status: faker.helpers.arrayElement([
+        "to_issue",
+        "issued",
+        "partial",
+        "paid",
+        "overdue",
+        "cancelled",
+      ] as const),
+      total: faker.helpers.arrayElement([
+        { ...getScanEdsProjectContractResponseProjectMoneyMock() },
+        null,
+      ]),
+      paid: faker.helpers.arrayElement([
+        { ...getScanEdsProjectContractResponseProjectMoneyMock() },
+        null,
+      ]),
+      balance_due: faker.helpers.arrayElement([
+        { ...getScanEdsProjectContractResponseProjectMoneyMock() },
+        null,
+      ]),
+      issued_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      due_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      has_pdf: faker.datatype.boolean(),
+    }),
+  ),
+  act: faker.helpers.arrayElement([{ ...getScanEdsProjectContractResponseProjectActMock() }, null]),
+  act_blocker: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(["no_invoice", "act_exists", "forbidden"] as const),
+    null,
+  ]),
+  fulfillment: faker.helpers.arrayElement([
+    { ...getScanEdsProjectContractResponseProjectFulfillmentMock() },
+    null,
+  ]),
+  delivery_lines: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => ({
+    line_no: faker.number.int(),
+    title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    quantity: faker.helpers.arrayElement([faker.number.int(), null]),
+    unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    eta: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    shipped_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    tracking: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  })),
+  journal: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      actor_name: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      document: faker.helpers.arrayElement([
+        faker.helpers.arrayElement(["contract", "act", "invoice", "quote", "project"] as const),
+        null,
+      ]),
+      number: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    }),
+  ),
+  ...overrideResponse,
+});
+
+export const getActEdsProjectActResponseProjectMoneyMock = (
+  overrideResponse: Partial<ProjectMoney> = {},
+): ProjectMoney => ({
+  ...{
+    amount: faker.helpers.fromRegExp("^-?\\d+\\.\\d{2}$"),
+    currency: faker.helpers.fromRegExp("^[A-Z]{3}$"),
+  },
+  ...overrideResponse,
+});
+
+export const getActEdsProjectActResponseProjectPersonMock = (
+  overrideResponse: Partial<ProjectPerson> = {},
+): ProjectPerson => ({
+  ...{ id: faker.number.int(), name: faker.string.alpha({ length: { min: 10, max: 20 } }) },
+  ...overrideResponse,
+});
+
+export const getActEdsProjectActResponseProjectQuoteRefMock = (
+  overrideResponse: Partial<ProjectQuoteRef> = {},
+): ProjectQuoteRef => ({
+  ...{
+    id: faker.number.int(),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: "accepted",
+    version: faker.number.int(),
+  },
+  ...overrideResponse,
+});
+
+export const getActEdsProjectActResponseProjectContractRefMock = (
+  overrideResponse: Partial<ProjectContractRef> = {},
+): ProjectContractRef => ({
+  ...{
+    id: faker.number.int(),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement([
+      "project",
+      "client_agreed",
+      "issued_at_operator",
+      "signed",
+      "rejected",
+      "cancelled",
+    ] as const),
+    sent_to_client: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
+export const getActEdsProjectActResponseProjectInvoiceRefMock = (
+  overrideResponse: Partial<ProjectInvoiceRef> = {},
+): ProjectInvoiceRef => ({
+  ...{
+    id: faker.number.int(),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement([
+      "to_issue",
+      "issued",
+      "partial",
+      "paid",
+      "overdue",
+      "cancelled",
+    ] as const),
+    count: faker.number.int(),
+  },
+  ...overrideResponse,
+});
+
+export const getActEdsProjectActResponseProjectActRefMock = (
+  overrideResponse: Partial<ProjectActRef> = {},
+): ProjectActRef => ({
+  ...{
+    id: faker.number.int(),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement([
+      "project",
+      "returned",
+      "issued",
+      "signed",
+      "cancelled",
+    ] as const),
+  },
+  ...overrideResponse,
+});
+
+export const getActEdsProjectActResponseProjectQuoteMock = (
+  overrideResponse: Partial<ProjectQuote> = {},
+): ProjectQuote => ({
+  ...{
+    id: faker.number.int(),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: "accepted",
+    version: faker.number.int(),
+    outgoing_number: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  },
+  ...overrideResponse,
+});
+
+export const getActEdsProjectActResponseProjectContractMock = (
+  overrideResponse: Partial<ProjectContract> = {},
+): ProjectContract => ({
+  ...{
+    id: faker.number.int(),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement([
+      "project",
+      "client_agreed",
+      "issued_at_operator",
+      "signed",
+      "rejected",
+      "cancelled",
+    ] as const),
+    sent_to_client: faker.datatype.boolean(),
+    total: faker.helpers.arrayElement([{ ...getActEdsProjectActResponseProjectMoneyMock() }, null]),
+    created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    client_agreed_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    signed_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    has_pdf: faker.datatype.boolean(),
+    has_scan: faker.datatype.boolean(),
+    actions: faker.helpers.arrayElements([
+      "send_to_client",
+      "client_agreed",
+      "reject",
+      "revise",
+      "mark_issued",
+      "attach_scan",
+    ] as const),
+    history: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        at: faker.date.past().toISOString().slice(0, 19) + "Z",
+        code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        actor_name: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        document: faker.helpers.arrayElement([
+          faker.helpers.arrayElement(["contract", "act", "invoice", "quote", "project"] as const),
+          null,
+        ]),
+        number: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      }),
+    ),
+  },
+  ...overrideResponse,
+});
+
+export const getActEdsProjectActResponseProjectActMock = (
+  overrideResponse: Partial<ProjectAct> = {},
+): ProjectAct => ({
+  ...{
+    id: faker.number.int(),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement([
+      "project",
+      "returned",
+      "issued",
+      "signed",
+      "cancelled",
+    ] as const),
+    total: faker.helpers.arrayElement([{ ...getActEdsProjectActResponseProjectMoneyMock() }, null]),
+    issued_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    signed_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    rejection_reason: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    has_pdf: faker.datatype.boolean(),
+    has_scan: faker.datatype.boolean(),
+    actions: faker.helpers.arrayElements(["attach_scan", "return", "reissue"] as const),
+    history: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        at: faker.date.past().toISOString().slice(0, 19) + "Z",
+        code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        actor_name: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        document: faker.helpers.arrayElement([
+          faker.helpers.arrayElement(["contract", "act", "invoice", "quote", "project"] as const),
+          null,
+        ]),
+        number: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      }),
+    ),
+  },
+  ...overrideResponse,
+});
+
+export const getActEdsProjectActResponseProjectFulfillmentMock = (
+  overrideResponse: Partial<ProjectFulfillment> = {},
+): ProjectFulfillment => ({
+  ...{
+    status: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    status_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    expected_delivery_date: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 10),
+      null,
+    ]),
+    shipped_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    delivered_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    accepted_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    tracking_number: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    carrier: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getActEdsProjectActResponseMock = (
+  overrideResponse: Partial<Extract<ProjectCard, object>> = {},
+): ProjectCard => ({
+  number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  request_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  client_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  step: faker.helpers.arrayElement(["CONTRACT", "PAYMENT", "DONE"] as const),
+  client_status: faker.helpers.arrayElement([
+    "contract_review",
+    "contract_signing",
+    "awaiting_payment",
+    "fulfilling",
+    "awaiting_acceptance",
+    "done",
+  ] as const),
+  total: faker.helpers.arrayElement([{ ...getActEdsProjectActResponseProjectMoneyMock() }, null]),
+  due_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  manager: faker.helpers.arrayElement([
+    { ...getActEdsProjectActResponseProjectPersonMock() },
+    null,
+  ]),
+  responsible: faker.helpers.arrayElement([
+    { ...getActEdsProjectActResponseProjectPersonMock() },
+    null,
+  ]),
+  documents: {
+    quote: faker.helpers.arrayElement([
+      { ...getActEdsProjectActResponseProjectQuoteRefMock() },
+      null,
+    ]),
+    contract: faker.helpers.arrayElement([
+      { ...getActEdsProjectActResponseProjectContractRefMock() },
+      null,
+    ]),
+    invoice: faker.helpers.arrayElement([
+      { ...getActEdsProjectActResponseProjectInvoiceRefMock() },
+      null,
+    ]),
+    act: faker.helpers.arrayElement([{ ...getActEdsProjectActResponseProjectActRefMock() }, null]),
+  },
+  problems: faker.helpers.arrayElements([
+    "no_contract",
+    "contract_rejected",
+    "act_returned",
+    "invoice_overdue",
+  ] as const),
+  created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  quote: faker.helpers.arrayElement([{ ...getActEdsProjectActResponseProjectQuoteMock() }, null]),
+  contract: faker.helpers.arrayElement([
+    { ...getActEdsProjectActResponseProjectContractMock() },
+    null,
+  ]),
+  can_create_contract: faker.datatype.boolean(),
+  invoices: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.number.int(),
+      number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      status: faker.helpers.arrayElement([
+        "to_issue",
+        "issued",
+        "partial",
+        "paid",
+        "overdue",
+        "cancelled",
+      ] as const),
+      total: faker.helpers.arrayElement([
+        { ...getActEdsProjectActResponseProjectMoneyMock() },
+        null,
+      ]),
+      paid: faker.helpers.arrayElement([
+        { ...getActEdsProjectActResponseProjectMoneyMock() },
+        null,
+      ]),
+      balance_due: faker.helpers.arrayElement([
+        { ...getActEdsProjectActResponseProjectMoneyMock() },
+        null,
+      ]),
+      issued_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      due_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      has_pdf: faker.datatype.boolean(),
+    }),
+  ),
+  act: faker.helpers.arrayElement([{ ...getActEdsProjectActResponseProjectActMock() }, null]),
+  act_blocker: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(["no_invoice", "act_exists", "forbidden"] as const),
+    null,
+  ]),
+  fulfillment: faker.helpers.arrayElement([
+    { ...getActEdsProjectActResponseProjectFulfillmentMock() },
+    null,
+  ]),
+  delivery_lines: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => ({
+    line_no: faker.number.int(),
+    title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    quantity: faker.helpers.arrayElement([faker.number.int(), null]),
+    unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    eta: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    shipped_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    tracking: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  })),
+  journal: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      actor_name: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      document: faker.helpers.arrayElement([
+        faker.helpers.arrayElement(["contract", "act", "invoice", "quote", "project"] as const),
+        null,
+      ]),
+      number: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    }),
+  ),
+  ...overrideResponse,
+});
+
+export const getScanEdsProjectActResponseProjectMoneyMock = (
+  overrideResponse: Partial<ProjectMoney> = {},
+): ProjectMoney => ({
+  ...{
+    amount: faker.helpers.fromRegExp("^-?\\d+\\.\\d{2}$"),
+    currency: faker.helpers.fromRegExp("^[A-Z]{3}$"),
+  },
+  ...overrideResponse,
+});
+
+export const getScanEdsProjectActResponseProjectPersonMock = (
+  overrideResponse: Partial<ProjectPerson> = {},
+): ProjectPerson => ({
+  ...{ id: faker.number.int(), name: faker.string.alpha({ length: { min: 10, max: 20 } }) },
+  ...overrideResponse,
+});
+
+export const getScanEdsProjectActResponseProjectQuoteRefMock = (
+  overrideResponse: Partial<ProjectQuoteRef> = {},
+): ProjectQuoteRef => ({
+  ...{
+    id: faker.number.int(),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: "accepted",
+    version: faker.number.int(),
+  },
+  ...overrideResponse,
+});
+
+export const getScanEdsProjectActResponseProjectContractRefMock = (
+  overrideResponse: Partial<ProjectContractRef> = {},
+): ProjectContractRef => ({
+  ...{
+    id: faker.number.int(),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement([
+      "project",
+      "client_agreed",
+      "issued_at_operator",
+      "signed",
+      "rejected",
+      "cancelled",
+    ] as const),
+    sent_to_client: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
+export const getScanEdsProjectActResponseProjectInvoiceRefMock = (
+  overrideResponse: Partial<ProjectInvoiceRef> = {},
+): ProjectInvoiceRef => ({
+  ...{
+    id: faker.number.int(),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement([
+      "to_issue",
+      "issued",
+      "partial",
+      "paid",
+      "overdue",
+      "cancelled",
+    ] as const),
+    count: faker.number.int(),
+  },
+  ...overrideResponse,
+});
+
+export const getScanEdsProjectActResponseProjectActRefMock = (
+  overrideResponse: Partial<ProjectActRef> = {},
+): ProjectActRef => ({
+  ...{
+    id: faker.number.int(),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement([
+      "project",
+      "returned",
+      "issued",
+      "signed",
+      "cancelled",
+    ] as const),
+  },
+  ...overrideResponse,
+});
+
+export const getScanEdsProjectActResponseProjectQuoteMock = (
+  overrideResponse: Partial<ProjectQuote> = {},
+): ProjectQuote => ({
+  ...{
+    id: faker.number.int(),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: "accepted",
+    version: faker.number.int(),
+    outgoing_number: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  },
+  ...overrideResponse,
+});
+
+export const getScanEdsProjectActResponseProjectContractMock = (
+  overrideResponse: Partial<ProjectContract> = {},
+): ProjectContract => ({
+  ...{
+    id: faker.number.int(),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement([
+      "project",
+      "client_agreed",
+      "issued_at_operator",
+      "signed",
+      "rejected",
+      "cancelled",
+    ] as const),
+    sent_to_client: faker.datatype.boolean(),
+    total: faker.helpers.arrayElement([
+      { ...getScanEdsProjectActResponseProjectMoneyMock() },
+      null,
+    ]),
+    created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    client_agreed_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    signed_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    has_pdf: faker.datatype.boolean(),
+    has_scan: faker.datatype.boolean(),
+    actions: faker.helpers.arrayElements([
+      "send_to_client",
+      "client_agreed",
+      "reject",
+      "revise",
+      "mark_issued",
+      "attach_scan",
+    ] as const),
+    history: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        at: faker.date.past().toISOString().slice(0, 19) + "Z",
+        code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        actor_name: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        document: faker.helpers.arrayElement([
+          faker.helpers.arrayElement(["contract", "act", "invoice", "quote", "project"] as const),
+          null,
+        ]),
+        number: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      }),
+    ),
+  },
+  ...overrideResponse,
+});
+
+export const getScanEdsProjectActResponseProjectActMock = (
+  overrideResponse: Partial<ProjectAct> = {},
+): ProjectAct => ({
+  ...{
+    id: faker.number.int(),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement([
+      "project",
+      "returned",
+      "issued",
+      "signed",
+      "cancelled",
+    ] as const),
+    total: faker.helpers.arrayElement([
+      { ...getScanEdsProjectActResponseProjectMoneyMock() },
+      null,
+    ]),
+    issued_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    signed_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    rejection_reason: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    has_pdf: faker.datatype.boolean(),
+    has_scan: faker.datatype.boolean(),
+    actions: faker.helpers.arrayElements(["attach_scan", "return", "reissue"] as const),
+    history: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        at: faker.date.past().toISOString().slice(0, 19) + "Z",
+        code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        actor_name: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        document: faker.helpers.arrayElement([
+          faker.helpers.arrayElement(["contract", "act", "invoice", "quote", "project"] as const),
+          null,
+        ]),
+        number: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      }),
+    ),
+  },
+  ...overrideResponse,
+});
+
+export const getScanEdsProjectActResponseProjectFulfillmentMock = (
+  overrideResponse: Partial<ProjectFulfillment> = {},
+): ProjectFulfillment => ({
+  ...{
+    status: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    status_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    expected_delivery_date: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 10),
+      null,
+    ]),
+    shipped_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    delivered_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    accepted_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    tracking_number: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    carrier: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getScanEdsProjectActResponseMock = (
+  overrideResponse: Partial<Extract<ProjectCard, object>> = {},
+): ProjectCard => ({
+  number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  request_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  client_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  step: faker.helpers.arrayElement(["CONTRACT", "PAYMENT", "DONE"] as const),
+  client_status: faker.helpers.arrayElement([
+    "contract_review",
+    "contract_signing",
+    "awaiting_payment",
+    "fulfilling",
+    "awaiting_acceptance",
+    "done",
+  ] as const),
+  total: faker.helpers.arrayElement([{ ...getScanEdsProjectActResponseProjectMoneyMock() }, null]),
+  due_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  manager: faker.helpers.arrayElement([
+    { ...getScanEdsProjectActResponseProjectPersonMock() },
+    null,
+  ]),
+  responsible: faker.helpers.arrayElement([
+    { ...getScanEdsProjectActResponseProjectPersonMock() },
+    null,
+  ]),
+  documents: {
+    quote: faker.helpers.arrayElement([
+      { ...getScanEdsProjectActResponseProjectQuoteRefMock() },
+      null,
+    ]),
+    contract: faker.helpers.arrayElement([
+      { ...getScanEdsProjectActResponseProjectContractRefMock() },
+      null,
+    ]),
+    invoice: faker.helpers.arrayElement([
+      { ...getScanEdsProjectActResponseProjectInvoiceRefMock() },
+      null,
+    ]),
+    act: faker.helpers.arrayElement([{ ...getScanEdsProjectActResponseProjectActRefMock() }, null]),
+  },
+  problems: faker.helpers.arrayElements([
+    "no_contract",
+    "contract_rejected",
+    "act_returned",
+    "invoice_overdue",
+  ] as const),
+  created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  quote: faker.helpers.arrayElement([{ ...getScanEdsProjectActResponseProjectQuoteMock() }, null]),
+  contract: faker.helpers.arrayElement([
+    { ...getScanEdsProjectActResponseProjectContractMock() },
+    null,
+  ]),
+  can_create_contract: faker.datatype.boolean(),
+  invoices: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.number.int(),
+      number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      status: faker.helpers.arrayElement([
+        "to_issue",
+        "issued",
+        "partial",
+        "paid",
+        "overdue",
+        "cancelled",
+      ] as const),
+      total: faker.helpers.arrayElement([
+        { ...getScanEdsProjectActResponseProjectMoneyMock() },
+        null,
+      ]),
+      paid: faker.helpers.arrayElement([
+        { ...getScanEdsProjectActResponseProjectMoneyMock() },
+        null,
+      ]),
+      balance_due: faker.helpers.arrayElement([
+        { ...getScanEdsProjectActResponseProjectMoneyMock() },
+        null,
+      ]),
+      issued_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      due_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      has_pdf: faker.datatype.boolean(),
+    }),
+  ),
+  act: faker.helpers.arrayElement([{ ...getScanEdsProjectActResponseProjectActMock() }, null]),
+  act_blocker: faker.helpers.arrayElement([
+    faker.helpers.arrayElement(["no_invoice", "act_exists", "forbidden"] as const),
+    null,
+  ]),
+  fulfillment: faker.helpers.arrayElement([
+    { ...getScanEdsProjectActResponseProjectFulfillmentMock() },
+    null,
+  ]),
+  delivery_lines: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => ({
+    line_no: faker.number.int(),
+    title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    quantity: faker.helpers.arrayElement([faker.number.int(), null]),
+    unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    eta: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    shipped_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    tracking: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  })),
+  journal: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      actor_name: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      document: faker.helpers.arrayElement([
+        faker.helpers.arrayElement(["contract", "act", "invoice", "quote", "project"] as const),
+        null,
+      ]),
+      number: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      reason: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    }),
+  ),
+  ...overrideResponse,
+});
+
+export const getDownloadEdsProjectFileResponseMock = (
+  overrideResponse: Partial<Extract<Blob | ProjectFileGenerating, object>> = {},
+): Blob | ProjectFileGenerating =>
+  faker.helpers.arrayElement([
+    new Blob([new Uint8Array(faker.number.int({ min: 1, max: 64 }))]),
+    new Blob([new Uint8Array(faker.number.int({ min: 1, max: 64 }))]),
+    { detail: "GENERATING", retry_after: faker.number.int(), ...overrideResponse },
+  ]);
 
 export const getUploadEdsDocumentFileResponseMock = (
   overrideResponse: Partial<Extract<EdsFile, object>> = {},
@@ -14310,6 +16804,197 @@ export const getUpdateEdsDocumentMockHandler = (
   );
 };
 
+export const getListEdsProjectsMockHandler = (
+  overrideResponse?:
+    | ProjectPage
+    | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<ProjectPage> | ProjectPage),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/eds/projects",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListEdsProjectsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetEdsProjectMockHandler = (
+  overrideResponse?:
+    | ProjectCard
+    | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<ProjectCard> | ProjectCard),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/eds/projects/:ref",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetEdsProjectResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getCreateEdsProjectContractMockHandler = (
+  overrideResponse?:
+    | ProjectCard
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<ProjectCard> | ProjectCard),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/eds/projects/:ref/contract/draft",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCreateEdsProjectContractResponseMock(),
+        { status: 201 },
+      );
+    },
+    options,
+  );
+};
+
+export const getActEdsProjectContractMockHandler = (
+  overrideResponse?:
+    | ProjectCard
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<ProjectCard> | ProjectCard),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/eds/projects/:ref/contract",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getActEdsProjectContractResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getScanEdsProjectContractMockHandler = (
+  overrideResponse?:
+    | ProjectCard
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<ProjectCard> | ProjectCard),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/eds/projects/:ref/contract/scan",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getScanEdsProjectContractResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getActEdsProjectActMockHandler = (
+  overrideResponse?:
+    | ProjectCard
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<ProjectCard> | ProjectCard),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/eds/projects/:ref/act",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getActEdsProjectActResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getScanEdsProjectActMockHandler = (
+  overrideResponse?:
+    | ProjectCard
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<ProjectCard> | ProjectCard),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/eds/projects/:ref/act/scan",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getScanEdsProjectActResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getDownloadEdsProjectFileMockHandler = (
+  overrideResponse?:
+    | Blob
+    | ProjectFileGenerating
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<Blob | ProjectFileGenerating> | Blob | ProjectFileGenerating),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/eds/projects/:ref/files/:kind/:docId",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      const binaryBody =
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getDownloadEdsProjectFileResponseMock();
+      return new HttpResponse(binaryBody, {
+        status: 200,
+        headers: { "Content-Type": "application/pdf" },
+      });
+    },
+    options,
+  );
+};
+
 export const getUploadEdsDocumentFileMockHandler = (
   overrideResponse?:
     | EdsFile
@@ -19744,6 +22429,14 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getCreateEdsDocumentMockHandler(),
   getGetEdsDocumentMockHandler(),
   getUpdateEdsDocumentMockHandler(),
+  getListEdsProjectsMockHandler(),
+  getGetEdsProjectMockHandler(),
+  getCreateEdsProjectContractMockHandler(),
+  getActEdsProjectContractMockHandler(),
+  getScanEdsProjectContractMockHandler(),
+  getActEdsProjectActMockHandler(),
+  getScanEdsProjectActMockHandler(),
+  getDownloadEdsProjectFileMockHandler(),
   getUploadEdsDocumentFileMockHandler(),
   getDownloadEdsDocumentFileMockHandler(),
   getListQuoteApprovalsMockHandler(),

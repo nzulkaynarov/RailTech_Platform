@@ -12,8 +12,8 @@ from core.file_streaming import stream_file_field
 from core.optimistic_locking import OptimisticLockingMixin
 from core.permissions import ADMIN_ONLY, IsCompanyMemberOrPlatformAdmin, IsPlatformAdmin, RoleGatedViewMixin
 from crm import services as crm_services
-from crm.constants import DEFAULT_INVOICE_DUE_DAYS, InvoiceStatusCode
-from crm.models import Act, Contract, Fulfillment, Invoice, Payment
+from crm.constants import DEFAULT_INVOICE_DUE_DAYS, ContractStatusCode, InvoiceStatusCode
+from crm.models import Act, ActivityLog, Contract, Fulfillment, Invoice, Payment
 from crm.serializers import (
     ActSerializer,
     ContractSerializer,
@@ -21,7 +21,9 @@ from crm.serializers import (
     InvoiceSerializer,
     PaymentSerializer,
 )
+from crm.serializers.projects import ContractFlowSerializer
 from crm.views.billing_filters import ActFilter, ContractFilter, FulfillmentFilter, InvoiceFilter, PaymentFilter
+from crm.views.billing_flow import ActFlowMixin, ContractFlowMixin
 from crm.views.request_body import invalid_body_response, is_object_body
 
 _PDF_DOC_TYPE = {
@@ -111,7 +113,7 @@ def _billing_visibility_q(user, request, *, deal_path):
     return buyer_q | seller_q
 
 
-class ContractViewSet(RoleGatedViewMixin, OptimisticLockingMixin, viewsets.ModelViewSet):
+class ContractViewSet(RoleGatedViewMixin, OptimisticLockingMixin, ContractFlowMixin, viewsets.ModelViewSet):
     """Contracts -- generated from approved quotes, double-signed."""
 
     required_permissions = {
@@ -122,6 +124,13 @@ class ContractViewSet(RoleGatedViewMixin, OptimisticLockingMixin, viewsets.Model
         "generate_from_quote": "contract.manage",
         "select_wording": "contract.manage",
         "upload_signed": "contract.manage",
+        # D2-5: статусы договора вместо подписи кликом (`crm/services/contract_flow.py`).
+        "send_to_client": "contract.manage",
+        "client_agreed": "contract.manage",
+        "reject": "contract.manage",
+        "revise": "contract.manage",
+        "mark_issued": "contract.sign",
+        "attach_scan": "contract.sign",
         "cancel": ADMIN_ONLY,
         "force_cancel": ADMIN_ONLY,
         "sign_manager": "contract.sign",
@@ -160,11 +169,26 @@ class ContractViewSet(RoleGatedViewMixin, OptimisticLockingMixin, viewsets.Model
     @extend_schema(
         summary="Generate contract from a quote",
         tags=["CRM"],
+        responses={
+            201: ContractFlowSerializer,  # создание; прежняя выгрузка называла 200 (исключение в openapi-breaking-exceptions.yaml)
+            400: OpenApiResponse(
+                description="QUOTE_ID_REQUIRED / CONTRACT_NEEDS_APPROVAL / MEMBER_REQUIRED_FOR_ACTION (код в `detail`)"
+            ),
+            403: OpenApiResponse(description="ROLE_NOT_PERMITTED: нет права `contract.manage`"),
+        },
         request=inline_serializer(
             "GenContract",
             fields={
                 "quote_id": drf_serializers.IntegerField(),
                 "notes": drf_serializers.CharField(required=False, default=""),
+                "send_to_client": drf_serializers.BooleanField(
+                    required=False,
+                    default=True,
+                    help_text=(
+                        "false (Платформа, D2-5): проект остаётся в DRAFT, клиенту не виден; на согласование его "
+                        "отправляет `send-to-client`. По умолчанию — прежнее поведение (сразу PENDING_CLIENT)."
+                    ),
+                ),
             },
         ),
     )
@@ -182,10 +206,11 @@ class ContractViewSet(RoleGatedViewMixin, OptimisticLockingMixin, viewsets.Model
             int(quote_id),
             actor=request.user,
             notes=request.data.get("notes", ""),
+            send_to_client=str(request.data.get("send_to_client", "true")).lower() not in ("false", "0"),
         )
         if err:
             return Response({"detail": err}, status=400)
-        return Response(ContractSerializer(contract).data, status=201)
+        return Response(ContractFlowSerializer(contract).data, status=201)
 
     @extend_schema(
         summary="Select an approved wording variant for THIS contract (E4 playbook)",
@@ -218,29 +243,63 @@ class ContractViewSet(RoleGatedViewMixin, OptimisticLockingMixin, viewsets.Model
     def sign_manager(self, request, pk=None):
         contract, err = crm_services.sign_contract_by_manager(int(pk), request.user)
         if err:
-            return Response({"detail": err}, status=400)
+            # D2-5: подпись кликом закрыта, подписывает скан (`attach-scan`): 409 с кодом, а не «неверный запрос».
+            return Response({"detail": err}, status=409 if err == "CONTRACT_SIGN_VIA_SCAN" else 400)
         return Response(ContractSerializer(contract).data)
 
-    @extend_schema(summary="Upload signed copy", tags=["CRM"])
+    @extend_schema(
+        summary="Upload signed copy",
+        description=(
+            "Файл подписанного экземпляра к договору, который ещё не подписан. На «Подписан» и «Отменён» — 409 "
+            "`CONTRACT_SCAN_LOCKED`: подписанный скан не заменяется. Тип проверяется как у скана (PDF, jpg, png, webp "
+            "по сигнатуре, до 20 МБ), загрузка пишется в журнал. Статус не меняет: «Подписан» ставит `attach-scan`."
+        ),
+        tags=["CRM"],
+    )
     @action(detail=True, methods=["post"], url_path="upload-signed", parser_classes=[MultiPartParser, FormParser])
     def upload_signed(self, request, pk=None):
         contract = self.get_object()
         file_obj = request.FILES.get("file")
         if not file_obj:
             return Response({"detail": "NO_FILE_PROVIDED"}, status=400)
+        if contract.status_code in (ContractStatusCode.SIGNED, ContractStatusCode.CANCELLED):
+            return Response({"detail": "CONTRACT_SCAN_LOCKED"}, status=409)
 
         from django.core.exceptions import ValidationError
+        from django.db import transaction
 
-        from core.validators import validate_document_upload
+        from core.validators import validate_scan_upload
 
         try:
-            validate_document_upload(file_obj)
+            validate_scan_upload(file_obj)
         except ValidationError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-        contract.signed_file = file_obj
-        contract.save(update_fields=["signed_file", "updated_at"])
+        # Строка договора под блокировкой, статус перечитан внутри транзакции: параллельный `attach-scan` не даст
+        # заменить скан только что подписанного договора (гонка проверки «не подписан» и записи файла).
+        with transaction.atomic():
+            contract = Contract.objects.select_for_update(of=("self",)).select_related("deal").get(pk=contract.pk)
+            if contract.status_code in (ContractStatusCode.SIGNED, ContractStatusCode.CANCELLED):
+                return Response({"detail": "CONTRACT_SCAN_LOCKED"}, status=409)
+            contract.signed_file = file_obj
+            contract.save(update_fields=["signed_file", "updated_at"])
+            self._log_signed_file_uploaded(contract, request.user)
         return Response(ContractSerializer(contract).data)
+
+    @staticmethod
+    def _log_signed_file_uploaded(contract, user) -> None:
+        ActivityLog.objects.create(
+            action="Загружен файл подписанного экземпляра договора",
+            detail=f"Договор {contract.number} / сделка #{contract.deal_id}",
+            event_code="contract.signed_file_uploaded",
+            event_params={"number": contract.number, "deal_id": contract.deal_id},
+            user=user,
+            level="INFO",
+            entity_type="contract",
+            entity_id=contract.id,
+            deal=contract.deal,
+            company_id=contract.deal.company_id,
+        )
 
     @extend_schema(summary="Cancel contract", tags=["CRM"])
     @action(detail=True, methods=["post"], url_path="cancel", permission_classes=[IsAuthenticated, IsPlatformAdmin])
@@ -547,7 +606,7 @@ class PaymentViewSet(viewsets.ReadOnlyModelViewSet):
         return _stream_or_render_pdf(self.get_object())
 
 
-class ActViewSet(RoleGatedViewMixin, viewsets.ReadOnlyModelViewSet):
+class ActViewSet(RoleGatedViewMixin, ActFlowMixin, viewsets.ReadOnlyModelViewSet):
     """Акты — только чтение плюс сервисные экшены ниже (Rule 8).
 
     Выпуск — через `invoices/{id}/generate-act/` (там же проверяется роутинг
@@ -559,6 +618,8 @@ class ActViewSet(RoleGatedViewMixin, viewsets.ReadOnlyModelViewSet):
         "cancel": "fulfillment.act",
         "reissue": "fulfillment.act",
         "remind": "fulfillment.act",
+        "attach_scan": "fulfillment.act",  # D2-5: скан подписанного акта
+        "record_return": "fulfillment.act",
     }
 
     serializer_class = ActSerializer

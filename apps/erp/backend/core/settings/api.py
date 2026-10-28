@@ -158,6 +158,17 @@ SPECTACULAR_SETTINGS = {
         "ContactPreferredChannelEnum": ["email", "telegram", "both"],
         "LanguageEnum": ["ru", "uz", "en"],
         "SecretSourceEnum": ["db", "env", "none"],
+        # Проекты (D2-5): слова статусов SPEC-v3 §2.4 у договора, счёта и акта — свои имена, а не хеши по полю `status`.
+        "ProjectContractStatusEnum": [
+            "project",
+            "client_agreed",
+            "issued_at_operator",
+            "signed",
+            "rejected",
+            "cancelled",
+        ],
+        "ProjectInvoiceStatusEnum": ["to_issue", "issued", "partial", "paid", "overdue", "cancelled"],
+        "ProjectActStatusEnum": ["project", "returned", "issued", "signed", "cancelled"],
         # D2-3: «Номенклатура и поставщики» — одноимённые поля `kind` и `unit` у разных схем.
         "DeskItemKindEnum": ["stock", "on_order", "service_fixed", "service_milestones", "service_time"],
         "BrigadeKindEnum": ["brigade", "person", "subcontractor"],

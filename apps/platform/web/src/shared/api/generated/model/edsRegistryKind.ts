@@ -4,7 +4,7 @@
  */
 
 /**
- * Вкладки реестра «Все документы»: письма (входящие и исходящие), КП, служебные, заявления, отчёты
+ * Вкладки реестра «Все документы»: письма (входящие и исходящие), КП, служебные, заявления, отчёты; с 0.26.0 — договоры, счета и акты проектов (проекция ERP)
  */
 export type EdsRegistryKind = (typeof EdsRegistryKind)[keyof typeof EdsRegistryKind];
 
@@ -15,4 +15,7 @@ export const EdsRegistryKind = {
   memo: "memo",
   application: "application",
   report: "report",
+  contract: "contract",
+  invoice: "invoice",
+  act: "act",
 } as const;

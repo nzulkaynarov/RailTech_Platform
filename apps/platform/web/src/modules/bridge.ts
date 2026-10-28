@@ -90,13 +90,8 @@ export const BRIDGE: Readonly<Record<string, BridgeEntry>> = {
     when: "pilot",
     objectKind: "quote",
   },
-  "eds.projects": {
-    legacy: erp("#crm-deals", "erpDeals", numericPath("#request-detail/")),
-    when: "pilot",
-    objectKind: "project",
-  },
-  // «Все документы» и «Создать документ» (D1-5), «КП на одобрение» и «На согласовании» (D1-4), «Счета и оплаты» (D2-4) — настоящие
-  // экраны, записей моста у них нет.
+  // «Все документы» и «Создать документ» (D1-5), «КП на одобрение» и «На согласовании» (D1-4), «Счета и оплаты» (D2-4) и
+  // «Проекты» (D2-5) — настоящие экраны, записей моста у них нет.
 
   "chats.all": { who: "chats", when: "pilot", objectKind: "chat" },
   "chats.internal": { who: "chats", when: "pilot", objectKind: "chat" },
@@ -127,6 +122,7 @@ export const NATIVE_SECTIONS: readonly string[] = [
   "erp.stock",
   "eds.drafts",
   "eds.approvals",
+  "eds.projects",
   "eds.payments",
   "admin.roles",
   "admin.org",

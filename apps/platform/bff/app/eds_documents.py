@@ -255,6 +255,7 @@ class _RawRegistryItem(BaseModel):
     status: str
     registered_at: Any
     responsible: EdsPerson | None
+    links: dict[str, Any] | None = None
 
 
 def _parse[T: BaseModel](model: type[T], body: Any, path: str) -> T:
@@ -341,6 +342,17 @@ def documents_page(body: Any) -> EdsDocumentPage:
     return EdsDocumentPage(items=rows, next_cursor=cursor if isinstance(cursor, str) else None)
 
 
+_PROJECT_KINDS = ("contract", "invoice", "act")
+
+
+def _project_ref(item: _RawRegistryItem) -> str | None:
+    """Договор, счёт и акт проекта (проекция ERP, D2-5) ведут в карточку проекта по id сделки."""
+    deal_id = (item.links or {}).get("erp_deal_id")
+    if item.kind in _PROJECT_KINDS and isinstance(deal_id, int) and not isinstance(deal_id, bool):
+        return str(deal_id)
+    return None
+
+
 def registry_page(body: Any) -> EdsDocumentPage:
     """`GET /registry` EDS -> страница реестра «Все документы» (суммы и сроков в реестре нет)."""
     items = body.get("items") if isinstance(body, dict) else None
@@ -362,6 +374,7 @@ def registry_page(body: Any) -> EdsDocumentPage:
                     "due_date": None,
                     "created_at": item.registered_at,
                     "openable": item.kind in DOCUMENT_KINDS,
+                    "project_ref": _project_ref(item),
                 }
             )
         )

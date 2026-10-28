@@ -1,4 +1,5 @@
-"""Тела событий ERP, которые читает EDS: `erp.request.created` и `erp.quote.ready_for_approval` (терпимое чтение, L10).
+"""Тела событий ERP, которые читает EDS: `erp.request.created`, `erp.quote.ready_for_approval` и документы проектов —
+`erp.contract.status_changed`, `erp.invoice.*`, `erp.act.*` (D2-5; терпимое чтение, L10).
 
 Лишние поля игнорируются; неверный тип или нет обязательного поля — ошибка обработчика (автоповтор, затем `failed`).
 Схемы — `packages/contracts/events/erp/`.
@@ -19,6 +20,8 @@ class DealRef(_Tolerant):
     erp_deal_id: int
     number: str
     title: str = ""
+    amount: str | None = None
+    currency: str | None = None
 
 
 class RequestPayload(_Tolerant):
@@ -81,3 +84,24 @@ class QuoteReady(_Tolerant):
     crm_client_id: int | None = None
     deal: DealRef
     payload: QuotePayload
+
+
+class ProjectDocumentPayload(_Tolerant):
+    """`payload` событий документов проекта: у договора — статус, у счёта — сумма, у акта — только номер."""
+
+    number: str
+    erp_contract_id: int | None = None
+    erp_invoice_id: int | None = None
+    erp_act_id: int | None = None
+    status: Literal["project", "client_agreed", "issued_at_operator", "signed", "rejected", "cancelled"] | None = None
+    amount: str | None = None
+    currency: str | None = None
+
+
+class ProjectDocumentEvent(_Tolerant):
+    """`data` событий `contract.status_changed`, `invoice.issued|paid|overdue`, `act.issued|accepted|returned`."""
+
+    erp_company_id: int | None = None
+    crm_client_id: int | None = None
+    deal: DealRef
+    payload: ProjectDocumentPayload

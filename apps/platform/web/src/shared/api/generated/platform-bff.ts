@@ -107,6 +107,7 @@ import type {
   DocumentTemplatePreviewIn,
   DocumentTemplateUpdate,
   DownloadCsvExportParams,
+  DownloadEdsProjectFileParams,
   EdsConflictResponse,
   EdsDealOptions,
   EdsDocument,
@@ -192,6 +193,7 @@ import type {
   ListCrmLeadsParams,
   ListEdsDealOptionsParams,
   ListEdsDocumentsParams,
+  ListEdsProjectsParams,
   ListEmployeesParams,
   ListExternalChatsParams,
   ListHsCodesParams,
@@ -257,6 +259,14 @@ import type {
   PriceRequestList,
   Profile,
   ProfileUpdate,
+  ProjectActActionIn,
+  ProjectCard,
+  ProjectConflictResponse,
+  ProjectContractActionIn,
+  ProjectFileGenerating,
+  ProjectPage,
+  ProjectPayloadTooLargeResponse,
+  ProjectScanUpload,
   ProviderKeyIn,
   ProviderKeyResult,
   Queue,
@@ -6918,6 +6928,1116 @@ export const useUpdateEdsDocument = <
 > => {
   return useMutation(getUpdateEdsDocumentMutationOptions(options), queryClient);
 };
+
+export const getListEdsProjectsUrl = (params?: ListEdsProjectsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/eds/projects?${stringifiedParams}`
+    : `/api/v1/eds/projects`;
+};
+
+/**
+ * ERP `GET /crm/projects/`. Проект — сделка от принятия КП клиентом. Шаг, статус для клиента и «проблемы» выводит ERP из документов. `q` — название, клиент, номер КП, договора, счёта или акта; номер `ПР-…` или `ЗВ-…` ищет точно. `mine` — где сотрудник менеджер или ведёт проект; `problems` — договор отклонён, акт возвращён, счёт просрочен. Порядок — от новых; страница — `limit`/`offset`. Раздел `eds.projects` — чтение. ERP не ответил — 503 `BACKEND_UNAVAILABLE`.
+ * @summary EDS · Все проекты: список
+ */
+export const listEdsProjects = async (
+  params?: ListEdsProjectsParams,
+  options?: Parameters<typeof http>[1],
+): Promise<ProjectPage> => {
+  return http<ProjectPage>(getListEdsProjectsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListEdsProjectsQueryKey = (params?: ListEdsProjectsParams) => {
+  return [`/api/v1/eds/projects`, ...(params ? [params] : [])] as const;
+};
+
+export const getListEdsProjectsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listEdsProjects>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListEdsProjectsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listEdsProjects>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListEdsProjectsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listEdsProjects>>> = ({ signal }) =>
+    listEdsProjects(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listEdsProjects>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListEdsProjectsQueryResult = NonNullable<Awaited<ReturnType<typeof listEdsProjects>>>;
+export type ListEdsProjectsQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse | BackendUnavailableResponse
+>;
+
+export function useListEdsProjects<
+  TData = Awaited<ReturnType<typeof listEdsProjects>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params: undefined | ListEdsProjectsParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listEdsProjects>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listEdsProjects>>,
+          TError,
+          Awaited<ReturnType<typeof listEdsProjects>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListEdsProjects<
+  TData = Awaited<ReturnType<typeof listEdsProjects>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListEdsProjectsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listEdsProjects>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listEdsProjects>>,
+          TError,
+          Awaited<ReturnType<typeof listEdsProjects>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListEdsProjects<
+  TData = Awaited<ReturnType<typeof listEdsProjects>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListEdsProjectsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listEdsProjects>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary EDS · Все проекты: список
+ */
+
+export function useListEdsProjects<
+  TData = Awaited<ReturnType<typeof listEdsProjects>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListEdsProjectsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listEdsProjects>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListEdsProjectsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getGetEdsProjectUrl = (ref: string) => {
+  return `/api/v1/eds/projects/${ref}`;
+};
+
+/**
+ * ERP `GET /crm/projects/{id}/`. Документы проекта КП · Договор · Счета · Акт с историей (кто, когда, что, причина) и действиями, **доступными этому сотруднику сейчас** (`actions`, `can_create_contract`, `act_blocker` считает ERP по статусу и правам роли), исполнение (отгрузка и строки поставки — только чтение) и журнал. Раздел `eds.projects` — чтение: менеджер, снабженец и гл. инженер видят карточку без действий.
+ * @summary EDS · Карточка проекта
+ */
+export const getEdsProject = async (
+  ref: string,
+  options?: Parameters<typeof http>[1],
+): Promise<ProjectCard> => {
+  return http<ProjectCard>(getGetEdsProjectUrl(ref), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetEdsProjectQueryKey = (ref: string) => {
+  return [`/api/v1/eds/projects/${ref}`] as const;
+};
+
+export const getGetEdsProjectQueryOptions = <
+  TData = Awaited<ReturnType<typeof getEdsProject>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  ref: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getEdsProject>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetEdsProjectQueryKey(ref);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getEdsProject>>> = ({ signal }) =>
+    getEdsProject(ref, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: ref !== null && ref !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getEdsProject>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetEdsProjectQueryResult = NonNullable<Awaited<ReturnType<typeof getEdsProject>>>;
+export type GetEdsProjectQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useGetEdsProject<
+  TData = Awaited<ReturnType<typeof getEdsProject>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  ref: string,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getEdsProject>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getEdsProject>>,
+          TError,
+          Awaited<ReturnType<typeof getEdsProject>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetEdsProject<
+  TData = Awaited<ReturnType<typeof getEdsProject>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  ref: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getEdsProject>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getEdsProject>>,
+          TError,
+          Awaited<ReturnType<typeof getEdsProject>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetEdsProject<
+  TData = Awaited<ReturnType<typeof getEdsProject>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  ref: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getEdsProject>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary EDS · Карточка проекта
+ */
+
+export function useGetEdsProject<
+  TData = Awaited<ReturnType<typeof getEdsProject>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  ref: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getEdsProject>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetEdsProjectQueryOptions(ref, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getCreateEdsProjectContractUrl = (ref: string) => {
+  return `/api/v1/eds/projects/${ref}/contract/draft`;
+};
+
+/**
+ * ERP `POST /crm/contracts/generate-from-quote/` с `send_to_client = false`: договор создаётся в статусе «Проект», клиенту не виден; на согласование его отправляет «На согласование клиенту». Нужны право `contract.manage` и принятое КП, договора ещё нет (иначе 409 `contract_exists`). Раздел `eds.projects` — полный. Ответ — обновлённая карточка.
+ * @summary EDS · Проект: сформировать проект договора из принятого КП
+ */
+export const createEdsProjectContract = async (
+  ref: string,
+  options?: Parameters<typeof http>[1],
+): Promise<ProjectCard> => {
+  return http<ProjectCard>(getCreateEdsProjectContractUrl(ref), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getCreateEdsProjectContractMutationKey = () => ["createEdsProjectContract"] as const;
+
+export const getCreateEdsProjectContractMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ProjectConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createEdsProjectContract>>,
+    TError,
+    CreateEdsProjectContractMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createEdsProjectContract>>,
+  TError,
+  CreateEdsProjectContractMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateEdsProjectContractMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createEdsProjectContract>>,
+    CreateEdsProjectContractMutationVariables
+  > = (props) => {
+    const { ref } = props ?? {};
+
+    return createEdsProjectContract(ref, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateEdsProjectContractMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createEdsProjectContract>>
+>;
+
+export type CreateEdsProjectContractMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | ProjectConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type CreateEdsProjectContractMutationVariables = { ref: string };
+
+/**
+ * @summary EDS · Проект: сформировать проект договора из принятого КП
+ */
+export const useCreateEdsProjectContract = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ProjectConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createEdsProjectContract>>,
+      TError,
+      CreateEdsProjectContractMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createEdsProjectContract>>,
+  TError,
+  CreateEdsProjectContractMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateEdsProjectContractMutationOptions(options), queryClient);
+};
+
+export const getActEdsProjectContractUrl = (ref: string) => {
+  return `/api/v1/eds/projects/${ref}/contract`;
+};
+
+/**
+ * Переход статуса договора SPEC-v3 §2.4 в ERP (`crm/contracts/{id}/<действие>/`). `send_to_client` — «На согласование клиенту» (Проект → у клиента, договор появляется в кабинете); `client_agreed` — «Согласован клиентом» (клиент согласовал вне кабинета или в нём); `reject` — «Отклонён клиентом», `reason` обязательна (422 в BFF до ERP); `revise` — вернуть отклонённый проект в работу; `mark_issued` — «Выставлен у оператора» (ЭДО вне платформы; `note` — оператор или номер). Подготовку (`send_to_client`, `client_agreed`, `reject`, `revise`) ERP разрешает с правом `contract.manage`, `mark_issued` — `contract.sign`; недопустимый переход — 409 `contract_transition_not_allowed`. Раздел `eds.projects` — полный. Ответ — обновлённая карточка.
+ * @summary EDS · Проект: действие по договору
+ */
+export const actEdsProjectContract = async (
+  ref: string,
+  projectContractActionIn: ProjectContractActionIn,
+  options?: Parameters<typeof http>[1],
+): Promise<ProjectCard> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<ProjectCard>(getActEdsProjectContractUrl(ref), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(projectContractActionIn),
+  });
+};
+
+export const getActEdsProjectContractMutationKey = () => ["actEdsProjectContract"] as const;
+
+export const getActEdsProjectContractMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ProjectConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof actEdsProjectContract>>,
+    TError,
+    ActEdsProjectContractMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof actEdsProjectContract>>,
+  TError,
+  ActEdsProjectContractMutationVariables,
+  TContext
+> => {
+  const mutationKey = getActEdsProjectContractMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof actEdsProjectContract>>,
+    ActEdsProjectContractMutationVariables
+  > = (props) => {
+    const { ref, data } = props ?? {};
+
+    return actEdsProjectContract(ref, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ActEdsProjectContractMutationResult = NonNullable<
+  Awaited<ReturnType<typeof actEdsProjectContract>>
+>;
+export type ActEdsProjectContractMutationBody = ProjectContractActionIn;
+export type ActEdsProjectContractMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | ProjectConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type ActEdsProjectContractMutationVariables = { ref: string; data: ProjectContractActionIn };
+
+/**
+ * @summary EDS · Проект: действие по договору
+ */
+export const useActEdsProjectContract = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ProjectConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof actEdsProjectContract>>,
+      TError,
+      ActEdsProjectContractMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof actEdsProjectContract>>,
+  TError,
+  ActEdsProjectContractMutationVariables,
+  TContext
+> => {
+  return useMutation(getActEdsProjectContractMutationOptions(options), queryClient);
+};
+
+export const getScanEdsProjectContractUrl = (ref: string) => {
+  return `/api/v1/eds/projects/${ref}/contract/scan`;
+};
+
+/**
+ * ERP `POST /crm/contracts/{id}/attach-scan/` (multipart, поле `file`). BFF читает тело потоком до 20 МБ и поля формы, multipart не разбирает. ERP проверяет тип (PDF, jpg, png, webp) и сигнатуру байтов: не тот файл — 422 `scan_invalid`, нет файла — `scan_required`. Договор должен быть «Выставлен у оператора» (иначе 409 `contract_transition_not_allowed`); после скана он «Подписан», сделка закрывается как выигранная, ERP создаёт черновик счёта на предоплату. Право `contract.sign`. Раздел `eds.projects` — полный.
+ * @summary EDS · Проект: прикрепить скан подписанного договора → «Подписан»
+ */
+export const scanEdsProjectContract = async (
+  ref: string,
+  projectScanUpload: ProjectScanUpload,
+  options?: Parameters<typeof http>[1],
+): Promise<ProjectCard> => {
+  const formData = new FormData();
+  formData.append(`file`, projectScanUpload.file);
+
+  return http<ProjectCard>(getScanEdsProjectContractUrl(ref), {
+    ...options,
+    method: "POST",
+    body: formData,
+  });
+};
+
+export const getScanEdsProjectContractMutationKey = () => ["scanEdsProjectContract"] as const;
+
+export const getScanEdsProjectContractMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ProjectConflictResponse
+    | ProjectPayloadTooLargeResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof scanEdsProjectContract>>,
+    TError,
+    ScanEdsProjectContractMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof scanEdsProjectContract>>,
+  TError,
+  ScanEdsProjectContractMutationVariables,
+  TContext
+> => {
+  const mutationKey = getScanEdsProjectContractMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof scanEdsProjectContract>>,
+    ScanEdsProjectContractMutationVariables
+  > = (props) => {
+    const { ref, data } = props ?? {};
+
+    return scanEdsProjectContract(ref, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ScanEdsProjectContractMutationResult = NonNullable<
+  Awaited<ReturnType<typeof scanEdsProjectContract>>
+>;
+export type ScanEdsProjectContractMutationBody = ProjectScanUpload;
+export type ScanEdsProjectContractMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | ProjectConflictResponse
+  | ProjectPayloadTooLargeResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type ScanEdsProjectContractMutationVariables = { ref: string; data: ProjectScanUpload };
+
+/**
+ * @summary EDS · Проект: прикрепить скан подписанного договора → «Подписан»
+ */
+export const useScanEdsProjectContract = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ProjectConflictResponse
+    | ProjectPayloadTooLargeResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof scanEdsProjectContract>>,
+      TError,
+      ScanEdsProjectContractMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof scanEdsProjectContract>>,
+  TError,
+  ScanEdsProjectContractMutationVariables,
+  TContext
+> => {
+  return useMutation(getScanEdsProjectContractMutationOptions(options), queryClient);
+};
+
+export const getActEdsProjectActUrl = (ref: string) => {
+  return `/api/v1/eds/projects/${ref}/act`;
+};
+
+/**
+ * `issue` — выпустить акт по самому свежему выставленному счёту проекта (ERP `POST /crm/invoices/{id}/generate-act/`; счёта нет — 409 `no_invoice`, акт уже есть — 409 `act_already_exists`); `return` — записать возврат акта заказчиком (ERP `POST /crm/acts/{id}/record-return/`, `reason` обязательна — 422 в BFF до ERP); `reissue` — выпустить возвращённый акт заново. Право `fulfillment.act`. Раздел `eds.projects` — полный. Ответ — обновлённая карточка.
+ * @summary EDS · Проект: действие по акту
+ */
+export const actEdsProjectAct = async (
+  ref: string,
+  projectActActionIn: ProjectActActionIn,
+  options?: Parameters<typeof http>[1],
+): Promise<ProjectCard> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<ProjectCard>(getActEdsProjectActUrl(ref), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(projectActActionIn),
+  });
+};
+
+export const getActEdsProjectActMutationKey = () => ["actEdsProjectAct"] as const;
+
+export const getActEdsProjectActMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ProjectConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof actEdsProjectAct>>,
+    TError,
+    ActEdsProjectActMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof actEdsProjectAct>>,
+  TError,
+  ActEdsProjectActMutationVariables,
+  TContext
+> => {
+  const mutationKey = getActEdsProjectActMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof actEdsProjectAct>>,
+    ActEdsProjectActMutationVariables
+  > = (props) => {
+    const { ref, data } = props ?? {};
+
+    return actEdsProjectAct(ref, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ActEdsProjectActMutationResult = NonNullable<
+  Awaited<ReturnType<typeof actEdsProjectAct>>
+>;
+export type ActEdsProjectActMutationBody = ProjectActActionIn;
+export type ActEdsProjectActMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | ProjectConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type ActEdsProjectActMutationVariables = { ref: string; data: ProjectActActionIn };
+
+/**
+ * @summary EDS · Проект: действие по акту
+ */
+export const useActEdsProjectAct = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ProjectConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof actEdsProjectAct>>,
+      TError,
+      ActEdsProjectActMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof actEdsProjectAct>>,
+  TError,
+  ActEdsProjectActMutationVariables,
+  TContext
+> => {
+  return useMutation(getActEdsProjectActMutationOptions(options), queryClient);
+};
+
+export const getScanEdsProjectActUrl = (ref: string) => {
+  return `/api/v1/eds/projects/${ref}/act/scan`;
+};
+
+/**
+ * ERP `POST /crm/acts/{id}/attach-scan/` (multipart, поле `file`, до 20 МБ; тип и сигнатуру проверяет ERP). Акт должен быть «Выпущен» (иначе 409 `act_sign_not_allowed`). Когда акт подписан и все счета оплачены, проект «Выполнено». Право `fulfillment.act`. Раздел `eds.projects` — полный.
+ * @summary EDS · Проект: прикрепить скан подписанного акта → «Подписан»
+ */
+export const scanEdsProjectAct = async (
+  ref: string,
+  projectScanUpload: ProjectScanUpload,
+  options?: Parameters<typeof http>[1],
+): Promise<ProjectCard> => {
+  const formData = new FormData();
+  formData.append(`file`, projectScanUpload.file);
+
+  return http<ProjectCard>(getScanEdsProjectActUrl(ref), {
+    ...options,
+    method: "POST",
+    body: formData,
+  });
+};
+
+export const getScanEdsProjectActMutationKey = () => ["scanEdsProjectAct"] as const;
+
+export const getScanEdsProjectActMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ProjectConflictResponse
+    | ProjectPayloadTooLargeResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof scanEdsProjectAct>>,
+    TError,
+    ScanEdsProjectActMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof scanEdsProjectAct>>,
+  TError,
+  ScanEdsProjectActMutationVariables,
+  TContext
+> => {
+  const mutationKey = getScanEdsProjectActMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof scanEdsProjectAct>>,
+    ScanEdsProjectActMutationVariables
+  > = (props) => {
+    const { ref, data } = props ?? {};
+
+    return scanEdsProjectAct(ref, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ScanEdsProjectActMutationResult = NonNullable<
+  Awaited<ReturnType<typeof scanEdsProjectAct>>
+>;
+export type ScanEdsProjectActMutationBody = ProjectScanUpload;
+export type ScanEdsProjectActMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | ProjectConflictResponse
+  | ProjectPayloadTooLargeResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type ScanEdsProjectActMutationVariables = { ref: string; data: ProjectScanUpload };
+
+/**
+ * @summary EDS · Проект: прикрепить скан подписанного акта → «Подписан»
+ */
+export const useScanEdsProjectAct = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ProjectConflictResponse
+    | ProjectPayloadTooLargeResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof scanEdsProjectAct>>,
+      TError,
+      ScanEdsProjectActMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof scanEdsProjectAct>>,
+  TError,
+  ScanEdsProjectActMutationVariables,
+  TContext
+> => {
+  return useMutation(getScanEdsProjectActMutationOptions(options), queryClient);
+};
+
+export const getDownloadEdsProjectFileUrl = (
+  ref: string,
+  kind: "contract" | "invoice" | "act",
+  docId: number,
+  params?: DownloadEdsProjectFileParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/eds/projects/${ref}/files/${kind}/${docId}?${stringifiedParams}`
+    : `/api/v1/eds/projects/${ref}/files/${kind}/${docId}`;
+};
+
+/**
+ * Файл договора, счёта или акта потоком (ERP `download-pdf`, `download-signed`). Документ обязан быть в карточке этого проекта (иначе 404). `variant = pdf` — наш PDF, `scan` — подписанный скан (есть у договора и акта); скан всегда скачивается (`attachment`), тип не доверяется. PDF ещё готовится — 202 с `Retry-After`. Раздел `eds.projects` — чтение.
+ * @summary EDS · Проект: файл документа (PDF или скан)
+ */
+export const downloadEdsProjectFile = async (
+  ref: string,
+  kind: "contract" | "invoice" | "act",
+  docId: number,
+  params?: DownloadEdsProjectFileParams,
+  options?: Parameters<typeof http>[1],
+): Promise<Blob | ProjectFileGenerating> => {
+  return http<Blob | ProjectFileGenerating>(
+    getDownloadEdsProjectFileUrl(ref, kind, docId, params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getDownloadEdsProjectFileQueryKey = (
+  ref: string,
+  kind: "contract" | "invoice" | "act",
+  docId: number,
+  params?: DownloadEdsProjectFileParams,
+) => {
+  return [
+    `/api/v1/eds/projects/${ref}/files/${kind}/${docId}`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getDownloadEdsProjectFileQueryOptions = <
+  TData = Awaited<ReturnType<typeof downloadEdsProjectFile>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  ref: string,
+  kind: "contract" | "invoice" | "act",
+  docId: number,
+  params?: DownloadEdsProjectFileParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadEdsProjectFile>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getDownloadEdsProjectFileQueryKey(ref, kind, docId, params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof downloadEdsProjectFile>>> = ({ signal }) =>
+    downloadEdsProjectFile(ref, kind, docId, params, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled:
+      ref !== null &&
+      ref !== undefined &&
+      kind !== null &&
+      kind !== undefined &&
+      docId !== null &&
+      docId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof downloadEdsProjectFile>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type DownloadEdsProjectFileQueryResult = NonNullable<
+  Awaited<ReturnType<typeof downloadEdsProjectFile>>
+>;
+export type DownloadEdsProjectFileQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useDownloadEdsProjectFile<
+  TData = Awaited<ReturnType<typeof downloadEdsProjectFile>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  ref: string,
+  kind: "contract" | "invoice" | "act",
+  docId: number,
+  params: undefined | DownloadEdsProjectFileParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadEdsProjectFile>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof downloadEdsProjectFile>>,
+          TError,
+          Awaited<ReturnType<typeof downloadEdsProjectFile>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useDownloadEdsProjectFile<
+  TData = Awaited<ReturnType<typeof downloadEdsProjectFile>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  ref: string,
+  kind: "contract" | "invoice" | "act",
+  docId: number,
+  params?: DownloadEdsProjectFileParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadEdsProjectFile>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof downloadEdsProjectFile>>,
+          TError,
+          Awaited<ReturnType<typeof downloadEdsProjectFile>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useDownloadEdsProjectFile<
+  TData = Awaited<ReturnType<typeof downloadEdsProjectFile>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  ref: string,
+  kind: "contract" | "invoice" | "act",
+  docId: number,
+  params?: DownloadEdsProjectFileParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadEdsProjectFile>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary EDS · Проект: файл документа (PDF или скан)
+ */
+
+export function useDownloadEdsProjectFile<
+  TData = Awaited<ReturnType<typeof downloadEdsProjectFile>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  ref: string,
+  kind: "contract" | "invoice" | "act",
+  docId: number,
+  params?: DownloadEdsProjectFileParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadEdsProjectFile>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getDownloadEdsProjectFileQueryOptions(ref, kind, docId, params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getUploadEdsDocumentFileUrl = () => {
   return `/api/v1/eds/document-files`;

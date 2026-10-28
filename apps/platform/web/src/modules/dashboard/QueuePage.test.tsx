@@ -195,20 +195,22 @@ describe("Dashboard · Моя очередь", () => {
     expect(within(page).queryByRole("button", { name: /^Где сделать/ })).toBeNull();
   });
 
-  it("строка без экрана (проект) — «Где сделать» с мостом, ссылки на заглушку нет; письмо, КП и служебка рядом — «Открыть»", async () => {
+  it("строка без экрана (исходящее КП) — «Где сделать» с мостом, ссылки на заглушку нет; письмо, КП и служебка рядом — «Открыть»", async () => {
     window.localStorage.setItem(MOCK_QUEUE_STUB_KEY, "1");
     signInAs("director@demo.example");
     renderApp("/dashboard/queue");
     const page = await main();
 
     const where = await within(page).findByRole("button", {
-      name: "Где сделать: Разобраться с проектом ПР-2026-099",
+      name: "Где сделать: Проверить отправку КП-2026/117",
     });
     fireEvent.click(where);
-    expect(await screen.findByText(/Сейчас — в старом ERP: раздел «Сделки»/)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/Сейчас — в старом ERP: .*Коммерческие предложения/),
+    ).toBeInTheDocument();
     expect(await screen.findByRole("link", { name: /Открыть в старом ERP/ })).toHaveAttribute(
       "href",
-      "http://erp.localhost:8088/#crm-deals",
+      "http://erp.localhost:8088/#crm-quotes",
     );
     // письмо, КП и служебка — «Открыть» с адресом объекта и вкладкой решения; «Где сделать» у них нет
     const open = within(page).getAllByRole("link", { name: /^Открыть:/ });

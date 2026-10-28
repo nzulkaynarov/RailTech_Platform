@@ -1,10 +1,12 @@
-"""Реестр «Все документы» (SPEC-v3 §7.3; eds.yaml `GET /registry`): письма, КП, служебные, заявления, отчёты.
+"""Реестр «Все документы» (SPEC-v3 §7.3; eds.yaml `GET /registry`): письма, КП, служебные, заявления, отчёты и
+договоры, счета, акты проектов.
 
-Один запрос объединяет письма (`letters`), документы (`documents`) и маршруты КП (`approval_routes`, template = quote)
-в общий вид и фильтрует его: вкладка (тип), статус, период (по `Asia/Tashkent`), ответственный, клиент, номер, поиск
-по номеру и теме. Доступ — `registry.read`, но реестр **не шире прав на сам вид документа** (D1-10): письма
-(`letter_in`, `letter_out`) — только с `letters.read`; черновики (`status = draft`) — только автору; документы — по
-`access.document_visible` (он же у `/documents`, карточки и файлов), КП — по `access.route_visible`.
+Один запрос объединяет письма (`letters`), документы (`documents`), маршруты КП (`approval_routes`, template = quote) и
+документы проектов из ERP (`project_documents`, D2-5: договор, счёт, акт) в общий вид и фильтрует его: вкладка (тип),
+статус, период (по `Asia/Tashkent`), ответственный, клиент, номер, поиск по номеру и теме. Доступ — `registry.read`, но
+реестр **не шире прав на сам вид документа** (D1-10): письма (`letter_in`, `letter_out`) — только с `letters.read`;
+черновики (`status = draft`) — только автору; документы — по `access.document_visible` (он же у `/documents`, карточки
+и файлов), КП — по `access.route_visible`; договоры, счета и акты проектов — с `registry.read`.
 Отбор — в SQL до курсора и счётчиков.
 """
 
@@ -28,7 +30,7 @@ from sqlalchemy import (
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.clock import COMPANY_TZ
-from app.models import ApprovalRoute, ApprovalStep, Document, Employee, Letter
+from app.models import ApprovalRoute, ApprovalStep, Document, Employee, Letter, ProjectDocument
 from app.schemas.common import ErpLinks, LetterSender
 from app.schemas.pagination import decode_cursor
 from app.schemas.registry import RegistryItem, RegistryKind, RegistryPage
@@ -116,8 +118,33 @@ def _union(employee: Employee) -> CompoundSelect[Any]:
         ApprovalRoute.crm_client_id,
         ApprovalRoute.erp_company_id,
     ).where(ApprovalRoute.template == "quote", access.route_visible(employee))
+    parts = [documents, quotes]
     # Входящие письма — метаданные отправителя (имя, ИНН) — только с `letters.read`, как `/letters`.
-    return union_all(letters, documents, quotes) if access.can_read_letters(employee) else union_all(documents, quotes)
+    if access.can_read_letters(employee):
+        parts.insert(0, letters)
+    # Договоры, счета и акты проектов (D2-5) — суммы и клиенты проекта: только с `registry.read`.
+    if access.can_read_project_documents(employee):
+        parts.append(_project_documents())
+    return union_all(*parts)
+
+
+def _project_documents() -> Select[Any]:
+    return select(
+        cast(ProjectDocument.kind, String),
+        ProjectDocument.id,
+        ProjectDocument.number,
+        ProjectDocument.title,
+        ProjectDocument.status,
+        ProjectDocument.registered_at,
+        ProjectDocument.responsible_crm_user_id,
+        ProjectDocument.client_name,
+        ProjectDocument.client_inn,
+        _big(),
+        ProjectDocument.erp_deal_id,
+        ProjectDocument.deal_number,
+        ProjectDocument.crm_client_id,
+        ProjectDocument.erp_company_id,
+    )
 
 
 def _filtered(employee: Employee, filters: Filters) -> Select[Any]:

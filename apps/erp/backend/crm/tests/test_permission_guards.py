@@ -362,8 +362,9 @@ def test_contract_manager_sign_with_perm_passes(lookups, buyer_company, seller_c
         total_amount=Decimal("112"),
     )
     result, err = sign_contract_by_manager(contract.id, seller)
-    assert err is None, f"Expected success, got error: {err}"
-    assert result is not None
+    # Право проходит; подпись кликом закрыта (D2-5) — отказ с кодом, подписывает скан (`contract_flow`).
+    assert err == "CONTRACT_SIGN_VIA_SCAN", err
+    assert result is None
 
 
 @pytest.mark.django_db

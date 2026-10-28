@@ -967,6 +967,166 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/eds/projects": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * EDS · Все проекты: список
+     * @description ERP `GET /crm/projects/`. Проект — сделка от принятия КП клиентом. Шаг, статус для клиента и «проблемы» выводит ERP из документов. `q` — название, клиент, номер КП, договора, счёта или акта; номер `ПР-…` или `ЗВ-…` ищет точно. `mine` — где сотрудник менеджер или ведёт проект; `problems` — договор отклонён, акт возвращён, счёт просрочен. Порядок — от новых; страница — `limit`/`offset`. Раздел `eds.projects` — чтение. ERP не ответил — 503 `BACKEND_UNAVAILABLE`.
+     */
+    get: operations["listEdsProjects"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/projects/{ref}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * EDS · Карточка проекта
+     * @description ERP `GET /crm/projects/{id}/`. Документы проекта КП · Договор · Счета · Акт с историей (кто, когда, что, причина) и действиями, **доступными этому сотруднику сейчас** (`actions`, `can_create_contract`, `act_blocker` считает ERP по статусу и правам роли), исполнение (отгрузка и строки поставки — только чтение) и журнал. Раздел `eds.projects` — чтение: менеджер, снабженец и гл. инженер видят карточку без действий.
+     */
+    get: operations["getEdsProject"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/projects/{ref}/contract/draft": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * EDS · Проект: сформировать проект договора из принятого КП
+     * @description ERP `POST /crm/contracts/generate-from-quote/` с `send_to_client = false`: договор создаётся в статусе «Проект», клиенту не виден; на согласование его отправляет «На согласование клиенту». Нужны право `contract.manage` и принятое КП, договора ещё нет (иначе 409 `contract_exists`). Раздел `eds.projects` — полный. Ответ — обновлённая карточка.
+     */
+    post: operations["createEdsProjectContract"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/projects/{ref}/contract": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * EDS · Проект: действие по договору
+     * @description Переход статуса договора SPEC-v3 §2.4 в ERP (`crm/contracts/{id}/<действие>/`). `send_to_client` — «На согласование клиенту» (Проект → у клиента, договор появляется в кабинете); `client_agreed` — «Согласован клиентом» (клиент согласовал вне кабинета или в нём); `reject` — «Отклонён клиентом», `reason` обязательна (422 в BFF до ERP); `revise` — вернуть отклонённый проект в работу; `mark_issued` — «Выставлен у оператора» (ЭДО вне платформы; `note` — оператор или номер). Подготовку (`send_to_client`, `client_agreed`, `reject`, `revise`) ERP разрешает с правом `contract.manage`, `mark_issued` — `contract.sign`; недопустимый переход — 409 `contract_transition_not_allowed`. Раздел `eds.projects` — полный. Ответ — обновлённая карточка.
+     */
+    post: operations["actEdsProjectContract"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/projects/{ref}/contract/scan": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * EDS · Проект: прикрепить скан подписанного договора → «Подписан»
+     * @description ERP `POST /crm/contracts/{id}/attach-scan/` (multipart, поле `file`). BFF читает тело потоком до 20 МБ и поля формы, multipart не разбирает. ERP проверяет тип (PDF, jpg, png, webp) и сигнатуру байтов: не тот файл — 422 `scan_invalid`, нет файла — `scan_required`. Договор должен быть «Выставлен у оператора» (иначе 409 `contract_transition_not_allowed`); после скана он «Подписан», сделка закрывается как выигранная, ERP создаёт черновик счёта на предоплату. Право `contract.sign`. Раздел `eds.projects` — полный.
+     */
+    post: operations["scanEdsProjectContract"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/projects/{ref}/act": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * EDS · Проект: действие по акту
+     * @description `issue` — выпустить акт по самому свежему выставленному счёту проекта (ERP `POST /crm/invoices/{id}/generate-act/`; счёта нет — 409 `no_invoice`, акт уже есть — 409 `act_already_exists`); `return` — записать возврат акта заказчиком (ERP `POST /crm/acts/{id}/record-return/`, `reason` обязательна — 422 в BFF до ERP); `reissue` — выпустить возвращённый акт заново. Право `fulfillment.act`. Раздел `eds.projects` — полный. Ответ — обновлённая карточка.
+     */
+    post: operations["actEdsProjectAct"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/projects/{ref}/act/scan": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * EDS · Проект: прикрепить скан подписанного акта → «Подписан»
+     * @description ERP `POST /crm/acts/{id}/attach-scan/` (multipart, поле `file`, до 20 МБ; тип и сигнатуру проверяет ERP). Акт должен быть «Выпущен» (иначе 409 `act_sign_not_allowed`). Когда акт подписан и все счета оплачены, проект «Выполнено». Право `fulfillment.act`. Раздел `eds.projects` — полный.
+     */
+    post: operations["scanEdsProjectAct"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/projects/{ref}/files/{kind}/{doc_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * EDS · Проект: файл документа (PDF или скан)
+     * @description Файл договора, счёта или акта потоком (ERP `download-pdf`, `download-signed`). Документ обязан быть в карточке этого проекта (иначе 404). `variant = pdf` — наш PDF, `scan` — подписанный скан (есть у договора и акта); скан всегда скачивается (`attachment`), тип не доверяется. PDF ещё готовится — 202 с `Retry-After`. Раздел `eds.projects` — чтение.
+     */
+    get: operations["downloadEdsProjectFile"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/eds/document-files": {
     parameters: {
       query?: never;
@@ -6650,10 +6810,309 @@ export interface components {
      */
     EdsDocumentKind: "memo" | "application" | "report" | "letter_out";
     /**
-     * @description Вкладки реестра «Все документы»: письма (входящие и исходящие), КП, служебные, заявления, отчёты
+     * @description Шаг пути заявки для проекта (SPEC-v3 §2.3 шаги 5–7)
      * @enum {string}
      */
-    EdsRegistryKind: "letter_in" | "letter_out" | "quote" | "memo" | "application" | "report";
+    ProjectStage: "CONTRACT" | "PAYMENT" | "DONE";
+    ProjectScanUpload: {
+      /**
+       * Format: binary
+       * @description Скан подписанного документа — PDF, jpg, png или webp до 20 МБ
+       */
+      file: string;
+    };
+    ProjectMoney: {
+      amount: string;
+      currency: string;
+    };
+    ProjectPerson: {
+      id: number;
+      name: string;
+    };
+    ProjectQuoteRef: {
+      id: number;
+      number: string;
+      /** @constant */
+      status: "accepted";
+      version: number;
+    };
+    ProjectContractRef: {
+      id: number;
+      number: string;
+      /** @enum {string} */
+      status:
+        | "project"
+        | "client_agreed"
+        | "issued_at_operator"
+        | "signed"
+        | "rejected"
+        | "cancelled";
+      /** @description Проект ушёл клиенту на согласование редакции и виден ему в кабинете */
+      sent_to_client: boolean;
+    };
+    ProjectInvoiceRef: {
+      id: number;
+      number: string;
+      /** @enum {string} */
+      status: "to_issue" | "issued" | "partial" | "paid" | "overdue" | "cancelled";
+      /** @description Сколько не отменённых счетов у проекта */
+      count: number;
+    };
+    ProjectActRef: {
+      id: number;
+      number: string;
+      /** @enum {string} */
+      status: "project" | "returned" | "issued" | "signed" | "cancelled";
+    };
+    ProjectDocuments: {
+      quote: components["schemas"]["ProjectQuoteRef"] | null;
+      contract: components["schemas"]["ProjectContractRef"] | null;
+      invoice: components["schemas"]["ProjectInvoiceRef"] | null;
+      act: components["schemas"]["ProjectActRef"] | null;
+    };
+    ProjectRow: {
+      /** @description Номер проекта ПР-ГГГГ-NNN (тот же NNN, что у заявки). Пока в ERP нет Deal.number (ERP-09), BFF составляет его из года создания и id сделки */
+      number: string;
+      /** @description Номер заявки ЗВ-ГГГГ-NNN, из которой вырос проект */
+      request_number: string;
+      /** @description Название проекта (сделки ERP); нет названия — название клиента */
+      title: string;
+      client_name: string;
+      /**
+       * @description Шаг пути заявки SPEC-v3 §2.3: CONTRACT — договор, PAYMENT — оплата (договор подписан), DONE — выполнено (акт подписан и счета оплачены)
+       * @enum {string}
+       */
+      step: "CONTRACT" | "PAYMENT" | "DONE";
+      /**
+       * @description Статус для клиента — ключ packages/contracts/client-statuses.yaml (SPEC-v3 §2.5); слово собирает SPA по ключу
+       * @enum {string}
+       */
+      client_status:
+        | "contract_review"
+        | "contract_signing"
+        | "awaiting_payment"
+        | "fulfilling"
+        | "awaiting_acceptance"
+        | "done";
+      /** @description Сумма с НДС последнего КП, видимого клиенту; null — КП клиенту не отправлялось */
+      total: components["schemas"]["ProjectMoney"] | null;
+      /**
+       * Format: date
+       * @description Срок проекта: ожидаемая дата поставки исполнения, иначе самая поздняя дата по строкам поставки
+       */
+      due_date: string | null;
+      /** @description Менеджер заявки */
+      manager: components["schemas"]["ProjectPerson"] | null;
+      /** @description Кто ведёт проект: взявший в работу, иначе менеджер */
+      responsible: components["schemas"]["ProjectPerson"] | null;
+      documents: components["schemas"]["ProjectDocuments"];
+      /** @description Что требует внимания: нет проекта договора, договор отклонён клиентом, акт возвращён, счёт просрочен */
+      problems: ("no_contract" | "contract_rejected" | "act_returned" | "invoice_overdue")[];
+      /** Format: date-time */
+      created_at: string;
+    };
+    ProjectPage: {
+      items: components["schemas"]["ProjectRow"][];
+      /** @description Сколько проектов подошло под фильтры */
+      total: number;
+      offset: number;
+      limit: number;
+    };
+    ProjectJournalEntry: {
+      /** Format: date-time */
+      at: string;
+      /** @description Код события журнала ERP (contract.scan_attached, act.returned…); по нему SPA собирает фразу на языке сотрудника */
+      code: string;
+      /** @description Запасная фраза на русском, если у кода нет перевода */
+      text: string;
+      actor_name: string | null;
+      /** @enum {string|null} */
+      document: "contract" | "act" | "invoice" | "quote" | "project" | null;
+      number: string | null;
+      /** @description Причина или заметка к действию; пусто, если её не было */
+      reason: string;
+    };
+    ProjectQuote: {
+      id: number;
+      number: string;
+      /** @constant */
+      status: "accepted";
+      version: number;
+      outgoing_number: string | null;
+      /** Format: date */
+      valid_until: string | null;
+    };
+    ProjectContract: {
+      id: number;
+      number: string;
+      /** @enum {string} */
+      status:
+        | "project"
+        | "client_agreed"
+        | "issued_at_operator"
+        | "signed"
+        | "rejected"
+        | "cancelled";
+      sent_to_client: boolean;
+      total: components["schemas"]["ProjectMoney"] | null;
+      /** Format: date-time */
+      created_at: string;
+      /**
+       * Format: date-time
+       * @description Когда редакция согласована клиентом
+       */
+      client_agreed_at: string | null;
+      /**
+       * Format: date-time
+       * @description Когда прикреплён скан подписанного договора; null — ещё не подписан
+       */
+      signed_at: string | null;
+      has_pdf: boolean;
+      has_scan: boolean;
+      /** @description Что можно сделать СЕЙЧАС этому сотруднику (допустимо из статуса и разрешено правами ERP); считает ERP, SPA не угадывает */
+      actions: (
+        | "send_to_client"
+        | "client_agreed"
+        | "reject"
+        | "revise"
+        | "mark_issued"
+        | "attach_scan"
+      )[];
+      history: components["schemas"]["ProjectJournalEntry"][];
+    };
+    ProjectInvoice: {
+      id: number;
+      number: string;
+      /** @enum {string} */
+      status: "to_issue" | "issued" | "partial" | "paid" | "overdue" | "cancelled";
+      total: components["schemas"]["ProjectMoney"] | null;
+      paid: components["schemas"]["ProjectMoney"] | null;
+      balance_due: components["schemas"]["ProjectMoney"] | null;
+      /** Format: date */
+      issued_at: string | null;
+      /** Format: date */
+      due_date: string | null;
+      has_pdf: boolean;
+    };
+    ProjectAct: {
+      id: number;
+      number: string;
+      /** @enum {string} */
+      status: "project" | "returned" | "issued" | "signed" | "cancelled";
+      total: components["schemas"]["ProjectMoney"] | null;
+      /** Format: date */
+      issued_at: string | null;
+      /** Format: date-time */
+      signed_at: string | null;
+      /** @description Причина возврата акта заказчиком; у возвращённого акта */
+      rejection_reason: string | null;
+      has_pdf: boolean;
+      has_scan: boolean;
+      /** @description Что можно сделать СЕЙЧАС с актом: прикрепить скан или записать возврат (выпущен), выпустить заново (возвращён) */
+      actions: ("attach_scan" | "return" | "reissue")[];
+      history: components["schemas"]["ProjectJournalEntry"][];
+    };
+    ProjectFulfillment: {
+      status: string | null;
+      status_name: string | null;
+      /** Format: date */
+      expected_delivery_date: string | null;
+      /** Format: date-time */
+      shipped_at: string | null;
+      /** Format: date-time */
+      delivered_at: string | null;
+      /** Format: date-time */
+      accepted_at: string | null;
+      tracking_number: string | null;
+      carrier: string | null;
+    };
+    ProjectDeliveryLine: {
+      line_no: number;
+      title: string;
+      quantity: number | null;
+      unit: string;
+      status: string;
+      /** Format: date */
+      eta: string | null;
+      /** Format: date-time */
+      shipped_at: string | null;
+      tracking: string;
+    };
+    ProjectCard: {
+      number: string;
+      request_number: string;
+      title: string;
+      client_name: string;
+      /** @enum {string} */
+      step: "CONTRACT" | "PAYMENT" | "DONE";
+      /** @enum {string} */
+      client_status:
+        | "contract_review"
+        | "contract_signing"
+        | "awaiting_payment"
+        | "fulfilling"
+        | "awaiting_acceptance"
+        | "done";
+      total: components["schemas"]["ProjectMoney"] | null;
+      /** Format: date */
+      due_date: string | null;
+      manager: components["schemas"]["ProjectPerson"] | null;
+      responsible: components["schemas"]["ProjectPerson"] | null;
+      documents: components["schemas"]["ProjectDocuments"];
+      problems: ("no_contract" | "contract_rejected" | "act_returned" | "invoice_overdue")[];
+      /** Format: date-time */
+      created_at: string;
+      quote: components["schemas"]["ProjectQuote"] | null;
+      contract: components["schemas"]["ProjectContract"] | null;
+      /** @description КП принято, живого договора нет, и у сотрудника есть право готовить договоры: можно сформировать проект */
+      can_create_contract: boolean;
+      invoices: components["schemas"]["ProjectInvoice"][];
+      act: components["schemas"]["ProjectAct"] | null;
+      /**
+       * @description Почему акт сейчас выпустить нельзя: no_invoice — нет выставленного счёта, act_exists — акт уже есть, forbidden — нет права; null — можно
+       * @enum {string|null}
+       */
+      act_blocker: "no_invoice" | "act_exists" | "forbidden" | null;
+      /** @description Исполнение из ERP — только чтение */
+      fulfillment: components["schemas"]["ProjectFulfillment"] | null;
+      /** @description Строки поставки из ERP — только чтение */
+      delivery_lines: components["schemas"]["ProjectDeliveryLine"][];
+      /** @description История документов проекта (договор, счета, акт), новые первыми: кто, когда, что и по какой причине */
+      journal: components["schemas"]["ProjectJournalEntry"][];
+    };
+    /** @description Действие по договору. `reason` обязательна для `reject`: пустую BFF отклоняет (422). */
+    ProjectContractActionIn: {
+      /** @enum {string} */
+      action: "send_to_client" | "client_agreed" | "reject" | "revise" | "mark_issued";
+      reason?: string | null;
+      note?: string | null;
+    };
+    /** @description Действие по акту. `reason` обязательна для `return`: возврат без причины не бывает. */
+    ProjectActActionIn: {
+      /** @enum {string} */
+      action: "issue" | "return" | "reissue";
+      reason?: string | null;
+    };
+    ProjectFileGenerating: {
+      /** @constant */
+      detail: "GENERATING";
+      /** @description Секунды до повторной попытки */
+      retry_after: number;
+    };
+    /**
+     * @description Вкладки реестра «Все документы»: письма (входящие и исходящие), КП, служебные, заявления, отчёты; с 0.26.0 — договоры, счета и акты проектов (проекция ERP)
+     * @enum {string}
+     */
+    EdsRegistryKind:
+      | "letter_in"
+      | "letter_out"
+      | "quote"
+      | "memo"
+      | "application"
+      | "report"
+      | "contract"
+      | "invoice"
+      | "act";
     EdsPerson: {
       crm_user_id: number;
       full_name: string;
@@ -6694,6 +7153,8 @@ export interface components {
       created_at: string;
       /** @description Документ (`memo`, `application`, `report`, `letter_out`) открывается в боковом окне; письма и КП — в своих разделах */
       openable: boolean;
+      /** @description Договор, счёт и акт проекта (0.26.0) — id сделки для адреса `/eds/projects/{project_ref}`; у остальных типов нет */
+      project_ref?: string | null;
     };
     EdsDocumentPage: {
       items: components["schemas"]["EdsDocumentRow"][];
@@ -10171,8 +10632,26 @@ export interface components {
         "application/json": components["schemas"]["Error"];
       };
     };
+    /** @description 409 `CONFLICT` — `details.reason`: `contract_transition_not_allowed` (договор сейчас в другом статусе), `act_sign_not_allowed`, `act_already_exists`, `no_invoice`, `contract_exists`; обновите карточку */
+    ProjectConflict: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["Error"];
+      };
+    };
     /** @description 409 `CONFLICT` — состояние счёта не позволяет действие: `details.reason` — `exceeds_balance` (сумма больше остатка), `already_paid`, `not_issued`, `not_open`, `cancelled`, `reference_conflict` (номер операции уже записан с другой суммой или датой); обновите карточку */
     PaymentConflict: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["Error"];
+      };
+    };
+    /** @description 413 `PAYLOAD_TOO_LARGE` — скан больше 20 МБ (`details.max_bytes`) */
+    ProjectPayloadTooLarge: {
       headers: {
         [name: string]: unknown;
       };
@@ -10238,6 +10717,8 @@ export interface components {
     ReferenceKindPath: components["schemas"]["ReferenceKind"];
     /** @description UUID входящего письма (EDS) */
     LetterIdPath: string;
+    /** @description Номер проекта `ПР-2026-104` (или заявки `ЗВ-2026-104`) либо id сделки ERP цифрами; год номера сверяется с годом создания сделки */
+    ProjectRefPath: string;
     /** @description Номер заявки `ЗВ-ГГГГ-NNN` (как в списке «Заявки в расчёте») */
     CalcNumberPath: string;
     /** @description Строка расчёта (`CalcLine.id`) */
@@ -11954,6 +12435,284 @@ export interface operations {
       404: components["responses"]["NotFound"];
       409: components["responses"]["EdsConflict"];
       422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listEdsProjects: {
+    parameters: {
+      query?: {
+        mine?: boolean;
+        problems?: boolean;
+        step?: components["schemas"]["ProjectStage"];
+        q?: string;
+        limit?: number;
+        offset?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Страница проектов */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProjectPage"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getEdsProject: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Номер проекта `ПР-2026-104` (или заявки `ЗВ-2026-104`) либо id сделки ERP цифрами; год номера сверяется с годом создания сделки */
+        ref: components["parameters"]["ProjectRefPath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Карточка проекта */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProjectCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  createEdsProjectContract: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер проекта `ПР-2026-104` (или заявки `ЗВ-2026-104`) либо id сделки ERP цифрами; год номера сверяется с годом создания сделки */
+        ref: components["parameters"]["ProjectRefPath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Проект договора сформирован */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProjectCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["ProjectConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  actEdsProjectContract: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер проекта `ПР-2026-104` (или заявки `ЗВ-2026-104`) либо id сделки ERP цифрами; год номера сверяется с годом создания сделки */
+        ref: components["parameters"]["ProjectRefPath"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ProjectContractActionIn"];
+      };
+    };
+    responses: {
+      /** @description Статус договора изменён */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProjectCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["ProjectConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  scanEdsProjectContract: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер проекта `ПР-2026-104` (или заявки `ЗВ-2026-104`) либо id сделки ERP цифрами; год номера сверяется с годом создания сделки */
+        ref: components["parameters"]["ProjectRefPath"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["ProjectScanUpload"];
+      };
+    };
+    responses: {
+      /** @description Скан прикреплён, договор подписан */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProjectCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["ProjectConflict"];
+      413: components["responses"]["ProjectPayloadTooLarge"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  actEdsProjectAct: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер проекта `ПР-2026-104` (или заявки `ЗВ-2026-104`) либо id сделки ERP цифрами; год номера сверяется с годом создания сделки */
+        ref: components["parameters"]["ProjectRefPath"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ProjectActActionIn"];
+      };
+    };
+    responses: {
+      /** @description Акт выпущен, возвращён или выпущен заново */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProjectCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["ProjectConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  scanEdsProjectAct: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер проекта `ПР-2026-104` (или заявки `ЗВ-2026-104`) либо id сделки ERP цифрами; год номера сверяется с годом создания сделки */
+        ref: components["parameters"]["ProjectRefPath"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["ProjectScanUpload"];
+      };
+    };
+    responses: {
+      /** @description Скан прикреплён, акт подписан */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProjectCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["ProjectConflict"];
+      413: components["responses"]["ProjectPayloadTooLarge"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  downloadEdsProjectFile: {
+    parameters: {
+      query?: {
+        variant?: "pdf" | "scan";
+      };
+      header?: never;
+      path: {
+        /** @description Номер проекта `ПР-2026-104` (или заявки `ЗВ-2026-104`) либо id сделки ERP цифрами; год номера сверяется с годом создания сделки */
+        ref: components["parameters"]["ProjectRefPath"];
+        kind: "contract" | "invoice" | "act";
+        doc_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Содержимое файла */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/pdf": string;
+          "application/octet-stream": string;
+        };
+      };
+      /** @description PDF ещё готовится — повторите через `retry_after` секунд */
+      202: {
+        headers: {
+          "Retry-After"?: number;
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ProjectFileGenerating"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
       503: components["responses"]["BackendUnavailable"];
     };
   };

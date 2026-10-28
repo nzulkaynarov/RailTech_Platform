@@ -42,13 +42,15 @@ export interface MockDocument {
 
 /** Строка реестра, которой нет среди документов сотрудников: входящее письмо или КП (откроются в своих разделах). */
 export interface MockRegistryRow {
-  kind: Extract<EdsRegistryKind, "letter_in" | "quote">;
+  kind: Extract<EdsRegistryKind, "letter_in" | "quote" | "contract" | "invoice" | "act">;
   id: string;
   number: string;
   title: string;
   status: string;
   registered_at: string;
   responsible: EdsPerson | null;
+  /** Договор, счёт и акт проекта: id сделки для ссылки на карточку проекта (0.26.0) */
+  project_ref?: string;
 }
 
 export interface MockDeal {
@@ -232,6 +234,26 @@ function initial(): EdsMock {
         status: "open",
         registered_at: "2026-10-25T15:00:00Z",
         responsible: DIRECTOR,
+      },
+      {
+        kind: "contract",
+        id: documentId(811),
+        number: "ДОГ-2026/105",
+        title: "Поставка стрелочных переводов",
+        status: "client_agreed",
+        registered_at: "2026-10-24T09:00:00Z",
+        responsible: { crm_user_id: 1, full_name: "Демо Менеджеров" },
+        project_ref: "105",
+      },
+      {
+        kind: "act",
+        id: documentId(812),
+        number: "АКТ-2026/051",
+        title: "Монтаж крепежа, объект «Север»",
+        status: "issued",
+        registered_at: "2026-10-23T09:00:00Z",
+        responsible: { crm_user_id: 1, full_name: "Демо Менеджеров" },
+        project_ref: "97",
       },
     ],
     files: {

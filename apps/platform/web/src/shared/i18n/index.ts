@@ -21,6 +21,7 @@ import enLeads from "./en/leads.json";
 import enMessages from "./en/messages.json";
 import enRequest from "./en/request.json";
 import enQuotes from "./en/quotes.json";
+import enProjects from "./en/projects.json";
 import enApprovals from "./en/approvals.json";
 import enPayments from "./en/payments.json";
 import enModules from "./en/modules.json";
@@ -48,6 +49,7 @@ import ruLeads from "./ru/leads.json";
 import ruMessages from "./ru/messages.json";
 import ruRequest from "./ru/request.json";
 import ruQuotes from "./ru/quotes.json";
+import ruProjects from "./ru/projects.json";
 import ruApprovals from "./ru/approvals.json";
 import ruPayments from "./ru/payments.json";
 import ruModules from "./ru/modules.json";
@@ -75,6 +77,7 @@ import uzLeads from "./uz/leads.json";
 import uzMessages from "./uz/messages.json";
 import uzRequest from "./uz/request.json";
 import uzQuotes from "./uz/quotes.json";
+import uzProjects from "./uz/projects.json";
 import uzApprovals from "./uz/approvals.json";
 import uzPayments from "./uz/payments.json";
 import uzModules from "./uz/modules.json";
@@ -108,6 +111,7 @@ export const resources = {
     request: ruRequest,
     profile: ruProfile,
     quotes: ruQuotes,
+    projects: ruProjects,
     approvals: ruApprovals,
     payments: ruPayments,
     bot: ruBot,
@@ -137,6 +141,7 @@ export const resources = {
     request: uzRequest,
     profile: uzProfile,
     quotes: uzQuotes,
+    projects: uzProjects,
     approvals: uzApprovals,
     payments: uzPayments,
     bot: uzBot,
@@ -166,6 +171,7 @@ export const resources = {
     request: enRequest,
     profile: enProfile,
     quotes: enQuotes,
+    projects: enProjects,
     approvals: enApprovals,
     payments: enPayments,
     bot: enBot,
@@ -197,7 +203,7 @@ export function rememberLanguage(language: Language): void {
   }
 }
 
-/** ru — язык по умолчанию (SPEC-v3 §8); uz — латиница. Пространства имён: common, shell (каркас и вход), modules (меню и пустые состояния), bridge (заглушки разделов и мост в старые экраны), dictionary (словарь SPEC-v3 §2: стадии и статусы), ui (тексты общих компонентов), integrations (Admin · Внешние интеграции), company (Admin · Компания), kb (CRM · База знаний), bot (Admin · Настройки бота), bus (Admin · Журнал интеграций), documents (EDS · Создать документ и «Мои документы»), letters (EDS · Входящие письма и резолюция), messages (Клиенты · Ждут ответа, D1-1), leads, clients и request (Клиенты · Лиды, Клиенты и «Создать заявку», D1-2b), calc (Расчёт по заявке, D2-1), catalog (Расчёт · Номенклатура и поставщики, Техдокументация, D2-3), profile (страница /me, «Забыли пароль?»), quotes (EDS · КП на одобрение), approvals (EDS · На согласовании), payments (EDS · Счета и оплаты бухгалтера, D2-4), help (помощь, первый вход и обращения к администратору, W15-H7), articles (Admin · Статьи компании и раздел «Как у нас принято» в Помощи, W18A-P5). */
+/** ru — язык по умолчанию (SPEC-v3 §8); uz — латиница. Пространства имён: common, shell (каркас и вход), modules (меню и пустые состояния), bridge (заглушки разделов и мост в старые экраны), dictionary (словарь SPEC-v3 §2: стадии и статусы), ui (тексты общих компонентов), integrations (Admin · Внешние интеграции), company (Admin · Компания), kb (CRM · База знаний), bot (Admin · Настройки бота), bus (Admin · Журнал интеграций), documents (EDS · Создать документ и «Мои документы»), letters (EDS · Входящие письма и резолюция), messages (Клиенты · Ждут ответа, D1-1), leads, clients и request (Клиенты · Лиды, Клиенты и «Создать заявку», D1-2b), calc (Расчёт по заявке, D2-1), catalog (Расчёт · Номенклатура и поставщики, Техдокументация, D2-3), profile (страница /me, «Забыли пароль?»), quotes (EDS · КП на одобрение), projects (EDS · Проекты: договор, акт, сканы, D2-5), approvals (EDS · На согласовании), payments (EDS · Счета и оплаты бухгалтера, D2-4), help (помощь, первый вход и обращения к администратору, W15-H7), articles (Admin · Статьи компании и раздел «Как у нас принято» в Помощи, W18A-P5). */
 void i18n.use(initReactI18next).init({
   resources,
   lng: storedLanguage(),
@@ -224,6 +230,7 @@ void i18n.use(initReactI18next).init({
     "calc",
     "profile",
     "quotes",
+    "projects",
     "approvals",
     "catalog",
     "payments",

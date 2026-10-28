@@ -14,30 +14,34 @@ function card(listName: string, title: string) {
 }
 
 describe('Договоры', () => {
-  it('статусы подписи обеих сторон; «Подписать» с подтверждением', async () => {
+  it('статусы договора; «Согласовать» с подтверждением: клиент согласовал — подписывает не он, а скан у сотрудника (D2-5)', async () => {
     signedIn();
     const user = userEvent.setup();
     renderApp('/contracts');
     await heading('Договоры');
-    expect(await screen.findByText('2 договора ждут вашей подписи')).toBeInTheDocument();
+    expect(await screen.findByText('2 договора ждут вашего согласования')).toBeInTheDocument();
 
     const signed = card('Договоры', 'D-2026-0035');
     expect(within(signed).getByText('Подписан сторонами')).toBeInTheDocument();
     expect(within(signed).getByText('20 авг. 2026 г., 15:30')).toBeInTheDocument();
-    expect(within(signed).queryByRole('button', { name: /Подписать/ })).not.toBeInTheDocument();
+    expect(within(signed).queryByRole('button', { name: /Согласовать/ })).not.toBeInTheDocument();
 
     const pending = card('Договоры', 'D-2026-0029');
-    expect(within(pending).getByText('Ждёт вашей подписи')).toBeInTheDocument();
+    expect(within(pending).getByText('Ждёт вашего согласования')).toBeInTheDocument();
     expect(within(pending).getByText('Файл ещё не выпущен')).toBeInTheDocument();
-    await user.click(within(pending).getByRole('button', { name: 'Подписать договор D-2026-0029' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Подписать договор D-2026-0029' });
-    expect(within(dialog).getByText(/подтверждаете согласие с условиями договора/)).toBeInTheDocument();
+    await user.click(within(pending).getByRole('button', { name: 'Согласовать договор D-2026-0029' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Согласовать договор D-2026-0029' });
+    expect(within(dialog).getByText(/Подписание — отдельный шаг/)).toBeInTheDocument();
     await expectNoAxeViolations();
-    await user.click(within(dialog).getByRole('button', { name: 'Подписать договор' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Согласовать договор' }));
 
-    expect(await screen.findByText('Договор D-2026-0029 подписан обеими сторонами.')).toBeInTheDocument();
-    expect(within(card('Договоры', 'D-2026-0029')).getByText('Подписан сторонами')).toBeInTheDocument();
-    expect(await screen.findByText('1 договор ждёт вашей подписи')).toBeInTheDocument();
+    // согласие клиента не делает договор подписанным: честный статус «ждём подписания», кнопки «согласовать» больше нет
+    expect(await screen.findByText('Вы согласовали договор D-2026-0029. Ждём подписания.')).toBeInTheDocument();
+    const agreed = card('Договоры', 'D-2026-0029');
+    expect(within(agreed).getByText('Вы согласовали, ждём подписания')).toBeInTheDocument();
+    expect(within(agreed).queryByText('Подписан сторонами')).not.toBeInTheDocument();
+    expect(within(agreed).queryByRole('button', { name: /Согласовать/ })).not.toBeInTheDocument();
+    expect(await screen.findByText('1 договор ждёт вашего согласования')).toBeInTheDocument();
   });
 
   it('409 — договор уже подписан: понятное сообщение', async () => {
@@ -46,10 +50,10 @@ describe('Договоры', () => {
     const user = userEvent.setup();
     renderApp('/contracts');
     await heading('Договоры');
-    await user.click(await screen.findByRole('button', { name: 'Подписать договор D-2026-0048' }));
+    await user.click(await screen.findByRole('button', { name: 'Согласовать договор D-2026-0048' }));
     const dialog = await screen.findByRole('dialog');
-    await user.click(within(dialog).getByRole('button', { name: 'Подписать договор' }));
-    expect(await within(dialog).findByText('Договор уже подписан или отменён — обновите страницу.')).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'Согласовать договор' }));
+    expect(await within(dialog).findByText('Договор уже согласован, подписан или отменён — обновите страницу.')).toBeInTheDocument();
   });
 
   it('can_act=false — подписать нельзя, скачать можно', async () => {
@@ -57,7 +61,7 @@ describe('Договоры', () => {
     window.localStorage.setItem('cabinet.language', 'ru');
     renderApp('/contracts');
     await screen.findByRole('list', { name: 'Договоры' });
-    expect(screen.queryByRole('button', { name: /Подписать/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Согласовать/ })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Скачать: D-2026-0048' })).toBeInTheDocument();
   });
 

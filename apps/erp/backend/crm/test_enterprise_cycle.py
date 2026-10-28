@@ -8,6 +8,7 @@ from decimal import Decimal
 
 import pytest
 from django.utils import timezone
+from integration.tests import world as w
 
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
 from catalog.models import DomainType, ProductStatus, StockStatus
@@ -238,8 +239,7 @@ def test_contract_double_sign_becomes_signed(master_data, deal, manager, buyer):
     contract, err = crm_services.sign_contract_by_client(contract.id, manager)
     assert err is None
     assert contract.status_code == "PENDING_MANAGER"
-    contract, err = crm_services.sign_contract_by_manager(contract.id, manager)
-    assert err is None
+    contract = w.sign_via_scan(contract.id)  # подпись кликом закрыта (D2-5): оператор → скан
     assert contract.status_code == "SIGNED"
 
 
@@ -251,7 +251,7 @@ def test_cancel_signed_contract_fails(master_data, deal, manager, buyer):
     quote.save()
     contract, _ = crm_services.generate_contract_from_quote(quote.id, actor=manager)
     crm_services.sign_contract_by_client(contract.id, manager)
-    crm_services.sign_contract_by_manager(contract.id, manager)
+    w.sign_via_scan(contract.id)
     _, err = crm_services.cancel_contract(contract.id, manager, "test")
     assert err is not None
 
@@ -276,7 +276,7 @@ def test_record_payment_marks_invoice_paid(master_data, deal, manager, buyer):
     quote.save()
     contract, _ = crm_services.generate_contract_from_quote(quote.id, actor=manager)
     crm_services.sign_contract_by_client(contract.id, manager)
-    crm_services.sign_contract_by_manager(contract.id, manager)
+    w.sign_via_scan(contract.id)
     invoice, err = crm_services.generate_invoice_from_contract(contract.id, actor=manager)
     assert err is None
 
@@ -315,7 +315,7 @@ def test_record_payment_rejects_negative(master_data, deal, manager, buyer):
     quote.save()
     contract, _ = crm_services.generate_contract_from_quote(quote.id, actor=manager)
     crm_services.sign_contract_by_client(contract.id, manager)
-    crm_services.sign_contract_by_manager(contract.id, manager)
+    w.sign_via_scan(contract.id)
     invoice, _ = crm_services.generate_invoice_from_contract(contract.id, actor=manager)
     _, err = crm_services.record_payment(invoice.id, manager, amount="-1", paid_at=timezone.localdate())
     assert err is not None
@@ -332,7 +332,7 @@ def test_fulfillment_accepted_auto_closes_deal(master_data, deal, manager, buyer
     quote.save()
     contract, _ = crm_services.generate_contract_from_quote(quote.id, actor=manager)
     crm_services.sign_contract_by_client(contract.id, manager)
-    crm_services.sign_contract_by_manager(contract.id, manager)
+    w.sign_via_scan(contract.id)
     crm_services.ensure_fulfillment(deal)
     # Move deal to CONTRACT_SIGNED legally (via FSM hop DRAFT→SOURCING→CALCULATING→QUOTE_SENT→CONTRACT_SIGNED)
     for stage in ["SOURCING", "CALCULATING", "QUOTE_SENT", "CONTRACT_SIGNED"]:
