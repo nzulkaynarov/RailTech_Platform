@@ -6,7 +6,9 @@ import { Link } from "react-router";
 import { useViewport } from "../../app/shell/useViewport";
 import { WriteToAdminModal } from "../tickets/WriteToAdminModal";
 import { ArticleView } from "./ArticleView";
+import { StatusTag } from "../../shared/ui/StatusTag";
 import { HELP_ARTICLES, articleForSection, findArticle, searchArticles } from "./articles";
+import { useWhatsNew } from "./whatsNew";
 
 import "./help.css";
 
@@ -29,6 +31,7 @@ export function HelpDrawer({ open, onClose, sectionKey }: HelpDrawerProps) {
   const [query, setQuery] = useState("");
   const [slug, setSlug] = useState<string | null>(null);
   const [writing, setWriting] = useState(false);
+  const { fresh } = useWhatsNew();
 
   // Каждое открытие и смена раздела — статья текущего раздела, а не прошлый поиск (сброс при отрисовке, без эффекта).
   const [seen, setSeen] = useState({ open, sectionKey });
@@ -75,6 +78,14 @@ export function HelpDrawer({ open, onClose, sectionKey }: HelpDrawerProps) {
         }
       >
         <div className="pf-help-block">
+          {fresh ? (
+            <p style={{ margin: 0, display: "flex", gap: 8, alignItems: "center" }}>
+              <StatusTag tone="red">{t("whatsNew.fresh")}</StatusTag>
+              <Link to="/help/news" onClick={onClose} className="pf-help-link pf-focusable">
+                {t("whatsNew.open")}
+              </Link>
+            </p>
+          ) : null}
           <div>
             <label
               htmlFor={searchId}

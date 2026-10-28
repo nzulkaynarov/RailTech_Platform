@@ -3,7 +3,8 @@ import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { HELP_ARTICLES, articleForSection, parseArticle, searchArticles } from "./articles";
+import { MENU } from "../../app/rbac.generated";
+import { HELP_ARTICLES, articleForSection, listOf, parseArticle, searchArticles } from "./articles";
 
 const SOURCE = join(import.meta.dirname, "../../../../../../docs/kb/help");
 
@@ -35,7 +36,7 @@ describe("статьи помощи в сборке", () => {
     expect(articleForSection("dashboard.queue")?.slug).toBe("queue");
     expect(articleForSection("admin.tickets")?.slug).toBe("admin-tickets");
     expect(articleForSection("me")?.slug).toBe("profile");
-    expect(articleForSection("chats.contacts")).toBeUndefined();
+    expect(articleForSection("admin.bus")).toBeUndefined();
     expect(articleForSection(undefined)).toBeUndefined();
   });
 
@@ -45,16 +46,47 @@ describe("статьи помощи в сборке", () => {
   });
 });
 
+describe("актуальность помощи (W-REL)", () => {
+  // Новый пункт меню каталога без статьи — красный CI: добавьте статью в docs/kb/help (ключ раздела в `sections`).
+  it("у каждого пункта меню каталога platform-rbac.yaml есть статья", () => {
+    const covered = new Set(HELP_ARTICLES.flatMap((a) => a.sections));
+    const missing = Object.entries(MENU).flatMap(([module, items]) =>
+      Object.keys(items)
+        .map((item) => `${module}.${item}`)
+        .filter((key) => !covered.has(key)),
+    );
+    expect(missing).toEqual([]);
+  });
+
+  it("в каждой статье есть `screens` — адреса экранов (или пусто для общих статей)", () => {
+    for (const name of readdirSync(SOURCE).filter((file) => file.endsWith(".md"))) {
+      const head = readFileSync(join(SOURCE, name), "utf-8").split("\n---")[0] ?? "";
+      expect(head, name).toMatch(/\nscreens: \[.*\]/);
+    }
+    for (const article of HELP_ARTICLES) {
+      for (const screen of article.screens) expect(screen, article.slug).toMatch(/^\/[a-z/-]+$/);
+    }
+  });
+
+  it("listOf: с квадратными скобками и без", () => {
+    expect(listOf("[/a, /b]")).toEqual(["/a", "/b"]);
+    expect(listOf("a.b, c.d")).toEqual(["a.b", "c.d"]);
+    expect(listOf("[]")).toEqual([]);
+    expect(listOf(undefined)).toEqual([]);
+  });
+});
+
 describe("parseArticle", () => {
   it("front matter и текст; без front matter — весь текст", () => {
     const a = parseArticle(
       "x",
-      "---\ntitle: Заголовок: с двоеточием\nsections: a.b, c.d\norder: 7\n---\nТекст",
+      "---\ntitle: Заголовок: с двоеточием\nsections: a.b, c.d\norder: 7\nscreens: [/a/b, /c]\n---\nТекст",
     );
     expect(a).toEqual({
       slug: "x",
       title: "Заголовок: с двоеточием",
       sections: ["a.b", "c.d"],
+      screens: ["/a/b", "/c"],
       order: 7,
       body: "Текст",
     });

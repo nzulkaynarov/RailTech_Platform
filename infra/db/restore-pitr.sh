@@ -6,8 +6,10 @@
 #   restore-pitr.sh --target-time "2026-10-22 14:30:00+00"     на момент времени (часовой пояс обязателен: +00, +05, Z)
 #   restore-pitr.sh --latest                                   до конца архива (последний сохранённый момент)
 #   restore-pitr.sh --drop [--name rt-pitr]                    убрать контейнер и том восстановления
+#   restore-pitr.sh --latest --source file --file-dir <каталог>  из копии архива на диске (скачана с Google Drive:
+#                                                              infra/db/restore-from-gdrive.sh); ключ — WAL_ENC_KEY из --env-file
 # Параметры: --name <имя> (по умолчанию rt-pitr; должно начинаться с rt-pitr), --backup <имя-копии> (по умолчанию — последняя,
-#   завершённая до момента), --source primary|ext (хранилище: RustFS на VPS 1 или внешнее), --port <порт> (опубликовать на
+#   завершённая до момента), --source primary|ext|file (хранилище: RustFS на VPS 1, внешнее S3 или каталог --file-dir), --port <порт> (опубликовать на
 #   127.0.0.1), --memory <лимит> (по умолчанию 512m: VPS 2 — 2 ГБ, боевая база держит 1,25 ГБ), --timeout <сек> (ожидание конца восстановления, по умолчанию 1800),
 #   --env-file <файл> (по умолчанию $RT_DB_DIR/.env.db), --image <образ> (по умолчанию rt-db-postgres:local).
 # Момент должен быть не позже последней зафиксированной транзакции в архиве: иначе PostgreSQL остановится с сообщением
@@ -18,10 +20,11 @@ RT_DB_DIR="${RT_DB_DIR:-/opt/rt-db}"
 envf="$RT_DB_DIR/.env.db"
 image="rt-db-postgres:local"
 name="rt-pitr"
-target="" latest=0 drop=0 backup="" source=primary port="" memory=512m timeout=1800
+target="" latest=0 drop=0 backup="" source=primary port="" memory=512m timeout=1800 file_dir=""
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 die() { echo "restore-pitr: $*" >&2; exit 1; }
-usage() { sed -n '2,14p' "$0"; }
+usage() { sed -n '2,16p' "$0"; }
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -31,6 +34,7 @@ while [[ $# -gt 0 ]]; do
     --name) name="${2:?}"; shift 2 ;;
     --backup) backup="${2:?}"; shift 2 ;;
     --source) source="${2:?}"; shift 2 ;;
+    --file-dir) file_dir="${2:?}"; shift 2 ;;
     --port) port="${2:?}"; shift 2 ;;
     --memory) memory="${2:?}"; shift 2 ;;
     --timeout) timeout="${2:?}"; shift 2 ;;
@@ -42,7 +46,15 @@ while [[ $# -gt 0 ]]; do
 done
 
 [[ "$name" =~ ^rt-pitr[a-z0-9_.-]*$ ]] || die "--name должно начинаться с rt-pitr (боевые контейнеры rt-db-* не трогаем)"
-[[ "$source" == primary || "$source" == ext ]] || die "--source: primary или ext"
+[[ "$source" == primary || "$source" == ext || "$source" == file ]] || die "--source: primary, ext или file"
+# Источник file: каталог копии архива (basebackups_005/, wal_005/) монтируется в контейнеры только на чтение; rt-walg — из репозитория
+# рядом со скриптом: образ, собранный до OPS-GDRIVE, источника file не знает, а восстанавливать бывает нужно и на чужой машине.
+file_mounts=()
+if [[ "$source" == file && $drop -eq 0 ]]; then
+  [[ -n "$file_dir" && -d "$file_dir/basebackups_005" ]] || die "--source file: нужен --file-dir <каталог с basebackups_005/ и wal_005/>"
+  file_dir="$(cd "$file_dir" && pwd)"
+  file_mounts=(-v "$file_dir:/walg-file:ro" -v "$here/rt-walg.sh:/usr/local/bin/rt-walg:ro")
+fi
 [[ "$timeout" =~ ^[0-9]+$ ]] || die "--timeout: число секунд"
 [[ -z "$port" || "$port" =~ ^[0-9]+$ ]] || die "--port: число"
 volume="${name}-data"
@@ -79,13 +91,16 @@ for v in WAL_S3_ENDPOINT WAL_S3_ACCESS_KEY WAL_S3_SECRET_KEY WAL_S3_BUCKET WAL_S
          BACKUP_EXT_ENDPOINT BACKUP_EXT_ACCESS_KEY BACKUP_EXT_SECRET_KEY BACKUP_EXT_BUCKET BACKUP_EXT_REGION; do
   printf '%s=%s\n' "$v" "$(get "$v")" >> "$tmpenv"
 done
+[[ "$source" != file ]] || printf 'WAL_FILE_PREFIX=/walg-file\n' >> "$tmpenv"
+# С неверным WAL_ENC_KEY backup-fetch не падает, а зависает — предел ожидания (rt-pitr prepare), по умолчанию 2 ч.
+printf 'WAL_FETCH_TIMEOUT_S=%s\n' "${WAL_FETCH_TIMEOUT_S:-7200}" >> "$tmpenv"
 
 echo "▸ том $volume: скачиваю базовую копию и настраиваю восстановление (источник: $source)"
 docker volume create "$volume" >/dev/null
 args=(--source "$source")
 [[ -z "$target" ]] || args+=(--target-time "$target")
 [[ -z "$backup" ]] || args+=(--backup "$backup")
-if ! docker run --rm --user postgres --env-file "$tmpenv" -v "$volume:/var/lib/postgresql/data" --entrypoint rt-pitr "$image" \
+if ! docker run --rm --user postgres --env-file "$tmpenv" -v "$volume:/var/lib/postgresql/data" ${file_mounts[@]+"${file_mounts[@]}"} --entrypoint rt-pitr "$image" \
     prepare /var/lib/postgresql/data "${args[@]}"; then
   docker volume rm "$volume" >/dev/null 2>&1 || true
   die "не удалось подготовить восстановление (причина выше)"
@@ -93,7 +108,7 @@ fi
 
 echo "▸ контейнер $name: запуск восстановления"
 run=(docker run -d --name "$name" --user postgres --env-file "$tmpenv" --memory "$memory" --label rt.pitr=1
-     -v "$volume:/var/lib/postgresql/data" --entrypoint rt-pitr)
+     -v "$volume:/var/lib/postgresql/data" ${file_mounts[@]+"${file_mounts[@]}"} --entrypoint rt-pitr)
 [[ -z "$port" ]] || run+=(-p "127.0.0.1:$port:5432")
 "${run[@]}" "$image" serve /var/lib/postgresql/data >/dev/null
 

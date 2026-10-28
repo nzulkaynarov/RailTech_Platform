@@ -31,7 +31,8 @@ usage() {
 или merge меняют ключ, и задание идёт заново. Провал удаляет штамп. Не штампуются: crm-audit (база уязвимостей меняется сама).
 
 Задания:
-  gitleaks          секреты в истории текущей ветки (.gitleaks.toml, legacy/ в allowlist) и ссылки документации
+  gitleaks          секреты в истории текущей ветки (.gitleaks.toml, legacy/ в allowlist), ссылки документации,
+                    тесты сборщика «Что нового» и мягкая проверка помощи (scripts/tests, scripts/help_freshness.py)
   crm               make check-crm (ruff, mypy, eslint, prettier, tsc, unit) + OpenAPI CRM (packages/contracts/openapi/crm.yaml) без диффа
   contracts         make contracts (в т. ч. совместимость событий и oasdiff по OpenAPI с точкой ответвления от origin/main) + чистый generated
   tokens            make -C packages/ui-tokens check
@@ -133,6 +134,8 @@ stage_gitleaks() {
     return 1
   fi
   (cd "$ROOT" && scripts/check-doc-links.sh)   # как шаг задания gitleaks в ci.yml (DOCS-1)
+  # W-REL, как шаг задания gitleaks в ci.yml: тесты сборщика «Что нового» и мягкая проверка помощи (предупреждения, не сбой)
+  (cd "$ROOT" && python3 -m unittest discover -s scripts/tests && python3 scripts/help_freshness.py --base origin/main)
 }
 
 stage_crm() {

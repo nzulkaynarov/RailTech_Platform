@@ -71,6 +71,7 @@ jobs:
       checks: read  # проверка «CI ok» на sha (check-runs)
     outputs:
       sha: ${{ steps.ver.outputs.sha }}
+      date: ${{ steps.ver.outputs.date }}
       owner: ${{ steps.ver.outputs.owner }}
       action: ${{ steps.ver.outputs.action }}
       push: ${{ steps.ver.outputs.push }}
@@ -95,6 +96,7 @@ jobs:
           if [ "$action" = "deploy" ]; then push=true; else push=false; fi
           {
             echo "sha=$sha"
+            echo "date=$(date -u +%Y-%m-%d)"
             echo "action=$action"
             echo "push=$push"
             echo "owner=${GITHUB_REPOSITORY_OWNER,,}"
@@ -185,7 +187,11 @@ jobs:
         with:
           context: ${{ matrix.context }}
           build-contexts: ${{ matrix.contexts }}
-          build-args: ${{ matrix.args }}
+          # BFF получает sha и дату сборки — версия «О системе» (W-REL); пустые строки build-push-action пропускает.
+          build-args: |
+            ${{ matrix.args }}
+            ${{ matrix.image == 'rt-platform-bff' && format('PLATFORM_BUILD_SHA={0}', needs.prepare.outputs.sha) || '' }}
+            ${{ matrix.image == 'rt-platform-bff' && format('PLATFORM_BUILD_DATE={0}', needs.prepare.outputs.date) || '' }}
           target: ${{ matrix.target }}
           # push: false (режим build) — образ только собирается: ветка задачи не кладёт в GHCR образы с тегом не из main
           push: ${{ needs.prepare.outputs.push == 'true' }}
@@ -203,6 +209,10 @@ jobs:
     permissions:
       contents: read
       packages: write
+    # Для «Что нового» (job release-notes, W-REL): прежний тег на VPS 1 и решение «выкладка пропущена».
+    outputs:
+      previous: ${{ steps.already.outputs.previous }}
+      skip: ${{ steps.already.outputs.skip }}
     env:
       DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
       DEPLOY_USER: ${{ vars.DEPLOY_USER }}
@@ -262,6 +272,7 @@ jobs:
           # shellcheck disable=SC2029
           cur="$(ssh app "cat /opt/rt/state/current_tag 2>/dev/null || true")" || cur=""   # нет связи - не пропускаем, выкладываем
           cur="$(tr -d '[:space:]' <<<"$cur")"
+          echo "previous=$cur" >> "$GITHUB_OUTPUT"
           decision="$(bash infra/deploy/should-deploy.sh "$TAG" "$cur")"
           echo "sha $TAG, current_tag на VPS 1: ${cur:-<пусто>} - решение: $decision"
           if [ "$EVENT_NAME" = workflow_run ]; then
@@ -353,6 +364,71 @@ jobs:
       - name: Выход из GHCR на сервере
         if: always()
         run: ssh app "docker logout ghcr.io" || true
+
+  # «Что нового» (W-REL): после успешной выкладки — черновик записи docs/kb/help/changelog/<дата>.md из строк «Для пользователей»
+  # PR, влитых с прошлого тега (scripts/release_notes.py). Бот в main не пишет: запись уходит черновым PR в ветке
+  # release-notes/<дата>-<sha>; архитектор правит формулировки и переводит PR в «Ready for review» — CI запускается от
+  # человека (события GITHUB_TOKEN workflows не запускают), а дальше обычные правила main. Нет строк — PR нет. Сбой этой job
+  # выкладку не отменяет (continue-on-error): запись всегда можно собрать вручную тем же скриптом. Если в репозитории не
+  # разрешено «Allow GitHub Actions to create … pull requests», черновик остаётся артефактом прогона и в сводке job.
+  release-notes:
+    name: «Что нового» — черновик записи
+    needs: [prepare, deploy]
+    if: needs.prepare.outputs.action == 'deploy' && needs.deploy.result == 'success' && needs.deploy.outputs.skip != 'true' && needs.deploy.outputs.previous != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    continue-on-error: true
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.prepare.outputs.sha }}
+          fetch-depth: 0
+
+      - name: Запись из строк «Для пользователей»
+        id: notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FROM: ${{ needs.deploy.outputs.previous }}
+          TO: ${{ needs.prepare.outputs.sha }}
+        run: |
+          day="$(date -u +%Y-%m-%d)"
+          python3 scripts/release_notes.py --from "$FROM" --to "$TO" --repo "$GITHUB_REPOSITORY" --date "$day" \
+            --out-dir docs/kb/help/changelog | tee notes.log
+          file="docs/kb/help/changelog/$day.md"
+          if git status --porcelain -- "$file" | grep -q .; then
+            node apps/platform/web/scripts/sync-kb-docs.mjs   # копия для сборки web (тест changelog.test.ts)
+            { echo "## Черновик «Что нового» $day"; echo; cat "$file"; } >> "$GITHUB_STEP_SUMMARY"
+            echo "file=$file" >> "$GITHUB_OUTPUT"
+            echo "day=$day" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Артефакт черновика
+        if: steps.notes.outputs.file != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-notes-${{ steps.notes.outputs.day }}
+          path: ${{ steps.notes.outputs.file }}
+
+      - name: Черновой PR с записью
+        if: steps.notes.outputs.file != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DAY: ${{ steps.notes.outputs.day }}
+          SHA: ${{ needs.prepare.outputs.sha }}
+        run: |
+          branch="release-notes/$DAY-${SHA:0:7}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$branch"
+          git add docs/kb/help/changelog apps/platform/web/src/generated/help-articles
+          git commit -m "docs: «Что нового» $DAY — черновик из строк «Для пользователей» (W-REL)"
+          git push origin "$branch"
+          body="Черновик записи «Что нового» после выкладки ${SHA:0:7} (deploy.yml, job release-notes). Поправьте заголовок и формулировки (человеческим языком, для кого), затем «Ready for review» — CI запустится. Пустое или лишнее — закройте PR."
+          gh pr create --draft --base main --head "$branch" --title "docs: «Что нового» $DAY" --body "$body" \
+            || echo "::warning::PR не создан (нет права Actions создавать PR?) — ветка $branch запушена, черновик — в артефакте прогона"
 
   rollback:
     if: github.event_name == 'workflow_dispatch' && inputs.action == 'rollback'
