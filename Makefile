@@ -19,11 +19,15 @@ help: ## Список целей
 # --- Проверки --------------------------------------------------------------------
 
 .PHONY: check
-check: docs-links check-crm check-erp check-cabinet check-platform check-eds check-rt-bus ## Проверки всех приложений, rt-bus (lint + typecheck + unit) и ссылок документации
+check: docs-links check-crm check-erp check-cabinet check-platform check-eds check-rt-bus check-rt-docs ## Проверки всех приложений, rt-bus, rt-docs (lint + typecheck + тесты) и ссылок документации
 
 .PHONY: docs-links
-docs-links: ## Ссылки на документацию целы и ведут в docs/ (scripts/check-doc-links.sh, ORCHESTRATOR §3 п. 17)
+docs-links: ## Ссылки на документацию целы и ведут в docs/, ID строк BACKLOG уникальны (scripts/check-doc-links.sh, ORCHESTRATOR §3 п. 17)
 	scripts/check-doc-links.sh
+
+.PHONY: docs-backlog
+docs-backlog: ## Сводка docs/BACKLOG.md: всего, по приоритету и типу (счётчики в файле руками не ведутся — scripts/backlog.py)
+	python3 scripts/backlog.py
 
 .PHONY: check-crm
 check-crm: ## CRM: ruff, mypy, eslint, tsc, pytest, vitest (apps/crm/Makefile)
@@ -48,6 +52,10 @@ check-eds: ## EDS: ruff, mypy --strict, pytest на PostgreSQL — миграц�
 .PHONY: check-rt-bus
 check-rt-bus: ## Библиотека шины: ruff, mypy, миграция Django, pytest на PostgreSQL (packages/rt-bus/Makefile; без RT_BUS_TEST_DATABASE_URL — одноразовый postgres:17 в Docker)
 	$(MAKE) -C packages/rt-bus check
+
+.PHONY: check-rt-docs
+check-rt-docs: ## Документы (rt-docs): ruff, mypy, pytest с эталонными PDF в одноразовом контейнере (packages/rt-docs/Makefile; docker/test.Dockerfile, сеть выключена)
+	$(MAKE) -C packages/rt-docs check
 
 .PHONY: tokens
 tokens: ## Токены дизайна: tokens.json → dist/, копии в apps/crm (tokens.generated.ts), apps/cabinet (tokens.generated.css), apps/platform (tokens.generated.ts)
@@ -135,6 +143,7 @@ deploy-check: ## Проверка конфигурации прода без з�
 	@bash $(INFRA)/deploy/tests/reset-prod-test.sh
 	@bash $(INFRA)/deploy/tests/bus-contracts-image-test.sh
 	@bash $(INFRA)/deploy/tests/crm-backup-source-test.sh
+	@bash $(INFRA)/deploy/tests/crm-status-sources-test.sh
 	@bash $(INFRA)/deploy/tests/telegram-webhook-url-test.sh
 	@bash $(INFRA)/deploy/tests/crm-bot-test.sh
 	@bash $(INFRA)/deploy/tests/cpu-baseline-test.sh

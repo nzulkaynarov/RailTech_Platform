@@ -56,9 +56,18 @@ describe("SectionStubPage · раздел с мостом", () => {
     expect(within(page).getByText("Когда появится: в ближайшем обновлении.")).toBeVisible();
   });
 
+  it("«Каналы связи» отсылают в «Настройки · Telegram-бот», а не в «Подключения» (W15-G-8)", async () => {
+    signInAs("all@demo.example");
+    renderApp("/crm/channels");
+    const page = await main();
+    const open = await within(page).findByRole("link", { name: /Открыть «Telegram-бот»/ });
+    expect(open).toHaveAttribute("href", "/admin/bot");
+    expect(page).not.toHaveTextContent("Подключения");
+  });
+
   it("ни «пока нет», ни «фаза Pn» нет ни на одной заглушке", async () => {
     signInAs("all@demo.example");
-    for (const path of ["/crm/leads", "/crm/clients", "/erp/calc", "/chats"]) {
+    for (const path of ["/crm/leads", "/crm/clients", "/erp/stock", "/chats"]) {
       renderApp(path);
       await main();
       const text = document.body.textContent;

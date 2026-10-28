@@ -8,6 +8,7 @@ from typing import Any, Final
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.domain.platform_links import LinkBase
 from app.models.auth import Role, User, UserRole
 from app.models.kb import Product
 from app.models.leads import Conversation, Lead, Message, TelegramIdentity
@@ -20,13 +21,12 @@ from app.services.channel_card import CardData
 MENTION_CAP: Final = 5
 
 
-def lead_link(cfg: AppSettings, lead_id: int) -> str:
-    url = f"{cfg.company.crm_base_url.rstrip('/')}/leads/{lead_id}"
-    return tx.LEAD_LINK.format(url=escape(url, quote=True), lead_id=lead_id)
+def lead_link(links: LinkBase, lead_id: int) -> str:
+    return tx.LEAD_LINK.format(url=escape(links.lead(lead_id), quote=True), lead_id=lead_id)
 
 
 async def load_card(
-    session: AsyncSession, escalation_id: int, cfg: AppSettings
+    session: AsyncSession, escalation_id: int, cfg: AppSettings, links: LinkBase
 ) -> tuple[Escalation, CardData] | None:
     escalation = await session.get(Escalation, escalation_id)
     if escalation is None:
@@ -56,7 +56,7 @@ async def load_card(
         taken_at=escalation.taken_at,
         sla_overdue=escalation.sla_notified_at is not None,
         last_lead_message=await _last_lead_text(session, lead.id),
-        crm_url=f"{cfg.company.crm_base_url.rstrip('/')}/leads/{lead.id}",
+        crm_url=links.lead(lead.id),
         timezone=cfg.business_hours.timezone,
         kb_gap_streak=cfg.escalation.kb_gap_streak,
         created_at=escalation.created_at,

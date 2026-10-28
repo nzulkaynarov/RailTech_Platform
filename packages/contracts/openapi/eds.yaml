@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — EDS API (электронный документооборот)
-  version: 0.5.0
+  version: 0.4.0
   summary: Пространство `/api/v1/` сервиса EDS — вызывает BFF Платформы от имени сотрудника.
   description: |
     Контракт сервиса EDS (`apps/eds`, ADR-0015; `docs/runbooks/wave12-eds-c1.md` §2). EDS — владелец реестра документов и
@@ -21,7 +21,7 @@ info:
 
     **0.4.0 (D1-5).** Добавляющее изменение: `PATCH /api/v1/documents/{document_id}` — правка черновика (или возвращённого документа) без отправки.
 
-    **0.5.0 (D2-4).** «Оплачено» для служебной записки с суммой: `POST /api/v1/documents/{document_id}/payment` (право `payments.confirm`) —
+    **Оплата служебной записки (D2-4).** «Оплачено» для служебной записки с суммой: `POST /api/v1/documents/{document_id}/payment` (право `payments.confirm`) —
     дата, сумма и платёжка бухгалтера; закрывает шаг «Бухгалтер», статус `to_accountant` → `paid`, журнал `document.paid`.
     `Document.payment` (факт оплаты или `null`), `DocumentListItem.files_count` и `paid_on`. Решение `approve` на шаге бухгалтера через
     `/approvals/{id}/decision` теперь отклоняется (409, `details.reason = payment_required`) и не входит в `allowed_decisions`:
@@ -432,6 +432,7 @@ paths:
       summary: Документы (служебные записки, заявления, отчёты, исходящие письма)
       description: |
         Без `registry.read` — только документы, где сотрудник автор или участник маршрута; с `registry.read` — все.
+        В любом случае чужой черновик (`draft`) виден только автору, а исходящее письмо (`letter_out`) — только с `letters.read`.
       x-rt-permissions: [memos.create, memos.approve, approvals.decide, registry.read]
       parameters:
         - name: kind
@@ -513,7 +514,9 @@ paths:
       tags: [documents]
       operationId: getDocument
       summary: Карточка документа
-      description: Автор, участник маршрута или сотрудник с `registry.read`; иначе 404 `NOT_FOUND` (существование не раскрывается).
+      description: |
+        Автор, участник маршрута или сотрудник с `registry.read`; иначе 404 `NOT_FOUND` (существование не раскрывается).
+        Чужой черновик — всегда 404; исходящее письмо — 404 без `letters.read`.
       x-rt-permissions: [memos.create, memos.approve, approvals.decide, registry.read]
       parameters:
         - $ref: '#/components/parameters/DocumentId'
@@ -536,7 +539,7 @@ paths:
       summary: Править черновик или возвращённый документ (без отправки)
       description: |
         Только автор; `memo`, `application`, `report` — из `draft` и `returned`, `letter_out` — из `draft`; другой статус —
-        409 `CONFLICT` (`details.reason = invalid_state`), не автор — 403 (`details.reason = not_author`). Меняются только
+        409 `CONFLICT` (`details.reason = invalid_state`), не автор — 403 (`details.reason = not_author`; чужой черновик не виден вовсе — 404). Меняются только
         переданные поля (`amount: null` и `due_date: null` очищают значение); `file_ids` привязывает файлы (уже привязанные
         к этому документу пропускаются, снять вложение нельзя); `erp_deal_id` — связь с проектом (заявкой) ERP. Версия
         не растёт (растёт при повторной отправке после возврата), номер и маршрут не меняются; в журнал — `document.updated`.
@@ -610,7 +613,7 @@ paths:
     post:
       tags: [documents]
       operationId: payDocument
-      summary: «Оплачено» — оплата согласованной служебной записки (0.5.0, D2-4)
+      summary: «Оплачено» — оплата согласованной служебной записки (D2-4)
       description: |
         Бухгалтер фиксирует оплату записки с суммой, которую согласовал директор (SPEC-v3 §3.2 п. 5): `paid_on` — дата платежа
         (не позже сегодняшней по `Asia/Tashkent`), `amount` — сумма (валюта записки, не больше согласованной суммы),
@@ -656,6 +659,8 @@ paths:
       description: |
         `mine=1` (по умолчанию) — маршруты, текущий шаг которых ждёт этого сотрудника (назначен по `crm_user_id` или он
         держит право шага). `mine=0` — без `registry.read` маршруты, где сотрудник автор или участник; с `registry.read` — все.
+        Участник маршрута видит его всегда; остальные — маршрут документа, только если виден сам документ (исходящее письмо
+        без `letters.read` и чужой черновик скрыты и при `registry.read`); КП — с `registry.read`.
       x-rt-permissions: [memos.create, memos.approve, approvals.decide, payments.confirm, registry.read]
       parameters:
         - name: mine
@@ -705,6 +710,7 @@ paths:
       summary: Карточка маршрута (шаги, чек-лист КП, снимок КП)
       description: |
         Автор объекта, участник маршрута (в том числе держатель права шага) или сотрудник с `registry.read`; иначе 404.
+        Маршрут документа виден неучастнику, только если ему виден сам документ (D1-10); участнику — всегда.
         Снимок КП (`quote`) с себестоимостью и маржой — только тем, кто решает шаг маршрута КП (`approvals.decide`).
       x-rt-permissions: [memos.create, memos.approve, approvals.decide, payments.confirm, registry.read]
       parameters:
@@ -739,7 +745,7 @@ paths:
         При одобрении КП присваивается `ИСХ-NNN/ГГ`, выбранные `channels` уходят в событие. Маршрут закрыт — 409
         (`details.reason = route_closed`). Каждое решение — строка журнала и `approval.decided`.
         Шаг «Бухгалтер» служебной записки с суммой: `approve` недоступно — 409 `CONFLICT`, `details.reason = payment_required`
-        (оплату фиксирует `payDocument`: дата, сумма, платёжка; 0.5.0); `return` и `reject` работают.
+        (оплату фиксирует `payDocument`: дата, сумма, платёжка); `return` и `reject` работают.
       x-rt-permissions: [memos.approve, approvals.decide, payments.confirm]
       parameters:
         - $ref: '#/components/parameters/ApprovalId'
@@ -775,6 +781,12 @@ paths:
       description: |
         Единый реестр с вкладками по типу и фильтрами статус · период · ответственный · клиент. КП — маршруты одобрения
         (номер КП ERP); договоры, счета и акты ERP появятся, когда EDS начнёт вести их проекции (вне C1).
+
+        `registry.read` открывает сам реестр, но он **не шире прав на вид документа**: входящие и исходящие письма
+        (`letter_in`, `letter_out`) попадают в выдачу только у сотрудника с `letters.read`; черновики (`status = draft`) —
+        только у автора; служебные записки, заявления и отчёты — по видимости документа, КП — по видимости маршрута.
+        Отбор идёт до курсора и ограничения страницы: скрытые строки не занимают место на странице. Вкладка, на которую
+        у сотрудника нет прав, — `200` с пустой страницей, не `403`.
       x-rt-permissions: [registry.read]
       parameters:
         - $ref: '#/components/parameters/RegistryKind'
@@ -806,7 +818,9 @@ paths:
       tags: [registry]
       operationId: exportRegistry
       summary: Экспорт реестра с теми же фильтрами
-      description: Не больше 10 000 строк (иначе 422 `VALIDATION_FAILED`, `details.reason = export_too_large`); в журнал — `registry.export`.
+      description: |
+        Не больше 10 000 строк (иначе 422 `VALIDATION_FAILED`, `details.reason = export_too_large`); в журнал — `registry.export`.
+        Видимость строк — как у `GET /registry`: письма только с `letters.read`, чужие черновики не выгружаются.
       x-rt-permissions: [registry.export]
       parameters:
         - $ref: '#/components/parameters/RegistryKind'
@@ -899,7 +913,7 @@ paths:
       operationId: downloadFile
       summary: Скачать файл (поток)
       description: |
-        Последняя версия, или `version`. Видит тот, кому виден документ, к которому файл привязан, или загрузивший; иначе 404.
+        Последняя версия, или `version`. Видит тот, кому виден документ, к которому файл привязан (чужой черновик и исходящее письмо без `letters.read` не видны), или загрузивший; иначе 404.
       x-rt-permissions: [letters.read, memos.create, memos.approve, approvals.decide, registry.read]
       parameters:
         - $ref: '#/components/parameters/FileId'
@@ -2175,7 +2189,7 @@ components:
       type: object
       additionalProperties: false
       required: [paid_on, amount]
-      description: «Оплачено» (0.5.0) — дата и сумма платежа, платёжка бухгалтера
+      description: «Оплачено» — дата и сумма платежа, платёжка бухгалтера
       properties:
         paid_on:
           type: string
@@ -2193,7 +2207,7 @@ components:
       type: object
       additionalProperties: false
       required: [paid_on, amount, receipt_file_id, note, paid_by, recorded_at]
-      description: Факт оплаты служебной записки (0.5.0)
+      description: Факт оплаты служебной записки
       properties:
         paid_on:
           type: string
@@ -2296,11 +2310,11 @@ components:
         files_count:
           type: integer
           minimum: 0
-          description: Сколько файлов приложено к документу (0.5.0; у записки к оплате — счёт поставщика и платёжка)
+          description: Сколько файлов приложено к документу (у записки к оплате — счёт поставщика и платёжка)
         paid_on:
           type: [string, 'null']
           format: date
-          description: Дата оплаты записки (0.5.0); `null` — не оплачена
+          description: Дата оплаты записки; `null` — не оплачена
         created_at:
           type: string
           format: date-time
@@ -2400,7 +2414,7 @@ components:
           oneOf:
             - $ref: '#/components/schemas/DocumentPayment'
             - type: 'null'
-          description: Факт оплаты служебной записки (0.5.0); `null` — не оплачена
+          description: Факт оплаты служебной записки; `null` — не оплачена
         decisions:
           type: array
           items:

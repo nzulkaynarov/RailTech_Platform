@@ -138,7 +138,7 @@ SPECTACULAR_SETTINGS = {
         "Supports deal lifecycle management, quoting, product catalog (PIM), "
         "Excel imports, and real-time notifications via WebSocket."
     ),
-    "VERSION": "1.0.0",
+    "VERSION": "1.1.0",
     "CONTACT": {"name": "ERP API Support", "email": "support@example.com"},
     "LICENSE": {"name": "Proprietary"},
     "SERVE_INCLUDE_SCHEMA": False,
@@ -158,6 +158,11 @@ SPECTACULAR_SETTINGS = {
         "ContactPreferredChannelEnum": ["email", "telegram", "both"],
         "LanguageEnum": ["ru", "uz", "en"],
         "SecretSourceEnum": ["db", "env", "none"],
+        # D2-1 «Расчёт по заявке» (crm.serializers.calc): наборы значений с явными именами.
+        "CalcVisaStateEnum": "crm.serializers.calc.VISA_STATES",
+        "CalcStateEnum": "crm.serializers.calc.CALC_STATES",
+        "CalcLineKindEnum": "crm.serializers.calc.LINE_KINDS",
+        "CalcItemKindEnum": "crm.serializers.calc.ITEM_KINDS",
     },
     "TAGS": [
         {"name": "Auth", "description": "Login, password setup by invitation, JWT tokens"},

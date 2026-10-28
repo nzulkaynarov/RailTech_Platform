@@ -78,7 +78,7 @@ SLA_OVERDUE: Final = "⏰ <b>Срок реакции просрочен</b>"
 
 # Кнопки
 TAKE_BUTTON: Final = "Забрать"
-OPEN_BUTTON: Final = "Открыть в CRM"
+OPEN_BUTTON: Final = "Открыть"
 
 # Напоминания и сводка (HTML: ссылки — только <a href>, сырые адреса не показываются)
 SLA_REMINDER: Final = "⏰ Срок реакции просрочен: {lead} ждёт {waited}"
@@ -98,7 +98,7 @@ NEW_WEB_LEAD_DM: Final = (
 WEB_LEAD_OVERDUE_DM: Final = (
     "⏰ Запрос с сайта #{lead_id} ({who}) ждёт ответа дольше {minutes} мин — никто не взял. {link}"
 )
-CRM_OPEN: Final = '<a href="{url}">открыть в CRM</a>'
+CRM_OPEN: Final = '<a href="{url}">открыть</a>'
 
 # Итоги дня (в канал; стоимость моделей — только админам в личку)
 REPORT_TITLE: Final = "📊 Итоги дня {day}"

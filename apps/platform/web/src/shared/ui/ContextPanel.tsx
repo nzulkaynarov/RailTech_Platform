@@ -32,7 +32,8 @@ function PanelBody({
   hideLabel,
   onHide,
   children,
-}: ContextPanelProps) {
+  withHide = true,
+}: ContextPanelProps & { withHide?: boolean }) {
   // Кнопка «›» лежит рядом с `Tabs`, а не в `tabBarExtraContent`: antd вешает `role="tablist"` на всю полосу вместе с
   // дополнительным содержимым, а внутри `tablist` допустимы только вкладки (axe: aria-required-children). Содержимое
   // отдаём активной панели antd: свой `tabpanel` рядом с ней дублировал бы id и роль.
@@ -50,15 +51,17 @@ function PanelBody({
           children: tab.key === activeTab ? <div style={{ padding: 16 }}>{children}</div> : null,
         }))}
       />
-      <button
-        type="button"
-        className="pf-icon-btn pf-focusable pf-panel-hide"
-        aria-label={hideLabel}
-        onClick={onHide}
-        style={{ width: 28, height: 28 }}
-      >
-        <ChevronRightIcon />
-      </button>
+      {withHide ? (
+        <button
+          type="button"
+          className="pf-icon-btn pf-focusable pf-panel-hide"
+          aria-label={hideLabel}
+          onClick={onHide}
+          style={{ width: 28, height: 28 }}
+        >
+          <ChevronRightIcon />
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -113,6 +116,47 @@ export function ContextPanelDrawer({
       id={props.id}
     >
       <PanelBody {...props} />
+    </Drawer>
+  );
+}
+
+/**
+ * < 768 px для разделов с `sheetOnMobile` (B-020): боковое окно — лист на весь экран снизу с заголовком и кнопкой
+ * «Закрыть» (UX-оценка P0-4: на телефоне окно справа узкое и закрывает основное наполовину). Вкладки — те же.
+ */
+export function ContextPanelSheet({
+  open,
+  onClose,
+  title,
+  closeLabel,
+  ...props
+}: ContextPanelProps & {
+  open: boolean;
+  onClose: () => void;
+  /** Заголовок листа: подпись активной вкладки или объекта («Задание · ЗВ-2026-104») */
+  title: string;
+  /** Подпись кнопки закрытия: «Закрыть» */
+  closeLabel: string;
+}) {
+  return (
+    <Drawer
+      open={open}
+      onClose={onClose}
+      placement="bottom"
+      height="100%"
+      closeIcon={null}
+      title={title}
+      extra={
+        <button type="button" className="pf-sheet-close pf-focusable" onClick={onClose}>
+          {closeLabel}
+        </button>
+      }
+      styles={{ body: { padding: 0 }, header: { padding: "12px 16px" } }}
+      aria-label={props.label}
+      id={props.id}
+      className="pf-panel-sheet"
+    >
+      <PanelBody {...props} withHide={false} />
     </Drawer>
   );
 }

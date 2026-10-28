@@ -8,6 +8,9 @@
 #   make-env-prod.sh s3-keys [файл]    только ключи S3 на сервис (S0-9): дописывает недостающие S3_*_ACCESS_KEY/SECRET_KEY, делает прежний
 #                                      S3_ACCESS_KEY/S3_SECRET_KEY корневым, генерирует случайные значения; остальное в файле не трогает
 #                                      (в отличие от init не возвращает переменные VPS 2, удалённые drop-db-only). Его же зовёт reset-prod.sh
+#   make-env-prod.sh ensure-secrets [файл] только недостающие автоматические секреты (сейчас REDIS_PROBE_PASSWORD — пароль пробы «Состояния
+#                                      системы», W15-H8b): отсутствующий, пустой или CHANGE_ME создаётся случайным, заданный не меняется;
+#                                      остальное в файле не трогает. Его зовёт deploy.sh на каждом деплое (руками секрет не вписывают)
 #   make-env-prod.sh extract-s3 [файл] печатает 4 переменные ключей S3 для VPS 2 (WAL_S3_*, BACKUP_RUSTFS_*) из ключей сервисов
 #                                      S3_WAL_* и S3_BACKUP_* — для смены ключей, когда extract-db уже недоступен (после drop-db-only)
 # Значения секретов скрипт на экран не печатает (extract-db печатает — перенаправляйте в файл).
@@ -97,6 +100,19 @@ case "$cmd" in
     done <"$file"
     s3_mirror_all "$tmp"   # копии для VPS 2 обновляются, только если они уже есть в файле (drop-db-only их убрал — не возвращаем)
     cat "$tmp" >"$file"; chmod 600 "$file"
+    ;;
+  ensure-secrets)
+    command -v openssl >/dev/null || { echo "openssl не найден" >&2; exit 1; }
+    [[ -f "$file" ]] || { echo "нет $file — сначала init" >&2; exit 1; }
+    for name in REDIS_PROBE_PASSWORD; do
+      current="$(grep -E "^${name}=" "$file" | tail -n1 | cut -d= -f2- || true)"
+      [[ -z "$current" || "$current" == CHANGE_ME ]] || continue
+      tmp="$(mktemp)"
+      grep -vE "^${name}=" "$file" >"$tmp" || true
+      printf '%s=%s\n' "$name" "$(openssl rand -hex 24)" >>"$tmp"
+      cat "$tmp" >"$file"; rm -f "$tmp"; chmod 600 "$file"
+      echo "  ✓ ${name} сгенерирован"
+    done
     ;;
   extract-s3)
     for pair in WAL_S3_ACCESS_KEY:S3_WAL_ACCESS_KEY WAL_S3_SECRET_KEY:S3_WAL_SECRET_KEY BACKUP_RUSTFS_ACCESS_KEY:S3_BACKUP_ACCESS_KEY BACKUP_RUSTFS_SECRET_KEY:S3_BACKUP_SECRET_KEY; do

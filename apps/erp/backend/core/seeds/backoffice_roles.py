@@ -191,23 +191,6 @@ def grant_finance_rates(apps, schema_editor):
                 role.save(update_fields=["permissions"])
 
 
-# D2-4 (миграция accounts/0011): новый код `finance.view` — чтение счетов и оплат без права действовать. Системным ролям
-# «Финансы» и «Руководитель» своей компании; каталог после 0011 = ALL + ADDED_0004 + ADDED_0011.
-ADDED_0011 = ["finance.view"]
-ROLE_GRANTS_0011 = {"FINANCE": ["finance.view"], "HEAD": ["finance.view"]}
-
-
-def grant_finance_view(apps, schema_editor):
-    """Догнать системные роли «Финансы» и «Руководитель» до шаблона с `finance.view`."""
-    CompanyRole = apps.get_model("accounts", "CompanyRole")
-    for code, added in ROLE_GRANTS_0011.items():
-        for role in CompanyRole.objects.filter(code=code, is_system=True):
-            missing = [perm for perm in added if perm not in (role.permissions or [])]
-            if missing:
-                role.permissions = list(role.permissions or []) + missing
-                role.save(update_fields=["permissions"])
-
-
 def seed_backoffice_roles(apps, schema_editor):
     """Каталог прав M1-ERP-05: системные роли своей компании, переименование кодов, роли участникам."""
     for company_id in _own_company_ids(apps):
@@ -245,3 +228,42 @@ def prune_unknown_snapshot_permissions(apps, schema_editor):
         snapshot["permissions"] = _known(permissions)
         mapping.provision_snapshot = snapshot
         mapping.save(update_fields=["provision_snapshot"])
+
+
+# D2-1 (миграция accounts/0011): виза строки расчёта по типу позиции — `quote.visa_goods` и `quote.visa_services`
+# (ADR-0012 п. 6). Системные роли «Расчёт» и «Руководитель» своей компании получают оба кода. Замороженная копия, как
+# таблицы выше: каталог после 0011 = CATALOG_0010 + ADDED_0011, шаблоны = BACKOFFICE_ROLES + ROLE_GRANTS_0004 +
+# ROLE_GRANTS_0011 (сверяет test_backoffice_roles).
+ADDED_0011 = ["quote.visa_goods", "quote.visa_services"]
+ROLE_GRANTS_0011 = {"CALCULATION": ADDED_0011, "HEAD": ADDED_0011}
+CATALOG_0011 = CATALOG_0010 + ADDED_0011
+
+
+def grant_calc_visas(apps, schema_editor):
+    """Догнать системные роли «Расчёт» и «Руководитель» до шаблона с визами расчёта."""
+    CompanyRole = apps.get_model("accounts", "CompanyRole")
+    for code, added in ROLE_GRANTS_0011.items():
+        for role in CompanyRole.objects.filter(code=code, is_system=True):
+            missing = [perm for perm in added if perm not in (role.permissions or [])]
+            if missing:
+                role.permissions = list(role.permissions or []) + missing
+                role.save(update_fields=["permissions"])
+
+
+# D2-4 (миграция accounts/0012): новый код `finance.view` — чтение счетов и оплат без права действовать. Системным ролям
+# «Финансы» и «Руководитель» своей компании. Замороженная копия: каталог после 0012 = CATALOG_0011 + ADDED_0012,
+# шаблоны = BACKOFFICE_ROLES + ROLE_GRANTS_0004 + ROLE_GRANTS_0011 + ROLE_GRANTS_0012 (сверяет test_backoffice_roles).
+ADDED_0012 = ["finance.view"]
+ROLE_GRANTS_0012 = {"FINANCE": ADDED_0012, "HEAD": ADDED_0012}
+CATALOG_0012 = CATALOG_0011 + ADDED_0012
+
+
+def grant_finance_view(apps, schema_editor):
+    """Догнать системные роли «Финансы» и «Руководитель» до шаблона с `finance.view`."""
+    CompanyRole = apps.get_model("accounts", "CompanyRole")
+    for code, added in ROLE_GRANTS_0012.items():
+        for role in CompanyRole.objects.filter(code=code, is_system=True):
+            missing = [perm for perm in added if perm not in (role.permissions or [])]
+            if missing:
+                role.permissions = list(role.permissions or []) + missing
+                role.save(update_fields=["permissions"])

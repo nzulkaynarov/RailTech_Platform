@@ -51,7 +51,7 @@ export function ProofList({ card }: { card: PaymentCard }) {
             >
               {proof.original_name}
             </a>
-            {/* Платёжка без подтверждения у уже оплаченного счёта — лишняя: ждать нечего (отклонение — B-088) */}
+            {/* Платёжка без подтверждения у уже оплаченного счёта — лишняя: ждать нечего (отклонение — B-D24-7) */}
             {proof.status === "PENDING" && card.status === "paid" ? (
               <StatusTag tone="default">{t("proofs.state.EXTRA")}</StatusTag>
             ) : (
@@ -175,7 +175,7 @@ function AttachForm({ card }: { card: PaymentCard }) {
   );
 }
 
-/** «Запросить платёжку»: шаблон сообщения клиенту и отметка в журнале счёта (автоотправки нет — хвост B-081). */
+/** «Запросить платёжку»: шаблон сообщения клиенту и отметка в журнале счёта (автоотправки нет — хвост B-D24-1). */
 function RequestForm({ card }: { card: PaymentCard }) {
   const { t } = useTranslation("payments");
   const { date, money } = useFormat();

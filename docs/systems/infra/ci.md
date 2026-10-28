@@ -1,10 +1,11 @@
 # CI ансамбля — пояснения к `.github/workflows/ci.yml`
-Статус: действует · Владелец: лид · Обновлено: 2026-10-27 (волна 14, W14-S2)
+Статус: действует · Владелец: лид · Обновлено: 2026-10-28 (D-DOC1: задание rt-docs)
 
 Workflow ансамбля — `.github/workflows/ci.yml` (GitHub читает только корневой `.github/`). Здесь — пояснения. Цель волны 14 — ответ по PR
 не дольше 10 минут (`docs/runbooks/wave14-speed.md`): задания приложения идут параллельно, а запускается только то, что затронуто правкой.
 
-- **Ссылки на документацию** — `scripts/check-doc-links.sh` в задании gitleaks (DOCS-1): битые ссылки и пути вне `docs/` роняют CI.
+- **Ссылки на документацию** — `scripts/check-doc-links.sh` в задании gitleaks (DOCS-1): битые ссылки и пути вне `docs/` роняют CI; там же
+  `scripts/backlog.py --check` — ID строк `docs/BACKLOG.md` уникальны и по формату (два PR с одним ID git сливает молча; 2026-10-28).
 - **gitleaks** — всегда, по истории ветки, с `.gitleaks.toml` (`legacy/` в allowlist). PR, где изменена только документация (кроме `docs/kb`),
   запускает только его.
 - **`ci-ok`** — единственная обязательная проверка для защиты `main`: красная, если любой job упал или отменён; пропущенные (нет изменений) —
@@ -44,6 +45,7 @@ compose). Задание `packages · contracts` идёт на любую пра
 | `apps/platform/**` | Platform check, e2e\* (3 шарда) |
 | `apps/eds/**` | EDS |
 | `packages/rt-bus/**` | rt-bus, contracts, CRM, ERP, EDS, Platform (библиотека вшита в образы) |
+| `packages/rt-docs/**` | rt-docs\*, contracts (пакет пока не вшит в образы; EDS и ERP подключат его в D-DOC2, D-DOC3 — тогда их фильтры получат путь) |
 | `packages/ui-tokens/**` | contracts, CRM, ERP, Cabinet, Platform |
 | `packages/contracts/openapi/crm.yaml` | contracts, CRM, Cabinet (типы формы лида), Platform (модели CRM в BFF). **ERP не запускается** |
 | `…/openapi/erp-portal.yaml` | contracts, ERP, Cabinet |
@@ -55,6 +57,7 @@ compose). Задание `packages · contracts` идёт на любую пра
 | `…/mcp-tools.json` | contracts, CRM (инструменты агента), ERP (MCP-сервер) |
 | `…/events/**`, `…/bus/**` | contracts, rt-bus, CRM, ERP, EDS, Platform (схемы и подписки читает каждый участник шины и вшивает в образ) |
 | `…/examples/pairing-bootstrap.json` | contracts, CRM, ERP |
+| `…/documents/**` | contracts (ajv, `test_documents.py`, `documents_compat`), rt-docs\* (схема и примеры — тестовые данные пакета) |
 | `…/generated/python/**` | contracts, CRM, EDS (`rt_contracts` — path-зависимость) |
 | Прочее в `packages/contracts` (`client-statuses.*`, `mcp-tools.schema.json`, `examples/webhook-signature-v2.json`, `generated/*.d.ts`, `generated/crm/**`, `Makefile`, `scripts`, `tests`, `redocly*`, lock-файлы) | только contracts |
 | `infra/**`, `scripts/**`, `Makefile`, `.env.example` | infra (compose, caddy) |
@@ -76,6 +79,9 @@ compose). Задание `packages · contracts` идёт на любую пра
 - ERP: три параллельных задания вместо одного `make check-erp` — «lint & vitest» (`make -C apps/erp lint test-frontend`), «pytest»
   (`make -C apps/erp test-backend`), «миграции и схема» (`--migration-check`, `openapi-check`). Критический путь — pytest.
 - Platform: e2e не ждёт `Platform · check` (BFF не нужен).
+- rt-docs (D-DOC1, подключено с разрешения владельца 2026-10-28): ruff и mypy на раннере, pytest — в одноразовом контейнере
+  `packages/rt-docs/docker/test.Dockerfile` (pango, harfbuzz; базовый образ по digest; сеть выключена), тот же образ, что локально, —
+  число страниц эталонов совпадает. Тяжёлое: на push в `main` не идёт (сборка образа ≈ 1–2 мин), только на PR, ночью и вручную.
 - rt-bus: три прогона pytest (ядро + SQLAlchemy, Django на psycopg2, Django на psycopg 3) идут одновременно на одном PostgreSQL в
   непересекающихся базах (`rt_bus_sa`, `rt_bus_dj_psycopg2`, `rt_bus_dj_psycopg`); вывод печатается по завершении, код выхода — провал любого.
 

@@ -204,6 +204,7 @@ export interface paths {
     /**
      * Документы (служебные записки, заявления, отчёты, исходящие письма)
      * @description Без `registry.read` — только документы, где сотрудник автор или участник маршрута; с `registry.read` — все.
+     *     В любом случае чужой черновик (`draft`) виден только автору, а исходящее письмо (`letter_out`) — только с `letters.read`.
      */
     get: operations["listDocuments"];
     put?: never;
@@ -231,6 +232,7 @@ export interface paths {
     /**
      * Карточка документа
      * @description Автор, участник маршрута или сотрудник с `registry.read`; иначе 404 `NOT_FOUND` (существование не раскрывается).
+     *     Чужой черновик — всегда 404; исходящее письмо — 404 без `letters.read`.
      */
     get: operations["getDocument"];
     put?: never;
@@ -241,7 +243,7 @@ export interface paths {
     /**
      * Править черновик или возвращённый документ (без отправки)
      * @description Только автор; `memo`, `application`, `report` — из `draft` и `returned`, `letter_out` — из `draft`; другой статус —
-     *     409 `CONFLICT` (`details.reason = invalid_state`), не автор — 403 (`details.reason = not_author`). Меняются только
+     *     409 `CONFLICT` (`details.reason = invalid_state`), не автор — 403 (`details.reason = not_author`; чужой черновик не виден вовсе — 404). Меняются только
      *     переданные поля (`amount: null` и `due_date: null` очищают значение); `file_ids` привязывает файлы (уже привязанные
      *     к этому документу пропускаются, снять вложение нельзя); `erp_deal_id` — связь с проектом (заявкой) ERP. Версия
      *     не растёт (растёт при повторной отправке после возврата), номер и маршрут не меняются; в журнал — `document.updated`.
@@ -284,7 +286,7 @@ export interface paths {
     get?: never;
     put?: never;
     /**
-     * «Оплачено» — оплата согласованной служебной записки (0.5.0, D2-4)
+     * «Оплачено» — оплата согласованной служебной записки (D2-4)
      * @description Бухгалтер фиксирует оплату записки с суммой, которую согласовал директор (SPEC-v3 §3.2 п. 5): `paid_on` — дата платежа
      *     (не позже сегодняшней по `Asia/Tashkent`), `amount` — сумма (валюта записки, не больше согласованной суммы),
      *     `receipt_file_id` — платёжка, загруженная `POST /files` (привязывается к документу), `note` — необязательно.
@@ -313,6 +315,8 @@ export interface paths {
      * Маршруты согласования («На согласовании», «Черновик КП»)
      * @description `mine=1` (по умолчанию) — маршруты, текущий шаг которых ждёт этого сотрудника (назначен по `crm_user_id` или он
      *     держит право шага). `mine=0` — без `registry.read` маршруты, где сотрудник автор или участник; с `registry.read` — все.
+     *     Участник маршрута видит его всегда; остальные — маршрут документа, только если виден сам документ (исходящее письмо
+     *     без `letters.read` и чужой черновик скрыты и при `registry.read`); КП — с `registry.read`.
      */
     get: operations["listApprovals"];
     put?: never;
@@ -333,6 +337,7 @@ export interface paths {
     /**
      * Карточка маршрута (шаги, чек-лист КП, снимок КП)
      * @description Автор объекта, участник маршрута (в том числе держатель права шага) или сотрудник с `registry.read`; иначе 404.
+     *     Маршрут документа виден неучастнику, только если ему виден сам документ (D1-10); участнику — всегда.
      *     Снимок КП (`quote`) с себестоимостью и маржой — только тем, кто решает шаг маршрута КП (`approvals.decide`).
      */
     get: operations["getApproval"];
@@ -365,7 +370,7 @@ export interface paths {
      *     При одобрении КП присваивается `ИСХ-NNN/ГГ`, выбранные `channels` уходят в событие. Маршрут закрыт — 409
      *     (`details.reason = route_closed`). Каждое решение — строка журнала и `approval.decided`.
      *     Шаг «Бухгалтер» служебной записки с суммой: `approve` недоступно — 409 `CONFLICT`, `details.reason = payment_required`
-     *     (оплату фиксирует `payDocument`: дата, сумма, платёжка; 0.5.0); `return` и `reject` работают.
+     *     (оплату фиксирует `payDocument`: дата, сумма, платёжка); `return` и `reject` работают.
      */
     post: operations["decideApproval"];
     delete?: never;
@@ -385,6 +390,12 @@ export interface paths {
      * Реестр «Все документы» (SPEC-v3 §7.3)
      * @description Единый реестр с вкладками по типу и фильтрами статус · период · ответственный · клиент. КП — маршруты одобрения
      *     (номер КП ERP); договоры, счета и акты ERP появятся, когда EDS начнёт вести их проекции (вне C1).
+     *
+     *     `registry.read` открывает сам реестр, но он **не шире прав на вид документа**: входящие и исходящие письма
+     *     (`letter_in`, `letter_out`) попадают в выдачу только у сотрудника с `letters.read`; черновики (`status = draft`) —
+     *     только у автора; служебные записки, заявления и отчёты — по видимости документа, КП — по видимости маршрута.
+     *     Отбор идёт до курсора и ограничения страницы: скрытые строки не занимают место на странице. Вкладка, на которую
+     *     у сотрудника нет прав, — `200` с пустой страницей, не `403`.
      */
     get: operations["listRegistry"];
     put?: never;
@@ -405,6 +416,7 @@ export interface paths {
     /**
      * Экспорт реестра с теми же фильтрами
      * @description Не больше 10 000 строк (иначе 422 `VALIDATION_FAILED`, `details.reason = export_too_large`); в журнал — `registry.export`.
+     *     Видимость строк — как у `GET /registry`: письма только с `letters.read`, чужие черновики не выгружаются.
      */
     get: operations["exportRegistry"];
     put?: never;
@@ -446,7 +458,7 @@ export interface paths {
     };
     /**
      * Скачать файл (поток)
-     * @description Последняя версия, или `version`. Видит тот, кому виден документ, к которому файл привязан, или загрузивший; иначе 404.
+     * @description Последняя версия, или `version`. Видит тот, кому виден документ, к которому файл привязан (чужой черновик и исходящее письмо без `letters.read` не видны), или загрузивший; иначе 404.
      */
     get: operations["downloadFile"];
     put?: never;
@@ -1011,7 +1023,7 @@ export interface components {
       due_date?: string | null;
       file_ids?: components["schemas"]["Uuid"][];
     };
-    /** @description «Оплачено» (0.5.0) — дата и сумма платежа, платёжка бухгалтера */
+    /** @description «Оплачено» — дата и сумма платежа, платёжка бухгалтера */
     DocumentPaymentIn: {
       /** Format: date */
       paid_on: string;
@@ -1019,7 +1031,7 @@ export interface components {
       receipt_file_id?: components["schemas"]["Uuid"] | null;
       note?: string | null;
     };
-    /** @description Факт оплаты служебной записки (0.5.0) */
+    /** @description Факт оплаты служебной записки */
     DocumentPayment: {
       /** Format: date */
       paid_on: string;
@@ -1064,11 +1076,11 @@ export interface components {
       amount?: components["schemas"]["Money"] | null;
       /** Format: date */
       due_date?: string | null;
-      /** @description Сколько файлов приложено к документу (0.5.0; у записки к оплате — счёт поставщика и платёжка) */
+      /** @description Сколько файлов приложено к документу (у записки к оплате — счёт поставщика и платёжка) */
       files_count: number;
       /**
        * Format: date
-       * @description Дата оплаты записки (0.5.0); `null` — не оплачена
+       * @description Дата оплаты записки; `null` — не оплачена
        */
       paid_on: string | null;
       /** Format: date-time */
@@ -1100,7 +1112,7 @@ export interface components {
       in_reply_to?: components["schemas"]["Uuid"] | null;
       /** @description Маршрут текущего круга; `null` — не отправлялся */
       approval_id: components["schemas"]["Uuid"] | null;
-      /** @description Факт оплаты служебной записки (0.5.0); `null` — не оплачена */
+      /** @description Факт оплаты служебной записки; `null` — не оплачена */
       payment: components["schemas"]["DocumentPayment"] | null;
       decisions: components["schemas"]["DocumentDecision"][];
       journal: components["schemas"]["JournalEntry"][];

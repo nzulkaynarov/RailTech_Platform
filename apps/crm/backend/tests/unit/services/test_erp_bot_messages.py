@@ -357,6 +357,28 @@ def test_delivery_line_texts_reject_wrong_placeholders() -> None:
         )
 
 
+@pytest.mark.parametrize(
+    ("channels", "sends"),
+    [
+        (None, True),  # отправка менеджером — все каналы клиента, как прежде
+        (["telegram", "cabinet"], True),
+        (["telegram"], True),
+        (["cabinet", "email"], False),  # ERP-11: директор не выбрал Telegram — бот молчит
+        ([], False),
+    ],
+)
+def test_quote_sent_goes_to_telegram_only_when_chosen(
+    channels: list[str] | None, sends: bool
+) -> None:
+    payload = dict(PAYLOADS["quote.sent"])
+    if channels is not None:
+        payload["channels"] = channels
+    message = client_message(
+        "quote.sent", payload, deal_title="Оси", texts=TEXTS, language="ru", cabinet_url=CABINET
+    )
+    assert (message is not None) is sends
+
+
 # ── «Заявка принята, считаем» (D1-9, SPEC-v3 §3.1 шаг 2 и Приложение Б) ───────────────────────────
 
 

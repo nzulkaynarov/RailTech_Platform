@@ -1,0 +1,89 @@
+{
+  "version": 1,
+  "lang": "ru",
+  "doc": {
+    "type": "doc",
+    "content": [
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "Уважаемый Бахтиёр Бахтиярович!"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "Подтверждаем получение вашего письма и готовность к поставке по заявке "
+          },
+          {
+            "type": "variable",
+            "attrs": {
+              "code": "deal.number"
+            }
+          },
+          {
+            "type": "text",
+            "text": "."
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "Перед отгрузкой просим подтвердить готовность площадки к приёмке и назначить ответственного представителя."
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "Срок поставки — до "
+          },
+          {
+            "type": "variable",
+            "attrs": {
+              "code": "invoice.due_date"
+            }
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "С уважением,"
+          }
+        ]
+      },
+      {
+        "type": "signature",
+        "attrs": {
+          "parties": [
+            {
+              "position": {
+                "var": "company.director_position"
+              },
+              "name": {
+                "var": "company.director"
+              }
+            }
+          ],
+          "stamp": true
+        }
+      }
+    ]
+  },
+  "page": {
+    "density": "normal"
+  }
+}

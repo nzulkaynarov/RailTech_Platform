@@ -136,6 +136,7 @@ SUPPLY_PERMISSIONS = (
     "quote.build",
     "quote.edit_pricing",
     "quote.view_cost_margin",
+    "quote.visa_goods",
     "catalog.manage",
     "catalog.publish",
     "supply.manage",

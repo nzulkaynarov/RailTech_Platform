@@ -52,7 +52,9 @@ def perform_quote_acceptance(
     quote.approved_by = approved_by_user
     quote.save(update_fields=["status", "approved_at", "approved_by", "updated_at"])
     from integration.services import events
+    from sales.services import deal_numbers
 
+    deal_numbers.promote_to_project(quote.deal)  # проект ПР с тем же NNN — уже в событии принятия (ERP-09)
     events.publish_quote_outcome("quote.accepted", quote, contact=portal_contact)
 
     # Change deal stage via FSM (P0-1: capture the error — don't swallow it).

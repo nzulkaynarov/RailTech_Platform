@@ -96,7 +96,7 @@ def test_build_deal_ref(mapped_company, deal_stages):
 
     deal_ref = build_deal_ref(deal)
     assert deal_ref["erp_deal_id"] == deal.id
-    assert deal_ref["number"] == f"D-{deal.id}"
+    assert deal_ref["number"] == deal.number and deal.number.startswith("ЗВ-"), "номер ЗВ выдаёт ERP (ERP-09)"
     assert deal_ref["title"] == "Поставка рельсов"
     assert deal_ref["stage"] == "quoting"
     assert deal_ref["amount"] is None, "КП клиенту не отправлялось — суммы нет"
@@ -192,8 +192,9 @@ def test_all_22_event_types_payload_builders(mapped_company, deal_stages):
         "summary": "Строки",
         "company_name": "ООО ТестТранс",
         "company_inn": "123456789",
+        "request_number": deal.number,
     }
-    assert request["deal"]["erp_deal_id"] == deal.id
+    assert request["deal"]["erp_deal_id"] == deal.id and request["deal"]["number"] == deal.number
 
     publish_deal_stage_changed(deal, from_stage="request", to_stage="quoting", reason="КП готово")
     assert bus_support.only("deal.stage_changed")["data"]["payload"] == {
@@ -336,7 +337,30 @@ def test_request_created_without_known_parties_omits_the_optional_fields(deal_st
 
     publish_request_created(deal, source="erp", erp_request_id=deal.id)
     payload = bus_support.only("request.created")["data"]["payload"]
-    assert payload == {"source": "erp", "erp_request_id": deal.id, "company_name": "ООО Без ИНН"}
+    assert payload == {
+        "source": "erp",
+        "erp_request_id": deal.id,
+        "company_name": "ООО Без ИНН",
+        "request_number": deal.number,  # ERP-09: номер ЗВ у каждой сделки
+    }
+
+
+def test_request_created_of_a_platform_request_carries_number_urgency_file_and_crm_request(mapped_company, deal_stages):
+    """«Создать заявку» (W16-D1-2): процесс v3 — `process` и `urgency`; файл письма и заявка CRM — от вызывающего."""
+    company, _ = mapped_company
+    deal = Deal.objects.create(company=company, stage=deal_stages["request"], process="v3", urgency="urgent")
+
+    publish_request_created(
+        deal,
+        source="crm",
+        erp_request_id=deal.id,
+        letter_file_id="3f2c1a7e-5b9d-4c8e-9a1f-0d2e3c4b5a69",
+        crm_request_id=318,
+    )
+    payload = bus_support.only("request.created")["data"]["payload"]
+    assert payload["request_number"] == deal.number and deal.number.startswith("ЗВ-")
+    assert payload["process"] == "v3" and payload["urgency"] == "urgent"
+    assert payload["letter_file_id"] == "3f2c1a7e-5b9d-4c8e-9a1f-0d2e3c4b5a69" and payload["crm_request_id"] == 318
 
 
 def test_explicit_manager_wins_over_the_deal_owner(mapped_company, deal_stages):

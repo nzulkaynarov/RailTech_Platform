@@ -50,6 +50,8 @@ _PERM_LABELS_EN = {
     "quote.view_cost_margin": "See cost & margin",
     "quote.send": "Send quotes to client",
     "quote.review": "Review quotes",
+    "quote.visa_goods": "Sign off goods in costing",
+    "quote.visa_services": "Sign off services in costing",
     "contract.manage": "Prepare contracts",
     "contract.sign": "Sign contracts for the company",
     "catalog.manage": "Maintain the catalog",

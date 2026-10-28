@@ -30,6 +30,12 @@ _ALLOWED: Final[dict[tuple[Stage, Stage], frozenset[TransitionSource]]] = {
     (S.IN_PROGRESS, S.ENGAGED): frozenset({Src.USER}),
     (S.IN_PROGRESS, S.QUALIFIED): frozenset({Src.USER}),
     (S.WON, S.CUSTOMER): frozenset({Src.USER, Src.SYSTEM}),
+    # «Создать заявку» (CRM-03, W16-D1-2): лид становится клиентом из любой активной стадии, без
+    # «Забрать».
+    **{
+        (s, S.CUSTOMER): frozenset({Src.USER})
+        for s in (S.NEW, S.ENGAGED, S.QUALIFIED, S.HANDOFF, S.UNRESPONSIVE)
+    },
     # В handoff ждёт лид, а не мы: таймер «Не отвечает» его не трогает (ADR-0015).
     **{(s, S.UNRESPONSIVE): frozenset({Src.TIMER}) for s in (S.NEW, S.ENGAGED, S.QUALIFIED)},
     (S.UNRESPONSIVE, S.ENGAGED): frozenset({Src.SYSTEM}),

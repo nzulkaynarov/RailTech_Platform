@@ -45,6 +45,10 @@ class Permission(models.TextChoices):
     # Визы КП внутри компании. Одобрение КП директором — маршрут EDS (EDS-03, волна 12): права ERP на него нет.
     # Акцепт КП клиентом — не право бэк-офиса (Cabinet / публичная ссылка).
     QUOTE_REVIEW = "quote.review", "Согласовывать КП"
+    # Виза строки расчёта по типу позиции (ADR-0012 п. 6, D2-1): товар — «расчёт товаров и склад», услуга — «расчёт
+    # услуг». Права вычисляет CRM из разделов каталога `erp.calc.goods` и `erp.calc.services` (platform-rbac.yaml).
+    QUOTE_VISA_GOODS = "quote.visa_goods", "Визировать товары в расчёте"
+    QUOTE_VISA_SERVICES = "quote.visa_services", "Визировать услуги в расчёте"
     # Договоры
     CONTRACT_MANAGE = "contract.manage", "Готовить договоры"
     CONTRACT_SIGN = "contract.sign", "Подписывать договоры от компании"
@@ -80,6 +84,8 @@ PERMISSION_GROUPS = {
         Permission.QUOTE_VIEW_COST_MARGIN,
         Permission.QUOTE_SEND,
         Permission.QUOTE_REVIEW,
+        Permission.QUOTE_VISA_GOODS,
+        Permission.QUOTE_VISA_SERVICES,
     ],
     "contracts": [Permission.CONTRACT_MANAGE, Permission.CONTRACT_SIGN],
     "catalog": [Permission.CATALOG_MANAGE, Permission.CATALOG_PUBLISH],
@@ -120,6 +126,8 @@ ROLE_TEMPLATES = {
         P.QUOTE_VIEW_COST_MARGIN,
         P.QUOTE_SEND,
         P.QUOTE_REVIEW,
+        P.QUOTE_VISA_GOODS,
+        P.QUOTE_VISA_SERVICES,
         P.CONTRACT_MANAGE,
     ],
     BackofficeRoleCode.CATALOG_SUPPLY: [

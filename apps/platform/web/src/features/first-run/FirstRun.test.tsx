@@ -13,6 +13,7 @@ import {
   startFreshInstall,
   startFreshSetup,
 } from "../../mocks/setupState";
+import { ERP_RECHECK } from "../../entities/setup/recheck";
 import i18n from "../../shared/i18n";
 import { hideBanner, resetBannerHidden, startOfTomorrow } from "./hidden";
 import { renderApp, signInAs } from "../../test/renderApp";
@@ -567,6 +568,79 @@ describe("Баннер настройки и мастер", () => {
       await new Promise((resolve) => setTimeout(resolve, 150));
     });
     expect(within(after).queryByRole("link", { name: "Первый запуск" })).toBeNull();
+  });
+
+  it("ERP ещё не выдала доступ: мастер ждёт, сам перепроверяет и показывает форму компании без «Проверить снова»", async () => {
+    const saved = { ...ERP_RECHECK };
+    ERP_RECHECK.everyMs = 40;
+    ERP_RECHECK.attempts = 8;
+    let calls = 0;
+    server.use(
+      http.get("*/setup/checklist", () => {
+        calls += 1;
+        const waiting = calls < 4;
+        return HttpResponse.json({
+          steps: [
+            { key: "erp", state: "done" },
+            { key: "bot", state: "todo" },
+            { key: "mail", state: "todo" },
+            { key: "models", state: "todo" },
+            { key: "first_employee", state: "todo" },
+          ],
+          done: 1,
+          total: 5,
+          company: waiting ? null : { required: true, can_setup: true },
+          company_blocker: waiting ? "erp_unavailable" : null,
+        });
+      }),
+    );
+    try {
+      signInAs("admin@demo.example");
+      renderApp("/admin/setup");
+
+      expect(await screen.findByText("Ждём, пока ERP выдаст доступ…")).toBeVisible();
+      // форма появляется сама, мастер остаётся на шаге компании
+      expect(await screen.findByLabelText("Название компании")).toBeVisible();
+      expect(screen.queryByText("Ждём, пока ERP выдаст доступ…")).toBeNull();
+      expect(screen.queryByText(/ERP пока не ответила/)).toBeNull();
+    } finally {
+      Object.assign(ERP_RECHECK, saved);
+    }
+  });
+
+  it("ERP так и не ответила: после нескольких попыток — «Проверить снова», без ожидания", async () => {
+    const saved = { ...ERP_RECHECK };
+    ERP_RECHECK.everyMs = 20;
+    ERP_RECHECK.attempts = 2;
+    server.use(
+      http.get("*/setup/checklist", () =>
+        HttpResponse.json({
+          steps: [
+            { key: "erp", state: "done" },
+            { key: "bot", state: "todo" },
+            { key: "mail", state: "todo" },
+            { key: "models", state: "todo" },
+            { key: "first_employee", state: "todo" },
+          ],
+          done: 1,
+          total: 5,
+          company: null,
+          company_blocker: "erp_unavailable",
+        }),
+      ),
+    );
+    try {
+      signInAs("admin@demo.example");
+      renderApp("/admin/setup");
+      await screen.findByText("Ждём, пока ERP выдаст доступ…");
+      await waitFor(() => {
+        expect(screen.queryByText("Ждём, пока ERP выдаст доступ…")).toBeNull();
+      });
+      // имя может начинаться с иконки «loading», пока antd не доиграл выход анимации (в jsdom она не кончается)
+      expect(await screen.findByRole("button", { name: /Проверить снова/ })).toBeVisible();
+    } finally {
+      Object.assign(ERP_RECHECK, saved);
+    }
   });
 
   it("шаг открывается в боковом окне мастера, без перехода; после сохранения — сразу следующий шаг", async () => {

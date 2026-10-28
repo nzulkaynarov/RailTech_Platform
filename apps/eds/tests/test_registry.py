@@ -13,6 +13,7 @@ from app.container import Container
 from app.services import registry
 from tests.conftest import FakeClock
 from tests.domain import Person, deliver_erp, erp_event, validate
+from tests.helpers import seed_employee
 from tests.test_api_auth import assert_error
 from tests.test_documents import create, submit
 from tests.test_letters import NEW_LETTER
@@ -89,7 +90,7 @@ async def test_registry_requires_registry_read(client: httpx.AsyncClient, staff:
 
 async def test_registry_filters(client: httpx.AsyncClient, container: Container, staff: dict[str, Person]) -> None:
     await fill(client, container, staff)
-    who = staff["accountant"]
+    who = staff["manager"]  # автор черновика СЗ — видит его; у бухгалтера черновика менеджера в реестре нет
 
     async def numbers(**params: Any) -> list[str]:
         return [i["number"] for i in await listing(client, who, **params)]
@@ -98,6 +99,7 @@ async def test_registry_filters(client: httpx.AsyncClient, container: Container,
     assert await numbers(kind=["memo", "report"]) == ["ОТ-2026/001", "СЗ-2026/001"]
     assert await numbers(status="on_approval") == ["ОТ-2026/001"]
     assert await numbers(status=["draft", "sent"]) == ["ИСХ-001/26", "СЗ-2026/001"]
+    assert [i["number"] for i in await listing(client, staff["accountant"], status=["draft", "sent"])] == ["ИСХ-001/26"]
     assert await numbers(number="ВХ-001/26") == ["ВХ-001/26"]  # номер с «/» ищется параметром, не путём
     assert await numbers(number="ВХ-999/26") == []
     assert await numbers(q="канцтоваров") == ["СЗ-2026/001"]
@@ -130,6 +132,7 @@ async def test_registry_cursor_pagination_over_the_union(
     for _ in range(4):
         params: dict[str, Any] = {"limit": 2, **({"cursor": cursor} if cursor else {})}
         page = (await client.get("/api/v1/registry", params=params, headers=staff["manager"].headers)).json()
+        assert page["items"] or page["next_cursor"] is None  # пустая страница при курсоре — «дыра» от пост-фильтра
         seen += [i["number"] for i in page["items"]]
         cursor = page["next_cursor"]
         if cursor is None:
@@ -162,12 +165,12 @@ async def test_export_csv_and_xlsx_with_filters_and_journal(
     assert text[0] == "Тип,Номер,Тема,Статус,Зарегистрирован,Ответственный,Клиент,Сделка ERP"
     assert len(text) == 3 and text[1].startswith("letter_in,ВХ-002/26,") and text[2].startswith("letter_in,ВХ-001/26,")
 
-    xlsx = await client.get("/api/v1/registry/export", params={"kind": "memo", "q": "канцтоваров"}, headers=who.headers)
+    xlsx = await client.get("/api/v1/registry/export", params={"kind": "report", "q": "складу"}, headers=who.headers)
     assert xlsx.status_code == 200
     assert xlsx.headers["content-type"].startswith("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
     rows = sheet_rows(xlsx.content)
     assert rows[0][:3] == ["Тип", "Номер", "Тема"]
-    assert rows[1][:4] == ["memo", "СЗ-2026/001", "Закупка канцтоваров", "draft"]
+    assert rows[1][:4] == ["report", "ОТ-2026/001", "Отчёт по складу", "on_approval"]
     assert len(rows) == 2
 
     async with container.session_factory() as session:
@@ -221,10 +224,151 @@ async def test_export_too_large_is_rejected(
 
 
 async def test_export_neutralizes_formulas(client: httpx.AsyncClient, staff: dict[str, Person]) -> None:
-    await create(client, staff["manager"], subject='=HYPERLINK("http://example.invalid")')
+    memo = await create(client, staff["manager"], subject='=HYPERLINK("http://example.invalid")')
+    assert (await submit(client, staff["manager"], memo["id"])).status_code == 200  # черновики в экспорт не попадают
     csv_text = (
         await client.get("/api/v1/registry/export", params={"format": "csv"}, headers=staff["accountant"].headers)
     ).content.decode("utf-8-sig")
     assert "'=HYPERLINK" in csv_text
     xlsx = await client.get("/api/v1/registry/export", headers=staff["accountant"].headers)
     assert sheet_rows(xlsx.content)[1][2].startswith("'=HYPERLINK")
+
+
+# --- D1-10: реестр не шире прав на вид документа -------------------------------------------------------------------
+
+KIND_ROWS = {
+    "letter_in": "ВХ-001/26",
+    "letter_out": "ИСХ-001/26",
+    "quote": "КП-2026/115",
+    "memo": "СЗ-2026/001",  # отправленная служебка менеджера
+    "report": "ОТ-2026/001",
+}
+
+
+async def fill_visibility(client: httpx.AsyncClient, container: Container, staff: dict[str, Person]) -> None:
+    """Все виды, кроме черновиков: ВХ, ИСХ (отправлено), КП, СЗ и ОТ на согласовании; плюс чужой черновик заявления."""
+    reg = staff["registrar"].headers
+    assert (await client.post("/api/v1/letters", json=NEW_LETTER, headers=reg)).status_code == 201
+    out = await create(
+        client, staff["registrar"], kind="letter_out", subject="Ответ клиенту", recipient={"name": "ООО «Пример»"}
+    )
+    await submit(client, staff["registrar"], out["id"])
+    memo = await create(client, staff["manager"], subject="Закупка канцтоваров")
+    await submit(client, staff["manager"], memo["id"])
+    report = await create(client, staff["supplier"], kind="report", subject="Отчёт по складу")
+    await submit(client, staff["supplier"], report["id"])
+    await create(client, staff["engineer"], kind="application", subject="Заявление инженера")  # черновик
+    await deliver_erp(client, container, erp_event("erp/quote.ready_for_approval.v1"))
+
+
+@pytest.mark.parametrize(
+    ("who", "visible"),
+    [
+        # с `letters.read` — все виды; без — ни входящих, ни исходящих писем, остальное по своим правам
+        ("director", {"letter_in", "letter_out", "quote", "memo", "report"}),
+        ("manager", {"letter_in", "letter_out", "quote", "memo", "report"}),
+        ("accountant", {"letter_in", "letter_out", "quote", "memo", "report"}),
+        ("supplier", {"quote", "memo", "report"}),
+        ("engineer", {"quote", "memo", "report", "application"}),  # свой черновик заявления виден автору
+    ],
+)
+async def test_registry_kind_follows_view_permission(
+    client: httpx.AsyncClient, container: Container, staff: dict[str, Person], who: str, visible: set[str]
+) -> None:
+    await fill_visibility(client, container, staff)
+    items = await listing(client, staff[who])
+    assert {i["kind"] for i in items} == visible
+    assert {i["number"] for i in items if i["kind"] != "application"} == {
+        KIND_ROWS[k] for k in visible - {"application"}
+    }
+    # вкладка «Письма» без права — пустота, а не ошибка
+    if "letter_in" not in visible:
+        for kind in ("letter_in", "letter_out"):
+            assert await listing(client, staff[who], kind=kind) == []
+        assert await listing(client, staff[who], number="ВХ-001/26") == []
+        assert await listing(client, staff[who], q="Ответ") == []
+        assert await listing(client, staff[who], crm_client_id=42) == [
+            i for i in items if i["links"]["crm_client_id"] == 42
+        ]
+
+
+async def test_registry_draft_is_visible_only_to_its_author(
+    client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
+) -> None:
+    await fill_visibility(client, container, staff)
+    for who in ("director", "manager", "accountant", "supplier"):
+        assert "Заявление инженера" not in [i["title"] for i in await listing(client, staff[who])]
+        assert await listing(client, staff[who], kind="application") == []
+        assert await listing(client, staff[who], status="draft") == []
+    own = await listing(client, staff["engineer"], kind="application")
+    assert [(i["title"], i["status"]) for i in own] == [("Заявление инженера", "draft")]
+    assert [i["title"] for i in await listing(client, staff["engineer"], status="draft")] == ["Заявление инженера"]
+
+
+async def test_registry_own_draft_letter_out_needs_letters_read(
+    client: httpx.AsyncClient, staff: dict[str, Person]
+) -> None:
+    """Свой черновик исходящего письма виден автору с `letters.read`; чужой — никому, даже с `letters.read`."""
+    await create(client, staff["director"], kind="letter_out", subject="Черновик ответа")
+    assert [i["title"] for i in await listing(client, staff["director"])] == ["Черновик ответа"]
+    for who in ("manager", "accountant"):
+        assert await listing(client, staff[who]) == []
+
+
+async def test_registry_draft_filter_applies_before_cursor_and_limit(
+    client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
+) -> None:
+    """Скрытое не занимает место на странице: страницы по 1 строке без пропусков, курсор доходит до конца."""
+    await fill_visibility(client, container, staff)
+    for index in range(3):  # чужие черновики между видимыми строками
+        await create(client, staff["engineer"], subject=f"Черновик {index}")
+    seen: list[str] = []
+    cursor: str | None = None
+    for _ in range(10):
+        params: dict[str, Any] = {"limit": 1, **({"cursor": cursor} if cursor else {})}
+        page = (await client.get("/api/v1/registry", params=params, headers=staff["supplier"].headers)).json()
+        assert len(page["items"]) <= 1
+        assert page["items"] or page["next_cursor"] is None  # пустая страница при курсоре — «дыра» от пост-фильтра
+        seen += [i["number"] for i in page["items"]]
+        cursor = page["next_cursor"]
+        if cursor is None:
+            break
+    assert seen == ["КП-2026/115", "ОТ-2026/001", "СЗ-2026/001"]
+    assert cursor is None
+
+
+async def extra_person(container: Container, crm_user_id: int, permissions: list[str]) -> Person:
+    await seed_employee(
+        container,
+        crm_user_id,
+        full_name=f"Сотрудник {crm_user_id}",
+        email=f"user{crm_user_id}@example.com",
+        permissions={"eds": permissions},
+    )
+    return Person(crm_user_id, f"Сотрудник {crm_user_id}", permissions)
+
+
+async def test_registry_export_follows_the_same_visibility(
+    client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
+) -> None:
+    await fill_visibility(client, container, staff)
+    await create(client, staff["manager"], subject="Мой черновик")
+
+    async def kinds(who: Person) -> tuple[list[str], str]:
+        response = await client.get("/api/v1/registry/export", params={"format": "csv"}, headers=who.headers)
+        assert response.status_code == 200, response.text
+        text = response.content.decode("utf-8-sig")
+        return sorted(r.split(",")[0] for r in text.splitlines()[1:]), text
+
+    # экспортёр без `letters.read` не получает писем, чужих черновиков нет ни у кого
+    no_letters = await extra_person(container, 20, ["registry.read", "registry.export"])
+    got, text = await kinds(no_letters)
+    assert got == ["memo", "quote", "report"] and "черновик" not in text.lower()
+    got, text = await kinds(staff["accountant"])
+    assert got == ["letter_in", "letter_out", "memo", "quote", "report"] and "черновик" not in text.lower()
+    # автор видит свой черновик и в экспорте
+    author = await extra_person(container, 5, ["letters.read", "registry.read", "registry.export", "memos.create"])
+    assert "Мой черновик" in (await kinds(author))[1]
+    # экспорт без `registry.read`, но с `registry.export`: только свои объекты и маршруты, где участник
+    export_only = await extra_person(container, 21, ["registry.export"])
+    assert (await kinds(export_only))[0] == []

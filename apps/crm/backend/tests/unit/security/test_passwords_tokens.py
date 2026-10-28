@@ -10,7 +10,13 @@ from app.security.passwords import (
     validate_new_password,
     verify_password,
 )
-from app.security.tokens import AccessClaims, TokenError, decode_access, issue_access
+from app.security.tokens import (
+    AccessClaims,
+    TokenError,
+    decode_access,
+    issue_access,
+    password_version,
+)
 
 KEY = b"k" * 32
 CLAIMS = AccessClaims(user_id=7, roles=("manager",), must_change_password=False)
@@ -37,9 +43,7 @@ def test_weak_passwords_rejected(password: str) -> None:
 
 
 def test_access_token_roundtrip() -> None:
-    decoded = decode_access(KEY, issue_access(KEY, CLAIMS, 900))
-    assert decoded.issued_at is not None
-    assert replace(decoded, issued_at=None) == CLAIMS
+    assert decode_access(KEY, issue_access(KEY, CLAIMS, 900)) == CLAIMS
 
 
 @pytest.mark.parametrize(
@@ -59,20 +63,28 @@ def test_short_key_refused() -> None:
         issue_access(b"short", CLAIMS, 900)
 
 
-def test_token_issued_before_a_password_reset_is_closed() -> None:
-    from app.security.tokens import closed_by_password_reset
-
-    changed = datetime(2026, 10, 28, 10, 0, 0, 700_000, tzinfo=UTC)
-    second = changed.replace(microsecond=0)
-    assert closed_by_password_reset(second - timedelta(seconds=1), changed)
-    assert not closed_by_password_reset(second, changed)  # выпущен в ту же секунду — после сброса
-    assert not closed_by_password_reset(second + timedelta(seconds=5), changed)
-    assert not closed_by_password_reset(second, None)  # сброса не было
-    assert not closed_by_password_reset(None, changed)
+def test_password_version_is_exact_microseconds_and_zero_without_a_change() -> None:
+    changed = datetime(2026, 10, 28, 10, 0, 0, 123_456, tzinfo=UTC)
+    assert password_version(None) == 0
+    assert password_version(changed) == 1_793_181_600_123_456
+    assert password_version(changed) != password_version(changed + timedelta(microseconds=1))
 
 
-def test_decoded_token_carries_its_issue_time() -> None:
-    key = b"k" * 32
-    now = datetime.now(UTC) - timedelta(seconds=30)
-    claims = decode_access(key, issue_access(key, CLAIMS, 900, now))
-    assert claims.issued_at == now.replace(microsecond=0)
+def test_token_carries_the_password_version_it_was_issued_with() -> None:
+    claims = replace(CLAIMS, password_version=1_793_181_600_123_456)
+    assert (
+        decode_access(KEY, issue_access(KEY, claims, 900)).password_version
+        == claims.password_version
+    )
+    # Токен без поля (выпущен до этой правки) — версия 0: совпадает с «пароль не менялся».
+    assert decode_access(KEY, issue_access(KEY, CLAIMS, 900)).password_version == 0
+
+
+def test_refresh_created_before_the_password_change_is_closed() -> None:
+    from app.security.tokens import closed_by_password_change
+
+    changed = datetime(2026, 10, 28, 10, 0, 0, tzinfo=UTC)
+    assert closed_by_password_change(changed - timedelta(microseconds=1), changed)
+    assert not closed_by_password_change(changed, changed)  # выпущен на момент смены
+    assert not closed_by_password_change(changed + timedelta(seconds=1), changed)
+    assert not closed_by_password_change(changed, None)

@@ -448,6 +448,9 @@ def test_there_is_no_director_step_and_no_final_approval_permission():
         "QUOTE_VIEW_COST_MARGIN",
         "QUOTE_SEND",
         "QUOTE_REVIEW",
+        # D2-1: визы строки расчёта по типу позиции (ADR-0012 п. 6) — не одобрение КП.
+        "QUOTE_VISA_GOODS",
+        "QUOTE_VISA_SERVICES",
     }
     assert StepStatus.PENDING  # шаги виз остаются
 
@@ -481,12 +484,21 @@ def _approved_by_supply(world):
 
 
 def test_manager_with_quote_send_sends_the_approved_quote_and_the_author_without_it_gets_403(world):
-    """Менеджер — `quote.send` из раздела `crm.clients` full каталога (C1-G-4); снабженец-автор — нет."""
+    """Менеджер заявки — `quote.send` из раздела `crm.clients` full каталога (C1-G-4) и владелец сделки (B-008);
+    снабженец-автор без `quote.send` и менеджер чужой заявки — 403."""
     quote, supply = _approved_by_supply(world)
     manager = _staff(world, "manager@railtech.test", 5, [Permission.DEAL_MANAGE.value, Permission.QUOTE_SEND.value])
+    other = _staff(world, "other-manager@railtech.test", 6, [Permission.DEAL_MANAGE.value, Permission.QUOTE_SEND.value])
+    world["deal"].manager = manager
+    world["deal"].save(update_fields=["manager"])
 
     denied = _api(supply).post(f"/api/v1/crm/quotes/{quote.pk}/send-to-client/", {}, format="json")
     assert denied.status_code == 403, denied.content
+    foreign = _api(other).post(f"/api/v1/crm/quotes/{quote.pk}/send-to-client/", {}, format="json")
+    assert foreign.status_code == 403 and foreign.json()["detail"] == "ROLE_NOT_PERMITTED", foreign.content
+    # отзыв публичной ссылки — та же объектная проверка (B-008)
+    revoke = _api(other).post(f"/api/v1/crm/quotes/{quote.pk}/revoke-public-link/", {}, format="json")
+    assert revoke.status_code == 403, revoke.content
     assert _status(quote) == "READY_TO_SEND"
 
     sent = _api(manager).post(f"/api/v1/crm/quotes/{quote.pk}/send-to-client/", {}, format="json")
@@ -544,3 +556,164 @@ def test_buyer_sees_the_outgoing_number_but_not_the_directors_decision(world):
 
     staff = _api(world["calc"]).get(f"/api/v1/crm/quotes/{quote.pk}/").json()
     assert staff["director_comment"] == "Согласовано с опозданием" and staff["send_channels"] == ["telegram", "cabinet"]
+
+
+# ── ERP-11 (решение архитектора 2026-10-28, W16-D1-2): автоотправка по каналам директора ─────────────────────────────
+
+
+def _contact(world, *, telegram=None, email="", invited=False):
+    """Контакт сделки клиента (офлайн, без входа в ERP): Telegram, e-mail и приглашение в кабинет — по аргументам."""
+    from django.utils import timezone
+    from parties.models import Contact
+
+    contact = Contact.objects.create(
+        company=world["client"],
+        name="Бахтиёр Каримов",
+        email=email,
+        telegram_user_id=telegram,
+        is_primary=True,
+        invited_at=timezone.now() if invited else None,
+    )
+    world["deal"].contact, world["deal"].client = contact, None
+    world["deal"].save(update_fields=["contact", "client"])
+    return contact
+
+
+def _approve_with(world, channels):
+    quote = _submitted(world)
+    data = decided(quote, "approve")
+    data["channels"] = channels
+    assert eds_inbound.apply_approval_decided(data).applied
+    quote.refresh_from_db()
+    return quote, data
+
+
+def test_approval_with_available_channels_sends_the_quote_to_the_client(world):
+    """Директор выбрал Telegram, кабинет и почту — все доступны: КП «Отправлено», `quote.sent` несёт каналы."""
+    _contact(world, telegram=700100, email="client@example.test", invited=True)
+
+    quote, _ = _approve_with(world, ["telegram", "cabinet", "email"])
+
+    assert quote.status.code == "SENT" and quote.frozen_at is not None
+    assert quote.send_report["sent_via"] == ["telegram", "cabinet", "email"] and quote.send_report["skipped"] == []
+    sent = bus_support.only("quote.sent")
+    bus_support.assert_matches_contract(sent)
+    assert sent["data"]["payload"]["channels"] == ["telegram", "cabinet", "email"]
+    assert ActivityLog.objects.filter(entity_id=quote.pk, event_code="quote.auto_sent").exists()
+
+
+def test_unavailable_channel_is_skipped_with_a_reason_and_the_approval_stands(world):
+    """Почта выбрана, но e-mail у контакта нет: КП уходит в Telegram, почта — в итоге с причиной, письма нет."""
+    _contact(world, telegram=700101, email="")
+
+    quote, _ = _approve_with(world, ["telegram", "email"])
+
+    assert quote.status.code == "SENT" and quote.director_decision == "approve"
+    assert quote.send_report["sent_via"] == ["telegram"]
+    assert quote.send_report["skipped"] == [{"channel": "email", "reason": "CONTACT_EMAIL_REQUIRED"}]
+    assert bus_support.only("quote.sent")["data"]["payload"]["channels"] == ["telegram"]
+
+
+def test_no_available_channel_leaves_the_quote_ready_for_the_manager(world):
+    """Ни один выбранный канал не доступен: одобрение в силе, КП «Готово к отправке», причины — в итоге и журнале."""
+    _contact(world, telegram=None, email="")
+
+    quote, _ = _approve_with(world, ["telegram", "cabinet"])
+
+    assert quote.status.code == "READY_TO_SEND" and quote.outgoing_number == "ИСХ-082/26"
+    assert quote.send_report["sent_via"] == []
+    assert quote.send_report["skipped"] == [
+        {"channel": "telegram", "reason": "CONTACT_TELEGRAM_REQUIRED"},
+        {"channel": "cabinet", "reason": "CABINET_NOT_INVITED"},
+    ]
+    assert bus_support.published("quote.sent") == []
+    assert ActivityLog.objects.filter(entity_id=quote.pk, event_code="quote.auto_send_skipped").exists()
+
+
+def test_telegram_needs_a_client_known_to_crm(world):
+    """Telegram доставляет бот CRM: клиент без сопоставления с CRM — канал недоступен."""
+    _contact(world, telegram=700102, email="")
+    CrmClientMapping.objects.filter(company=world["client"]).delete()
+
+    quote, _ = _approve_with(world, ["telegram"])
+
+    assert quote.status.code == "READY_TO_SEND"
+    assert quote.send_report["skipped"] == [{"channel": "telegram", "reason": "CLIENT_NOT_IN_CRM"}]
+
+
+def test_repeated_delivery_of_the_decision_does_not_send_twice(world):
+    _contact(world, telegram=700103, email="", invited=True)
+    quote, data = _approve_with(world, ["telegram", "cabinet"])
+    assert quote.status.code == "SENT"
+
+    again = eds_inbound.apply_approval_decided(data)
+
+    assert not again.applied
+    assert len(bus_support.published("quote.sent")) == 1
+    assert ActivityLog.objects.filter(entity_id=quote.pk, event_code="quote.auto_sent").count() == 1
+
+
+def test_a_send_gate_stops_the_auto_send_without_undoing_the_approval(world, monkeypatch):
+    """Гейт отправки (здесь — убыточное КП) останавливает автоотправку: одобрение в силе, код — в итоге."""
+    from crm.services.quotes import lifecycle
+
+    _contact(world, telegram=700104, email="", invited=True)
+    quote = _submitted(world)
+    monkeypatch.setattr(
+        lifecycle,
+        "compute_quote_economics",
+        lambda quote: {"fx_missing": False, "below_cost": True, "below_floor": False},
+    )
+    data = decided(quote, "approve")
+    data["channels"] = ["cabinet"]
+    assert eds_inbound.apply_approval_decided(data).applied
+    quote.refresh_from_db()
+
+    assert quote.status.code == "READY_TO_SEND" and quote.director_decision == "approve"
+    assert quote.send_report["sent_via"] == [] and quote.send_report["error"] == "QUOTE_BELOW_COST"
+    assert bus_support.published("quote.sent") == []
+
+
+def test_approval_without_channels_does_not_auto_send(world):
+    _contact(world, telegram=700105, email="client2@example.test", invited=True)
+
+    quote, _ = _approve_with(world, [])
+
+    assert quote.status.code == "READY_TO_SEND" and quote.send_report == {}
+
+
+def test_any_send_failure_keeps_the_approval_and_tells_the_request_manager(world, monkeypatch):
+    """Любое исключение внутри отправки откатывает только точку сохранения: решение применено, КП «Готово к
+    отправке», в итоге `SEND_FAILED` с причиной, менеджеру заявки — уведомление «отправьте вручную»."""
+    from crm.services.quotes import QuoteLifecycleService
+    from notifications.models import Notification
+
+    _contact(world, telegram=700106, email="", invited=True)
+    quote = _submitted(world)
+
+    def broken(*args, **kwargs):
+        raise RuntimeError("smtp is on fire")
+
+    monkeypatch.setattr(QuoteLifecycleService, "send_to_client", staticmethod(broken))
+    data = decided(quote, "approve")
+    data["channels"] = ["cabinet"]
+
+    assert eds_inbound.apply_approval_decided(data).applied
+    quote.refresh_from_db()
+    assert quote.status.code == "READY_TO_SEND" and quote.director_decision == "approve"
+    assert quote.outgoing_number == "ИСХ-082/26"
+    assert quote.send_report["error"] == "SEND_FAILED" and "smtp is on fire" in quote.send_report["error_detail"]
+    note = Notification.objects.get(user=world["calc"], event_code="quote.auto_send_failed")
+    assert "cabinet" in note.message and "вручную" in note.message
+
+
+def test_unavailable_channels_are_reported_to_the_request_manager(world):
+    from notifications.models import Notification
+
+    _contact(world, telegram=700107, email="")
+
+    quote, _ = _approve_with(world, ["telegram", "email"])
+
+    assert quote.status.code == "SENT"
+    note = Notification.objects.get(user=world["calc"], event_code="quote.auto_send_failed")
+    assert note.event_params["channels"] == "email"

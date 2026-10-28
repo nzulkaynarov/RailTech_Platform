@@ -21,10 +21,12 @@ from app.security.audit import Actor
 from app.security.passwords import hash_password, needs_rehash, verify_password
 from app.security.tokens import (
     AccessClaims,
+    closed_by_password_change,
     hash_refresh_token,
     issue_access,
     new_family,
     new_refresh_token,
+    password_version,
 )
 
 logger = structlog.get_logger(__name__)
@@ -83,7 +85,7 @@ class AuthService:
 
     async def refresh(self, token: str, client: ClientInfo) -> Session:
         now = datetime.now(UTC)
-        reused = False
+        reused = closed = False
         async with self._sessions() as session, session.begin():
             row = await _token(session, token)
             if row is None:
@@ -98,11 +100,29 @@ class AuthService:
                 user = await repo.get(session, row.user_id)
                 if user is None or not user.is_active:
                     raise AuthError("user inactive")
-                row.revoked_at = now
-                result = await self._issue(session, user, row.family, client, now)
+                if closed_by_password_change(row.created_at, user.password_changed_at):
+                    # Токен выпущен до смены пароля (гонка refresh и сброса): сессия закрыта.
+                    await _revoke_family(session, row.family, now)
+                    closed = True  # ошибка — после коммита, иначе откат отменит отзыв семейства
+                else:
+                    row.revoked_at = now
+                    result = await self._issue(session, user, row.family, client, now)
+        if closed:
+            raise AuthError("session closed by a password change")
         if reused:
             raise AuthError("refresh token reused")
         return result
+
+    async def reissue(self, user_id: int, client: ClientInfo, at: datetime) -> Session:
+        """Новая сессия после смены пароля: прежние закрыты, эта рабочая (новое семейство токенов).
+
+        `at` — момент смены пароля: токены выпускаются на него, чтобы отсечка по
+        `password_changed_at` их не задела."""
+        async with self._sessions() as session, session.begin():
+            user = await repo.get(session, user_id)
+            if user is None or not user.is_active:
+                raise AuthError("user inactive")
+            return await self._issue(session, user, new_family(), client, at)
 
     async def logout(self, token: str) -> None:
         async with self._sessions() as session, session.begin():
@@ -128,6 +148,7 @@ class AuthService:
                 user_id=user.id,
                 token_hash=hash_refresh_token(refresh),
                 family=family,
+                created_at=now,
                 expires_at=now + timedelta(days=self._settings.refresh_token_ttl_days),
                 user_agent=(client.user_agent or "")[:255] or None,
                 ip=client.ip,
@@ -135,7 +156,12 @@ class AuthService:
         )
         access = issue_access(
             self._settings.jwt_secret.get_secret_value().encode(),
-            AccessClaims(user.id, tuple(roles), user.must_change_password),
+            AccessClaims(
+                user.id,
+                tuple(roles),
+                user.must_change_password,
+                password_version(user.password_changed_at),
+            ),
             self._settings.access_token_ttl_s,
             now,
         )

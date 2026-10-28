@@ -131,9 +131,14 @@ def test_codes_become_roles_the_column_goes_and_downgrade_brings_the_codes_back(
         assert director is not None
         assert (director[0]["crm.leads"], director[0]["chats.external"]) == ("read", "read")
         assert director[1] == 2
+        # Остальные роли — версия 1; «Бухгалтер» — 2 (0044: без цен поставщиков, D2-1).
         assert conn.execute(
-            "SELECT DISTINCT version FROM platform_roles WHERE code <> 'DIRECTOR'"
+            "SELECT DISTINCT version FROM platform_roles "
+            "WHERE code NOT IN ('DIRECTOR', 'tpl:ACCOUNTANT')"
         ).fetchall() == [(1,)]
+        assert conn.execute(
+            "SELECT version FROM platform_roles WHERE code = 'tpl:ACCOUNTANT'"
+        ).fetchall() == [(2,)]
         # Столбец с кодами удалён, связь по роли не даёт её удалить.
         columns = conn.execute(
             "SELECT column_name FROM information_schema.columns "
@@ -216,3 +221,31 @@ def test_a_migrated_manager_and_accountant_keeps_the_same_rights(
     # finance.view — чтение счетов и оплат без права действовать (Q-D2-4-1 п. 2, D2-4)
     assert erp_after - erp_before == {"contract.sign", "quote.send", "finance.view"}
     assert erp_before - erp_after == {"quote.view_cost_margin"}
+
+
+def test_accountant_template_loses_supplier_prices_and_downgrade_returns_them(
+    alembic_config: Config, live_settings: Settings
+) -> None:
+    """0047 (D2-1, Q-D2-1-4): «Бухгалтер» без цен поставщиков; версия роли растёт в обе стороны."""
+
+    def accountant() -> tuple[list[str], int]:
+        with psycopg.connect(live_settings.libpq_dsn, autocommit=True) as conn:
+            row = conn.execute(
+                "SELECT restricted_fields, version FROM platform_roles "
+                "WHERE code = 'tpl:ACCOUNTANT'"
+            ).fetchone()
+        assert row is not None
+        return list(row[0]), int(row[1])
+
+    command.upgrade(alembic_config, "head")
+    command.downgrade(alembic_config, "0046_client_requests")
+    fields, version = accountant()
+    assert "supplier_prices" in fields
+
+    command.upgrade(alembic_config, "head")
+    after, after_version = accountant()
+    assert after == ["totals_only"]
+    assert after_version == version + 1
+
+    command.upgrade(alembic_config, "head")  # повтор — без изменений
+    assert accountant() == (after, after_version)
