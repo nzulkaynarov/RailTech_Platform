@@ -133,6 +133,18 @@
  * (директор читает), сброс пароля — `admin: full`; профиль доступен каждому вошедшему. Секреты из записей журнала BFF вырезает
  * (значения полей `password`, `secret`, `token`, `key`, `*_key`, `credentials`, `authorization`, `pin` и им подобных -> `***` целиком, любого типа).
  *
+ * **0.25.0 (D2-3) — Расчёт · Номенклатура и поставщики, справочники, Техдокументация.** Добавляющее изменение, тег `erp-catalog`
+ * (разделы `erp.stock`; решения о правах — за ERP). **Номенклатура**: `GET|POST /erp/catalog/items`, `GET|PATCH /erp/catalog/items/{id}` —
+ * позиции с типом (товар со склада или под заказ, услуга фикс / по этапам / по времени), единицей, НДС и сроком цен. **Поставщики**:
+ * `GET /erp/catalog/suppliers`, `GET /erp/catalog/suppliers/{id}` (квоты, сроки действия цен), `PATCH …/offers/{offer_id}`. **Закрытые
+ * поля**: цена закупки в предложениях (`price`) — только с полем `supplier_prices`, ставка бригады (`Brigade.rate`) — с полем
+ * `cost_margin` или разделом `erp.calc.services`; иначе `null` — режут и ERP, и BFF. **Бригады**: `GET|POST /erp/catalog/brigades`,
+ * `PATCH /erp/catalog/brigades/{id}`. **Запросы на категории** сотрудника: `GET|POST /erp/catalog/category-requests` (решение директора —
+ * прежние `approve|rejectCategoryRequest`). **Справочники «только в Django admin»**: курсы валют `GET /erp/catalog/exchange-rates`,
+ * коды ТН ВЭД `GET|POST /erp/catalog/hs-codes`, `PATCH …/{id}`, производители `GET|POST /erp/catalog/manufacturers`, `PATCH …/{id}`;
+ * `GET /erp/catalog/lookups` — единицы, категории, валюты и страны для форм. **Техдокументация**: `GET|POST /erp/docs/files` (multipart,
+ * файл до 20 МБ), `DELETE /erp/docs/files/{id}`, `GET /erp/docs/files/{id}/content` (поток, всегда вложением), `GET /erp/docs/deals`.
+ *
  * **0.24.0 (D1-4) — EDS · КП на одобрение и документы на согласовании.** Добавляющее изменение, тег `eds-approvals`: `GET /eds/quotes`
  * (КП на одобрение: «на моём шаге» или все), `GET /eds/quotes/{ref}` (карточка КП по id маршрута или номеру `КП-2026/115`: шаги маршрута,
  * чек-лист с датой и автором, состав и итоги из ERP, письмо и заявка, каналы отправки по контакту клиента; **внутренний блок**
@@ -238,7 +250,7 @@
  * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; «Забыли пароль?» — 5 запросов в час на IP и на адрес; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.24.0
+ * OpenAPI spec version: 0.25.0
  */
 
 export interface EdsPerson {

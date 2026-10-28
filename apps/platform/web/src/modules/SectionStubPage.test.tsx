@@ -77,10 +77,10 @@ describe("SectionStubPage · раздел с мостом", () => {
 
   it("ERP: ссылка ведёт на хэш-маршрут старого ERP, под кнопкой — путь после входа", async () => {
     signInAs("supply@demo.example");
-    renderApp("/erp/catalog");
+    renderApp("/erp/stock");
     const page = await main();
     const open = await within(page).findByRole("link", { name: /Открыть в старом ERP/ });
-    expect(open).toHaveAttribute("href", "http://erp.localhost:8088/#catalog-reference");
+    expect(open).toHaveAttribute("href", "http://erp.localhost:8088/#my-products");
     expect(open).toHaveAttribute("target", "_blank");
     expect(
       within(page).getByText(/Вход выполнится сам\. Старый ERP откроется на главной странице/),
@@ -90,7 +90,7 @@ describe("SectionStubPage · раздел с мостом", () => {
 
   it("ERP: клик берёт одноразовый SSO-адрес у BFF и открывает его в новой вкладке", async () => {
     signInAs("supply@demo.example");
-    renderApp("/erp/catalog");
+    renderApp("/erp/stock");
     const open = await screen.findByRole("link", { name: /Открыть в старом ERP/ });
     const replace = vi.fn();
     const tab = { opener: {}, location: { replace } };
@@ -110,7 +110,7 @@ describe("SectionStubPage · раздел с мостом", () => {
   it("ERP: SSO не вышел — вкладка получает обычную ссылку, под кнопкой честное пояснение", async () => {
     setBridgeMock({ ssoFails: true });
     signInAs("supply@demo.example");
-    renderApp("/erp/catalog");
+    renderApp("/erp/stock");
     const open = await screen.findByRole("link", { name: /Открыть в старом ERP/ });
     const replace = vi.fn();
     vi.spyOn(window, "open").mockReturnValue({
@@ -121,7 +121,7 @@ describe("SectionStubPage · раздел с мостом", () => {
     fireEvent.click(open);
 
     await waitFor(() => {
-      expect(replace).toHaveBeenCalledWith("http://erp.localhost:8088/#catalog-reference");
+      expect(replace).toHaveBeenCalledWith("http://erp.localhost:8088/#my-products");
     });
     expect(await screen.findByText(/Вход без второго пароля не получился/)).toBeVisible();
   });
@@ -131,7 +131,7 @@ describe("SectionStubPage · раздел с мостом", () => {
       http.post("*/bridge/erp-sso", () => HttpResponse.json({ url: "javascript:alert(1)" })),
     );
     signInAs("supply@demo.example");
-    renderApp("/erp/catalog");
+    renderApp("/erp/stock");
     const open = await screen.findByRole("link", { name: /Открыть в старом ERP/ });
     const replace = vi.fn();
     vi.spyOn(window, "open").mockReturnValue({
@@ -142,14 +142,14 @@ describe("SectionStubPage · раздел с мостом", () => {
     fireEvent.click(open);
 
     await waitFor(() => {
-      expect(replace).toHaveBeenCalledWith("http://erp.localhost:8088/#catalog-reference");
+      expect(replace).toHaveBeenCalledWith("http://erp.localhost:8088/#my-products");
     });
     expect(replace).not.toHaveBeenCalledWith(expect.stringContaining("javascript:"));
   });
 
   it("всплывающие окна закрыты — срабатывает обычная ссылка, запросов SSO нет", async () => {
     signInAs("supply@demo.example");
-    renderApp("/erp/catalog");
+    renderApp("/erp/stock");
     const open = await screen.findByRole("link", { name: /Открыть в старом ERP/ });
     vi.spyOn(window, "open").mockReturnValue(null);
     const notPrevented = fireEvent.click(open);

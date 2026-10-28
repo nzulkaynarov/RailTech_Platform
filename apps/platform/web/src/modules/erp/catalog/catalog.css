@@ -1,0 +1,185 @@
+/* Расчёт · Номенклатура и поставщики, Техдокументация (D2-3). Значения — макет v3: рамка #f0f0f0, вторичный текст #595959. */
+.pf-cat {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.pf-cat-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px 16px;
+}
+.pf-cat-control {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.pf-cat-control > label {
+  color: #595959;
+  font-size: 13px;
+}
+.pf-cat-spacer {
+  flex: 1 1 auto;
+}
+.pf-cat-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.pf-cat-table th,
+.pf-cat-table td {
+  padding: 10px 16px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid #f0f0f0;
+}
+.pf-cat-table th {
+  color: #595959;
+  font-weight: 500;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.pf-cat-table td.num,
+.pf-cat-table th.num {
+  text-align: right;
+}
+.pf-cat-table tr[data-selected="true"] {
+  background: #e6f4ff;
+}
+.pf-cat-main {
+  overflow-wrap: anywhere;
+  min-width: 180px;
+}
+.pf-cat-sub {
+  display: block;
+  color: #595959;
+  font-size: 13px;
+}
+.pf-cat-linkbtn.ant-btn {
+  height: auto;
+  padding: 0;
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.pf-cat-cards {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pf-cat-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+.pf-cat-card dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 2px 12px;
+  margin: 0;
+  font-size: 13px;
+}
+.pf-cat-card dt {
+  color: #595959;
+}
+.pf-cat-card dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.pf-cat-pager {
+  display: flex;
+  justify-content: flex-end;
+  padding: 12px 16px;
+}
+.pf-cat-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.pf-cat-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+@media (max-width: 767px) {
+  .pf-cat-form-row {
+    grid-template-columns: 1fr;
+  }
+}
+.pf-cat-section {
+  margin: 16px 0 8px;
+  font-size: 14px;
+  line-height: 22px;
+  font-weight: 600;
+}
+.pf-cat-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.pf-cat-note {
+  margin: 0;
+  color: #595959;
+  font-size: 13px;
+  line-height: 20px;
+}
+.pf-cat-offers {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.pf-cat-offers th,
+.pf-cat-offers td {
+  padding: 8px 8px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid #f0f0f0;
+}
+.pf-cat-offers th {
+  color: #595959;
+  font-weight: 500;
+}
+/* Просмотр PDF: страницы рисуются в canvas (CSP Платформы запрещает встроенные просмотрщики) */
+.pf-doc-viewer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+.pf-doc-viewer-pages {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 70vh;
+  overflow: auto;
+  padding: 8px;
+  background: #fafafa;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+}
+.pf-doc-viewer-pages:focus-visible {
+  outline: 2px solid #1668dc;
+}
+.pf-doc-viewer-pages canvas {
+  max-width: 100%;
+  height: auto;
+  background: #fff;
+  border: 1px solid #f0f0f0;
+}
+.pf-doc-viewer-image {
+  max-width: 100%;
+  max-height: 70vh;
+  align-self: center;
+}
+.pf-cat-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  font-size: 14px;
+}

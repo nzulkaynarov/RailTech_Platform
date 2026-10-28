@@ -2,6 +2,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Alert, App, Button, Checkbox, Form, Input, InputNumber, Segmented } from "antd";
 import { useId, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Link } from "react-router";
+
+import { canSee } from "../../../../app/access";
+import { useAuth } from "../../../../app/auth/useAuth";
 
 import type {
   ReferenceItem,
@@ -35,6 +39,7 @@ type Values = Partial<Omit<ReferenceItem, "id">> & { code: string; name: string 
 /** Справочники ERP, у которых есть API: страны, валюты, единицы измерения, базисы поставки (ERP `master-data/*`). */
 export function ReferenceTab() {
   const { t } = useTranslation("company");
+  const { me } = useAuth();
   const [kind, setKind] = useState<ReferenceKind>("countries");
   return (
     <div className="pf-co-body">
@@ -46,7 +51,16 @@ export function ReferenceTab() {
         options={KINDS.map((value) => ({ value, label: t(`reference.kinds.${value}`) }))}
       />
       <ReferenceList key={kind} kind={kind} />
-      <Alert type="info" showIcon message={t("reference.noApi")} />
+      {canSee(me, { resource: "erp.stock" }) ? (
+        <Alert
+          type="info"
+          showIcon
+          message={t("reference.moved")}
+          action={<Link to="/erp/catalog?part=refs">{t("reference.movedLink")}</Link>}
+        />
+      ) : (
+        <Alert type="info" showIcon message={t("reference.movedNoAccess")} />
+      )}
     </div>
   );
 }

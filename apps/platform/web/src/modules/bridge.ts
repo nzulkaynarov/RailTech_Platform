@@ -126,8 +126,6 @@ export const BRIDGE: Readonly<Record<string, BridgeEntry>> = {
     objectKind: "request",
   },
   "erp.stock": { legacy: erp("#my-products", "erpStock"), when: "pilot" },
-  "erp.catalog": { legacy: erp("#catalog-reference", "erpCatalog"), when: "pilot" },
-  "erp.docs": { legacy: erp("#company-files", "erpFiles"), when: "pilot" },
 
   "chats.all": { who: "chats", when: "pilot", objectKind: "chat" },
   "chats.internal": { who: "chats", when: "pilot", objectKind: "chat" },
@@ -153,6 +151,8 @@ export const NATIVE_SECTIONS: readonly string[] = [
   "admin.company",
   "admin.bot",
   "admin.audit",
+  "erp.catalog",
+  "erp.docs",
 ];
 
 /** Главные действия модулей без экрана (кнопка внизу подменю неактивна): когда появятся. Остальных модулей это не касается. */

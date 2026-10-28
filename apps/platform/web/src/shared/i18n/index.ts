@@ -4,6 +4,7 @@ import { initReactI18next } from "react-i18next";
 import enAudit from "./en/audit.json";
 import enBridge from "./en/bridge.json";
 import enBus from "./en/bus.json";
+import enCatalog from "./en/catalog.json";
 import enBot from "./en/bot.json";
 import enCommon from "./en/common.json";
 import enCompany from "./en/company.json";
@@ -22,6 +23,7 @@ import enUi from "./en/ui.json";
 import ruAudit from "./ru/audit.json";
 import ruBridge from "./ru/bridge.json";
 import ruBus from "./ru/bus.json";
+import ruCatalog from "./ru/catalog.json";
 import ruBot from "./ru/bot.json";
 import ruCommon from "./ru/common.json";
 import ruCompany from "./ru/company.json";
@@ -40,6 +42,7 @@ import ruUi from "./ru/ui.json";
 import uzAudit from "./uz/audit.json";
 import uzBridge from "./uz/bridge.json";
 import uzBus from "./uz/bus.json";
+import uzCatalog from "./uz/catalog.json";
 import uzBot from "./uz/bot.json";
 import uzCommon from "./uz/common.json";
 import uzCompany from "./uz/company.json";
@@ -79,6 +82,7 @@ export const resources = {
     bot: ruBot,
     ui: ruUi,
     company: ruCompany,
+    catalog: ruCatalog,
   },
   uz: {
     common: uzCommon,
@@ -99,6 +103,7 @@ export const resources = {
     bot: uzBot,
     ui: uzUi,
     company: uzCompany,
+    catalog: uzCatalog,
   },
   en: {
     common: enCommon,
@@ -119,6 +124,7 @@ export const resources = {
     bot: enBot,
     ui: enUi,
     company: enCompany,
+    catalog: enCatalog,
   },
 } as const;
 
@@ -143,7 +149,7 @@ export function rememberLanguage(language: Language): void {
   }
 }
 
-/** ru — язык по умолчанию (SPEC-v3 §8); uz — латиница. Пространства имён: common, shell (каркас и вход), modules (меню и пустые состояния), bridge (заглушки разделов и мост в старые экраны), dictionary (словарь SPEC-v3 §2: стадии и статусы), ui (тексты общих компонентов), integrations (Admin · Внешние интеграции), company (Admin · Компания), kb (CRM · База знаний), bot (Admin · Настройки бота), bus (Admin · Журнал интеграций), documents (EDS · Создать документ и «Мои документы»), letters (EDS · Входящие письма и резолюция), messages (Клиенты · Ждут ответа, D1-1), profile (страница /me, «Забыли пароль?»), quotes (EDS · КП на одобрение), approvals (EDS · На согласовании). */
+/** ru — язык по умолчанию (SPEC-v3 §8); uz — латиница. Пространства имён: common, shell (каркас и вход), modules (меню и пустые состояния), bridge (заглушки разделов и мост в старые экраны), dictionary (словарь SPEC-v3 §2: стадии и статусы), ui (тексты общих компонентов), integrations (Admin · Внешние интеграции), company (Admin · Компания), kb (CRM · База знаний), bot (Admin · Настройки бота), bus (Admin · Журнал интеграций), documents (EDS · Создать документ и «Мои документы»), letters (EDS · Входящие письма и резолюция), messages (Клиенты · Ждут ответа, D1-1), profile (страница /me, «Забыли пароль?»), quotes (EDS · КП на одобрение), approvals (EDS · На согласовании), catalog (Расчёт · Номенклатура и поставщики, Техдокументация, D2-3). */
 void i18n.use(initReactI18next).init({
   resources,
   lng: storedLanguage(),
@@ -167,6 +173,7 @@ void i18n.use(initReactI18next).init({
     "profile",
     "quotes",
     "approvals",
+    "catalog",
   ],
   interpolation: { escapeValue: false },
 });
