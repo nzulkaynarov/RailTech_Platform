@@ -155,6 +155,8 @@ def update_offer(offer: SupplierOffer, data: dict, user) -> SupplierOffer:
         action="Предложение поставщика изменено",
         before=before,
         after=snapshot(offer, OFFER_FIELDS),
+        masked=("base_price",),  # цену видит только supplier_prices, журнал читает администратор
+        detail=f"{offer.product.name} | {offer.supplier.name}",
     )
     return offer
 

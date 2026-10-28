@@ -557,8 +557,11 @@ def test_offer_edit_is_written_to_the_audit_log_with_before_and_after(world):
     (entry,) = _log("admin.supplier_offer.updated")
     assert entry.user == world["users"]["supply"] and entry.entity_id == live.pk
     assert entry.before_data["stock_quantity"] == 500 and entry.after_data["stock_quantity"] == 250
-    assert (entry.before_data["base_price"], entry.after_data["base_price"]) == ("12.50", "13.75")
+    # значений цены в журнале нет: его читает администратор без supplier_prices, остаётся факт изменения
+    assert (entry.before_data["base_price"], entry.after_data["base_price"]) == ("скрыто", "изменено")
     assert entry.after_data["currency"] == "UZS"
+    assert "12.50" not in str(entry.before_data) + str(entry.after_data) + entry.detail
+    assert "13.75" not in str(entry.before_data) + str(entry.after_data) + entry.detail
     # правка без изменений следа не оставляет
     send(world, "supply", "patch", path, {"quota_qty": 250})
     assert len(_log("admin.supplier_offer.updated")) == 1
@@ -570,11 +573,14 @@ def test_brigade_hs_code_manufacturer_and_file_deletion_are_audited(world):
     ).json()
     send(world, "supply", "patch", f"catalog/brigades/{created['id']}/", {"rate": {"amount": "200", "currency": "UZS"}})
     (made, changed) = _log("admin.brigade.created"), _log("admin.brigade.updated")
-    assert (
-        made[0].after_data["rate"] == "100.00"
-        and changed[0].before_data["rate"] == "100.00"
-        and changed[0].after_data["rate"] == "200.00"
-    )
+    # ставки в журнале нет, только факт изменения
+    assert made[0].after_data["rate"] == "изменено"
+    assert (changed[0].before_data["rate"], changed[0].after_data["rate"]) == ("скрыто", "изменено")
+    seen = "".join(str(e.before_data) + str(e.after_data) + e.detail for e in (*made, *changed))
+    assert "100" not in seen and "200" not in seen
+    # правка без ставки её не «меняет»
+    send(world, "supply", "patch", f"catalog/brigades/{created['id']}/", {"headcount": 7})
+    assert _log("admin.brigade.updated")[-1].after_data["rate"] == "скрыто"
     code = send(world, "supply", "post", "master-data/hs-codes/", {"code": "8536", "name": "x"}).json()
     send(world, "supply", "patch", f"master-data/hs-codes/{code['id']}/", {"valid_until": "2020-01-01"})
     assert _log("admin.hs_code.created") and _log("admin.hs_code.updated")[0].after_data["valid_until"] == "2020-01-01"

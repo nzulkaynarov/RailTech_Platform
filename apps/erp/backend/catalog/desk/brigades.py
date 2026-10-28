@@ -112,5 +112,6 @@ def save_brigade(brigade, data: dict, user) -> Brigade:
         action="Бригада добавлена" if created else "Бригада изменена",
         before=before,
         after=snapshot(brigade, BRIGADE_FIELDS),
+        masked=("rate",),  # ставку видит только cost_margin, журнал читает администратор
     )
     return brigade
