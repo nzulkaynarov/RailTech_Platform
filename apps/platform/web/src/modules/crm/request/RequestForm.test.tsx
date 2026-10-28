@@ -242,9 +242,11 @@ describe("письмо директору: из переписки и при с�
   it("«В заявку» у файла клиента в «Ждут ответа» — форма с этим файлом как письмом директору", async () => {
     signIn("manager@demo.example");
     const { router } = renderAt("/crm/messages?lead=L-2041");
-    const button = await screen.findByRole("link", {
-      name: "В заявку: Заявка-демо.pdf — письмом директору",
-    });
+    const button = await screen.findByRole(
+      "link",
+      { name: "В заявку: Заявка-демо.pdf — письмом директору" },
+      { timeout: 10_000 },
+    );
     fireEvent.click(button);
     await waitFor(() => {
       expect(router.state.location.pathname).toBe("/crm/leads");

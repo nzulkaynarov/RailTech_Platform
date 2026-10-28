@@ -258,15 +258,19 @@ describe("Глобальный поиск", () => {
     expect(screen.queryByRole("region", { name: /Где посмотреть/ })).toBeNull();
   });
 
-  it("действие без экрана подписано честно: «Пока делается в старой системе»", async () => {
+  it("у всех действий поиска есть экран: подписи «Пока делается в старой системе» нет", async () => {
+    // «Создать заявку» (D1-2b) и «Создать документ» (D1-6b) — настоящие экраны
     signInAs("manager@demo.example");
-    renderApp("/dashboard/queue");
+    const { router } = renderApp("/dashboard/queue");
     const box = await searchBox();
 
     type(box, "служебка");
     const action = await screen.findByRole("option", { name: /Создать служебную записку/ });
-    expect(action).toHaveTextContent("Пока делается в старой системе");
-    expect(action).not.toHaveTextContent(/фаз/i);
+    expect(action).not.toHaveTextContent("Пока делается в старой системе");
+    fireEvent.click(action);
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/eds/new");
+    });
   });
 
   it("администратор: «пригласить» — действие, которое ведёт в Оргструктуру с приглашением", async () => {
