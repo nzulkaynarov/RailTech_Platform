@@ -53,7 +53,7 @@
     "preferred": "Предпочитает: {{channel}}",
     "conversation": "Переписка",
     "noLeads": "Переписки нет",
-    "openConversation": "Открыть переписку с {{name}} в «Ждут ответа»",
+    "openConversation": "{{name}} — открыть переписку в «Ждут ответа»",
     "requests": "Заявки и проекты",
     "noRequests": "Заявок пока нет",
     "noNumber": "номер ещё не присвоен",

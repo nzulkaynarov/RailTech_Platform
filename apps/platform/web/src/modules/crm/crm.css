@@ -34,7 +34,7 @@
 }
 .pf-crm-table th,
 .pf-crm-table td {
-  padding: 10px 16px;
+  padding: 10px 12px;
   text-align: left;
   vertical-align: middle;
   border-bottom: 1px solid #f0f0f0;
@@ -67,8 +67,12 @@
   text-decoration: underline;
 }
 .pf-crm-need {
+  min-width: 140px;
   max-width: 320px;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
+}
+.pf-crm-table td:first-child {
+  min-width: 150px;
 }
 .pf-crm-wrap {
   overflow-wrap: anywhere;

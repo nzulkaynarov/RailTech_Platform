@@ -186,7 +186,6 @@ function LeadsTable({
             <th scope="col">{t("leads:columns.name")}</th>
             <th scope="col">{t("leads:columns.status")}</th>
             <th scope="col">{t("leads:columns.need")}</th>
-            <th scope="col">{t("leads:columns.channel")}</th>
             <th scope="col">{t("leads:columns.assigned")}</th>
             <th scope="col">{t("leads:columns.last")}</th>
             <th scope="col">{t("leads:columns.action")}</th>
@@ -197,13 +196,14 @@ function LeadsTable({
             <tr key={row.lead} data-selected={selected === row.lead}>
               <td>
                 <NameCell row={row} params={params} selected={selected === row.lead} />
-                <div className="pf-hint">{row.lead}</div>
+                <div className="pf-hint">
+                  {row.lead} · {channelLabel(t, row.channel)}
+                </div>
               </td>
               <td>
                 <StatusTag kind="lead" status={row.status} />
               </td>
               <td className="pf-crm-need">{row.need ?? <span aria-hidden="true">—</span>}</td>
-              <td>{channelLabel(t, row.channel)}</td>
               <td>{row.assigned?.name ?? t("leads:nobody")}</td>
               <td>
                 <LastMessage row={row} />

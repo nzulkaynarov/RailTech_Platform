@@ -52,7 +52,7 @@ describe("Клиенты · Клиенты (D1-2b)", () => {
     const conversation = within(panel).getByRole("region", { name: "Переписка" });
     expect(
       within(conversation).getByRole("link", {
-        name: "Открыть переписку с Бобур Снабженцев в «Ждут ответа»",
+        name: "Бобур Снабженцев · L-2033 — открыть переписку в «Ждут ответа»",
       }),
     ).toHaveAttribute("href", "/crm/messages?lead=L-2033");
 

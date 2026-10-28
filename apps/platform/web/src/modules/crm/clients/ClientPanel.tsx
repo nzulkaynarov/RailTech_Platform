@@ -317,7 +317,9 @@ function Body({ card, sheet, onClose }: { card: ClientCard; sheet: boolean; onCl
                   size="small"
                   style={{ padding: 0 }}
                   to={`/crm/messages?lead=${link.lead}`}
-                  aria-label={t("clients:card.openConversation", { name: link.name })}
+                  aria-label={t("clients:card.openConversation", {
+                    name: `${link.name} · ${link.lead}`,
+                  })}
                 >
                   {link.name} · {link.lead}
                 </LinkButton>

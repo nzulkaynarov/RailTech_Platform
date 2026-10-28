@@ -217,7 +217,8 @@ export function RequestForm({ lead, clientId, onCancel }: RequestFormProps) {
       }}
     >
       <div className="pf-fp-stack" style={{ gap: 4 }}>
-        <h3 className="pf-fp-title" id={id("title")}>
+        {/* На телефоне заголовок листа уже «Создать заявку» — второй виден только скринридеру */}
+        <h3 className={mobile ? "pf-sr-only" : "pf-fp-title"} id={id("title")}>
           {t("request:title")}
         </h3>
         {lead ? <p className="pf-fp-sub">{t("request:from", { lead: lead.lead })}</p> : null}

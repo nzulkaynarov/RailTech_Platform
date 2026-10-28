@@ -26,9 +26,8 @@
     "name": "Who",
     "status": "Status",
     "need": "Request",
-    "channel": "Channel",
     "assigned": "Handled by",
-    "last": "Last message",
+    "last": "Message",
     "action": "Action"
   },
   "caption": "Leads",

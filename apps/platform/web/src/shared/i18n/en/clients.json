@@ -53,7 +53,7 @@
     "preferred": "Prefers: {{channel}}",
     "conversation": "Conversation",
     "noLeads": "No conversation",
-    "openConversation": "Open the conversation with {{name}} in “Awaiting reply”",
+    "openConversation": "{{name}} — open the conversation in “Awaiting reply”",
     "requests": "Requests and projects",
     "noRequests": "No requests yet",
     "noNumber": "no number yet",
