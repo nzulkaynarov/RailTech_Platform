@@ -7,9 +7,12 @@
 - права сотрудника = объединение его ролей: максимум по разделу и объединение полей;
 - права CRM (casbin) и ERP (`Permission`) вычисляются из каталога по разделу и уровню (уровень
   `full` включает `read`); поле с ограничением открывает права ERP из каталога;
-- базовая роль CRM `admin|manager|viewer` остаётся для старого фронта до T4: роль с кодом — как
-  в версии 1 (`CRM_BASE_ROLE_BY_CODE`), роль без кода — по `CRM_BASE_ROLE_BY_ACCESS`; у сотрудника
-  берётся старшая (admin > manager > viewer);
+- базовая роль CRM `admin|manager|viewer` — лишь признак (D1-8, B-014): «последний администратор»,
+  кого можно назначить на лида, замещающий, режим интерфейса старого фронта. Прав она не даёт —
+  права сотрудника с ролями Платформы только из матриц его ролей (`Principal.rbac_roles`). Признак
+  вычисляется из той же матрицы (`CRM_BASE_ROLE_BY_ACCESS`: `admin: full` — admin,
+  `crm.leads: full` — manager, иначе viewer), без привязки к коду роли; у сотрудника берётся
+  старшая (admin > manager > viewer);
 - права EDS (`eds_permissions_of`) вычисляются так же, по `EDS_BACKEND`; неактивный сотрудник —
   пустой список; CRM публикует их в `identity.user.*` как `permissions.eds` (задача E4);
 - провижининг ERP: `permissions` = вычисленный набор, `role_codes = []`; суперпользователь ERP —
@@ -44,6 +47,7 @@ from app.domain.platform_roles_generated import (
 __all__ = [
     "LEGACY_ROLE_CODES",
     "POLICY_DOMAIN",
+    "PUBLISHED_SECTION_PREFIXES",
     "SUBJECT_PREFIX",
     "TEMPLATE_PREFIX",
     "AccessDiff",
@@ -58,6 +62,7 @@ __all__ = [
     "eds_permissions_for",
     "eds_permissions_of",
     "erp_access_for",
+    "erp_catalog_fingerprint",
     "erp_permissions_for",
     "legacy_code",
     "merge_access",
@@ -229,6 +234,11 @@ def eds_permissions_for(access: Mapping[str, str]) -> tuple[str, ...]:
     return tuple(sorted(granted))
 
 
+# Разделы каталога, которые CRM публикует в `identity.user.*` (`permissions.sections`): модулей EDS
+# и ERP по префиксу ключа. Остальное (CRM, чаты, настройки) подписчикам не нужно.
+PUBLISHED_SECTION_PREFIXES: Final = ("eds.", "erp.")
+
+
 def eds_catalog_fingerprint(
     backend: Mapping[str, Mapping[str, tuple[str, ...]]] = EDS_BACKEND,
     role_access: Mapping[str, Mapping[str, str]] = ROLE_ACCESS,
@@ -241,7 +251,10 @@ def eds_catalog_fingerprint(
     уровни и разделы не считаются), права EDS системных ролей и шаблонов ролей (`tpl:<код>`, B-005:
     их матрица из каталога) по их матрицам. Не входит: права CRM
     и ERP, названия, описания, порядок записей и комментарии каталога — их правка отпечаток не
-    меняет. Роли с произвольной матрицей — данные, их правки идут обычными событиями сотрудника."""
+    меняет. Роли с произвольной матрицей — данные, их правки идут обычными событиями сотрудника.
+    С D1-8 входят и опубликованные разделы (`permissions.sections`: ключи `eds.*`/`erp.*`) всех
+    ролей каталога, системных и шаблонов `tpl:*`, с уровнями: правка раздела `erp.calc.*` меняет
+    отпечаток. `v` — версия формата отпечатка, не содержимое."""
     effective = {
         resource: {
             level: sorted(set(_accumulated(backend, resource, level))) for level in ("read", "full")
@@ -266,10 +279,34 @@ def eds_catalog_fingerprint(
         }
 
     payload = {
-        "v": 2,
+        # 3 — D1-8: снимок несёт и `permissions.sections` (опубликованные разделы всех ролей);
+        # 2 — B-005: шаблоны `tpl:*` в отпечатке. Номер — версия формата, не содержимое.
+        "v": 3,
         "backend": {r: lv for r, lv in sorted(effective.items()) if lv},
         "system_roles": of_roles(system_codes),
         "role_templates": of_roles(template_codes),
+        "role_sections": {
+            code: {
+                resource: level
+                for resource, level in sorted(role_access.get(code, {}).items())
+                if resource.startswith(PUBLISHED_SECTION_PREFIXES)
+            }
+            for code in sorted(role_access)
+        },
+    }
+    return hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
+
+
+def erp_catalog_fingerprint() -> str:
+    """Отпечаток части каталога, от которой зависят права ERP сотрудника (провижининг, D2-1).
+
+    Тот же расчёт, что у EDS (`eds_catalog_fingerprint`) по `ERP_BACKEND`, плюс права ERP полей с
+    ограничением (`FIELD_ERP_BACKEND`). Смена отпечатка = «провижинить заново всех с доступом к ERP»
+    (`services/identity_catalog.py`)."""
+    payload = {
+        "v": 1,
+        "backend": eds_catalog_fingerprint(ERP_BACKEND),
+        "fields": {name: sorted(codes) for name, codes in sorted(FIELD_ERP_BACKEND.items())},
     }
     return hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
 
@@ -289,10 +326,8 @@ def _meets(access: Mapping[str, str], condition: str) -> bool:
 
 
 def role_crm_base(grant: RoleGrant) -> str:
-    """Базовая роль CRM одной роли для старого фронта (до T4)."""
-    legacy = legacy_code(grant.code)
-    if legacy is not None:
-        return CRM_BASE_ROLE_BY_CODE[legacy]
+    """Базовая роль CRM одной роли — признак по матрице, не по коду роли (D1-8): шаблон
+    «Бухгалтер» без `crm.leads` — `viewer`, а не `manager`, как в версии 1."""
     for role in ("admin", "manager"):
         if any(_meets(grant.access, c) for c in CRM_BASE_ROLE_BY_ACCESS.get(role, ())):
             return role

@@ -1,5 +1,8 @@
 import type { ModuleConfig } from "../types";
 
+/** Вкладки бокового окна расчёта: «Задание» (резолюция, визы, чат проекта), чат и документы (SPEC-v3 §7.4). */
+const CALC_TABS = [{ key: "task" }, { key: "chat" }, { key: "documents" }] as const;
+
 export const erp: ModuleConfig = {
   code: "erp",
   action: { access: "erp.calc" },
@@ -9,15 +12,20 @@ export const erp: ModuleConfig = {
       path: "/erp/requests",
       detail: "/erp/requests/:id",
       access: { resource: "erp.calc" },
+      tabs: CALC_TABS,
+      // Таблица заявок на всю ширину; «Задание» открывается кликом по строке (SPEC-v3 §11.2 п. 4).
+      defaults: { panelOpen: false },
+      sheetOnMobile: true,
     },
     {
       key: "calc",
       path: "/erp/calc",
       detail: "/erp/calc/:id",
       access: { resource: "erp.calc" },
-      tabs: [{ key: "task" }, { key: "chat" }, { key: "documents" }],
+      tabs: CALC_TABS,
       defaults: { menuOpen: false },
       actionTo: "/erp/requests",
+      sheetOnMobile: true,
     },
     {
       key: "stock",

@@ -104,10 +104,15 @@ templates:
       erp.stock: read
       chats.internal: full
       chats.external: full
-    restricted_fields: [totals_only, supplier_prices]
+    # Решение архитектора 2026-10-28 (Q-D2-1-4): бухгалтер видит цены клиенту, итоги и НДС — без цен поставщиков,
+    # себестоимости и маржи.
+    restricted_fields: [totals_only]
 
-# Базовая роль CRM (admin|manager|viewer) для старого фронта до T4: максимум по ролям сотрудника.
-# Роль с кодом из `by_code` (системные и шаблоны) — как в версии 1; роль без кода — по `by_access`; иначе viewer.
+# Базовая роль CRM (admin|manager|viewer) — признак, прав она не даёт (D1-8, B-014): права CRM сотрудника с ролями
+# Платформы — только из матриц его ролей. Признак нужен там, где считают людей, а не права: «последний администратор»,
+# кого можно назначить на лида, замещающий, режим интерфейса старого фронта. У сотрудника — максимум по ролям.
+# Признак роли вычисляется по матрице (`by_access`, иначе viewer); `by_code` (версия 1) CRM больше не применяет —
+# оставлен для обратной совместимости контракта.
 crm_base_role:
   by_code:
     MANAGER: manager
@@ -198,13 +203,13 @@ resources:
     levels: [full]
     label: { ru: "Расчёт · Виза расчёта: товары и склад", uz: "Hisob-kitob · Hisob-kitob vizasi: tovarlar va ombor", en: "Costing · Costing sign-off: goods and stock" }
     backend:
-      erp: { full: [quote.build, quote.edit_pricing] }
+      erp: { full: [quote.build, quote.edit_pricing, quote.visa_goods] }
   - key: erp.calc.services
     module: erp
     levels: [full]
     label: { ru: "Расчёт · Виза расчёта: услуги", uz: "Hisob-kitob · Hisob-kitob vizasi: xizmatlar", en: "Costing · Costing sign-off: services" }
     backend:
-      erp: { full: [quote.build] }
+      erp: { full: [quote.build, quote.visa_services] }
   - key: erp.stock
     module: erp
     label: { ru: "Расчёт · Склад, Номенклатура и поставщики, Техдокументация", uz: "Hisob-kitob · Ombor, nomenklatura va yetkazib beruvchilar, texnik hujjatlar", en: "Costing · Stock, items & suppliers, technical files" }
@@ -316,7 +321,8 @@ menu:
     setup: [admin]
 
 # Поля с ограничением внутри экранов (SPEC-v3 §4.2). Роль перечисляет поля, которые она ВИДИТ; поле скрыто, если ни одна роль
-# сотрудника его не видит. Скрытие `supplier_prices` и `totals_only` делает BFF (у ERP для них нет отдельного права).
+# сотрудника его не видит. `supplier_prices` и `totals_only` своих прав ERP не дают: в расчёте (D2-1) ERP режет цены поставщика
+# по `quote.view_cost_margin` или праву визы товаров, BFF — по этим группам; «только итоги» — без себестоимости и цен поставщика.
 restricted_fields:
   cost_margin:
     description: { ru: "Себестоимость и маржа", uz: "Tannarx va marja", en: "Cost and margin" }

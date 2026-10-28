@@ -4,8 +4,10 @@
 браузер узнаёт обычными запросами с проверкой прав. Подписки (типы и адрес) —
 `packages/contracts/bus/subscriptions.yaml`, строка `platform-bff`; секреты пар —
 `RT_BUS_SECRET_ERP_PLATFORM_BFF`, `RT_BUS_SECRET_CRM_PLATFORM_BFF`, `RT_BUS_SECRET_EDS_PLATFORM_BFF`
-из окружения. События EDS (волна 12) приходят, но подсказок пока не дают (`skipped`). Своих событий
-BFF не публикует. Снаружи `/bus/*` домена Платформы не публикуется (Caddy отвечает 404).
+из окружения. События EDS (волна 12; D1-6) дают подсказки очереди, счётчиков и уведомлений:
+письмо, маршрут, решение и документ меняют «Мою очередь» директора и бейджи «Документов» без
+перезагрузки. Своих событий BFF не публикует. Снаружи `/bus/*` домена Платформы не публикуется
+(Caddy отвечает 404).
 """
 
 from collections.abc import Mapping
@@ -23,11 +25,12 @@ SERVICE = "platform-bff"
 ERP_EVENTS = "uz.railtech.erp.*.v1"
 LEAD_EVENTS = "uz.railtech.crm.lead.*.v1"
 USER_EVENTS = "uz.railtech.identity.user.*.v1"
-# События EDS (волна 12): подписка в контракте есть, обработчика нет — приёмник отвечает
-# 200 `skipped`, подсказок SSE нет (экраны EDS — этап D).
+# События EDS (`letter.registered|resolved|returned|rejected`, `approval.requested|decided`,
+# `document.registered|archived`): письмо ждёт резолюции, служебка или КП пришли на шаг, решение
+# снимает строку с очереди.
 EDS_EVENTS = "uz.railtech.eds.*.v1"
 SUBSCRIBED = (ERP_EVENTS, LEAD_EVENTS, USER_EVENTS, EDS_EVENTS)
-HANDLED = (ERP_EVENTS, LEAD_EVENTS, USER_EVENTS)
+HANDLED = (ERP_EVENTS, LEAD_EVENTS, USER_EVENTS, EDS_EVENTS)
 
 # Новое сообщение в переписке лида (D1-1): очередь «Ждут ответа» и открытая лента; если лид не у
 # бота (`handoff`), ещё бейдж «Ждут ответа» и «Моя очередь» (непрочитанное). Диалог с ботом
@@ -37,11 +40,13 @@ _MESSAGE_TOPICS: tuple[str, ...] = ("messages",)
 _HANDOFF_MESSAGE_TOPICS: tuple[str, ...] = ("counters", "queue", "messages")
 
 # Что может изменить событие: уведомления, счётчики меню, «Моя очередь», лента «Сегодня», переписка
-# (новая передача, «Забрать», смена ответственного — тоже «Ждут ответа»).
+# (новая передача, «Забрать», смена ответственного — тоже «Ждут ответа»). Событие EDS — очередь,
+# счётчики и уведомления (в «Сегодня» их нет: лента — журнал ERP).
 _TOPICS_BY_MASK: tuple[tuple[str, tuple[str, ...]], ...] = (
     (ERP_EVENTS, ("notifications", "counters", "queue", "activity")),
     (LEAD_EVENTS, ("counters", "queue", "activity", "messages")),
     (USER_EVENTS, ("counters", "queue")),
+    (EDS_EVENTS, ("notifications", "counters", "queue")),
 )
 
 

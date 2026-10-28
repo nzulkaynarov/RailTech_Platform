@@ -3149,6 +3149,29 @@
         "title": "EDS event skipped",
         "detail": "{{letter_number}}: the letter is not linked to an ERP deal"
       }
+    },
+    "calc": {
+      "started": {
+        "title": "Calculation started",
+        "detail": "Draft quote for the calculation on {{letter_number}}"
+      },
+      "lines_added": {
+        "title": "Lines added to the calculation",
+        "detail": "{{letter_number}}: lines added — {{count}}"
+      },
+      "line_updated": {
+        "title": "Calculation line changed"
+      },
+      "line_deleted": {
+        "title": "Line removed from the calculation"
+      },
+      "line_signed": {
+        "title": "Calculation line approved"
+      },
+      "ready": {
+        "title": "Calculation ready: draft quote sent to the director",
+        "detail": "{{letter_number}}: all approvals collected, lines — {{lines}}"
+      }
     }
   },
   "companyTypes": {
@@ -3546,6 +3569,10 @@
     "deal.calc_assigned": {
       "title": "Calculation task",
       "message": "Resolution on {{letter_number}}: calculate request #{{deal_id}} by {{due}}."
+    },
+    "calc.all_signed": {
+      "title": "All calculation lines approved",
+      "message": "Calculation on {{letter_number}}: all approvals collected, you can press “Calculation ready”."
     }
   },
   "approvalParticipation": {

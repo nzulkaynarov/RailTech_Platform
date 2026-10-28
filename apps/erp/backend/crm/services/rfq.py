@@ -41,5 +41,6 @@ def merge_request_lines(quote: Quote, new_items: list) -> tuple:
     if created:
         QuoteItem.objects.bulk_create(created)
     for line in touched:
-        line.save(update_fields=["quantity"])
+        line.version = (line.version or 0) + 1  # количество изменилось — версия строки растёт (D2-1)
+        line.save(update_fields=["quantity", "version"])
     return created, merged

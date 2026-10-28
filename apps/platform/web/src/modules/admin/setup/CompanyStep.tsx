@@ -58,11 +58,14 @@ export function CompanyStep({
   blocker,
   onRetry,
   retrying,
+  waiting = false,
 }: {
   company: SetupChecklist["company"];
   blocker: SetupChecklist["company_blocker"];
   onRetry: () => void;
   retrying: boolean;
+  /** Мастер сам перепроверяет доступ к ERP (W15-G-10): показываем, что ждём, а не тупик */
+  waiting?: boolean;
 }) {
   const { t } = useTranslation("modules");
   const { message } = App.useApp();
@@ -134,6 +137,11 @@ export function CompanyStep({
     return (
       <div className="pf-panel-stack">
         <Alert type="info" showIcon message={t("admin.setup.companyUnknown")} />
+        {waiting ? (
+          <p role="status" className="pf-hint" style={{ margin: 0 }}>
+            {t("admin.setup.companyWaiting")}
+          </p>
+        ) : null}
         <Button loading={retrying} onClick={onRetry}>
           {t("admin.setup.companyRetry")}
         </Button>

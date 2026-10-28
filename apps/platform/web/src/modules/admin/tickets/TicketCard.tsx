@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
 import { canEdit } from "../../../app/access";
+import { RT_TAG_TEXT } from "../../../app/tokens.generated";
 import { useAuth } from "../../../app/auth/useAuth";
 import { TICKET_TEXT_MAX, ticketErrorText } from "../../../features/tickets/ticketMeta";
 import { TicketStatusTag } from "../../../features/tickets/ticketUi";
@@ -168,7 +169,7 @@ export function TicketCard({ number }: { number: string }) {
             />
           ) : null}
           {done && !error ? (
-            <div role="status" className="pf-hint" style={{ color: "#389e0d" }}>
+            <div role="status" className="pf-hint" style={{ color: RT_TAG_TEXT["green"] }}>
               {done === "saved" ? t("admin.card.saved") : t("admin.card.statusSaved")}
             </div>
           ) : (

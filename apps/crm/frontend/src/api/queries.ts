@@ -75,7 +75,7 @@ export const useDecisions = (id: number) => useLeadDecisions(id);
 export const useUsers = () => useListUsers();
 
 /** Активные менеджеры и админы — кому передать лида (без email и ролей). */
-export const useTeam = () => useTeamQuery({ query: { staleTime: 60_000 } });
+export const useTeam = () => useTeamQuery(undefined, { query: { staleTime: 60_000 } });
 
 export type LeadAction =
   | { kind: "take" }

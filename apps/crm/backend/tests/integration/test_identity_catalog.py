@@ -178,3 +178,74 @@ async def test_lock_held_by_another_session_is_skipped_within_the_limit(
 
     retry = await ensure_eds_rights_published(sessions, fingerprint="v-a")  # блокировка снята
     assert (retry.republished, retry.users) == (True, 3)
+
+
+# Отпечаток каталога в формате до D1-8 (main a7c55df73: только коды EDS, `v: 1`) на нынешних данных.
+PRE_D1_8_FINGERPRINT = "e63fc509f2738a144af1918be11b5cfd62d054f8481e4d62b5d964be60a92106"
+
+
+async def test_state_written_before_d1_8_triggers_a_republish_with_sections(
+    sessions: async_sessionmaker[AsyncSession], bus: Any
+) -> None:
+    """Выкладка D1-8: в базе отпечаток старого формата -> при старте воркера все сотрудники
+    переопубликованы, и в снимках уже есть `permissions.sections` (EDS заполнит проекцию)."""
+    ids = await _staff(sessions)
+    async with sessions() as session, session.begin():
+        await session.execute(
+            text(
+                "INSERT INTO identity_catalog_state (key, fingerprint, published_users) "
+                "VALUES (:k, :f, 3)"
+            ),
+            {"k": EDS_KEY, "f": PRE_D1_8_FINGERPRINT},
+        )
+    assert eds_catalog_fingerprint() != PRE_D1_8_FINGERPRINT
+
+    await sync_eds_rights_on_start(sessions)
+
+    assert sorted(await _outbox_subjects(sessions)) == sorted(f"user/{i}" for i in ids)
+    async with sessions() as session:
+        rows = await session.execute(
+            text("SELECT envelope FROM rt_bus_outbox WHERE type = :t"), {"t": USER_UPDATED}
+        )
+        permissions = [r[0]["data"]["user"]["permissions"] for r in rows]
+    assert len(permissions) == 3
+    assert all("sections" in p and "eds" in p for p in permissions)
+
+
+# --- права ERP (D2-1, B-073): провижининг заново по отпечатку ERP-части каталога ----------------
+
+
+async def test_changed_erp_fingerprint_provisions_active_erp_staff_once(
+    sessions: async_sessionmaker[AsyncSession], bus: Any
+) -> None:
+    from app.services.identity_catalog import ERP_KEY, ensure_erp_rights_provisioned
+
+    ids = await _staff(sessions, inactive=1)  # ids[0] неактивен
+    async with sessions() as session, session.begin():
+        await session.execute(
+            text("UPDATE users SET platform_access = CAST(:access AS jsonb) WHERE id = ANY(:ids)"),
+            {"access": '["crm", "erp"]', "ids": [ids[0], ids[1]]},
+        )
+    calls: list[tuple[str, int]] = []
+
+    async def enqueue(action: str, user_id: int) -> None:
+        calls.append((action, user_id))
+
+    first = await ensure_erp_rights_provisioned(sessions, enqueue, fingerprint="erp-a")
+    again = await ensure_erp_rights_provisioned(sessions, enqueue, fingerprint="erp-a")
+    changed = await ensure_erp_rights_provisioned(sessions, enqueue, fingerprint="erp-b")
+
+    # Только активный сотрудник с доступом к ERP; без ERP и неактивный — нет.
+    assert (first.republished, first.users) == (True, 1)
+    assert (again.republished, again.users) == (False, 0)
+    assert (changed.republished, changed.users) == (True, 1)
+    assert calls == [("provision", ids[1]), ("provision", ids[1])]
+    assert (ERP_KEY, "erp-b", 1) in await _stored(sessions)
+    assert await _outbox_subjects(sessions) == [], "права ERP — провижинингом, не событиями"
+
+
+def test_erp_fingerprint_follows_erp_part_of_catalog() -> None:
+    from app.domain.platform_roles import erp_catalog_fingerprint
+
+    assert erp_catalog_fingerprint() == erp_catalog_fingerprint()
+    assert erp_catalog_fingerprint() != eds_catalog_fingerprint()

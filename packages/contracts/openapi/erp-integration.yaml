@@ -42,6 +42,10 @@ info:
     уже переданного в ERP (CRM-03): срочность, файл письма директору (EDS), процесс `v3`, менеджер заявки = владелец сделки
     ERP (B-008); номер заявки `ЗВ-ГГГГ-NNN` выдаёт ERP (`Deal.number`, ERP-09) и возвращает в ответе; `number` у
     `DealListItem` — этот номер (у сделок, заведённых до ERP-09, тоже — номера выданы миграцией).
+
+    D2-1 (волна 17, в 0.9.0; аддитивно, без подъёма версии): `ErpPermission` + `quote.visa_goods`, `quote.visa_services` —
+    виза строки расчёта по типу позиции (ADR-0012 п. 6). CRM выдаёт их из разделов `erp.calc.goods` и `erp.calc.services`
+    каталога Платформы.
   contact:
     name: RailTech Platform — docs/architecture/CONTRACTS.md
 servers:
@@ -1491,6 +1495,8 @@ components:
         - quote.view_cost_margin
         - quote.send
         - quote.review
+        - quote.visa_goods
+        - quote.visa_services
         - contract.manage
         - contract.sign
         - catalog.manage

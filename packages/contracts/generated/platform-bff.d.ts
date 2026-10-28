@@ -3050,7 +3050,7 @@ export interface paths {
     put?: never;
     /**
      * EDS · Утвердить резолюцию → задание в расчёт
-     * @description EDS `POST /letters/{id}/resolution` (право `letters.resolve`). Раздел `eds.inbox` — полный: роль только для чтения получает 403 в BFF до EDS. Письмо должно ждать резолюции, иначе 409 `CONFLICT` (`details.reason = invalid_state`). Срок расчёта в прошлом (по `Asia/Tashkent`) — 422 `VALIDATION_FAILED`, `details.fields = [due]`, `details.reason = due_in_past`; исполнитель не найден или отключён — `details.fields = [assignees]`, `details.reason = not_active_employee`; исполнитель дважды в одной зоне — `duplicate`; `min_margin_pct` у роли без группы `cost_margin` — 422 BFF, `details.reason = margin_forbidden`, в EDS запрос не уходит. Текст ошибки — `message` EDS на языке сотрудника. Ответ — обновлённая карточка. Решение, кого можно назначить, остаётся за EDS и ERP: BFF только передаёт сотрудников и зоны (`GET /eds/resolution/assignees` подсказывает, кого выбрать).
+     * @description EDS `POST /letters/{id}/resolution` (право `letters.resolve`). Раздел `eds.inbox` — полный: роль только для чтения получает 403 в BFF до EDS. Письмо должно ждать резолюции, иначе 409 `CONFLICT` (`details.reason = invalid_state`). Срок расчёта в прошлом (по `Asia/Tashkent`) — 422 `VALIDATION_FAILED`, `details.fields = [due]`, `details.reason = due_in_past`; исполнитель не найден или отключён — `details.fields = [assignees]`, `details.reason = not_active_employee`; исполнитель дважды в одной зоне — `duplicate`; `min_margin_pct` у роли без группы `cost_margin` — 422 BFF, `details.reason = margin_forbidden`, в EDS запрос не уходит. Текст ошибки — `message` EDS на языке сотрудника. Исполнитель без раздела своей зоны — 422, `details.fields = [assignees]`, `details.reason = assignee_zone_mismatch` (проверяет EDS, D1-8). Ответ — обновлённая карточка. Решение, кого можно назначить, остаётся за EDS и ERP: BFF только передаёт сотрудников и зоны (`GET /eds/resolution/assignees` подсказывает, кого выбрать).
      */
     post: operations["resolveLetter"];
     delete?: never;
@@ -3108,7 +3108,7 @@ export interface paths {
     };
     /**
      * EDS · Кого можно назначить исполнителем резолюции, по зонам
-     * @description Кандидаты по зонам резолюции: товары (склад и цены поставщиков), услуги (ТЗ, бригада), условия оплаты. Зона даёт сотрудникам **раздел каталога**, а не код роли: товары — `erp.calc.goods`, услуги — `erp.calc.services`, условия оплаты — `eds.payments` (все — уровень «полный»). BFF читает из CRM активных сотрудников и роли с их матрицами (`GET /users`, `GET /platform-roles`; нужен раздел `admin` не ниже чтения) и сводит матрицы ролей каждого. Если роли сотрудника не дают чтения справочника CRM — 200 с пустыми списками и `directory = forbidden`: выбор исполнителей недоступен до появления операции «сотрудники по разделу» в CRM (docs/QUESTIONS.md). Раздел `eds.inbox` — полный.
+     * @description Кандидаты по зонам резолюции: товары (склад и цены поставщиков), услуги (ТЗ, бригада), условия оплаты. Зона даёт сотрудникам **раздел каталога**, а не код роли: товары — `erp.calc.goods`, услуги — `erp.calc.services`, условия оплаты — `eds.payments` (все — уровень «полный»). Выбор делает CRM — `GET /team?section=&level=full` по вызову на зону (D1-8, B-007); BFF матрицы ролей не сводит. Операция CRM требует чтения сотрудников (раздел `admin` не ниже чтения): если роли сотрудника его не дают — 200 с пустыми списками и `directory = forbidden`. EDS при резолюции сверяет зону исполнителя сам (422 `assignee_zone_mismatch`). Автор резолюции в списках исключён. Раздел `eds.inbox` — полный.
      */
     get: operations["listResolutionAssignees"];
     put?: never;
@@ -3339,6 +3339,210 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/erp/calc/requests": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Расчёт · Заявки в расчёте (и «Мои расчёты»)
+     * @description ERP `GET /calc/tasks/`: заявки с заданием расчёта по резолюции директора на стадиях расчёта, по сроку расчёта. Строка — номер ЗВ, клиент, шаг пути, срок, состояние расчёта, три индикатора виз (склад — товары со склада, снабжение — товары под заказ, гл. инженер — услуги; `none` — таких строк нет), ответственный (менеджер заявки) и исполнители резолюции. `mine=true` — только где сотрудник исполнитель резолюции («Мои расчёты»). Раздел `erp.calc` — чтение. Номер ЗВ/ПР выдаёт ERP (`Deal.number`, ERP-09); из номера `id` не разбирается.
+     */
+    get: operations["listCalcRequests"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/calc/catalog": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Расчёт · Каталог для сопоставления строки
+     * @description ERP `GET /calc/catalog/?q=`: карточки, в названии, артикуле, коде производителя или ГОСТ которых есть каждое слово запроса (до 20, без ИИ). Человек выбирает карточку сам (`PATCH …/lines/{line_id}` с `product_id`). Раздел `erp.calc` — чтение.
+     */
+    get: operations["searchCalcCatalog"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/calc-jobs/{job_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Расчёт · Итог ИИ-разбора текста заявки (предложение строк)
+     * @description ERP `GET /sourcing/ai-status/{task_id}/`. `pending` — разбор идёт (опрашивать раз в 2 с); `done` — предложение строк (ничего не записано: человек отмечает строки и добавляет их `POST …/lines`); `failed` — `reason` (`ai_extract_failed`, `ai_disabled`, `ai_budget_exceeded`, …). Чужое задание — 404. Раздел `erp.calc` — полный.
+     */
+    get: operations["getCalcParse"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/calc/{number}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Расчёт · Расчёт по заявке ЗВ-…
+     * @description ERP `GET /calc/{deal_id}/` (заявку по номеру BFF находит среди заявок с заданием расчёта). Заявка, задание (резолюция директора — проекция события EDS в ERP: текст, дата, кто; исполнители по зонам), КП расчёта, строки (позиция и тип, кол-во, склад, поставщик и срок, закупка и цена клиенту без НДС, наценка, виза), итоги без НДС, визы по трём индикаторам, готовность «Расчёт готов» с причиной и права сотрудника по зонам. Поля с ограничением BFF вырезает (и ERP режет сам): закупку и себестоимость строки (в том числе ставку и дни бригады услуги) видит группа `cost_margin` или держатель зоны этой строки (`erp.calc.goods` — товары, `erp.calc.services` — услуги); наценку, итоги себестоимости и наценки и порог маржи резолюции — только `cost_margin`; цены предложений поставщиков — `supplier_prices` или держатель зоны товаров. Бухгалтер (`totals_only`) — цены клиенту, итоги и НДС. Номера нет среди заявок с заданием — 404. Раздел `erp.calc` — чтение.
+     */
+    get: operations["getCalcSheet"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/calc/{number}/start": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Расчёт · Начать расчёт: черновик КП из строк заявки
+     * @description ERP `POST /calc/{deal_id}/start/`: черновик КП расчёта — строки заявки (точные совпадения ГОСТ/артикула с каталогом, закупка из своего предложения), без ИИ; у заявки без строк — пустой черновик. Уже начат — без изменений. Раздел `erp.calc` — полный.
+     */
+    post: operations["startCalc"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/calc/{number}/lines": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Расчёт · Добавить строки (вручную или подтверждённое предложение ИИ-разбора)
+     * @description ERP `POST /calc/{deal_id}/lines/`. Строка-услуга (`kind = service` или карточка каталога «услуга») — раздел `erp.calc.services`, товар — `erp.calc.goods` (полный); иначе 403 до ERP. Решает ERP (`quote.visa_goods`, `quote.visa_services`). До 50 строк за раз. Ответ — обновлённый расчёт.
+     */
+    post: operations["addCalcLines"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/calc/{number}/lines/{line_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /**
+     * Расчёт · Удалить строку
+     * @description ERP `DELETE /calc/{deal_id}/lines/{item_id}/`; держатель права зоны строки (разделы — как у правки).
+     */
+    delete: operations["deleteCalcLine"];
+    options?: never;
+    head?: never;
+    /**
+     * Расчёт · Изменить строку (виза строки снимается)
+     * @description ERP `PATCH /calc/{deal_id}/lines/{item_id}/`. Правит держатель права зоны строки: товар — снабженец (закупка, валюта, срок, цена клиенту, карточка каталога), услуга — гл. инженер (ставка бригады и дни; закупка услуги = ставка × дни). Цена клиенту без НДС пересчитывает наценку строки; ниже закупки — 422 `details.reason = client_price_below_cost`. Закупку (`purchase_price`, `purchase_currency`) без группы `cost_margin` BFF не принимает: 422 `details.reason = cost_forbidden`, в ERP запрос не уходит. Любая правка снимает визу строки. Нужен раздел `erp.calc.goods` или `erp.calc.services` (полный); зону решает ERP (403 `details.reason = zone_not_permitted`).
+     */
+    patch: operations["updateCalcLine"];
+    trace?: never;
+  };
+  "/erp/calc/{number}/lines/{line_id}/visa": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Расчёт · «Подтвердить» строку (виза по зоне)
+     * @description ERP `POST /calc/{deal_id}/lines/{item_id}/visa/`. Товар визирует держатель `erp.calc.goods`, услугу — `erp.calc.services` (решает ERP: 403 `details.reason = zone_not_permitted`). Кто визирует — факт визы (имя в `visa.by`): список «сотрудников зоны» в CRM ещё не появился (B-007), поэтому визирует любой держатель права зоны. Строка без закупки или цены клиенту — 409 `details.reason = line_incomplete`. Повтор — без изменений.
+     */
+    post: operations["signCalcLine"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/calc/{number}/ready": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Расчёт · «Расчёт готов → черновик КП директору»
+     * @description ERP `POST /calc/{deal_id}/ready/`. Только когда завизированы все строки — иначе 409 `details.reason = visas_missing` (`details.missing` — сколько строк без визы); проверка на сервере, не только кнопкой. Дальше — как отправка КП на одобрение: клиент заявки, ненулевая сумма, курсы строк, не в убыток (409 с причиной ERP). КП получает номер и уходит директору в EDS событием `quote.ready_for_approval` (визы — подписи строк по зонам): у директора — «КП на одобрение» в Документах · Черновик КП и в «Моей очереди». Раздел `erp.calc` — полный.
+     */
+    post: operations["markCalcReady"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/calc/{number}/parse": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Расчёт · ИИ-разбор текста заявки в строки (предложение)
+     * @description ERP `POST /calc/{deal_id}/parse/`: задание в очереди ИИ (модель — через шлюз по алиасу), ответ — `job_id`; итог — `GET /erp/calc-jobs/{job_id}`. Ничего не записывается: строки добавляет человек. Без `text` разбирается текст заявки. ИИ выключен — 409 `details.reason = ai_disabled`; текста нет — 409 `request_text_empty`; дневной лимит ИИ — 429. Раздел `erp.calc` — полный.
+     */
+    post: operations["parseCalcText"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -3492,6 +3696,8 @@ export interface components {
     Sources: {
       crm: components["schemas"]["SourceState"];
       erp: components["schemas"]["SourceState"];
+      /** @description Только если ответ собран и из EDS (с 0.25.0): `unavailable` — EDS не ответил, `not_applicable` — EDS не пустил сотрудника. Нет доступа к разделам EDS — поля нет. */
+      eds?: components["schemas"]["SourceState"];
     };
     /**
      * @description Id роли Платформы в CRM (роли — данные, ADR-0012)
@@ -6395,7 +6601,7 @@ export interface components {
       /** @description Всегда три зоны в порядке товары, услуги, условия оплаты */
       zones: components["schemas"]["ResolutionZone"][];
       /**
-       * @description `ok` — справочник сотрудников прочитан; `forbidden` — роли сотрудника не дают чтения справочника CRM (кандидатов нет); `unavailable` — CRM не ответила
+       * @description `ok` — сотрудники зон получены от CRM; `forbidden` — роли сотрудника не дают чтения сотрудников в CRM (кандидатов нет); `unavailable` — CRM не ответила
        * @enum {string}
        */
       directory: "ok" | "forbidden" | "unavailable";
@@ -6576,6 +6782,285 @@ export interface components {
     ReturnToBotIn: {
       note?: string | null;
     };
+    /**
+     * @description Где расчёт: не начат; в работе; возвращён директором на доработку; черновик КП у директора; КП отклонено; КП одобрено (и дальше)
+     * @enum {string}
+     */
+    CalcState: "not_started" | "in_progress" | "returned" | "at_director" | "rejected" | "approved";
+    /**
+     * @description `none` — строк этого вида нет; `waiting` — есть строки без визы; `done` — все строки вида завизированы
+     * @enum {string}
+     */
+    CalcVisaState: "none" | "waiting" | "done";
+    /** @description Три индикатора виз заявки (SPEC-v3 §7.4) — склад (товары со склада), снабжение (под заказ), гл. инженер (услуги) */
+    CalcVisaIndicators: {
+      stock: components["schemas"]["CalcVisaState"];
+      supply: components["schemas"]["CalcVisaState"];
+      engineer: components["schemas"]["CalcVisaState"];
+    };
+    /** @description Исполнитель из резолюции директора; `name` пуст, если сотрудник ещё не заведён в ERP */
+    CalcAssignee: {
+      zone: components["schemas"]["LetterZone"];
+      name: string | null;
+    };
+    CalcRequestRow: {
+      /** @example ЗВ-2026-104 */
+      number: string;
+      title: string;
+      client: string | null;
+      step: components["schemas"]["StepCode"];
+      state: components["schemas"]["CalcState"];
+      /**
+       * Format: date
+       * @description Срок расчёта из резолюции
+       */
+      due: string;
+      /** @example ВХ-104/26 */
+      letter_number: string;
+      lines: number;
+      visas: components["schemas"]["CalcVisaIndicators"];
+      /** @description Менеджер заявки */
+      responsible: string | null;
+      assignees: components["schemas"]["CalcAssignee"][];
+      /** @example /erp/calc/ЗВ-2026-104 */
+      path: string;
+    };
+    CalcRequestList: {
+      items: components["schemas"]["CalcRequestRow"][];
+    };
+    /** @description Задание расчёта — резолюция директора (проекция события EDS в ERP) */
+    CalcTask: {
+      letter_number: string;
+      letter_subject: string;
+      resolution_text: string;
+      /** Format: date-time */
+      decided_at: string;
+      decided_by: string | null;
+      /** Format: date */
+      due: string;
+      /** @description Маржа не ниже, % — только группе `cost_margin` */
+      min_margin_pct?: components["schemas"]["DecimalString"] | null;
+      assignees: components["schemas"]["CalcAssignee"][];
+    };
+    CalcRequestText: {
+      /** @description Заявка словами (текст клиента или суть из «Создать заявку») */
+      text: string;
+      /** @description Строк в заявке клиента */
+      lines: number;
+    };
+    CalcQuote: {
+      /** @description Номер КП появляется при «Расчёт готов» */
+      number: string | null;
+      version: number;
+      state: components["schemas"]["CalcState"];
+      /** @description Комментарий директора при возврате на доработку */
+      director_comment: string | null;
+      vat_rate: components["schemas"]["DecimalString"];
+    };
+    /**
+     * @description Товар со склада (остаток покрывает количество), товар под заказ, услуга
+     * @enum {string}
+     */
+    CalcLineKind: "goods" | "goods_to_order" | "service";
+    /**
+     * @description Зона визы строки — товары (`erp.calc.goods`) или услуги (`erp.calc.services`)
+     * @enum {string}
+     */
+    CalcZone: "goods" | "services";
+    /** @description Склад своей компании; ячейка и резерв — с экрана «Склад» (D2-2), пока пусто */
+    CalcStock: {
+      /** @description Остаток; пусто — строка без карточки каталога */
+      on_hand: number | null;
+      cell: string | null;
+      reserved: number | null;
+    };
+    CalcSupplier: {
+      name: string;
+      lead_days: number | null;
+      /** @description Квота — минимальный заказ у поставщика */
+      min_order_qty: number;
+      /** Format: date */
+      price_valid_until: string | null;
+      /** @description Цена предложения поставщика — группе `supplier_prices` или держателю `erp.calc.goods` */
+      offer_price?: components["schemas"]["DecimalString"] | null;
+      /** @description Валюта предложения — группе `supplier_prices` или держателю `erp.calc.goods` */
+      offer_currency?: string | null;
+    };
+    CalcLineVisa: {
+      /** @description Кто подтвердил строку (факт визы) */
+      by: string;
+      /** Format: date-time */
+      at: string;
+    };
+    CalcLine: {
+      id: string;
+      name: string;
+      article: string;
+      /** @description Карточка каталога (сопоставление) */
+      product_id: string | null;
+      product_name: string | null;
+      kind: components["schemas"]["CalcLineKind"];
+      zone: components["schemas"]["CalcZone"];
+      /**
+       * @description Индикатор виз, к которому относится строка
+       * @enum {string}
+       */
+      group: "stock" | "supply" | "engineer";
+      quantity: number;
+      unit: string;
+      stock: components["schemas"]["CalcStock"];
+      supplier: components["schemas"]["CalcSupplier"] | null;
+      /** @description Срок поставки строки, дней */
+      lead_days: number | null;
+      /** @description Закупка товара за единицу в валюте строки — `cost_margin` или держателю `erp.calc.goods` */
+      purchase_price?: components["schemas"]["DecimalString"] | null;
+      /** @description Валюта закупки — `cost_margin` или держателю зоны строки */
+      purchase_currency?: string;
+      /** @description Услуга — ставка бригады, сум/день (вводит гл. инженер); `cost_margin` или держателю `erp.calc.services`, иначе null */
+      crew_rate: components["schemas"]["DecimalString"] | null;
+      /** @description Услуга — дней работы бригады; `cost_margin` или держателю `erp.calc.services`, иначе null */
+      crew_days: components["schemas"]["DecimalString"] | null;
+      /** @description Себестоимость за единицу, сум (закупка с пошлиной по курсу) — `cost_margin` или держателю зоны строки */
+      cost?: components["schemas"]["DecimalString"] | null;
+      /** @description Клиенту за единицу, сум, без НДС */
+      client_price: components["schemas"]["DecimalString"];
+      /** @description Наценка строки, % — только группе `cost_margin` */
+      markup_pct?: components["schemas"]["DecimalString"] | null;
+      visa: components["schemas"]["CalcLineVisa"] | null;
+      /** @description Сотрудник может править и визировать строку (зона, черновик) */
+      can_edit: boolean;
+    };
+    /** @description Итоги без НДС */
+    CalcTotals: {
+      client: components["schemas"]["DecimalString"];
+      /** @description Закупка итого — только группе `cost_margin` */
+      purchase?: components["schemas"]["DecimalString"];
+      /** @description Наценка итого — только группе `cost_margin` */
+      markup_pct?: components["schemas"]["DecimalString"] | null;
+      /** @constant */
+      vat_included: false;
+    };
+    CalcVisaGroup: {
+      state: components["schemas"]["CalcVisaState"];
+      total: number;
+      signed: number;
+      /** @description Кто визировал строки этого вида (факт визы) */
+      by: string[];
+    };
+    CalcVisaGroups: {
+      stock: components["schemas"]["CalcVisaGroup"];
+      supply: components["schemas"]["CalcVisaGroup"];
+      engineer: components["schemas"]["CalcVisaGroup"];
+    };
+    CalcReady: {
+      allowed: boolean;
+      /**
+       * @description Почему «Расчёт готов» неактивна
+       * @enum {string|null}
+       */
+      blocker:
+        | "not_started"
+        | "not_in_calculation"
+        | "not_draft"
+        | "no_lines"
+        | "visas_missing"
+        | null;
+      /** @description Строк без визы */
+      missing: number;
+    };
+    /** @description Что сотрудник может в этом расчёте (права ERP, вычисленные из разделов каталога) */
+    CalcRights: {
+      /** @description Править и визировать товары */
+      goods: boolean;
+      /** @description Править и визировать услуги */
+      services: boolean;
+      /** @description Начать расчёт, «Расчёт готов», ИИ-разбор */
+      build: boolean;
+      /** @description Видеть себестоимость и наценку по строкам */
+      cost: boolean;
+    };
+    CalcSheet: {
+      /** @example ЗВ-2026-104 */
+      number: string;
+      title: string;
+      client: string | null;
+      step: components["schemas"]["StepCode"];
+      path: string;
+      task: components["schemas"]["CalcTask"];
+      request: components["schemas"]["CalcRequestText"];
+      quote: components["schemas"]["CalcQuote"] | null;
+      lines: components["schemas"]["CalcLine"][];
+      totals: components["schemas"]["CalcTotals"];
+      visas: components["schemas"]["CalcVisaGroups"];
+      ready: components["schemas"]["CalcReady"];
+      rights: components["schemas"]["CalcRights"];
+    };
+    CalcLineIn: {
+      name?: string;
+      quantity?: number;
+      unit?: string;
+      /**
+       * @description Тип строки без карточки каталога (у карточки тип задаёт каталог)
+       * @enum {string}
+       */
+      kind?: "goods" | "service";
+      product_id?: string | null;
+      article?: string;
+      note?: string;
+    };
+    CalcLinesIn: {
+      lines: components["schemas"]["CalcLineIn"][];
+    };
+    CalcLinePatch: {
+      name?: string;
+      quantity?: number;
+      unit?: string;
+      lead_days?: number | null;
+      purchase_price?: components["schemas"]["DecimalString"];
+      purchase_currency?: string;
+      crew_rate?: components["schemas"]["DecimalString"] | null;
+      crew_days?: components["schemas"]["DecimalString"] | null;
+      client_price?: components["schemas"]["DecimalString"];
+      product_id?: string | null;
+      /** @enum {string} */
+      kind?: "goods" | "service";
+    };
+    CalcParseIn: {
+      /** @description Свой текст; без поля — текст заявки */
+      text?: string;
+    };
+    CalcParseJob: {
+      job_id: string;
+    };
+    CalcProposalLine: {
+      name: string;
+      quantity: number;
+      unit: string;
+      article: string;
+      note: string;
+    };
+    CalcParseResult: {
+      /** @enum {string} */
+      status: "pending" | "done" | "failed";
+      lines: components["schemas"]["CalcProposalLine"][];
+      recognized?: number;
+      truncated?: boolean;
+      /** @description Причина `failed`: код ERP в нижнем регистре */
+      reason?: string;
+    };
+    CalcCatalogItem: {
+      id: string;
+      name: string;
+      article: string;
+      /** @enum {string} */
+      kind: "goods" | "service";
+      on_hand: number;
+      supplier_name: string | null;
+      lead_days: number | null;
+    };
+    CalcCatalogPage: {
+      items: components["schemas"]["CalcCatalogItem"][];
+    };
   };
   responses: {
     /** @description `SESSION_EXPIRED` — сессии нет, истекла или сотрудник отключён */
@@ -6717,6 +7202,15 @@ export interface components {
         "application/json": components["schemas"]["Error"];
       };
     };
+    /** @description 409 `CONFLICT` — расчёт не в том состоянии для действия: `details.reason` — код ERP в нижнем регистре (`visas_missing` и `details.missing`, `deal_not_in_calculation`, `quote_not_draft`, `calc_not_started`, `line_incomplete`, `purchase_required`, `no_lines`, `quote_below_cost`, `fx_rate_missing`, `quote_client_required`, `request_text_empty`, `ai_disabled`) */
+    CalcConflict: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["Error"];
+      };
+    };
     /** @description 409 `CONFLICT` — письмо уже не ждёт резолюции (решил другой директор, вернули, отклонили): `details.reason = invalid_state`; обновите карточку */
     LetterConflict: {
       headers: {
@@ -6778,6 +7272,10 @@ export interface components {
     ReferenceKindPath: components["schemas"]["ReferenceKind"];
     /** @description UUID входящего письма (EDS) */
     LetterIdPath: string;
+    /** @description Номер заявки `ЗВ-ГГГГ-NNN` (как в списке «Заявки в расчёте») */
+    CalcNumberPath: string;
+    /** @description Строка расчёта (`CalcLine.id`) */
+    CalcLineIdPath: string;
     /** @description UUID маршрута согласования EDS (`id` карточки КП, `approval_id` карточки документа) */
     ApprovalIdPath: string;
     /** @description `mine` — на моём шаге (по умолчанию); `all` — всё, что EDS показывает сотруднику */
@@ -12969,6 +13467,349 @@ export interface operations {
       };
       401: components["responses"]["SessionExpired"];
       403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listCalcRequests: {
+    parameters: {
+      query?: {
+        mine?: boolean;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Заявки в расчёте */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CalcRequestList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  searchCalcCatalog: {
+    parameters: {
+      query: {
+        q: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Карточки каталога */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CalcCatalogPage"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getCalcParse: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        job_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Состояние разбора */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CalcParseResult"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getCalcSheet: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Номер заявки `ЗВ-ГГГГ-NNN` (как в списке «Заявки в расчёте») */
+        number: components["parameters"]["CalcNumberPath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Расчёт по заявке */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CalcSheet"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  startCalc: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер заявки `ЗВ-ГГГГ-NNN` (как в списке «Заявки в расчёте») */
+        number: components["parameters"]["CalcNumberPath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Расчёт по заявке */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CalcSheet"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["CalcConflict"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  addCalcLines: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер заявки `ЗВ-ГГГГ-NNN` (как в списке «Заявки в расчёте») */
+        number: components["parameters"]["CalcNumberPath"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CalcLinesIn"];
+      };
+    };
+    responses: {
+      /** @description Расчёт по заявке */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CalcSheet"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["CalcConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  deleteCalcLine: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер заявки `ЗВ-ГГГГ-NNN` (как в списке «Заявки в расчёте») */
+        number: components["parameters"]["CalcNumberPath"];
+        /** @description Строка расчёта (`CalcLine.id`) */
+        line_id: components["parameters"]["CalcLineIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Расчёт по заявке */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CalcSheet"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["CalcConflict"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  updateCalcLine: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер заявки `ЗВ-ГГГГ-NNN` (как в списке «Заявки в расчёте») */
+        number: components["parameters"]["CalcNumberPath"];
+        /** @description Строка расчёта (`CalcLine.id`) */
+        line_id: components["parameters"]["CalcLineIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CalcLinePatch"];
+      };
+    };
+    responses: {
+      /** @description Расчёт по заявке */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CalcSheet"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["CalcConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  signCalcLine: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер заявки `ЗВ-ГГГГ-NNN` (как в списке «Заявки в расчёте») */
+        number: components["parameters"]["CalcNumberPath"];
+        /** @description Строка расчёта (`CalcLine.id`) */
+        line_id: components["parameters"]["CalcLineIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Расчёт по заявке */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CalcSheet"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["CalcConflict"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  markCalcReady: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер заявки `ЗВ-ГГГГ-NNN` (как в списке «Заявки в расчёте») */
+        number: components["parameters"]["CalcNumberPath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Расчёт у директора */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CalcSheet"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["CalcConflict"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  parseCalcText: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер заявки `ЗВ-ГГГГ-NNN` (как в списке «Заявки в расчёте») */
+        number: components["parameters"]["CalcNumberPath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["CalcParseIn"];
+      };
+    };
+    responses: {
+      /** @description Разбор поставлен в очередь */
+      202: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CalcParseJob"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["CalcConflict"];
+      422: components["responses"]["ValidationFailed"];
+      429: components["responses"]["TooManyRequests"];
       503: components["responses"]["BackendUnavailable"];
     };
   };
