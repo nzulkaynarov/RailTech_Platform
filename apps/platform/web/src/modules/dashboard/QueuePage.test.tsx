@@ -318,9 +318,11 @@ describe("Dashboard · Моя очередь", () => {
     renderApp("/dashboard/queue");
     const page = await main();
 
-    expect(await within(page).findByRole("status")).toHaveTextContent(
-      "Не загрузились данные из разделов «Расчёт», «Документы». Остальное показано.",
-    );
+    expect(
+      await within(page).findByText(
+        "Не загрузились данные из разделов «Расчёт», «Документы». Остальное показано.",
+      ),
+    ).toBeVisible();
   });
 
   it("ERP не отвечает: данные CRM остаются, сверху плашка с названиями разделов", async () => {

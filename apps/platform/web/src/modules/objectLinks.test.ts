@@ -115,11 +115,11 @@ describe("переходы: адрес и вкладка бокового окн
     }
   });
 
-  it("договор, счёт, акт и расчёт остаются без экрана — остаётся «Где сделать»", () => {
+  it("договор, счёт, акт и склад остаются без экрана — остаётся «Где сделать»", () => {
     for (const path of [
       "/eds/projects/%D0%9F%D0%A0-2026-099?panel=open&tab=documents",
       `/eds/payments/${seg("СЧ-2026/142")}`,
-      "/erp/calc/7",
+      "/erp/stock",
     ]) {
       expect(isActionable(path), path).toBe(false);
     }
