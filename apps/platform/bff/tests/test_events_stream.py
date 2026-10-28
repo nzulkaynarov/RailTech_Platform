@@ -381,8 +381,24 @@ async def test_eds_event_drops_the_cached_eds_parts_of_the_queue_before_the_hint
     await until(lambda: b"event: invalidate" in conn.body)
 
     assert not any(k in web.redis.values for k in cached)
-    # следующий запрос идёт в EDS заново
+    # следующий запрос идёт в EDS заново и видит новое письмо
     before = fb.calls(fb.eds["letters"])
-    await web.client.get("/api/v1/queue")
+    fb.state["letters"] = {
+        "items": [
+            {
+                "id": "20000000-0000-4000-8000-000000000104",
+                "number": "ВХ-104/26",
+                "subject": "Запрос КП",
+                "sender": {"name": "ООО «Демо-Рейл»"},
+                "received_at": "2027-01-14",
+                "status": "awaiting_resolution",
+                "links": {},
+                "urgent": True,
+            }
+        ],
+        "next_cursor": None,
+    }
+    items = (await web.client.get("/api/v1/queue")).json()["items"]
     assert fb.calls(fb.eds["letters"]) == before + 1
+    assert [i["object"]["number"] for i in items] == ["ВХ-104/26"]
     await conn.disconnect()
