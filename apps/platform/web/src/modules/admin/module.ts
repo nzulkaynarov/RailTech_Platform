@@ -41,6 +41,15 @@ export const admin: ModuleConfig = {
       actionTo: "/admin/org",
     },
     {
+      // «Статьи компании» (W18A-P5, B-079): внутренние инструкции; пишет администратор, директор читает, сотрудники видят опубликованные в Помощи.
+      key: "articles",
+      path: "/admin/articles",
+      access: { resource: "admin" },
+      tabs: [{ key: "card" }],
+      defaults: { panelOpen: false },
+      actionTo: "/admin/org",
+    },
+    {
       key: "company",
       path: "/admin/company",
       access: { resource: "company.settings" },

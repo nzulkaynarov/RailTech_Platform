@@ -216,7 +216,24 @@ SPA  GET  /api/v1/about                    → health CRM, ERP, EDS + верси
   помещается в предел CRM. Отметки «Что нового» (`Me.whats_new_shown`, `Me.whats_new_read`) хранит CRM, как `onboarding_done`:
   SPA показывает окно «Платформа обновлена», пока `shown` меньше даты последней записи, и отметку «Новое» у «?», пока меньше `read`.
   Записи — файлы `docs/kb/help/changelog/<дата>.md` в сборке SPA, BFF их не отдаёт.
-- **Статьи помощи** BFF не отдаёт: это файлы репозитория `docs/kb/help/*.md`, которые `pnpm kb:sync` копирует в сборку SPA (`src/generated/help-articles`). Редактирует их тот, у кого есть доступ к репозиторию (PR); редактора статей в интерфейсе нет (`docs/QUESTIONS.md`, Q-W15-H7-1).
+- **Продуктовые статьи помощи** BFF не отдаёт: это файлы репозитория `docs/kb/help/*.md`, которые `pnpm kb:sync` копирует в сборку SPA (`src/generated/help-articles`); правит их тот, у кого есть доступ к репозиторию (PR). Редактора продуктовых статей в интерфейсе нет и не будет (DECISIONS 2026-10-28). **Статьи компании** — другое: их пишет администратор в интерфейсе (см. ниже).
+
+#### Статьи компании в §3.4 (W18A-P5, B-079; добавление к 0.27.0, версия контракта не меняется)
+
+```
+SPA  GET    /api/v1/help/company-articles            → CRM GET /me/company-articles   только опубликованные, любому сотруднику (require_any_section)
+SPA  GET    /api/v1/admin/company-articles           → CRM GET /company-articles      все, с черновиками (admin: чтение)
+SPA  POST   /api/v1/admin/company-articles           → CRM POST /company-articles     {title, body, language?} → CompanyArticle (201, всегда черновик)
+SPA  PATCH  /api/v1/admin/company-articles/{id}      → CRM PATCH /company-articles/{id}   {title?, body?, language?}
+SPA  POST   /api/v1/admin/company-articles/{id}/publish|unpublish → CRM POST …/publish|unpublish
+SPA  DELETE /api/v1/admin/company-articles/{id}      → CRM DELETE /company-articles/{id}  (204)
+```
+
+- **Данные — в CRM** (таблица `company_articles`, ADR-0015); BFF ничего не хранит и текст не обрабатывает. Права: чтение с черновиками — `admin` от чтения (директор), запись — `admin` полный (CRM-права `company_articles:read|write` каталога); опубликованные читает любой сотрудник с хотя бы одним разделом.
+- **Безопасный показ — забота SPA.** Текст — Markdown ограниченного вида (`##`, абзацы, списки, жирный, код); `features/help/Markdown.tsx` строит дерево React без `dangerouslySetInnerHTML`, ссылок и картинок: HTML и скрипты остаются текстом (тесты `Markdown.test.tsx`, `ArticlesPage.test.tsx`). BFF и CRM текст не «чистят» молча.
+- **Ошибки значений** — 422 `VALIDATION_FAILED` с `details.fields` (`title`, `body`, `language`) и `details.reason` (`article_title_empty`, `article_title_too_long` > 200, `article_body_empty`, `article_body_too_long` > 20000, `article_language_unknown`); статьи нет — 404. Публикация и снятие повторяются безопасно (второй раз ничего не меняют и в журнал не пишутся).
+- **Журнал действий CRM:** `company_article.create|update|publish|unpublish|delete` (до/после — заголовок, язык, статус, длина текста; сам текст в журнал не попадает).
+- **В Помощи** SPA кладёт статьи компании рядом с продуктовыми под адресом `/help/articles/company-<id>`; недоступность CRM не ломает Помощь — продуктовые статьи открываются, в разделе «Как у нас принято» сказано, что статьи компании сейчас недоступны.
 
 ### 3.5. Расчёт по заявке (D2-1, BFF 0.26.0)
 

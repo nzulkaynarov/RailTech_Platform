@@ -351,6 +351,8 @@ tags:
     description: «+ Создать заявку» из лида и клиента, письмо директору (EDS), повтор отправки в ERP (CRM, EDS; раздел `crm.clients`)
   - name: tickets
     description: Обращения сотрудников к администратору — «Написать администратору» и Настройки · Обращения сотрудников (CRM, ADR-0015)
+  - name: company-articles
+    description: 'Статьи компании — внутренние инструкции «как у нас принято»: Настройки · Статьи компании и раздел «Как у нас принято» в Помощи (CRM, ADR-0015, B-079)'
   - name: erp-catalog
     description: Расчёт · Номенклатура и поставщики, бригады, справочники (ТН ВЭД, производители, курсы) и Техдокументация (ERP; раздел `erp.stock`)
 
@@ -1143,6 +1145,194 @@ paths:
                 $ref: '#/components/schemas/Error'
         '422':
           $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /help/company-articles:
+    get:
+      tags: [company-articles]
+      operationId: listCompanyArticles
+      summary: Статьи компании для Помощи (только опубликованные)
+      description: >-
+        Опубликованные статьи компании целиком (заголовок, Markdown, язык) — для раздела «Как у нас принято» в окне и на
+        странице Помощи и для общего поиска по статьям. Черновиков здесь нет ни у кого, в том числе у администратора (он
+        видит их в `GET /admin/company-articles`). Нужна сессия и хотя бы один раздел каталога; прав раздела не требуется.
+        Новые выше.
+      responses:
+        '200':
+          description: Опубликованные статьи
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanyArticleList'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /admin/company-articles:
+    get:
+      tags: [company-articles, admin]
+      operationId: listAdminCompanyArticles
+      summary: Все статьи компании с черновиками (Настройки · Статьи компании)
+      description: >-
+        Раздел `admin` от чтения (директор читает, администратор правит). Недавно правленные выше; в каждой статье — полный
+        текст для редактора.
+      responses:
+        '200':
+          description: Все статьи
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanyArticleList'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+    post:
+      tags: [company-articles, admin]
+      operationId: createCompanyArticle
+      summary: Создать статью компании (черновик)
+      description: >-
+        Раздел `admin` — полный. Новая статья всегда черновик; опубликовать — `POST /admin/company-articles/{id}/publish`.
+        Ошибка значения — 422 `VALIDATION_FAILED` (`details.fields`: `title`, `body`, `language`; `details.reason`:
+        `article_title_empty`, `article_title_too_long`, `article_body_empty`, `article_body_too_long`,
+        `article_language_unknown`). Создание пишется в журнал действий.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompanyArticleCreate'
+      responses:
+        '201':
+          description: Статья создана (черновик)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanyArticle'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /admin/company-articles/{id}:
+    patch:
+      tags: [company-articles, admin]
+      operationId: updateCompanyArticle
+      summary: Править статью компании
+      description: >-
+        Раздел `admin` — полный. Меняются присланные поля (`title`, `body`, `language`); статус не меняется — для него
+        `publish` и `unpublish`. Правка опубликованной статьи сразу видна в Помощи. Ошибки значений — как у создания; правка
+        пишется в журнал действий.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/CompanyArticleIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompanyArticleUpdate'
+      responses:
+        '200':
+          description: Обновлённая статья
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanyArticle'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+    delete:
+      tags: [company-articles, admin]
+      operationId: deleteCompanyArticle
+      summary: Удалить статью компании
+      description: >-
+        Раздел `admin` — полный. Удаляет статью насовсем (SPA просит подтверждение); удаление пишется в журнал действий без
+        текста статьи.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/CompanyArticleIdPath'
+      responses:
+        '204':
+          description: Удалена
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /admin/company-articles/{id}/publish:
+    post:
+      tags: [company-articles, admin]
+      operationId: publishCompanyArticle
+      summary: Опубликовать статью компании
+      description: >-
+        Раздел `admin` — полный. Статья появляется в «Как у нас принято» у всех сотрудников. Повтор для уже опубликованной
+        статьи ничего не меняет и в журнал второй раз не пишется.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/CompanyArticleIdPath'
+      responses:
+        '200':
+          description: Опубликованная статья
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanyArticle'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /admin/company-articles/{id}/unpublish:
+    post:
+      tags: [company-articles, admin]
+      operationId: unpublishCompanyArticle
+      summary: Вернуть статью компании в черновики
+      description: >-
+        Раздел `admin` — полный. Статья исчезает из Помощи у всех, кроме тех, кто правит раздел.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/CompanyArticleIdPath'
+      responses:
+        '200':
+          description: Статья-черновик
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompanyArticle'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '503':
           $ref: '#/components/responses/BackendUnavailable'
 
@@ -9042,6 +9232,14 @@ components:
       name: rt_pf_session
 
   parameters:
+    CompanyArticleIdPath:
+      name: id
+      in: path
+      required: true
+      description: Идентификатор статьи компании
+      schema:
+        type: integer
+        minimum: 1
     TicketNumberPath:
       name: number
       in: path
@@ -11212,6 +11410,95 @@ components:
           description: Сколько обращений подходит под фильтр
         counts:
           $ref: '#/components/schemas/TicketCounts'
+
+    CompanyArticleLanguage:
+      type: string
+      enum: [ru, uz, en]
+      description: Язык статьи. Сейчас в Помощи показываются статьи на любом языке, перевод по языку интерфейса — B-080
+
+    CompanyArticleStatus:
+      type: string
+      enum: [draft, published]
+      description: «Черновик» (видят те, кто правит раздел) или «Опубликовано» (видят все сотрудники)
+
+    CompanyArticleCreate:
+      type: object
+      additionalProperties: false
+      required: [title, body]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 1000
+          description: Заголовок — до 200 символов после сжатия пробелов (длиннее — 422 `article_title_too_long`)
+        body:
+          type: string
+          minLength: 1
+          maxLength: 100000
+          description: >-
+            Текст в простом Markdown (`##`-заголовки, абзацы, списки, **жирный**, `код`) — до 20000 символов после обрезки
+            пробелов (длиннее — 422 `article_body_too_long`). HTML не интерпретируется: Помощь показывает его как текст.
+        language:
+          $ref: '#/components/schemas/CompanyArticleLanguage'
+
+    CompanyArticleUpdate:
+      type: object
+      additionalProperties: false
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 1000
+        body:
+          type: string
+          minLength: 1
+          maxLength: 100000
+        language:
+          $ref: '#/components/schemas/CompanyArticleLanguage'
+
+    CompanyArticle:
+      type: object
+      additionalProperties: false
+      required: [id, title, body, language, status, created_at, updated_at]
+      properties:
+        id:
+          type: integer
+          minimum: 1
+        title:
+          type: string
+        body:
+          type: string
+          description: Markdown статьи
+        language:
+          $ref: '#/components/schemas/CompanyArticleLanguage'
+        status:
+          $ref: '#/components/schemas/CompanyArticleStatus'
+        created_by_name:
+          type: string
+          description: Кто создал; пусто, если сотрудник удалён
+        updated_by_name:
+          type: string
+          description: Кто правил последним; пусто, если сотрудник удалён
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        published_at:
+          type: string
+          format: date-time
+          description: Когда опубликована; у черновика поля нет
+
+    CompanyArticleList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CompanyArticle'
 
     ChangePasswordIn:
       type: object

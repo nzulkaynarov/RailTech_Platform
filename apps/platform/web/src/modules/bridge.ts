@@ -139,6 +139,7 @@ export const NATIVE_SECTIONS: readonly string[] = [
   "erp.catalog",
   "erp.docs",
   "admin.tickets",
+  "admin.articles",
 ];
 
 /** Главные действия модулей без экрана (кнопка внизу подменю неактивна): когда появятся. Остальных модулей это не касается. */

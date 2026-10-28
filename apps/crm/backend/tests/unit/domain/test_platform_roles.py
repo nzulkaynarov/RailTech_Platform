@@ -177,9 +177,12 @@ ADMIN_READ = {
     "kb:read",
     # W15-H7: директор читает обращения сотрудников, отвечает администратор.
     "tickets:read",
+    # W18A-P5: директор читает статьи компании вместе с черновиками, пишет администратор.
+    "company_articles:read",
 }
 ADMIN_FULL = ADMIN_READ | {
     "tickets:write",
+    "company_articles:write",
     "users:write",
     "settings:read",
     "settings:write",

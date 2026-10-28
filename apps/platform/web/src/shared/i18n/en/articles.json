@@ -1,0 +1,119 @@
+{
+  "admin": {
+    "title": "Company articles",
+    "subtitle": "Internal how-we-do-it guides: who approves, where the templates are, what the schedule is. Published articles are visible to all employees in Help.",
+    "listLabel": "Company articles",
+    "new": "New article",
+    "filtersLabel": "Article filter",
+    "status": "Status",
+    "allStatuses": "All articles",
+    "reset": "Show all",
+    "columns": {
+      "title": "Title",
+      "language": "Language",
+      "status": "Status",
+      "updated": "Changed",
+      "actions": "Actions"
+    },
+    "status_draft": "Draft",
+    "status_published": "Published",
+    "language": {
+      "ru": "Russian",
+      "uz": "Uzbek",
+      "en": "English"
+    },
+    "empty": "No company articles yet",
+    "emptyText": "Write the first guide: for example, who approves a contract or where the letter templates are. While an article is a draft, only you can see it.",
+    "emptyReadOnly": "The administrator has not written any articles yet. Published articles will appear in Help.",
+    "noMatch": "No such articles",
+    "noMatchText": "Reset the filter to see all articles.",
+    "loadError": "Could not load the articles",
+    "loadErrorText": "Check your connection and try again. If that does not help, write to the administrator.",
+    "retry": "Try again",
+    "readOnly": "You can read articles, drafts included. Only the administrator can write and publish them.",
+    "counts": "Articles in total: {{total}}, of them drafts: {{drafts}}",
+    "actions": {
+      "edit": "Edit",
+      "view": "Open",
+      "publish": "Publish",
+      "unpublish": "Unpublish",
+      "delete": "Delete"
+    },
+    "actionFor": "{{action}}: {{title}}",
+    "done": {
+      "created": "Draft saved.",
+      "updated": "Changes saved.",
+      "published": "Article published: all employees can now see it.",
+      "unpublished": "Article unpublished and is a draft again.",
+      "deleted": "Article deleted."
+    },
+    "delete": {
+      "title": "Delete the article?",
+      "text": "The article “{{title}}” will be deleted for good and cannot be restored. If it is published, it disappears from Help for everyone.",
+      "ok": "Delete",
+      "cancel": "Keep it"
+    },
+    "unpublishConfirm": {
+      "title": "Unpublish the article?",
+      "text": "The article “{{title}}” will disappear from Help for all employees and become a draft.",
+      "ok": "Unpublish",
+      "cancel": "Keep published"
+    },
+    "panelTitle": "How employees will see it",
+    "panelText": "A published article appears in Help under “How we do it” and is found by the common search together with the Platform articles."
+  },
+  "editor": {
+    "titleNew": "New article",
+    "titleEdit": "Company article",
+    "titleView": "Company article (read only)",
+    "back": "Back to the articles",
+    "titleField": "Title",
+    "titlePlaceholder": "For example: Who approves a contract",
+    "titleRequired": "Write a title.",
+    "titleTooLong": "The title is longer than {{max}} characters: shorten it.",
+    "languageField": "Article language",
+    "bodyField": "Article text",
+    "bodyRequired": "Write the article text.",
+    "bodyTooLong": "The text is longer than {{max}} characters: shorten it.",
+    "bodyHelp": "You can use: ## heading, paragraphs, lists (- item or 1. item), **bold**, `code`. Links and HTML do not work: anything you write in angle brackets stays plain text.",
+    "counter": "{{count}} of {{max}} characters",
+    "previewTitle": "This is how the article looks in Help",
+    "previewEmpty": "The article text will appear here once you start writing.",
+    "previewHeading": "No title yet",
+    "status": "Status: {{status}}",
+    "save": "Save",
+    "saveDraft": "Save draft",
+    "saveAndPublish": "Save and publish",
+    "cancel": "Close",
+    "unsaved": "There are unsaved changes",
+    "saved": "Saved",
+    "consequenceTitle": "What will happen",
+    "consequenceDraft": "“Save draft” — only you and the director will see the article.",
+    "consequencePublish": "“Save and publish” — the article appears in Help for all employees at once, under “How we do it”.",
+    "consequencePublished": "The article is already published: your edit is visible to everyone at once.",
+    "errors": {
+      "article_title_empty": "Write a title.",
+      "article_title_too_long": "The title is longer than 200 characters: shorten it.",
+      "article_body_empty": "Write the article text.",
+      "article_body_too_long": "The text is longer than 20000 characters: shorten it.",
+      "article_language_unknown": "Choose a language from the list.",
+      "NOT_FOUND": "The article is gone: another administrator may have deleted it. Go back to the list.",
+      "FORBIDDEN": "Only the administrator can edit company articles.",
+      "default": "Could not save the article. Check your connection and try again."
+    },
+    "discardTitle": "Close without saving?",
+    "discardText": "Your changes will be lost.",
+    "discardOk": "Close without saving",
+    "discardCancel": "Keep editing"
+  },
+  "help": {
+    "section": "How we do it",
+    "sectionHint": "Your company's guides: who approves, where the templates are, what the schedule is.",
+    "empty": "No company articles yet.",
+    "loadError": "Company articles are unavailable right now. Platform articles open as usual.",
+    "productSection": "Platform articles",
+    "kindCompany": "How we do it",
+    "otherLanguage": "The article is written in: {{language}}.",
+    "updated": "Updated: {{when}}"
+  }
+}

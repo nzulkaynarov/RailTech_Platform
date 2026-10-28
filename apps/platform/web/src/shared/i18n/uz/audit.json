@@ -287,6 +287,13 @@
       "create": "Administratorga yozdi",
       "reply": "Xodim murojaatiga javob berdi",
       "status": "Xodim murojaati holatini oʻzgartirdi"
+    },
+    "company_article": {
+      "create": "Kompaniya maqolasini yaratdi",
+      "update": "Kompaniya maqolasini oʻzgartirdi",
+      "publish": "Kompaniya maqolasini eʼlon qildi",
+      "unpublish": "Kompaniya maqolasini eʼlondan oldi",
+      "delete": "Kompaniya maqolasini oʻchirdi"
     }
   },
   "entities": {
@@ -310,7 +317,8 @@
     "integration": "Ulanish",
     "external_service": "Tashqi xizmat",
     "platform_role": "Platforma roli",
-    "staff_ticket": "Xodim murojaati"
+    "staff_ticket": "Xodim murojaati",
+    "company_article": "Kompaniya maqolasi"
   },
   "fields": {
     "email": "Elektron pochta",
@@ -337,6 +345,9 @@
     "model": "Model",
     "enabled": "Yoqilgan",
     "key": "Kalit",
-    "roles_count": "Rollar soni"
+    "roles_count": "Rollar soni",
+    "title": "Sarlavha",
+    "status": "Holati",
+    "body_length": "Matn uzunligi"
   }
 }

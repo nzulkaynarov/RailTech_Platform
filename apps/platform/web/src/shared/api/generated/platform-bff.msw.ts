@@ -28,6 +28,8 @@ import {
   ChecklistCode,
   ClientContactChannel,
   ClientSees,
+  CompanyArticleLanguage,
+  CompanyArticleStatus,
   DocumentKind,
   DocumentTemplateKind,
   DueLabel,
@@ -118,6 +120,8 @@ import type {
   ClientList,
   ClientShort,
   Colleague,
+  CompanyArticle,
+  CompanyArticleList,
   CompanyProfile,
   ConversationCard,
   ConversationThread,
@@ -940,6 +944,160 @@ export const getSetTicketStatusResponseMock = (
     }),
   ),
   resolved_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    undefined,
+  ]),
+  ...overrideResponse,
+});
+
+export const getListCompanyArticlesResponseMock = (
+  overrideResponse: Partial<Extract<CompanyArticleList, object>> = {},
+): CompanyArticleList => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.number.int({ min: 1 }),
+    title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    body: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    language: faker.helpers.arrayElement(Object.values(CompanyArticleLanguage)),
+    status: faker.helpers.arrayElement(Object.values(CompanyArticleStatus)),
+    created_by_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+    updated_by_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+    created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    published_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      undefined,
+    ]),
+  })),
+  ...overrideResponse,
+});
+
+export const getListAdminCompanyArticlesResponseMock = (
+  overrideResponse: Partial<Extract<CompanyArticleList, object>> = {},
+): CompanyArticleList => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.number.int({ min: 1 }),
+    title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    body: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    language: faker.helpers.arrayElement(Object.values(CompanyArticleLanguage)),
+    status: faker.helpers.arrayElement(Object.values(CompanyArticleStatus)),
+    created_by_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+    updated_by_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+    created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    published_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      undefined,
+    ]),
+  })),
+  ...overrideResponse,
+});
+
+export const getCreateCompanyArticleResponseMock = (
+  overrideResponse: Partial<Extract<CompanyArticle, object>> = {},
+): CompanyArticle => ({
+  id: faker.number.int({ min: 1 }),
+  title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  body: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  language: faker.helpers.arrayElement(Object.values(CompanyArticleLanguage)),
+  status: faker.helpers.arrayElement(Object.values(CompanyArticleStatus)),
+  created_by_name: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  updated_by_name: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  published_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    undefined,
+  ]),
+  ...overrideResponse,
+});
+
+export const getUpdateCompanyArticleResponseMock = (
+  overrideResponse: Partial<Extract<CompanyArticle, object>> = {},
+): CompanyArticle => ({
+  id: faker.number.int({ min: 1 }),
+  title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  body: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  language: faker.helpers.arrayElement(Object.values(CompanyArticleLanguage)),
+  status: faker.helpers.arrayElement(Object.values(CompanyArticleStatus)),
+  created_by_name: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  updated_by_name: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  published_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    undefined,
+  ]),
+  ...overrideResponse,
+});
+
+export const getPublishCompanyArticleResponseMock = (
+  overrideResponse: Partial<Extract<CompanyArticle, object>> = {},
+): CompanyArticle => ({
+  id: faker.number.int({ min: 1 }),
+  title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  body: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  language: faker.helpers.arrayElement(Object.values(CompanyArticleLanguage)),
+  status: faker.helpers.arrayElement(Object.values(CompanyArticleStatus)),
+  created_by_name: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  updated_by_name: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  published_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    undefined,
+  ]),
+  ...overrideResponse,
+});
+
+export const getUnpublishCompanyArticleResponseMock = (
+  overrideResponse: Partial<Extract<CompanyArticle, object>> = {},
+): CompanyArticle => ({
+  id: faker.number.int({ min: 1 }),
+  title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  body: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  language: faker.helpers.arrayElement(Object.values(CompanyArticleLanguage)),
+  status: faker.helpers.arrayElement(Object.values(CompanyArticleStatus)),
+  created_by_name: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  updated_by_name: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  published_at: faker.helpers.arrayElement([
     faker.date.past().toISOString().slice(0, 19) + "Z",
     undefined,
   ]),
@@ -13440,6 +13598,168 @@ export const getSetTicketStatusMockHandler = (
   );
 };
 
+export const getListCompanyArticlesMockHandler = (
+  overrideResponse?:
+    | CompanyArticleList
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<CompanyArticleList> | CompanyArticleList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/help/company-articles",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListCompanyArticlesResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getListAdminCompanyArticlesMockHandler = (
+  overrideResponse?:
+    | CompanyArticleList
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<CompanyArticleList> | CompanyArticleList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/company-articles",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListAdminCompanyArticlesResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getCreateCompanyArticleMockHandler = (
+  overrideResponse?:
+    | CompanyArticle
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<CompanyArticle> | CompanyArticle),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/company-articles",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCreateCompanyArticleResponseMock(),
+        { status: 201 },
+      );
+    },
+    options,
+  );
+};
+
+export const getUpdateCompanyArticleMockHandler = (
+  overrideResponse?:
+    | CompanyArticle
+    | ((
+        info: Parameters<Parameters<typeof http.patch>[1]>[0],
+      ) => Promise<CompanyArticle> | CompanyArticle),
+  options?: RequestHandlerOptions,
+) => {
+  return http.patch(
+    "*/admin/company-articles/:id",
+    async (info: Parameters<Parameters<typeof http.patch>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUpdateCompanyArticleResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getDeleteCompanyArticleMockHandler = (
+  overrideResponse?:
+    void | ((info: Parameters<Parameters<typeof http.delete>[1]>[0]) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.delete(
+    "*/admin/company-articles/:id",
+    async (info: Parameters<Parameters<typeof http.delete>[1]>[0]) => {
+      if (typeof overrideResponse === "function") {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options,
+  );
+};
+
+export const getPublishCompanyArticleMockHandler = (
+  overrideResponse?:
+    | CompanyArticle
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<CompanyArticle> | CompanyArticle),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/company-articles/:id/publish",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getPublishCompanyArticleResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getUnpublishCompanyArticleMockHandler = (
+  overrideResponse?:
+    | CompanyArticle
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<CompanyArticle> | CompanyArticle),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/company-articles/:id/unpublish",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUnpublishCompanyArticleResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getGetProfileMockHandler = (
   overrideResponse?:
     Profile | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<Profile> | Profile),
@@ -19392,6 +19712,13 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getGetTicketMockHandler(),
   getReplyTicketMockHandler(),
   getSetTicketStatusMockHandler(),
+  getListCompanyArticlesMockHandler(),
+  getListAdminCompanyArticlesMockHandler(),
+  getCreateCompanyArticleMockHandler(),
+  getUpdateCompanyArticleMockHandler(),
+  getDeleteCompanyArticleMockHandler(),
+  getPublishCompanyArticleMockHandler(),
+  getUnpublishCompanyArticleMockHandler(),
   getGetProfileMockHandler(),
   getUpdateProfileMockHandler(),
   getUploadAvatarMockHandler(),

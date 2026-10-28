@@ -118,7 +118,9 @@
         "chats:reply",
         "chats:note",
         "chats:assist",
-        "chats:invoiced"
+        "chats:invoiced",
+        "company_articles:read",
+        "company_articles:write"
       ]
     },
     "edsPermission": {

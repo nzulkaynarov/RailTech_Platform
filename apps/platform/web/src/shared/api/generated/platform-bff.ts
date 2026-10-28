@@ -86,6 +86,10 @@ import type {
   ClientInvitation,
   ClientList,
   Colleague,
+  CompanyArticle,
+  CompanyArticleCreate,
+  CompanyArticleList,
+  CompanyArticleUpdate,
   CompanyItemRef,
   CompanyProfile,
   CompanyProfileUpdate,
@@ -3278,6 +3282,797 @@ export const useSetTicketStatus = <
   TContext
 > => {
   return useMutation(getSetTicketStatusMutationOptions(options), queryClient);
+};
+
+export const getListCompanyArticlesUrl = () => {
+  return `/api/v1/help/company-articles`;
+};
+
+/**
+ * Опубликованные статьи компании целиком (заголовок, Markdown, язык) — для раздела «Как у нас принято» в окне и на странице Помощи и для общего поиска по статьям. Черновиков здесь нет ни у кого, в том числе у администратора (он видит их в `GET /admin/company-articles`). Нужна сессия и хотя бы один раздел каталога; прав раздела не требуется. Новые выше.
+ * @summary Статьи компании для Помощи (только опубликованные)
+ */
+export const listCompanyArticles = async (
+  options?: Parameters<typeof http>[1],
+): Promise<CompanyArticleList> => {
+  return http<CompanyArticleList>(getListCompanyArticlesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListCompanyArticlesQueryKey = () => {
+  return [`/api/v1/help/company-articles`] as const;
+};
+
+export const getListCompanyArticlesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listCompanyArticles>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listCompanyArticles>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListCompanyArticlesQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listCompanyArticles>>> = ({ signal }) =>
+    listCompanyArticles({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listCompanyArticles>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListCompanyArticlesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listCompanyArticles>>
+>;
+export type ListCompanyArticlesQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse
+>;
+
+export function useListCompanyArticles<
+  TData = Awaited<ReturnType<typeof listCompanyArticles>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCompanyArticles>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listCompanyArticles>>,
+          TError,
+          Awaited<ReturnType<typeof listCompanyArticles>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListCompanyArticles<
+  TData = Awaited<ReturnType<typeof listCompanyArticles>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCompanyArticles>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listCompanyArticles>>,
+          TError,
+          Awaited<ReturnType<typeof listCompanyArticles>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListCompanyArticles<
+  TData = Awaited<ReturnType<typeof listCompanyArticles>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCompanyArticles>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Статьи компании для Помощи (только опубликованные)
+ */
+
+export function useListCompanyArticles<
+  TData = Awaited<ReturnType<typeof listCompanyArticles>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCompanyArticles>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListCompanyArticlesQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getListAdminCompanyArticlesUrl = () => {
+  return `/api/v1/admin/company-articles`;
+};
+
+/**
+ * Раздел `admin` от чтения (директор читает, администратор правит). Недавно правленные выше; в каждой статье — полный текст для редактора.
+ * @summary Все статьи компании с черновиками (Настройки · Статьи компании)
+ */
+export const listAdminCompanyArticles = async (
+  options?: Parameters<typeof http>[1],
+): Promise<CompanyArticleList> => {
+  return http<CompanyArticleList>(getListAdminCompanyArticlesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListAdminCompanyArticlesQueryKey = () => {
+  return [`/api/v1/admin/company-articles`] as const;
+};
+
+export const getListAdminCompanyArticlesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listAdminCompanyArticles>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(options?: {
+  query?: Partial<
+    UseQueryOptions<Awaited<ReturnType<typeof listAdminCompanyArticles>>, TError, TData>
+  >;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListAdminCompanyArticlesQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listAdminCompanyArticles>>> = ({
+    signal,
+  }) => listAdminCompanyArticles({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listAdminCompanyArticles>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListAdminCompanyArticlesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listAdminCompanyArticles>>
+>;
+export type ListAdminCompanyArticlesQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse
+>;
+
+export function useListAdminCompanyArticles<
+  TData = Awaited<ReturnType<typeof listAdminCompanyArticles>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listAdminCompanyArticles>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listAdminCompanyArticles>>,
+          TError,
+          Awaited<ReturnType<typeof listAdminCompanyArticles>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListAdminCompanyArticles<
+  TData = Awaited<ReturnType<typeof listAdminCompanyArticles>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listAdminCompanyArticles>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listAdminCompanyArticles>>,
+          TError,
+          Awaited<ReturnType<typeof listAdminCompanyArticles>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListAdminCompanyArticles<
+  TData = Awaited<ReturnType<typeof listAdminCompanyArticles>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listAdminCompanyArticles>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Все статьи компании с черновиками (Настройки · Статьи компании)
+ */
+
+export function useListAdminCompanyArticles<
+  TData = Awaited<ReturnType<typeof listAdminCompanyArticles>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listAdminCompanyArticles>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListAdminCompanyArticlesQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getCreateCompanyArticleUrl = () => {
+  return `/api/v1/admin/company-articles`;
+};
+
+/**
+ * Раздел `admin` — полный. Новая статья всегда черновик; опубликовать — `POST /admin/company-articles/{id}/publish`. Ошибка значения — 422 `VALIDATION_FAILED` (`details.fields`: `title`, `body`, `language`; `details.reason`: `article_title_empty`, `article_title_too_long`, `article_body_empty`, `article_body_too_long`, `article_language_unknown`). Создание пишется в журнал действий.
+ * @summary Создать статью компании (черновик)
+ */
+export const createCompanyArticle = async (
+  companyArticleCreate: CompanyArticleCreate,
+  options?: Parameters<typeof http>[1],
+): Promise<CompanyArticle> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<CompanyArticle>(getCreateCompanyArticleUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(companyArticleCreate),
+  });
+};
+
+export const getCreateCompanyArticleMutationKey = () => ["createCompanyArticle"] as const;
+
+export const getCreateCompanyArticleMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createCompanyArticle>>,
+    TError,
+    CreateCompanyArticleMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createCompanyArticle>>,
+  TError,
+  CreateCompanyArticleMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateCompanyArticleMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createCompanyArticle>>,
+    CreateCompanyArticleMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createCompanyArticle(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateCompanyArticleMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createCompanyArticle>>
+>;
+export type CreateCompanyArticleMutationBody = CompanyArticleCreate;
+export type CreateCompanyArticleMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse | BackendUnavailableResponse
+>;
+export type CreateCompanyArticleMutationVariables = { data: CompanyArticleCreate };
+
+/**
+ * @summary Создать статью компании (черновик)
+ */
+export const useCreateCompanyArticle = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createCompanyArticle>>,
+      TError,
+      CreateCompanyArticleMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createCompanyArticle>>,
+  TError,
+  CreateCompanyArticleMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateCompanyArticleMutationOptions(options), queryClient);
+};
+
+export const getUpdateCompanyArticleUrl = (id: number) => {
+  return `/api/v1/admin/company-articles/${id}`;
+};
+
+/**
+ * Раздел `admin` — полный. Меняются присланные поля (`title`, `body`, `language`); статус не меняется — для него `publish` и `unpublish`. Правка опубликованной статьи сразу видна в Помощи. Ошибки значений — как у создания; правка пишется в журнал действий.
+ * @summary Править статью компании
+ */
+export const updateCompanyArticle = async (
+  id: number,
+  companyArticleUpdate: CompanyArticleUpdate,
+  options?: Parameters<typeof http>[1],
+): Promise<CompanyArticle> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<CompanyArticle>(getUpdateCompanyArticleUrl(id), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(companyArticleUpdate),
+  });
+};
+
+export const getUpdateCompanyArticleMutationKey = () => ["updateCompanyArticle"] as const;
+
+export const getUpdateCompanyArticleMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateCompanyArticle>>,
+    TError,
+    UpdateCompanyArticleMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateCompanyArticle>>,
+  TError,
+  UpdateCompanyArticleMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateCompanyArticleMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateCompanyArticle>>,
+    UpdateCompanyArticleMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return updateCompanyArticle(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateCompanyArticleMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateCompanyArticle>>
+>;
+export type UpdateCompanyArticleMutationBody = CompanyArticleUpdate;
+export type UpdateCompanyArticleMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type UpdateCompanyArticleMutationVariables = { id: number; data: CompanyArticleUpdate };
+
+/**
+ * @summary Править статью компании
+ */
+export const useUpdateCompanyArticle = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateCompanyArticle>>,
+      TError,
+      UpdateCompanyArticleMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateCompanyArticle>>,
+  TError,
+  UpdateCompanyArticleMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateCompanyArticleMutationOptions(options), queryClient);
+};
+
+export const getDeleteCompanyArticleUrl = (id: number) => {
+  return `/api/v1/admin/company-articles/${id}`;
+};
+
+/**
+ * Раздел `admin` — полный. Удаляет статью насовсем (SPA просит подтверждение); удаление пишется в журнал действий без текста статьи.
+ * @summary Удалить статью компании
+ */
+export const deleteCompanyArticle = async (
+  id: number,
+  options?: Parameters<typeof http>[1],
+): Promise<void> => {
+  return http<void>(getDeleteCompanyArticleUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteCompanyArticleMutationKey = () => ["deleteCompanyArticle"] as const;
+
+export const getDeleteCompanyArticleMutationOptions = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteCompanyArticle>>,
+    TError,
+    DeleteCompanyArticleMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteCompanyArticle>>,
+  TError,
+  DeleteCompanyArticleMutationVariables,
+  TContext
+> => {
+  const mutationKey = getDeleteCompanyArticleMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteCompanyArticle>>,
+    DeleteCompanyArticleMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteCompanyArticle(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteCompanyArticleMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteCompanyArticle>>
+>;
+
+export type DeleteCompanyArticleMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+export type DeleteCompanyArticleMutationVariables = { id: number };
+
+/**
+ * @summary Удалить статью компании
+ */
+export const useDeleteCompanyArticle = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteCompanyArticle>>,
+      TError,
+      DeleteCompanyArticleMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof deleteCompanyArticle>>,
+  TError,
+  DeleteCompanyArticleMutationVariables,
+  TContext
+> => {
+  return useMutation(getDeleteCompanyArticleMutationOptions(options), queryClient);
+};
+
+export const getPublishCompanyArticleUrl = (id: number) => {
+  return `/api/v1/admin/company-articles/${id}/publish`;
+};
+
+/**
+ * Раздел `admin` — полный. Статья появляется в «Как у нас принято» у всех сотрудников. Повтор для уже опубликованной статьи ничего не меняет и в журнал второй раз не пишется.
+ * @summary Опубликовать статью компании
+ */
+export const publishCompanyArticle = async (
+  id: number,
+  options?: Parameters<typeof http>[1],
+): Promise<CompanyArticle> => {
+  return http<CompanyArticle>(getPublishCompanyArticleUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getPublishCompanyArticleMutationKey = () => ["publishCompanyArticle"] as const;
+
+export const getPublishCompanyArticleMutationOptions = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof publishCompanyArticle>>,
+    TError,
+    PublishCompanyArticleMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof publishCompanyArticle>>,
+  TError,
+  PublishCompanyArticleMutationVariables,
+  TContext
+> => {
+  const mutationKey = getPublishCompanyArticleMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof publishCompanyArticle>>,
+    PublishCompanyArticleMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return publishCompanyArticle(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PublishCompanyArticleMutationResult = NonNullable<
+  Awaited<ReturnType<typeof publishCompanyArticle>>
+>;
+
+export type PublishCompanyArticleMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+export type PublishCompanyArticleMutationVariables = { id: number };
+
+/**
+ * @summary Опубликовать статью компании
+ */
+export const usePublishCompanyArticle = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof publishCompanyArticle>>,
+      TError,
+      PublishCompanyArticleMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof publishCompanyArticle>>,
+  TError,
+  PublishCompanyArticleMutationVariables,
+  TContext
+> => {
+  return useMutation(getPublishCompanyArticleMutationOptions(options), queryClient);
+};
+
+export const getUnpublishCompanyArticleUrl = (id: number) => {
+  return `/api/v1/admin/company-articles/${id}/unpublish`;
+};
+
+/**
+ * Раздел `admin` — полный. Статья исчезает из Помощи у всех, кроме тех, кто правит раздел.
+ * @summary Вернуть статью компании в черновики
+ */
+export const unpublishCompanyArticle = async (
+  id: number,
+  options?: Parameters<typeof http>[1],
+): Promise<CompanyArticle> => {
+  return http<CompanyArticle>(getUnpublishCompanyArticleUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getUnpublishCompanyArticleMutationKey = () => ["unpublishCompanyArticle"] as const;
+
+export const getUnpublishCompanyArticleMutationOptions = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof unpublishCompanyArticle>>,
+    TError,
+    UnpublishCompanyArticleMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof unpublishCompanyArticle>>,
+  TError,
+  UnpublishCompanyArticleMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUnpublishCompanyArticleMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof unpublishCompanyArticle>>,
+    UnpublishCompanyArticleMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return unpublishCompanyArticle(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UnpublishCompanyArticleMutationResult = NonNullable<
+  Awaited<ReturnType<typeof unpublishCompanyArticle>>
+>;
+
+export type UnpublishCompanyArticleMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+export type UnpublishCompanyArticleMutationVariables = { id: number };
+
+/**
+ * @summary Вернуть статью компании в черновики
+ */
+export const useUnpublishCompanyArticle = <
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof unpublishCompanyArticle>>,
+      TError,
+      UnpublishCompanyArticleMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof unpublishCompanyArticle>>,
+  TError,
+  UnpublishCompanyArticleMutationVariables,
+  TContext
+> => {
+  return useMutation(getUnpublishCompanyArticleMutationOptions(options), queryClient);
 };
 
 export const getGetProfileUrl = () => {
