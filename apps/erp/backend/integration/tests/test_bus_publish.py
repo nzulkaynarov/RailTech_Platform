@@ -2,7 +2,7 @@
 
 * золотой путь заявка → КП → договор → счёт → оплата → поставка на настоящих сервисах публикует цепочку событий, и каждое
   проходит схему контракта;
-* каждый из 24 типов `uz.railtech.erp.*.v1` рождается в своём сервисе (`test_every_event_type_is_published_by_its_service`);
+* каждый из 25 типов `uz.railtech.erp.*.v1` рождается в своём сервисе (`test_every_event_type_is_published_by_its_service`);
 * откат транзакции — нет события (в обе стороны: событие не переживает откат, откат не прячет событие другого действия);
 * ошибка публикации (в том числе `data` не по схеме) откатывает само изменение;
 * в ERP нет `except Exception` вокруг публикации, сигналов Django и вебхуков.
@@ -460,4 +460,5 @@ ATOMIC_BY_CALLER = {
     "sales/services/delivery_lines.py::_publish_decision",  # из accept/dispute_delivery_line (@atomic)
     "portal/services/acceptance.py::_emit_code_event",  # из request_acceptance_code (with transaction.atomic)
     "integration/services/handoff.py::_create_request",  # из _handoff в transaction.atomic
+    "crm/services/contract_flow.py::_publish",  # из apply_transition, generate_contract_from_quote, sign_* (все @atomic)
 }

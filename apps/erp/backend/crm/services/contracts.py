@@ -8,6 +8,7 @@ from crm.services.pdf_storage import save_rendered_pdf
 
 from ..constants import ContractStatusCode, QuoteStatusCode
 from ..models import ActivityLog, Quote
+from .contract_flow import publish_current_status
 
 # ──────────────────────────────────────────────────────────────────────────
 # Contracts
@@ -52,8 +53,13 @@ def generate_contract_from_quote(
     quote_id: int,
     actor: Optional[CustomUser] = None,
     notes: str = "",
+    send_to_client: bool = True,
 ) -> Tuple[Optional["Contract"], Optional[str]]:  # noqa: F821
-    """Create a Contract tied to an approved Quote, render its PDF."""
+    """Create a Contract tied to an approved Quote, render its PDF.
+
+    `send_to_client=False` (D2-5, Платформа) оставляет проект в `DRAFT`: клиенту он не виден и не уведомляется, на согласование
+    его отправляет бухгалтер действием `send_to_client` (`crm/services/contract_flow.py`). По умолчанию — прежнее
+    поведение: договор сразу `PENDING_CLIENT` (так он рождается и после акцепта КП клиентом)."""
     from accounts.services import is_seller
 
     from ..models import Contract
@@ -77,6 +83,7 @@ def generate_contract_from_quote(
         .first()
     )
 
+    created = not contract
     if not contract:
         # Seller company = the КП author's owning company → its prefix + per-company counter.
         from .document_blocks import frozen_body_for
@@ -113,8 +120,9 @@ def generate_contract_from_quote(
     # fires only on success; the download endpoint renders lazily if this races behind.
     from integration.services import document_events
 
+    was_draft = contract.status_code == ContractStatusCode.DRAFT
     with document_events.watch_document_issue("contract", contract):  # document.created на выпуске (шина rt_bus)
-        if contract.status_code == ContractStatusCode.DRAFT:
+        if was_draft and send_to_client:
             contract.status = _cstatus(ContractStatusCode.PENDING_CLIENT)
         contract.save(update_fields=["status", "updated_at"])
 
@@ -133,9 +141,12 @@ def generate_contract_from_quote(
         deal=quote.deal,
         company_id=quote.deal.company_id,
     )
+    if created or (was_draft and send_to_client):
+        publish_current_status(contract, actor)  # `contract.status_changed` — проекция реестра EDS (D2-5)
     # P1: a created contract must not be silent — tell BOTH parties it awaits signature
     # (previously generate set PENDING_CLIENT and nobody was notified → dead-end after accept).
-    _notify_contract_pending(contract)
+    if send_to_client:
+        _notify_contract_pending(contract)
     return contract, None
 
 
@@ -344,6 +355,9 @@ def sign_contract_by_client(
         )
         contract.save(update_fields=["client_signer", "client_signed_at", "status", "updated_at"])
     events.publish_contract_signed(contract, by="both" if contract.manager_signed_at else "client")
+    publish_current_status(
+        contract, client_user
+    )  # статус «Согласован клиентом» / «Подписан» — проекция реестра EDS (D2-5)
     event_params = {"number": contract.number, "deal_id": contract.deal_id, "manual": True}
     if portal_contact is not None:
         event_params.update({"channel": "portal", "contact_id": portal_contact.pk})
@@ -398,6 +412,7 @@ def sign_contract_by_manager(
         )
         contract.save(update_fields=["manager_signer", "manager_signed_at", "status", "updated_at"])
     events.publish_contract_signed(contract, by="both" if contract.client_signed_at else "company")
+    publish_current_status(contract, manager_user)
     ActivityLog.objects.create(
         action="[MANUAL_MODE] Подписан договор (сторона продавца)",
         detail=f"Договор {contract.number} / сделка #{contract.deal_id}",
@@ -489,6 +504,7 @@ def cancel_contract(
     # Причина и автор в `contract.notes` не пишутся: поле печатается в PDF договора («Дополнительные
     # условия») и уходит клиенту. След — в журнале (как у force-варианта).
     contract.save(update_fields=["status", "updated_at"])
+    publish_current_status(contract, actor, reason=(reason or "").strip() if isinstance(reason, str) else "")
     reason = reason.strip() if isinstance(reason, str) else ""
     log_admin_action(
         entity_type="contract",
@@ -537,6 +553,7 @@ def force_cancel_contract(
     # Причина и e-mail администратора в `contract.notes` не пишутся: поле печатается в PDF договора
     # («Дополнительные условия») и уходит клиенту — как и у force-approve КП. Весь след — в журнале ниже.
     contract.save(update_fields=["status", "updated_at"])
+    publish_current_status(contract, admin_user, reason=reason)
     # Structured, entity-scoped audit (G2 Gap A) — route through log_admin_action so the
     # override carries reason + entity_type/id + before/after and surfaces on the contract
     # timeline and the «Журнал доступа» page (not a bare, unscoped ActivityLog).

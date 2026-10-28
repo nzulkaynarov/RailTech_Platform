@@ -22,6 +22,8 @@ from crm.serializers import (
     PaymentSerializer,
 )
 from crm.views.billing_filters import ActFilter, ContractFilter, FulfillmentFilter, InvoiceFilter, PaymentFilter
+from crm.serializers.projects import ContractFlowSerializer
+from crm.views.billing_flow import ActFlowMixin, ContractFlowMixin
 from crm.views.request_body import invalid_body_response, is_object_body
 
 _PDF_DOC_TYPE = {
@@ -111,7 +113,7 @@ def _billing_visibility_q(user, request, *, deal_path):
     return buyer_q | seller_q
 
 
-class ContractViewSet(RoleGatedViewMixin, OptimisticLockingMixin, viewsets.ModelViewSet):
+class ContractViewSet(RoleGatedViewMixin, OptimisticLockingMixin, ContractFlowMixin, viewsets.ModelViewSet):
     """Contracts -- generated from approved quotes, double-signed."""
 
     required_permissions = {
@@ -122,6 +124,13 @@ class ContractViewSet(RoleGatedViewMixin, OptimisticLockingMixin, viewsets.Model
         "generate_from_quote": "contract.manage",
         "select_wording": "contract.manage",
         "upload_signed": "contract.manage",
+        # D2-5: статусы договора вместо подписи кликом (`crm/services/contract_flow.py`).
+        "send_to_client": "contract.manage",
+        "client_agreed": "contract.manage",
+        "reject": "contract.manage",
+        "revise": "contract.manage",
+        "mark_issued": "contract.sign",
+        "attach_scan": "contract.sign",
         "cancel": ADMIN_ONLY,
         "force_cancel": ADMIN_ONLY,
         "sign_manager": "contract.sign",
@@ -160,11 +169,26 @@ class ContractViewSet(RoleGatedViewMixin, OptimisticLockingMixin, viewsets.Model
     @extend_schema(
         summary="Generate contract from a quote",
         tags=["CRM"],
+        responses={
+            201: ContractFlowSerializer,  # создание; прежняя выгрузка называла 200 (исключение в openapi-breaking-exceptions.yaml)
+            400: OpenApiResponse(
+                description="QUOTE_ID_REQUIRED / CONTRACT_NEEDS_APPROVAL / MEMBER_REQUIRED_FOR_ACTION (код в `detail`)"
+            ),
+            403: OpenApiResponse(description="ROLE_NOT_PERMITTED: нет права `contract.manage`"),
+        },
         request=inline_serializer(
             "GenContract",
             fields={
                 "quote_id": drf_serializers.IntegerField(),
                 "notes": drf_serializers.CharField(required=False, default=""),
+                "send_to_client": drf_serializers.BooleanField(
+                    required=False,
+                    default=True,
+                    help_text=(
+                        "false (Платформа, D2-5): проект остаётся в DRAFT, клиенту не виден; на согласование его "
+                        "отправляет `send-to-client`. По умолчанию — прежнее поведение (сразу PENDING_CLIENT)."
+                    ),
+                ),
             },
         ),
     )
@@ -182,10 +206,11 @@ class ContractViewSet(RoleGatedViewMixin, OptimisticLockingMixin, viewsets.Model
             int(quote_id),
             actor=request.user,
             notes=request.data.get("notes", ""),
+            send_to_client=str(request.data.get("send_to_client", "true")).lower() not in ("false", "0"),
         )
         if err:
             return Response({"detail": err}, status=400)
-        return Response(ContractSerializer(contract).data, status=201)
+        return Response(ContractFlowSerializer(contract).data, status=201)
 
     @extend_schema(
         summary="Select an approved wording variant for THIS contract (E4 playbook)",
@@ -547,7 +572,7 @@ class PaymentViewSet(viewsets.ReadOnlyModelViewSet):
         return _stream_or_render_pdf(self.get_object())
 
 
-class ActViewSet(RoleGatedViewMixin, viewsets.ReadOnlyModelViewSet):
+class ActViewSet(RoleGatedViewMixin, ActFlowMixin, viewsets.ReadOnlyModelViewSet):
     """Акты — только чтение плюс сервисные экшены ниже (Rule 8).
 
     Выпуск — через `invoices/{id}/generate-act/` (там же проверяется роутинг
@@ -559,6 +584,8 @@ class ActViewSet(RoleGatedViewMixin, viewsets.ReadOnlyModelViewSet):
         "cancel": "fulfillment.act",
         "reissue": "fulfillment.act",
         "remind": "fulfillment.act",
+        "attach_scan": "fulfillment.act",  # D2-5: скан подписанного акта
+        "record_return": "fulfillment.act",
     }
 
     serializer_class = ActSerializer

@@ -21,7 +21,7 @@ from . import stages
 
 logger = logging.getLogger(__name__)
 
-#: Короткие имена 24 типов ERP (`<сущность>.<действие>`); полный тип — `uz.railtech.erp.<имя>.v1`. `quote.ready_for_approval`
+#: Короткие имена 25 типов ERP (`<сущность>.<действие>`); полный тип — `uz.railtech.erp.<имя>.v1`. `quote.ready_for_approval`
 #: адресован EDS (EDS-03) и CRM не доставляется (`bus/subscriptions.yaml`).
 VALID_EVENT_TYPES = {
     "request.created",
@@ -33,6 +33,7 @@ VALID_EVENT_TYPES = {
     "quote.acceptance_code_requested",
     "quote.ready_for_approval",
     "contract.signed",
+    "contract.status_changed",
     "invoice.issued",
     "invoice.paid",
     "invoice.overdue",

@@ -9760,6 +9760,97 @@
                 }
             }
         },
+        "/api/v1/crm/acts/{id}/attach-scan/": {
+            "post": {
+                "operationId": "crm_acts_attach_scan_create",
+                "description": "PDF или изображение (jpg, png, webp) до 20 МБ. Акт становится «Подписан (скан)»; публикуется `act.accepted`.",
+                "summary": "Прикрепить скан подписанного акта (ISSUED → SIGNED)",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Акт.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "CRM"
+                ],
+                "requestBody": {
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ActScanInRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ActFlow"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BadRequest"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "MEMBER_REQUIRED_FOR_ACTION / ROLE_NOT_PERMITTED",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Не найдено",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
         "/api/v1/crm/acts/{id}/cancel/": {
             "post": {
                 "operationId": "crm_acts_cancel_create",
@@ -9925,6 +10016,107 @@
                     },
                     "404": {
                         "$ref": "#/components/responses/NotFoundResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/crm/acts/{id}/record-return/": {
+            "post": {
+                "operationId": "crm_acts_record_return_create",
+                "description": "Акты — только чтение плюс сервисные экшены ниже (Rule 8).\n\nВыпуск — через `invoices/{id}/generate-act/` (там же проверяется роутинг\nпродавца, аудит H4), подпись — через `acts/{id}/sign/`. Сырые create/update/\ndestroy обходили обе проверки и позволяли проставить номер, статус и даты руками.",
+                "summary": "Записать возврат акта заказчиком (ISSUED → DRAFT с причиной)",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Акт.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "CRM"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ActReturnInRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ActReturnInRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ActReturnInRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ActFlow"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BadRequest"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "MEMBER_REQUIRED_FOR_ACTION / ROLE_NOT_PERMITTED",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Не найдено",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
                     }
                 }
             }
@@ -10980,6 +11172,97 @@
                 }
             }
         },
+        "/api/v1/crm/contracts/{id}/attach-scan/": {
+            "post": {
+                "operationId": "crm_contracts_attach_scan_create",
+                "description": "PDF или изображение (jpg, png, webp) до 20 МБ; сигнатура байтов должна совпадать с расширением. Договор становится «Подписан», сделка уходит в `CLOSED_WON` — задача создаёт черновик счёта на предоплату.",
+                "summary": "Прикрепить скан подписанного договора (ISSUED_EXTERNAL → SIGNED)",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Контракт.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "CRM"
+                ],
+                "requestBody": {
+                    "content": {
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ContractScanInRequest"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ContractFlow"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BadRequest"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "MEMBER_REQUIRED_FOR_ACTION / ROLE_NOT_PERMITTED",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Не найдено",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
         "/api/v1/crm/contracts/{id}/cancel/": {
             "post": {
                 "operationId": "crm_contracts_cancel_create",
@@ -11046,6 +11329,106 @@
                     },
                     "404": {
                         "$ref": "#/components/responses/NotFoundResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/crm/contracts/{id}/client-agreed/": {
+            "post": {
+                "operationId": "crm_contracts_client_agreed_create",
+                "description": "Contracts -- generated from approved quotes, double-signed.",
+                "summary": "Отметить: редакция согласована клиентом (PENDING_CLIENT → PENDING_MANAGER)",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Контракт.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "CRM"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ContractTransitionInRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ContractTransitionInRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ContractTransitionInRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ContractFlow"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BadRequest"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "MEMBER_REQUIRED_FOR_ACTION / ROLE_NOT_PERMITTED",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Не найдено",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
                     }
                 }
             }
@@ -11219,6 +11602,306 @@
                 }
             }
         },
+        "/api/v1/crm/contracts/{id}/mark-issued/": {
+            "post": {
+                "operationId": "crm_contracts_mark_issued_create",
+                "description": "Contracts -- generated from approved quotes, double-signed.",
+                "summary": "Отметить: договор выставлен у оператора ЭДО (PENDING_MANAGER → ISSUED_EXTERNAL)",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Контракт.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "CRM"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ContractTransitionInRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ContractTransitionInRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ContractTransitionInRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ContractFlow"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BadRequest"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "MEMBER_REQUIRED_FOR_ACTION / ROLE_NOT_PERMITTED",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Не найдено",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/crm/contracts/{id}/reject/": {
+            "post": {
+                "operationId": "crm_contracts_reject_create",
+                "description": "Contracts -- generated from approved quotes, double-signed.",
+                "summary": "Записать отклонение договора клиентом (→ REJECTED), причина обязательна",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Контракт.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "CRM"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ContractTransitionInRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ContractTransitionInRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ContractTransitionInRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ContractFlow"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BadRequest"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "MEMBER_REQUIRED_FOR_ACTION / ROLE_NOT_PERMITTED",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Не найдено",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/crm/contracts/{id}/revise/": {
+            "post": {
+                "operationId": "crm_contracts_revise_create",
+                "description": "Contracts -- generated from approved quotes, double-signed.",
+                "summary": "Вернуть отклонённый проект договора в работу (REJECTED → DRAFT)",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Контракт.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "CRM"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ContractTransitionInRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ContractTransitionInRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ContractTransitionInRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ContractFlow"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BadRequest"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "MEMBER_REQUIRED_FOR_ACTION / ROLE_NOT_PERMITTED",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Не найдено",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
         "/api/v1/crm/contracts/{id}/select-wording/": {
             "post": {
                 "operationId": "crm_contracts_select_wording_create",
@@ -11285,6 +11968,106 @@
                     },
                     "404": {
                         "$ref": "#/components/responses/NotFoundResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/crm/contracts/{id}/send-to-client/": {
+            "post": {
+                "operationId": "crm_contracts_send_to_client_create",
+                "description": "Contracts -- generated from approved quotes, double-signed.",
+                "summary": "Отправить проект договора клиенту на согласование редакции (DRAFT → PENDING_CLIENT)",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "A unique integer value identifying this Контракт.",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "CRM"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ContractTransitionInRequest"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ContractTransitionInRequest"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ContractTransitionInRequest"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ContractFlow"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "description": "REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BadRequest"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "MEMBER_REQUIRED_FOR_ACTION / ROLE_NOT_PERMITTED",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Не найдено",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
                     }
                 }
             }
@@ -11458,24 +12241,38 @@
                     }
                 ],
                 "responses": {
-                    "200": {
+                    "201": {
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/Contract"
+                                    "$ref": "#/components/schemas/ContractFlow"
                                 }
                             }
                         },
                         "description": ""
                     },
                     "400": {
-                        "$ref": "#/components/responses/BadRequestResponse"
+                        "description": "QUOTE_ID_REQUIRED / CONTRACT_NEEDS_APPROVAL / MEMBER_REQUIRED_FOR_ACTION (код в `detail`)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BadRequest"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "ROLE_NOT_PERMITTED: нет права `contract.manage`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "$ref": "#/components/responses/UnauthorizedResponse"
-                    },
-                    "403": {
-                        "$ref": "#/components/responses/ForbiddenResponse"
                     }
                 }
             }
@@ -14911,6 +15708,170 @@
                     },
                     "404": {
                         "$ref": "#/components/responses/NotFoundResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/crm/projects/": {
+            "get": {
+                "operationId": "crm_projects_list",
+                "description": "Сделки от принятия КП клиентом. Шаг (`CONTRACT`/`PAYMENT`/`DONE`), статус для клиента и «проблемы» выводятся из документов. Порядок — от новых; страница — `limit`/`offset`. Читает сотрудник компании-владельца.",
+                "summary": "Проекты: список",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "deal_id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "Одна сделка (точный поиск по номеру ПР)"
+                    },
+                    {
+                        "in": "query",
+                        "name": "limit",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "Размер страницы, 1–100 (по умолчанию 25)"
+                    },
+                    {
+                        "in": "query",
+                        "name": "mine",
+                        "schema": {
+                            "type": "boolean"
+                        },
+                        "description": "Только проекты, где сотрудник — менеджер или взявший в работу"
+                    },
+                    {
+                        "in": "query",
+                        "name": "offset",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "Сдвиг"
+                    },
+                    {
+                        "in": "query",
+                        "name": "problems",
+                        "schema": {
+                            "type": "boolean"
+                        },
+                        "description": "Только с проблемами: договор отклонён, акт возвращён, счёт просрочен"
+                    },
+                    {
+                        "in": "query",
+                        "name": "q",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Название, клиент, номер КП, договора, счёта или акта"
+                    },
+                    {
+                        "in": "query",
+                        "name": "step",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "CONTRACT",
+                                "DONE",
+                                "PAYMENT"
+                            ]
+                        },
+                        "description": "Шаг пути заявки"
+                    }
+                ],
+                "tags": [
+                    "CRM"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProjectPage"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "403": {
+                        "description": "PROJECT_STAFF_ONLY",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
+                    }
+                }
+            }
+        },
+        "/api/v1/crm/projects/{deal_id}/": {
+            "get": {
+                "operationId": "crm_projects_retrieve",
+                "description": "Документы проекта (КП, договор, счета, акт) с историей и действиями, доступными ЭТОМУ сотруднику, исполнение (отгрузка и строки поставки — только чтение) и журнал документов.",
+                "summary": "Проект: карточка",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "deal_id",
+                        "schema": {
+                            "type": "integer"
+                        },
+                        "description": "Сделка ERP (`deal_id` строки списка)",
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "CRM"
+                ],
+                "security": [
+                    {
+                        "jwtAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ProjectCard"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "403": {
+                        "description": "PROJECT_STAFF_ONLY",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "NOT_FOUND: сделки нет или она не проект",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedResponse"
                     }
                 }
             }
@@ -20830,7 +21791,24 @@
                         }
                     },
                     "404": {
-                        "$ref": "#/components/responses/NotFoundResponse"
+                        "description": "Unknown or not-yet-sent token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "410": {
+                        "description": "Public link revoked or expired (QUOTE_LINK_REVOKED / QUOTE_LINK_EXPIRED)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -20898,7 +21876,24 @@
                         }
                     },
                     "404": {
-                        "$ref": "#/components/responses/NotFoundResponse"
+                        "description": "Unknown or not-yet-sent token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "410": {
+                        "description": "Public link revoked or expired (QUOTE_LINK_REVOKED / QUOTE_LINK_EXPIRED)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -20936,7 +21931,24 @@
                         "description": ""
                     },
                     "404": {
-                        "$ref": "#/components/responses/NotFoundResponse"
+                        "description": "Unknown or not-yet-sent token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "410": {
+                        "description": "Public link revoked or expired (QUOTE_LINK_REVOKED / QUOTE_LINK_EXPIRED)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -20967,7 +21979,24 @@
                         "description": "No response body"
                     },
                     "404": {
-                        "$ref": "#/components/responses/NotFoundResponse"
+                        "description": "Unknown or not-yet-sent token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
+                    },
+                    "410": {
+                        "description": "Public link revoked or expired (QUOTE_LINK_REVOKED / QUOTE_LINK_EXPIRED)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorDetail"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -22858,6 +23887,323 @@
                     "viewer_can_sign"
                 ]
             },
+            "ActBlockerEnum": {
+                "enum": [
+                    "no_invoice",
+                    "act_exists",
+                    "forbidden"
+                ],
+                "type": "string",
+                "description": "* `no_invoice` - no_invoice\n* `act_exists` - act_exists\n* `forbidden` - forbidden"
+            },
+            "ActCard": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "number": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/ProjectActStatusEnum"
+                    },
+                    "total": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/Money"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "issued_at": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "signed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "rejection_reason": {
+                        "type": "string"
+                    },
+                    "has_pdf": {
+                        "type": "boolean"
+                    },
+                    "has_scan": {
+                        "type": "boolean"
+                    },
+                    "actions": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ActCardActionsEnum"
+                        }
+                    },
+                    "history": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ProjectJournalEntry"
+                        }
+                    }
+                },
+                "required": [
+                    "actions",
+                    "has_pdf",
+                    "has_scan",
+                    "history",
+                    "id",
+                    "issued_at",
+                    "number",
+                    "rejection_reason",
+                    "signed_at",
+                    "status",
+                    "total"
+                ]
+            },
+            "ActCardActionsEnum": {
+                "enum": [
+                    "attach_scan",
+                    "return",
+                    "reissue"
+                ],
+                "type": "string",
+                "description": "* `attach_scan` - attach_scan\n* `return` - return\n* `reissue` - reissue"
+            },
+            "ActFlow": {
+                "type": "object",
+                "description": "Ответ действий по акту (D2-5): подписанты акта могут быть неизвестны (скан, возврат).",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "deal": {
+                        "type": "integer",
+                        "title": "Сделка"
+                    },
+                    "contract": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "invoice": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "number": {
+                        "type": "string",
+                        "readOnly": true,
+                        "title": "Номер акта"
+                    },
+                    "status": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "status_name": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "issued_at": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "signed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "total_amount": {
+                        "type": "string",
+                        "format": "decimal",
+                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$"
+                    },
+                    "pdf_file": {
+                        "type": "string",
+                        "format": "uri",
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "pdf_url": {
+                        "type": "string",
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "signed_file": {
+                        "type": "string",
+                        "format": "uri",
+                        "nullable": true
+                    },
+                    "signed_file_url": {
+                        "type": "string",
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "issuer_signer": {
+                        "type": "integer",
+                        "readOnly": true,
+                        "nullable": true,
+                        "title": "Выпустил (сторона исполнителя)"
+                    },
+                    "issuer_signer_name": {
+                        "type": "string",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "issuer_signed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "nullable": true,
+                        "title": "Выпущен"
+                    },
+                    "acceptor_signer": {
+                        "type": "integer",
+                        "readOnly": true,
+                        "nullable": true,
+                        "title": "Принял (сторона заказчика)"
+                    },
+                    "acceptor_signer_name": {
+                        "type": "string",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "acceptor_signed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "nullable": true,
+                        "title": "Принят"
+                    },
+                    "rejection_reason": {
+                        "type": "string",
+                        "readOnly": true,
+                        "title": "Причина отклонения",
+                        "description": "Заполняется, когда заказчик отклоняет акт: основание попадает в аудит"
+                    },
+                    "cancellation_reason": {
+                        "type": "string",
+                        "readOnly": true,
+                        "title": "Причина аннулирования",
+                        "description": "Заполняется, когда акт аннулирует ВЫПУСТИВШАЯ сторона. Отдельно от причины отклонения: отклонение — ответ заказчика, аннулирование — отзыв исполнителя, и смешивать их в одном поле значит терять, кто именно закрыл документ."
+                    },
+                    "reminder_sent_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "nullable": true,
+                        "title": "Напоминание отправлено"
+                    },
+                    "viewer_can_sign": {
+                        "type": "boolean",
+                        "readOnly": true
+                    },
+                    "viewer_can_reject": {
+                        "type": "boolean",
+                        "readOnly": true
+                    },
+                    "viewer_can_remind": {
+                        "type": "boolean",
+                        "description": "Напомнить может исполнитель по ВЫСТАВЛЕННОМУ акту и не чаще раза в сутки.\n\nКулдаун показывается заранее, а не выясняется отказом после нажатия: PandaDoc так же\nгасит кнопку до истечения суток.",
+                        "readOnly": true
+                    },
+                    "viewer_can_cancel": {
+                        "type": "boolean",
+                        "description": "Отозвать акт может ТОЛЬКО выпустившая сторона и только пока он не согласован обеими:\nзакрытый документ не «разподписывают» (у DocuSign и Adobe отзыв тоже терминален).",
+                        "readOnly": true
+                    },
+                    "viewer_can_reissue": {
+                        "type": "boolean",
+                        "description": "Возвращённый заказчиком акт выпускает заново ТОЛЬКО исполнитель.\n\nДо 24-08 у отклонённого акта оставалась одна кнопка — «Аннулировать», хотя диалог\nотказа обещал заказчику, что исполнитель «выставит акт заново». Единственным способом\nбыло вернуться на счета и нажать «Сформировать акт», что порождало ВТОРОЙ документ.",
+                        "readOnly": true
+                    },
+                    "notes": {
+                        "type": "string"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "acceptor_signed_at",
+                    "acceptor_signer",
+                    "acceptor_signer_name",
+                    "cancellation_reason",
+                    "created_at",
+                    "deal",
+                    "id",
+                    "issuer_signed_at",
+                    "issuer_signer",
+                    "issuer_signer_name",
+                    "number",
+                    "pdf_file",
+                    "pdf_url",
+                    "rejection_reason",
+                    "reminder_sent_at",
+                    "signed_at",
+                    "signed_file_url",
+                    "updated_at",
+                    "viewer_can_cancel",
+                    "viewer_can_reissue",
+                    "viewer_can_reject",
+                    "viewer_can_remind",
+                    "viewer_can_sign"
+                ]
+            },
+            "ActRef": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "number": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/ProjectActStatusEnum"
+                    }
+                },
+                "required": [
+                    "id",
+                    "number",
+                    "status"
+                ]
+            },
+            "ActReturnInRequest": {
+                "type": "object",
+                "properties": {
+                    "reason": {
+                        "type": "string",
+                        "minLength": 1,
+                        "description": "Причина возврата акта заказчиком — обязательна"
+                    }
+                },
+                "required": [
+                    "reason"
+                ]
+            },
+            "ActScanInRequest": {
+                "type": "object",
+                "properties": {
+                    "file": {
+                        "type": "string",
+                        "format": "binary",
+                        "description": "Скан подписанного акта: PDF, jpg, png или webp до 20 МБ"
+                    }
+                },
+                "required": [
+                    "file"
+                ]
+            },
             "ActiveSession": {
                 "type": "object",
                 "description": "One live refresh token = one session. `is_current` matches the row against\nthe jti of THIS browser's HttpOnly refresh cookie (passed via context).",
@@ -24189,6 +25535,18 @@
                 "required": [
                     "order"
                 ]
+            },
+            "ClientStatusEnum": {
+                "enum": [
+                    "contract_review",
+                    "contract_signing",
+                    "awaiting_payment",
+                    "fulfilling",
+                    "awaiting_acceptance",
+                    "done"
+                ],
+                "type": "string",
+                "description": "* `contract_review` - contract_review\n* `contract_signing` - contract_signing\n* `awaiting_payment` - awaiting_payment\n* `fulfilling` - fulfilling\n* `awaiting_acceptance` - awaiting_acceptance\n* `done` - done"
             },
             "Company": {
                 "type": "object",
@@ -25556,6 +26914,277 @@
                     "wording_selections"
                 ]
             },
+            "ContractCard": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "number": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/ProjectContractStatusEnum"
+                    },
+                    "sent_to_client": {
+                        "type": "boolean",
+                        "description": "Проект ушёл клиенту на согласование и виден ему в портале"
+                    },
+                    "total": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/Money"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "client_agreed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "signed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "has_pdf": {
+                        "type": "boolean"
+                    },
+                    "has_scan": {
+                        "type": "boolean"
+                    },
+                    "actions": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ContractCardActionsEnum"
+                        },
+                        "description": "Что можно сделать СЕЙЧАС этому сотруднику: допустимо из статуса и разрешено правами роли"
+                    },
+                    "history": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ProjectJournalEntry"
+                        }
+                    }
+                },
+                "required": [
+                    "actions",
+                    "client_agreed_at",
+                    "created_at",
+                    "has_pdf",
+                    "has_scan",
+                    "history",
+                    "id",
+                    "number",
+                    "sent_to_client",
+                    "signed_at",
+                    "status",
+                    "total"
+                ]
+            },
+            "ContractCardActionsEnum": {
+                "enum": [
+                    "send_to_client",
+                    "client_agreed",
+                    "reject",
+                    "revise",
+                    "mark_issued",
+                    "attach_scan"
+                ],
+                "type": "string",
+                "description": "* `send_to_client` - send_to_client\n* `client_agreed` - client_agreed\n* `reject` - reject\n* `revise` - revise\n* `mark_issued` - mark_issued\n* `attach_scan` - attach_scan"
+            },
+            "ContractFlow": {
+                "type": "object",
+                "description": "Ответ действий по договору (D2-5): тот же договор, но имена подписантов честно могут быть пустыми — подпись\nвне платформы, подписантов ERP может не знать. Отдельный компонент: у прежних операций схема не меняется.",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "readOnly": true
+                    },
+                    "deal": {
+                        "type": "integer",
+                        "title": "Сделка"
+                    },
+                    "quote": {
+                        "type": "integer",
+                        "title": "КП-источник"
+                    },
+                    "number": {
+                        "type": "string",
+                        "readOnly": true,
+                        "title": "Номер контракта"
+                    },
+                    "status": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "status_name": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "invoice_id": {
+                        "type": "integer",
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "total_amount": {
+                        "type": "string",
+                        "format": "decimal",
+                        "pattern": "^-?\\d{0,12}(?:\\.\\d{0,2})?$",
+                        "readOnly": true,
+                        "title": "Сумма контракта"
+                    },
+                    "currency": {
+                        "type": "integer",
+                        "nullable": true,
+                        "title": "Валюта"
+                    },
+                    "pdf_file": {
+                        "type": "string",
+                        "format": "uri",
+                        "nullable": true,
+                        "readOnly": true,
+                        "title": "PDF контракта"
+                    },
+                    "pdf_url": {
+                        "type": "string",
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "signed_file": {
+                        "type": "string",
+                        "format": "uri",
+                        "nullable": true,
+                        "title": "Подписанный скан/скан-копия"
+                    },
+                    "signed_file_url": {
+                        "type": "string",
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "client_signer": {
+                        "type": "integer",
+                        "readOnly": true,
+                        "nullable": true,
+                        "title": "Подписал со стороны клиента"
+                    },
+                    "client_signer_name": {
+                        "type": "string",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "client_signed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "manager_signer": {
+                        "type": "integer",
+                        "readOnly": true,
+                        "nullable": true,
+                        "title": "Подписал со стороны продавца"
+                    },
+                    "manager_signer_name": {
+                        "type": "string",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "manager_signed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "viewer_can_sign_client": {
+                        "type": "boolean",
+                        "readOnly": true
+                    },
+                    "viewer_can_sign_manager": {
+                        "type": "boolean",
+                        "readOnly": true
+                    },
+                    "valid_from": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "valid_until": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "notes": {
+                        "type": "string"
+                    },
+                    "wording_selections": {
+                        "readOnly": true,
+                        "title": "Формулировки договора"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "client_signed_at",
+                    "client_signer",
+                    "client_signer_name",
+                    "created_at",
+                    "deal",
+                    "id",
+                    "invoice_id",
+                    "manager_signed_at",
+                    "manager_signer",
+                    "manager_signer_name",
+                    "number",
+                    "pdf_file",
+                    "pdf_url",
+                    "quote",
+                    "signed_file_url",
+                    "total_amount",
+                    "updated_at",
+                    "viewer_can_sign_client",
+                    "viewer_can_sign_manager",
+                    "wording_selections"
+                ]
+            },
+            "ContractRef": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "number": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/ProjectContractStatusEnum"
+                    },
+                    "sent_to_client": {
+                        "type": "boolean",
+                        "description": "Проект ушёл клиенту на согласование и виден ему в портале"
+                    }
+                },
+                "required": [
+                    "id",
+                    "number",
+                    "sent_to_client",
+                    "status"
+                ]
+            },
             "ContractRequest": {
                 "type": "object",
                 "properties": {
@@ -25596,6 +27225,35 @@
                     "deal",
                     "quote"
                 ]
+            },
+            "ContractScanInRequest": {
+                "type": "object",
+                "properties": {
+                    "file": {
+                        "type": "string",
+                        "format": "binary",
+                        "description": "Скан подписанного договора: PDF, jpg, png или webp до 20 МБ"
+                    },
+                    "note": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "file"
+                ]
+            },
+            "ContractTransitionInRequest": {
+                "type": "object",
+                "properties": {
+                    "reason": {
+                        "type": "string",
+                        "description": "Обязательна для `reject`"
+                    },
+                    "note": {
+                        "type": "string",
+                        "description": "Заметка в журнал (оператор ЭДО, ссылка)"
+                    }
+                }
             },
             "Country": {
                 "type": "object",
@@ -26377,6 +28035,50 @@
                     "name"
                 ]
             },
+            "DeliveryLineCard": {
+                "type": "object",
+                "properties": {
+                    "line_no": {
+                        "type": "integer"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "quantity": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "unit": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "eta": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "shipped_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "tracking": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "eta",
+                    "line_no",
+                    "quantity",
+                    "shipped_at",
+                    "status",
+                    "title",
+                    "tracking",
+                    "unit"
+                ]
+            },
             "DisplayTypeEnum": {
                 "enum": [
                     "ITEM",
@@ -26448,6 +28150,17 @@
                     "signatory_name",
                     "signatory_position"
                 ]
+            },
+            "DocumentEnum": {
+                "enum": [
+                    "contract",
+                    "act",
+                    "invoice",
+                    "quote",
+                    "project"
+                ],
+                "type": "string",
+                "description": "* `contract` - contract\n* `act` - act\n* `invoice` - invoice\n* `quote` - quote\n* `project` - project"
             },
             "DocumentPlaceholder": {
                 "type": "object",
@@ -27153,6 +28866,55 @@
                     "viewer_can_ship"
                 ]
             },
+            "FulfillmentCard": {
+                "type": "object",
+                "properties": {
+                    "status": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "status_name": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "expected_delivery_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "shipped_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "delivered_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "accepted_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "tracking_number": {
+                        "type": "string"
+                    },
+                    "carrier": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "accepted_at",
+                    "carrier",
+                    "delivered_at",
+                    "expected_delivery_date",
+                    "shipped_at",
+                    "status",
+                    "status_name",
+                    "tracking_number"
+                ]
+            },
             "FulfillmentPolicyEnum": {
                 "enum": [
                     "fixed",
@@ -27228,6 +28990,11 @@
                         "type": "string",
                         "minLength": 1,
                         "default": ""
+                    },
+                    "send_to_client": {
+                        "type": "boolean",
+                        "default": true,
+                        "description": "false (Платформа, D2-5): проект остаётся в DRAFT, клиенту не виден; на согласование его отправляет `send-to-client`. По умолчанию — прежнее поведение (сразу PENDING_CLIENT)."
                     }
                 },
                 "required": [
@@ -27567,6 +29334,68 @@
                     "viewer_can_pay"
                 ]
             },
+            "InvoiceCard": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "number": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/ProjectInvoiceStatusEnum"
+                    },
+                    "total": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/Money"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "paid": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/Money"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "balance_due": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/Money"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "issued_at": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "due_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "has_pdf": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "balance_due",
+                    "due_date",
+                    "has_pdf",
+                    "id",
+                    "issued_at",
+                    "number",
+                    "paid",
+                    "status",
+                    "total"
+                ]
+            },
             "InvoiceItem": {
                 "type": "object",
                 "properties": {
@@ -27633,6 +29462,31 @@
                 },
                 "required": [
                     "description"
+                ]
+            },
+            "InvoiceRef": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "description": "Последний не отменённый счёт проекта"
+                    },
+                    "number": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "$ref": "#/components/schemas/ProjectInvoiceStatusEnum"
+                    },
+                    "count": {
+                        "type": "integer",
+                        "description": "Сколько не отменённых счетов у проекта"
+                    }
+                },
+                "required": [
+                    "count",
+                    "id",
+                    "number",
+                    "status"
                 ]
             },
             "InvoiceRequest": {
@@ -28149,6 +30003,23 @@
                     "label"
                 ]
             },
+            "Money": {
+                "type": "object",
+                "properties": {
+                    "amount": {
+                        "type": "string",
+                        "description": "Сумма строкой с двумя знаками, `-?\\d+\\.\\d{2}`"
+                    },
+                    "currency": {
+                        "type": "string",
+                        "description": "Код валюты, три заглавные буквы"
+                    }
+                },
+                "required": [
+                    "amount",
+                    "currency"
+                ]
+            },
             "Notification": {
                 "type": "object",
                 "properties": {
@@ -28255,6 +30126,11 @@
                 "required": [
                     "count",
                     "status"
+                ]
+            },
+            "NullEnum": {
+                "enum": [
+                    null
                 ]
             },
             "NumberingPreviewItem": {
@@ -30949,6 +32825,21 @@
                     "reference"
                 ]
             },
+            "Person": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "id",
+                    "name"
+                ]
+            },
             "PlatformUserCreateRequest": {
                 "type": "object",
                 "description": "Вход формы «Новый пользователь» в операторской панели.\n\nОтдельный сериализатор, а не `UserSerializer`: у того `role` лежит в `read_only_fields`\n(правильно для правки — роль меняется отдельным действием с проверкой инвариантов), а\n`username` обязателен на уровне модели. Форма же спрашивает email и роль — и обе должны\nдействовать. Роль принимаем КОДОМ (Rule 2), как и весь остальной фронт.",
@@ -31090,6 +32981,16 @@
                 "required": [
                     "name"
                 ]
+            },
+            "ProblemsEnum": {
+                "enum": [
+                    "no_contract",
+                    "contract_rejected",
+                    "act_returned",
+                    "invoice_overdue"
+                ],
+                "type": "string",
+                "description": "* `no_contract` - no_contract\n* `contract_rejected` - contract_rejected\n* `act_returned` - act_returned\n* `invoice_overdue` - invoice_overdue"
             },
             "Product": {
                 "type": "object",
@@ -31956,6 +33857,405 @@
                     "name"
                 ]
             },
+            "ProjectActStatusEnum": {
+                "enum": [
+                    "project",
+                    "returned",
+                    "issued",
+                    "signed",
+                    "cancelled"
+                ],
+                "type": "string",
+                "description": "* `project` - project\n* `returned` - returned\n* `issued` - issued\n* `signed` - signed\n* `cancelled` - cancelled"
+            },
+            "ProjectCard": {
+                "type": "object",
+                "properties": {
+                    "deal_id": {
+                        "type": "integer",
+                        "description": "Сделка ERP; номер ПР-ГГГГ-NNN составляет BFF (B-010)"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "company_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "company_name": {
+                        "type": "string"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "step": {
+                        "$ref": "#/components/schemas/StepEnum"
+                    },
+                    "client_status": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ClientStatusEnum"
+                            }
+                        ],
+                        "description": "Ключ `client-statuses.yaml`\n\n* `contract_review` - contract_review\n* `contract_signing` - contract_signing\n* `awaiting_payment` - awaiting_payment\n* `fulfilling` - fulfilling\n* `awaiting_acceptance` - awaiting_acceptance\n* `done` - done"
+                    },
+                    "total": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/Money"
+                            }
+                        ],
+                        "nullable": true,
+                        "description": "Сумма последнего КП, видимого клиенту, с НДС"
+                    },
+                    "manager": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/Person"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "responsible": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/Person"
+                            }
+                        ],
+                        "nullable": true,
+                        "description": "Кто ведёт: взявший в работу, иначе менеджер"
+                    },
+                    "due_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "documents": {
+                        "$ref": "#/components/schemas/ProjectDocuments"
+                    },
+                    "problems": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ProblemsEnum"
+                        }
+                    },
+                    "quote": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/QuoteCard"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "contract": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ContractCard"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "can_create_contract": {
+                        "type": "boolean",
+                        "description": "КП принято, договора нет, и у сотрудника есть право `contract.manage`: можно сформировать проект"
+                    },
+                    "invoices": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/InvoiceCard"
+                        }
+                    },
+                    "act": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ActCard"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "act_blocker": {
+                        "nullable": true,
+                        "description": "Почему акт сейчас выпустить нельзя: нет счёта, акт уже есть, нет права `fulfillment.act`\n\n* `no_invoice` - no_invoice\n* `act_exists` - act_exists\n* `forbidden` - forbidden",
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/ActBlockerEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/NullEnum"
+                            }
+                        ]
+                    },
+                    "fulfillment": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/FulfillmentCard"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "delivery_lines": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DeliveryLineCard"
+                        }
+                    },
+                    "journal": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ProjectJournalEntry"
+                        }
+                    }
+                },
+                "required": [
+                    "act",
+                    "act_blocker",
+                    "can_create_contract",
+                    "client_status",
+                    "company_id",
+                    "company_name",
+                    "contract",
+                    "created_at",
+                    "deal_id",
+                    "delivery_lines",
+                    "documents",
+                    "due_date",
+                    "fulfillment",
+                    "invoices",
+                    "journal",
+                    "manager",
+                    "problems",
+                    "quote",
+                    "responsible",
+                    "step",
+                    "title",
+                    "total"
+                ]
+            },
+            "ProjectContractStatusEnum": {
+                "enum": [
+                    "project",
+                    "client_agreed",
+                    "issued_at_operator",
+                    "signed",
+                    "rejected",
+                    "cancelled"
+                ],
+                "type": "string",
+                "description": "* `project` - project\n* `client_agreed` - client_agreed\n* `issued_at_operator` - issued_at_operator\n* `signed` - signed\n* `rejected` - rejected\n* `cancelled` - cancelled"
+            },
+            "ProjectDocuments": {
+                "type": "object",
+                "properties": {
+                    "quote": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/QuoteRef"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "contract": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ContractRef"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "invoice": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/InvoiceRef"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "act": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ActRef"
+                            }
+                        ],
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "act",
+                    "contract",
+                    "invoice",
+                    "quote"
+                ]
+            },
+            "ProjectInvoiceStatusEnum": {
+                "enum": [
+                    "to_issue",
+                    "issued",
+                    "partial",
+                    "paid",
+                    "overdue",
+                    "cancelled"
+                ],
+                "type": "string",
+                "description": "* `to_issue` - to_issue\n* `issued` - issued\n* `partial` - partial\n* `paid` - paid\n* `overdue` - overdue\n* `cancelled` - cancelled"
+            },
+            "ProjectJournalEntry": {
+                "type": "object",
+                "properties": {
+                    "at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "code": {
+                        "type": "string",
+                        "description": "Код события журнала (`contract.scan_attached`, …); пусто у прежних записей"
+                    },
+                    "text": {
+                        "type": "string",
+                        "description": "Фраза на русском: запасной текст, если у кода нет перевода"
+                    },
+                    "actor_name": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "document": {
+                        "nullable": true,
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/DocumentEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/NullEnum"
+                            }
+                        ]
+                    },
+                    "number": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "reason": {
+                        "type": "string",
+                        "description": "Причина или заметка к действию"
+                    }
+                },
+                "required": [
+                    "actor_name",
+                    "at",
+                    "code",
+                    "document",
+                    "number",
+                    "reason",
+                    "text"
+                ]
+            },
+            "ProjectPage": {
+                "type": "object",
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "description": "Сколько проектов подошло под фильтры"
+                    },
+                    "results": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ProjectRow"
+                        }
+                    }
+                },
+                "required": [
+                    "count",
+                    "results"
+                ]
+            },
+            "ProjectRow": {
+                "type": "object",
+                "properties": {
+                    "deal_id": {
+                        "type": "integer",
+                        "description": "Сделка ERP; номер ПР-ГГГГ-NNN составляет BFF (B-010)"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "company_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "company_name": {
+                        "type": "string"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "step": {
+                        "$ref": "#/components/schemas/StepEnum"
+                    },
+                    "client_status": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ClientStatusEnum"
+                            }
+                        ],
+                        "description": "Ключ `client-statuses.yaml`\n\n* `contract_review` - contract_review\n* `contract_signing` - contract_signing\n* `awaiting_payment` - awaiting_payment\n* `fulfilling` - fulfilling\n* `awaiting_acceptance` - awaiting_acceptance\n* `done` - done"
+                    },
+                    "total": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/Money"
+                            }
+                        ],
+                        "nullable": true,
+                        "description": "Сумма последнего КП, видимого клиенту, с НДС"
+                    },
+                    "manager": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/Person"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "responsible": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/Person"
+                            }
+                        ],
+                        "nullable": true,
+                        "description": "Кто ведёт: взявший в работу, иначе менеджер"
+                    },
+                    "due_date": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    },
+                    "documents": {
+                        "$ref": "#/components/schemas/ProjectDocuments"
+                    },
+                    "problems": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/ProblemsEnum"
+                        }
+                    }
+                },
+                "required": [
+                    "client_status",
+                    "company_id",
+                    "company_name",
+                    "created_at",
+                    "deal_id",
+                    "documents",
+                    "due_date",
+                    "manager",
+                    "problems",
+                    "responsible",
+                    "step",
+                    "title",
+                    "total"
+                ]
+            },
             "PublicCodeSent": {
                 "type": "object",
                 "properties": {
@@ -32466,6 +34766,40 @@
                     "total_incl_vat",
                     "updated_at",
                     "vat_amount",
+                    "version"
+                ]
+            },
+            "QuoteCard": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "number": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string",
+                        "description": "Всегда `accepted`: КП проекта принято клиентом"
+                    },
+                    "version": {
+                        "type": "integer"
+                    },
+                    "outgoing_number": {
+                        "type": "string"
+                    },
+                    "valid_until": {
+                        "type": "string",
+                        "format": "date",
+                        "nullable": true
+                    }
+                },
+                "required": [
+                    "id",
+                    "number",
+                    "outgoing_number",
+                    "status",
+                    "valid_until",
                     "version"
                 ]
             },
@@ -33162,6 +35496,30 @@
                     "quote"
                 ]
             },
+            "QuoteRef": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "number": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string",
+                        "description": "Всегда `accepted`: КП проекта принято клиентом"
+                    },
+                    "version": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "id",
+                    "number",
+                    "status",
+                    "version"
+                ]
+            },
             "QuoteRequest": {
                 "type": "object",
                 "properties": {
@@ -33799,6 +36157,15 @@
                 ],
                 "type": "string",
                 "description": "* `paired` - paired\n* `env` - env\n* `none` - none"
+            },
+            "StepEnum": {
+                "enum": [
+                    "CONTRACT",
+                    "PAYMENT",
+                    "DONE"
+                ],
+                "type": "string",
+                "description": "* `CONTRACT` - CONTRACT\n* `PAYMENT` - PAYMENT\n* `DONE` - DONE"
             },
             "StockStatus": {
                 "type": "object",

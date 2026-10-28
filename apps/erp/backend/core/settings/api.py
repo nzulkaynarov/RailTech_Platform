@@ -158,6 +158,17 @@ SPECTACULAR_SETTINGS = {
         "ContactPreferredChannelEnum": ["email", "telegram", "both"],
         "LanguageEnum": ["ru", "uz", "en"],
         "SecretSourceEnum": ["db", "env", "none"],
+        # Проекты (D2-5): слова статусов SPEC-v3 §2.4 у договора, счёта и акта — свои имена, а не хеши по полю `status`.
+        "ProjectContractStatusEnum": [
+            "project",
+            "client_agreed",
+            "issued_at_operator",
+            "signed",
+            "rejected",
+            "cancelled",
+        ],
+        "ProjectInvoiceStatusEnum": ["to_issue", "issued", "partial", "paid", "overdue", "cancelled"],
+        "ProjectActStatusEnum": ["project", "returned", "issued", "signed", "cancelled"],
     },
     "TAGS": [
         {"name": "Auth", "description": "Login, password setup by invitation, JWT tokens"},
