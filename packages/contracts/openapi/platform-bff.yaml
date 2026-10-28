@@ -2491,6 +2491,99 @@ paths:
         '503':
           $ref: '#/components/responses/BackendUnavailable'
 
+  /admin/integrations/offsite:
+    get:
+      tags: [integrations]
+      operationId: getOffsiteBackup
+      summary: 'Внешняя копия бэкапов (Google Drive): папка, сервисный аккаунт, ключ — маска'
+      description: >-
+        CRM `GET /integrations/offsite` (OPS-GDRIVE-2). Ключ сервисного аккаунта не возвращается — только адрес аккаунта и
+        `key_suffix` (последние 4 символа ID ключа); `delivered_at` — когда ключ и папка ушли сервису копирования; `last_check` —
+        итог последней проверки. Состояние самой копии — строка `offsite_backup` в `/admin/integrations/services`.
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OffsiteBackup'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+    put:
+      tags: [integrations]
+      operationId: saveOffsiteBackup
+      summary: 'Сохранить ключ сервисного аккаунта и папку и сразу проверить у Google'
+      description: >-
+        CRM `PUT /integrations/offsite`. `key_json` — содержимое JSON-ключа сервисного аккаунта Google (`null` — оставить
+        прежний), `folder_id` — ID папки общего диска или её адрес, `password` — пароль администратора. Ключ хранится
+        зашифрованным и доставляется сервису копирования без захода на сервер. `INTEGRATION_INVALID` (422) — `details.reason`:
+        `offsite_key_invalid` (`details.fields = [key_json]`; `details.problem`: `not_json`, `not_service_account`,
+        `missing_fields`, `foreign_token_uri` — ключ ведёт не на `oauth2.googleapis.com`), `offsite_folder_invalid` (`[folder_id]`);
+        `INTEGRATION_FAILED` (502) — `offsite_delivery_failed` (хранилище недоступно, ничего не сохранено).
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OffsiteBackupIn'
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OffsiteBackup'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/IntegrationConflict'
+        '422':
+          $ref: '#/components/responses/IntegrationInvalid'
+        '423':
+          $ref: '#/components/responses/AccountLocked'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '502':
+          $ref: '#/components/responses/IntegrationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /admin/integrations/offsite/check:
+    post:
+      tags: [integrations]
+      operationId: checkOffsiteBackup
+      summary: 'Проверить ключ и папку у Google'
+      description: >-
+        CRM `POST /integrations/offsite/check`: токен сервисного аккаунта, папка, общий ли диск, можно ли добавлять файлы.
+        Ничего не пишет на Drive. Итог — 200 с `reason`; `NOT_CONFIGURED` (409) — ключа или папки ещё нет.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      responses:
+        '200':
+          description: Готово
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OffsiteCheck'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/IntegrationConflict'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
   /admin/integrations/smtp:
     get:
       tags: [integrations]
@@ -8837,6 +8930,21 @@ components:
           description: Пароль SMTP; `null` — оставить прежний
         password: {type: string, format: password, writeOnly: true, minLength: 1, maxLength: 256, description: Пароль администратора}
 
+    OffsiteBackupIn:
+      type: object
+      additionalProperties: false
+      required: [folder_id, password]
+      properties:
+        key_json:
+          type: [string, 'null']
+          format: password
+          writeOnly: true
+          minLength: 1
+          maxLength: 16384
+          description: Содержимое JSON-ключа сервисного аккаунта Google; `null` — оставить прежний
+        folder_id: {type: string, minLength: 1, maxLength: 512, description: ID папки общего диска или её адрес}
+        password: {type: string, format: password, writeOnly: true, minLength: 1, maxLength: 256, description: Пароль администратора}
+
     ServiceSwitchIn:
       type: object
       additionalProperties: false
@@ -9007,6 +9115,41 @@ components:
       properties: {id: {type: [integer, 'null']}, ok: {const: true, type: boolean}}
       type: object
       required: [id, ok]
+      additionalProperties: false
+    OffsiteBackup:
+      description: >-
+        Внешняя копия бэкапов на Google Drive (OPS-GDRIVE-2). Ключ не возвращается — адрес сервисного аккаунта и последние
+        4 символа ID ключа.
+      properties:
+        configured: {type: boolean}
+        folder_id: {type: string}
+        client_email: {type: string}
+        key_suffix: {type: [string, 'null']}
+        key_updated_at: {format: date-time, type: [string, 'null']}
+        delivered_at: {format: date-time, type: [string, 'null'], description: Когда ключ и папка ушли сервису копирования}
+        last_check:
+          oneOf:
+            - $ref: '#/components/schemas/OffsiteCheck'
+            - type: 'null'
+        secrets_enabled: {type: boolean}
+      required: [configured, folder_id, client_email, key_suffix, key_updated_at, delivered_at, last_check, secrets_enabled]
+      type: object
+      additionalProperties: false
+    OffsiteCheck:
+      description: >-
+        Итог проверки у Google. `reason`: `ok`; исправляет владелец — `key_rejected` (ключ отозван или удалён),
+        `drive_api_disabled` (в проекте не включён Google Drive API), `folder_not_found` (неверный ID или нет доступа),
+        `not_folder`, `not_shared_drive` (папка в «Моём диске»), `read_only` (роль ниже «Менеджера контента»);
+        `network` — Google не ответил (хостинг).
+      properties:
+        ok: {type: boolean}
+        reason:
+          type: string
+          enum: [ok, key_rejected, drive_api_disabled, folder_not_found, not_folder, not_shared_drive, read_only, network]
+        folder_name: {type: [string, 'null']}
+        checked_at: {format: date-time, type: string}
+      required: [ok, reason, folder_name, checked_at]
+      type: object
       additionalProperties: false
     SmtpConnector:
       description: 'Коннектор «Почта» (один SMTP на ансамбль). Пароль не возвращается — только «задан» и `last4`.'

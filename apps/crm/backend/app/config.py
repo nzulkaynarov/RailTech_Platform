@@ -55,6 +55,9 @@ class Settings(BaseSettings):
     # Отметка внешней копии архива на Google Drive (сервис offsite-backup на VPS 1, OPS-GDRIVE):
     # status.json в бакете `offsite` — CRM только читает её, ни архива, ни Drive не видит.
     s3_bucket_offsite: str = "offsite"
+    # Настройка внешней копии из интерфейса (OPS-GDRIVE-2): CRM кладёт сюда ключ сервисного аккаунта
+    # и ID папки для offsite-backup — только запись (политика `crm` в infra/s3/init.sh).
+    s3_bucket_offsite_config: str = "offsite-config"
     # Redis ансамбля (CRM его не использует, адреса нужны пробе состояния): брокер (Celery ERP,
     # Channels, очереди Langfuse) и кэш (кэш ERP, сессии Платформы). Пусто — «не проверено».
     redis_broker_url: SecretStr = SecretStr("")

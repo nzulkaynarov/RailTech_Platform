@@ -124,6 +124,9 @@ import type {
   ModelTestResult,
   NoteCreate,
   NoteOut,
+  OffsiteCheckOut,
+  OffsiteConnectorIn,
+  OffsiteStatusOut,
   PasswordReset,
   PermissionsResponse,
   PlatformRoleCreate,
@@ -6552,6 +6555,314 @@ export const useRotateErpKeys = <TError = ErrorType<ErrorOut>, TContext = unknow
   TContext
 > => {
   return useMutation(getRotateErpKeysMutationOptions(options), queryClient);
+};
+
+export const getGetOffsiteStatusUrl = () => {
+  return `/api/v1/integrations/offsite`;
+};
+
+/**
+ * Внешняя копия бэкапов на Google Drive (OPS-GDRIVE-2): папка, адрес сервисного аккаунта,
+ * последние символы ID ключа, доставка сервису копирования, итог последней проверки. Ключ не
+ * возвращается никогда. Состояние самой копии — строка `offsite_backup` внешних сервисов.
+ * @summary Get Offsite Status
+ */
+export const getOffsiteStatus = async (
+  options?: Parameters<typeof http>[1],
+): Promise<OffsiteStatusOut> => {
+  return http<OffsiteStatusOut>(getGetOffsiteStatusUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetOffsiteStatusQueryKey = () => {
+  return [`/api/v1/integrations/offsite`] as const;
+};
+
+export const getGetOffsiteStatusQueryOptions = <
+  TData = Awaited<ReturnType<typeof getOffsiteStatus>>,
+  TError = ErrorType<ErrorOut>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getOffsiteStatus>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetOffsiteStatusQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getOffsiteStatus>>> = ({ signal }) =>
+    getOffsiteStatus({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getOffsiteStatus>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetOffsiteStatusQueryResult = NonNullable<Awaited<ReturnType<typeof getOffsiteStatus>>>;
+export type GetOffsiteStatusQueryError = ErrorType<ErrorOut>;
+
+export function useGetOffsiteStatus<
+  TData = Awaited<ReturnType<typeof getOffsiteStatus>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getOffsiteStatus>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getOffsiteStatus>>,
+          TError,
+          Awaited<ReturnType<typeof getOffsiteStatus>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetOffsiteStatus<
+  TData = Awaited<ReturnType<typeof getOffsiteStatus>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getOffsiteStatus>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getOffsiteStatus>>,
+          TError,
+          Awaited<ReturnType<typeof getOffsiteStatus>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetOffsiteStatus<
+  TData = Awaited<ReturnType<typeof getOffsiteStatus>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getOffsiteStatus>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Get Offsite Status
+ */
+
+export function useGetOffsiteStatus<
+  TData = Awaited<ReturnType<typeof getOffsiteStatus>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getOffsiteStatus>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetOffsiteStatusQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getPutOffsiteConnectorUrl = () => {
+  return `/api/v1/integrations/offsite`;
+};
+
+/**
+ * Сохранить ключ сервисного аккаунта и папку (после пароля админа) и сразу проверить у Google.
+ *
+ * Ключ доставляется сервису копирования (бакет `offsite-config`, у CRM — только запись) и
+ * хранится зашифрованным; `key_json = null` — оставить прежний. Итог проверки — `last_check`.
+ * Ошибки: `offsite_key_invalid` (422, `key_json`; `details.problem`: `not_json`,
+ * `not_service_account`, `missing_fields`), `offsite_folder_invalid` (422, `folder_id`),
+ * `wrong_password` (422), `secrets_key_missing` (409), `offsite_delivery_failed` (502).
+ * @summary Put Offsite Connector
+ */
+export const putOffsiteConnector = async (
+  offsiteConnectorIn: OffsiteConnectorIn,
+  options?: Parameters<typeof http>[1],
+): Promise<OffsiteStatusOut> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<OffsiteStatusOut>(getPutOffsiteConnectorUrl(), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(offsiteConnectorIn),
+  });
+};
+
+export const getPutOffsiteConnectorMutationKey = () => ["putOffsiteConnector"] as const;
+
+export const getPutOffsiteConnectorMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof putOffsiteConnector>>,
+    TError,
+    PutOffsiteConnectorMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof putOffsiteConnector>>,
+  TError,
+  PutOffsiteConnectorMutationVariables,
+  TContext
+> => {
+  const mutationKey = getPutOffsiteConnectorMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof putOffsiteConnector>>,
+    PutOffsiteConnectorMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return putOffsiteConnector(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PutOffsiteConnectorMutationResult = NonNullable<
+  Awaited<ReturnType<typeof putOffsiteConnector>>
+>;
+export type PutOffsiteConnectorMutationBody = OffsiteConnectorIn;
+export type PutOffsiteConnectorMutationError = ErrorType<ErrorOut>;
+export type PutOffsiteConnectorMutationVariables = { data: OffsiteConnectorIn };
+
+/**
+ * @summary Put Offsite Connector
+ */
+export const usePutOffsiteConnector = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof putOffsiteConnector>>,
+      TError,
+      PutOffsiteConnectorMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof putOffsiteConnector>>,
+  TError,
+  PutOffsiteConnectorMutationVariables,
+  TContext
+> => {
+  return useMutation(getPutOffsiteConnectorMutationOptions(options), queryClient);
+};
+
+export const getCheckOffsiteConnectorUrl = () => {
+  return `/api/v1/integrations/offsite/check`;
+};
+
+/**
+ * «Проверить»: ключ из хранилища → токен Google → папка (общий диск, право добавлять файлы).
+ *
+ * Ничего не пишет на Drive. Итог — 200 с `reason`; ошибка: `offsite_not_configured` (409).
+ * @summary Check Offsite Connector
+ */
+export const checkOffsiteConnector = async (
+  options?: Parameters<typeof http>[1],
+): Promise<OffsiteCheckOut> => {
+  return http<OffsiteCheckOut>(getCheckOffsiteConnectorUrl(), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getCheckOffsiteConnectorMutationKey = () => ["checkOffsiteConnector"] as const;
+
+export const getCheckOffsiteConnectorMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof checkOffsiteConnector>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof checkOffsiteConnector>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = getCheckOffsiteConnectorMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof checkOffsiteConnector>>,
+    void
+  > = () => {
+    return checkOffsiteConnector(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CheckOffsiteConnectorMutationResult = NonNullable<
+  Awaited<ReturnType<typeof checkOffsiteConnector>>
+>;
+
+export type CheckOffsiteConnectorMutationError = ErrorType<ErrorOut>;
+
+/**
+ * @summary Check Offsite Connector
+ */
+export const useCheckOffsiteConnector = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof checkOffsiteConnector>>,
+      TError,
+      void,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<Awaited<ReturnType<typeof checkOffsiteConnector>>, TError, void, TContext> => {
+  return useMutation(getCheckOffsiteConnectorMutationOptions(options), queryClient);
 };
 
 export const getGetSmtpStatusUrl = () => {

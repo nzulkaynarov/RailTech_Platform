@@ -32,6 +32,14 @@ FAKE_KEY = "sk-fix66b-FAKE-gateway-key"
 FAKE_JWT = "eyJfaXg2NmJmYWtl.eyJmaXg2NmJmYWtlcGF5bG9hZA.fix66bfakesig"
 
 
+PEM_BEGIN = "-----BEGIN " + "PRIVATE KEY-----"
+PEM_JSON = PEM_BEGIN + "\\nMIIEvQopsgPEM\\n-----END " + "PRIVATE KEY-----\\n"
+RSA_BODY = "MIIEopsgRSA"
+# Маркеры собраны из частей: фиктивный блок PEM целиком в исходнике — ложное срабатывание gitleaks.
+RSA_BEGIN = "-----BEGIN RSA " + "PRIVATE KEY-----"
+RSA_END = "-----END RSA " + "PRIVATE KEY-----"
+
+
 @pytest.mark.parametrize(
     ("text", "secret"),
     [
@@ -67,6 +75,10 @@ FAKE_JWT = "eyJfaXg2NmJmYWtl.eyJmaXg2NmJmYWtlcGF5bG9hZA.fix66bfakesig"
         ("GET /api/x?access_token=fix66bACCESS&refresh_token=fix66bREFRESH", "fix66bACCESS"),
         ('{"access_token": "fix66bBODY", "ok": true}', "fix66bBODY"),
         ("{'password': 'fix66bPASSWORD'}", "fix66bPASSWORD"),
+        # OPS-GDRIVE-2: ключ сервисного аккаунта Google — PEM, в JSON переводы строк как \\n.
+        (f'{{"private_key": "{PEM_JSON}"}}', "MIIEvQopsgPEM"),
+        (f"{RSA_BEGIN}\n{RSA_BODY}\n{RSA_END}", RSA_BODY),
+        ("обрезано: -----BEGIN PRIVATE KEY-----\nMIIEopsgCUT", "MIIEopsgCUT"),
     ],
 )
 def test_secret_is_masked(text: str, secret: str) -> None:

@@ -161,6 +161,8 @@ import type {
   NotificationSettings,
   NumberingPreview,
   NumberingScheme,
+  OffsiteBackup,
+  OffsiteCheck,
   PersonRef,
   PlatformSettings,
   PriceRequest,
@@ -3126,6 +3128,128 @@ export const getSaveBotProfileResponseMock = (
     },
     null,
   ]),
+  ...overrideResponse,
+});
+
+export const getGetOffsiteBackupResponseOffsiteCheckMock = (
+  overrideResponse: Partial<OffsiteCheck> = {},
+): OffsiteCheck => ({
+  ...{
+    ok: faker.datatype.boolean(),
+    reason: faker.helpers.arrayElement([
+      "ok",
+      "key_rejected",
+      "drive_api_disabled",
+      "folder_not_found",
+      "not_folder",
+      "not_shared_drive",
+      "read_only",
+      "network",
+    ] as const),
+    folder_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    checked_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  },
+  ...overrideResponse,
+});
+
+export const getGetOffsiteBackupResponseMock = (
+  overrideResponse: Partial<Extract<OffsiteBackup, object>> = {},
+): OffsiteBackup => ({
+  configured: faker.datatype.boolean(),
+  folder_id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  client_email: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  key_suffix: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  key_updated_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  delivered_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  last_check: faker.helpers.arrayElement([
+    { ...getGetOffsiteBackupResponseOffsiteCheckMock() },
+    null,
+  ]),
+  secrets_enabled: faker.datatype.boolean(),
+  ...overrideResponse,
+});
+
+export const getSaveOffsiteBackupResponseOffsiteCheckMock = (
+  overrideResponse: Partial<OffsiteCheck> = {},
+): OffsiteCheck => ({
+  ...{
+    ok: faker.datatype.boolean(),
+    reason: faker.helpers.arrayElement([
+      "ok",
+      "key_rejected",
+      "drive_api_disabled",
+      "folder_not_found",
+      "not_folder",
+      "not_shared_drive",
+      "read_only",
+      "network",
+    ] as const),
+    folder_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    checked_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  },
+  ...overrideResponse,
+});
+
+export const getSaveOffsiteBackupResponseMock = (
+  overrideResponse: Partial<Extract<OffsiteBackup, object>> = {},
+): OffsiteBackup => ({
+  configured: faker.datatype.boolean(),
+  folder_id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  client_email: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  key_suffix: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  key_updated_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  delivered_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  last_check: faker.helpers.arrayElement([
+    { ...getSaveOffsiteBackupResponseOffsiteCheckMock() },
+    null,
+  ]),
+  secrets_enabled: faker.datatype.boolean(),
+  ...overrideResponse,
+});
+
+export const getCheckOffsiteBackupResponseMock = (
+  overrideResponse: Partial<Extract<OffsiteCheck, object>> = {},
+): OffsiteCheck => ({
+  ok: faker.datatype.boolean(),
+  reason: faker.helpers.arrayElement([
+    "ok",
+    "key_rejected",
+    "drive_api_disabled",
+    "folder_not_found",
+    "not_folder",
+    "not_shared_drive",
+    "read_only",
+    "network",
+  ] as const),
+  folder_name: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  checked_at: faker.date.past().toISOString().slice(0, 19) + "Z",
   ...overrideResponse,
 });
 
@@ -12657,6 +12781,78 @@ export const getSaveBotProfileMockHandler = (
   );
 };
 
+export const getGetOffsiteBackupMockHandler = (
+  overrideResponse?:
+    | OffsiteBackup
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<OffsiteBackup> | OffsiteBackup),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/integrations/offsite",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetOffsiteBackupResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getSaveOffsiteBackupMockHandler = (
+  overrideResponse?:
+    | OffsiteBackup
+    | ((
+        info: Parameters<Parameters<typeof http.put>[1]>[0],
+      ) => Promise<OffsiteBackup> | OffsiteBackup),
+  options?: RequestHandlerOptions,
+) => {
+  return http.put(
+    "*/admin/integrations/offsite",
+    async (info: Parameters<Parameters<typeof http.put>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getSaveOffsiteBackupResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getCheckOffsiteBackupMockHandler = (
+  overrideResponse?:
+    | OffsiteCheck
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<OffsiteCheck> | OffsiteCheck),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/integrations/offsite/check",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCheckOffsiteBackupResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getGetSmtpConnectorMockHandler = (
   overrideResponse?:
     | SmtpConnector
@@ -16708,6 +16904,9 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getTestTelegramChannelMockHandler(),
   getGetBotProfileMockHandler(),
   getSaveBotProfileMockHandler(),
+  getGetOffsiteBackupMockHandler(),
+  getSaveOffsiteBackupMockHandler(),
+  getCheckOffsiteBackupMockHandler(),
   getGetSmtpConnectorMockHandler(),
   getSaveSmtpConnectorMockHandler(),
   getCheckSmtpMockHandler(),

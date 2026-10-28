@@ -30,20 +30,20 @@ CAUSE_NOT_CONFIGURED: Final = "offsite_not_configured"
 CAUSE_ACCESS: Final = "offsite_access"
 CAUSE_QUOTA: Final = "offsite_quota"
 SETUP_STEPS: Final = (
-    "создать сервисный аккаунт Google Workspace, дать ему роль «Менеджер контента» в папке общего "
-    "диска, положить ключ JSON на сервер приложений в /opt/rt/secrets/gdrive-sa.json (chmod 600), "
-    "вписать ID папки в OFFSITE_GDRIVE_FOLDER_ID файла /opt/rt/.env.prod и запустить "
-    f"infra/deploy/offsite-check.sh — по шагам в {RUNBOOK}"
+    "создать сервисный аккаунт Google Workspace и папку на общем диске, дать аккаунту роль "
+    "«Менеджер контента» в папке, затем в Платформе: Admin → Подключения → «Хранилище» → «Внешняя "
+    "копия бэкапов» — загрузить JSON-ключ, вставить ID папки и нажать «Сохранить и проверить»; "
+    f"на сервер заходить не нужно (по шагам — {RUNBOOK})"
 )
 _OWNER_TODO: Final = {
     "access": (
         "проверить в папке общего диска, что сервисному аккаунту выдана роль «Менеджер контента», "
-        "ключ не отозван в Google Cloud, а OFFSITE_GDRIVE_FOLDER_ID — ID этой папки; затем "
-        "infra/deploy/offsite-check.sh"
+        "ключ не отозван в Google Cloud, а в «Внешней копии бэкапов» (Admin → Подключения → "
+        "«Хранилище») указана эта папка; там же — «Проверить»"
     ),
     "not_shared_drive": (
         "создать папку на общем диске (Shared Drive), а не в «Моём диске», выдать в ней "
-        "сервисному аккаунту роль «Менеджер контента» и вписать её ID в OFFSITE_GDRIVE_FOLDER_ID"
+        "сервисному аккаунту роль «Менеджер контента» и указать её в «Внешней копии бэкапов»"
     ),
     "quota": (
         "освободить место на общем диске Google или поднять OFFSITE_MAX_GB в /opt/rt/.env.prod "

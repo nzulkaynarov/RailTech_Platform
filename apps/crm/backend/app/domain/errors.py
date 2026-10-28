@@ -98,6 +98,12 @@ class Reason(StrEnum):
     SMTP_AUTH_FAILED = "smtp_auth_failed"
     SMTP_TLS_FAILED = "smtp_tls_failed"
     SMTP_REJECTED = "smtp_rejected"
+    # Внешняя копия бэкапов на Google Drive (OPS-GDRIVE-2): ключ или ID папки не те, нет
+    # настройки, ключ не дошёл до сервиса копирования (хранилище RustFS недоступно).
+    OFFSITE_KEY_INVALID = "offsite_key_invalid"
+    OFFSITE_FOLDER_INVALID = "offsite_folder_invalid"
+    OFFSITE_NOT_CONFIGURED = "offsite_not_configured"
+    OFFSITE_DELIVERY_FAILED = "offsite_delivery_failed"
     # Источники лидов (M3-CRM-05): ручное создание и форма «Запрос» с сайта.
     LEAD_EXISTS = "lead_exists"
     CLIENT_EXISTS = "client_exists"
