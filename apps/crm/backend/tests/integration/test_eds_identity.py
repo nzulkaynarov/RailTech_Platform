@@ -148,7 +148,6 @@ async def test_created_user_carries_the_eds_permissions_of_the_roles(
                 "approvals.decide",
                 "registry.read",
                 "registry.export",
-                "payments.confirm",
                 "files.upload",  # crm.clients: full — письмо директору (D1-2b)
             ]
         ),
@@ -247,8 +246,9 @@ async def test_role_matrix_change_publishes_to_every_holder_whose_eds_rights_cha
     assign(client, boss, with_director.id, [role, director])
     await clear_outbox(sessions)
 
+    # D2-4: директор читает счета, но не подтверждает оплату — его права покрывает «Черновики: full»
     changed = patch_role(
-        client, boss, role, {"access": {"eds.inbox": "read", "eds.payments": "full"}}
+        client, boss, role, {"access": {"eds.inbox": "read", "eds.drafts": "full"}}
     )
     assert changed.status_code == 200, changed.text
 
@@ -258,8 +258,8 @@ async def test_role_matrix_change_publishes_to_every_holder_whose_eds_rights_cha
     assert len(data) == 1
     event = by_user[alone.id]
     assert event["user"]["permissions"] == {
-        "eds": ["letters.read", "payments.confirm", "registry.export", "registry.read"],
-        "sections": {"eds.inbox": "read", "eds.payments": "full"},
+        "eds": ["approvals.decide", "letters.read", "registry.read"],
+        "sections": {"eds.inbox": "read", "eds.drafts": "full"},
     }
     assert event["changed_fields"] == ["permissions"]
     assert without_role.id not in by_user

@@ -74,3 +74,25 @@ class DocumentVersion(Base):
     body: Mapped[dict[str, Any]] = mapped_column(JSONB)
     created_by: Mapped[int] = mapped_column(BigInteger)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class DocumentPayment(Base):
+    """Оплата согласованной служебной записки (SPEC-v3 §2.4 «Оплачена», §3.2 п. 5): дата, сумма, платёжка бухгалтера.
+
+    Ровно одна на документ: маршрут «директор → бухгалтер» закрывается этой оплатой. Деньги живут вне EDS — здесь факт,
+    который подтвердил бухгалтер, и файл платёжного поручения (счёт поставщика приложен к самой записке).
+    """
+
+    __tablename__ = "document_payments"
+    __table_args__ = (CheckConstraint("amount > 0", name="amount_positive"),)
+
+    document_id: Mapped[uuid.UUID] = mapped_column(
+        Uuid, ForeignKey("documents.id", ondelete="CASCADE"), primary_key=True
+    )
+    paid_on: Mapped[date] = mapped_column(Date)
+    amount: Mapped[Decimal] = mapped_column(Numeric(18, 2))
+    currency: Mapped[str] = mapped_column(String(3))
+    receipt_file_id: Mapped[uuid.UUID | None] = mapped_column(Uuid, ForeignKey("files.id", ondelete="SET NULL"))
+    note: Mapped[str | None] = mapped_column(String(500))
+    paid_by_crm_user_id: Mapped[int] = mapped_column(BigInteger)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

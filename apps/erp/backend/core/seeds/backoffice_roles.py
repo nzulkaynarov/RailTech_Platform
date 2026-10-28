@@ -248,3 +248,22 @@ def grant_calc_visas(apps, schema_editor):
             if missing:
                 role.permissions = list(role.permissions or []) + missing
                 role.save(update_fields=["permissions"])
+
+
+# D2-4 (миграция accounts/0012): новый код `finance.view` — чтение счетов и оплат без права действовать. Системным ролям
+# «Финансы» и «Руководитель» своей компании. Замороженная копия: каталог после 0012 = CATALOG_0011 + ADDED_0012,
+# шаблоны = BACKOFFICE_ROLES + ROLE_GRANTS_0004 + ROLE_GRANTS_0011 + ROLE_GRANTS_0012 (сверяет test_backoffice_roles).
+ADDED_0012 = ["finance.view"]
+ROLE_GRANTS_0012 = {"FINANCE": ADDED_0012, "HEAD": ADDED_0012}
+CATALOG_0012 = CATALOG_0011 + ADDED_0012
+
+
+def grant_finance_view(apps, schema_editor):
+    """Догнать системные роли «Финансы» и «Руководитель» до шаблона с `finance.view`."""
+    CompanyRole = apps.get_model("accounts", "CompanyRole")
+    for code, added in ROLE_GRANTS_0012.items():
+        for role in CompanyRole.objects.filter(code=code, is_system=True):
+            missing = [perm for perm in added if perm not in (role.permissions or [])]
+            if missing:
+                role.permissions = list(role.permissions or []) + missing
+                role.save(update_fields=["permissions"])

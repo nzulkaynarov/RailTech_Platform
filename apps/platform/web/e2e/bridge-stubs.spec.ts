@@ -42,12 +42,12 @@ test.describe("Заглушки и мост", () => {
     page,
   }) => {
     await loginAndWait(page, "all@demo.example");
-    // «Лиды» — настоящий экран (D1-2b); заглушка-карточка остаётся у разделов без экрана (счета и оплаты)
-    await spaGoto(page, "/eds/payments/%D0%A1%D0%A7-2026%2F142?panel=open&tab=payment");
-    await expect(page.getByRole("heading", { level: 1, name: "Счёт СЧ-2026/142" })).toBeVisible();
+    // «Лиды» (D1-2b) и «Счета и оплаты» (D2-4) — настоящие экраны; заглушка-карточка остаётся у разделов без экрана (проекты)
+    await spaGoto(page, "/eds/projects/%D0%9F%D0%A0-2026-099?panel=open&tab=documents");
+    await expect(page.getByRole("heading", { level: 1, name: "Проект ПР-2026-099" })).toBeVisible();
     const main = page.getByRole("main");
     const open = main.getByRole("link", { name: /Открыть в старом ERP/ });
-    await expect(open).toHaveAttribute("href", "http://erp.localhost:8088/#payments");
+    await expect(open).toHaveAttribute("href", "http://erp.localhost:8088/#crm-deals");
     await expect(open).toHaveAttribute("target", "_blank");
     expect(await open.getAttribute("rel")).toContain("noopener");
     await expect(main.getByText("Когда появится: к пилоту.")).toBeVisible();

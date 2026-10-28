@@ -38,6 +38,7 @@ describe("i18n", () => {
     "profile",
     "quotes",
     "approvals",
+    "payments",
     "help",
     "articles",
   ] as const)("пространство %s: uz и en — те же ключи, что ru", (ns) => {
@@ -74,6 +75,7 @@ describe("i18n", () => {
         "profile",
         "quotes",
         "approvals",
+        "payments",
         "help",
         "articles",
       ] as const) {

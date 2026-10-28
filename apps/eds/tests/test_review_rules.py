@@ -69,9 +69,11 @@ async def test_accountant_author_cannot_confirm_own_payment_when_another_account
         await decide(client, staff["accountant"], approval_id, "approve"), 403, "FORBIDDEN", reason="not_your_step"
     )
     other = await client.post(
-        f"/api/v1/approvals/{approval_id}/decision", json={"decision": "approve"}, headers=headers_of(21)
+        f"/api/v1/documents/{doc['id']}/payment",
+        json={"paid_on": "2026-10-20", "amount": {"amount": "1500000.00", "currency": "UZS"}},
+        headers=headers_of(21),
     )
-    assert other.status_code == 200
+    assert other.status_code == 200, other.text
 
 
 async def test_addressee_cannot_be_the_author(client: httpx.AsyncClient, staff: dict[str, Person]) -> None:
@@ -239,5 +241,9 @@ async def test_next_step_publishes_approval_requested_with_its_index(
         "uz.railtech.eds.approval.requested.v1", decided_before.index("uz.railtech.eds.approval.decided.v1")
     )
     # конец маршрута или возврат нового шага не открывают
-    await decide(client, staff["accountant"], approval_id, "approve")
+    await client.post(
+        f"/api/v1/documents/{doc['id']}/payment",
+        json={"paid_on": "2026-10-20", "amount": {"amount": "1500000.00", "currency": "UZS"}},
+        headers=staff["accountant"].headers,
+    )
     assert len(await outbox(container, "approval.requested")) == 2

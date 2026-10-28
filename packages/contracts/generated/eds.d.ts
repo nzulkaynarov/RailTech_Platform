@@ -279,6 +279,34 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/documents/{document_id}/payment": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * «Оплачено» — оплата согласованной служебной записки (D2-4)
+     * @description Бухгалтер фиксирует оплату записки с суммой, которую согласовал директор (SPEC-v3 §3.2 п. 5): `paid_on` — дата платежа
+     *     (не позже сегодняшней по `Asia/Tashkent`), `amount` — сумма (валюта записки, не больше согласованной суммы),
+     *     `receipt_file_id` — платёжка, загруженная `POST /files` (привязывается к документу), `note` — необязательно.
+     *     Записка обязана быть в статусе `to_accountant`, а шаг «Бухгалтер» — ждать этого сотрудника (автор записки её не платит,
+     *     если есть другой держатель права): иначе 409 `CONFLICT` (`details.reason = invalid_state`, `route_closed`) или 403
+     *     `FORBIDDEN` (`not_your_step`). Шаг закрывается решением `approve` (`approval.decided`), документ получает `paid`,
+     *     архивируется (`document.archived`), журнал — `document.paid` (дата, сумма, файл платёжки). Повтор с теми же датой и суммой
+     *     возвращает прежний документ (идемпотентно); другие данные по оплаченной записке — 409 (`already_paid`). Сумма, валюта и дата
+     *     вне правил — 422 `VALIDATION_FAILED` (`amount`: `must_be_positive`, `currency_mismatch`, `exceeds_approved`; `paid_on`: `in_future`).
+     */
+    post: operations["payDocument"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/approvals": {
     parameters: {
       query?: never;
@@ -344,6 +372,8 @@ export interface paths {
      *     `approval.approved_late`, событие `approval.decided` — `approved_late: true` (решение архитектора 2026-10-26, C1-G-1).
      *     При одобрении КП присваивается `ИСХ-NNN/ГГ`, выбранные `channels` уходят в событие. Маршрут закрыт — 409
      *     (`details.reason = route_closed`). Каждое решение — строка журнала и `approval.decided`.
+     *     Шаг «Бухгалтер» служебной записки с суммой: `approve` недоступно — 409 `CONFLICT`, `details.reason = payment_required`
+     *     (оплату фиксирует `payDocument`: дата, сумма, платёжка); `return` и `reject` работают.
      */
     post: operations["decideApproval"];
     delete?: never;
@@ -998,6 +1028,25 @@ export interface components {
       due_date?: string | null;
       file_ids?: components["schemas"]["Uuid"][];
     };
+    /** @description «Оплачено» — дата и сумма платежа, платёжка бухгалтера */
+    DocumentPaymentIn: {
+      /** Format: date */
+      paid_on: string;
+      amount: components["schemas"]["Money"];
+      receipt_file_id?: components["schemas"]["Uuid"] | null;
+      note?: string | null;
+    };
+    /** @description Факт оплаты служебной записки */
+    DocumentPayment: {
+      /** Format: date */
+      paid_on: string;
+      amount: components["schemas"]["Money"];
+      receipt_file_id: components["schemas"]["Uuid"] | null;
+      note: string | null;
+      paid_by: components["schemas"]["PersonRef"];
+      /** Format: date-time */
+      recorded_at: string;
+    };
     /** @description Правка черновика без отправки (0.4.0, D1-5) — поля `DocumentSubmitIn` и связь с проектом */
     DocumentUpdate: {
       subject?: string;
@@ -1032,6 +1081,13 @@ export interface components {
       amount?: components["schemas"]["Money"] | null;
       /** Format: date */
       due_date?: string | null;
+      /** @description Сколько файлов приложено к документу (у записки к оплате — счёт поставщика и платёжка) */
+      files_count: number;
+      /**
+       * Format: date
+       * @description Дата оплаты записки; `null` — не оплачена
+       */
+      paid_on: string | null;
       /** Format: date-time */
       created_at: string;
     };
@@ -1061,6 +1117,8 @@ export interface components {
       in_reply_to?: components["schemas"]["Uuid"] | null;
       /** @description Маршрут текущего круга; `null` — не отправлялся */
       approval_id: components["schemas"]["Uuid"] | null;
+      /** @description Факт оплаты служебной записки; `null` — не оплачена */
+      payment: components["schemas"]["DocumentPayment"] | null;
       decisions: components["schemas"]["DocumentDecision"][];
       journal: components["schemas"]["JournalEntry"][];
       /** Format: date-time */
@@ -1770,6 +1828,37 @@ export interface operations {
     };
     responses: {
       /** @description Отправлено */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Document"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["Conflict"];
+      422: components["responses"]["ValidationFailed"];
+    };
+  };
+  payDocument: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        document_id: components["parameters"]["DocumentId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["DocumentPaymentIn"];
+      };
+    };
+    responses: {
+      /** @description Записка оплачена */
       200: {
         headers: {
           [name: string]: unknown;

@@ -159,7 +159,7 @@ describe("исполнимость адреса: есть ли экран в П�
     ["/crm/messages?lead=L-2041", true],
     ["/eds/documents?doc=5f0c7a52-3b1e-4c53-9d0a-1c6a1f0e2b77", true],
     ["/eds/new?type=memo", true],
-    ["/eds/payments/%D0%A1%D0%A7-2026%2F142", false],
+    ["/eds/payments/%D0%A1%D0%A7-2026%2F142", true],
     ["/erp/calc", true],
     ["/erp/stock", true],
     ["/erp/stock/%D0%97%D0%9F-2026-029", true],
@@ -170,9 +170,9 @@ describe("исполнимость адреса: есть ли экран в П�
   });
 
   it("раздел с родным экраном исполним, а стоит убрать запись моста — адрес становится исполнимым сам", () => {
-    const key = "eds.payments";
+    const key = "eds.projects";
     const entry = BRIDGE[key];
-    const path = "/eds/payments/%D0%A1%D0%A7-2026%2F142";
+    const path = "/eds/projects/%D0%9F%D0%A0-2026-099";
     expect(isActionable(path)).toBe(false);
     // имитация переноса раздела: запись моста удалена
     Reflect.deleteProperty(BRIDGE, key);
