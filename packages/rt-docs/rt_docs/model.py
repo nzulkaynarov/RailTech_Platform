@@ -45,6 +45,19 @@ LOGO_MIME = frozenset({"image/png", "image/jpeg", "image/webp"})
 LOGO_MAX_BYTES = 512 * 1024
 
 
+def image_mime(data: bytes) -> str | None:
+    """Тип растровой картинки по сигнатуре байтов (PNG, JPEG, GIF, WebP); иное (SVG, HTML) — None."""
+    if data.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "image/png"
+    if data.startswith(b"\xff\xd8\xff"):
+        return "image/jpeg"
+    if data.startswith((b"GIF87a", b"GIF89a")):
+        return "image/gif"
+    if data[:4] == b"RIFF" and data[8:12] == b"WEBP":
+        return "image/webp"
+    return None
+
+
 @dataclass(frozen=True)
 class Logo:
     """Логотип бланка байтами: рендер не читает файлы и не ходит в сеть (безопасный fetcher)."""
@@ -57,6 +70,8 @@ class Logo:
             raise LetterheadError(f"logo mime {self.mime!r} is not allowed (png, jpeg, webp)")
         if not self.data or len(self.data) > LOGO_MAX_BYTES:
             raise LetterheadError("logo must be 1 byte … 512 KiB")
+        if image_mime(self.data) != self.mime:
+            raise LetterheadError(f"logo bytes are not {self.mime} (PNG, JPEG or WebP signature expected)")
 
 
 @dataclass(frozen=True)
@@ -145,3 +160,4 @@ class RenderResult:
     tuning: Tuning
     warnings: tuple[str, ...] = ()
     blocked_urls: tuple[str, ...] = field(default=())
+    passes: int = 1  # проходов вёрстки WeasyPrint (второй — только для «Стр. N из M» многостраничного)

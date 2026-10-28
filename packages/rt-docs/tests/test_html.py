@@ -81,7 +81,7 @@ def test_signature_keeps_with_previous_and_has_stamp() -> None:
 def test_blocks_data_keep_and_missing_placeholder() -> None:
     body = samples.invoice()
     html = html_of(body, blocks={"doc.items_table": samples.items_table(1), "doc.totals": samples.totals("—")})
-    assert 'class="rt-block rt-block-totals rt-keep"' in html
+    assert 'class="rt-block rt-keep"' in html
     assert "Блок «Платёжные реквизиты»: данные подставит система" in html
 
 
@@ -95,7 +95,7 @@ def test_locked_block_without_data_prints_its_content() -> None:
             }
         ]
     )
-    assert '<div class="rt-block rt-block-contract-liability"><p>Текст</p></div>' in html_of(body)
+    assert '<div class="rt-block"><p>Текст</p></div>' in html_of(body)
 
 
 def test_page_numbers_only_when_asked() -> None:

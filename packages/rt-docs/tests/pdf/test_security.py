@@ -10,6 +10,7 @@ from weasyprint import HTML
 from weasyprint.text.fonts import FontConfiguration
 
 from rt_docs.css import _font_faces
+from rt_docs.errors import BodyError
 from rt_docs.fetcher import ResourcePolicy
 from rt_docs.model import Layout
 from rt_docs.pdf import SafeURLFetcher, render_html_unsafe_for_tests, render_pdf
@@ -19,8 +20,8 @@ from tests.pdf.pdfcheck import fonts, pages
 ATTACK = f"""<html><head>
 <link rel="stylesheet" href="http://127.0.0.1:9/evil.css">
 <style>
-{_font_faces()}
 @import url("file:///etc/hostname");
+{_font_faces()}
 body {{ font-family: "RT Doc Sans"; background: url("https://example.org/track.png"); }}
 </style></head><body>
 <p>Текст</p>
@@ -39,6 +40,8 @@ def test_file_and_network_urls_are_blocked_and_reported() -> None:
     assert "http://127.0.0.1:9/evil.css" in blocked
     assert "https://example.org/track.png" in blocked
     assert any(url.startswith("data:image/svg+xml") for url in blocked)
+    assert "file:///etc/hostname" in blocked  # @import в начале CSS — действующее правило, адрес отклонён
+    assert "file:///etc/shadow" in blocked  # <object data>
     assert "Текст" in pages(pdf)[0].text
 
 
@@ -72,3 +75,11 @@ def test_document_with_logo_renders_without_blocked_resources() -> None:
         samples.letter_short(), letterhead=samples.LETTERHEAD, layout=Layout.LETTER, values=samples.VALUES
     )
     assert result.blocked_urls == ()
+
+
+def test_block_data_with_raw_html_never_reaches_the_renderer() -> None:
+    evil = [{"type": "_block", "code": 'doc.x"><img src="file:///etc/passwd">', "content": []}]
+    with pytest.raises(BodyError):
+        render_pdf(
+            samples.invoice(), letterhead=samples.LETTERHEAD, layout=Layout.COMMERCIAL, blocks={"doc.items_table": evil}
+        )

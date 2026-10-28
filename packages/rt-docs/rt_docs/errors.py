@@ -25,3 +25,11 @@ class BodyError(RtDocsError):
 
 class LetterheadError(RtDocsError):
     """Бланк задан неверно (цвет, логотип)."""
+
+
+class RenderTimeoutError(RtDocsError):
+    """Рендер не уложился в тайм-аут (`timeout_s`)."""
+
+    def __init__(self, seconds: float) -> None:
+        self.seconds = seconds
+        super().__init__(f"document rendering exceeded the {seconds:g} s timeout")

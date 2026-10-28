@@ -11,7 +11,7 @@ dependencies = [
     "python-docx>=1.2.0",
     "pyyaml>=6.0.3",
     "referencing>=0.36.2",
-    "weasyprint>=68.0",
+    "weasyprint>=69,<70",  # rt_docs.pdf опирается на внутренности 69 — проверка версии при импорте (engine.py)
 ]
 
 [dependency-groups]

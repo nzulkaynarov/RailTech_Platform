@@ -4,7 +4,8 @@ WeasyPrint по умолчанию открывает любые `http(s)://`, `
 CVE-2025-68616 — повод нового `URLFetcher` в 68.0). Здесь разрешено только:
 - `rtdocs:fonts/<файл>` — вшитые шрифты пакета (точные имена, без путей);
 - `rtdocs:logo` — логотип бланка, переданный байтами в `Letterhead.logo`;
-- `data:image/(png|jpeg|gif|webp);base64,…` — встроенная растровая картинка (SVG запрещён: в нём бывает скрипт).
+- `data:image/(png|jpeg|gif|webp);base64,…` — встроенная растровая картинка, тип сверяется с сигнатурой байтов (SVG и
+  всё, что выдаёт себя за картинку, запрещены: в SVG бывает скрипт). Логотип бланка проверяется так же (`Logo`).
 Всё остальное отклоняется и попадает в `blocked` (результат рендера → `RenderResult.blocked_urls`).
 """
 
@@ -17,7 +18,7 @@ from dataclasses import dataclass, field
 from importlib import resources
 
 from .css import FONT_FILES
-from .model import Logo
+from .model import Logo, image_mime
 
 FONT_NAMES = frozenset(name for files in FONT_FILES.values() for name, _, _ in files)
 _DATA_IMAGE = re.compile(r"^data:(image/(?:png|jpeg|gif|webp));base64,([A-Za-z0-9+/=\s]+)$", re.IGNORECASE)
@@ -49,7 +50,7 @@ class ResourcePolicy:
                 data = base64.b64decode(match[2], validate=False)
             except (binascii.Error, ValueError):
                 data = b""
-            if 0 < len(data) <= MAX_DATA_BYTES:
+            if 0 < len(data) <= MAX_DATA_BYTES and image_mime(data) == match[1].lower():
                 return Resource(data, match[1].lower())
         self.blocked.append(url if len(url) <= 200 else url[:200] + "…")
         return None

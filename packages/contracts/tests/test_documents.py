@@ -153,3 +153,54 @@ def test_major_change_and_removed_codes_are_breaking() -> None:
 
 def test_new_files_are_not_breaking() -> None:
     assert check({}, working_tree()) == []
+
+
+# ─── kitchen-sink: каждый узел, атрибут и значение перечисления есть в примерах ─────────────────────────
+
+
+def _resolve(node: Any) -> Any:
+    while isinstance(node, dict) and "$ref" in node and node["$ref"].startswith("#/"):
+        target: Any = SCHEMA
+        for part in node["$ref"].removeprefix("#/").split("/"):
+            target = target[part]
+        node = target
+    return node
+
+
+def _enums(schema: Any, name: str | None, out: dict[str, set[Any]], seen: set[int]) -> None:
+    schema = _resolve(schema)
+    if not isinstance(schema, dict) or id(schema) in seen:
+        return
+    seen.add(id(schema))
+    if "enum" in schema and name:
+        out.setdefault(name, set()).update(schema["enum"])
+    for key, sub in (schema.get("properties") or {}).items():
+        _enums(sub, key, out, seen)
+    for key in ("items", "additionalProperties"):
+        _enums(schema.get(key), name, out, seen)
+    for key in ("oneOf", "anyOf", "allOf"):
+        for sub in schema.get(key) or ():
+            _enums(sub, name, out, seen)
+
+
+def test_kitchen_sink_covers_every_node_attribute_and_enum_value() -> None:
+    """Иначе documents_compat не заметит ужесточение: проверка совместимости опирается на корпус примеров."""
+    sink = json.loads((DOCS / "examples" / "kitchen-sink.json").read_text(encoding="utf-8"))
+    nodes = walk(sink)
+    for name, definition in SCHEMA["$defs"].items():
+        const = ((definition.get("properties") or {}).get("type") or {}).get("const")
+        if const is None or const == "doc":
+            continue
+        of_type = [n for n in nodes if n.get("type") == const]
+        assert of_type, f"нет узла {const} ({name})"
+        attrs = _resolve((definition.get("properties") or {}).get("attrs") or {})
+        for attr in attrs.get("properties") or {}:
+            assert any(attr in (n.get("attrs") or {}) for n in of_type), f"{const}.attrs.{attr}"
+    enums: dict[str, set[Any]] = {}
+    _enums(SCHEMA, None, enums, set())
+    corpus = [n for path in EXAMPLES for n in walk(json.loads(path.read_text(encoding="utf-8")))]
+    for prop, values in enums.items():
+        used = {n[prop] for n in corpus if prop in n and not isinstance(n[prop], dict | list)}
+        assert values <= used, f"{prop}: нет значений {sorted(map(str, values - used))}"
+    for key in ("lineHeight", "marginDeltaMm", "leadMm", "orientation", "density"):
+        assert any(key in n for n in nodes), key

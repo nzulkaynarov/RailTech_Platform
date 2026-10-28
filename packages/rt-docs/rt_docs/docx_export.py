@@ -10,7 +10,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from io import BytesIO
 from typing import Any
 
@@ -24,12 +24,12 @@ from docx.shared import Mm, Pt, RGBColor
 from docx.table import Table, _Cell
 from docx.text.paragraph import Paragraph
 
-from .contracts import Catalog, load_catalog, validate_body
+from .contracts import Catalog, clean_text
 from .css import PageSetup, page_setup
-from .errors import ContractsNotFoundError
 from .formatters import format_date
 from .labels import EXECUTOR, MISSING_BLOCK, PAGE_OF, REPLY_TO, SIGN, STAMP, number_line
 from .model import Density, DocumentMeta, Lang, Layout, Letterhead, Orientation, Tuning, Value
+from .prepare import checked_input
 from .resolve import resolve
 
 _ALIGN = {
@@ -46,6 +46,31 @@ _MUTED = RGBColor(0x5A, 0x62, 0x70)
 class DocxResult:
     data: bytes
     warnings: tuple[str, ...] = ()
+
+
+def _clean_meta(meta: DocumentMeta) -> DocumentMeta:
+    """Реквизиты без управляющих символов: lxml (python-docx) их не принимает."""
+
+    def c(value: str | None) -> str | None:
+        return clean_text(value) if value is not None else None
+
+    return replace(
+        meta,
+        title=c(meta.title),
+        number=c(meta.number),
+        addressee=tuple(clean_text(a) for a in meta.addressee),
+        reply_to=c(meta.reply_to),
+        executor=c(meta.executor),
+    )
+
+
+def _clean_letterhead(letterhead: Letterhead) -> Letterhead:
+    return replace(
+        letterhead,
+        company_name=clean_text(letterhead.company_name),
+        requisites=tuple(clean_text(x) for x in letterhead.requisites),
+        footer=tuple(clean_text(x) for x in letterhead.footer),
+    )
 
 
 def _rgb(hex_color: str) -> RGBColor:
@@ -289,15 +314,11 @@ def to_docx(
 
     `page_numbers=False` — когда известно, что страница одна (статистика PDF).
     """
-    validate_body(body, contracts_dir)
-    if catalog is None:
-        try:
-            catalog = load_catalog(contracts_dir)
-        except ContractsNotFoundError:
-            catalog = Catalog.empty()
+    body, clean_blocks, catalog = checked_input(body, blocks, catalog, contracts_dir)
     lang: Lang = body["lang"]
-    meta = meta or DocumentMeta()
-    resolved = resolve(body, values=values or {}, blocks=blocks or {}, catalog=catalog)
+    meta = _clean_meta(meta or DocumentMeta())
+    letterhead = _clean_letterhead(letterhead)
+    resolved = resolve(body, values=values or {}, blocks=clean_blocks, catalog=catalog)
     page: Mapping[str, Any] = body.get("page") or {}
     tuning_raw: Mapping[str, Any] = page.get("tuning") or {}
     setup = page_setup(

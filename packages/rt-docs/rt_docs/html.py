@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from html import escape
 from typing import Any
 
+from .contracts import clean_text
 from .css import PageSetup, stylesheet
 from .formatters import format_date
 from .labels import EXECUTOR, MISSING_BLOCK, REPLY_TO, SIGN, STAMP, number_line
@@ -22,10 +23,17 @@ from .resolve import Node
 LOGO_URL = "rtdocs:logo"
 _SAFE_HREF = re.compile(r"^(https?://|mailto:|tel:)[^\s<>\"']+$")
 _BLANK = "_______________"
+_LAYOUT_CLASS = {
+    Layout.LETTER: "rt-layout-letter",
+    Layout.INTERNAL: "rt-layout-internal",
+    Layout.COMMERCIAL: "rt-layout-commercial",
+}
+_LANG_ATTR = {"ru": "ru", "uz": "uz", "en": "en"}
 
 
 def e(text: str) -> str:
-    return escape(text, quote=True)
+    """Экранирование всего, что попадает в HTML из данных; управляющие символы вычищаются."""
+    return escape(clean_text(str(text)), quote=True)
 
 
 @dataclass(frozen=True)
@@ -194,7 +202,8 @@ class _Writer:
         return e(text)
 
     def locked_block(self, node: Mapping[str, Any]) -> None:
-        classes = ["rt-block", f"rt-block-{node['code'].split('.', 1)[1].replace('_', '-')}"]
+        # Класс — только из фиксированного набора: код блока в разметку не попадает.
+        classes = ["rt-block"]
         if node.get("keep"):
             classes.append("rt-keep")
         if node.get("missing"):
@@ -271,10 +280,10 @@ def build_html(
     w = _Writer(lang, options)
     layout = setup.layout
     title = meta.title or letterhead.company_name
-    w.w(f'<!DOCTYPE html><html lang="{lang}"><head><meta charset="utf-8"><title>{e(title)}</title>')
+    w.w(f'<!DOCTYPE html><html lang="{_LANG_ATTR[lang]}"><head><meta charset="utf-8"><title>{e(title)}</title>')
     w.w(f"<style>{stylesheet(setup, letterhead, lang, page_numbers=options.page_numbers)}")
     w.w(".rt-docno-inline { string-set: rtdocref content(); }</style></head>")
-    w.w(f'<body class="rt-layout-{layout.value}">')
+    w.w(f'<body class="{_LAYOUT_CLASS[layout]}">')
     if layout is Layout.COMMERCIAL and letterhead.footer:
         # Бегущий подвал — в начале потока: значение действует с первой страницы до последней.
         w.w(f'<div class="rt-footer">{"<br>".join(e(line) for line in letterhead.footer)}</div>')

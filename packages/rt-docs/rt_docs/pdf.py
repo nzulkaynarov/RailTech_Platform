@@ -1,41 +1,44 @@
-"""Рендер PDF через WeasyPrint: изолированные шрифты, безопасный fetcher, статистика страниц,
+"""Рендер PDF через WeasyPrint: изолированные шрифты, безопасный fetcher, статистика страниц, тайм-аут,
 «Стр. N из M» только при M > 1.
 
 Импорт этого модуля требует системных библиотек WeasyPrint (pango, harfbuzz): в сервисе — образ потребителя,
 в тестах — docker/test.Dockerfile. Остальной пакет (схема, HTML, DOCX, форматтеры) работает без них.
+Изоляция шрифтов и статистика страниц опираются на внутренности WeasyPrint 69 — другая версия отклоняется при импорте.
 """
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+import signal
+import threading
+import time
+from collections.abc import Iterator, Mapping, Sequence
+from contextlib import contextmanager
 from dataclasses import dataclass, replace
 from typing import Any
 
-from weasyprint import HTML
-from weasyprint.formatting_structure import boxes
-from weasyprint.text.ffi import ffi, fontconfig, gobject, pangoft2
-from weasyprint.text.fonts import FontConfiguration
-from weasyprint.urls import URLFetcher, URLFetcherResponse
+import weasyprint
 
-from .contracts import Catalog, load_catalog, validate_body
-from .css import PageSetup, page_setup
-from .errors import ContractsNotFoundError
-from .fetcher import ResourcePolicy
-from .fonts import missing_glyphs
-from .html import HtmlOptions, build_html
-from .model import (
-    Density,
-    DocumentMeta,
-    Lang,
-    Layout,
-    Letterhead,
-    Orientation,
-    PageStats,
-    RenderResult,
-    Tuning,
-    Value,
-)
-from .resolve import Node, plain_text, resolve
+from .engine import check_weasyprint_version
+
+check_weasyprint_version(weasyprint.__version__)
+
+from weasyprint import HTML  # noqa: E402 — только после проверки версии
+from weasyprint.formatting_structure import boxes  # noqa: E402
+from weasyprint.text.ffi import ffi, fontconfig, gobject, pangoft2  # noqa: E402
+from weasyprint.text.fonts import FontConfiguration  # noqa: E402
+from weasyprint.urls import URLFetcher, URLFetcherResponse  # noqa: E402
+
+from .contracts import Catalog  # noqa: E402
+from .css import PageSetup  # noqa: E402
+from .errors import RenderTimeoutError  # noqa: E402
+from .fetcher import ResourcePolicy  # noqa: E402
+from .model import DocumentMeta, Layout, Letterhead, PageStats, RenderResult, Tuning, Value  # noqa: E402
+from .prepare import Prepared, document_html, prepare  # noqa: E402
+
+__all__ = ["Prepared", "RenderTimeoutError", "measure", "prepare", "render_pdf", "render_prepared"]
+
+#: Тайм-аут рендера по умолчанию, с: счёт на 500 позиций укладывается с запасом; сервисы зовут рендер в воркере.
+DEFAULT_TIMEOUT_S = 60.0
 
 # FcConfigCreate нет в объявлениях cffi WeasyPrint — объявляем один раз при импорте модуля (ABI-режим разрешает cdef
 # после dlopen; импорт идёт под блокировкой импорта, поэтому потоки сервера не объявят его дважды).
@@ -96,115 +99,94 @@ def page_stats(document: Any) -> PageStats:
     return PageStats(pages=len(pages), last_page_fill=round(fill, 4))
 
 
-@dataclass(frozen=True)
-class Prepared:
-    """Тело после проверки и подстановки — общее для нескольких рендеров «Подогнать»."""
-
-    content: Sequence[Node]
-    lang: Lang
-    letterhead: Letterhead
-    meta: DocumentMeta
-    layout: Layout
-    orientation: Orientation
-    density: Density | None
-    tuning: Tuning
-    warnings: tuple[str, ...]
-    highlight_missing: bool
+class _Interrupted(BaseException):
+    """Сигнал тайм-аута внутри WeasyPrint: BaseException, чтобы его не проглотили `except Exception` движка."""
 
 
-def prepare(
-    body: Mapping[str, Any],
-    *,
-    letterhead: Letterhead,
-    layout: Layout,
-    meta: DocumentMeta | None = None,
-    values: Mapping[str, Value] | None = None,
-    blocks: Mapping[str, Sequence[Mapping[str, Any]]] | None = None,
-    catalog: Catalog | None = None,
-    highlight_missing: bool = True,
-    contracts_dir: str | None = None,
-) -> Prepared:
-    validate_body(body, contracts_dir)
-    if catalog is None:
+class Deadline:
+    """Тайм-аут рендера: жёсткий (SIGALRM) в главном потоке, мягкий (проверка между проходами) — в остальных."""
+
+    def __init__(self, seconds: float | None) -> None:
+        self.seconds = seconds
+        self.until = time.monotonic() + seconds if seconds else None
+
+    def check(self) -> None:
+        if self.until is not None and time.monotonic() >= self.until:
+            raise RenderTimeoutError(self.seconds or 0)
+
+    @contextmanager
+    def armed(self) -> Iterator[Deadline]:
+        if not self.seconds or threading.current_thread() is not threading.main_thread():
+            yield self
+            return
+
+        def interrupt(_signum: int, _frame: Any) -> None:
+            raise _Interrupted
+
+        previous = signal.signal(signal.SIGALRM, interrupt)
+        outer, _ = signal.setitimer(signal.ITIMER_REAL, self.seconds)
+        started = time.monotonic()
         try:
-            catalog = load_catalog(contracts_dir)
-        except ContractsNotFoundError:
-            catalog = Catalog.empty()
-    resolved = resolve(body, values=values or {}, blocks=blocks or {}, catalog=catalog)
-    page: Mapping[str, Any] = body.get("page") or {}
-    tuning_raw: Mapping[str, Any] = page.get("tuning") or {}
-    tuning = Tuning(
-        line_height=tuning_raw.get("lineHeight"),
-        margin_delta_mm=int(tuning_raw.get("marginDeltaMm", 0)),
-        lead_mm=int(tuning_raw.get("leadMm", 0)),
-    )
-    meta = meta or DocumentMeta()
-    text = "\n".join(
-        [
-            plain_text(resolved.content),
-            letterhead.company_name,
-            *letterhead.requisites,
-            *letterhead.footer,
-            meta.title or "",
-            meta.number or "",
-            *meta.addressee,
-            meta.reply_to or "",
-            meta.executor or "",
-        ]
-    )
-    warnings = resolved.warnings()
-    absent = missing_glyphs(text, letterhead.font)
-    if absent:
-        warnings.append("characters missing from the document font: " + " ".join(f"U+{ord(c):04X}" for c in absent))
-    return Prepared(
-        content=resolved.content,
-        lang=body["lang"],
-        letterhead=letterhead,
-        meta=meta,
-        layout=layout,
-        orientation=Orientation(page.get("orientation", "portrait")),
-        density=Density(page["density"]) if page.get("density") else None,
-        tuning=tuning,
-        warnings=tuple(warnings),
-        highlight_missing=highlight_missing,
-    )
+            yield self
+        except _Interrupted:
+            raise RenderTimeoutError(self.seconds) from None
+        finally:
+            signal.setitimer(signal.ITIMER_REAL, 0)
+            signal.signal(signal.SIGALRM, previous)
+            if outer:  # чужой таймер процесса — вернуть остаток
+                signal.setitimer(signal.ITIMER_REAL, max(0.001, outer - (time.monotonic() - started)))
 
 
-def _render(prepared: Prepared, setup: PageSetup, *, page_numbers: bool) -> tuple[Any, ResourcePolicy]:
+@dataclass(frozen=True)
+class Measured:
+    """Один проход вёрстки без номеров страниц: разбивка и статистика (номера на поток не влияют)."""
+
+    tuning: Tuning
+    setup: PageSetup
+    document: Any
+    policy: ResourcePolicy
+    stats: PageStats
+
+
+def _layout(prepared: Prepared, tuning: Tuning, *, page_numbers: bool) -> tuple[Any, ResourcePolicy]:
     policy = ResourcePolicy(logo=prepared.letterhead.logo)
-    html = build_html(
-        prepared.content,
-        lang=prepared.lang,
-        letterhead=prepared.letterhead,
-        meta=prepared.meta,
-        setup=setup,
-        options=HtmlOptions(page_numbers=page_numbers, highlight_missing=prepared.highlight_missing),
-    )
+    html = document_html(prepared, tuning, page_numbers=page_numbers)
     document = HTML(string=html, base_url=None, url_fetcher=SafeURLFetcher(policy)).render(
         font_config=IsolatedFontConfiguration()
     )
     return document, policy
 
 
-def render_prepared(prepared: Prepared, tuning: Tuning | None = None) -> RenderResult:
-    """Рендер подготовленного тела с подстройкой `tuning` (по умолчанию — из `page.tuning` тела)."""
+def measure(prepared: Prepared, tuning: Tuning | None, deadline: Deadline) -> Measured:
+    """Проход вёрстки для статистики (кандидаты «Подогнать» и первый проход итогового рендера)."""
+    deadline.check()
     effective = tuning if tuning is not None else prepared.tuning
-    setup = page_setup(prepared.layout, prepared.orientation, prepared.density, effective)
-    document, policy = _render(prepared, setup, page_numbers=False)
-    stats = page_stats(document)
+    document, policy = _layout(prepared, effective, page_numbers=False)
+    return Measured(effective, prepared.setup(effective), document, policy, page_stats(document))
+
+
+def finish(prepared: Prepared, measured: Measured, deadline: Deadline, passes: int) -> RenderResult:
+    """PDF из измеренного прохода; при двух и более страницах — ещё один проход с «Стр. N из M» (разбивка та же)."""
+    document, policy, stats = measured.document, measured.policy, measured.stats
     if stats.pages > 1:
-        # Колонтитулы не влияют на поток: второй проход с «Стр. N из M» даёт ту же разбивку.
-        document, policy = _render(prepared, setup, page_numbers=True)
+        deadline.check()
+        document, policy = _layout(prepared, measured.tuning, page_numbers=True)
         stats = page_stats(document)
+        passes += 1
+    deadline.check()
     pdf = document.write_pdf()
-    used = replace(effective, density=setup.density, line_height=setup.line_height)
-    return RenderResult(
-        pdf=pdf,
-        stats=stats,
-        tuning=used,
-        warnings=prepared.warnings,
-        blocked_urls=tuple(dict.fromkeys(policy.blocked)),
-    )
+    used = replace(measured.tuning, density=measured.setup.density, line_height=measured.setup.line_height)
+    blocked = tuple(dict.fromkeys([*measured.policy.blocked, *policy.blocked]))
+    return RenderResult(pdf, stats, used, prepared.warnings, blocked, passes)
+
+
+def render_prepared(
+    prepared: Prepared, tuning: Tuning | None = None, *, timeout_s: float | None = DEFAULT_TIMEOUT_S
+) -> RenderResult:
+    """Рендер подготовленного тела с подстройкой `tuning` (по умолчанию — из `page.tuning` тела)."""
+    deadline = Deadline(timeout_s)
+    with deadline.armed():
+        return finish(prepared, measure(prepared, tuning, deadline), deadline, passes=1)
 
 
 def render_pdf(
@@ -219,8 +201,12 @@ def render_pdf(
     catalog: Catalog | None = None,
     highlight_missing: bool = True,
     contracts_dir: str | None = None,
+    timeout_s: float | None = DEFAULT_TIMEOUT_S,
 ) -> RenderResult:
-    """Тело документа (контракт documents/body.schema.json) → PDF на бланке со статистикой страниц."""
+    """Тело документа (контракт documents/body.schema.json) → PDF на бланке со статистикой страниц.
+
+    `timeout_s` — предел всего рендера; превышен — `RenderTimeoutError` (вызывающий показывает понятную ошибку).
+    """
     prepared = prepare(
         body,
         letterhead=letterhead,
@@ -232,7 +218,7 @@ def render_pdf(
         highlight_missing=highlight_missing,
         contracts_dir=contracts_dir,
     )
-    return render_prepared(prepared, tuning)
+    return render_prepared(prepared, tuning, timeout_s=timeout_s)
 
 
 def render_html_unsafe_for_tests(html: str) -> tuple[bytes, tuple[str, ...]]:

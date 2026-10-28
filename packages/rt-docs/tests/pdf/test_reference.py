@@ -16,6 +16,24 @@ from tests import samples
 from tests.pdf.pdfcheck import MM, fonts, pages, pdf_fill
 
 WORDS = "Сто пятьдесят два миллиона триста сорок тысяч сум 00 тийин"
+#: Эталоны из описания PR #295 и docs/architecture/rt-docs.md §6: точное число страниц, заполненность последней ±0,05.
+EXPECTED = {
+    "letter_short": (1, 0.47),
+    "letter_uz": (1, 0.38),
+    "letter_1_2": (2, 0.14),
+    "letter_2": (2, 0.43),
+    "contract": (3, 0.65),
+    "invoice_40": (3, 0.23),
+    "spec_landscape": (2, 0.68),
+}
+TOLERANCE = 0.05
+
+
+def assert_reference(name: str, result: RenderResult) -> None:
+    pages_expected, fill = EXPECTED[name]
+    assert result.stats.pages == pages_expected, name
+    assert abs(result.stats.last_page_fill - fill) <= TOLERANCE, (name, result.stats.last_page_fill)
+    assert result.passes == (1 if pages_expected == 1 else 2), "второй проход — только для «Стр. N из M»"
 
 
 def letter(body: dict[str, Any]) -> RenderResult:
@@ -76,8 +94,7 @@ def assert_fill_matches_pdf(result: RenderResult, *, top_mm: float = 20, bottom_
 
 
 def test_short_letter_is_one_page_without_page_numbers(short_letter: RenderResult) -> None:
-    assert short_letter.stats.pages == 1
-    assert 0.35 < short_letter.stats.last_page_fill < 0.6
+    assert_reference("letter_short", short_letter)
     text = pages(short_letter.pdf)[0].text
     assert "Стр." not in text and " из 1" not in text
     assert "Уважаемый Бахтиёр Бахтиярович!" in text
@@ -99,7 +116,7 @@ def test_uzbek_latin_and_cyrillic_letters_are_printed_and_extractable() -> None:
         meta=DocumentMeta(number="CHQ-7/26", executor="Ijrochi: A. Petrova"),
         values={**samples.VALUES, "deal.number": "ZV-2026-104"},
     )
-    assert result.stats.pages == 1
+    assert_reference("letter_uz", result)
     assert not [w for w in result.warnings if "characters missing" in w]
     text = pages(result.pdf)[0].text
     for fragment in ("Oʻzbekiston", "gʻalla", "qoʻshimcha", "ўқғҳ", "ЎҚҒҲ", "boʻyicha", "M. Oʻ.", "imzo"):
@@ -108,7 +125,7 @@ def test_uzbek_latin_and_cyrillic_letters_are_printed_and_extractable() -> None:
 
 def test_long_letter_is_two_pages_with_page_numbers_and_running_number() -> None:
     result = letter(samples.letter_paragraphs(11))
-    assert result.stats.pages == 2
+    assert_reference("letter_2", result)
     first, second = pages(result.pdf)
     assert "Стр. 1 из 2" in first.text and "Стр. 2 из 2" in second.text
     assert "ИСХ-015/26" in second.text  # номер письма в колонтитуле со второй страницы
@@ -118,7 +135,7 @@ def test_long_letter_is_two_pages_with_page_numbers_and_running_number() -> None
 
 def test_letter_of_1_2_pages_has_a_nearly_empty_last_page() -> None:
     result = letter(samples.letter_paragraphs(8))
-    assert result.stats.pages == 2
+    assert_reference("letter_1_2", result)
     assert result.stats.last_page_fill < 0.2  # почти пустая — её убирает «Подогнать» (test_fit)
     # подпись не одна: на второй странице вместе с предыдущим абзацем
     second = pages(result.pdf)[1].text
@@ -137,8 +154,7 @@ def test_signature_never_goes_to_a_new_page_alone(extra: int) -> None:
 
 
 def test_contract_is_three_pages(contract: RenderResult) -> None:
-    assert contract.stats.pages == 3
-    assert 0.3 < contract.stats.last_page_fill < 0.9
+    assert_reference("contract", contract)
     texts = [p.text for p in pages(contract.pdf)]
     assert "Стр. 3 из 3" in texts[2]
     assert all("Д-15/26" in t for t in texts[1:])
@@ -150,7 +166,8 @@ def test_contract_is_three_pages(contract: RenderResult) -> None:
 
 def test_invoice_40_items_repeats_header_and_keeps_totals_and_signature(invoice: RenderResult) -> None:
     result = pages(invoice.pdf)
-    assert invoice.stats.pages == len(result) >= 2
+    assert_reference("invoice_40", invoice)
+    assert invoice.stats.pages == len(result)
     for page in result:
         if "Позиция" in page.text:
             assert "Наименование" in page.text and "Сумма" in page.text, "шапка таблицы на каждой странице"
@@ -165,7 +182,8 @@ def test_invoice_40_items_repeats_header_and_keeps_totals_and_signature(invoice:
 
 def test_specification_is_landscape(specification: RenderResult) -> None:
     result = pages(specification.pdf, bottom_margin_mm=15)
-    assert specification.stats.pages == len(result) == 2
+    assert_reference("spec_landscape", specification)
+    assert specification.stats.pages == len(result)
     assert all(p.width > p.height for p in result)
     assert abs(result[0].width - 297 * MM) < 1
     assert "Код ТН ВЭД" in result[1].text, "шапка повторяется"

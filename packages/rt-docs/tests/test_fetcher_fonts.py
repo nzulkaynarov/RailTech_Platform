@@ -7,6 +7,7 @@ from importlib import resources
 
 import pytest
 
+from rt_docs.errors import LetterheadError
 from rt_docs.fetcher import FONT_NAMES, ResourcePolicy
 from rt_docs.fonts import REQUIRED_CHARS, coverage, missing_glyphs
 from rt_docs.model import Logo
@@ -39,6 +40,7 @@ def test_allows_only_embedded_fonts_logo_and_raster_data() -> None:
         "data:image/svg+xml;base64,PHN2Zz48c2NyaXB0PmFsZXJ0KDEpPC9zY3JpcHQ+PC9zdmc+",
         "data:text/html,<script>alert(1)</script>",
         "/etc/passwd",
+        "data:image/png;base64," + base64.b64encode(b"<svg><script>alert(1)</script></svg>").decode(),
     ],
 )
 def test_everything_else_is_blocked_and_recorded(url: str) -> None:
@@ -63,3 +65,12 @@ def test_font_files_ship_with_the_ofl_license() -> None:
     assert fonts.joinpath("OFL.txt").read_text(encoding="utf-8").find("SIL OPEN FONT LICENSE Version 1.1") > 0
     for name in FONT_NAMES:
         assert fonts.joinpath(name).is_file(), name
+
+
+@pytest.mark.parametrize(
+    ("data", "mime"),
+    [(b"<svg onload=alert(1)>", "image/png"), (samples.png(2, 2), "image/jpeg"), (b"GIF89a....", "image/png")],
+)
+def test_logo_bytes_must_match_a_raster_signature(data: bytes, mime: str) -> None:
+    with pytest.raises(LetterheadError):
+        Logo(data, mime)

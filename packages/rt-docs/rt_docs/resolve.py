@@ -10,11 +10,13 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
-from .contracts import Catalog
+from .contracts import Catalog, clean_text
+from .errors import BodyError
 from .formatters import format_value
 from .model import Lang, Value
 
 Node = dict[str, Any]
+_INLINE = frozenset({"text", "hardBreak"})
 
 
 @dataclass
@@ -61,14 +63,14 @@ class _Resolver:
         if raw is None or raw == "":
             self._note(self.result.missing_variables, code)
             return self.catalog.label(code, self.lang), True
-        return format_value(raw, self.lang), False
+        return clean_text(format_value(raw, self.lang)), False
 
     def text_or_var(self, item: Any) -> tuple[str, bool] | None:
         if item is None:
             return None
         if isinstance(item, Mapping):
             return self.value(str(item["var"]))
-        return str(item), False
+        return clean_text(str(item)), False
 
     def inline(self, nodes: Sequence[Mapping[str, Any]]) -> list[Node]:
         out: list[Node] = []
@@ -85,8 +87,10 @@ class _Resolver:
                         "_missing": missing,
                     }
                 )
-            else:
+            elif node["type"] in _INLINE:
                 out.append(dict(node))
+            else:
+                raise BodyError([f"inline node {str(node.get('type'))[:40]!r} is not in the contract"])
         return out
 
     def blocks_(self, nodes: Sequence[Mapping[str, Any]]) -> list[Node]:
@@ -104,8 +108,10 @@ class _Resolver:
                 out.append({"type": "signature", "parties": parties, "stamp": bool(node["attrs"].get("stamp", False))})
             elif kind == "block":
                 out.append(self.block(node))
+            elif kind == "pageBreak":
+                out.append({"type": "pageBreak"})
             else:
-                out.append(dict(node))
+                raise BodyError([f"node {str(kind)[:40]!r} is not in the contract"])
         return out
 
     def block(self, node: Mapping[str, Any]) -> Node:

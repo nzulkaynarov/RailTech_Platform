@@ -1,6 +1,6 @@
 # rt-docs — документы: тело JSON → HTML → PDF (WeasyPrint), DOCX, форматтеры (docs/architecture/rt-docs.md, ADR-0020).
 # Инструменты — как packages/rt-bus: uv, ruff, mypy, pytest. Рендер PDF — в одноразовом контейнере (pango, harfbuzz):
-# scripts/in_container.sh, образ docker/test.Dockerfile — один и тот же локально и в CI.
+# scripts/in_container.sh, образ docker/test.Dockerfile (базовый — по digest). В CI задания нет: подключение — вопрос владельцу.
 
 SHELL := /bin/bash
 .DEFAULT_GOAL := help

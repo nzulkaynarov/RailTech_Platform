@@ -1033,7 +1033,7 @@ requires-dist = [
     { name = "python-docx", specifier = ">=1.2.0" },
     { name = "pyyaml", specifier = ">=6.0.3" },
     { name = "referencing", specifier = ">=0.36.2" },
-    { name = "weasyprint", specifier = ">=68.0" },
+    { name = "weasyprint", specifier = ">=69,<70" },
 ]
 
 [package.metadata.requires-dev]

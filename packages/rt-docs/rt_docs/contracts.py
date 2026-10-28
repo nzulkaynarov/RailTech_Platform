@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 from functools import lru_cache
@@ -48,12 +49,108 @@ def _validator(directory: Path) -> Draft202012Validator:
     return Draft202012Validator(schema)
 
 
-def validate_body(body: Mapping[str, Any], directory: str | Path | None = None) -> None:
-    """Тело документа по схеме контракта; все нарушения — одним `BodyError` (путь → сообщение)."""
+#: Решения архитектора по ревью #295: вложенность узлов, строки таблицы и размер тела ограничены до хранения в базах.
+MAX_DEPTH = 20  # уровней вложенности узлов (doc → список → пункт → … → текст)
+MAX_TABLE_ROWS = 500  # строк в одной таблице (= maxItems в body.schema.json; счёт на сотни позиций)
+MAX_BODY_BYTES = 1_000_000  # сериализованный JSON (UTF-8)
+_JSON_DEPTH = (
+    3 * MAX_DEPTH + 10
+)  # уровней JSON (узел, его content и attrs) — до json.dumps и jsonschema, без RecursionError
+_C0 = re.compile(r"[\x00-\x08\x0b-\x1f]")
+_BLOCK_CODE = re.compile(r"^doc\.[a-z][a-z0-9_]*$")
+
+
+def clean_text(text: str) -> str:
+    """Управляющие символы C0, кроме табуляции и перевода строки, вычищаются (схема их не допускает)."""
+    return _C0.sub("", text)
+
+
+def _cleaned(value: Any) -> Any:
+    if isinstance(value, str):
+        return clean_text(value)
+    if isinstance(value, Mapping):
+        return {clean_text(str(k)): _cleaned(v) for k, v in value.items()}
+    if isinstance(value, list | tuple):
+        return [_cleaned(v) for v in value]
+    return value
+
+
+def _check_limits(value: Any, where: str) -> None:
+    """Глубина и размер — итеративно, до любой рекурсии (json.dumps, jsonschema)."""
+    stack: list[tuple[Any, int, int]] = [(value, 1, 1)]
+    while stack:
+        item, json_depth, node_depth = stack.pop()
+        if json_depth > _JSON_DEPTH or node_depth > MAX_DEPTH:
+            raise BodyError([f"{where}: nesting depth exceeds {MAX_DEPTH} nodes"])
+        if isinstance(item, Mapping):
+            children = list(item.values())
+            next_node = node_depth + (1 if "type" in item else 0)
+        elif isinstance(item, list | tuple):
+            children = list(item)
+            next_node = node_depth
+        else:
+            continue
+        stack.extend((child, json_depth + 1, next_node) for child in children)
+    try:
+        size = len(json.dumps(value, ensure_ascii=False).encode())
+    except (TypeError, ValueError) as error:
+        raise BodyError([f"{where}: not JSON ({error})"]) from error
+    if size > MAX_BODY_BYTES:
+        raise BodyError([f"{where}: {size} bytes, more than 1 MB ({MAX_BODY_BYTES} bytes)"])
+
+
+def normalize_body(body: Any) -> dict[str, Any]:
+    """Копия тела без управляющих символов (кроме \\t и \\n) — нормализация входа перед проверкой и хранением."""
+    if not isinstance(body, Mapping):
+        raise BodyError(["#: body must be a JSON object"])
+    _check_limits(body, "#")
+    cleaned: dict[str, Any] = _cleaned(body)
+    return cleaned
+
+
+def normalize_blocks(blocks: Any) -> dict[str, list[Any]]:
+    if not isinstance(blocks, Mapping):
+        raise BodyError(["blocks: must be an object {code: [nodes]}"])
+    _check_limits(blocks, "blocks")
+    cleaned: dict[str, list[Any]] = _cleaned(blocks)
+    return cleaned
+
+
+def validate_body(body: Any, directory: str | Path | None = None) -> None:
+    """Тело документа по схеме контракта и лимитам; все нарушения — одним `BodyError` (путь → сообщение)."""
+    if not isinstance(body, Mapping):
+        raise BodyError(["#: body must be a JSON object"])
+    _check_limits(body, "#")
     validator = _validator(contracts_dir(directory))
     errors = sorted(validator.iter_errors(body), key=lambda e: list(e.absolute_path))
     if errors:
         raise BodyError([f"{'/'.join(str(p) for p in e.absolute_path) or '#'}: {_short(e.message)}" for e in errors])
+
+
+def validate_blocks(blocks: Any, directory: str | Path | None = None) -> None:
+    """Данные блоков с замком: код по каталогу `doc.*`, узлы — те же блочные узлы тела (`#/$defs/block`).
+
+    Служебных узлов рендера (`_block` и т. п.) и чего-либо вне контракта во входных данных быть не может.
+    """
+    if not isinstance(blocks, Mapping):
+        raise BodyError(["blocks: must be an object {code: [nodes]}"])
+    _check_limits(blocks, "blocks")
+    validator = _validator(contracts_dir(directory))
+    problems: list[str] = []
+    for code, nodes in blocks.items():
+        label = code if isinstance(code, str) and _BLOCK_CODE.match(code) and len(code) <= 64 else None
+        if label is None:
+            problems.append(f"blocks: block code {str(code)[:40]!r} is not doc.<code>")
+            continue
+        if not isinstance(nodes, list):
+            problems.append(f"blocks/{label}: must be a list of block nodes")
+            continue
+        wrapper = {"version": 1, "lang": "ru", "doc": {"type": "doc", "content": nodes}}
+        for e in sorted(validator.iter_errors(wrapper), key=lambda e: list(e.absolute_path)):
+            path = "/".join(str(p) for p in list(e.absolute_path)[2:])
+            problems.append(f"blocks/{label}/{path}: {_short(e.message)}")
+    if problems:
+        raise BodyError(problems)
 
 
 def _short(message: str) -> str:

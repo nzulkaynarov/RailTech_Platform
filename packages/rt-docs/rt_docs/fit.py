@@ -1,5 +1,5 @@
 """«Подогнать»: подбор плотности, межстрочного и полей, чтобы убрать почти пустую последнюю страницу (аналог Word
-«Сократить на страницу»), и «воздух» для короткого письма. Не больше трёх дополнительных рендеров (исследование §3.2).
+«Сократить на страницу»), и «воздух» для короткого письма. Не больше трёх проходов-кандидатов (исследование §3.2).
 
 Пределы — те же, что в схеме тела (`page.tuning`): межстрочный 1,2 … 1,6, поля сверху и снизу уже не больше чем на 6 мм,
 отступ до текста 0 … 30 мм. Результат сохраняется в теле (`apply_tuning`) — предпросмотр и выпуск не расходятся.
@@ -12,9 +12,9 @@ from collections.abc import Mapping
 from dataclasses import dataclass, replace
 from typing import Any
 
-from .css import DEFAULT_DENSITY, DENSITY
+from .css import DENSITY
 from .model import Density, PageStats, RenderResult, Tuning
-from .pdf import Prepared, render_prepared
+from .pdf import DEFAULT_TIMEOUT_S, Deadline, Prepared, finish, measure
 
 #: Последняя страница заполнена меньше — «почти пустая», её пробуем убрать (документы до трёх страниц).
 NEAR_EMPTY = 0.20
@@ -40,7 +40,11 @@ class FitResult:
     result: RenderResult
     before: PageStats
     actions: tuple[FitAction, ...]
-    renders: int
+
+    @property
+    def passes(self) -> int:
+        """Проходов вёрстки всего: исходник, кандидаты (≤ 3) и, если страниц больше одной, проход с номерами страниц."""
+        return self.result.passes
 
     @property
     def tuning(self) -> Tuning:
@@ -77,36 +81,43 @@ def _shrink_candidates(current: Tuning) -> list[tuple[Tuning, list[FitAction]]]:
     return steps
 
 
-def fit(prepared: Prepared, tuning: Tuning | None = None) -> FitResult:
-    """Рендер с подгонкой: убрать почти пустую последнюю страницу или дать воздух короткому документу."""
-    base = render_prepared(prepared, tuning)
-    stats = base.stats
-    renders = 1
-    if 1 < stats.pages <= MAX_PAGES_TO_SHRINK and stats.last_page_fill < NEAR_EMPTY:
-        for candidate, actions in _shrink_candidates(base.tuning)[:MAX_EXTRA_RENDERS]:
-            attempt = render_prepared(prepared, candidate)
-            renders += 1
-            if attempt.stats.pages < stats.pages:
-                return FitResult(attempt, stats, tuple(actions), renders)
-        kept = FitAction(
-            "kept",
-            f"Последнюю страницу ({stats.last_page_fill:.0%}) не убрать в допустимых пределах плотности и полей — "
-            f"оставлено {stats.pages} стр.; сократите текст или добавьте разрыв страницы",
-        )
-        return FitResult(base, stats, (kept,), renders)
-    if stats.pages == 1 and stats.last_page_fill < SHORT:
-        density = base.tuning.density or DEFAULT_DENSITY[prepared.layout]
-        lead = 20 if stats.last_page_fill < 0.3 else 10
-        candidate = Tuning(density=Density.SPACIOUS, line_height=None, margin_delta_mm=0, lead_mm=lead)
-        attempt = render_prepared(prepared, candidate)
-        renders += 1
-        if attempt.stats.pages == 1:
-            actions = []
-            if density is not Density.SPACIOUS:
-                actions.append(FitAction("density", f"Плотность {_DENSITY_NAMES[density]} → «Просторно»"))
-            actions.append(FitAction("lead", f"Отступ до текста {lead} мм"))
-            return FitResult(attempt, stats, tuple(actions), renders)
-    return FitResult(base, stats, (FitAction("none", "Подгонка не нужна"),), renders)
+def fit(prepared: Prepared, tuning: Tuning | None = None, *, timeout_s: float | None = DEFAULT_TIMEOUT_S) -> FitResult:
+    """Рендер с подгонкой: убрать почти пустую последнюю страницу или дать воздух короткому документу.
+
+    Кандидаты верстаются без номеров страниц (на разбивку они не влияют); проход с «Стр. N из M» — только для итога.
+    `timeout_s` — на всю подгонку.
+    """
+    deadline = Deadline(timeout_s)
+    with deadline.armed():
+        base = measure(prepared, tuning, deadline)
+        stats = base.stats
+        passes = 1
+        if 1 < stats.pages <= MAX_PAGES_TO_SHRINK and stats.last_page_fill < NEAR_EMPTY:
+            used = replace(base.tuning, density=base.setup.density, line_height=base.setup.line_height)
+            for candidate, actions in _shrink_candidates(used)[:MAX_EXTRA_RENDERS]:
+                attempt = measure(prepared, candidate, deadline)
+                passes += 1
+                if attempt.stats.pages < stats.pages:
+                    return FitResult(finish(prepared, attempt, deadline, passes), stats, tuple(actions))
+            kept = FitAction(
+                "kept",
+                f"Последнюю страницу ({stats.last_page_fill:.0%}) не убрать в допустимых пределах плотности и полей — "
+                f"оставлено {stats.pages} стр.; сократите текст или добавьте разрыв страницы",
+            )
+            return FitResult(finish(prepared, base, deadline, passes), stats, (kept,))
+        if stats.pages == 1 and stats.last_page_fill < SHORT:
+            density = base.setup.density
+            lead = 20 if stats.last_page_fill < 0.3 else 10
+            candidate = Tuning(density=Density.SPACIOUS, line_height=None, margin_delta_mm=0, lead_mm=lead)
+            attempt = measure(prepared, candidate, deadline)
+            passes += 1
+            if attempt.stats.pages == 1:
+                actions = []
+                if density is not Density.SPACIOUS:
+                    actions.append(FitAction("density", f"Плотность {_DENSITY_NAMES[density]} → «Просторно»"))
+                actions.append(FitAction("lead", f"Отступ до текста {lead} мм"))
+                return FitResult(finish(prepared, attempt, deadline, passes), stats, tuple(actions))
+        return FitResult(finish(prepared, base, deadline, passes), stats, (FitAction("none", "Подгонка не нужна"),))
 
 
 def apply_tuning(body: Mapping[str, Any], tuning: Tuning) -> dict[str, Any]:

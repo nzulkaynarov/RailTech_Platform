@@ -4,9 +4,18 @@
 Рендер PDF — `rt_docs.pdf.render_pdf` и `rt_docs.fit.fit` (импорт требует pango и harfbuzz); остальное — без них.
 """
 
-from .contracts import Catalog, contracts_dir, load_catalog, validate_body
+from .contracts import (
+    Catalog,
+    clean_text,
+    contracts_dir,
+    load_catalog,
+    normalize_blocks,
+    normalize_body,
+    validate_blocks,
+    validate_body,
+)
 from .docx_export import DocxResult, to_docx
-from .errors import BodyError, ContractsNotFoundError, LetterheadError, RtDocsError
+from .errors import BodyError, ContractsNotFoundError, LetterheadError, RenderTimeoutError, RtDocsError
 from .formatters import amount_in_words, currency_label, format_date, format_money, format_number, format_value
 from .html_import import ImportResult, Loss, html_to_body
 from .model import (
@@ -39,9 +48,11 @@ __all__ = [
     "Orientation",
     "PageStats",
     "RenderResult",
+    "RenderTimeoutError",
     "RtDocsError",
     "Tuning",
     "amount_in_words",
+    "clean_text",
     "contracts_dir",
     "currency_label",
     "format_date",
@@ -50,6 +61,9 @@ __all__ = [
     "format_value",
     "html_to_body",
     "load_catalog",
+    "normalize_blocks",
+    "normalize_body",
     "to_docx",
+    "validate_blocks",
     "validate_body",
 ]

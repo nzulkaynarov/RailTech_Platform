@@ -1,6 +1,6 @@
 # rt_docs — документы: формат тела, бланк, рендер PDF и DOCX
 
-Статус: действует · Владелец: архитектор · Обновлено: 2026-10-28 (D-DOC1)
+Статус: действует · Владелец: архитектор · Обновлено: 2026-10-28 (D-DOC1, ревью #295)
 
 Пакет [`packages/rt-docs`](../../packages/rt-docs/) (дистрибутив `rt-docs`, импорт `rt_docs`, Python ≥ 3.12, без фреймворков) и
 контракт [`packages/contracts/documents/`](../../packages/contracts/documents/) — ядро документов на бланке: тело JSON → HTML →
@@ -22,7 +22,7 @@ fit: рендер → почти пустая последняя страниц�
 |---|---|
 | `body.schema.json` | Тело документа (semver в `$comment`): `version` (мажор 1), `lang` (`ru`, `uz` — латиница, `en`), `page` (`orientation`, `density`, `tuning`), `doc` — дерево узлов ProseMirror/Tiptap |
 | `variables.yaml` + `variables.schema.json` | Каталог: виды документов (подпись, макет бланка, домен-владелец), переменные (код, тип `text/date/money/number`, подписи ru/uz/en, виды), блоки с замком (подписи, `required_for`, `keep_with_previous`) |
-| `examples/*.json` | Тела-примеры: письмо (ru, uz), договор, счёт с таблицей позиций; они же — корпус проверки совместимости |
+| `examples/*.json` | Тела-примеры: письмо (ru, uz), договор, счёт с таблицей позиций и `kitchen-sink.json` — каждый узел, атрибут и значение перечисления (тест сверяет со схемой); они же — корпус проверки совместимости |
 
 Узлы тела: `paragraph` (`textAlign`), `heading` (1–3), `bulletList`/`orderedList` (`start`)/`listItem`, `table` (`columnWidths` в %,
 `variant`: `grid` — позиции, `plain` — реквизиты, `totals` — итоги справа) с `tableRow` (`emphasis`) и `tableCell`/`tableHeader`
@@ -30,6 +30,12 @@ fit: рендер → почти пустая последняя страниц�
 `{"var": код}`; `stamp` — «М. П.»), `block` (`code` `doc.*`, `locked`, `required`; `content` — закреплённый текст, если вызывающий
 не дал данных). Инлайн: `text` с метками `bold`, `italic`, `underline`, `link` (`https://`, `http://`, `mailto:`, `tel:`), `variable`
 (`code` из каталога), `hardBreak`. Цвета, шрифтов, стилей, классов и сырого HTML в схеме нет.
+
+**Лимиты** (решение архитектора по ревью #295 — до появления тел в базах): вложенность узлов ≤ 20, таблица ≤ 500 строк
+(`maxItems` в схеме; счёт на сотни позиций), тело ≤ 1 МБ сериализованного JSON — `validate_body` проверяет глубину и размер
+итеративно, до схемы (`BodyError`, а не `RecursionError`). Управляющие символы, кроме `\t` и `\n`, схема **не допускает** в
+сохранённом теле, а **вход их вычищает, а не отклоняет**: `normalize_body` (и `normalize_blocks`) — домен вызывает её перед
+проверкой и сохранением; рендер (`prepare`, `to_docx`) нормализует тело, данные блоков, значения переменных, реквизиты и бланк сам.
 
 Проверки (`make contracts`): ajv (`pnpm lint:documents` — схемы, примеры, каталог), pytest `tests/test_documents.py` (коды примеров —
 из каталога, подписи uz — латиница с ʻ, обязательные блоки = ERP `REQUIRED_TEMPLATE_BLOCKS`), совместимость
@@ -41,9 +47,10 @@ fit: рендер → почти пустая последняя страниц�
 
 | Модуль | Что |
 |---|---|
-| `rt_docs` | `validate_body`, `load_catalog`, `Catalog`, модели (`Letterhead`, `Logo`, `DocumentMeta`, `Money`, `Tuning`, `Layout`, `Density`, `PageStats`, `RenderResult`), форматтеры, `to_docx`, `html_to_body` — без системных библиотек |
-| `rt_docs.pdf` | `render_pdf(body, *, letterhead, layout, meta, values, blocks, tuning, highlight_missing)` → `RenderResult(pdf, stats, tuning, warnings, blocked_urls)`; `prepare` + `render_prepared` для нескольких рендеров — нужны pango и harfbuzz |
-| `rt_docs.fit` | `fit(prepared)` → `FitResult(result, before, actions, renders)`; `apply_tuning(body, tuning)` — сохранить подгонку в теле |
+| `rt_docs` | `normalize_body`, `validate_body`, `validate_blocks`, `load_catalog`, `Catalog`, модели (`Letterhead`, `Logo`, `DocumentMeta`, `Money`, `Tuning`, `Layout`, `Density`, `PageStats`, `RenderResult`), форматтеры, `to_docx`, `html_to_body` — без системных библиотек |
+| `rt_docs.prepare` | `prepare(...)` → `Prepared` (нормализация, лимиты, схема тела и данных блоков, подстановка), `document_html` — HTML без pango |
+| `rt_docs.pdf` | `render_pdf(body, *, letterhead, layout, meta, values, blocks, tuning, highlight_missing, timeout_s=60)` → `RenderResult(pdf, stats, tuning, warnings, blocked_urls, passes)`; `render_prepared` — нужны pango и harfbuzz; превышение тайм-аута — `RenderTimeoutError`; другая мажорная версия WeasyPrint — ошибка при импорте |
+| `rt_docs.fit` | `fit(prepared, timeout_s=60)` → `FitResult(result, before, actions, passes)`; `apply_tuning(body, tuning)` — сохранить подгонку в теле |
 
 - **Бланк** — `Letterhead(company_name, requisites, footer, logo=Logo(bytes, mime), accent="#rrggbb", font="sans"|"serif")`:
   входные данные (ERP — владелец, EDS — проекция), не чтение из БД. **Реквизиты документа** — `DocumentMeta(title, number, date,
@@ -53,7 +60,8 @@ fit: рендер → почти пустая последняя страниц�
   жёлтой рамке `[Контрагент — название]` и предупреждение `variable without value: …`; при `highlight_missing=False` — линия
   для подписи от руки. Выпуск с предупреждениями — решение домена.
 - **Данные блоков** — `blocks: {"doc.items_table": [узлы тела], …}`: домен собирает таблицу позиций, итоги, реквизиты теми же
-  узлами контракта (рендер один для всего). Нет данных и нет `content` — пунктирная рамка «Блок «…»: данные подставит система».
+  узлами контракта (рендер один для всего); код — `doc.<код>`, узлы проверяются по `#/$defs/block` (`validate_blocks`),
+  служебные узлы рендера во входе отклоняются. Нет данных и нет `content` — пунктирная рамка «Блок «…»: данные подставит система».
 - **Сумма прописью** — `amount_in_words(value, currency, lang)`: ru (как ERP `money_words`), uz-латиница («Bir million ikki yuz
   ming soʻm 00 tiyin», сотни — «bir yuz»), en; неизвестная валюта словом не называется (`CNY 50/100`).
 
@@ -67,8 +75,9 @@ fit: рендер → почти пустая последняя страниц�
 
 Поля — ГОСТ Р 7.0.97 (`_document_base.html` ERP): 20/15/20/20 мм, альбомная — 15/20/15/20 мм (`page.orientation: landscape`).
 Плотность: «Компактно» 9,5 pt / 1,35, «Обычно» 11 pt / 1,45, «Просторно» 12 pt / 1,5; по умолчанию — «Обычно» у письма и
-внутреннего, «Компактно» у коммерческого. «Стр. N из M» (`Sahifa N, jami M`, `Page N of M`) — только при M > 1: первый рендер без
-номеров, при двух и более страницах — второй с номерами (колонтитулы на поток не влияют, разбивка та же).
+внутреннего, «Компактно» у коммерческого. «Стр. N из M» (`Sahifa N, jami M`, `Page N of M`) — только при M > 1: первый проход
+вёрстки без номеров, при двух и более страницах — второй с номерами (колонтитулы на поток не влияют, разбивка та же);
+`RenderResult.passes` — честный счёт проходов.
 
 Разрывы: шапка таблицы (строки `tableHeader` в начале) повторяется на каждой странице, строка таблицы не рвётся, `table-layout:
 fixed` с ширинами из тела, суммы без переноса; заголовки не висят в конце страницы; абзацы `orphans/widows: 2`; блок с
@@ -78,7 +87,8 @@ fixed` с ширинами из тела, суммы без переноса; з
 **«Подогнать»** (`fit`): документ до трёх страниц с последней, заполненной меньше чем на 20 %, — шаги «плотность ниже →
 межстрочный −0,1 → поля сверху и снизу −6 мм» (в «Компактно» — межстрочный и поля), первый шаг, убравший страницу, побеждает;
 не убрала ни один — исходник и честное `kept` «оставлено N стр.; сократите текст или добавьте разрыв». Одностраничный документ,
-заполненный меньше чем на 40 %, — «Просторно» и отступ до текста 10–20 мм. Не больше трёх дополнительных рендеров; результат —
+заполненный меньше чем на 40 %, — «Просторно» и отступ до текста 10–20 мм. Кандидаты верстаются без номеров страниц (не больше трёх проходов), проход с номерами — только для итога; `FitResult.passes` —
+все проходы. Результат —
 `page.density` и `page.tuning` тела (`apply_tuning`), поэтому предпросмотр и выпуск совпадают. Статистика страниц — по боксам
 WeasyPrint: заполненность последней = низ нижнего бокса потока / высота области текста.
 
@@ -92,8 +102,12 @@ WeasyPrint: заполненность последней = низ нижнег�
   WeasyPrint добавляет только `@font-face` пакета. Символ вне шрифта печатается «тофу», а рендер заранее предупреждает
   (`characters missing from the document font`, `rt_docs.fonts.missing_glyphs`). Поэтому число страниц не зависит от образа.
 - **Безопасный fetcher** (`SafeURLFetcher` + `ResourcePolicy`): разрешены только `rtdocs:fonts/<файл пакета>`, `rtdocs:logo`
-  (байты бланка) и растровые `data:image/(png|jpeg|gif|webp)`; `http(s)://`, `file://`, `ftp://`, SVG, пути — отклоняются до
-  открытия и попадают в `RenderResult.blocked_urls`. HTML документа строится только из узлов контракта с экранированием текста.
+  (байты бланка, сигнатура PNG/JPEG/WebP сверяется в `Logo`) и растровые `data:image/(png|jpeg|gif|webp)` с совпадающей
+  сигнатурой; `http(s)://`, `file://`, `ftp://`, SVG, пути — отклоняются до
+  открытия и попадают в `RenderResult.blocked_urls`. HTML документа строится только из узлов контракта с экранированием текста;
+  атрибут `class` — только из фиксированного набора (код блока в разметку не попадает). Тесты-инъекции `<img src=file://…>` и
+  `<script>` идут через текст, атрибуты, данные и код блока, ячейки, значения переменных, реквизиты и бланк
+  (`tests/test_limits_injection.py`).
 
 ## 5. DOCX и миграция HTML
 
@@ -118,11 +132,17 @@ make check-rt-docs                   # ruff, mypy --strict, все тесты в
 
 PDF-тесты идут в одноразовом контейнере `docker/test.Dockerfile` (`python:3.12-slim-trixie` + `libpango-1.0-0`, `libpangoft2-1.0-0`,
 `libharfbuzz-subset0`, uv 0.13.0 — та же линия, что образ EDS) через `scripts/in_container.sh`: пакет и контракт монтируются только
-для чтения, `--network none`. Тот же образ — в задании CI `packages · rt-docs` и в `scripts/ci_local.sh rt-docs`. Файл не называется
-`Dockerfile*`, чтобы его правка не запускала сборку 11 образов прода под qemu64 (это не образ прода).
+для чтения, `--network none`. Базовые образы закреплены digest'ом. **Задания в CI у пакета нет** (CLAUDE.md: `ci.yml` и
+`scripts/ci_local.sh` меняются только по запросу владельца): проверка — локальная цель `make check-rt-docs`, подключение к CI —
+вопрос владельцу. Файл не называется `Dockerfile*`, чтобы при подключении его правка не запускала сборку 11 образов прода под qemu64.
+
+**Смена образа тестов** (digest, пакеты pango/harfbuzz, версия WeasyPrint) — вручную: полный прогон эталонов и проверка под CPU
+`qemu64` — `docker build --platform linux/amd64 -f docker/test.Dockerfile -t rt-docs-test:amd64 .`, затем рендер эталонов в
+контейнере через `$(scripts/qemu_cpu_check.sh qemu-path)` с `-cpu qemu64 -L /` (механика — `scripts/qemu_cpu_check.sh`); числа
+страниц и заполненности должны совпасть с таблицей ниже.
 
 **Эталоны** (`tests/pdf/test_reference.py`; тесты не сравнивают байты PDF — число страниц, заполненность последней по статистике
-WeasyPrint и по PDF через pypdf с допуском 0,03, текст ru и uz):
+WeasyPrint и по PDF через pypdf с допуском 0,03; точное число страниц и заполненность ±0,05 к таблице; текст ru и uz):
 
 | Документ | Страниц | Заполненность последней | Что ещё проверяется |
 |---|---|---|---|
@@ -134,7 +154,7 @@ WeasyPrint и по PDF через pypdf с допуском 0,03, текст ru 
 | Счёт на 40 позиций | 3 | 0,23 | шапка таблицы на каждой странице; «Итого» с последней позицией; подпись с «Оплатить до» |
 | Спецификация, альбомная, 20 строк | 2 | 0,68 | ширина листа 297 мм, шапка повторяется |
 
-Детерминизм проверен: те же числа в образе `linux/arm64` (Mac), `linux/amd64` (как CI) и под эмуляцией CPU `qemu64`
+Детерминизм проверен: те же числа в образе `linux/arm64` (Mac), `linux/amd64` (как раннеры GitHub) и под эмуляцией CPU `qemu64`
 (`scripts/qemu_cpu_check.sh qemu-path`, `-cpu qemu64` — CPU прода, ADR-0013 п. 8). Защиту проверяют `tests/pdf/test_security.py`
 (file://, http://, SVG, `@import` — заблокированы; `font-family: "DejaVu Sans"` не берёт системный шрифт, контрольный тест без
 изоляции — берёт).
@@ -143,6 +163,12 @@ WeasyPrint и по PDF через pypdf с допуском 0,03, текст ru 
 
 - **EDS**: `rt-docs = { path = "../../packages/rt-docs", editable = true }` в `pyproject.toml`, контекст сборки `rtdocs` и
   `contracts` (как `rtbus`), в образ — `libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz-subset0`; `RT_DOCS_CONTRACTS_DIR` →
-  копия `documents/`. Рендер — вне запроса (воркер), предпросмотр с кэшем по хешу тела, бланка и данных.
-- **ERP**: пакет копией в `site-packages` (как `rt_bus`), WeasyPrint уже в образе (та же версия 69.0 — `constraint-dependencies`).
+  копия `documents/`. Предпросмотр с кэшем по хешу тела, бланка и данных.
+- **ERP**: пакет копией в `site-packages` (как `rt_bus`); в образе ERP WeasyPrint 69.0 (`requirements.txt`) — та же мажорная версия,
+  которую требует пакет (`weasyprint>=69,<70` в зависимостях, проверка при импорте `rt_docs.pdf`; lock пакета — 69.0).
+- **Рендер — только в воркере** (Procrastinate EDS, Celery ERP), не в запросе: с тайм-аутом `timeout_s` (по умолчанию 60 с;
+  счёт на 500 позиций — 23 страницы, 2 прохода, ≈ 13 с и ≈ 740 МБ RSS на Mac arm64; на CPU прода — медленнее) и лимитом памяти
+  процесса воркера ≥ 1 ГБ (compose `mem_limit`). Жёсткий тайм-аут (SIGALRM) работает в главном потоке процесса воркера; в
+  других потоках — проверка между проходами, поэтому рендер зовут из главного потока задачи. Превышение — `RenderTimeoutError`,
+  пользователю — понятное «документ слишком большой для предпросмотра».
 - Каталог контракта: параметр → `RT_DOCS_CONTRACTS_DIR` → поиск `packages/contracts/documents` вверх от пакета.

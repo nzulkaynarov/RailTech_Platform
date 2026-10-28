@@ -17,6 +17,7 @@ LAYOUT = {
     "letter.uz": Layout.LETTER,
     "contract": Layout.COMMERCIAL,
     "invoice": Layout.COMMERCIAL,
+    "kitchen-sink": Layout.COMMERCIAL,
 }
 
 
