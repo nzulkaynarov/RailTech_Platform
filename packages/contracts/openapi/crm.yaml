@@ -4404,6 +4404,16 @@ components:
         ui_mode:
           title: Ui Mode
           type: string
+        whats_new_read:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Whats New Read
+        whats_new_shown:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Whats New Shown
       required:
       - id
       - email
@@ -4484,6 +4494,18 @@ components:
             type: string
           - type: 'null'
           title: Ui Mode
+        whats_new_read:
+          anyOf:
+          - pattern: ^\d{4}-\d{2}-\d{2}$
+            type: string
+          - type: 'null'
+          title: Whats New Read
+        whats_new_shown:
+          anyOf:
+          - pattern: ^\d{4}-\d{2}-\d{2}$
+            type: string
+          - type: 'null'
+          title: Whats New Shown
       title: MePatch
       type: object
     MessageOut:
@@ -6844,6 +6866,7 @@ components:
       title: SystemStatusOut
       type: object
     TeamMember:
+      description: 'Сотрудник в выборе («кому передать лида», «исполнитель зоны»): без почты, телефона, ролей.'
       properties:
         full_name:
           title: Full Name
@@ -6851,9 +6874,19 @@ components:
         id:
           title: Id
           type: integer
+        initials:
+          maxLength: 3
+          title: Initials
+          type: string
+        position:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Position
       required:
       - id
       - full_name
+      - initials
       title: TeamMember
       type: object
     TelegramLinkOut:
@@ -13045,8 +13078,37 @@ paths:
       - system
   /api/v1/team:
     get:
-      description: 'Активные менеджеры и админы: кому передать лида, чьё имя показать (без email и ролей).'
+      description: Менеджеры и админы (без `section`) либо сотрудники раздела каталога (с `section`).
       operationId: team
+      parameters:
+      - description: 'Раздел каталога (`erp.calc.goods`, `eds.payments`, …): сотрудники с этим разделом. Нужен `level`. Право
+          — чтение сотрудников (`users:read`, раздел `admin` не ниже чтения); без `section` — `leads:read`. Раздела нет в
+          каталоге — 422.'
+        in: query
+        name: section
+        required: false
+        schema:
+          anyOf:
+          - maxLength: 64
+            type: string
+          - type: 'null'
+          description: 'Раздел каталога (`erp.calc.goods`, `eds.payments`, …): сотрудники с этим разделом. Нужен `level`.
+            Право — чтение сотрудников (`users:read`, раздел `admin` не ниже чтения); без `section` — `leads:read`. Раздела
+            нет в каталоге — 422.'
+          title: Section
+      - description: 'Уровень раздела не ниже: `full` или `read` (`full` ⊇ `read`).'
+        in: query
+        name: level
+        required: false
+        schema:
+          anyOf:
+          - enum:
+            - full
+            - read
+            type: string
+          - type: 'null'
+          description: 'Уровень раздела не ниже: `full` или `read` (`full` ⊇ `read`).'
+          title: Level
       responses:
         '200':
           content:

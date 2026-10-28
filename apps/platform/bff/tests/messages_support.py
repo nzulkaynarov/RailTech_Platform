@@ -124,7 +124,6 @@ STORED = {
     "name": "Заявка.pdf",
     "mime": "application/pdf",
     "size": 1200,
-    "storage_key": "tg/5001/77/Заявка.pdf",
     "stored": True,
 }
 NOT_STORED = {"kind": "file", "name": "big.zip", "mime": "application/zip", "stored": False}
@@ -171,7 +170,9 @@ class CrmMessagesFake:
                 "mine": [mine, lead(2041)],
                 "unassigned": [lead(2060, escalation=None, handoff_note=None)],
             },
-            ("GET", "team"): [{"id": 7, "full_name": "Дилшод Менеджеров"}],
+            ("GET", "team"): [
+                {"id": 7, "full_name": "Дилшод Менеджеров", "initials": "ДМ", "position": None}
+            ],
             ("GET", "kb/products"): [
                 {"key": "rails", "name": "Рельсы", "description": None, "is_active": True}
             ],

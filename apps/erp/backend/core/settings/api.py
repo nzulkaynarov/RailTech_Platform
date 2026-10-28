@@ -163,6 +163,11 @@ SPECTACULAR_SETTINGS = {
         "BrigadeKindEnum": ["brigade", "person", "subcontractor"],
         "TechDocKindEnum": ["tz", "drawing", "certificate", "pnr", "other"],
         "CrewRateUnitEnum": ["day", "hour"],
+        # D2-1 «Расчёт по заявке» (crm.serializers.calc): наборы значений с явными именами.
+        "CalcVisaStateEnum": "crm.serializers.calc.VISA_STATES",
+        "CalcStateEnum": "crm.serializers.calc.CALC_STATES",
+        "CalcLineKindEnum": "crm.serializers.calc.LINE_KINDS",
+        "CalcItemKindEnum": "crm.serializers.calc.ITEM_KINDS",
     },
     "TAGS": [
         {"name": "Auth", "description": "Login, password setup by invitation, JWT tokens"},

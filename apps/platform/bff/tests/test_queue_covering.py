@@ -68,6 +68,8 @@ async def test_deputy_sees_the_absent_colleague_queue_marked(
     assert sorted(i["object"]["number"] for i in behalf) == ["L-2060", "L-2071"]
     assert all(i["on_behalf_of"] == {"id": "12", "name": "Мадина Р."} for i in behalf)
     assert all(i["kind"] == "answer_lead" for i in behalf)
+    # строки «ждут ответа» ведут в диалог «Ждут ответа», а не в карточку лида (D1-6)
+    assert all(i["object"]["path"] == f"/crm/messages?lead={i['object']['number']}" for i in items)
     assert len({i["id"] for i in items}) == len(items)  # ключи строк не пересекаются
     # В CRM ушёл именно запрос за коллегу, под токеном заместителя.
     assert fb.crm["inbox"].calls.last.request.url.params["on_behalf_of"] == "12"

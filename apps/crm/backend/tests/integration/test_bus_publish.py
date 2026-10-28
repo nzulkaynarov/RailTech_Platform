@@ -454,7 +454,7 @@ async def test_user_created_updated_deactivated(
         "platform_roles": [],
         "systems": ["crm"],
         "erp_role_codes": [],
-        "permissions": {"eds": []},
+        "permissions": {"eds": [], "sections": {}},
         "updated_at": user["updated_at"],
     }
     assert "password" not in str(created["envelope"]), "секретов в событии нет"

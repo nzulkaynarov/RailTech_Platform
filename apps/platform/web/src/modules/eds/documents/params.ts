@@ -1,11 +1,22 @@
 import { useQueryClient } from "@tanstack/react-query";
 
-/** Сброс кэша всех запросов документов EDS после действия: списки и открытая карточка перечитываются. */
+/**
+ * Сброс кэша всех запросов документов EDS после действия: списки и открытая карточка перечитываются. Вместе с ними — «Моя очередь»
+ * и бейджи меню: отправленный на согласование документ перестаёт быть делом автора («Доработать», D1-6b), не дожидаясь подсказки
+ * потока или опроса.
+ */
 export function useRefreshDocuments(): () => void {
   const queryClient = useQueryClient();
   return () => {
     void queryClient.invalidateQueries({
-      predicate: (query) => String(query.queryKey[0]).startsWith("/api/v1/eds/documents"),
+      predicate: (query) => {
+        const key = String(query.queryKey[0]);
+        return (
+          key.startsWith("/api/v1/eds/documents") ||
+          key === "/api/v1/menu-counters" ||
+          key.startsWith("/api/v1/queue")
+        );
+      },
     });
   };
 }

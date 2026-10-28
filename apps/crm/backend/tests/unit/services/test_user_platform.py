@@ -12,10 +12,10 @@ from tests.platform_role_data import make_role
 
 
 def test_chosen_roles_compute_crm_role_and_access_without_erp_role_codes() -> None:
-    chosen = [make_role("DIRECTOR"), make_role("ACCOUNTANT")]
+    chosen = [make_role("DIRECTOR"), make_role("MANAGER")]
     patch = resolve_patch([], chosen, UserPatch())
 
-    assert patch.roles == ["manager"]  # manager > viewer: бухгалтер был manager и до R-1
+    assert patch.roles == ["manager"]  # manager > viewer; бухгалтер без crm.leads — viewer (D1-8)
     assert patch.platform_access == ["crm", "erp"]
     assert patch.erp_role_codes == []  # права ERP — вычисленный набор, не системные роли
 

@@ -9,6 +9,7 @@ from rt_bus.fastapi import bus_router
 
 from app import __version__
 from app.api import (
+    about,
     admin_audit,
     admin_bot,
     admin_bus,
@@ -27,6 +28,7 @@ from app.api import (
     eds_letters,
     erp_catalog,
     erp_docs,
+    erp_calc,
     events,
     health,
     me,
@@ -93,6 +95,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.add_middleware(ClientIpMiddleware, networks=cfg.trusted_proxy_networks)
     install_error_handlers(app)
     app.include_router(health.router, prefix=API_PREFIX)
+    app.include_router(about.router, prefix=API_PREFIX)
     app.include_router(auth.router, prefix=API_PREFIX)
     app.include_router(me.router, prefix=API_PREFIX)
     app.include_router(bridge.router, prefix=API_PREFIX)
@@ -115,6 +118,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(eds_approvals.router, prefix=API_PREFIX)
     app.include_router(erp_catalog.router, prefix=API_PREFIX)
     app.include_router(erp_docs.router, prefix=API_PREFIX)
+    app.include_router(erp_calc.router, prefix=API_PREFIX)
     app.include_router(dashboard.router, prefix=API_PREFIX)
     app.include_router(notifications.router, prefix=API_PREFIX)
     app.include_router(search.router, prefix=API_PREFIX)

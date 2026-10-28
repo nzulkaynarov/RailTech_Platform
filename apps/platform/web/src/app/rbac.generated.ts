@@ -313,6 +313,10 @@ export const QUEUE = {
     resource: "eds.memo.approve",
     level: "full",
   },
+  rework_document: {
+    resource: "eds.memo.create",
+    level: "full",
+  },
   problem_project: {
     resource: "eds.projects",
     level: "full",
@@ -491,7 +495,7 @@ export const TEMPLATES = {
       "chats.internal": "full",
       "chats.external": "full",
     },
-    restricted_fields: ["supplier_prices", "totals_only"],
+    restricted_fields: ["totals_only"],
   },
 } satisfies Record<string, CatalogRole>;
 

@@ -43,6 +43,9 @@ class UserView:
     deputy_to: date | None = None
     # Приветствие и тур первого входа закрыты (W15-H7); у существующих сотрудников — сразу True.
     onboarding_done: bool = True
+    # «Что нового» (W-REL): до какой записи показано окно и открыт раздел; None — ничего.
+    whats_new_shown: str | None = None
+    whats_new_read: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -107,6 +110,8 @@ def view_of(
         deputy_from=user.deputy_from,
         deputy_to=user.deputy_to,
         onboarding_done=user.onboarding_done_at is not None,
+        whats_new_shown=user.whats_new_shown,
+        whats_new_read=user.whats_new_read,
     )
 
 

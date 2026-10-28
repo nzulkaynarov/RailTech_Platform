@@ -4,6 +4,8 @@
 Повторы — Procrastinate; итог и ошибки пишет `ErpAccessService` (ленту внешних сервисов, ADR-0024).
 """
 
+from procrastinate.exceptions import AlreadyEnqueued
+
 from app.container import get_container
 from app.tasks.erp_retry import ErpRetryStrategy
 from app.tasks.queue import queue
@@ -27,8 +29,20 @@ async def erp_revoke_sessions(user_id: int) -> str:
     return outcome
 
 
-async def enqueue_erp_sync(action: str, user_id: int) -> int:
-    """Поставить задачу по решению `domain.erp_sync.sync_action`; возвращает id задания."""
+def queue_lock(action: str, user_id: int) -> str:
+    """Одна ждущая задача на сотрудника и действие: задача читает состояние в момент выполнения,
+    вторая такая же в очереди ничего не добавит (массовый провижининг по отпечатку, D2-1)."""
+    return f"erp_user_q:{action}:{user_id}"
+
+
+async def enqueue_erp_sync(action: str, user_id: int) -> int | None:
+    """Поставить задачу по решению `domain.erp_sync.sync_action`; id задания или `None` — такая
+    же уже ждёт в очереди."""
     task = erp_provision_user if action == "provision" else erp_revoke_sessions
-    job_id: int = await task.configure(lock=user_lock(user_id)).defer_async(user_id=user_id)
+    try:
+        job_id: int = await task.configure(
+            lock=user_lock(user_id), queueing_lock=queue_lock(action, user_id)
+        ).defer_async(user_id=user_id)
+    except AlreadyEnqueued:
+        return None
     return job_id

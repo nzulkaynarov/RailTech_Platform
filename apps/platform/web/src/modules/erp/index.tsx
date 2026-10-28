@@ -3,16 +3,33 @@ import { useLocation } from "react-router";
 import { RequireAccess } from "../../app/RequireAccess";
 import { ModuleRoutes } from "../ModuleRoutes";
 import { matchSection } from "../registry";
+import { CalcScreen } from "./calc/CalcScreen";
+import { RequestsScreen } from "./calc/RequestsScreen";
 import { CatalogScreen } from "./catalog/CatalogScreen";
 import { DocsScreen } from "./docs/DocsScreen";
 
 /**
- * Модуль ERP («Расчёт»). «Номенклатура и поставщики» и «Техдокументация» (D2-3) — настоящие экраны; остальные разделы
- * пока заглушки каркаса.
+ * Модуль «Расчёт» (ERP). «Заявки в расчёте» и «Мои расчёты» — список заданий на расчёт, карточка `/erp/calc/ЗВ-…` (и
+ * `/erp/requests/ЗВ-…`) — расчёт по заявке (D2-1, SPEC-v3 §7.4); «Номенклатура и поставщики» и «Техдокументация» (D2-3) —
+ * настоящие экраны; склад — заглушка каркаса до D2-2.
  */
 export function Component() {
   const location = useLocation();
   const match = matchSection(location.pathname, location.search);
+  if (
+    match?.module.code === "erp" &&
+    (match.section.key === "requests" || match.section.key === "calc")
+  ) {
+    return (
+      <RequireAccess rule={match.section.access}>
+        {match.objectId ? (
+          <CalcScreen number={match.objectId} />
+        ) : (
+          <RequestsScreen mine={match.section.key === "calc"} />
+        )}
+      </RequireAccess>
+    );
+  }
   if (match?.module.code === "erp" && match.section.key === "catalog") {
     return (
       <RequireAccess rule={match.section.access}>

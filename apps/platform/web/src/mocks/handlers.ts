@@ -5,6 +5,7 @@ import {
   getRailTechPlatformBFFAPICRMERPMock,
 } from "../shared/api/generated/platform-bff.msw";
 import type { ChangePasswordIn, LoginIn, MeUpdate } from "../shared/api/generated/model";
+import { aboutHandlers } from "./aboutHandlers";
 import { adminAuditHandlers } from "./adminAudit";
 import { adminBusHandlers } from "./adminBus";
 import { adminIntegrationsHandlers } from "./adminIntegrations";
@@ -16,6 +17,7 @@ import { edsApprovalsHandlers } from "./edsApprovals";
 import { erpCatalogHandlers } from "./erpCatalog";
 import { bridgeHandlers } from "./bridgeHandlers";
 import { edsLettersHandlers } from "./edsLetters";
+import { erpCalcHandlers } from "./erpCalc";
 import { adminUsersHandlers } from "./adminUsers";
 import { edsDocumentsHandlers } from "./edsDocuments";
 import { eventStreamHandlers } from "./eventStream";
@@ -144,6 +146,7 @@ export const handlers = [
   }),
 
   ...profileHandlers,
+  ...aboutHandlers,
   ...adminUsersHandlers,
   ...adminAuditHandlers,
   ...adminRolesHandlers,
@@ -159,6 +162,7 @@ export const handlers = [
   ...edsLettersHandlers,
   ...edsApprovalsHandlers,
   ...erpCatalogHandlers,
+  ...erpCalcHandlers,
 
   getGetHealthMockHandler({
     status: "ok",

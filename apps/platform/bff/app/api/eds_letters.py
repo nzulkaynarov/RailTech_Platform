@@ -8,9 +8,10 @@ EDS (и бизнес-правила шины ERP). Здесь — доступ �
 
 Кандидаты в исполнители — по **разделам каталога**, а не по кодам ролей (CONVENTIONS.md §2 п. 6):
 зона «товары» — `erp.calc.goods`, «услуги» — `erp.calc.services`, «условия оплаты» —
-`eds.payments`; сотрудников и матрицы ролей BFF читает в CRM (`admin` не ниже чтения). Роли без
-доступа к справочнику получают пустой выбор и `directory = forbidden` — разрыв бэкенда записан в
-`docs/QUESTIONS.md`.
+`eds.payments`. Выбор делает CRM (`GET /team?section=&level=full`, D1-8, B-007): он владеет людьми и
+матрицами ролей; BFF матрицы не сводит. Право на операцию — чтение сотрудников (`admin` не ниже
+чтения): без него выбор пуст и `directory = forbidden`. Зону исполнителя проверяет и EDS при
+резолюции (`assignee_zone_mismatch`).
 """
 
 import asyncio
@@ -32,7 +33,6 @@ from app.errors import PlatformError
 from app.feeds.feed import Feed
 from app.rbac import strip_restricted
 from app.rbac_generated import RESOURCE_MODULE
-from app.schemas import initials_of
 from app.schemas_eds_letters import (
     NUMBER_RE,
     UUID_RE,
@@ -192,12 +192,14 @@ async def reject_letter(id: LetterId, body: LetterRejectIn, authed: Resolver) ->
 # --- кандидаты в исполнители ---------------------------------------------------------------------
 
 
-async def _directory(
-    authed: Authed, path: str
+async def _zone_team(
+    authed: Authed, zone: LetterZone
 ) -> list[dict[str, Any]] | Literal["forbidden", "unavailable"]:
-    """Справочник CRM (`/users`, `/platform-roles`): список, либо причина, почему его нет."""
+    """Сотрудники зоны из CRM (`GET /team?section=&level=full`): список или причина отказа."""
     try:
-        response = await authed.call("crm", "GET", path)
+        response = await authed.call(
+            "crm", "GET", "/api/v1/team", params={"section": ZONE_SECTION[zone], "level": "full"}
+        )
     except PlatformError as exc:
         if exc.status_code == 503:
             return "unavailable"
@@ -205,7 +207,7 @@ async def _directory(
     if response.status_code == 403:
         return "forbidden"
     if response.status_code != 200:
-        log.warning("resolution_directory_failed", path=path, status=response.status_code)
+        log.warning("resolution_team_failed", zone=zone, status=response.status_code)
         return "unavailable"
     try:
         body = response.json()
@@ -216,39 +218,24 @@ async def _directory(
     )
 
 
-def _has_full(role_access: dict[str, Any] | None, section: str) -> bool:
-    return isinstance(role_access, dict) and role_access.get(section) == "full"
-
-
-def _candidates(
-    users: list[dict[str, Any]], roles: list[dict[str, Any]], author_id: str
-) -> list[ResolutionZone]:
-    access_by_role = {int(r["id"]): r.get("access") for r in roles if isinstance(r.get("id"), int)}
-    zones: list[ResolutionZone] = []
-    for zone in ZONES:
-        section = ZONE_SECTION[zone]
-        found: list[ResolutionCandidate] = []
-        for user in users:
-            if user.get("is_active") is False or not isinstance(user.get("id"), int):
-                continue
-            if str(user["id"]) == author_id:
-                continue  # автор резолюции не исполнитель собственного задания (по id, не по роли)
-            role_ids = user.get("platform_role_ids") or []
-            if not any(_has_full(access_by_role.get(rid), section) for rid in role_ids):
-                continue
-            name = str(user.get("full_name") or "")
-            position = user.get("position")
-            found.append(
-                ResolutionCandidate(
-                    id=str(user["id"]),
-                    name=name,
-                    initials=initials_of(name, str(user.get("email") or "")),
-                    position=position if isinstance(position, str) and position else None,
-                )
+def _candidates(team: list[dict[str, Any]], author_id: str) -> list[ResolutionCandidate]:
+    found: list[ResolutionCandidate] = []
+    for member in team:
+        if not isinstance(member.get("id"), int) or str(member["id"]) == author_id:
+            continue  # автор резолюции не исполнитель собственного задания (по id, не по роли)
+        name = str(member.get("full_name") or "")
+        position = member.get("position")
+        initials = member.get("initials")  # считает CRM (`GET /team`), BFF своих не выдумывает
+        found.append(
+            ResolutionCandidate(
+                id=str(member["id"]),
+                name=name,
+                initials=initials if isinstance(initials, str) else "",
+                position=position if isinstance(position, str) and position else None,
             )
-        found.sort(key=lambda c: (c.name.casefold(), c.id))
-        zones.append(ResolutionZone(zone=zone, candidates=found))
-    return zones
+        )
+    found.sort(key=lambda c: (c.name.casefold(), c.id))
+    return found
 
 
 @router.get(
@@ -257,17 +244,18 @@ def _candidates(
     operation_id="listResolutionAssignees",
 )
 async def list_resolution_assignees(authed: Resolver) -> ResolutionAssignees:
-    users, roles = await asyncio.gather(
-        _directory(authed, "/api/v1/users"), _directory(authed, "/api/v1/platform-roles")
-    )
-    for failure in (users, roles):
+    teams = await asyncio.gather(*(_zone_team(authed, zone) for zone in ZONES))
+    for failure in teams:
         if isinstance(failure, str):
             return ResolutionAssignees(
                 zones=[ResolutionZone(zone=z, candidates=[]) for z in ZONES], directory=failure
             )
-    assert not isinstance(users, str)  # noqa: S101 — отказы разобраны выше
-    assert not isinstance(roles, str)  # noqa: S101
-    zones = _candidates(users, roles, str(authed.data.user_id))
+    author = str(authed.data.user_id)
+    zones = [
+        ResolutionZone(zone=zone, candidates=_candidates(team, author))
+        for zone, team in zip(ZONES, teams, strict=True)
+        if not isinstance(team, str)
+    ]
     return ResolutionAssignees(zones=zones, directory="ok")
 
 

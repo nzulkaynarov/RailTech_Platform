@@ -17,6 +17,7 @@ import asyncio
 import base64
 import hashlib
 import json
+import re
 from dataclasses import dataclass
 from typing import Any
 
@@ -255,6 +256,8 @@ class AuthService:
             position=profile.get("position") or None,
             avatar_version=_avatar_version(profile),
             onboarding_done=bool(profile.get("onboarding_done", True)),
+            whats_new_shown=_whats_new(profile, "whats_new_shown"),
+            whats_new_read=_whats_new(profile, "whats_new_read"),
             language=_language(profile),
             roles=roles,
             platform_access=access,
@@ -742,6 +745,15 @@ def roles_of(profile: dict[str, Any]) -> list[SessionRole]:
     return roles
 
 
+_WHATS_NEW = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def _whats_new(profile: dict[str, Any], key: str) -> str | None:
+    """Отметка «Что нового» из профиля CRM (W-REL): дата записи или None (нет поля, не дата)."""
+    value = profile.get(key)
+    return value if isinstance(value, str) and _WHATS_NEW.match(value) else None
+
+
 def _apply_profile(data: SessionData, profile: dict[str, Any]) -> None:
     roles = roles_of(profile)
     access = list(profile.get("platform_access") or ["crm"])
@@ -749,6 +761,8 @@ def _apply_profile(data: SessionData, profile: dict[str, Any]) -> None:
     data.position = profile.get("position") or None
     data.avatar_version = _avatar_version(profile)
     data.onboarding_done = bool(profile.get("onboarding_done", True))
+    data.whats_new_shown = _whats_new(profile, "whats_new_shown")
+    data.whats_new_read = _whats_new(profile, "whats_new_read")
     data.language = _language(profile)
     data.roles = roles
     data.platform_access = access

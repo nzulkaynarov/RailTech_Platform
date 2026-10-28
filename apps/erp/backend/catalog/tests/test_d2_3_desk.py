@@ -13,7 +13,6 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils import timezone
 from parties.models import CompanySettings
 
-from accounts.constants import ALL_PERMISSIONS
 from catalog.desk import tech_docs
 from catalog.models import Brigade, HSCode, Manufacturer, Product, TechDocument
 from catalog.tests.desk_world import build_world
@@ -22,9 +21,6 @@ from core.models import ExchangeRate
 pytestmark = pytest.mark.django_db
 
 PDF = b"%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n"
-zone_services = pytest.mark.skipif(
-    "quote.visa_services" not in ALL_PERMISSIONS, reason="зона услуг расчёта приходит с D2-1 (PR #289)"
-)
 
 
 @pytest.fixture
@@ -256,7 +252,6 @@ def test_brigade_rate_is_cut_by_erp_for_roles_without_the_right(world):
         assert row["rate"] == {"amount": "800000.00", "currency": "UZS", "unit": "day"} and row["rate_visible"] is True
 
 
-@zone_services
 def test_services_zone_holder_sees_and_edits_the_crew_rate(world):
     brigade = Brigade.objects.create(name="ПНР-группа", rate="1200000", currency=world["uzs"])
     row = get(world, "engineer", "catalog/brigades/").json()["results"][0]
