@@ -1,4 +1,4 @@
-"""EDS · Счета и оплаты бухгалтера (контракт: tag `eds-payments`, 0.25.0; D2-4).
+"""EDS · Счета и оплаты бухгалтера (контракт: tag `eds-payments`, 0.26.0; D2-4).
 
 Счета, платёжки клиентов и подтверждение оплаты — ERP (`/finance/receivables/*`, права
 `finance.invoice` и `finance.payment`

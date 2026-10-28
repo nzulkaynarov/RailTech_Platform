@@ -1,4 +1,4 @@
-"""Модели EDS · Счета и оплаты (контракт platform-bff.yaml 0.25.0, тег `eds-payments`; D2-4).
+"""Модели EDS · Счета и оплаты (контракт platform-bff.yaml 0.26.0, тег `eds-payments`; D2-4).
 
 Счета, платёжки и оплаты — ERP (`/api/v1/finance/receivables/*`), служебки к оплате — EDS
 (`/documents?status=to_accountant`,

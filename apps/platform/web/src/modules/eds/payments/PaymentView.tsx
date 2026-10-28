@@ -1,7 +1,7 @@
 import { Button, Card, Skeleton } from "antd";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate, useSearchParams } from "react-router";
+import { useLocation, useNavigate, useSearchParams } from "react-router";
 
 import { useAuth } from "../../../app/auth/useAuth";
 import { useViewport } from "../../../app/shell/useViewport";
@@ -244,6 +244,7 @@ export function PaymentView({ id }: { id: number }) {
 export function PaymentByNumber({ number }: { number: string }) {
   const { t } = useTranslation("payments");
   const navigate = useNavigate();
+  const { search } = useLocation();
   const [missing, setMissing] = useState(false);
   useEffect(() => {
     let cancelled = false;
@@ -251,7 +252,7 @@ export function PaymentByNumber({ number }: { number: string }) {
       .then((board) => {
         if (cancelled) return;
         const hit = board.items.find((row) => row.number === number);
-        if (hit) void navigate(invoicePath(hit.id), { replace: true });
+        if (hit) void navigate(`${invoicePath(hit.id)}${search}`, { replace: true });
         else setMissing(true);
       })
       .catch(() => {
@@ -260,7 +261,7 @@ export function PaymentByNumber({ number }: { number: string }) {
     return () => {
       cancelled = true;
     };
-  }, [number, navigate]);
+  }, [number, navigate, search]);
   if (missing) {
     return (
       <EmptyState

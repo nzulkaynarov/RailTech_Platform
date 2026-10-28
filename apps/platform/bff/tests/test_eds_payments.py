@@ -1,4 +1,4 @@
-"""EDS · Счета и оплаты бухгалтера (BFF 0.25.0, D2-4): `/eds/payments*`, `/eds/payment-memos*`.
+"""EDS · Счета и оплаты бухгалтера (BFF 0.26.0, D2-4): `/eds/payments*`, `/eds/payment-memos*`.
 
 ERP и EDS — на respx (`eds_payments_support`), ответы BFF сверяются со схемами platform-bff.yaml.
 Проверяется то, что делает BFF: разделы каталога (чтение — менеджер, действия — бухгалтер;

@@ -363,6 +363,19 @@ describe("Карточка счёта", () => {
     );
   });
 
+  it("ссылка из очереди с номером и ?panel=open&tab=payment: карточка по id, боковое окно остаётся", async () => {
+    signIn("accountant@demo.example");
+    const { router } = renderAt(
+      `/eds/payments/${encodeURIComponent("СЧ-2026/142")}?panel=open&tab=payment`,
+    );
+
+    expect(await screen.findByRole("heading", { level: 1, name: "СЧ-2026/142" })).toBeVisible();
+    expect(router.state.location.pathname).toBe("/eds/payments/142");
+    expect(router.state.location.search).toBe("?panel=open&tab=payment");
+    const panel = await panelEl();
+    expect(await within(panel).findByRole("form", { name: "Подтверждение оплаты" })).toBeVisible();
+  });
+
   it("счёта нет: «Счёт не найден» и ссылка к списку", async () => {
     signIn("accountant@demo.example");
     renderAt("/eds/payments/999");
