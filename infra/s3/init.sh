@@ -16,8 +16,9 @@ log() { printf 's3-init: %s\n' "$*"; }
 die() { printf 's3-init: ОШИБКА: %s\n' "$*" >&2; exit 1; }
 
 # Сервисы и их доступ. Бакеты: erp-* — файлы ERP; kb-sources, client-documents, tg-attachments — CRM; eds-private — EDS; langfuse — события и
-# медиа Langfuse; wal — архив WAL-G (VPS 2); backups — ежедневные дампы (VPS 2 пишет, CRM читает статус бэкапа).
-SERVICES="erp crm eds langfuse wal backup"
+# медиа Langfuse; wal — архив WAL-G (VPS 2); backups — ежедневные дампы (VPS 2 пишет, CRM читает статус бэкапа); offsite — внешняя копия
+# архива на Google Drive (offsite-backup на VPS 1, OPS-GDRIVE): читает wal, пишет только свою отметку status.json в бакет offsite.
+SERVICES="erp crm eds langfuse wal backup offsite"
 rw_of() {
   case "$1" in
     erp) echo "erp-private erp-public erp-temp" ;;
@@ -26,11 +27,15 @@ rw_of() {
     langfuse) echo "langfuse" ;;
     wal) echo "wal" ;;
     backup) echo "backups" ;;
+    offsite) echo "offsite" ;;
   esac
 }
 ro_of() {
   case "$1" in
-    crm) echo "backups" ;; # статус бэкапа в «Центре внешних сервисов»: только чтение
+    # статус бэкапа в «Центре внешних сервисов» и отметка внешней копии (status.json) для «Состояния системы»: только чтение
+    crm) echo "backups offsite" ;;
+    # копирует уже зашифрованные WAL-G объекты на Drive: чтение, без записи и удаления в архиве
+    offsite) echo "wal" ;;
     *) echo "" ;;
   esac
 }

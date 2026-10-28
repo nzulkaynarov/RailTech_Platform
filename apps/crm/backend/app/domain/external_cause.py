@@ -86,7 +86,9 @@ _SEVERITY: Final[dict[State, int]] = {
     "ok": 7,
 }
 #: Причины «ещё не подключено»: слово «Не настроено», а не «Сломано».
-NOT_CONFIGURED: Final = frozenset({"no_token", "not_configured", "erp_not_connected"})
+NOT_CONFIGURED: Final = frozenset(
+    {"no_token", "not_configured", "erp_not_connected", "offsite_not_configured"}
+)
 #: Причины «так задумано»: выключено намеренно (настройкой сервера или вручную).
 INTENTIONAL: Final = frozenset({"intentional", "disabled_manual"})
 #: Причины, у которых корень общий для нескольких сервисов: ключ группы — по области, не по сервису.
@@ -144,6 +146,11 @@ ROUTES: Final[dict[str, Route]] = {
     "bus_dlq": Route("admin", "open_bus", ("recheck",)),
     # Права EDS не ушли на шину (B-005): проверка повторяет публикацию сама, шину чинит хостинг.
     "eds_rights": _HOSTING,
+    # Внешняя копия на Google Drive (OPS-GDRIVE): ключ сервисного аккаунта, папка общего диска и
+    # место на нём — у владельца компании; сеть и сервис копирования — у хостинга (server_down).
+    "offsite_not_configured": Route("owner", "write_owner"),
+    "offsite_access": Route("owner", "write_owner", ("recheck",)),
+    "offsite_quota": Route("owner", "write_owner", ("recheck",)),
     "checks_stale": _HOSTING,
     "ai_unavailable": Route("admin", "recheck", ("open_settings",)),
     "flapping": Route(None, "recheck"),

@@ -505,6 +505,33 @@ async def test_raw_bot_and_backup_errors_go_to_technical_not_detail(
     assert (backup["detail"], backup["technical"]) == (None, "bucket_missing")
 
 
+async def test_offsite_copy_failure_reddens_the_storage_card_and_not_configured_does_not(
+    web: Web, crm: CrmIntegrationsFake, check: ContractChecker
+) -> None:
+    """OPS-GDRIVE: внешняя копия на Google Drive — часть «Хранилища»; «не настроено» — не сбой."""
+    offsite = service("offsite_backup", "fail", state="broken", action="write_owner")
+    crm.answer(
+        "GET",
+        "admin/external-services",
+        200,
+        services_out(
+            [offsite], [group("offsite_backup", "broken", action="write_owner", owner="owner")]
+        ),
+    )
+    crm.answer("GET", "system/backups", 200, backups())
+    await web.login(["ADMIN"])
+
+    response = await web.client.get(URL)
+
+    check(response, "/admin/integrations", "get")
+    assert cards(response.json())["storage"]["status"] == "fail"
+
+    idle = service("offsite_backup", "off", state="not_configured", action="write_owner")
+    crm.answer("GET", "admin/external-services", 200, services_out([idle], []))
+    response = await web.client.get(URL)
+    assert cards(response.json())["storage"]["status"] != "fail"
+
+
 async def test_wal_archive_is_on_the_storage_card_and_the_bus_row_keeps_its_action(
     web: Web, crm: CrmIntegrationsFake, check: ContractChecker
 ) -> None:

@@ -67,10 +67,10 @@ req="$(grep -nE '^require_env_file$' "$deploy" | head -1 | cut -d: -f1)"
 
 # 2. Политика CRM на бакет wal — только СПИСОК (имена и время сегментов), без чтения и записи объектов.
 grep -qE '^    crm\) echo "wal" ;;' "$init" || fail "init.sh: CRM должен видеть список бакета wal (ls_of)"
-grep -qE '^    crm\) echo "backups" ;;' "$init" || fail "init.sh: ro-бакет CRM: только backups"
+grep -qE '^    crm\) echo "backups offsite" ;;$' "$init" || fail "init.sh: ro-бакеты CRM: только backups и offsite (отметка внешней копии)"
 grep -qE '^    crm\) echo "kb-sources client-documents tg-attachments" ;;$' "$init" || fail "init.sh: rw-бакеты CRM изменились"
 fn="$(sed -n '/^policy_json() {/,/^}/p' "$init")"
-pol="$(bash -c "$fn; policy_json 'kb-sources client-documents tg-attachments' 'backups' 'wal'")"
+pol="$(bash -c "$fn; policy_json 'kb-sources client-documents tg-attachments' 'backups offsite' 'wal'")"
 jq -e '[.Statement[] | select(.Action | index("s3:ListBucket")) | .Resource[]] | index("arn:aws:s3:::wal")' <<<"$pol" >/dev/null \
   || fail "политика CRM: список бакета wal недоступен"
 [[ "$(jq -r '[.Statement[] | .Resource[] | select(test("wal"))] | length' <<<"$pol")" == 1 ]] \

@@ -28,7 +28,8 @@
 - [x] Сообщить **внутренние IP** обоих VPS (для `pg_hba` и `DATABASE_URL`).
 - [x] SSH-доступ: публичный ключ деплоя на оба хоста, пользователь с правом `docker` (или root на время установки).
 - [x] DNS: A-записи `crm.`, `erp.`, `cabinet.railtech.uz` → 176.101.56.141.
-- [ ] Внешнее хранилище для недельных копий бэкапов базы (S3-совместимое или второй провайдер) — какое.
+- [x] Внешнее хранилище для копий бэкапов базы — корпоративный Google Drive (решение 2026-10-28, OPS-GDRIVE).
+- [ ] Включить внешнюю копию на Google Drive: сервисный аккаунт, роль «Менеджер контента» в папке общего диска, ключ на VPS 1, ID папки — `docs/runbooks/offsite-gdrive.md`, раздел 1 (≈ 20 минут); проверка — строка «Внешняя копия бэкапов» в Admin → Подключения «В порядке».
 - [x] GitHub environment `production` (M5-INF-01, `docs/runbooks/deploy.md` §1.4; включить Required reviewers): секреты `DEPLOY_SSH_KEY` (приватный ключ деплоя) и `DEPLOY_KNOWN_HOSTS` (`ssh-keyscan` VPS 1, отпечаток сверить); переменные `DEPLOY_HOST`, `DEPLOY_USER`, `CRM_DOMAIN`, `ERP_DOMAIN`, `CABINET_DOMAIN`, `TELEGRAM_BOT_USERNAME`.
 - [x] Секреты приложений (пароли баз, токены сервисов, `PLATFORM_SSO_SECRET`, `WEBHOOK_SECRET`, токен бота, ключи моделей, SMTP) — **не в GitHub**, а в `/opt/rt/.env.prod` на VPS 1 (`infra/deploy/make-env-prod.sh init` генерирует случайные; вписать вручную: ключи моделей, `TELEGRAM_BOT_TOKEN`, SMTP, адреса). Сохранить офлайн копию файлов, `BACKUP_ENC_PASSPHRASE` и `LITELLM_SALT_KEY`.
 - [x] Открыть на файрволе VPS 1 порт `9000` только для внутреннего IP VPS 2 (выгрузка бэкапов в RustFS) — runbook §1.1.
