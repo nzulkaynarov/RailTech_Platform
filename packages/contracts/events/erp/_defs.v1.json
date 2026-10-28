@@ -296,6 +296,49 @@
       },
       "additionalProperties": false
     },
+    "ContractStatusChanged": {
+      "type": "object",
+      "description": "Договор сменил статус по SPEC-v3 §2.4 (D2-5). Договор подписывают вне платформы (у оператора ЭДО): в ERP фиксируются статусы и скан. `project` — проект (флаг `sent_to_client` — ушёл ли клиенту на согласование редакции), `client_agreed` — согласован клиентом, `issued_at_operator` — выставлен у оператора, `signed` — подписан (прикреплён скан), `rejected` — отклонён клиентом, `cancelled` — отменён. Событие порождает каждый переход и создание проекта договора.",
+      "required": [
+        "erp_contract_id",
+        "number",
+        "status",
+        "sent_to_client"
+      ],
+      "properties": {
+        "erp_contract_id": {
+          "type": "integer"
+        },
+        "number": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "project",
+            "client_agreed",
+            "issued_at_operator",
+            "signed",
+            "rejected",
+            "cancelled"
+          ]
+        },
+        "sent_to_client": {
+          "type": "boolean"
+        },
+        "amount": {
+          "$ref": "#/$defs/Amount"
+        },
+        "currency": {
+          "$ref": "#/$defs/Currency"
+        },
+        "reason": {
+          "type": "string",
+          "description": "Причина отклонения клиентом (для `rejected`)"
+        }
+      },
+      "additionalProperties": false
+    },
     "InvoiceEvent": {
       "type": "object",
       "required": [

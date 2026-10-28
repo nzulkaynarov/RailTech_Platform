@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.25.0
+  version: 0.26.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -134,6 +134,23 @@ info:
     привязан ли, подписки, последняя неудача доставки, пробное сообщение). Журнал и журнал роли — раздел `admin` от чтения
     (директор читает), сброс пароля — `admin: full`; профиль доступен каждому вошедшему. Секреты из записей журнала BFF вырезает
     (значения полей `password`, `secret`, `token`, `key`, `*_key`, `credentials`, `authorization`, `pin` и им подобных -> `***` целиком, любого типа).
+
+    **0.26.0 (D2-5) — EDS · Проекты: договор, акт, сканы.** Добавляющее изменение, тег `eds-projects`: `GET /eds/projects` (список:
+    ПР-номер, клиент, шаг пути, статус для клиента, документы КП · Договор · Счёт · Акт, срок, ответственный; фильтры «мои», «с
+    проблемами», шаг, поиск), `GET /eds/projects/{ref}` (карточка по номеру `ПР-2026-104` или id сделки: документы с историей и
+    действиями, доступными сотруднику, исполнение из ERP — только чтение, журнал), `POST /eds/projects/{ref}/contract/draft`
+    («Сформировать проект договора» из принятого КП), `POST /eds/projects/{ref}/contract` (действия: «На согласование клиенту»,
+    «Согласован клиентом», «Отклонён клиентом» с причиной, «Вернуть в проект», «Выставлен у оператора»),
+    `POST /eds/projects/{ref}/contract/scan` и `…/act/scan` («Прикрепить скан» → договор и акт «Подписан»; multipart до 20 МБ, BFF не
+    разбирает, ERP проверяет тип и сигнатуру), `POST /eds/projects/{ref}/act` («Выпустить акт», «Возвращён заказчиком» с причиной,
+    «Выпустить заново»), `GET /eds/projects/{ref}/files/{kind}/{doc_id}` (PDF или скан потоком). Подписи кликом в Платформе нет: договор
+    подписывают вне платформы (у оператора ЭДО), статусы — SPEC-v3 §2.4. Раздел `eds.projects`: чтение — менеджер, снабженец,
+    гл. инженер; действия — директор и бухгалтер. Источник один — ERP (`GET /crm/projects/`, `crm/contracts/*`, `crm/acts/*`) с токеном
+    сотрудника; право (`contract.manage`, `contract.sign`, `fulfillment.act`), допустимый переход и скан проверяет ERP, id документа BFF
+    берёт из карточки проекта, а не из запроса. Ошибки ERP — в формате `Error`: 409 `CONFLICT` (`details.reason` =
+    `contract_transition_not_allowed`, `act_sign_not_allowed`…), 422 `VALIDATION_FAILED` (`reason_required`, `scan_invalid`,
+    `scan_required`; `details.fields`), 413 `PAYLOAD_TOO_LARGE`. `EdsRegistryKind` дополнен `contract`, `invoice`, `act` (реестр «Все документы»
+    показывает проекцию ERP, EDS 0.5.0), `EdsDocumentRow.project_ref` — id сделки для ссылки на карточку проекта.
 
     **0.25.0 (W15-H7) — помощь, первый вход и обращения к администратору.** Добавляющее изменение (тег `tickets`). **Обращения
     сотрудников** (домен CRM, ADR-0015): `POST /tickets` (тема из списка `access|notification|template|error|other`, текст,
@@ -291,6 +308,8 @@ tags:
     description: Admin · Настройки бота — разделы настроек CRM, шаблоны ответов, выгрузки CSV (прокси к CRM; раздел `admin`)
   - name: eds-approvals
     description: EDS · КП на одобрение и документы на согласовании — списки, карточки, решения директора (сервис EDS, ERP для состава КП; разделы `eds.drafts`, `eds.memo.approve`)
+  - name: eds-projects
+    description: EDS · Проекты — список и карточка проекта, договор (статусы вместо подписи кликом), акт, сканы, файлы (ERP; раздел `eds.projects`)
   - name: letters
     description: EDS · Входящие письма — список, карточка, резолюция директора, возврат менеджеру, отказ, вложения (сервис EDS; раздел `eds.inbox`)
   - name: tickets
@@ -1711,6 +1730,312 @@ paths:
           $ref: '#/components/responses/EdsConflict'
         '422':
           $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /eds/projects:
+    get:
+      tags: [eds-projects]
+      operationId: listEdsProjects
+      summary: 'EDS · Все проекты: список'
+      description: >-
+        ERP `GET /crm/projects/`. Проект — сделка от принятия КП клиентом. Шаг, статус для клиента и «проблемы» выводит ERP из
+        документов. `q` — название, клиент, номер КП, договора, счёта или акта; номер `ПР-…` или `ЗВ-…` ищет точно. `mine` — где
+        сотрудник менеджер или ведёт проект; `problems` — договор отклонён, акт возвращён, счёт просрочен. Порядок — от новых;
+        страница — `limit`/`offset`. Раздел `eds.projects` — чтение. ERP не ответил — 503 `BACKEND_UNAVAILABLE`.
+      parameters:
+        - {name: mine, in: query, required: false, schema: {type: boolean, default: false}}
+        - {name: problems, in: query, required: false, schema: {type: boolean, default: false}}
+        - name: step
+          in: query
+          required: false
+          schema: {$ref: '#/components/schemas/ProjectStage'}
+        - {name: q, in: query, required: false, schema: {type: string, maxLength: 100}}
+        - {name: limit, in: query, required: false, schema: {type: integer, minimum: 1, maximum: 100, default: 25}}
+        - {name: offset, in: query, required: false, schema: {type: integer, minimum: 0, maximum: 100000, default: 0}}
+      responses:
+        '200':
+          description: Страница проектов
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectPage'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /eds/projects/{ref}:
+    get:
+      tags: [eds-projects]
+      operationId: getEdsProject
+      summary: 'EDS · Карточка проекта'
+      description: >-
+        ERP `GET /crm/projects/{id}/`. Документы проекта КП · Договор · Счета · Акт с историей (кто, когда, что, причина) и
+        действиями, **доступными этому сотруднику сейчас** (`actions`, `can_create_contract`, `act_blocker` считает ERP по статусу и
+        правам роли), исполнение (отгрузка и строки поставки — только чтение) и журнал. Раздел `eds.projects` — чтение: менеджер,
+        снабженец и гл. инженер видят карточку без действий.
+      parameters:
+        - $ref: '#/components/parameters/ProjectRefPath'
+      responses:
+        '200':
+          description: Карточка проекта
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectCard'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /eds/projects/{ref}/contract/draft:
+    post:
+      tags: [eds-projects]
+      operationId: createEdsProjectContract
+      summary: 'EDS · Проект: сформировать проект договора из принятого КП'
+      description: >-
+        ERP `POST /crm/contracts/generate-from-quote/` с `send_to_client = false`: договор создаётся в статусе «Проект», клиенту
+        не виден; на согласование его отправляет «На согласование клиенту». Нужны право `contract.manage` и принятое КП, договора
+        ещё нет (иначе 409 `contract_exists`). Раздел `eds.projects` — полный. Ответ — обновлённая карточка.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/ProjectRefPath'
+      responses:
+        '201':
+          description: Проект договора сформирован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectCard'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/ProjectConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /eds/projects/{ref}/contract:
+    post:
+      tags: [eds-projects]
+      operationId: actEdsProjectContract
+      summary: 'EDS · Проект: действие по договору'
+      description: >-
+        Переход статуса договора SPEC-v3 §2.4 в ERP (`crm/contracts/{id}/<действие>/`). `send_to_client` — «На согласование клиенту»
+        (Проект → у клиента, договор появляется в кабинете); `client_agreed` — «Согласован клиентом» (клиент согласовал вне кабинета
+        или в нём); `reject` — «Отклонён клиентом», `reason` обязательна (422 в BFF до ERP); `revise` — вернуть отклонённый проект
+        в работу; `mark_issued` — «Выставлен у оператора» (ЭДО вне платформы; `note` — оператор или номер). Подготовку (`send_to_client`,
+        `client_agreed`, `reject`, `revise`) ERP разрешает с правом `contract.manage`, `mark_issued` — `contract.sign`; недопустимый
+        переход — 409 `contract_transition_not_allowed`. Раздел `eds.projects` — полный. Ответ — обновлённая карточка.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/ProjectRefPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectContractActionIn'
+      responses:
+        '200':
+          description: Статус договора изменён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectCard'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/ProjectConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /eds/projects/{ref}/contract/scan:
+    post:
+      tags: [eds-projects]
+      operationId: scanEdsProjectContract
+      summary: 'EDS · Проект: прикрепить скан подписанного договора → «Подписан»'
+      description: >-
+        ERP `POST /crm/contracts/{id}/attach-scan/` (multipart, поле `file`). BFF читает тело потоком до 20 МБ и поля формы, multipart не
+        разбирает. ERP проверяет тип (PDF, jpg, png, webp) и сигнатуру байтов: не тот файл — 422 `scan_invalid`, нет файла —
+        `scan_required`. Договор должен быть «Выставлен у оператора» (иначе 409 `contract_transition_not_allowed`); после скана он
+        «Подписан», сделка закрывается как выигранная, ERP создаёт черновик счёта на предоплату. Право `contract.sign`. Раздел `eds.projects` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/ProjectRefPath'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ProjectScanUpload'
+      responses:
+        '200':
+          description: Скан прикреплён, договор подписан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectCard'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/ProjectConflict'
+        '413':
+          $ref: '#/components/responses/ProjectPayloadTooLarge'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /eds/projects/{ref}/act:
+    post:
+      tags: [eds-projects]
+      operationId: actEdsProjectAct
+      summary: 'EDS · Проект: действие по акту'
+      description: >-
+        `issue` — выпустить акт по самому свежему выставленному счёту проекта (ERP `POST /crm/invoices/{id}/generate-act/`; счёта нет —
+        409 `no_invoice`, акт уже есть — 409 `act_already_exists`); `return` — записать возврат акта заказчиком (ERP
+        `POST /crm/acts/{id}/record-return/`, `reason` обязательна — 422 в BFF до ERP); `reissue` — выпустить возвращённый акт заново.
+        Право `fulfillment.act`. Раздел `eds.projects` — полный. Ответ — обновлённая карточка.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/ProjectRefPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectActActionIn'
+      responses:
+        '200':
+          description: Акт выпущен, возвращён или выпущен заново
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectCard'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/ProjectConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /eds/projects/{ref}/act/scan:
+    post:
+      tags: [eds-projects]
+      operationId: scanEdsProjectAct
+      summary: 'EDS · Проект: прикрепить скан подписанного акта → «Подписан»'
+      description: >-
+        ERP `POST /crm/acts/{id}/attach-scan/` (multipart, поле `file`, до 20 МБ; тип и сигнатуру проверяет ERP). Акт должен быть
+        «Выпущен» (иначе 409 `act_sign_not_allowed`). Когда акт подписан и все счета оплачены, проект «Выполнено». Право `fulfillment.act`.
+        Раздел `eds.projects` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/ProjectRefPath'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ProjectScanUpload'
+      responses:
+        '200':
+          description: Скан прикреплён, акт подписан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectCard'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/ProjectConflict'
+        '413':
+          $ref: '#/components/responses/ProjectPayloadTooLarge'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /eds/projects/{ref}/files/{kind}/{doc_id}:
+    get:
+      tags: [eds-projects]
+      operationId: downloadEdsProjectFile
+      summary: 'EDS · Проект: файл документа (PDF или скан)'
+      description: >-
+        Файл договора, счёта или акта потоком (ERP `download-pdf`, `download-signed`). Документ обязан быть в карточке этого проекта
+        (иначе 404). `variant = pdf` — наш PDF, `scan` — подписанный скан (есть у договора и акта); скан всегда скачивается
+        (`attachment`), тип не доверяется. PDF ещё готовится — 202 с `Retry-After`. Раздел `eds.projects` — чтение.
+      parameters:
+        - $ref: '#/components/parameters/ProjectRefPath'
+        - name: kind
+          in: path
+          required: true
+          schema: {type: string, enum: [contract, invoice, act]}
+        - name: doc_id
+          in: path
+          required: true
+          schema: {type: integer, minimum: 1}
+        - name: variant
+          in: query
+          required: false
+          schema: {type: string, enum: [pdf, scan], default: pdf}
+      responses:
+        '200':
+          description: Содержимое файла
+          content:
+            application/pdf:
+              schema: {type: string, format: binary}
+            application/octet-stream:
+              schema: {type: string, format: binary}
+        '202':
+          description: PDF ещё готовится — повторите через `retry_after` секунд
+          headers:
+            Retry-After:
+              schema: {type: integer}
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectFileGenerating'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '503':
           $ref: '#/components/responses/BackendUnavailable'
 
@@ -6571,6 +6896,15 @@ components:
         type: string
         format: uuid
 
+    ProjectRefPath:
+      name: ref
+      in: path
+      required: true
+      description: Номер проекта `ПР-2026-104` (или заявки `ЗВ-2026-104`) либо id сделки ERP цифрами; год номера сверяется с годом создания сделки
+      schema:
+        type: string
+        minLength: 1
+        maxLength: 64
     ApprovalIdPath:
       name: id
       in: path
@@ -6719,6 +7053,21 @@ components:
       description: >-
         409 `CONFLICT` — письмо уже не ждёт резолюции (решил другой директор, вернули, отклонили): `details.reason =
         invalid_state`; обновите карточку
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    ProjectConflict:
+      description: >-
+        409 `CONFLICT` — `details.reason`: `contract_transition_not_allowed` (договор сейчас в другом статусе),
+        `act_sign_not_allowed`, `act_already_exists`, `no_invoice`, `contract_exists`; обновите карточку
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    ProjectPayloadTooLarge:
+      description: '413 `PAYLOAD_TOO_LARGE` — скан больше 20 МБ (`details.max_bytes`)'
       content:
         application/json:
           schema:
@@ -9235,10 +9584,514 @@ components:
       type: string
       enum: [memo, application, report, letter_out]
       description: Служебная записка (СЗ), заявление (ЗЯ), отчёт (ОТ), письмо (ИСХ)
+    ProjectStage:
+      type: string
+      enum: [CONTRACT, PAYMENT, DONE]
+      description: Шаг пути заявки для проекта (SPEC-v3 §2.3 шаги 5–7)
+    ProjectScanUpload:
+      type: object
+      required: [file]
+      properties:
+        file:
+          type: string
+          format: binary
+          description: Скан подписанного документа — PDF, jpg, png или webp до 20 МБ
+    ProjectMoney:
+      type: object
+      properties:
+        amount:
+          pattern: '^-?\d+\.\d{2}$'
+          type: string
+        currency:
+          pattern: '^[A-Z]{3}$'
+          type: string
+      required: [amount, currency]
+      additionalProperties: false
+    ProjectPerson:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+      required: [id, name]
+      additionalProperties: false
+    ProjectQuoteRef:
+      type: object
+      properties:
+        id:
+          type: integer
+        number:
+          type: string
+        status:
+          const: accepted
+          type: string
+        version:
+          type: integer
+      required: [id, number, status, version]
+      additionalProperties: false
+    ProjectContractRef:
+      type: object
+      properties:
+        id:
+          type: integer
+        number:
+          type: string
+        status:
+          enum: [project, client_agreed, issued_at_operator, signed, rejected, cancelled]
+          type: string
+        sent_to_client:
+          description: 'Проект ушёл клиенту на согласование редакции и виден ему в кабинете'
+          type: boolean
+      required: [id, number, status, sent_to_client]
+      additionalProperties: false
+    ProjectInvoiceRef:
+      type: object
+      properties:
+        id:
+          type: integer
+        number:
+          type: string
+        status:
+          enum: [to_issue, issued, partial, paid, overdue, cancelled]
+          type: string
+        count:
+          description: 'Сколько не отменённых счетов у проекта'
+          type: integer
+      required: [id, number, status, count]
+      additionalProperties: false
+    ProjectActRef:
+      type: object
+      properties:
+        id:
+          type: integer
+        number:
+          type: string
+        status:
+          enum: [project, returned, issued, signed, cancelled]
+          type: string
+      required: [id, number, status]
+      additionalProperties: false
+    ProjectDocuments:
+      type: object
+      properties:
+        quote:
+          oneOf:
+            - $ref: '#/components/schemas/ProjectQuoteRef'
+            - type: 'null'
+        contract:
+          oneOf:
+            - $ref: '#/components/schemas/ProjectContractRef'
+            - type: 'null'
+        invoice:
+          oneOf:
+            - $ref: '#/components/schemas/ProjectInvoiceRef'
+            - type: 'null'
+        act:
+          oneOf:
+            - $ref: '#/components/schemas/ProjectActRef'
+            - type: 'null'
+      required: [quote, contract, invoice, act]
+      additionalProperties: false
+    ProjectRow:
+      type: object
+      properties:
+        number:
+          description: 'Номер проекта ПР-ГГГГ-NNN (тот же NNN, что у заявки). Пока в ERP нет Deal.number (ERP-09), BFF составляет его из года создания и id сделки'
+          type: string
+        request_number:
+          description: 'Номер заявки ЗВ-ГГГГ-NNN, из которой вырос проект'
+          type: string
+        title:
+          description: 'Название проекта (сделки ERP); нет названия — название клиента'
+          type: string
+        client_name:
+          type: string
+        step:
+          description: 'Шаг пути заявки SPEC-v3 §2.3: CONTRACT — договор, PAYMENT — оплата (договор подписан), DONE — выполнено (акт подписан и счета оплачены)'
+          enum: [CONTRACT, PAYMENT, DONE]
+          type: string
+        client_status:
+          description: 'Статус для клиента — ключ packages/contracts/client-statuses.yaml (SPEC-v3 §2.5); слово собирает SPA по ключу'
+          enum: [contract_review, contract_signing, awaiting_payment, fulfilling, awaiting_acceptance, done]
+          type: string
+        total:
+          description: 'Сумма с НДС последнего КП, видимого клиенту; null — КП клиенту не отправлялось'
+          oneOf:
+            - $ref: '#/components/schemas/ProjectMoney'
+            - type: 'null'
+        due_date:
+          description: 'Срок проекта: ожидаемая дата поставки исполнения, иначе самая поздняя дата по строкам поставки'
+          format: date
+          type: [string, 'null']
+        manager:
+          description: 'Менеджер заявки'
+          oneOf:
+            - $ref: '#/components/schemas/ProjectPerson'
+            - type: 'null'
+        responsible:
+          description: 'Кто ведёт проект: взявший в работу, иначе менеджер'
+          oneOf:
+            - $ref: '#/components/schemas/ProjectPerson'
+            - type: 'null'
+        documents:
+          $ref: '#/components/schemas/ProjectDocuments'
+        problems:
+          description: 'Что требует внимания: нет проекта договора, договор отклонён клиентом, акт возвращён, счёт просрочен'
+          items:
+            enum: [no_contract, contract_rejected, act_returned, invoice_overdue]
+            type: string
+          type: array
+        created_at:
+          format: date-time
+          type: string
+      required: [number, request_number, title, client_name, step, client_status, total, due_date, manager, responsible, documents, problems, created_at]
+      additionalProperties: false
+    ProjectPage:
+      type: object
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/ProjectRow'
+          type: array
+        total:
+          description: 'Сколько проектов подошло под фильтры'
+          type: integer
+        offset:
+          type: integer
+        limit:
+          type: integer
+      required: [items, total, offset, limit]
+      additionalProperties: false
+    ProjectJournalEntry:
+      type: object
+      properties:
+        at:
+          format: date-time
+          type: string
+        code:
+          description: 'Код события журнала ERP (contract.scan_attached, act.returned…); по нему SPA собирает фразу на языке сотрудника'
+          type: string
+        text:
+          description: 'Запасная фраза на русском, если у кода нет перевода'
+          type: string
+        actor_name:
+          type: [string, 'null']
+        document:
+          enum: [contract, act, invoice, quote, project, null]
+          type: [string, 'null']
+        number:
+          type: [string, 'null']
+        reason:
+          description: 'Причина или заметка к действию; пусто, если её не было'
+          type: string
+      required: [at, code, text, actor_name, document, number, reason]
+      additionalProperties: false
+    ProjectQuote:
+      type: object
+      properties:
+        id:
+          type: integer
+        number:
+          type: string
+        status:
+          const: accepted
+          type: string
+        version:
+          type: integer
+        outgoing_number:
+          type: [string, 'null']
+        valid_until:
+          format: date
+          type: [string, 'null']
+      required: [id, number, status, version, outgoing_number, valid_until]
+      additionalProperties: false
+    ProjectContract:
+      type: object
+      properties:
+        id:
+          type: integer
+        number:
+          type: string
+        status:
+          enum: [project, client_agreed, issued_at_operator, signed, rejected, cancelled]
+          type: string
+        sent_to_client:
+          type: boolean
+        total:
+          oneOf:
+            - $ref: '#/components/schemas/ProjectMoney'
+            - type: 'null'
+        created_at:
+          format: date-time
+          type: string
+        client_agreed_at:
+          description: 'Когда редакция согласована клиентом'
+          format: date-time
+          type: [string, 'null']
+        signed_at:
+          description: 'Когда прикреплён скан подписанного договора; null — ещё не подписан'
+          format: date-time
+          type: [string, 'null']
+        has_pdf:
+          type: boolean
+        has_scan:
+          type: boolean
+        actions:
+          description: 'Что можно сделать СЕЙЧАС этому сотруднику (допустимо из статуса и разрешено правами ERP); считает ERP, SPA не угадывает'
+          items:
+            enum: [send_to_client, client_agreed, reject, revise, mark_issued, attach_scan]
+            type: string
+          type: array
+        history:
+          items:
+            $ref: '#/components/schemas/ProjectJournalEntry'
+          type: array
+      required: [id, number, status, sent_to_client, total, created_at, client_agreed_at, signed_at, has_pdf, has_scan, actions, history]
+      additionalProperties: false
+    ProjectInvoice:
+      type: object
+      properties:
+        id:
+          type: integer
+        number:
+          type: string
+        status:
+          enum: [to_issue, issued, partial, paid, overdue, cancelled]
+          type: string
+        total:
+          oneOf:
+            - $ref: '#/components/schemas/ProjectMoney'
+            - type: 'null'
+        paid:
+          oneOf:
+            - $ref: '#/components/schemas/ProjectMoney'
+            - type: 'null'
+        balance_due:
+          oneOf:
+            - $ref: '#/components/schemas/ProjectMoney'
+            - type: 'null'
+        issued_at:
+          format: date
+          type: [string, 'null']
+        due_date:
+          format: date
+          type: [string, 'null']
+        has_pdf:
+          type: boolean
+      required: [id, number, status, total, paid, balance_due, issued_at, due_date, has_pdf]
+      additionalProperties: false
+    ProjectAct:
+      type: object
+      properties:
+        id:
+          type: integer
+        number:
+          type: string
+        status:
+          enum: [project, returned, issued, signed, cancelled]
+          type: string
+        total:
+          oneOf:
+            - $ref: '#/components/schemas/ProjectMoney'
+            - type: 'null'
+        issued_at:
+          format: date
+          type: [string, 'null']
+        signed_at:
+          format: date-time
+          type: [string, 'null']
+        rejection_reason:
+          description: 'Причина возврата акта заказчиком; у возвращённого акта'
+          type: [string, 'null']
+        has_pdf:
+          type: boolean
+        has_scan:
+          type: boolean
+        actions:
+          description: 'Что можно сделать СЕЙЧАС с актом: прикрепить скан или записать возврат (выпущен), выпустить заново (возвращён)'
+          items:
+            enum: [attach_scan, return, reissue]
+            type: string
+          type: array
+        history:
+          items:
+            $ref: '#/components/schemas/ProjectJournalEntry'
+          type: array
+      required: [id, number, status, total, issued_at, signed_at, rejection_reason, has_pdf, has_scan, actions, history]
+      additionalProperties: false
+    ProjectFulfillment:
+      type: object
+      properties:
+        status:
+          type: [string, 'null']
+        status_name:
+          type: [string, 'null']
+        expected_delivery_date:
+          format: date
+          type: [string, 'null']
+        shipped_at:
+          format: date-time
+          type: [string, 'null']
+        delivered_at:
+          format: date-time
+          type: [string, 'null']
+        accepted_at:
+          format: date-time
+          type: [string, 'null']
+        tracking_number:
+          type: [string, 'null']
+        carrier:
+          type: [string, 'null']
+      required: [status, status_name, expected_delivery_date, shipped_at, delivered_at, accepted_at, tracking_number, carrier]
+      additionalProperties: false
+    ProjectDeliveryLine:
+      type: object
+      properties:
+        line_no:
+          type: integer
+        title:
+          type: string
+        quantity:
+          type: [integer, 'null']
+        unit:
+          type: string
+        status:
+          type: string
+        eta:
+          format: date
+          type: [string, 'null']
+        shipped_at:
+          format: date-time
+          type: [string, 'null']
+        tracking:
+          type: string
+      required: [line_no, title, quantity, unit, status, eta, shipped_at, tracking]
+      additionalProperties: false
+    ProjectCard:
+      type: object
+      properties:
+        number:
+          type: string
+        request_number:
+          type: string
+        title:
+          type: string
+        client_name:
+          type: string
+        step:
+          enum: [CONTRACT, PAYMENT, DONE]
+          type: string
+        client_status:
+          enum: [contract_review, contract_signing, awaiting_payment, fulfilling, awaiting_acceptance, done]
+          type: string
+        total:
+          oneOf:
+            - $ref: '#/components/schemas/ProjectMoney'
+            - type: 'null'
+        due_date:
+          format: date
+          type: [string, 'null']
+        manager:
+          oneOf:
+            - $ref: '#/components/schemas/ProjectPerson'
+            - type: 'null'
+        responsible:
+          oneOf:
+            - $ref: '#/components/schemas/ProjectPerson'
+            - type: 'null'
+        documents:
+          $ref: '#/components/schemas/ProjectDocuments'
+        problems:
+          items:
+            enum: [no_contract, contract_rejected, act_returned, invoice_overdue]
+            type: string
+          type: array
+        created_at:
+          format: date-time
+          type: string
+        quote:
+          oneOf:
+            - $ref: '#/components/schemas/ProjectQuote'
+            - type: 'null'
+        contract:
+          oneOf:
+            - $ref: '#/components/schemas/ProjectContract'
+            - type: 'null'
+        can_create_contract:
+          description: 'КП принято, живого договора нет, и у сотрудника есть право готовить договоры: можно сформировать проект'
+          type: boolean
+        invoices:
+          items:
+            $ref: '#/components/schemas/ProjectInvoice'
+          type: array
+        act:
+          oneOf:
+            - $ref: '#/components/schemas/ProjectAct'
+            - type: 'null'
+        act_blocker:
+          description: 'Почему акт сейчас выпустить нельзя: no_invoice — нет выставленного счёта, act_exists — акт уже есть, forbidden — нет права; null — можно'
+          enum: [no_invoice, act_exists, forbidden, null]
+          type: [string, 'null']
+        fulfillment:
+          description: 'Исполнение из ERP — только чтение'
+          oneOf:
+            - $ref: '#/components/schemas/ProjectFulfillment'
+            - type: 'null'
+        delivery_lines:
+          description: 'Строки поставки из ERP — только чтение'
+          items:
+            $ref: '#/components/schemas/ProjectDeliveryLine'
+          type: array
+        journal:
+          description: 'История документов проекта (договор, счета, акт), новые первыми: кто, когда, что и по какой причине'
+          items:
+            $ref: '#/components/schemas/ProjectJournalEntry'
+          type: array
+      required: [number, request_number, title, client_name, step, client_status, total, due_date, manager, responsible, documents, problems, created_at, quote, contract, can_create_contract, invoices, act, act_blocker, fulfillment, delivery_lines, journal]
+      additionalProperties: false
+    ProjectContractActionIn:
+      type: object
+      additionalProperties: false
+      description: 'Действие по договору. `reason` обязательна для `reject`: пустую BFF отклоняет (422).'
+      properties:
+        action:
+          enum: [send_to_client, client_agreed, reject, revise, mark_issued]
+          type: string
+        reason:
+          maxLength: 1000
+          type: [string, 'null']
+        note:
+          maxLength: 500
+          type: [string, 'null']
+      required: [action]
+    ProjectActActionIn:
+      type: object
+      additionalProperties: false
+      description: 'Действие по акту. `reason` обязательна для `return`: возврат без причины не бывает.'
+      properties:
+        action:
+          enum: [issue, return, reissue]
+          type: string
+        reason:
+          maxLength: 1000
+          type: [string, 'null']
+      required: [action]
+    ProjectFileGenerating:
+      type: object
+      properties:
+        detail:
+          const: GENERATING
+          type: string
+        retry_after:
+          description: 'Секунды до повторной попытки'
+          type: integer
+      required: [detail, retry_after]
+      additionalProperties: false
     EdsRegistryKind:
       type: string
-      enum: [letter_in, letter_out, quote, memo, application, report]
-      description: 'Вкладки реестра «Все документы»: письма (входящие и исходящие), КП, служебные, заявления, отчёты'
+      enum: [letter_in, letter_out, quote, memo, application, report, contract, invoice, act]
+      description: 'Вкладки реестра «Все документы»: письма (входящие и исходящие), КП, служебные, заявления, отчёты; с 0.26.0 — договоры, счета и акты проектов (проекция ERP)'
     EdsPerson:
       type: object
       additionalProperties: false
@@ -9283,6 +10136,9 @@ components:
         openable:
           type: boolean
           description: Документ (`memo`, `application`, `report`, `letter_out`) открывается в боковом окне; письма и КП — в своих разделах
+        project_ref:
+          type: [string, 'null']
+          description: Договор, счёт и акт проекта (0.26.0) — id сделки для адреса `/eds/projects/{project_ref}`; у остальных типов нет
     EdsDocumentPage:
       type: object
       additionalProperties: false

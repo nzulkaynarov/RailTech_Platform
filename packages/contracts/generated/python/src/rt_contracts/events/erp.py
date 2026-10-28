@@ -157,6 +157,47 @@ class ContractSignedV1(BaseModel):
     payload: ContractSigned
 
 
+class ContractStatusChanged(BaseModel):
+    """
+    Договор сменил статус по SPEC-v3 §2.4 (D2-5). Договор подписывают вне платформы (у оператора ЭДО): в ERP фиксируются статусы и скан. `project` — проект (флаг `sent_to_client` — ушёл ли клиенту на согласование редакции), `client_agreed` — согласован клиентом, `issued_at_operator` — выставлен у оператора, `signed` — подписан (прикреплён скан), `rejected` — отклонён клиентом, `cancelled` — отменён. Событие порождает каждый переход и создание проекта договора.
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    erp_contract_id: int
+    number: str
+    status: Status
+    sent_to_client: bool
+    amount: Amount | None = None
+    currency: Currency | None = None
+    reason: str | None = None
+    """
+    Причина отклонения клиентом (для `rejected`)
+    """
+
+
+class ContractStatusChangedV1(BaseModel):
+    """
+    Тип uz.railtech.erp.contract.status_changed.v1, источник rt://erp. Поле data конверта (envelope.v1.json). Новый тип D2-5 (SPEC-v3 §2.4): договор подписывают вне платформы, ERP фиксирует статусы «Проект», «Согласован клиентом», «Выставлен у оператора», «Подписан (скан)», «Отклонён». Что делает EDS: проекция документа проекта в реестре «Все документы». CRM тип не доставляется (`NOT_FOR_CRM`).
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    erp_company_id: int
+    """
+    Компания клиента в ERP
+    """
+    crm_client_id: int
+    """
+    Клиент в CRM
+    """
+    deal: DealRef
+    actor: Actor
+    payload: ContractStatusChanged
+
+
 class Currency(RootModel[str]):
     root: Annotated[str, Field(pattern="^[A-Z]{3}$")]
 
@@ -301,7 +342,7 @@ class DeliveryEvent(BaseModel):
     Краткое описание строк, к которым относится событие
     """
     line_nos: list[LineNo] | None = None
-    status: Status
+    status: Status1
     eta: date | None = None
     previous_eta: date | None = None
     tracking: str | None = None
@@ -338,7 +379,7 @@ class DeliveryLineDecision(BaseModel):
     )
     line_no: Annotated[int, Field(ge=1)]
     title: str
-    status: Status1
+    status: Status2
     remark: Annotated[str | None, Field(max_length=2000)] = None
     """
     Замечание клиента; обязательно при disputed
@@ -901,6 +942,15 @@ class Source(StrEnum):
 
 
 class Status(StrEnum):
+    project = "project"
+    client_agreed = "client_agreed"
+    issued_at_operator = "issued_at_operator"
+    signed = "signed"
+    rejected = "rejected"
+    cancelled = "cancelled"
+
+
+class Status1(StrEnum):
     assembling = "assembling"
     in_transit = "in_transit"
     ready_to_ship = "ready_to_ship"
@@ -908,7 +958,7 @@ class Status(StrEnum):
     delivered = "delivered"
 
 
-class Status1(StrEnum):
+class Status2(StrEnum):
     accepted = "accepted"
     disputed = "disputed"
 
