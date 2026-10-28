@@ -2927,6 +2927,14 @@
         "title": "Quote approved by the director",
         "detail": "{{outgoing_number}} — ready to send"
       },
+      "auto_sent": {
+        "title": "Quote sent to the client after the director's approval",
+        "detail": "Channels: {{sent_via}}"
+      },
+      "auto_send_skipped": {
+        "title": "Quote was not sent automatically — the request manager will send it",
+        "detail": "Unavailable channels and reasons are on the quote card"
+      },
       "director_returned": {
         "title": "Quote returned by the director for rework",
         "detail": "{{comment}}"
@@ -3526,6 +3534,10 @@
     "quote.director_approved": {
       "title": "Quote approved by the director",
       "message": "Quote #{{number}} approved ({{outgoing_number}}) — you can send it to the client."
+    },
+    "quote.auto_send_failed": {
+      "title": "Quote not sent on some channels",
+      "message": "Quote #{{number}} was not sent via {{channels}} — send it manually."
     },
     "quote.director_rejected": {
       "title": "Quote rejected by the director",

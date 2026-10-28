@@ -4,6 +4,7 @@ Workflow-экшены — в workflow.py (распил deals.py, тех-долг
 from django.db import transaction
 from django.db.models import Prefetch
 from django.utils.translation import gettext_lazy as _
+from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view, inline_serializer
 from rest_framework import serializers as drf_serializers
 from rest_framework import status, viewsets
@@ -18,6 +19,7 @@ from crm.serializers import DealDetailSerializer, DealListSerializer
 from crm.services import register_new_deal, transition_deal_stage
 
 from .ai import DealAiActionsMixin
+from .search import DealSearchFilter
 from .workflow import DealWorkflowActionsMixin
 
 
@@ -26,7 +28,9 @@ from .workflow import DealWorkflowActionsMixin
         summary="List deals",
         description=(
             "Returns deals accessible to the current user. "
-            "Admins/managers see all; clients see only their company's deals."
+            "Admins/managers see all; clients see only their company's deals. "
+            "`search` finds deals by number (ЗВ-ГГГГ-NNN / ПР-ГГГГ-NNN — the same NNN under either prefix, "
+            "latin ZV/PR and spaces accepted), title or client company name (ERP-09)."
         ),
         tags=["CRM"],
     ),
@@ -83,6 +87,9 @@ class DealViewSet(RoleGatedViewMixin, DealAiActionsMixin, DealWorkflowActionsMix
         return ctx
 
     permission_classes = [IsAuthenticated, IsCompanyMemberOrPlatformAdmin]
+    # Поиск по номеру ЗВ/ПР, названию и компании (ERP-09): `?search=`.
+    filter_backends = [DjangoFilterBackend, DealSearchFilter]
+    search_fields = ["number", "title", "company__name"]
     # Operator sub-capability for the force-override action (ADR-0004 G1).
 
     def get_queryset(self):

@@ -4,7 +4,7 @@
   "source": "rt://erp",
   "type": "uz.railtech.erp.request.created.v1",
   "time": "2026-10-13T03:00:00Z",
-  "subject": "D-2026-0905",
+  "subject": "ЗВ-2026-104",
   "datacontenttype": "application/json",
   "dataschema": "rt://contracts/events/erp/request.created/v1",
   "tenant": "railtech",
@@ -15,7 +15,7 @@
     "crm_client_id": 42,
     "deal": {
       "erp_deal_id": 905,
-      "number": "D-2026-0905",
+      "number": "ЗВ-2026-104",
       "title": "Поставка оборудования, партия 1",
       "stage": "request",
       "amount": "0.00",
@@ -31,7 +31,12 @@
       "company_name": "ООО «Пример Логистик»",
       "company_inn": "301234567",
       "contact_name": "Бахтиёр Каримов",
-      "manager_crm_user_id": 5
+      "manager_crm_user_id": 5,
+      "request_number": "ЗВ-2026-104",
+      "urgency": "urgent",
+      "letter_file_id": "3f2c1a7e-5b9d-4c8e-9a1f-0d2e3c4b5a69",
+      "crm_request_id": 318,
+      "process": "v3"
     }
   }
 }

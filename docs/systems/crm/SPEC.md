@@ -1,5 +1,5 @@
 # RailTech CRM — техническое задание (SPEC)
-Статус: действует для бэкенда CRM; при расхождении права docs/product/ и стратегия · Владелец: лид · Обновлено: 2026-10-23
+Статус: действует для бэкенда CRM; при расхождении права docs/product/ и стратегия · Владелец: лид · Обновлено: 2026-10-28
 
 Версия 2.8 · 2026-10-14 (центр внешних сервисов — §13.2, M3-CRM-12, ADR-0024; расходы на ИИ по ансамблю из журнала LiteLLM — §13.1, M3-CRM-09; RustFS — ADR-0009; модели — ADR-0004; docling-serve и MCP SDK — ADR-0011; жизненный цикл без тупиков — ADR-0015; квалификация и цена по правилам — ADR-0016; передача в бэк-офис и итог из ERP — ADR-0022; коннектор «ERP» в «Подключениях» — M3-CRM-02; коннектор «Почта» и журнал писем — ADR-0023, M3-CRM-08: решение Q-010 «SMTP нет» пересмотрено — SMTP появляется как коннектор, ручной временный пароль остаётся)
 
@@ -230,7 +230,13 @@ deals(                                              -- сделки клиент
   id, client_id NULL, lead_id NULL, title, product_key NULL, amount NUMERIC(14,2) NULL,
   currency CHAR(3) DEFAULT 'UZS', stage 'open'|'won'|'lost', expected_close_date DATE NULL,
   closed_at NULL, lost_reason NULL,                 -- значение из settings.deals.lost_reasons
-  owner_user_id NULL, created_at, updated_at
+  owner_user_id NULL, created_at, updated_at,
+  erp_deal_id UNIQUE NULL, external_stage NULL, external_stage_at NULL,  -- зеркало заявки ERP (FIX-33)
+  erp_number NULL,                                  -- ЗВ/ПР-ГГГГ-NNN из ERP (ERP-09, события)
+  request_key UUID UNIQUE NULL,                     -- ключ формы «Создать заявку» (идемпотентность)
+  request_summary NULL, request_urgency 'normal'|'urgent' NULL,           -- «Создать заявку» (W16-D1-2, CRM-03):
+  request_contact_id → client_contacts NULL, request_letter_file_id UUID NULL, --   суть, срочность, контакт, файл EDS
+  erp_request_status 'pending'|'done'|'failed' NULL, erp_request_error NULL  -- передача заявки в ERP задачей
 )
 telegram_identities(
   id, tg_user_id UNIQUE, tg_username, tg_first_name, lead_id NULL, client_id NULL,
@@ -337,6 +343,19 @@ settings(key PK, value JSONB, schema_version INT, updated_by, updated_at)
 `new → engaged → qualified → handoff → in_progress → won → customer`; боковая: `lost` (выход — новое сообщение лида или «Забрать»); временная: `unresponsive`. Клиент может открыть новую сделку: `customer → in_progress → won|lost → customer` (ADR-0015).
 
 **Ансамбль CRM ↔ ERP (ADR-0022, proposed).** «Передан в бэк-офис» = стадия `customer`. Режим определяет код по факту «коннектор ERP настроен» (`integrations/erp.erp_connector_configured`, `domain/backoffice.py`): без коннектора (`local`) — поведение выше без изменений («Сделать клиентом» из `won`, итог сделки — действия CRM); с коннектором (`erp`) — «Передать в бэк-офис» (та же операция `make_customer`) из `in_progress` | `won` | `customer` с вызовом `POST /clients/handoff` (M3-CRM-03), итог сделки приходит событиями ERP `deal.won`/`deal.lost` в зеркало `deals` (`domain/deals.plan_erp_outcome`), **стадия лида событиями ERP не меняется**; в CRM из `in_progress` остаётся только «Закрыть отказом» (`may_close_locally`). Повторная передача тому же клиенту — идемпотентна (ничего не меняет, ERP не вызывается). Зеркальная сделка (`deals.erp_deal_id`) — копия заявки ERP: название, сумму, валюту, стадию и причину отказа ведёт бэк-офис (приёмник событий перезаписывает их), `PATCH /deals/{id}` с изменением этих полей — 409 `deal_owned_by_erp` (`details.fields`); ответственный, срок и продукт правятся в CRM (FIX-57, I-26). Номер заявки в карточке лида — `leads.erp_request_id`, результат передачи этого лида, а не последняя сделка (поздние заявки клиента из Cabinet привязываются к тому же лиду, D-10).
+
+**«Создать заявку» (CRM-03, W16-D1-2; SPEC-v3 §3.1 шаг 2).** `POST /leads/{id}/actions/create_request` из любой активной
+стадии лида (кроме `lost`; переход в `customer` — действием менеджера, `domain/stage_machine.py`) и `POST /clients/{id}/actions/create_request`
+из карточки клиента: клиент (выбранный или новая компания с ИНН), контакт с хотя бы одним каналом (телефон, e-mail или Telegram
+лида; e-mail не обязателен — 422 `contact_channel_required`), суть, срочность, id файла письма директору в EDS; согласие
+обязательно (бот или отметка сотрудника `consent` — 422 `handoff_no_consent`). В одной транзакции: лид → клиент, менеджер —
+ответственный за переписку, диалог ведёт бот, активная передача закрывается (`request_created`), заявка — строка `deals` со
+`erp_request_status = pending`. В ERP — задачей `erp_create_request` после коммита (`services/erp_requests.py`): клиента нет в
+ERP — передача без заявки, затем `POST /clients/{crm_client_id}/requests` шва 0.9.0; итог — `erp_request_status`,
+`erp_deal_id`, `erp_number`. Без коннектора ERP — 409 `erp_not_configured`. Идемпотентность — `request_key` формы (UUID от клиента): повтор — 200 с той
+же заявкой без новой строки и задачи (блокировка лида или клиента, UNIQUE `deals.request_key`); ключ заявки другого лида —
+409 `request_key_reused`; ERP ответила 409 `IDEMPOTENCY_CONFLICT` (тело изменилось) — заявка `failed`, `erp_request_conflict`. Статус лида для Платформы (CRM-02) —
+`platform_status` в ответе лида и фильтры `GET /leads?platform_status=&overdue=` (`domain/client_requests.py`).
 
 ### 6.2. State machine (`domain/stage_machine.py`)
 

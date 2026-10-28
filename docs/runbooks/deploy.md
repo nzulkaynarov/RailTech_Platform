@@ -223,6 +223,28 @@ mcp-tools.json` монтируется в контейнер по пути `../.
 
 Вручную с сервера (без Actions): `/opt/rt/releases/<sha>/infra/deploy/deploy.sh <sha>`; без миграций и дампа — `make up-prod RT_IMAGE_TAG=<sha>`.
 
+### Номера заявок ЗВ/ПР после выкладки (ERP-09, W16-D1-2)
+
+Миграция `sales/0008_backfill_deal_numbers` выдаёт номера сделкам, которые уже есть в базе, а новым сделкам номер
+выдаёт код (`Deal.save`). Сделка, созданная **старым кодом** между миграцией и стартом новых контейнеров (портал,
+передача из CRM в эти секунды), остаётся без номера: в API и событиях у неё запасной `D-<id>`. После выкладки проверить:
+
+```bash
+docker compose exec erp-backend python manage.py shell -c \
+  "from crm.models import Deal; print(Deal.objects.filter(number_seq__isnull=True).count())"
+```
+
+Не ноль — догнать той же функцией миграции (идемпотентно: сделки с номером не трогает; запускать, когда новые заявки
+не создаются, — функция ставит счётчик года на последний выданный NNN):
+
+```bash
+docker compose exec erp-backend python manage.py shell -c \
+  "import importlib; from django.apps import apps; \
+   importlib.import_module('sales.migrations.0008_backfill_deal_numbers').backfill(apps, None)"
+```
+
+Повторная проверка — `0`. Номер приходит в CRM с ближайшим событием по сделке (`deals.erp_number`).
+
 ### Django admin ERP и машинный API ERP — без внешнего маршрута (S0-5)
 
 Caddy (`no_erp_internal` в `Caddyfile.prod`/`Caddyfile.dev`) отвечает 404 на `/api/integration`, `/api/integration/*`, `/admin`, `/admin/*`
