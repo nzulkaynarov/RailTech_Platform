@@ -186,10 +186,34 @@ async def decide(
     current = next(s for s in steps if s.index == route.current_step)
     if not await may_decide(session, employee, route.id, current.index):
         raise forbidden_reason("not_your_step", "Сейчас решение за другим сотрудником.")
+    if is_payment_step(route, current) and body.decision is Decision.APPROVE:
+        # Деньги записывает «Оплачено» (дата, сумма, платёжка), а не голое «согласовано» (D2-4, SPEC-v3 §3.2 п. 5).
+        raise conflict(
+            "payment_required",
+            "Оплату записки фиксирует действие «Оплачено»: дата, сумма и платёжка.",
+        )
     late: str | None = None
     if route.template == ApprovalTemplate.QUOTE.value and body.decision is Decision.APPROVE:
         late = await _require_green(session, route)
     return await _apply(session, bus, employee, route, steps, current, body, late=late)
+
+
+def is_payment_step(route: ApprovalRoute, step: ApprovalStep) -> bool:
+    """Шаг «Бухгалтер» служебной записки с суммой: его закрывает `services.payments.pay`, не обычное решение."""
+    return route.template == ApprovalTemplate.MEMO.value and step.assignee_permission == P.PAYMENTS_CONFIRM.value
+
+
+async def complete_step(
+    session: AsyncSession,
+    bus: AsyncBus,
+    employee: Employee,
+    route: ApprovalRoute,
+    steps: list[ApprovalStep],
+    current: ApprovalStep,
+    body: DecisionIn,
+) -> ApprovalRoute:
+    """Закрыть текущий шаг решением из другой операции (оплата записки): журнал, события, статус — как у решения."""
+    return await _apply(session, bus, employee, route, steps, current, body)
 
 
 async def _require_green(session: AsyncSession, route: ApprovalRoute) -> str | None:

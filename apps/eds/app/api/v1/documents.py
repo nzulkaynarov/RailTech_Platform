@@ -14,13 +14,14 @@ from app.schemas.documents import (
     DocumentCreate,
     DocumentKind,
     DocumentPage,
+    DocumentPaymentIn,
     DocumentStatus,
     DocumentSubmitIn,
     DocumentUpdate,
 )
 from app.schemas.pagination import Cursor, Limit
 from app.security.permissions import EdsPermission as P
-from app.services import documents, documents_read, idempotency
+from app.services import documents, documents_read, idempotency, payments
 
 router = APIRouter(prefix="/api/v1", tags=["documents"])
 
@@ -30,6 +31,7 @@ Reader = Annotated[
     Employee, Depends(require_permission(P.MEMOS_CREATE, P.MEMOS_APPROVE, P.APPROVALS_DECIDE, P.REGISTRY_READ))
 ]
 Author = Annotated[Employee, Depends(require_permission(P.MEMOS_CREATE, P.LETTERS_REGISTER))]
+Accountant = Annotated[Employee, Depends(require_permission(P.PAYMENTS_CONFIRM))]
 Session = Annotated[AsyncSession, Depends(get_session)]
 Bus = Annotated[AsyncBus, Depends(get_bus)]
 
@@ -92,4 +94,13 @@ async def submit_document(
 ) -> Document:
     async with session.begin():
         document = await documents.submit(session, bus, employee=employee, document_id=document_id, edits=body)
+        return await documents_read.present(session, document)
+
+
+@router.post("/documents/{document_id}/payment", response_model=Document, operation_id="payDocument")
+async def pay_document(
+    document_id: uuid.UUID, body: DocumentPaymentIn, employee: Accountant, session: Session, bus: Bus
+) -> Document:
+    async with session.begin():
+        document = await payments.pay(session, bus, employee=employee, document_id=document_id, body=body)
         return await documents_read.present(session, document)

@@ -205,14 +205,23 @@ async def test_memo_with_amount_goes_to_accountant_then_paid(
     assert [i["id"] for i in queue["items"]] == [approval_id]
     assert queue["items"][0]["current_step"]["label"] == "Бухгалтер"
     detail = await route_of(client, staff["accountant"], approval_id)
-    assert detail["can_decide"] is True and detail["allowed_decisions"] == ["approve", "return", "reject"]
+    # шаг бухгалтера закрывает «Оплачено» (D2-4): «согласовать» без суммы и даты платежа недоступно
+    assert detail["can_decide"] is True and detail["allowed_decisions"] == ["return", "reject"]
+    assert_error(
+        await decide(client, staff["accountant"], approval_id, "approve"), 409, "CONFLICT", reason="payment_required"
+    )
 
-    step2 = await decide(client, staff["accountant"], approval_id, "approve", comment="Оплачено платёжкой №15")
-    assert step2.status_code == 200
-    assert step2.json()["status"] == "approved"
+    paid = await client.post(
+        f"/api/v1/documents/{doc['id']}/payment",
+        json={"paid_on": "2026-10-20", "amount": {"amount": "1500000.00", "currency": "UZS"}, "note": "Платёжка №15"},
+        headers=staff["accountant"].headers,
+    )
+    assert paid.status_code == 200, paid.text
+    validate("Document", paid.json())
     final = (await client.get(f"/api/v1/documents/{doc['id']}", headers=staff["manager"].headers)).json()
     assert (final["status"], final["archived_at"] is not None) == ("paid", True)
     assert [d["decision"] for d in final["decisions"]] == ["approve", "approve"]
+    assert final["payment"]["paid_on"] == "2026-10-20" and final["payment"]["paid_by"]["crm_user_id"] == 6
     [archived] = await outbox(container, "document.archived")
     assert archived["data"]["reason"] == "paid"
 
