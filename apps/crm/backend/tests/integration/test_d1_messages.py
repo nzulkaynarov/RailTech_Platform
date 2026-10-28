@@ -8,7 +8,6 @@
 ключом не шлёт второе сообщение; вложение отдаётся по номеру без ключа хранилища.
 """
 
-import time
 from collections.abc import Iterator
 from datetime import UTC, datetime
 from typing import Any
@@ -79,7 +78,6 @@ async def test_a_lead_message_is_published_in_its_transaction_without_text(
 ) -> None:
     lead_id = await escalated_lead(sessions, tg_user_id=6101)
     await clear_outbox(sessions)
-    started = time.perf_counter()
 
     recorded = await Records(sessions).record_lead_message(
         Incoming(tg_user_id=6101, chat_id=6101, text="Есть рельсы Р65 на складе?", message_id=77)
@@ -110,8 +108,30 @@ async def test_a_lead_message_is_published_in_its_transaction_without_text(
         "actor": {"type": "bot"},
     }
     assert "Р65" not in str(row["envelope"])  # текст сообщения в шину не уходит
-    # Замер D1-1: запись сообщения и строки outbox — одна транзакция, без ожидания чего-либо.
-    assert time.perf_counter() - started < 2.0
+
+    # Та же транзакция — по факту, а не по часам: строку сообщения и строку outbox записала одна
+    # транзакция (одинаковый `xmin`). Время «до Платформы ≤ 2 с» проверяет гейт D1-7 на стенде.
+    await Records(sessions).record_lead_message(
+        Incoming(tg_user_id=6101, chat_id=6101, text="И шпалы тоже", message_id=78)
+    )
+    async with sessions() as session:
+        pairs = (
+            await session.execute(
+                text(
+                    "SELECT o.envelope -> 'data' ->> 'message_id' AS message_id, "
+                    "o.xmin::text AS event_tx, m.xmin::text AS message_tx "
+                    "FROM rt_bus_outbox o JOIN messages m "
+                    "ON m.id = (o.envelope -> 'data' ->> 'message_id')::bigint "
+                    "WHERE o.type = :type ORDER BY o.created_at, o.id"
+                ),
+                {"type": MESSAGE_ADDED},
+            )
+        ).all()
+    # порядок событий — порядок сообщений, у каждого события — транзакция своего сообщения
+    assert [int(p.message_id) for p in pairs] == sorted(int(p.message_id) for p in pairs)
+    assert len(pairs) == 2
+    assert all(p.event_tx == p.message_tx for p in pairs)
+    assert pairs[0].event_tx != pairs[1].event_tx
 
 
 async def test_manager_reply_is_published_as_outgoing_by_the_staff_member(
