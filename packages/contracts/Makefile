@@ -14,7 +14,7 @@ install: ## Зависимости генераторов: pnpm (lockfile) и uv
 	uv sync --locked
 
 .PHONY: lint
-lint: install ## Линт OpenAPI (redocly), ajv (erp-mcp, Платформа), AsyncAPI (parser), ruff скриптов
+lint: install ## Линт OpenAPI (redocly), ajv (erp-mcp, Платформа, documents), AsyncAPI (parser), ruff скриптов
 	pnpm lint
 	$(UV_RUN) ruff check scripts tests
 	$(UV_RUN) ruff format --check scripts tests
@@ -25,12 +25,13 @@ generate: install ## TS-типы и orval-клиент; модели Pydantic v2
 	$(UV_RUN) python scripts/gen_python.py
 
 .PHONY: test
-test: install ## Схемы событий валидны, примеры проходят конверт и схему типа, AsyncAPI ↔ файлы, подписки, модели; правила L8
+test: install ## Схемы событий валидны, примеры проходят конверт и схему типа, AsyncAPI ↔ файлы, подписки, модели; правила L8; документы
 	$(UV_RUN) pytest
 
 .PHONY: compat
-compat: install ## Совместимость схем events/** и bus/subscriptions.schema.json с базой (L8)
+compat: install ## Совместимость схем events/** и bus/subscriptions.schema.json (L8) и контракта documents/ (ADR-0020) с базой
 	$(UV_RUN) python scripts/events_compat.py
+	$(UV_RUN) python scripts/documents_compat.py
 
 .PHONY: openapi-compat
 openapi-compat: install ## oasdiff: ломающие изменения openapi/*.yaml против базы (ADR-0016); oasdiff закреплён, одноразовый контейнер Docker
