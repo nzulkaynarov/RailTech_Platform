@@ -317,6 +317,8 @@ tags:
     description: CRM · База знаний — документы, поиск, пробелы, песочница бота (прокси к CRM; разделы `crm.leads` и `admin`)
   - name: messages
     description: Клиенты · Ждут ответа — передачи от бота, переписка с клиентом, ответ, заметка, подсказка (прокси к CRM; раздел `crm.leads`)
+  - name: chats
+    description: Чаты · С клиентами — диалоги с клиентами, открытые сотруднику (прокси к CRM; раздел `chats.external`, B-D18-1)
   - name: bot
     description: Admin · Настройки бота — разделы настроек CRM, шаблоны ответов, выгрузки CSV (прокси к CRM; раздел `admin`)
   - name: eds-approvals
@@ -6320,7 +6322,9 @@ paths:
       summary: 'Лента диалога: сообщения клиента, бота и менеджера, вложения, заметки команды'
       description: >-
         CRM `GET /leads/{id}/messages` (страница, старые выше), `GET /leads/{id}/notes` (только первая страница — без `before`)
-        и `GET /team` (имена менеджеров). Раздел `crm.leads` от чтения. Подгрузка истории — `before` = id самого старого
+        и `GET /team` (имена менеджеров). Раздел `crm.leads` или `chats.external` от чтения (B-D18-1): держателю только
+        `chats.external` CRM открывает лишь диалоги, где он участвует, и диалоги зоны «Счета и оплаты» (сделки клиента со
+        счётом); чужой диалог — 404 `NOT_FOUND`, BFF проверку CRM не обходит. Подгрузка истории — `before` = id самого старого
         показанного сообщения. Вложения — ссылками BFF (`attachments[].url`): адреса и ключи хранилища наружу не уходят.
       parameters:
         - $ref: '#/components/parameters/LeadNumber'
@@ -6355,7 +6359,8 @@ paths:
       operationId: downloadCrmAttachment
       summary: 'Вложение сообщения клиента (файл)'
       description: >-
-        CRM `GET /leads/{id}/messages/{message}/attachments/{index}` потоком. Раздел `crm.leads` от чтения. Ответ —
+        CRM `GET /leads/{id}/messages/{message}/attachments/{index}` потоком. Раздел `crm.leads` или `chats.external` от
+        чтения; диалог проверяет CRM, как у `getCrmThread` (чужой — 404). Ответ —
         `Content-Disposition: attachment` и `X-Content-Type-Options: nosniff`: файл скачивается, браузер его не исполняет.
         Файл не сохранён (до согласия, больше 20 МБ) — 404; хранилище CRM недоступно — 502 `INTEGRATION_FAILED`.
       parameters:
@@ -6565,6 +6570,48 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/MessagesConflict'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /chats/external:
+    get:
+      tags: [chats]
+      operationId: listExternalChats
+      summary: 'Чаты · С клиентами: диалоги, открытые сотруднику'
+      description: >-
+        CRM `GET /chats` (B-D18-1). Раздел `chats.external` или `crm.leads` от чтения — иначе 403 до CRM. Какие диалоги
+        открыты, решает CRM: держателю `crm.leads` — все (`access = registry`); держателю только `chats.external` — где он
+        участвует (ответственный за лида, клиента или сделку, автор ответа; `participant`) и, если у него ещё раздел
+        «Счета и оплаты» полный, диалоги клиентов со счётом по сделке (`invoiced`). Данных реестра лидов (оценка,
+        квалификация, стадия) в ответе нет. `erp_deal_id` — диалоги клиента этой заявки ERP (запросить платёжку).
+        Переписка — `getCrmThread`, вложения — `downloadCrmAttachment`.
+      parameters:
+        - name: erp_deal_id
+          in: query
+          required: false
+          description: Только диалоги клиента этой заявки ERP
+          schema: {type: integer, minimum: 1}
+        - name: limit
+          in: query
+          required: false
+          schema: {type: integer, minimum: 1, maximum: 200, default: 50}
+        - name: offset
+          in: query
+          required: false
+          schema: {type: integer, minimum: 0, default: 0}
+      responses:
+        '200':
+          description: Диалоги, новые сверху
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExternalChatList'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
         '503':
           $ref: '#/components/responses/BackendUnavailable'
 
@@ -13461,6 +13508,51 @@ components:
             - type: 'null'
         note:
           $ref: '#/components/schemas/HandoffNote'
+
+    ExternalChat:
+      type: object
+      additionalProperties: false
+      description: Диалог с клиентом без данных реестра лидов (B-D18-1)
+      required: [lead, name, channel, language, last_message_at, assigned, invoiced, access]
+      properties:
+        lead:
+          type: string
+          pattern: '^L-\d{4,}$'
+          description: Номер лида — ключ переписки (`getCrmThread`)
+        name: {type: string}
+        channel:
+          $ref: '#/components/schemas/MessageChannel'
+        language:
+          $ref: '#/components/schemas/Language'
+        last_message_at:
+          type: [string, 'null']
+          format: date-time
+          description: Последнее сообщение в диалоге (клиента, бота или сотрудника)
+        assigned:
+          oneOf:
+            - $ref: '#/components/schemas/PersonRef'
+            - type: 'null'
+        invoiced:
+          type: boolean
+          description: По сделке клиента выставлен счёт (событие ERP `invoice.issued`)
+        access:
+          type: string
+          enum: [registry, participant, invoiced]
+          description: >-
+            Почему диалог открыт: `registry` — раздел `crm.leads` (все диалоги), `participant` — сотрудник участвует,
+            `invoiced` — зона «Счета и оплаты»
+
+    ExternalChatList:
+      type: object
+      additionalProperties: false
+      required: [items, total]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/ExternalChat'}
+        total:
+          type: integer
+          minimum: 0
 
     MessageInbox:
       type: object

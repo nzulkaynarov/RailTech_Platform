@@ -127,6 +127,7 @@ import type {
   ErpConnector,
   ErpPairing,
   EscalationDryRun,
+  ExternalChatList,
   ExternalService,
   ExternalServiceDetail,
   ExternalServiceList,
@@ -6939,6 +6940,40 @@ export const getReturnCrmLeadToBotResponseMock = (
 ): ActionOk => ({
   id: faker.helpers.arrayElement([faker.number.int(), null]),
   ok: true,
+  ...overrideResponse,
+});
+
+export const getListExternalChatsResponsePersonRefMock = (
+  overrideResponse: Partial<PersonRef> = {},
+): PersonRef => ({
+  ...{
+    id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getListExternalChatsResponseMock = (
+  overrideResponse: Partial<Extract<ExternalChatList, object>> = {},
+): ExternalChatList => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    lead: faker.helpers.fromRegExp("^L-\\d{4,}$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    channel: faker.helpers.fromRegExp("^[a-z][a-z_]{0,15}$"),
+    language: faker.helpers.arrayElement(Object.values(Language)),
+    last_message_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    assigned: faker.helpers.arrayElement([
+      { ...getListExternalChatsResponsePersonRefMock() },
+      null,
+    ]),
+    invoiced: faker.datatype.boolean(),
+    access: faker.helpers.arrayElement(["registry", "participant", "invoiced"] as const),
+  })),
+  total: faker.number.int({ min: 0 }),
   ...overrideResponse,
 });
 
@@ -15788,6 +15823,30 @@ export const getReturnCrmLeadToBotMockHandler = (
   );
 };
 
+export const getListExternalChatsMockHandler = (
+  overrideResponse?:
+    | ExternalChatList
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<ExternalChatList> | ExternalChatList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/chats/external",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListExternalChatsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getListCrmReplyTemplatesMockHandler = (
   overrideResponse?:
     | ReplyTemplateList
@@ -17041,6 +17100,7 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getNoteCrmLeadMockHandler(),
   getAssistCrmReplyMockHandler(),
   getReturnCrmLeadToBotMockHandler(),
+  getListExternalChatsMockHandler(),
   getListCrmReplyTemplatesMockHandler(),
   getListCalcRequestsMockHandler(),
   getSearchCalcCatalogMockHandler(),

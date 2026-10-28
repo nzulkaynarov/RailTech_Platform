@@ -53,6 +53,7 @@
   "who": {
     "memos": "the director and the accountant: memos are still approved verbally or on paper",
     "chats": "the team: work conversations still happen in messengers outside the system",
+    "chatsExternal": "the client's manager: ask them to forward the message or file you need",
     "tickets": "the administrator: requests to them still arrive in Telegram or in person",
     "unknown": "a responsible employee outside the interface"
   },

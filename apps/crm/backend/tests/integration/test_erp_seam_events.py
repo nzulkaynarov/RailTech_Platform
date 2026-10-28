@@ -159,6 +159,34 @@ async def test_line_decisions_notify_the_feed_and_never_the_client(harness: Harn
     assert harness.bot.sent == []
 
 
+async def test_an_invoice_event_marks_the_deal_as_invoiced_once(harness: Harness) -> None:
+    """B-D18-1: факт «по сделке выставлен счёт» — от первого события счёта, и не снимается.
+
+    Оплата, пришедшая раньше выставления, тоже ставит отметку; опоздавшее выставление сдвигает её
+    на своё (более раннее) время; КП отметку не ставит.
+    """
+    quote, _, _ = await seeded(harness, "uz.railtech.erp.quote.sent.v1")
+    await harness.process(await receive(harness, quote))
+    [deal] = await harness.deals()
+    assert deal.invoice_issued_at is None
+
+    paid = example_envelope("uz.railtech.erp.invoice.paid.v1")
+    paid.update(id=str(uuid.uuid4()), time="2026-10-20T10:00:00Z")
+    paid["data"]["crm_client_id"] = quote["data"]["crm_client_id"]
+    paid["data"]["deal"]["erp_deal_id"] = deal.erp_deal_id
+    await harness.process(await receive(harness, paid))
+    [deal] = await harness.deals()
+    assert deal.invoice_issued_at == parse_time("2026-10-20T10:00:00Z")
+
+    issued = example_envelope("uz.railtech.erp.invoice.issued.v1")
+    issued.update(id=str(uuid.uuid4()), time="2026-10-18T09:00:00Z")
+    issued["data"]["crm_client_id"] = quote["data"]["crm_client_id"]
+    issued["data"]["deal"]["erp_deal_id"] = deal.erp_deal_id
+    await harness.process(await receive(harness, issued))
+    [deal] = await harness.deals()
+    assert deal.invoice_issued_at == parse_time("2026-10-18T09:00:00Z")
+
+
 # ── 2. Терпимый читатель и неизвестное событие ────────────────────────────────────────────────────
 
 

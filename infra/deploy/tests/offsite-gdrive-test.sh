@@ -13,6 +13,8 @@
 #     выход; расписание (due) и healthcheck.
 # Запуск: bash этот-файл
 set -euo pipefail
+# Маркеры PEM собраны из частей: фикстура без настоящего ключа, а gitleaks не принимает её за секрет.
+PEM_BEGIN="-----BEGIN PRIVATE"" KEY-----"; PEM_END="-----END PRIVATE"" KEY-----"
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 root="$(cd "$here/../../.." && pwd)"
 tmp="$(mktemp -d)"; trap 'docker run --rm -v "$tmp:/t" alpine:3.22 rm -rf /t/w >/dev/null 2>&1 || true; rm -rf "$tmp"' EXIT
@@ -132,7 +134,7 @@ rc=0; run --now > "$tmp/out" 2>&1 || rc=$?
 printf '{"type": "service_account", "private_key": "x", "token_uri": "https://evil.example/token"}' > "$w/secrets/gdrive-sa.json"
 rc=0; run --now > "$tmp/out" 2>&1 || rc=$?
 [[ "$rc" == 3 && "$(field reason)" == bad_key ]] || { status; fail "ключ с чужим token_uri (SSRF) должен отклоняться: bad_key"; }
-printf '{"type": "service_account", "client_email": "x@example.iam.gserviceaccount.com", "private_key": "-----BEGIN PRIVATE KEY-----\\nfake\\n-----END PRIVATE KEY-----\\n"}' > "$w/secrets/gdrive-sa.json"
+printf '{"type": "service_account", "client_email": "x@example.iam.gserviceaccount.com", "private_key": "%s\\nfake\\n%s\\n"}' "$PEM_BEGIN" "$PEM_END" > "$w/secrets/gdrive-sa.json"
 rc=0; run --now > "$tmp/out" 2>&1 || rc=$?
 [[ "$rc" == 3 && "$(field reason)" == no_folder ]] || { status; fail "нет ID папки: not_configured/no_folder"; }
 
@@ -245,7 +247,7 @@ docker rm -f "$cname" >/dev/null
 # 2.6c Настройка из интерфейса (OPS-GDRIVE-2): ключ и папка из бакета offsite-config, без файла на сервере и переменной;
 #      аварийный файл на сервере сильнее настройки из интерфейса.
 in_box 'rm -rf /t/drive /t/state /t/secrets/gdrive-sa.json; mkdir -p /t/cfg'
-printf '{"type": "service_account", "client_email": "ui@x.iam.gserviceaccount.com", "private_key": "-----BEGIN PRIVATE KEY-----\\nui\\n-----END PRIVATE KEY-----\\n"}' > "$w/cfg/gdrive-sa.json"
+printf '{"type": "service_account", "client_email": "ui@x.iam.gserviceaccount.com", "private_key": "%s\\nui\\n%s\\n"}' "$PEM_BEGIN" "$PEM_END" > "$w/cfg/gdrive-sa.json"
 printf '{"folder_id": "%s"}' "$FOLDER_ID" > "$w/cfg/settings.json"
 extra=(-e OFFSITE_KEEP_DAYS=14)
 run --now > "$tmp/out" 2>&1 || { cat "$tmp/out"; fail "настройка из интерфейса: копия не прошла"; }

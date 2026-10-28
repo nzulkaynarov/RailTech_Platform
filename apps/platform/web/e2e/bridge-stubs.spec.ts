@@ -116,6 +116,36 @@ test.describe("Заглушки и мост", () => {
     await shoot(page, "stub-without-bridge");
   });
 
+  test("«Чаты · С клиентами» (B-D18-1): менеджеру с разделом лидов — «Входящие» старой CRM", async ({
+    page,
+  }) => {
+    await loginAndWait(page, "manager@demo.example");
+    await spaGoto(page, "/chats?scope=external");
+    await expect(page.getByRole("heading", { level: 1, name: "С клиентами" })).toBeVisible();
+    await expect(
+      page.getByRole("main").getByRole("link", { name: /Открыть в старой CRM/ }),
+    ).toHaveAttribute("href", "http://crm.localhost:8088/inbox");
+    await shoot(page, "stub-chats-external-manager");
+  });
+
+  test("«Чаты · С клиентами» (B-D18-1): бухгалтеру без реестра лидов — кто делает, без кнопки в старую CRM", async ({
+    page,
+  }) => {
+    await loginAndWait(page, "accountant@demo.example");
+    await spaGoto(page, "/chats?scope=external");
+    await expect(page.getByRole("heading", { level: 1, name: "С клиентами" })).toBeVisible();
+    const main = page.getByRole("main");
+    await expect(
+      main.getByText(
+        "Сейчас этой работы в интерфейсе нет; её делает менеджер клиента: попросите его переслать нужное сообщение или файл.",
+      ),
+    ).toBeVisible();
+    await expect(main.getByRole("link", { name: /Открыть в/ })).toHaveCount(0);
+    // Реестра лидов у бухгалтера нет: «Ждут ответа» и «Лиды» в меню не показываются.
+    await expect(page.getByRole("link", { name: /Ждут ответа|^Лиды/ })).toHaveCount(0);
+    await shoot(page, "stub-chats-external-accountant");
+  });
+
   test("снабженец: «Справочники» — мост в старый ERP; клик открывает SSO-адрес в новой вкладке", async ({
     page,
     context,

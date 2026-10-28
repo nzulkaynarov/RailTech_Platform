@@ -396,8 +396,8 @@ BFF не решает: остаток, резерв, переходы стату
 `viewer`/`manager`. Сама базовая роль — **признак, не право**: она нужна «последнему администратору», выбору «кому передать лида» и
 замещающему, и вычисляется по матрице (`admin: full` — `admin`, `crm.leads: full` — `manager`, иначе `viewer`), а не по коду роли
 (шаблон «Бухгалтер» — теперь `viewer`; миграция CRM пересчитала сохранённое). Матрицу прямого API проверяет тест
-`tests/integration/test_catalog_rights_api.py`: ожидания строятся из `platform-rbac.yaml`, а не руками. Роли с `chats.external` дают
-`leads:read` (и ответ/заметку на `full`) по каталогу — это переписка с клиентами (см. Q-D1-8-1). (2) `MessageOut.attachments` не несёт
+`tests/integration/test_catalog_rights_api.py`: ожидания строятся из `platform-rbac.yaml`, а не руками. Роли с `chats.external` с
+W18A-P3 дают не `leads:*`, а `chats:*` — только переписку своих диалогов и зоны (ниже, B-D18-1). (2) `MessageOut.attachments` не несёт
 `storage_key`: файл отдаёт только `GET /leads/{id}/messages/{m}/attachments/{i}` с проверкой доступа к лиду; BFF ходит потоком.
 (3) `GET /team?section=<раздел>&level=full|read` (CRM; право `users:read`, т. е. `admin` не ниже чтения): активные сотрудники, у которых
 объединение матриц ролей даёт раздел на уровне; только id, имя, инициалы, должность. `GET /eds/resolution/assignees` берёт зоны оттуда
@@ -439,6 +439,17 @@ Telegram не ответил вовремя — 502 `INTEGRATION_FAILED` `delive
 доставленного ответа, «Заметка команде», «Подсказать ответ» (ИИ — только CRM/LiteLLM, таймаут пробы), «Вернуть боту»; шаблоны —
 `GET /crm/reply-templates`. Раздел `crm.leads`: чтение — `read` (директор видит очередь без действий; CRM `/inbox` с D1-1 —
 `leads:read`), действия и шаблоны — `full`. Служебные пометки причины CRM (`dialog: …`) и неизвестные коды экрану не отдаются.
+
+**W18A-P3 (B-D18-1; BFF без смены версии, CRM — `GET /chats`, миграция `deals.invoice_issued_at`): переписка отдельно от
+реестра лидов.** Права — CONTRACTS §8: `crm.leads` → `leads:*` (реестр и любой диалог), `chats.external` → `chats:*` (только
+диалоги, где сотрудник участвует: ответственный за лида, клиента или сделку, автор ответа), `eds.payments: full` → зона
+`chats:invoiced` (диалоги клиентов со счётом по сделке; вместе с `chats:read`). BFF: очередь и карточка
+(`/crm/messages`, `/crm/messages/{lead}`) — только `crm.leads`; лента и вложение (`/thread`, `/attachments`) — `crm.leads` или
+`chats.external` от чтения, объект решает CRM (чужой диалог — 404 как есть, BFF его не обходит); `GET /chats/external` → CRM
+`GET /chats` — список открытых диалогов с причиной `access` (`registry` | `participant` | `invoiced`) и фильтром `erp_deal_id`
+(«Запросить платёжку» — переписка клиента заявки). Заглушка «Чаты · С клиентами» ведёт во «Входящие» старой CRM только при
+`crm.leads` (`legacyNeeds` моста), иначе честно «её делает менеджер клиента». Раздел `eds.payments` теперь значит и CRM
+(`gives_backend`), поэтому источник CRM для роли «только счета» — `ok`, а не `not_applicable`; за агрегатами BFF в CRM для неё не ходит.
 
 **W16-D1-2b: Клиенты · Лиды, Клиенты и «+ Создать заявку».** `/crm/leads*` (раздел `crm.leads`, чтение) — CRM
 `GET /leads`: вкладка → `platform_status` (CRM-02), «мои» → `owner=me`, «просроченные» → `overdue=true`, канал → `source`, страница

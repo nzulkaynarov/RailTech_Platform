@@ -181,6 +181,10 @@ resources:
     module: eds
     label: { ru: "Документы · Счета и оплаты · подтвердить оплату, запросить платёжку", uz: "Hujjatlar · Hisoblar va to‘lovlar · to‘lovni tasdiqlash, to‘lov topshiriqnomasini so‘rash", en: "Documents · Invoices & payments · confirm payment, request a payment order" }
     backend:
+      # B-D18-1 (W18A-P3): зона переписки «Счета и оплаты» — диалоги клиентов, по сделкам которых выставлен счёт
+      # («Запросить платёжку»). Право CRM `chats:invoiced` само переписку не открывает: только вместе с `chats:read`
+      # раздела `chats.external` (правило — apps/crm/backend/app/domain/chat_access.py).
+      crm: { full: [chats:invoiced] }
       erp: { full: [finance.invoice, finance.payment, finance.rates, data.export] }
       # data.export ERP ↔ registry.export EDS: выгрузка реестра — у того, кто выгружает данные «Счетов и оплат».
       # payments.confirm — шаг «бухгалтер» маршрута служебной записки с суммой (решение архитектора, волна 12).
@@ -224,10 +228,14 @@ resources:
   - key: chats.external
     module: chats
     label: { ru: "Чаты · С клиентами (Telegram-бот, почта)", uz: "Chatlar · Mijozlar bilan (Telegram-bot, pochta)", en: "Chats · With clients (Telegram bot, email)" }
+    # B-D18-1 (W18A-P3, решение архитектора 2026-10-28): переписка отдельно от реестра лидов. `chats:*` открывает только
+    # переписку, вложения и заметки команды тех диалогов, где сотрудник участвует (ответственный за лида, клиента или
+    # сделку, автор ответа клиенту) или которые назначены его зоне (`chats:invoiced` — «Счета и оплаты»). Реестр лидов
+    # (очередь, список, карточка, воронка) — только `crm.leads` (`leads:*`); у него зона — все диалоги.
     backend:
       crm:
-        read: [leads:read]
-        full: [leads:read, leads:reply, leads:note, leads:assist]
+        read: [chats:read]
+        full: [chats:read, chats:reply, chats:note, chats:assist]
   - key: admin
     module: admin
     label: { ru: "Настройки · Роли и права, Сотрудники, Подключения, Telegram-бот, Журнал, Обращения сотрудников", uz: "Sozlamalar · Rollar va huquqlar, xodimlar, ulanishlar, Telegram-bot, jurnal, xodimlar murojaatlari", en: "Settings · Roles & permissions, employees, connections, Telegram bot, log, staff requests" }

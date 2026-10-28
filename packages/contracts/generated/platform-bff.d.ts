@@ -3272,7 +3272,7 @@ export interface paths {
     };
     /**
      * Лента диалога: сообщения клиента, бота и менеджера, вложения, заметки команды
-     * @description CRM `GET /leads/{id}/messages` (страница, старые выше), `GET /leads/{id}/notes` (только первая страница — без `before`) и `GET /team` (имена менеджеров). Раздел `crm.leads` от чтения. Подгрузка истории — `before` = id самого старого показанного сообщения. Вложения — ссылками BFF (`attachments[].url`): адреса и ключи хранилища наружу не уходят.
+     * @description CRM `GET /leads/{id}/messages` (страница, старые выше), `GET /leads/{id}/notes` (только первая страница — без `before`) и `GET /team` (имена менеджеров). Раздел `crm.leads` или `chats.external` от чтения (B-D18-1): держателю только `chats.external` CRM открывает лишь диалоги, где он участвует, и диалоги зоны «Счета и оплаты» (сделки клиента со счётом); чужой диалог — 404 `NOT_FOUND`, BFF проверку CRM не обходит. Подгрузка истории — `before` = id самого старого показанного сообщения. Вложения — ссылками BFF (`attachments[].url`): адреса и ключи хранилища наружу не уходят.
      */
     get: operations["getCrmThread"];
     put?: never;
@@ -3292,7 +3292,7 @@ export interface paths {
     };
     /**
      * Вложение сообщения клиента (файл)
-     * @description CRM `GET /leads/{id}/messages/{message}/attachments/{index}` потоком. Раздел `crm.leads` от чтения. Ответ — `Content-Disposition: attachment` и `X-Content-Type-Options: nosniff`: файл скачивается, браузер его не исполняет. Файл не сохранён (до согласия, больше 20 МБ) — 404; хранилище CRM недоступно — 502 `INTEGRATION_FAILED`.
+     * @description CRM `GET /leads/{id}/messages/{message}/attachments/{index}` потоком. Раздел `crm.leads` или `chats.external` от чтения; диалог проверяет CRM, как у `getCrmThread` (чужой — 404). Ответ — `Content-Disposition: attachment` и `X-Content-Type-Options: nosniff`: файл скачивается, браузер его не исполняет. Файл не сохранён (до согласия, больше 20 МБ) — 404; хранилище CRM недоступно — 502 `INTEGRATION_FAILED`.
      */
     get: operations["downloadCrmAttachment"];
     put?: never;
@@ -3397,6 +3397,26 @@ export interface paths {
      * @description CRM `POST /leads/{id}/actions/return_to_bot`. Раздел `crm.leads` полный. `note` — что знать боту дальше (видна боту).
      */
     post: operations["returnCrmLeadToBot"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/chats/external": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Чаты · С клиентами: диалоги, открытые сотруднику
+     * @description CRM `GET /chats` (B-D18-1). Раздел `chats.external` или `crm.leads` от чтения — иначе 403 до CRM. Какие диалоги открыты, решает CRM: держателю `crm.leads` — все (`access = registry`); держателю только `chats.external` — где он участвует (ответственный за лида, клиента или сделку, автор ответа; `participant`) и, если у него ещё раздел «Счета и оплаты» полный, диалоги клиентов со счётом по сделке (`invoiced`). Данных реестра лидов (оценка, квалификация, стадия) в ответе нет. `erp_deal_id` — диалоги клиента этой заявки ERP (запросить платёжку). Переписка — `getCrmThread`, вложения — `downloadCrmAttachment`.
+     */
+    get: operations["listExternalChats"];
+    put?: never;
+    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -7448,6 +7468,31 @@ export interface components {
       assigned: components["schemas"]["PersonRef"] | null;
       handoff: components["schemas"]["HandoffInfo"] | null;
       note: components["schemas"]["HandoffNote"];
+    };
+    /** @description Диалог с клиентом без данных реестра лидов (B-D18-1) */
+    ExternalChat: {
+      /** @description Номер лида — ключ переписки (`getCrmThread`) */
+      lead: string;
+      name: string;
+      channel: components["schemas"]["MessageChannel"];
+      language: components["schemas"]["Language"];
+      /**
+       * Format: date-time
+       * @description Последнее сообщение в диалоге (клиента, бота или сотрудника)
+       */
+      last_message_at: string | null;
+      assigned: components["schemas"]["PersonRef"] | null;
+      /** @description По сделке клиента выставлен счёт (событие ERP `invoice.issued`) */
+      invoiced: boolean;
+      /**
+       * @description Почему диалог открыт: `registry` — раздел `crm.leads` (все диалоги), `participant` — сотрудник участвует, `invoiced` — зона «Счета и оплаты»
+       * @enum {string}
+       */
+      access: "registry" | "participant" | "invoiced";
+    };
+    ExternalChatList: {
+      items: components["schemas"]["ExternalChat"][];
+      total: number;
     };
     MessageInbox: {
       items: components["schemas"]["MessageInboxItem"][];
@@ -15116,6 +15161,35 @@ export interface operations {
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
       409: components["responses"]["MessagesConflict"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listExternalChats: {
+    parameters: {
+      query?: {
+        /** @description Только диалоги клиента этой заявки ERP */
+        erp_deal_id?: number;
+        limit?: number;
+        offset?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Диалоги, новые сверху */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ExternalChatList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
       503: components["responses"]["BackendUnavailable"];
     };
   };

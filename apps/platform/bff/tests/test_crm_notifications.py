@@ -98,8 +98,9 @@ async def test_employee_without_crm_sections_still_gets_crm_notifications(
         "items": [crm_note(8, "ticket_reply", fb.m.ago(minutes=3))],
         "unread_count": 1,
     }
-    # Только «Счета и оплаты»: ни одного раздела, который даёт права в CRM.
-    await web.login([custom(31, "Кассир", {"dashboard.queue": "read", "eds.payments": "full"})])
+    # Только «Все проекты»: ни одного раздела, который даёт права в CRM («Счета и оплаты» с B-D18-1
+    # дают CRM зону переписки `chats:invoiced`).
+    await web.login([custom(31, "Архив", {"dashboard.queue": "read", "eds.projects": "full"})])
 
     response = await web.client.get("/api/v1/notifications")
 

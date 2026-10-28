@@ -2,10 +2,12 @@
 ответ.
 
 BFF проксирует к CRM с токеном сотрудника и проверяет раздел каталога `crm.leads`: чтение (очередь,
-карточка, лента, вложения) — от `read` (директор смотрит без действий), действия (забрать,
-ответить, заметка, подсказка, вернуть боту, шаблоны) — `full`. Право на действие над лидом
-(владелец, согласие, открытая передача) решает CRM; её отказы переводятся в `Error` с кодом CRM в
-`details.reason`.
+карточка) — от `read` (директор смотрит без действий), действия (забрать, ответить, заметка,
+подсказка, вернуть боту, шаблоны) — `full`. Лента диалога и вложения (B-D18-1) — `crm.leads` или
+`chats.external` от чтения: какой диалог открыт держателю только `chats.external` (участие, зона
+«Счета и оплаты»), решает CRM — чужой диалог она отдаёт 404, BFF его не обходит. Право на действие
+над лидом (владелец, согласие, открытая передача) решает CRM; её отказы переводятся в `Error` с
+кодом CRM в `details.reason`.
 
 Ответ клиенту несёт ключ повтора `client_message_id`: CRM не шлёт второе сообщение с тем же ключом,
 поэтому «Повторить» безопасно. Telegram не ответил — 502 CRM (`delivery_failed`) → 502
@@ -28,7 +30,7 @@ from starlette.types import Send
 from app.clients import crm_models as crm
 from app.clients.crm_proxy import CrmProxy, crm_error
 from app.crm_messages_view import card, inbox_items, team_note, thread_message
-from app.deps import Authed, require
+from app.deps import Authed, require, require_any
 from app.errors import PlatformError
 from app.feeds.numbers import lead_id_of, lead_number
 from app.schemas_bot import ReplyTemplate, ReplyTemplateList
@@ -50,6 +52,10 @@ router = APIRouter(tags=["messages"])
 
 API = "/api/v1"
 Reader = Annotated[Authed, Depends(require("crm.leads", "read"))]
+# Переписка диалога (B-D18-1): реестр лидов или «Чаты · С клиентами»; объект проверяет CRM.
+DialogReader = Annotated[
+    Authed, Depends(require_any(("crm.leads", "read"), ("chats.external", "read")))
+]
 Worker = Annotated[Authed, Depends(require("crm.leads", "full"))]
 LeadParam = Annotated[str, Path(pattern=r"^[Ll]-?\d{1,9}$")]
 
@@ -94,7 +100,8 @@ class _Crm:
         return response.json() if response.content else None
 
     async def names(self) -> dict[int, str]:
-        """Имена менеджеров (`GET /team`, `leads:read`); сбой — без имён, экран покажет «#id»."""
+        """Имена менеджеров (`GET /team`, `leads:read` или `chats:read`); сбой — без имён, экран
+        покажет «#id»."""
         try:
             rows = await self.proxy.get_list(crm.TeamMember, f"{API}/team")
         except PlatformError:
@@ -136,7 +143,7 @@ async def get_conversation(lead: LeadParam, authed: Reader) -> ConversationCard:
 )
 async def get_thread(
     lead: LeadParam,
-    authed: Reader,
+    authed: DialogReader,
     before: Annotated[int | None, Query(ge=1)] = None,
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
 ) -> ConversationThread:
@@ -195,7 +202,7 @@ async def download_attachment(
     lead: LeadParam,
     message: Annotated[int, Path(ge=1)],
     index: Annotated[int, Path(ge=0, le=19)],
-    authed: Reader,
+    authed: DialogReader,
 ) -> StreamingResponse:
     path = f"{API}/leads/{_lead_id(lead)}/messages/{message}/attachments/{index}"
     response = await CrmProxy(authed.call).raw("GET", path, stream=True)

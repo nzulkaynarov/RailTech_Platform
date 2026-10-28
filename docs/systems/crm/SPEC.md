@@ -238,7 +238,8 @@ deals(                                              -- сделки клиент
   request_key UUID UNIQUE NULL,                     -- ключ формы «Создать заявку» (идемпотентность)
   request_summary NULL, request_urgency 'normal'|'urgent' NULL,           -- «Создать заявку» (W16-D1-2, CRM-03):
   request_contact_id → client_contacts NULL, request_letter_file_id UUID NULL, --   суть, срочность, контакт, файл EDS
-  erp_request_status 'pending'|'done'|'failed' NULL, erp_request_error NULL  -- передача заявки в ERP задачей
+  erp_request_status 'pending'|'done'|'failed' NULL, erp_request_error NULL, -- передача заявки в ERP задачей
+  invoice_issued_at NULL                            -- первый счёт ERP по сделке (erp/invoice.*): зона переписки «Счета и оплаты», B-D18-1
 )
 telegram_identities(
   id, tg_user_id UNIQUE, tg_username, tg_first_name, lead_id NULL, client_id NULL,
@@ -623,7 +624,7 @@ Refine — оболочка: `authProvider` (cookie JWT), `accessControlProvider
 |---|---|
 | Секреты | Инфраструктурные — только в `.env` на стенде и GitHub Secrets; секреты интеграций, которые админ вводит в CRM (токен бота, сервисный токен и секрет вебхуков ERP), — в `integration_secrets` зашифрованными ключом `SECRETS_KEY` из `.env` (ADR-0018), поле только на запись, смена — с повторным паролем и аудитом без значения; в репозитории — `.env.example`. Ключи провайдеров моделей знает только `litellm`. pre-commit с `gitleaks` |
 | Аутентификация | argon2id; JWT access 15 мин в памяти, refresh в httpOnly/SameSite=Strict cookie с ротацией; logout отзывает refresh; блокировка после 10 неудачных входов на 15 мин |
-| Авторизация | Casbin на каждом REST-эндпоинте через зависимость `require(action, resource)`; объектные проверки (владелец лида) — в сервисах. MCP-инструменты — только внутренняя сеть + HMAC-контекст |
+| Авторизация | Casbin на каждом REST-эндпоинте через зависимость `require(action, resource)`; объектные проверки (владелец лида) — в сервисах. MCP-инструменты — только внутренняя сеть + HMAC-контекст. Переписка отдельно от реестра лидов (B-D18-1): очередь, список, карточка и решения лида — `leads:*`; сообщения, вложения и заметки лида, ответ и заметка — `leads:<действие>` или `chats:<действие>` с объектной проверкой диалога (`app/api/dialog_access.py`, правило — `domain/chat_access.py`: участник — ответственный за лида, клиента или сделку, автор ответа; зона `chats:invoiced` — сделка клиента со счётом); чужой диалог держателю `chats:*` — 404; список открытых диалогов — `GET /chats` |
 | Данные клиентов | Все запросы к `documents`/`clients` из бота — с обязательным `client_id` из верифицированной идентичности; интеграционные тесты на cross-tenant доступ |
 | Telegram | Webhook `secret_token`; allow-list `update` типов; `tg_updates` идемпотентность; rate-limit |
 | Сброс пароля по ссылке (W15-H6) | `POST /auth/forgot-password` без аутентификации: ответ 202 одинаков для существующей, отключённой и несуществующей учётной записи (не перечисляем сотрудников), в журнал — причина без адреса; ссылка на Платформу (`PLATFORM_PUBLIC_URL`) уходит на почту (коннектор «Почта») или в Telegram, нет канала — ничего; токен 256 бит, в БД хеш, живёт 60 минут, одноразовый, лимит — 3 ссылки в час на учётную запись (CRM) и 5 запросов в час на IP и адрес (BFF); `POST /auth/reset-password` проверяет политику пароля до погашения токена, после успеха гасит все токены учётной записи и её refresh-токены |
