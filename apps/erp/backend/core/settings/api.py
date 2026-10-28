@@ -158,6 +158,11 @@ SPECTACULAR_SETTINGS = {
         "ContactPreferredChannelEnum": ["email", "telegram", "both"],
         "LanguageEnum": ["ru", "uz", "en"],
         "SecretSourceEnum": ["db", "env", "none"],
+        # D2-3: «Номенклатура и поставщики» — одноимённые поля `kind` и `unit` у разных схем.
+        "DeskItemKindEnum": ["stock", "on_order", "service_fixed", "service_milestones", "service_time"],
+        "BrigadeKindEnum": ["brigade", "person", "subcontractor"],
+        "TechDocKindEnum": ["tz", "drawing", "certificate", "pnr", "other"],
+        "CrewRateUnitEnum": ["day", "hour"],
     },
     "TAGS": [
         {"name": "Auth", "description": "Login, password setup by invitation, JWT tokens"},
