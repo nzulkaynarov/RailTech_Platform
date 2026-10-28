@@ -16,6 +16,7 @@ export const QueueItemKind = {
   resolve_letter: "resolve_letter",
   approve_quote: "approve_quote",
   approve_memo: "approve_memo",
+  rework_document: "rework_document",
   problem_project: "problem_project",
   calc_task: "calc_task",
   supplier_overdue: "supplier_overdue",

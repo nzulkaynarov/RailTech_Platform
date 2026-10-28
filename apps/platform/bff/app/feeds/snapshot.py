@@ -9,6 +9,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from app.feeds.feed import SNAPSHOT_TTL_SECONDS, Feed, rows
+from app.feeds.rework import Returned, load_rework
 from app.rbac import View, allows
 
 # Сделки ERP постранично (DRF: максимум 200 на страницу); берём новейшие — поиск и счётчики
@@ -49,6 +50,8 @@ class Snapshot:
     approvals: list[dict[str, Any]] = field(default_factory=list)
     approvals_total: int = 0
     deals: list[dict[str, Any]] = field(default_factory=list)
+    # EDS: мои документы, возвращённые на доработку (D1-6b); `None` — не читали или EDS не ответил.
+    rework: list[Returned] | None = None
     # EDS: `None` — источник не читали или он не ответил (карточка и бейдж без числа: ноль был бы
     # ложью), список — ответ EDS как есть (что EDS вернул по токену сотрудника, то и строки).
     letters: list[dict[str, Any]] | None = None
@@ -179,6 +182,10 @@ async def load_snapshot(
             payload = await feed.get("erp", DEALS_PATH, DEALS_PARAMS, ttl=SNAPSHOT_TTL_SECONDS)
             snap.deals = rows(payload)
 
+    async def load_returned() -> None:
+        if eds:
+            snap.rework = await load_rework(feed, view)
+
     async def load_tickets() -> None:
         if tickets and wants_tickets(view):
             payload = await feed.get("crm", TICKETS_PATH, TICKETS_PARAMS, ttl=SNAPSHOT_TTL_SECONDS)
@@ -187,6 +194,12 @@ async def load_snapshot(
             snap.tickets_total = total if isinstance(total, int) else len(snap.tickets)
 
     await asyncio.gather(
-        load_inbox(), load_approvals(), load_deals(), load_tickets(), load_letters(), load_memos()
+        load_inbox(),
+        load_approvals(),
+        load_deals(),
+        load_tickets(),
+        load_letters(),
+        load_memos(),
+        load_returned(),
     )
     return snap
