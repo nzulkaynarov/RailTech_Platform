@@ -45,7 +45,7 @@ ASYNCAPI = yaml.safe_load((EVENTS / "asyncapi.yaml").read_text(encoding="utf-8")
 def test_types_present() -> None:
     domains = {t.domain for t in TYPES}
     assert {"erp", "crm", "identity", "eds"} <= domains
-    assert len([t for t in TYPES if t.domain == "erp"]) == 23
+    assert len([t for t in TYPES if t.domain == "erp"]) == 24
 
 
 @pytest.mark.parametrize("path", schema_files(), ids=lambda p: p.relative_to(CONTRACTS).as_posix())
@@ -147,11 +147,14 @@ ERP_EVENTS = {
 #: Новые типы ERP после бывшего вебхука: волна 12 (EDS-03) — КП готово к одобрению директором в EDS.
 ERP_EVENTS_C1 = {"quote.ready_for_approval"}
 
+#: Волна 16 (D1-9): приглашение контакта в Cabinet через бот CRM — ERP в Telegram не пишет.
+ERP_EVENTS_D1 = {"invite.requested"}
+
 
 def test_erp_types_are_the_22_events_of_the_former_webhook_and_the_c1_ones() -> None:
     """22 события бывшего вебхука (events.schema.json удалён в B4) — по-прежнему uz.railtech.erp.<тип>.v1; плюс C1."""
     erp = {f"{t.entity}.{t.action}" for t in TYPES if t.domain == "erp" and t.version == 1}
-    assert erp == ERP_EVENTS | ERP_EVENTS_C1
+    assert erp == ERP_EVENTS | ERP_EVENTS_C1 | ERP_EVENTS_D1
 
 
 EDS_EVENTS = {

@@ -34,7 +34,8 @@ Contract-first действует для `portal`, `integration`, событий
 
 | Метод и путь | Назначение | Тело / ответ (главное) |
 |---|---|---|
-| `POST /clients/handoff` | передача клиента из CRM | вход: `crm_client_id`, `crm_lead_id?`, `company{name, inn?, segment?, language}`, `contacts[{crm_contact_id, name, phone?, email?, telegram_user_id?, language, is_primary, preferred_channel}]`, `need{summary, product_interest[], attachments[]?}`, `owner{crm_user_id, name}`, `consent{given_at, version}`, `create_request: bool`, `invite{channels: [telegram, email]}`. Ответ: `erp_company_id`, `erp_request_id?`, `invite{sent_via[], cabinet_url}`. Идемпотентно по `crm_client_id` |
+| `POST /clients/handoff` | передача клиента из CRM | вход: `crm_client_id`, `crm_lead_id?`, `company{name, inn?, segment?, language}`, `contacts[{crm_contact_id, name, phone?, email?, telegram_user_id?, language, is_primary, preferred_channel}]`, `need{summary, product_interest[], attachments[]?}`, `owner{crm_user_id, name}`, `consent{given_at, version}`, `create_request: bool`, `invite{channels: [telegram, email]}`. Ответ: `erp_company_id`, `erp_request_id?`, `invite{sent_via[], cabinet_url, error?}`. Идемпотентно по `crm_client_id` |
+| `POST /clients/{crm_client_id}/invite` | повторное приглашение контакта другим каналом (0.8.0, D1-9) | вход: `channel: email|telegram|both`, `crm_contact_id?` (без него — основной контакт). Ответ всегда 200: `sent_via[]`, `cabinet_url`, `error?` — код причины, если не ушло ни одним каналом (`CONTACT_EMAIL_REQUIRED`, `CONTACT_TELEGRAM_REQUIRED`, `EMAIL_DELIVERY_FAILED`, `CONTACT_CHANNEL_REQUIRED`, `INVALID_CHANNEL`, `COMPANY_ARCHIVED`, `CONTACT_ARCHIVED`, `CONTACT_WITHOUT_COMPANY`, `CONTACT_NOT_FOUND`); 404 — клиент неизвестен |
 | `PUT /contacts/{crm_contact_id}` | обновление контакта / Telegram-привязки | те же поля контакта |
 | `GET /companies/{erp_company_id}/summary` | карточка клиента для CRM | открытые сделки, последний документ, дебиторка, ближайшая поставка |
 | `GET /companies/{erp_company_id}/deals` | список сделок | `[{erp_deal_id, number, title, stage, amount, currency, next_step, updated_at}]`; `amount` — сумма последнего КП, отправленного клиенту, `null` — КП ещё не отправлялось (черновик не утекает) |
@@ -119,6 +120,7 @@ inline и до БД не доходит (§9.2).
 | `deal.won` / `deal.lost` | `amount, lost_reason?` | зеркало сделки → `won/lost`; стадия лида не меняется (CRM ADR-0022) |
 | `document.created` | `erp_document_id, kind, number` | индекс документов клиента в CRM (без файла) |
 | `invite.sent` | `channels[]` | лента |
+| `invite.requested` | `channel: telegram, erp_contact_id, crm_contact_id, language?` | бот присылает контакту приглашение с кнопкой «Открыть кабинет» (Mini App; ссылок и токенов нет); итог доставки — в карточке клиента (D1-9, Q-FIX23-1). Inline-обработчик, как у кода акцепта |
 
 ## 4. Portal API (Cabinet → ERP)
 
@@ -468,7 +470,8 @@ subscribers:
 | `delivery.status_changed`, `delivery.eta_changed` | `ensure_fulfillment` (создание исполнения), `update_fulfillment_status` |
 | `delivery.line_accepted`, `delivery.line_disputed` | `accept_delivery_line`, `dispute_delivery_line` |
 | `document.created` | переход «не выпущен → выпущен» у КП, договора, счёта, акта, накладной, `GeneratedDocument` (правило `portal.services.documents.is_issued`) |
-| `invite.sent` | `invite_contact_to_portal` |
+| `invite.sent` | `invite_contact_to_portal` (за ушедшее письмо) |
+| `invite.requested` | `invite_contact_to_portal` (канал `telegram`: ERP в Telegram не пишет, событие уходит только контакту с `telegram_user_id` и сопоставлением с контактом CRM) |
 
 Компания без `CrmClientMapping` событий не порождает. `correlationid` по умолчанию — `X-Request-ID` входящего запроса
 (`RequestIDMiddleware` принимает только безопасную строку `A-Za-z0-9._-` до 128 знаков, иначе новый UUID), вне запроса
@@ -524,6 +527,9 @@ Telegram, язык, канал, признак основного); сегмен
 `erp_event_notices` и уходят после коммита (задача после обработки, сборщик раз в минуту, не позже суток; ушедшим адресатам
 повторно не шлются). Клиента нет или `erp_company_id` не совпадает — ошибка обработки (повтор, затем `failed`).
 `quote.acceptance_code_requested` — inline-обработчик: код доставляется в Telegram контакту из памяти запроса, в inbox лежит маска.
+`invite.requested` — тоже inline (D1-9): бот присылает приглашение сразу, итог (отправлено или причина словами) пишется в `client_notices`
+и виден менеджеру в карточке клиента и лида; секретов в событии нет. «Заявка принята» (`request.created`, `source` `crm` или `cabinet`) идёт
+обычным путём через `erp_event_notices`: бот, а клиенту без Telegram — письмо; повторная доставка события второго сообщения не даёт.
 
 **Секрет пары `erp ↔ crm`** (L12): `RT_BUS_SECRET_ERP_CRM` / `RT_BUS_SECRET_CRM_ERP`, если заданы; иначе
 `hex(HMAC-SHA256(webhook_secret, "rt-bus/v1/<издатель>-><подписчик>"))` из каждого действующего секрета вебхуков сопряжения

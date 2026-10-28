@@ -12,6 +12,7 @@ import { adminCompanyHandlers } from "./adminCompany";
 import { adminRolesHandlers } from "./adminRoles";
 import { botKbHandlers } from "./botKb";
 import { crmMessagesHandlers } from "./crmMessages";
+import { edsApprovalsHandlers } from "./edsApprovals";
 import { bridgeHandlers } from "./bridgeHandlers";
 import { edsLettersHandlers } from "./edsLetters";
 import { adminUsersHandlers } from "./adminUsers";
@@ -153,6 +154,7 @@ export const handlers = [
   ...bridgeHandlers,
   ...edsDocumentsHandlers,
   ...edsLettersHandlers,
+  ...edsApprovalsHandlers,
 
   getGetHealthMockHandler({
     status: "ok",

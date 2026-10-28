@@ -9,6 +9,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any, Final
 
+from app.domain import client_texts
 from app.domain.urls import is_http_url
 from app.schemas.settings import TextsSettings
 from app.schemas.settings_base import LANGUAGES, Language, LocalizedText
@@ -78,6 +79,30 @@ def acceptance_code_message(
     return BotMessage(text)
 
 
+#: Источники заявки, о которых клиенту пишем «принята»: заявку завёл менеджер из лида (`crm`) или
+#: сам
+#: клиент в кабинете (`cabinet`). Заявка сотрудника в ERP (`erp`) клиенту не сообщается.
+ACCEPTED_SOURCES: Final = ("crm", "cabinet")
+
+
+def request_accepted(
+    payload: Mapping[str, Any], *, number: str, language: Language, cabinet_url: str
+) -> BotMessage | None:
+    """«Заявка ЗВ-… принята, считаем» + «Открыть кабинет» (SPEC-v3 §3.1 шаг 2, Приложение Б).
+
+    Тексты — `domain/client_texts.py`, без внутренних терминов. `None` — по этому источнику
+    клиенту не пишем."""
+    if payload.get("source") not in ACCEPTED_SOURCES:
+        return None
+    text = client_texts.request_accepted_bot(language, number)
+    buttons = (
+        ((client_texts.open_cabinet_label(language), cabinet_url),)
+        if is_http_url(cabinet_url)
+        else ()
+    )
+    return BotMessage(text, buttons)
+
+
 def client_message(
     event: str,
     payload: Mapping[str, Any],
@@ -86,10 +111,13 @@ def client_message(
     texts: TextsSettings,
     language: Language,
     cabinet_url: str,
+    deal_number: str = "",
 ) -> BotMessage | None:
     """Сообщение клиенту по событию ERP или `None`, если по этому событию бот молчит."""
     p = payload
     doc_button: tuple[str, str] | None = None
+    if event == "request.created":
+        return request_accepted(p, number=deal_number, language=language, cabinet_url=cabinet_url)
     if event == "quote.sent":
         text = _text(texts, "erp_quote_sent", language, deal=deal_title)
         url = p.get("public_url")
