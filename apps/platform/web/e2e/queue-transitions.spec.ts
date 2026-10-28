@@ -41,9 +41,9 @@ async function shoot(page: Page, name: string): Promise<void> {
 }
 
 const STUB = "rt-pf-mock-queue-stub";
-const ROW_STUB = "Где сделать: Разобраться с проектом ПР-2026-099";
+const ROW_STUB = "Где сделать: Проверить отправку КП-2026/117";
 
-/** Директору — строка очереди без родного экрана (проект): у лидов, писем, КП и служебок экраны уже есть (D1-6). */
+/** Директору — строка очереди без родного экрана (исходящее КП): у лидов, писем, КП на одобрение, служебок и проектов экраны уже есть. */
 async function showStubRow(page: Page): Promise<void> {
   await loginAndWait(page, "director@demo.example");
   await setMock(page, STUB, "1");
@@ -62,9 +62,9 @@ test.describe("Мои задачи: «Открыть» или «Где сдел�
     const queue = page.getByRole("region", { name: "Что сделать сейчас" });
     await queue.getByRole("button", { name: ROW_STUB }).click();
     const pop = page.getByRole("region", { name: "Где сделать" });
-    await expect(pop.getByText(/Сейчас — в старом ERP: раздел «Сделки»/)).toBeVisible();
+    await expect(pop.getByText(/Сейчас — в старом ERP: .*Коммерческие предложения/)).toBeVisible();
     const open = pop.getByRole("link", { name: /Открыть в старом ERP/ });
-    await expect(open).toHaveAttribute("href", "http://erp.localhost:8088/#crm-deals");
+    await expect(open).toHaveAttribute("href", "http://erp.localhost:8088/#crm-quotes");
     await expect(open).toHaveAttribute("target", "_blank");
     expect(await open.getAttribute("rel")).toContain("noopener");
     await expect(pop.getByText("Когда появится: к пилоту.")).toBeVisible();
@@ -276,18 +276,18 @@ test.describe("Поиск: объект, «Где посмотреть», дей
 test.describe("Колокольчик: объект без экрана", () => {
   test.skip(({ isMobile }) => isMobile, "ширины задаёт сам сценарий");
 
-  test("«Где посмотреть» раскрывается под уведомлением, окно не закрывается", async ({ page }) => {
+  test("уведомление о договоре ведёт в карточку проекта (D2-5), «Где посмотреть» — у объектов без экрана", async ({
+    page,
+  }) => {
     await loginAndWait(page, "director@demo.example");
     await spaGoto(page, "/dashboard/queue");
     await page.getByRole("button", { name: "Центр уведомлений, 3 новых" }).click();
     const center = page.getByRole("dialog", { name: "Центр уведомлений" });
-    await center.getByRole("button", { name: /Где посмотреть: .*ДОГ-2026\/091/ }).click();
-    await expect(
-      center.getByRole("region", { name: "Где посмотреть" }).getByRole("link", {
-        name: /Открыть в старом ERP/,
-      }),
-    ).toBeVisible();
-    await shoot(page, "bell-where");
+    await expect(center.getByRole("button", { name: /Где посмотреть/ })).toHaveCount(0);
+    await center.getByRole("link", { name: /ДОГ-2026\/091/ }).click();
+    await expect(page).toHaveURL(/\/eds\/projects\/.*tab=contract/);
+    await expect(page.getByRole("heading", { level: 1, name: "Проект ПР-2026-097" })).toBeVisible();
+    await shoot(page, "bell-contract-opens-project");
   });
 });
 
