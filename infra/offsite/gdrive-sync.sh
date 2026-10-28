@@ -294,13 +294,29 @@ due() {
   [ "$t" -ge "$sched" ] && [ "$last_ok" -lt "$sched" ]
 }
 
+# Блокировка /state/lock лежит в томе и переживает контейнер: деплой пересоздаёт его, и копия, прерванная SIGKILL, оставила бы
+# блокировку на 6 ч 20 мин (без копий, healthcheck при этом «healthy»). Демон — единственный, кто стартует вместе с контейнером:
+# любая блокировка на этот момент — от прежнего контейнера, её снимаем.
+clear_stale_lock() {
+  if [ -d "$STATE/lock" ]; then
+    rmdir "$STATE/lock" 2>/dev/null || rm -rf "$STATE/lock"
+    log "offsite_stale_lock_removed"
+  fi
+}
+
 daemon() {
   log "offsite_daemon_started" ",\"at_utc\":\"$AT_UTC\",\"keep_days\":$KEEP_DAYS,\"bwlimit\":\"$BWLIMIT\""
+  clear_stale_lock
+  # SIGTERM (docker stop): sh как PID 1 без обработчика его игнорирует и получает SIGKILL через 10 с. Обработчик снимает блокировку
+  # и выходит; пауза — `sleep & wait`, чтобы сигнал обрабатывался сразу, а не после sleep. Во время самого копирования сигнал
+  # дождётся rclone — этот случай закрывает clear_stale_lock при следующем старте.
+  trap 'rmdir "$STATE/lock" 2>/dev/null || true; log offsite_daemon_stopped; exit 0' TERM INT
   recover_marker
   while true; do
     mark heartbeat "$(now)"
     if due; then locked_run || true; fi
-    sleep 60
+    sleep 60 &
+    wait $! || true
   done
 }
 

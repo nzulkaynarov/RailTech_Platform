@@ -63,12 +63,20 @@ docker image inspect "$image" >/dev/null 2>&1 \
 rclone_image="$(sed -n 's|^[[:space:]]*image:[[:space:]]*\(rclone/rclone:[^[:space:]]*\)[[:space:]]*$|\1|p' "$here/../compose/prod.yml" | head -n 1)"
 [[ -n "$rclone_image" ]] || die "не нашёл образ rclone в infra/compose/prod.yml"
 
-if [[ -z "$dir" ]]; then dir="$(mktemp -d /var/tmp/rt-gdrive-XXXXXX)"; fi
+auto_dir=0 pitr_started=0
+if [[ -z "$dir" ]]; then dir="$(mktemp -d /var/tmp/rt-gdrive-XXXXXX)"; auto_dir=1; fi
 mkdir -p "$dir"
 dir="$(cd "$dir" && pwd)"
 [[ -z "$(ls -A "$dir")" ]] || die "$dir не пуст — нужен пустой каталог (или не существующий)"
+# Учения (--check) после себя ничего не оставляют — и при успехе, и при сбое: одноразовый контейнер и том восстановления (только если
+# их создал этот запуск), скачанную копию и созданный здесь каталог /var/tmp/rt-gdrive-*. Восстановление (--latest, --target-time)
+# оставляет всё: контейнер нужен для переключения.
 cleanup() {
-  [[ "$mode" != check || $keep_dir -eq 1 ]] || docker run --rm -v "$dir:/d" --entrypoint sh "$rclone_image" -c 'rm -rf /d/*' >/dev/null 2>&1 || true
+  [[ "$mode" == check ]] || return 0
+  [[ $pitr_started -eq 0 ]] || "$here/restore-pitr.sh" --drop --name "$name" >/dev/null 2>&1 || true
+  [[ $keep_dir -eq 0 ]] || return 0
+  docker run --rm -v "$dir:/d" --entrypoint sh "$rclone_image" -c 'rm -rf /d/* /d/.files' >/dev/null 2>&1 || true
+  [[ $auto_dir -eq 0 ]] || rmdir "$dir" 2>/dev/null || true
 }
 trap cleanup EXIT
 
@@ -118,6 +126,10 @@ case "$mode" in
   check|latest) pitr+=(--latest) ;;
   target) pitr+=(--target-time "$target") ;;
 esac
+if docker inspect "$name" >/dev/null 2>&1 || docker volume inspect "$name-data" >/dev/null 2>&1; then
+  die "контейнер или том $name уже есть (прошлое восстановление?): уберите — $here/restore-pitr.sh --drop --name $name — или задайте --name"
+fi
+pitr_started=1
 "${pitr[@]}" || die "восстановление из копии с Drive не удалось (причина выше); убрать остатки: $here/restore-pitr.sh --drop --name $name"
 
 if [[ "$mode" != check ]]; then
@@ -130,5 +142,6 @@ got="$(docker exec -u postgres "$name" psql -X -At -U postgres -d postgres -c "S
 missing=""
 for db in $expect; do [[ " $got " == *" $db "* ]] || missing+="$db "; done
 "$here/restore-pitr.sh" --drop --name "$name" >/dev/null
+pitr_started=0
 [[ -z "$missing" ]] || die "учения НЕ пройдены: в восстановленном кластере нет баз: ${missing% } (есть: ${got% })"
 say "учения пройдены: копия с Google Drive разворачивается, базы на месте (${expect}); контейнер и том удалены"

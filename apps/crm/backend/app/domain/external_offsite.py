@@ -217,7 +217,7 @@ def offsite_backup(f: OffsiteFacts, now: datetime) -> CheckResult:
             error=f.error,
             hint=hosting_hint(
                 "CRM не читает бакет offsite с отметкой внешней копии (status.json)",
-                "Выдать сервису CRM чтение бакета offsite (s3-init при деплое); до этого "
+                "Выдать сервису CRM чтение offsite/status.json (s3-init при деплое); до этого "
                 "состояние копии: docker compose logs offsite-backup на сервере приложений",
             ),
             cause="server_down",

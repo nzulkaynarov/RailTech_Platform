@@ -7,7 +7,7 @@
 #  2. gdrive-sync.sh --now копирует архив в «Drive»: итог ok.
 #  3. restore-from-gdrive.sh --check: скачивает, wal-g видит копию, разворачивает, базы на месте — учения пройдены, остатков нет.
 #  4. restore-from-gdrive.sh --latest: в восстановленной базе есть и A, и B (WAL после базовой копии проигран).
-#  5. Неверный WAL_ENC_KEY — восстановление не проходит.
+#  5. Неверный WAL_ENC_KEY — восстановление не проходит, и после провала не остаётся контейнера, тома и скачанной копии.
 # Запуск: bash этот-файл [образ rt-db-postgres] (по умолчанию rt-db-postgres:local; нет — docker build -f infra/db/Dockerfile.postgres infra/db)
 set -euo pipefail
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -76,4 +76,8 @@ if WAL_FETCH_TIMEOUT_S=60 "$root/infra/db/restore-from-gdrive.sh" --check --env-
   --name rt-pitr-offsite-bad > "$w/bad.out" 2>&1; then
   cat "$w/bad.out"; fail "с неверным WAL_ENC_KEY учения не должны проходить"
 fi
+# Провалившиеся учения после себя ничего не оставляют: ни контейнера и тома восстановления, ни скачанной копии.
+! docker inspect rt-pitr-offsite-bad >/dev/null 2>&1 || fail "после провала учений остался контейнер"
+! docker volume inspect rt-pitr-offsite-bad-data >/dev/null 2>&1 || fail "после провала учений остался том"
+[[ -z "$(ls -A "$w/dl-bad" 2>/dev/null)" ]] || fail "после провала учений осталась скачанная копия"
 echo "offsite-restore-live-test: ok"

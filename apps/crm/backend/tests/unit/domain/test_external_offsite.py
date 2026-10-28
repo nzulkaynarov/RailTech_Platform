@@ -161,7 +161,7 @@ def test_unreadable_status_is_not_checked_with_a_hosting_hint() -> None:
     result = offsite_backup(OffsiteFacts(error="AccessDenied"), NOW)
     assert result.status == "unknown"
     assert result.hint
-    assert "бакета offsite" in result.hint
+    assert "offsite/status.json" in result.hint
 
 
 @pytest.mark.parametrize(

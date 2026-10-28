@@ -8,7 +8,9 @@
 #  2. Поведение (docker run образа rclone): нет ключа / битый ключ / нет ID папки — not_configured без падения; окно 14 суток —
 #     копируются копия, покрывающая границу, более новые копии и WAL с её начала, история веток; старое на «Drive» удаляется;
 #     пустой архив — сбой source_empty без удалений; выборка больше квоты — сбой quota без выгрузки; ID папки не попадает в
-#     status.json; расписание (due) и healthcheck.
+#     status.json; двухфазная выгрузка (сбой копирования данных — на «Drive» нет отметок готовности копий; сбой удаления отметок —
+#     данные старой копии не тронуты); блокировка, оставшаяся от прежнего контейнера, снимается при старте; SIGTERM — штатный
+#     выход; расписание (due) и healthcheck.
 # Запуск: bash этот-файл
 set -euo pipefail
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -58,9 +60,14 @@ for f in prod dev; do
 done
 grep -qE '^    offsite\) echo "offsite" ;;$' "$init" || fail "init.sh: offsite пишет только в бакет offsite"
 grep -qE '^    offsite\) echo "wal" ;;$' "$init" || fail "init.sh: offsite читает бакет wal (только чтение)"
-grep -qE '^    crm\) echo "backups offsite" ;;$' "$init" || fail "init.sh: CRM читает backups и offsite"
-grep -qE '^SERVICES=".* offsite"$' "$init" || fail "init.sh: сервиса offsite нет в SERVICES"
+grep -qE '^    crm\) echo "offsite/status.json" ;;$' "$init" || fail "init.sh: CRM читает в бакете offsite только status.json"
+grep -qE '^    crm\) echo "backups" ;;' "$init" || fail "init.sh: ro-бакет CRM — только backups (offsite целиком CRM не читает)"
 fn="$(sed -n '/^policy_json() {/,/^}/p' "$init")"
+pol="$(bash -c "$fn; policy_json 'kb-sources' 'backups' 'wal' 'offsite/status.json'")"
+[[ "$(jq -r '[.Statement[] | select(.Resource | tostring | test("offsite")) | {a: (.Action | sort | join(",")), r: (.Resource | join(","))}] | map(.a + "@" + .r) | sort | join(" ")' <<<"$pol")" \
+  == "s3:GetBucketLocation,s3:ListBucket@arn:aws:s3:::offsite s3:GetObject@arn:aws:s3:::offsite/status.json" ]] \
+  || fail "политика CRM: в offsite — список и чтение только status.json"
+grep -qE '^SERVICES=".* offsite"$' "$init" || fail "init.sh: сервиса offsite нет в SERVICES"
 pol="$(bash -c "$fn; policy_json 'offsite' 'wal'")"
 [[ "$(jq -r '[.Statement[] | select(.Resource | tostring | test("wal")) | .Action[]] | sort | unique | join(",")' <<<"$pol")" == s3:GetBucketLocation,s3:GetObject,s3:ListBucket ]] \
   || fail "политика offsite: на бакет wal только список и чтение"
@@ -169,6 +176,64 @@ rc=0; run --now > "$tmp/out" 2>&1 || rc=$?
 [[ "$rc" == 1 && "$(field result)" == fail && -n "$(field reason)" ]] || { status; fail "сбой записи: ожидался fail"; }
 ! grep -rq "$FOLDER_ID" "$w/status" "$w/state" "$tmp/out" || fail "ID папки попал в status.json, состояние или журнал"
 in_box 'rm -f /t/drive/pg17'
+
+# 2.6a Двухфазная выгрузка. Обёртка rclone впереди PATH роняет нужный вызов: copy со списком без отметок (данные) или delete со
+#      списком отметок. Инвариант «у каждой отметки готовности на Drive есть данные копии» должен держаться при любом сбое.
+mkdir -p "$w/bin"
+cat > "$w/bin/rclone" <<'WRAP'
+#!/bin/sh
+list="$(printf '%s\n' "$@" | sed -n '/^--files-from-raw$/{n;p;}')"
+if [ "$1" = copy ] && [ -n "${FAIL_DATA_COPY:-}" ] && [ -n "$list" ] && ! grep -q _backup_stop_sentinel "$list"; then
+  echo "ERROR : injected data copy failure" >&2; exit 1
+fi
+if [ "$1" = delete ] && [ -n "${FAIL_SENTINEL_DELETE:-}" ] && [ -n "$list" ] && grep -q _backup_stop_sentinel "$list"; then
+  echo "ERROR : injected sentinel delete failure" >&2; exit 1
+fi
+exec /usr/local/bin/rclone "$@"
+WRAP
+chmod +x "$w/bin/rclone"
+sentinels_have_data() { # у каждой отметки на «Drive» есть каталог копии с данными
+  local f base
+  for f in "$w"/drive/pg17/basebackups_005/*_backup_stop_sentinel.json; do
+    [[ -e "$f" ]] || continue
+    base="${f%_backup_stop_sentinel.json}"
+    [[ -s "$base/tar_partitions/part_1.tar.zst" ]] || { echo "отметка без данных: ${f##*/}"; return 1; }
+  done
+}
+in_box 'rm -rf /t/drive'
+extra=(-e OFFSITE_KEEP_DAYS=14 -e "OFFSITE_GDRIVE_FOLDER_ID=$FOLDER_ID" -e PATH=/t/bin:/usr/local/bin:/usr/bin:/bin -e FAIL_DATA_COPY=1)
+rc=0; run --now > "$tmp/out" 2>&1 || rc=$?
+[[ "$rc" == 1 ]] || { cat "$tmp/out"; fail "сбой копирования данных: ожидался fail"; }
+! compgen -G "$w/drive/pg17/basebackups_005/*_backup_stop_sentinel.json" >/dev/null \
+  || fail "сбой копирования данных, а отметки готовности копий уже на Drive (отметки — только после данных)"
+extra=(-e OFFSITE_KEEP_DAYS=14 -e "OFFSITE_GDRIVE_FOLDER_ID=$FOLDER_ID")
+run --now > "$tmp/out" 2>&1 || { cat "$tmp/out"; fail "копия после сбоя не прошла"; }
+in_box 'cp -a /t/src/pg17/basebackups_005/base_000000010000000000000002* /t/drive/pg17/basebackups_005/'
+extra=(-e OFFSITE_KEEP_DAYS=14 -e "OFFSITE_GDRIVE_FOLDER_ID=$FOLDER_ID" -e PATH=/t/bin:/usr/local/bin:/usr/bin:/bin -e FAIL_SENTINEL_DELETE=1)
+rc=0; run --now > "$tmp/out" 2>&1 || rc=$?
+[[ "$rc" == 1 ]] || { cat "$tmp/out"; fail "сбой удаления отметок: ожидался fail"; }
+sentinels_have_data || fail "сбой удаления отметок оставил отметку без данных (сначала удаляются отметки, затем данные)"
+[[ -s "$w/drive/pg17/basebackups_005/base_000000010000000000000002/tar_partitions/part_1.tar.zst" ]] \
+  || fail "данные старой копии удалены, хотя её отметку удалить не удалось"
+extra=(-e OFFSITE_KEEP_DAYS=14 -e "OFFSITE_GDRIVE_FOLDER_ID=$FOLDER_ID")
+run --now > "$tmp/out" 2>&1 || { cat "$tmp/out"; fail "копия после сбоя удаления не прошла"; }
+[[ ! -d "$w/drive/pg17/basebackups_005/base_000000010000000000000002" ]] && sentinels_have_data || fail "старая копия не удалена после сбоя"
+
+# 2.6b Блокировка от прежнего контейнера (SIGKILL посреди копии) снимается при старте демона; SIGTERM — штатный выход.
+in_box 'mkdir -p /t/state/lock'
+lname="rt-offsite-lock-$$"
+docker run -d --name "$lname" -v "$w:/t" -v "$script:/offsite/gdrive-sync.sh:ro" -e TZ=UTC -e OFFSITE_STATE_DIR=/t/state \
+  -e OFFSITE_STATUS_DST=/t/status/status.json -e OFFSITE_GDRIVE_SA_FILE=/t/nokey.json --entrypoint sh "$image" /offsite/gdrive-sync.sh --daemon >/dev/null
+sleep 4; docker logs "$lname" > "$tmp/out" 2>&1; docker rm -f "$lname" >/dev/null
+grep -q '"offsite_stale_lock_removed"' "$tmp/out" || { cat "$tmp/out"; fail "демон не снял блокировку прежнего контейнера"; }
+[[ ! -d "$w/state/lock" ]] || fail "блокировка осталась после старта демона"
+cname="rt-offsite-sigterm-$$"
+docker run -d --name "$cname" -v "$w:/t" -v "$script:/offsite/gdrive-sync.sh:ro" -e TZ=UTC -e OFFSITE_STATE_DIR=/t/state \
+  -e OFFSITE_STATUS_DST=/t/status/status.json -e OFFSITE_GDRIVE_SA_FILE=/t/nokey.json --entrypoint sh "$image" /offsite/gdrive-sync.sh --daemon >/dev/null
+sleep 3; t0=$(date +%s); docker stop -t 10 "$cname" >/dev/null; took=$(( $(date +%s) - t0 ))
+docker logs "$cname" 2>&1 | grep -q '"offsite_daemon_stopped"' || { docker logs "$cname"; docker rm -f "$cname" >/dev/null; fail "демон не обработал SIGTERM"; }
+[[ "$(docker inspect -f '{{.State.ExitCode}}' "$cname")" == 0 && "$took" -lt 8 ]] || { docker rm -f "$cname" >/dev/null; fail "SIGTERM: ожидался выход 0 сразу, а не SIGKILL через 10 с (took=$took)"; }
+docker rm -f "$cname" >/dev/null
 
 # 2.7 Расписание и healthcheck (функции скрипта в режиме библиотеки).
 docker run --rm -v "$w:/t" -v "$script:/offsite/gdrive-sync.sh:ro" -e TZ=UTC --entrypoint sh "$image" -c '
