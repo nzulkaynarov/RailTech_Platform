@@ -2,7 +2,7 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { beforeEach, describe, expect, it } from "vitest";
 
-import { readLeads, resetLeads } from "../../../mocks/fixtures/leads";
+import { readLeads, resetLeads, writeLeads } from "../../../mocks/fixtures/leads";
 import { resetMessages } from "../../../mocks/fixtures/messages";
 import { panelEl, renderAt, setupBotTests, signIn } from "../../../test/botKit";
 import { server } from "../../../test/server";
@@ -255,6 +255,27 @@ describe("письмо директору: из переписки и при с�
     expect(await within(panel).findByText("Заявка создана")).toBeVisible();
     const created = readLeads().clients.find((c) => c.name === "ООО Демо-Логистик");
     expect(created?.requests[0]?.letter_file_id).toBeTruthy();
+  });
+
+  it("чужой лид по адресу `create=1`: формы нет, вложение в EDS не копируется", async () => {
+    const state = readLeads();
+    const other = { id: "u-other", name: "Другой Менеджер", initials: "ДМ" };
+    const lead = state.leads.find((l) => l.row.lead === "L-2041");
+    if (!lead) throw new Error("нет L-2041");
+    lead.row.assigned = other;
+    lead.card.assigned = other;
+    writeLeads(state);
+    let copies = 0;
+    server.events.on("request:start", ({ request }) => {
+      if (request.url.includes("/crm/request-files/from-message")) copies += 1;
+    });
+    signIn("manager@demo.example");
+    renderAt("/crm/leads?lead=L-2041&create=1&letter=2041000-0&panel=open&tab=card");
+    const panel = await panelEl();
+    expect(await within(panel).findByText("Лида ведёт другой сотрудник")).toBeVisible();
+    expect(within(panel).queryByRole("form", { name: "Создать заявку" })).toBeNull();
+    expect(copies).toBe(0);
+    server.events.removeAllListeners();
   });
 
   it("письмо не загрузилось — заявка не уходит, пока файл не убран", async () => {
