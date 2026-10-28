@@ -46,8 +46,13 @@ class AttachmentFetcher(Protocol):
 
 
 def _origin(url: str) -> str:
-    parts = urlsplit(url)
-    port = parts.port or (443 if parts.scheme == "https" else 80)
+    """`схема://хост:порт`; разобрать адрес нельзя (битый IPv6, порт не число) — пустая строка:
+    такой источник не разрешён ни для какой ссылки."""
+    try:
+        parts = urlsplit(url)
+        port = parts.port or (443 if parts.scheme == "https" else 80)
+    except ValueError:
+        return ""
     return f"{parts.scheme}://{(parts.hostname or '').lower()}:{port}"
 
 
@@ -62,7 +67,7 @@ class HttpAttachmentFetcher:
         timeout_s: float = TIMEOUT_S,
         transport: httpx.AsyncBaseTransport | None = None,
     ) -> None:
-        self._allowed = frozenset(_origin(url) for url in allowed if url)
+        self._allowed = frozenset(_origin(url) for url in allowed if url) - {""}
         self._max_bytes = max_bytes
         self._timeout_s = timeout_s
         self._transport = transport

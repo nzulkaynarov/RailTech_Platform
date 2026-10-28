@@ -263,3 +263,26 @@ async def test_paused_mail_holds_letters_in_journal_until_enabled() -> None:
     state[0] = False
     assert await service.deliver(view.id) is True
     assert db.rows[view.id].status == "sent"
+
+
+class BrokenTransport(FakeTransport):
+    """Транспорт падает непредвиденно (не `SmtpProbeError`): баг, кодировка, обрыв потока."""
+
+    async def send(self, connection: SmtpConnection, to: str, subject: str, body: str) -> None:
+        raise UnicodeEncodeError("ascii", "ы", 0, 1, "boom")
+
+
+async def test_unexpected_error_counts_as_an_attempt_and_ends_failed() -> None:
+    """Ревью #322: прочее исключение — тоже попытка; иначе строка `queued` без роста `attempts`
+    вечно возвращалась бы сборщиком. После последней попытки — `failed` с причиной, тело стёрто."""
+    service, db, _, _ = build(transport=BrokenTransport())
+    view = await service.send("invite", "aziz@railtech.uz", CONTEXT)
+    row = db.rows[view.id]
+    for attempt in (1, 2):
+        with pytest.raises(UnicodeEncodeError):
+            await service.deliver(view.id)
+        assert (row.status, row.attempts) == ("queued", attempt)
+        assert row.error == "unexpected: UnicodeEncodeError"
+    assert await service.deliver(view.id) is False
+    assert (row.status, row.attempts, row.body_ciphertext) == ("failed", 3, None)
+    assert row.error == "unexpected: UnicodeEncodeError"

@@ -137,7 +137,7 @@ def test_rolled_back_change_leaves_neither_event_nor_log(bus_mail, no_smtp):
 
 def test_plain_send_mail_also_goes_through_the_bus_without_smtp(bus_mail, no_smtp):
     assert send_mail("Тема", "Текст", None, ["bob@example.com"], html_message="<b>HTML</b>") == 1
-    message = EmailMessage("Копия", "Текст", to=["a@example.com"], cc=["b@example.com"], bcc=["c@example.com"])
+    message = EmailMessage("Копия", "Текст", to=["a@example.com"], cc=["b@example.com"])
     assert message.send() == 1
     first, second = mail_requests()
     for envelope in (first, second):
@@ -145,7 +145,18 @@ def test_plain_send_mail_also_goes_through_the_bus_without_smtp(bus_mail, no_smt
     assert first["data"]["purpose"] == "erp_mail" and first["data"]["notify"] is False
     assert first["data"]["request_key"].startswith("erp:mail:")
     assert opened(first) == {"text": "Текст", "html": "<b>HTML</b>", "links": []}
-    assert second["data"]["to"] == ["a@example.com", "b@example.com", "c@example.com"]
+    assert second["data"]["to"] == ["a@example.com", "b@example.com"]
+
+
+def test_bcc_is_refused_not_merged_into_visible_recipients(bus_mail, no_smtp):
+    """Ревью #322: скрытой копии в запросе к CRM нет; слить bcc в `to` раскрыло бы адрес — явный отказ."""
+    message = EmailMessage("Скрытая копия", "Текст", to=["a@example.com"], bcc=["secret@example.com"])
+    with pytest.raises(mail_bus.MailRequestError, match="MAIL_BCC_UNSUPPORTED"):
+        message.send()
+    assert mail_requests() == []
+    quiet = EmailMessage("Скрытая копия", "Текст", to=["a@example.com"], bcc=["secret@example.com"])
+    assert quiet.send(fail_silently=True) == 0
+    assert mail_requests() == []
 
 
 def test_no_pair_secret_means_no_event_and_a_failed_log(settings, monkeypatch):

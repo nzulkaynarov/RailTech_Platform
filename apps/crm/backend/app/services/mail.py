@@ -230,23 +230,35 @@ class MailService:
             files = await mail_outgoing.download(self._fetcher, outgoing.refs)
             await mail_outgoing.send(self._transport, connection, outgoing, files)
         except (SmtpProbeError, AttachmentError) as exc:
-            final = last or exc.permanent
             error = mail_outgoing.error_text(exc)
-            logger.warning(
-                "email_send_failed",
-                email_log_id=email_log_id,
-                error=error,
-                attempt=attempt,
-                final=final,
+            return await self._failed_attempt(
+                email_log_id, attempt, error, last or exc.permanent, exc
             )
-            status = "failed" if final else "queued"
-            await self._finish(email_log_id, status, error, attempts=attempt, clear_body=final)
-            if final:
-                return False
-            raise
+        except Exception as exc:  # noqa: BLE001 — непредвиденный сбой отправки — тоже попытка
+            error = f"unexpected: {type(exc).__name__}"
+            return await self._failed_attempt(email_log_id, attempt, error, last, exc)
         await self._finish(email_log_id, "sent", None, attempts=attempt, clear_body=True)
         logger.info("email_sent", email_log_id=email_log_id)
         return True
+
+    async def _failed_attempt(
+        self, email_log_id: int, attempt: int, error: str, final: bool, exc: Exception
+    ) -> bool:
+        """Неудачная попытка считается всегда (иначе строка `queued` без роста `attempts`
+        крутилась бы у сборщика вечно): последняя или постоянная — `failed` с причиной, иначе
+        повтор задачи."""
+        logger.warning(
+            "email_send_failed",
+            email_log_id=email_log_id,
+            error=error,
+            attempt=attempt,
+            final=final,
+        )
+        status = "failed" if final else "queued"
+        await self._finish(email_log_id, status, error, attempts=attempt, clear_body=final)
+        if final:
+            return False
+        raise exc
 
     async def sweep(self, now: datetime | None = None) -> int:
         """Сборщик: письма `queued` с телом, которые давно не ушли (постановка потерялась после

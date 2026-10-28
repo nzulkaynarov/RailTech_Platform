@@ -3,7 +3,7 @@
 `settings.EMAIL_BACKEND` ERP — этот класс: любой `send_mail()` / `EmailMessage.send()` публикует
 `uz.railtech.erp.mail.requested.v1` в транзакции вызывающего (или своей), SMTP-соединений из ERP нет. Метаданные запроса
 `send_templated_email` передаёт служебными заголовками `X-RT-*` (бэкенд их снимает, в письмо они не попадают); без них —
-назначение `erp_mail`, случайный ключ запроса, итог не нужен. cc/bcc контракт не знает: адреса сливаются в `to` (до 10).
+назначение `erp_mail`, случайный ключ запроса, итог не нужен. cc сливается в `to` (до 10); скрытой копии (bcc) у почтового сервиса нет — `MAIL_BCC_UNSUPPORTED`.
 """
 
 from __future__ import annotations
@@ -69,7 +69,12 @@ class BusEmailBackend(BaseEmailBackend):
 
     def _request(self, message) -> None:
         headers = dict(message.extra_headers or {})
-        recipients = [*message.to, *message.cc, *message.bcc]
+        if message.bcc:
+            # В запросе к почтовому сервису CRM нет скрытой копии: слить bcc в `to` раскрыло бы адреса всем получателям.
+            raise MailRequestError(
+                "MAIL_BCC_UNSUPPORTED", "скрытая копия не поддерживается — отдельное письмо на адрес"
+            )
+        recipients = [*message.to, *message.cc]
         ref_kind, ref_id = _header(headers, HEADER_REF_KIND), _header(headers, HEADER_REF_ID)
         if not recipients:
             raise MailRequestError("MAIL_NO_RECIPIENTS")

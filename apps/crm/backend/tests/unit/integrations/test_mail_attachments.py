@@ -93,3 +93,20 @@ async def test_tampered_or_oversized_content_is_refused() -> None:
             ref(content=big, size=16)
         )
     assert info.value.reason == "attachment_too_large"
+
+
+@pytest.mark.parametrize(
+    "url", ["http://[::1/x.pdf", "http://rustfs:notaport/erp-temp/x.pdf", "http://rustfs:99999/x"]
+)
+async def test_unparsable_link_is_a_foreign_host_not_a_crash(url: str) -> None:
+    """Ревью #322: адрес, который `urlsplit` не разбирает (ValueError), — отказ, а не исключение."""
+    calls: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls.append(request)
+        return httpx.Response(200, content=PDF)
+
+    with pytest.raises(AttachmentError) as info:
+        await fetcher(handler).fetch(ref(url=url))
+    assert (info.value.reason, info.value.permanent) == ("attachment_foreign_host", True)
+    assert calls == []
