@@ -2,6 +2,7 @@
 title: Роли, сотрудники и подключения (для администратора)
 sections: admin.roles, admin.org, admin.integrations, admin.setup, admin.bot, admin.company, admin.audit
 order: 130
+screens: [/admin/roles, /admin/org, /admin/integrations, /admin/setup, /admin/bot, /admin/company, /admin/audit]
 ---
 Настройки доступны администратору (директор читает).
 

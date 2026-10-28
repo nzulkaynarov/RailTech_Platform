@@ -500,4 +500,13 @@ describe("карточка «Состояние системы»", () => {
     expect(within(list).getAllByText("Работает")).toHaveLength(5);
     expect(within(list).getByText("Внимание")).toBeVisible();
   });
+
+  it("ниже — версия Платформы и сервисы BFF, CRM, ERP, EDS с версией, если health её сообщает (W-REL)", async () => {
+    const side = await openPanel("system");
+    expect(await within(side).findByText("Платформа 2026.10.28 · 1a2b3c4")).toBeVisible();
+    const services = within(side).getByRole("list", { name: "Сервисы" });
+    expect(within(services).getByText("Платформа (BFF)")).toBeVisible();
+    expect(within(services).getByText("версия 0.1.0")).toBeVisible();
+    expect(within(services).getAllByText("версию не сообщает")).toHaveLength(2);
+  });
 });

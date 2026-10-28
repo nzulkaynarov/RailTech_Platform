@@ -2,6 +2,7 @@
 title: Профиль, Telegram и замещение
 sections: me
 order: 120
+screens: [/me]
 ---
 Откройте профиль из меню аватара (внизу слева).
 

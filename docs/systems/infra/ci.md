@@ -6,6 +6,10 @@ Workflow ансамбля — `.github/workflows/ci.yml` (GitHub читает т
 
 - **Ссылки на документацию** — `scripts/check-doc-links.sh` в задании gitleaks (DOCS-1): битые ссылки и пути вне `docs/` роняют CI; там же
   `scripts/backlog.py --check` — ID строк `docs/BACKLOG.md` уникальны и по формату (два PR с одним ID git сливает молча; 2026-10-28).
+- **Помощь и «Что нового»** (W-REL, 2026-10-28) — там же, в задании gitleaks: `python3 -m unittest discover -s scripts/tests` (сборщик
+  «Что нового» `scripts/release_notes.py` и мягкая проверка) и на PR `scripts/help_freshness.py --base origin/<база>` — PR меняет код
+  экрана из `screens` статьи `docs/kb/help`, а статью не трогает, или экран менялся без строки «Для пользователей» в описании —
+  `::warning::` в логе, не красное. Красное — только новый пункт меню без статьи (`articles.test.ts`, задание Platform).
 - **gitleaks** — всегда, по истории ветки, с `.gitleaks.toml` (`legacy/` в allowlist). PR, где изменена только документация (кроме `docs/kb`),
   запускает только его.
 - **`ci-ok`** — единственная обязательная проверка для защиты `main`: красная, если любой job упал или отменён; пропущенные (нет изменений) —

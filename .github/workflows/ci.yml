@@ -205,6 +205,15 @@ jobs:
           gitleaks git --redact --verbose --config .gitleaks.toml .
       - name: Ссылки на документацию (scripts/check-doc-links.sh, DOCS-1)
         run: scripts/check-doc-links.sh
+      # W-REL: тесты сборщика «Что нового» (scripts/release_notes.py) и мягкая проверка помощи — PR меняет экран из `screens`
+      # статьи, а статью не трогает -> ::warning:: в логе, не красное (решает ревьюер). Только stdlib, без установки.
+      - name: Помощь и «Что нового» (scripts/tests, scripts/help_freshness.py)
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          python3 -m unittest discover -s scripts/tests
+          if [ "$EVENT_NAME" = pull_request ]; then python3 scripts/help_freshness.py --base "origin/$BASE_REF"; fi
 
   # ─── CRM (apps/crm) ────────────────────────────────────────────────────────────────────────
 

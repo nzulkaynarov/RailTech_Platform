@@ -42,4 +42,6 @@ export interface MeOut {
   tg_username?: string | null;
   timezone?: string;
   ui_mode: string;
+  whats_new_read?: string | null;
+  whats_new_shown?: string | null;
 }

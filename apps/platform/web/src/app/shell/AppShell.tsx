@@ -10,6 +10,8 @@ import { SetupBanner } from "../../features/first-run/SetupBanner";
 import { useSetupPending } from "../../features/first-run/useSetupPending";
 import { GlobalSearch } from "../../features/global-search/GlobalSearch";
 import { HelpDrawer } from "../../features/help/HelpDrawer";
+import { WhatsNewNotice } from "../../features/help/WhatsNewNotice";
+import { useWhatsNew } from "../../features/help/whatsNew";
 import { Onboarding } from "../../features/onboarding/Onboarding";
 import { NotificationCenter } from "../../features/notifications/NotificationCenter";
 import { useNotifications } from "../../features/notifications/useNotifications";
@@ -59,6 +61,7 @@ export function AppShell() {
   const [menuDrawer, setMenuDrawer] = useState(false);
   const [bellOpen, setBellOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const { fresh: helpFresh } = useWhatsNew();
   const searchRef = useRef<HTMLInputElement>(null);
 
   const match = matchSection(location.pathname, location.search);
@@ -326,7 +329,12 @@ export function AppShell() {
           bellTitle={t("notifications.title")}
           bellOpen={bellOpen}
           onBellOpenChange={setBellOpen}
-          help={{ label: t("topbar.help"), open: helpOpen, onClick: openHelp }}
+          help={{
+            label: helpFresh ? t("help:whatsNew.helpFresh") : t("topbar.help"),
+            open: helpOpen,
+            onClick: openHelp,
+            fresh: helpFresh,
+          }}
           bellContent={
             <NotificationCenter
               variant="popover"
@@ -426,6 +434,7 @@ export function AppShell() {
         {...(helpSection ? { sectionKey: helpSection } : {})}
       />
       <Onboarding />
+      <WhatsNewNotice />
     </Layout>
   );
 }
