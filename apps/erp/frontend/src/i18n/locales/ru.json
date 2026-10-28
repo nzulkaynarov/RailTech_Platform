@@ -3160,6 +3160,29 @@
         "title": "Событие EDS пропущено",
         "detail": "{{letter_number}}: письмо не связано со сделкой ERP"
       }
+    },
+    "calc": {
+      "started": {
+        "title": "Расчёт начат",
+        "detail": "Черновик КП расчёта по {{letter_number}}"
+      },
+      "lines_added": {
+        "title": "Строки добавлены в расчёт",
+        "detail": "{{letter_number}}: добавлено строк — {{count}}"
+      },
+      "line_updated": {
+        "title": "Строка расчёта изменена"
+      },
+      "line_deleted": {
+        "title": "Строка удалена из расчёта"
+      },
+      "line_signed": {
+        "title": "Строка расчёта подтверждена"
+      },
+      "ready": {
+        "title": "Расчёт готов: черновик КП у директора",
+        "detail": "{{letter_number}}: все визы собраны, строк — {{lines}}"
+      }
     }
   },
   "companyTypes": {
@@ -3567,6 +3590,10 @@
     "deal.calc_assigned": {
       "title": "Задание на расчёт",
       "message": "Резолюция по {{letter_number}}: расчёт по заявке #{{deal_id}} до {{due}}."
+    },
+    "calc.all_signed": {
+      "title": "Все строки расчёта подтверждены",
+      "message": "Расчёт по {{letter_number}}: все визы собраны, можно нажать «Расчёт готов»."
     }
   },
   "approvalParticipation": {

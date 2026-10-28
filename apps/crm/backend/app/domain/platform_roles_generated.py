@@ -269,10 +269,14 @@ ERP_BACKEND: Final[dict[str, dict[str, tuple[str, ...]]]] = {
         "full": (
             "quote.build",
             "quote.edit_pricing",
+            "quote.visa_goods",
         ),
     },
     "erp.calc.services": {
-        "full": ("quote.build",),
+        "full": (
+            "quote.build",
+            "quote.visa_services",
+        ),
     },
     "erp.stock": {
         "full": (
@@ -477,10 +481,7 @@ ROLE_RESTRICTED_FIELDS: Final[dict[str, tuple[str, ...]]] = {
         "supplier_prices",
     ),
     "ENGINEER": (),
-    "ACCOUNTANT": (
-        "totals_only",
-        "supplier_prices",
-    ),
+    "ACCOUNTANT": ("totals_only",),
 }
 
 # Базовая роль CRM для старого фронта: роль с кодом (порядок — прежние шесть ролей).

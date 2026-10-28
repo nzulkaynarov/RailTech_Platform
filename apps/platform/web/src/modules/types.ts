@@ -46,6 +46,8 @@ export interface SectionConfig {
   defaults?: { menuOpen?: boolean; panelOpen?: boolean };
   /** Куда ведёт действие пустого состояния; без поля — кнопка неактивна («появится в фазе P2») */
   actionTo?: string;
+  /** < 768 px боковое окно раздела — лист на весь экран (B-020), а не узкое окно справа */
+  sheetOnMobile?: boolean;
 }
 
 export interface ModuleAction {

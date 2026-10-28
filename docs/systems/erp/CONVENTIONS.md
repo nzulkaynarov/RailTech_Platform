@@ -179,7 +179,7 @@ Makefile · .env.example · docs/ (ADR и runbooks ERP в docs/runbooks/erp/ —
 | Раздел | Коды |
 |---|---|
 | Запросы и сделки | `deal.manage` (создать/править, стадия, взять в работу, документы и вложения сделки, книга клиентов), `deal.assign` (назначить ответственного, вернуть чужую заявку в очередь) |
-| КП | `quote.build` (жизненный цикл: на согласование, отзыв, копия, PDF, базис, ИИ-подбор позиций), `quote.edit_pricing` (создание и правка КП и его позиций — они несут цены, скидки, статьи расходов; ИИ-черновик и «Взять и подготовить КП»), `quote.view_cost_margin`, `quote.send`, `quote.review` (виза КП; одобрение КП директором — маршрут EDS, EDS-03, волна 12) |
+| КП | `quote.build` (жизненный цикл: на согласование, отзыв, копия, PDF, базис, ИИ-подбор позиций), `quote.edit_pricing` (создание и правка КП и его позиций — они несут цены, скидки, статьи расходов; ИИ-черновик и «Взять и подготовить КП»), `quote.view_cost_margin`, `quote.send`, `quote.review` (виза КП; одобрение КП директором — маршрут EDS, EDS-03, волна 12), `quote.visa_goods`, `quote.visa_services` (виза строки расчёта по типу позиции — товар и услуга, D2-1; CRM выдаёт из разделов `erp.calc.goods` и `erp.calc.services`) |
 | Договоры | `contract.manage` (подготовка, правка, формулировки, скан), `contract.sign` (подпись от компании) |
 | Каталог | `catalog.manage`, `catalog.publish` |
 | Снабжение | `supply.manage` (поставщики и их предложения; M4 добавит заказы поставщикам и приёмку) |
@@ -193,7 +193,7 @@ Makefile · .env.example · docs/ (ADR и runbooks ERP в docs/runbooks/erp/ —
 
 | Код | Роль | Права |
 |---|---|---|
-| `CALCULATION` | Расчёт | `deal.manage`, `quote.build`, `quote.edit_pricing`, `quote.view_cost_margin`, `quote.send`, `quote.review`, `contract.manage` |
+| `CALCULATION` | Расчёт | `deal.manage`, `quote.build`, `quote.edit_pricing`, `quote.view_cost_margin`, `quote.send`, `quote.review`, `quote.visa_goods`, `quote.visa_services`, `contract.manage` |
 | `CATALOG_SUPPLY` | Каталог и закупки | `catalog.manage`, `catalog.publish`, `supply.manage`, `quote.view_cost_margin` |
 | `FULFILLMENT` | Исполнение и логистика | `fulfillment.manage`, `fulfillment.act` |
 | `FINANCE` | Финансы | `finance.invoice`, `finance.payment`, `finance.rates`, `quote.view_cost_margin`, `data.export` |

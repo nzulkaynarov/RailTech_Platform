@@ -16,6 +16,8 @@ export const ErpPermission = {
   quoteview_cost_margin: "quote.view_cost_margin",
   quotesend: "quote.send",
   quotereview: "quote.review",
+  quotevisa_goods: "quote.visa_goods",
+  quotevisa_services: "quote.visa_services",
   contractmanage: "contract.manage",
   contractsign: "contract.sign",
   catalogmanage: "catalog.manage",
