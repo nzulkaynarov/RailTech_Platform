@@ -63,12 +63,6 @@ x-erp-prod-env: &erp-prod-env
   CABINET_ORIGIN: https://${CABINET_DOMAIN}
   CSRF_TRUSTED_ORIGINS: https://${ERP_DOMAIN},https://${CABINET_DOMAIN}
   CORS_ALLOWED_ORIGINS: https://${ERP_DOMAIN},https://${CABINET_DOMAIN}
-  EMAIL_HOST: ${SMTP_HOST:-}
-  EMAIL_PORT: ${SMTP_PORT:-587}
-  EMAIL_HOST_USER: ${SMTP_USER:-}
-  EMAIL_HOST_PASSWORD: ${SMTP_PASSWORD:-}
-  EMAIL_USE_TLS: ${SMTP_USE_TLS:-True}
-  DEFAULT_FROM_EMAIL: ${SMTP_FROM:-noreply@example.com}
 
 # Окружение EDS: внешняя база (роль eds_app, TLS в параметрах URL), prod-режим. Миграции — только явно, после pg_dump-гейта
 # (deploy.sh: `run --rm --no-deps eds-migrate`); eds-migrate в `up` не участвует.

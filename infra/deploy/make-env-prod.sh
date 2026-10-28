@@ -79,7 +79,7 @@ case "$cmd" in
     s3_mirror_all "$tmp" create
     cat "$tmp" >"$file"
     chmod 600 "$file"
-    echo "▸ Готово: $file. Впишите вручную: адреса (APP_INTERNAL_IP, DB_INTERNAL_IP), домены, ACME_EMAIL, ключи моделей, токен бота, SMTP, внешнее хранилище бэкапов."
+    echo "▸ Готово: $file. Впишите вручную: адреса (APP_INTERNAL_IP, DB_INTERNAL_IP), домены, ACME_EMAIL, ключи моделей, токен бота, внешнее хранилище бэкапов (почту SMTP задаёт админ в Платформе: «Подключения → Почта»)."
     echo "▸ BACKUP_ENC_PASSPHRASE, WAL_ENC_KEY и LITELLM_SALT_KEY сохраните офлайн: потеря = потеря внешних копий / WAL-архива / ключей провайдеров."
     ;;
   s3-keys)

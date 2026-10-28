@@ -15,7 +15,7 @@ root="$(cd "$here/../../.." && pwd)"
 tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
 fail() { echo "FAIL: $*"; exit 1; }
 base="$root/infra/compose/base.yml"; prod="$root/infra/compose/prod.yml"; dev="$root/infra/compose/dev.yml"
-EDS_VARS=(EDS_ACCESS_SECRET S3_EDS_ACCESS_KEY S3_EDS_SECRET_KEY RT_BUS_SECRET_CRM_EDS RT_BUS_SECRET_ERP_EDS RT_BUS_SECRET_EDS_ERP RT_BUS_SECRET_EDS_PLATFORM_BFF)
+EDS_VARS=(EDS_ACCESS_SECRET S3_EDS_ACCESS_KEY S3_EDS_SECRET_KEY RT_BUS_SECRET_CRM_EDS RT_BUS_SECRET_ERP_EDS RT_BUS_SECRET_EDS_ERP RT_BUS_SECRET_EDS_PLATFORM_BFF RT_BUS_SECRET_EDS_CRM)
 
 # 1. Примеры env и генерация.
 for example in "$root/.env.example" "$root/infra/.env.prod.example"; do
@@ -28,7 +28,7 @@ grep -q '^DB_EDS_PASSWORD=CHANGE_ME$' "$root/infra/.env.prod.example" || fail "i
 fresh="$tmp/fresh.env"
 out="$(bash "$root/infra/deploy/make-env-prod.sh" init "$fresh")"
 legacy="$tmp/legacy.env"
-grep -vE '^(EDS_ACCESS_SECRET|S3_EDS_(ACCESS|SECRET)_KEY|DB_EDS_PASSWORD|RT_BUS_SECRET_(CRM_EDS|ERP_EDS|EDS_ERP|EDS_PLATFORM_BFF)|RT_BUS_ENDPOINT_EDS)=' \
+grep -vE '^(EDS_ACCESS_SECRET|S3_EDS_(ACCESS|SECRET)_KEY|DB_EDS_PASSWORD|RT_BUS_SECRET_(CRM_EDS|ERP_EDS|EDS_ERP|EDS_PLATFORM_BFF|EDS_CRM)|RT_BUS_ENDPOINT_EDS)=' \
   "$root/infra/.env.prod.example" | sed 's/CHANGE_ME/legacy-value/' > "$legacy"
 chmod 600 "$legacy"
 out_legacy="$(bash "$root/infra/deploy/make-env-prod.sh" init "$legacy")"
@@ -57,7 +57,7 @@ grep -qE '^S3_EDS_SECRET_KEY=[0-9a-f]{48}$' "$sk" || fail "s3-keys не созд
 # make-env.sh (dev): копия скрипта в одноразовом корне; существующий .env без EDS получает новые переменные со случайными значениями.
 dev_root="$tmp/devroot"; mkdir -p "$dev_root/infra/compose"
 cp "$root/infra/compose/make-env.sh" "$dev_root/infra/compose/"; cp "$root/.env.example" "$dev_root/.env.example"
-grep -vE '^(EDS_ACCESS_SECRET|S3_EDS_(ACCESS|SECRET)_KEY|RT_BUS_SECRET_(CRM_EDS|ERP_EDS|EDS_ERP|EDS_PLATFORM_BFF))=' "$root/.env.example" \
+grep -vE '^(EDS_ACCESS_SECRET|S3_EDS_(ACCESS|SECRET)_KEY|RT_BUS_SECRET_(CRM_EDS|ERP_EDS|EDS_ERP|EDS_PLATFORM_BFF|EDS_CRM))=' "$root/.env.example" \
   | sed 's/CHANGE_ME/old-value/' > "$dev_root/.env"
 bash "$dev_root/infra/compose/make-env.sh" >/dev/null
 for v in "${EDS_VARS[@]}"; do
@@ -68,7 +68,7 @@ grep -q '^POSTGRES_PASSWORD=old-value$' "$dev_root/.env" || fail "make-env.sh п
 
 # 2. Compose. Окружения с РАЗНЫМИ значениями секретов EDS.
 mkenv() { # mkenv <пример> <выход>
-  sed 's/CHANGE_ME/ci-only-value/' "$1" | grep -vE '^(EDS_ACCESS_SECRET|S3_EDS_(ACCESS|SECRET)_KEY|RT_BUS_SECRET_(CRM_EDS|ERP_EDS|EDS_ERP|EDS_PLATFORM_BFF))=' > "$2"
+  sed 's/CHANGE_ME/ci-only-value/' "$1" | grep -vE '^(EDS_ACCESS_SECRET|S3_EDS_(ACCESS|SECRET)_KEY|RT_BUS_SECRET_(CRM_EDS|ERP_EDS|EDS_ERP|EDS_PLATFORM_BFF|EDS_CRM))=' > "$2"
   for v in "${EDS_VARS[@]}"; do printf '%s=val-%s\n' "$v" "$v" >> "$2"; done
 }
 mkenv "$root/infra/.env.prod.example" "$tmp/env.prod"
@@ -105,6 +105,9 @@ for f in prod dev; do
   [[ "$crm_pair" == *crm-api* && "$crm_pair" == *crm-worker* && "$crm_pair" == *eds-api* && "$crm_pair" == *eds-worker* && "$crm_pair" != *erp-* ]] || fail "$f: секрет пары CRM→EDS: $crm_pair"
   erp_pair="$(holders 'val-RT_BUS_SECRET_ERP_EDS|val-RT_BUS_SECRET_EDS_ERP')"
   [[ "$erp_pair" == *erp-backend* && "$erp_pair" == *erp-worker* && "$erp_pair" == *eds-api* && "$erp_pair" == *eds-worker* && "$erp_pair" != *crm-* ]] || fail "$f: секреты пар ERP↔EDS: $erp_pair"
+  # W18A-P1: пара EDS → CRM (запрос письма почтовому сервису CRM) — только CRM и EDS.
+  mail_pair="$(holders 'val-RT_BUS_SECRET_EDS_CRM')"
+  [[ "$mail_pair" == *crm-worker* && "$mail_pair" == *eds-api* && "$mail_pair" == *eds-worker* && "$mail_pair" != *erp-* && "$mail_pair" != *platform-* ]] || fail "$f: секрет пары EDS→CRM: $mail_pair"
   bff_pair="$(holders 'val-RT_BUS_SECRET_EDS_PLATFORM_BFF')"
   [[ "$bff_pair" == *platform-bff* && "$bff_pair" == *eds-worker* && "$bff_pair" != *crm-* && "$bff_pair" != *erp-* ]] || fail "$f: секрет пары EDS→BFF: $bff_pair"
   # Каталог схем и подписки шины вшиты в образ (L14); подписки не монтируются с хоста.
