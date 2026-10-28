@@ -407,3 +407,27 @@ def test_missing_oasdiff_is_not_green(tmp_path: Path, monkeypatch: pytest.Monkey
     monkeypatch.setattr(oc.shutil, "which", lambda _: None)
     with pytest.raises(oc.CompatError, match="нет oasdiff"):
         oc.run_oasdiff(tmp_path / "a.yaml", tmp_path / "b.yaml")
+
+
+def test_default_base_env_then_merge_base_then_tip(monkeypatch: pytest.MonkeyPatch) -> None:
+    """База по умолчанию (DECISIONS 2026-10-28): переменная, иначе точка ответвления, без общей истории — вершина."""
+    import subprocess
+
+    monkeypatch.setenv("CONTRACTS_BASE_REF", "some/ref")
+    assert oc.default_base() == "some/ref"
+
+    monkeypatch.delenv("CONTRACTS_BASE_REF")
+    monkeypatch.setattr(oc, "_git", lambda *args: "abc123\n" if args[0] == "merge-base" else "")
+    assert oc.default_base() == "abc123"
+
+    def no_history(*args: str) -> str:
+        raise subprocess.CalledProcessError(1, ["git", *args])
+
+    monkeypatch.setattr(oc, "_git", no_history)
+    assert oc.default_base() == oc.DEFAULT_BASE
+
+
+def test_additive_change_needs_no_version_bump() -> None:
+    """Добавляющее изменение (нет ERR) зелёное при той же info.version — подъём версии на каждый PR не нужен."""
+    errors, _, _ = oc.check_file("x.yaml", BASE, copy.deepcopy(BASE), [], [], TODAY, set())
+    assert errors == []

@@ -98,8 +98,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app = FastAPI(
         title="RailTech CRM API",
-        # 0.14.0 (W16-D1-2b): «Повторить отправку в ERP» — POST /deals/{id}/actions/retry_request,
-        # фильтр `source` списка лидов, id привязки Telegram и последнее сообщение лида в карточке.
         # 0.13.0 (W15-H8b): WAL, Redis и шина в «Состоянии»; смена пароля выдаёт сессии
         # новую пару (POST /auth/change-password — 200 с токенами, было 204).
         # 0.12.0 (W16-D1-2): «Создать заявку» из лида и клиента, `platform_status` и фильтры
@@ -107,7 +105,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         # колокольчик /me/notifications, флаг тура users.onboarding_done; 0.10.0 (D1-9):
         # приглашение в кабинет и подтверждение запроса; 0.9.0 (D1-1): записка передачи,
         # ответы; 0.8.0 (W15-H6): профиль; 0.6.0 — W15-H3.
-        version="0.14.0",
+        version="0.13.0",
         lifespan=lifespan,
         # operationId = имя функции роута → читаемые имена в клиенте orval.
         generate_unique_id_function=lambda route: route.name,
