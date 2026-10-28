@@ -287,7 +287,7 @@
       "attachments_other": "{{count}} attachments"
     },
     "reason": {
-      "smtp_not_configured": "Mail is not configured",
+      "smtp_not_configured": "Mail is not configured — Settings · Connections · Mail",
       "secrets_key_missing": "The secrets encryption key is not set",
       "secrets_key_changed": "The secrets encryption key changed — the email cannot be read",
       "rejected": "The mail server rejected the email",

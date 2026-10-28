@@ -287,7 +287,7 @@
       "attachments_other": "ilovalar: {{count}}"
     },
     "reason": {
-      "smtp_not_configured": "Pochta sozlanmagan",
+      "smtp_not_configured": "Pochta sozlanmagan — Sozlamalar · Ulanishlar · Pochta",
       "secrets_key_missing": "Sirlarni shifrlash kaliti berilmagan",
       "secrets_key_changed": "Sirlarni shifrlash kaliti o‘zgargan — xatni o‘qib bo‘lmaydi",
       "rejected": "Pochta serveri xatni rad etdi",
