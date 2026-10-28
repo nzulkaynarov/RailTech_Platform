@@ -123,21 +123,55 @@ describe("Dashboard · Моя очередь", () => {
   });
 
   it("строка без экрана — «Где сделать» с мостом, строка с экраном — «Открыть»; primary у всех срочных", async () => {
+    server.use(
+      http.get("*/queue", () =>
+        HttpResponse.json({
+          items: [
+            {
+              id: "lead:2041:take",
+              role_id: "3",
+              kind: "take_lead",
+              title: "Взять в работу лида L-2041",
+              subtitle: "ООО «Демо-Депо»",
+              due_label: "today",
+              object: {
+                kind: "lead",
+                number: "L-2041",
+                path: "/crm/leads?lead=L-2041&panel=open&tab=card",
+              },
+            },
+            {
+              id: "invoice:142",
+              role_id: "3",
+              kind: "overdue_invoice",
+              title: "Счёт СЧ-2026/142 просрочен",
+              subtitle: "ООО «Демо-Депо»",
+              due_label: "today",
+              object: {
+                kind: "invoice",
+                number: "СЧ-2026/142",
+                path: "/eds/payments/%D0%A1%D0%A7-2026%2F142?panel=open&tab=payment",
+              },
+            },
+          ],
+          cards: [],
+          sources: { crm: "ok", erp: "ok" },
+        }),
+      ),
+    );
     signInAs("manager@demo.example");
     renderApp("/dashboard/queue");
     const page = await main();
 
-    const where = await within(page).findByRole("button", {
-      name: "Где сделать: Взять в работу лида L-2041",
+    // «Лиды» — настоящий экран (D1-2b): строка лида — «Открыть»
+    expect(
+      await within(page).findByRole("link", { name: "Открыть: Взять в работу лида L-2041" }),
+    ).toHaveAttribute("href", "/crm/leads?lead=L-2041&panel=open&tab=card");
+    const where = within(page).getByRole("button", {
+      name: "Где сделать: Счёт СЧ-2026/142 просрочен",
     });
     fireEvent.click(where);
-    expect(await screen.findByText(/Сейчас — в старой CRM: раздел «Лиды»/)).toBeInTheDocument();
-    expect(await screen.findByRole("link", { name: /Открыть в старой CRM/ })).toHaveAttribute(
-      "href",
-      "http://crm.localhost:8088/leads/2041",
-    );
-    // обе строки менеджера — «срок сегодня»; ссылки на заглушку у них нет
-    expect(within(page).queryAllByRole("link", { name: /^Открыть:/ })).toHaveLength(0);
+    expect(await screen.findByText(/Сейчас — в старом ERP/)).toBeInTheDocument();
   });
 
   it("строка директора с родным экраном (письмо, КП) — «Открыть»: у писем primary, у КП обычная кнопка", async () => {

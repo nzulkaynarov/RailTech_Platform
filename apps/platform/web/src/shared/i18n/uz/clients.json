@@ -1,0 +1,118 @@
+{
+  "subtitle": "Kontaktlar, yozishmalar, arizalar va hujjatlari bilan kompaniyalar.",
+  "search": {
+    "label": "Nomi va STIR bo‘yicha qidirish",
+    "placeholder": "Nomi yoki STIR"
+  },
+  "columns": {
+    "name": "Mijoz",
+    "inn": "STIR",
+    "requests": "Ochiq arizalar",
+    "erp": "Bek-ofis",
+    "last": "Oxirgi faollik"
+  },
+  "caption": "Mijozlar",
+  "tableScroll": "Mijozlar jadvali",
+  "listLabel": "Mijozlar",
+  "open": "{{name}} kartasini ochish",
+  "inErp": "Uzatilgan",
+  "notInErp": "Uzatilmagan",
+  "handoff": {
+    "pending": "Uzatilmoqda",
+    "failed": "Uzatishda xato",
+    "done": "Uzatilgan"
+  },
+  "empty": {
+    "title": "Hozircha mijozlar yo‘q",
+    "text": "Liddan ariza yaratilganda mijoz paydo bo‘ladi.",
+    "filteredTitle": "Hech narsa topilmadi",
+    "filteredText": "Nomi yoki STIRni tekshiring."
+  },
+  "loadError": {
+    "title": "Mijozlarni yuklab bo‘lmadi",
+    "text": "Server javob bermadi. Birozdan keyin qayta urinib ko‘ring."
+  },
+  "retry": "Qayta urinish",
+  "card": {
+    "label": "Mijoz kartasi",
+    "close": "Yopish",
+    "inn": "STIR",
+    "noInn": "STIR ko‘rsatilmagan",
+    "segment": "Segment",
+    "erp": "Bek-ofis",
+    "newRequest": "Mijoz uchun yangi ariza",
+    "contacts": "Kontaktlar",
+    "noContacts": "Hozircha kontaktlar yo‘q",
+    "primary": "asosiy",
+    "channels": {
+      "telegram": "Telegram",
+      "phone": "Telefon",
+      "email": "Pochta"
+    },
+    "noChannels": "aloqa kanallari yo‘q",
+    "preferred": "Afzal ko‘radi: {{channel}}",
+    "conversation": "Yozishma",
+    "noLeads": "Yozishma yo‘q",
+    "openConversation": "{{name}} bilan yozishmani «Javob kutmoqda»da ochish",
+    "requests": "Arizalar va loyihalar",
+    "noRequests": "Hozircha arizalar yo‘q",
+    "noNumber": "raqam hali berilmagan",
+    "urgent": "Shoshilinch",
+    "clientSees": "Mijoz ko‘radi: «{{text}}»",
+    "transfer": {
+      "pending": "Bek-ofisga uzatilmoqda",
+      "failed": "Bek-ofisga uzatilmadi: {{reason}}"
+    },
+    "retry": "ERPga qayta yuborish",
+    "retryLabel": "«{{title}}» arizasini ERPga qayta yuborish",
+    "retried": "Ariza ERPga qayta yuborildi",
+    "documents": "Hujjatlar",
+    "noDocuments": "Hozircha hujjatlar yo‘q",
+    "docTypes": {
+      "contract": "Shartnoma",
+      "proposal": "TT",
+      "letter": "Xat",
+      "invoice": "Hisob",
+      "act": "Dalolatnoma",
+      "other": "Hujjat"
+    },
+    "hiddenFromClient": "mijoz ko‘rmaydi",
+    "invitation": "Kabinetga taklif",
+    "noInvitation": "Hali taklif yuborilmagan",
+    "resend": "Boshqa kanal orqali qayta yuborish",
+    "resendChannel": "Kanal",
+    "resendDone": "Taklif yuborildi",
+    "resendChannels": {
+      "email": "Pochta",
+      "telegram": "Telegram",
+      "both": "Pochta va Telegram"
+    },
+    "partial": "Kartaning bir qismi yuklanmadi: {{parts}}. Birozdan keyin qayta urinib ko‘ring.",
+    "parts": {
+      "contacts": "kontaktlar",
+      "requests": "arizalar",
+      "documents": "hujjatlar"
+    }
+  },
+  "clientSees": {
+    "in_work": "Qabul qilindi, hisoblayapmiz",
+    "awaiting_decision": "Qaroringizni kutmoqda",
+    "contract_review": "Shartnoma tahririni kelishing",
+    "contract_signing": "Shartnoma imzolanmoqda",
+    "awaiting_payment": "To‘lov kutilmoqda",
+    "checking_payment": "To‘lovni tekshiryapmiz",
+    "fulfilling": "Bajarilmoqda",
+    "awaiting_acceptance": "Qabulingizni kutmoqda",
+    "done": "Bajarildi",
+    "rejected": "Rad etildi",
+    "quote_expired": "TT muddati tugadi"
+  },
+  "transferErrors": {
+    "erp_unavailable": "bek-ofis javob bermadi",
+    "erp_request_conflict": "yuborilgandan keyin ariza ma’lumotlari o‘zgardi — arizani qayta yarating",
+    "handoff_no_consent": "mijozning ma’lumotlarga roziligi yo‘q",
+    "erp_inn_conflict": "bu STIR boshqa mijozga tegishli",
+    "enqueue_failed": "navbatga qo‘yib bo‘lmadi",
+    "other": "sababi aniqlanmadi"
+  }
+}

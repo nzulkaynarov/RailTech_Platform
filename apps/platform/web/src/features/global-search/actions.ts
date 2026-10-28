@@ -29,7 +29,8 @@ export const SEARCH_ACTIONS: readonly SearchAction[] = [
       "new request",
       "ariza yaratish",
     ],
-    to: "/crm/leads",
+    // Заявка создаётся из лида или клиента (D1-2b): ведём к лидам, которые просят КП.
+    to: "/crm/leads?status=wants_quote",
     resource: "crm.clients",
   },
   {

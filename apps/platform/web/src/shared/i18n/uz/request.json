@@ -1,0 +1,94 @@
+{
+  "title": "Ariza yaratish",
+  "intro": "Lid mijozga aylanadi, xat direktorga «Hujjatlar · Kiruvchi xatlar»ga boradi, loyiha chati yaratiladi.",
+  "from": "{{lead}} lididan",
+  "client": {
+    "legend": "Mijoz",
+    "searchHint": "O‘xshash mijozlar — kompaniya takrorlanmasligi uchun tanlang",
+    "pick": "Tanlash: {{name}}",
+    "picked": "Mijoz: {{name}}",
+    "change": "Boshqa mijoz",
+    "name": "Kompaniya nomi",
+    "inn": "STIR",
+    "innHint": "9–14 raqam; keyinroq ham mumkin"
+  },
+  "contact": {
+    "legend": "Kontakt",
+    "existing": "Mijoz kontakti",
+    "newContact": "Yangi kontakt",
+    "name": "Ism",
+    "position": "Lavozim",
+    "phone": "Telefon",
+    "email": "Pochta",
+    "telegram": "Lid Telegrami ({{username}})",
+    "channelsHint": "Kamida bitta kanal kerak: Telegram, telefon yoki pochta"
+  },
+  "summary": {
+    "label": "So‘rov mazmuni",
+    "hint": "Mijozga nima kerak: pozitsiyalar, hajm, muddatlar"
+  },
+  "letter": {
+    "label": "Direktor nomiga xat",
+    "hint": "PDF, rasm yoki Office hujjati, 25 MB gacha. Majburiy emas",
+    "uploading": "Xat yuklanmoqda…",
+    "uploaded": "Xat yuklandi: {{name}}",
+    "remove": "Xatni olib tashlash",
+    "tooLarge": "Fayl 25 MB dan katta",
+    "unsupported": "PDF, rasm yoki Office hujjati mos keladi",
+    "failed": "Xatni yuklab bo‘lmadi: {{reason}}"
+  },
+  "urgency": {
+    "legend": "Shoshilinchlik",
+    "normal": "Oddiy",
+    "urgent": "Shoshilinch"
+  },
+  "consent": {
+    "legend": "Ma’lumotlarni qayta ishlashga rozilik",
+    "given": "Botda {{date}} berilgan",
+    "givenStaff": "Xodim tomonidan {{date}} belgilangan",
+    "missing": "Mijoz hali rozilik bermagan.",
+    "viaBot": "Telegramdagi lid rozilikni botda beradi: undan «Roziman»ni bosishini so‘rang.",
+    "mark": "Rozilik olindi",
+    "method": "Qanday olingan",
+    "methods": {
+      "phone": "Telefon orqali",
+      "email": "Xat orqali",
+      "paper": "Qog‘ozda"
+    },
+    "comment": "Izoh"
+  },
+  "consequence": {
+    "lead": "Lid mijozga aylanadi, siz yozishma uchun mas’ul bo‘lasiz; bot bu mijoz bo‘yicha javob berishda davom etadi.",
+    "request": "Bek-ofisda ЗВ raqamli ariza paydo bo‘ladi.",
+    "letter": "Xat direktorga «Hujjatlar · Kiruvchi xatlar»ga boradi{{urgent}}.",
+    "urgentSuffix": " «Shoshilinch» belgisi bilan",
+    "chat": "Loyiha chati yaratiladi."
+  },
+  "clientGets": "Mijoz oladi: «ЗВ-… arizasi qabul qilindi, hisoblayapmiz» va «Kabinetni ochish» tugmasi — Telegramda yoki xat orqali.",
+  "submit": "Ariza yaratish → direktorga Kiruvchilarga",
+  "submitting": "Ariza yaratilmoqda…",
+  "cancel": "Bekor qilish",
+  "done": {
+    "title": "Ariza yaratildi",
+    "text": "Ariza bek-ofisga uzatilmoqda; ЗВ raqami mijoz kartasida paydo bo‘ladi.",
+    "repeated": "Bu ariza allaqachon yaratilgan — uni ko‘rsatamiz.",
+    "openClient": "Mijoz kartasini ochish"
+  },
+  "errors": {
+    "company": "Mijozni tanlang yoki kompaniya nomini kiriting",
+    "contact": "Kontaktni tanlang yoki ismni kiriting",
+    "channel": "Kamida bitta kanal kerak: Telegram, telefon yoki pochta",
+    "summary": "So‘rov mazmunini yozing",
+    "consent": "Mijoz roziligisiz ariza yaratib bo‘lmaydi",
+    "inn": "STIR — 9 dan 14 gacha raqam",
+    "handoff_no_consent": "Mijoz ma’lumotlarga rozilik bermagan — qanday olinganini belgilang",
+    "consent_via_bot": "Telegramdagi lid rozilikni botda beradi — undan rozi bo‘lishini so‘rang",
+    "contact_channel_required": "Kontaktda Telegram, telefon yoki pochta yo‘q",
+    "request_not_allowed": "Lid rad etilgan — undan ariza yaratib bo‘lmaydi",
+    "request_key_reused": "Shakl eskirgan — «Ariza yaratish»ni qayta oching",
+    "erp_not_configured": "Bek-ofis ulanmagan — administratorga murojaat qiling",
+    "not_lead_owner": "Lidni boshqa xodim olib boryapti",
+    "telegram_linked_elsewhere": "Lid Telegrami boshqa mijozga bog‘langan",
+    "generic": "Ariza yaratib bo‘lmadi. Shakl ma’lumotlari saqlandi — qayta urinib ko‘ring"
+  }
+}

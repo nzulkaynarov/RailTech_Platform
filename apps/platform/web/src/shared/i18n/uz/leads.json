@@ -1,0 +1,110 @@
+{
+  "subtitle": "Botga, saytga, pochtaga yozgan yoki qo‘ng‘iroq qilgan barcha. TT so‘raganlar — darhol «Ariza yaratish»ga.",
+  "tabs": {
+    "label": "Lid holati",
+    "all": "Hammasi",
+    "new": "Yangi",
+    "dialog": "Suhbatda",
+    "wants_quote": "TT so‘ramoqda",
+    "client": "Mijozga aylangan"
+  },
+  "scope": {
+    "label": "Kimning lidlari",
+    "all": "Hammasi",
+    "mine": "Meniki",
+    "overdue": "Muddati o‘tgan"
+  },
+  "search": {
+    "label": "Ism va so‘rov bo‘yicha qidirish",
+    "placeholder": "Ism yoki so‘rov"
+  },
+  "channel": {
+    "label": "Kanal",
+    "any": "Istalgan kanal"
+  },
+  "columns": {
+    "name": "Kim",
+    "status": "Holat",
+    "need": "So‘rov",
+    "channel": "Kanal",
+    "assigned": "Mas’ul",
+    "last": "Oxirgi xabar",
+    "action": "Amal"
+  },
+  "caption": "Lidlar",
+  "tableScroll": "Lidlar jadvali",
+  "listLabel": "Lidlar",
+  "open": "{{name}} kartasini ochish",
+  "nobody": "Hech kim",
+  "overdue": "Javob muddati o‘tdi",
+  "unread": "Yangi xabar",
+  "actions": {
+    "take": "Olish",
+    "reply": "Javob berish",
+    "create": "Ariza yaratish",
+    "client": "Mijoz kartasi",
+    "takeLabel": "{{name}}ni «Javob kutmoqda»ga olish",
+    "replyLabel": "{{name}}ga «Javob kutmoqda»da javob berish",
+    "createLabel": "{{name}} uchun ariza yaratish",
+    "clientLabel": "{{name}} mijoz kartasi"
+  },
+  "paging": {
+    "label": "Lidlar sahifalari",
+    "prev": "Orqaga",
+    "next": "Keyingi",
+    "range": "{{total}} dan {{from}}–{{to}}"
+  },
+  "empty": {
+    "title": "Hozircha lidlar yo‘q",
+    "text": "Kimdir botga yozsa yoki saytda so‘rov qoldirsa, yangi lidlar paydo bo‘ladi.",
+    "filteredTitle": "Hech narsa topilmadi",
+    "filteredText": "Yorliq, filtr yoki qidiruvni o‘zgartiring."
+  },
+  "loadError": {
+    "title": "Lidlarni yuklab bo‘lmadi",
+    "text": "Server javob bermadi. Birozdan keyin qayta urinib ko‘ring."
+  },
+  "retry": "Qayta urinish",
+  "card": {
+    "label": "Lid kartasi",
+    "close": "Yopish",
+    "contacts": "Kontaktlar",
+    "about": "Lid haqida",
+    "facts": "Bot aniqlagan ma’lumotlar",
+    "need": "So‘rov",
+    "consent": "Ma’lumotlarga rozilik",
+    "consentBot": "botda {{date}} berilgan",
+    "consentStaff": "xodim tomonidan {{date}} belgilangan ({{method}})",
+    "consentMissing": "yo‘q — rozilikisiz ariza yaratib bo‘lmaydi",
+    "methods": {
+      "phone": "telefon orqali",
+      "email": "xat orqali",
+      "paper": "qog‘ozda"
+    },
+    "assigned": "Mas’ul",
+    "channel": "Kanal",
+    "language": "Til",
+    "messages": "Oxirgi xabarlar",
+    "noMessages": "Hozircha xabarlar yo‘q",
+    "authors": {
+      "lead": "Mijoz",
+      "bot": "Bot",
+      "manager": "Menejer",
+      "system": "Tizim"
+    },
+    "client": "Mijoz",
+    "confirmation": "Mijozga ariza tasdig‘i",
+    "firstResponse": "Saytdagi so‘rovga birinchi javob",
+    "firstResponseDue": "{{date}} gacha",
+    "firstResponseOverdue": "muddat o‘tdi: {{date}}",
+    "invitation": "Kabinetga taklif",
+    "notice": {
+      "queued": "navbatda",
+      "sent": "{{date}} yuborildi",
+      "failed": "yetib bormadi: {{reason}}",
+      "skipped": "yuborilmagan",
+      "channel": "kanal: {{channel}}"
+    },
+    "none": "ma’lumot yo‘q"
+  }
+}

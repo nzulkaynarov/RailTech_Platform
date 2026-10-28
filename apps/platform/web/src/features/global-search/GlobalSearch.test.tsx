@@ -111,16 +111,13 @@ describe("Глобальный поиск", () => {
     const { router } = renderApp("/dashboard/queue");
     const box = await searchBox();
 
-    type(box, "L-2041");
-    fireEvent.click(await screen.findByRole("option", { name: /L-2041/ }));
+    type(box, "ЗВ-2026-104");
+    fireEvent.click(await screen.findByRole("option", { name: /ЗВ-2026-104/ }));
 
     const where = await screen.findByRole("region", { name: "Где посмотреть" });
-    expect(within(where).getByText(/Сейчас — в старой CRM: раздел «Лиды»/)).toBeInTheDocument();
-    expect(
-      await within(where).findByRole("link", { name: /Открыть в старой CRM/ }),
-    ).toHaveAttribute("href", "http://crm.localhost:8088/leads/2041");
+    expect(within(where).getByText(/Сейчас — в старом ERP: раздел «Сделки»/)).toBeInTheDocument();
     expect(router.state.location.pathname).toBe("/dashboard/queue");
-    expect(box).toHaveValue("L-2041");
+    expect(box).toHaveValue("ЗВ-2026-104");
 
     fireEvent.click(within(where).getByRole("button", { name: "Закрыть подсказку" }));
     expect(screen.queryByRole("region", { name: "Где посмотреть" })).toBeNull();
@@ -128,16 +125,20 @@ describe("Глобальный поиск", () => {
 
   it("слова «создать заявку» добавляют группу «Действия»; без права на запись действия нет", async () => {
     signInAs("manager@demo.example");
-    renderApp("/dashboard/queue");
+    const { router } = renderApp("/dashboard/queue");
     const box = await searchBox();
 
     type(box, "создать заявку");
     const action = await screen.findByRole("option", { name: /Создать заявку/ });
     expect(within(action).getByText("Действие")).toBeInTheDocument();
     expect(screen.getByRole("group", { name: "Действия" })).toBeInTheDocument();
+    // «Лиды» — настоящий экран (D1-2b): действие ведёт к лидам, которые просят КП
     fireEvent.click(action);
-    const where = await screen.findByRole("region", { name: /Где посмотреть/ });
-    expect(within(where).getByText(/Сейчас — в старой CRM/)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/crm/leads");
+    });
+    expect(router.state.location.search).toBe("?status=wants_quote");
+    expect(screen.queryByRole("region", { name: /Где посмотреть/ })).toBeNull();
 
     type(box, "пригласить");
     await waitFor(() => {
@@ -150,8 +151,8 @@ describe("Глобальный поиск", () => {
     renderApp("/dashboard/queue");
     const box = await searchBox();
 
-    type(box, "L-2041");
-    fireEvent.click(await screen.findByRole("option", { name: /L-2041/ }));
+    type(box, "ЗВ-2026-104");
+    fireEvent.click(await screen.findByRole("option", { name: /ЗВ-2026-104/ }));
 
     const where = await screen.findByRole("region", { name: "Где посмотреть" });
     expect(where.parentElement).toHaveAttribute("aria-live", "polite");
@@ -207,8 +208,8 @@ describe("Глобальный поиск", () => {
     renderApp("/dashboard/queue");
     const box = await searchBox();
 
-    type(box, "создать заявку");
-    const action = await screen.findByRole("option", { name: /Создать заявку/ });
+    type(box, "служебка");
+    const action = await screen.findByRole("option", { name: /Создать служебную записку/ });
     expect(action).toHaveTextContent("Пока делается в старой системе");
     expect(action).not.toHaveTextContent(/фаз/i);
   });
