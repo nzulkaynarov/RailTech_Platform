@@ -11,7 +11,7 @@ from app.services import files as files_service
 from app.services.storage import CHUNK, TEST_STORAGE
 from tests.domain import Person, validate
 from tests.test_api_auth import assert_error
-from tests.test_documents import MEMO, create
+from tests.test_documents import MEMO, create, submit
 from tests.test_letters import NEW_LETTER
 
 pytestmark = pytest.mark.pg
@@ -124,7 +124,9 @@ async def test_file_attached_to_document_follows_document_visibility_and_is_jour
     assert again["files"][0]["version"] == 2
     assert again["journal"][-1]["action"] == "file.version_added"
 
-    # registry.read видит документ — и файл; сотрудник без права и не участник — нет
+    # файл черновика, как и сам черновик, виден только автору (D1-10); после отправки registry.read видит и то, и другое
+    assert_error(await client.get(f"/api/v1/files/{ref['id']}", headers=staff["manager"].headers), 404, "NOT_FOUND")
+    assert (await submit(client, staff["admin"], doc["id"])).status_code == 200
     assert (await client.get(f"/api/v1/files/{ref['id']}", headers=staff["manager"].headers)).status_code == 200
     assert_error(await client.get(f"/api/v1/files/{ref['id']}", headers=staff["nobody"].headers), 403, "FORBIDDEN")
     outsider = await client.get(f"/api/v1/files/{ref['id']}", headers=staff["registrar"].headers)
@@ -136,10 +138,11 @@ async def test_viewer_cannot_add_a_version_to_someone_elses_document_file(
 ) -> None:
     ref = (await upload(client, staff["admin"])).json()
     doc = await create(client, staff["admin"], file_ids=[ref["id"]])
-    # менеджер видит документ (registry.read) и может загружать файлы, но цепочку автора не продолжает
-    denied = await upload(client, staff["manager"], PDF + b"2", version_of=ref["id"])
-    assert_error(denied, 403, "FORBIDDEN", reason="not_file_owner")
     assert (await upload(client, staff["admin"], PDF + b"2", version_of=ref["id"])).status_code == 201
+    assert (await submit(client, staff["admin"], doc["id"])).status_code == 200  # черновик чужим не виден (D1-10)
+    # менеджер видит документ (registry.read) и может загружать файлы, но цепочку автора не продолжает
+    denied = await upload(client, staff["manager"], PDF + b"3", version_of=ref["id"])
+    assert_error(denied, 403, "FORBIDDEN", reason="not_file_owner")
     current = (await client.get(f"/api/v1/documents/{doc['id']}", headers=staff["admin"].headers)).json()
     assert current["files"][0]["version"] == 2
 

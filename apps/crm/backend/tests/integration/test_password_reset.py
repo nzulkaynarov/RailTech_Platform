@@ -278,15 +278,12 @@ async def test_reset_by_link_closes_sessions_issued_before_it(
     sessions: async_sessionmaker[AsyncSession], live_settings: Settings
 ) -> None:
     """Живой access-токен (и сессия в BFF) после сброса не принимается; новый вход работает."""
-    import asyncio
-
     service, mail, _, _ = make(sessions)
     manager, _ = await make_user(sessions, "dilshod@railtech.uz", ["manager"])
     with TestClient(create_app(live_settings)) as client:
         old = login(client, manager.email, PASSWORD)
         assert client.get("/api/v1/me", headers=old).status_code == 200
         await service.request("dilshod@railtech.uz")
-        await asyncio.sleep(1.1)  # токены считаются с точностью до секунды
         await service.reset(token_in(mail.sent[0]["context"]["reset_url"]), NEW_PASSWORD)
         assert client.get("/api/v1/me", headers=old).status_code == 401
         fresh = login(client, manager.email, NEW_PASSWORD)

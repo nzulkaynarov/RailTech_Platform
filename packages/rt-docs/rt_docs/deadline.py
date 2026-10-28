@@ -2,7 +2,7 @@
 
 Мягкий тайм-аут не прерывает проход вёрстки WeasyPrint: сервис, который зовёт рендер не из главного потока
 (Procrastinate в EDS гоняет синхронные задачи в потоках, асинхронные — в цикле событий), выносит рендер в отдельный
-процесс с kill по тайм-ауту (docs/architecture/rt-docs.md §7, B-085).
+процесс с kill по тайм-ауту (docs/architecture/rt-docs.md §7, B-094).
 """
 
 from __future__ import annotations

@@ -64,11 +64,14 @@ def assert_renderable(quote):
     return seller_company
 
 
-def assert_sendable(quote, sent_by_user):
+def assert_sendable(quote, sent_by_user, channels=None):
     """Non-economics send preconditions; returns the issuing seller company.
 
     Runs the status / recipient / claim gates in the exact order
     ``send_to_client`` used to inline them (order is contractual).
+
+    ERP-11: e-mail получателя обязателен, только если КП уходит письмом — ``channels`` нет (отправка менеджером) или
+    в них есть ``email``; автоотправка только в Telegram или кабинет e-mail не требует.
     """
     # Status guard: only an internally-approved КП (READY_TO_SEND — it passed
     # the sales → ВЭД → director chain) may go out to the client.
@@ -84,7 +87,7 @@ def assert_sendable(quote, sent_by_user):
     # frozen + SENT and the deal moved to QUOTE_SENT — «отправлено в никуда», invisible to the
     # seller. Synchronous and BEFORE any state change, using the SAME resolver the task uses,
     # so the two can never disagree about what "has a recipient" means.
-    if resolve_quote_recipient(quote) is None:
+    if (channels is None or "email" in channels) and resolve_quote_recipient(quote) is None:
         raise ValueError("RECIPIENT_REQUIRED")
 
     # An unclaimed КП has no issuing seller (e.g. the preparer's membership was deactivated

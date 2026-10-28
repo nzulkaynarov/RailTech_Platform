@@ -11,10 +11,11 @@ import { CompanyPage } from "./company/CompanyPage";
 import { OrgPage } from "./org/OrgPage";
 import { RolesPage } from "./roles/RolesPage";
 import { SetupWizardPage } from "./setup/SetupWizardPage";
+import { TicketsPage } from "./tickets/TicketsPage";
 
 /**
  * Модуль Admin. Оргструктура (PLT-15), Ролевая матрица (R-2), Внешние интеграции (W13-A1), Компания (W13-A3), Журнал
- * интеграций (W13-A2), первый запуск (W13-A4) и Настройки бота (W13-A5) — настоящие экраны; остальные разделы пока заглушки каркаса.
+ * интеграций (W13-A2), первый запуск (W13-A4) и Настройки бота (W13-A5) и Обращения сотрудников (W15-H7) — настоящие экраны; остальные разделы пока заглушки каркаса.
  */
 export function Component() {
   const location = useLocation();
@@ -65,6 +66,13 @@ export function Component() {
     return (
       <RequireAccess rule={match.section.access}>
         <SetupWizardPage />
+      </RequireAccess>
+    );
+  }
+  if (match?.module.code === "admin" && match.section.key === "tickets") {
+    return (
+      <RequireAccess rule={match.section.access}>
+        <TicketsPage objectId={match.objectId} />
       </RequireAccess>
     );
   }

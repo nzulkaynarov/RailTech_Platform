@@ -5,15 +5,14 @@ import { renderUi } from "../../test/renderUi";
 import { Forbidden } from "./Forbidden";
 
 describe("Forbidden", () => {
-  it("заголовок страницы, пояснение и неактивное «Написать администратору» (Q-PLT-12-4)", () => {
+  it("заголовок страницы, пояснение и рабочая кнопка «Написать администратору» (W15-H7)", () => {
     renderUi(<Forbidden />);
     expect(screen.getByRole("heading", { level: 1, name: "Нет доступа" })).toBeVisible();
     expect(
       screen.getByRole("heading", { level: 2, name: "Этот раздел недоступен для вашей роли" }),
     ).toBeVisible();
     const button = screen.getByRole("button", { name: /Написать администратору/ });
-    expect(button).toBeDisabled();
-    expect(button).toHaveAccessibleName(/Появится к пилоту/);
+    expect(button).toBeEnabled();
     expect(document.title).toBe("Нет доступа — RailTech Platform");
   });
 

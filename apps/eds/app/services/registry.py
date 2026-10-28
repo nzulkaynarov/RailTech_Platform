@@ -2,7 +2,10 @@
 
 Один запрос объединяет письма (`letters`), документы (`documents`) и маршруты КП (`approval_routes`, template = quote)
 в общий вид и фильтрует его: вкладка (тип), статус, период (по `Asia/Tashkent`), ответственный, клиент, номер, поиск
-по номеру и теме. Доступ — `registry.read`; видны все строки (сужение «свои» — у `/documents` и `/approvals`).
+по номеру и теме. Доступ — `registry.read`, но реестр **не шире прав на сам вид документа** (D1-10): письма
+(`letter_in`, `letter_out`) — только с `letters.read`; черновики (`status = draft`) — только автору; документы — по
+`access.document_visible` (он же у `/documents`, карточки и файлов), КП — по `access.route_visible`.
+Отбор — в SQL до курсора и счётчиков.
 """
 
 import datetime as dt
@@ -25,11 +28,11 @@ from sqlalchemy import (
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.clock import COMPANY_TZ
-from app.models import ApprovalRoute, ApprovalStep, Document, Letter
+from app.models import ApprovalRoute, ApprovalStep, Document, Employee, Letter
 from app.schemas.common import ErpLinks, LetterSender
 from app.schemas.pagination import decode_cursor
 from app.schemas.registry import RegistryItem, RegistryKind, RegistryPage
-from app.services import paging
+from app.services import access, paging
 from app.services.letters_read import escape_like
 from app.services.people import Directory, load_directory
 
@@ -52,7 +55,7 @@ def _big(value: Any = None) -> Any:
     return cast(null() if value is None else value, BigInteger)
 
 
-def _union() -> CompoundSelect[Any]:
+def _union(employee: Employee) -> CompoundSelect[Any]:
     current_assignee = (
         select(ApprovalStep.assignee_crm_user_id)
         .where(ApprovalStep.approval_id == ApprovalRoute.id, ApprovalStep.index == ApprovalRoute.current_step)
@@ -83,20 +86,20 @@ def _union() -> CompoundSelect[Any]:
     )
     documents = select(
         cast(literal_column("documents.kind"), String).label("kind"),
-        Document.id,
-        Document.number,
-        Document.subject,
-        Document.status,
-        Document.created_at,
-        Document.author_crm_user_id,
-        Document.recipient_name,
-        Document.recipient_inn,
-        _big(),
-        Document.erp_deal_id,
-        Document.deal_number,
-        _big(),
-        _big(),
-    )
+        Document.id.label("id"),
+        Document.number.label("number"),
+        Document.subject.label("title"),
+        Document.status.label("status"),
+        Document.created_at.label("registered_at"),
+        Document.author_crm_user_id.label("responsible"),
+        Document.recipient_name.label("client_name"),
+        Document.recipient_inn.label("client_inn"),
+        _big().label("erp_request_id"),
+        Document.erp_deal_id.label("erp_deal_id"),
+        Document.deal_number.label("deal_number"),
+        _big().label("crm_client_id"),
+        _big().label("erp_company_id"),
+    ).where(access.document_visible(employee))  # письма и чужие черновики отсекает сам предикат видимости
     quotes = select(
         cast(literal_column("'quote'"), String).label("kind"),
         ApprovalRoute.id,
@@ -112,12 +115,13 @@ def _union() -> CompoundSelect[Any]:
         ApprovalRoute.deal_number,
         ApprovalRoute.crm_client_id,
         ApprovalRoute.erp_company_id,
-    ).where(ApprovalRoute.template == "quote")
-    return union_all(letters, documents, quotes)
+    ).where(ApprovalRoute.template == "quote", access.route_visible(employee))
+    # Входящие письма — метаданные отправителя (имя, ИНН) — только с `letters.read`, как `/letters`.
+    return union_all(letters, documents, quotes) if access.can_read_letters(employee) else union_all(documents, quotes)
 
 
-def _filtered(filters: Filters) -> Select[Any]:
-    rows = _union().subquery("registry")
+def _filtered(employee: Employee, filters: Filters) -> Select[Any]:
+    rows = _union(employee).subquery("registry")
     c = rows.c
     stmt = select(rows)
     if filters.kinds:
@@ -162,8 +166,10 @@ def _item(row: Any, directory: Directory) -> RegistryItem:
     )
 
 
-async def list_page(session: AsyncSession, filters: Filters, *, cursor: str | None, limit: int) -> RegistryPage:
-    sub = _filtered(filters).subquery("page")
+async def list_page(
+    session: AsyncSession, employee: Employee, filters: Filters, *, cursor: str | None, limit: int
+) -> RegistryPage:
+    sub = _filtered(employee, filters).subquery("page")
     stmt = paging.apply(select(sub), sub.c.registered_at, sub.c.id, decode_cursor(cursor), limit)
     rows = list((await session.execute(stmt)).all())
     page, next_cursor = paging.cut(rows, limit, lambda r: r.registered_at, lambda r: r.id)
@@ -171,9 +177,9 @@ async def list_page(session: AsyncSession, filters: Filters, *, cursor: str | No
     return RegistryPage(items=[_item(r, directory) for r in page], next_cursor=next_cursor)
 
 
-async def export_rows(session: AsyncSession, filters: Filters) -> list[RegistryItem] | None:
+async def export_rows(session: AsyncSession, employee: Employee, filters: Filters) -> list[RegistryItem] | None:
     """Все строки по фильтрам, новые первыми; `None` — больше `EXPORT_LIMIT` (экспорт отклоняется)."""
-    sub = _filtered(filters).subquery("export")
+    sub = _filtered(employee, filters).subquery("export")
     stmt = select(sub).order_by(sub.c.registered_at.desc(), sub.c.id.desc()).limit(EXPORT_LIMIT + 1)
     rows = list((await session.execute(stmt)).all())
     if len(rows) > EXPORT_LIMIT:

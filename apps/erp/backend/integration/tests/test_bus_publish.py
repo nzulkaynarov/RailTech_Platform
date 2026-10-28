@@ -77,7 +77,7 @@ def test_golden_path_publishes_the_events_of_the_whole_chain_in_the_same_transac
     assert (
         quote_sent["data"]["erp_company_id"] == deal.company_id and quote_sent["data"]["crm_client_id"] == CRM_CLIENT_ID
     )
-    assert quote_sent["source"] == "rt://erp" and quote_sent["subject"] == f"D-{deal.pk}"
+    assert quote_sent["source"] == "rt://erp" and quote_sent["subject"] == deal.number  # ERP-09: номер ЗВ
 
     quote = QuoteLifecycleService.approve_quote(quote.id, buyer_user)
     contract, error = crm_services.generate_contract_from_quote(quote.id, actor=manager)

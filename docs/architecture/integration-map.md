@@ -1,5 +1,5 @@
 # Карта интеграции: экраны → BFF → домены (CRM, EDS, ERP)
-Статус: действует · Владелец: архитектор · Обновлено: 2026-10-27
+Статус: действует · Владелец: архитектор · Обновлено: 2026-10-28
 
 Версия 1.0 · 2026-10-22 · Сверено с `main @ fb3a3928`: CRM — OpenAPI CRM (тогда `apps/crm/docs/api/openapi.json`, теперь `packages/contracts/openapi/crm.yaml`) (109 путей), ERP —
 `packages/contracts/openapi/erp-internal.yaml` (251 путь), шов — `erp-integration.yaml` 0.5.0, портал —
@@ -25,7 +25,7 @@
 |---|---|---|---|
 | `POST /auth/login`, `POST /auth/logout`, `GET /auth/session` | `POST /auth/login`, `/auth/refresh`, `/auth/logout`, `GET /me`, `POST /auth/sso/token` | `POST /auth/sso/exchange/`, `/auth/token/refresh/`, `/auth/logout/` | ✓ |
 | `GET /me` (имя, роли Платформы, язык, модули) | `GET /me`, `GET /me/permissions` | — | Δ CRM-01, R-1 (`platform_role_refs`) |
-| `GET /search?q=` | `GET /leads?q=`, `GET /clients?q=` | `GET /crm/analytics/search-documents/`; сделки по номеру и названию — **нет** (`DealViewSet` без `search_fields`) | частично; сделки — Δ ERP-09, чаты — Δ ERP-08 |
+| `GET /search?q=` | `GET /leads?q=`, `GET /clients?q=` | `GET /crm/analytics/search-documents/`; сделки — `GET /crm/deals/?search=` по номеру ЗВ/ПР (любой префикс, латиница), названию и компании (ERP-09 ✓, W16-D1-2) | частично; чаты — Δ ERP-08 |
 | `GET /notifications`, `POST /notifications/read-all`, `POST /notifications/{id}/read` | Δ CRM-04 (уведомления сотрудникам из CRM) | `GET /notifications/`, `PATCH /notifications/mark_all_read/`, `PATCH /notifications/{id}/mark_read/` | ✓ ERP, Δ CRM |
 | `GET /events` (SSE, фаза P4) | `GET /stream` | Δ ERP-10 (шина `rt_bus`, этап B) | Δ |
 | `GET /menu-counters` (бейджи подменю всех модулей) | `GET /inbox`, `GET /service-requests` | счётчики по §1.2–1.5 | агрегат |
@@ -43,13 +43,13 @@
 
 | Экран / действие | BFF | CRM | ERP | Статус |
 |---|---|---|---|---|
-| Все лиды, вкладки и фильтры | `GET /leads` | `GET /leads` | — | ✓; статусы Платформы — §3.1, Δ CRM-02 для «Просит КП» |
+| Все лиды, вкладки и фильтры | `GET /leads` | `GET /leads` (`platform_status` в ответе; фильтры `platform_status=`, `overdue=`) | — | ✓; статусы Платформы — §3.1, CRM-02 ✓ (W16-D1-2) |
 | Карточка лида в боковом окне | `GET /leads/{L-NNNN}` | `GET /leads/{id}`, `/messages`, `/notes`, `/decisions` | — | ✓ |
 | Забрать, Ответить, Вернуть боту, Отказ | `POST /leads/{no}/take` и т. п. | `POST /leads/{id}/actions/take|return_to_bot|close_lost`, `POST /leads/{id}/messages` | — | ✓ |
-| **Создать заявку** | `POST /leads/{no}/request {company{name,inn}, contact{…channels}, summary, letter_file?, urgency}` | `POST /leads/{id}/actions/make_customer` → передача в ERP (`POST /clients/handoff` шва) | handoff создаёт компанию, контакты, `Deal`; **плюс** письмо ВХ, чат проекта, `process = v3`, номер ЗВ | Δ CRM-03, Δ EDS-01, ERP-07, ERP-09, контракт шва |
+| **Создать заявку** | `POST /leads/{no}/request {company{name,inn}, contact{…channels}, summary, letter_file?, urgency}` (D1-2b) | `POST /leads/{id}/actions/create_request {client_id \| company{name, inn}, contact{contact_id \| full_name, phone?, email?, use_lead_telegram}, summary, urgency, letter_file_id?, consent?}` — из любой активной стадии, e-mail не обязателен; задача после коммита → `POST /clients/handoff` (клиента ещё нет в ERP) и `POST /clients/{id}/requests` шва 0.9.0 | сделка процесса `v3` с номером ЗВ, срочностью, менеджером заявки (B-008); `request.created` → EDS: письмо ВХ директору со срочностью и файлом письма (файл — EDS `POST /files` до заявки) | ✓ бэкенды (W16-D1-2: CRM-03, ERP-09); BFF и экран — D1-2b; чат проекта — Δ ERP-08 |
 | Все сообщения / «Ждут ответа» (передачи от бота с запиской, SLA, «Забрать», лента, ответ «От себя / Заметка команде», шаблоны, подсказка, вложения, живые обновления) | `GET /crm/messages`, `GET /crm/messages/{lead}`, `/thread`, `/attachments/{m}/{i}`, `POST /crm/messages/{lead}/take|reply|note|assist|return-to-bot`, `GET /crm/reply-templates`; подсказка SSE `messages` | `GET /inbox` (с `handoff_note`), `GET /leads/{id}`, `/messages`, `/notes`, `/team`, `/leads/{id}/messages/{m}/attachments/{i}`, `POST /leads/{id}/messages` (`client_message_id`), `/actions/take|note|return_to_bot`, `/assist`, `GET /reply-templates`; событие `lead.message_added` | — | ✓ (D1-1, BFF 0.22.0; CRM-06 закрыт) |
 | Все клиенты, карточка 360° | `GET /clients`, `GET /clients/{id}` | `GET /clients`, `/clients/{id}`, `/contacts`, `/erp-receivables`, `/documents` | шов: `GET /companies/{id}/summary`, `/companies/{id}/deals`, `/deals/{id}/documents` | ✓ |
-| Новая заявка для клиента | `POST /clients/{id}/request` | `POST /leads/{id}/actions/new_deal` | handoff с `create_request` | Δ CRM-03 |
+| Новая заявка для клиента | `POST /clients/{id}/request` (D1-2b) | `POST /clients/{id}/actions/create_request` (то же тело) | `POST /clients/{crm_client_id}/requests` шва 0.9.0 | ✓ бэкенды (W16-D1-2) |
 | Все заявки (ЗВ/ПР, 7 шагов) | `GET /requests` | — | `GET /crm/deals/` + документы | ✓, шаг — §2 |
 | Каналы связи | `GET /channels` | `GET /integrations/telegram`, `GET /settings` (тексты), `GET /integrations/smtp` | — | ✓ |
 | База знаний: документы, поиск «Что найдёт бот», карточка и фрагменты | `GET /crm/kb/documents`, `GET /crm/kb/documents/{id}[/chunks]`, `POST /crm/kb/search`; изменения — `PATCH /crm/kb/documents/{id}`, `POST /crm/kb/documents/{id}/reingest`, `POST /crm/kb/documents` (multipart, тело CRM не разбирается), `POST /crm/kb/documents/manual` | `/kb/documents*`, `/kb/search` | — | ✓ (BFF 0.11.0, W13-A5); чтение — `crm.leads` или `admin`, правка — `admin: full` |
@@ -63,7 +63,7 @@
 | Входящие, карточка письма | `GET /eds/letters`, `GET /eds/letters/{id или ВХ}`, вложение `GET /eds/letter-files/{id}` (BFF 0.16.0) | сервис EDS (`GET /letters`, `GET /letters/{id}`, по номеру — `GET /registry?number=`, файлы `GET /files/{id}`); шаг и название заявки — ERP `GET /crm/deals/{erp_deal_id}/` по ссылке письма, ERP не ответил — `sources.erp = unavailable` | ✓ **D1-3 (волна 16)** |
 | **Утвердить резолюцию** / Вернуть менеджеру / Отклонить | `POST /eds/letters/{id}/resolution {text, assignees[{id, zone}], due, min_margin_pct}`; `/return {comment}`; `/reject {reason}`; кандидаты — `GET /eds/resolution/assignees` (по разделам каталога, не по кодам ролей) | сервис EDS (`POST /letters/{id}/resolution|return|reject`); ERP узнаёт о решении по шине (`letter.resolved/rejected` → задание расчёта, `CLOSED_LOST`); BFF в ERP за решением не ходит | ✓ **D1-3 (волна 16)**; список кандидатов — разрыв, см. Q-D1-3-1 |
 | Черновик КП, карточка | `GET /eds/quotes` (список: «на моём шаге» / все), `GET /eds/quotes/{id маршрута или КП-2026/115}` (шаги, чек-лист с датой и автором, состав и итоги, заявка, письмо, каналы; внутренний блок `internal` — себестоимость, маржа, порог, сроки — только с группой `cost_margin`) (BFF 0.24.0) | маршрут «КП» EDS (`GET /approvals?template=quote`, `GET /approvals/{id}`, номер — `GET /registry?number=&kind=quote`); состав и итоги — ERP `GET /crm/quotes/{id}/`, заявка — `GET /crm/deals/{id}/`, контакт клиента — `GET /accounts/contacts/{id}/`; письмо — EDS `GET /letters?q=`; ERP не ответил — `sources.erp = unavailable`, карточка без строк | ✓ **D1-4 (волна 16)**; условия оплаты и срок цены поставщика — B-076, состав КП не из снимка — B-077 |
-| **Одобрить КП → отправить клиенту** (каналы) | `POST /eds/quotes/{id}/decision {decision: approve, channels[]}` — раздел `eds.drafts` full; без выбранных каналов кнопка «Одобрить КП → в Исходящие»; неактивна с подписью, какой пункт чек-листа не зелёный или что нет данных КП из ERP | EDS `POST /approvals/{id}/decision`: чек-лист проверяет EDS (визы и маржа блокируют — 409 `checklist_not_green`; «срок» — предупреждение, КП одобряется с отметкой «с опозданием», C1-G-1), присваивает ИСХ-номер; ERP по `approval.decided` ставит `READY_TO_SEND` и сохраняет `send_channels`, **отправки по каналам нет** — клиенту отправляет менеджер заявки (`quote.send`, C1-G-4) | ✓ экран D1-4 (BFF 0.24.0); **Δ ERP-11** (автоотправка по `channels`, проверка канала на сервере) — B-078, закрывает W16-D1-2 |
+| **Одобрить КП → отправить клиенту** (каналы) | `POST /eds/quotes/{id}/decision {decision: approve, channels[]}` — раздел `eds.drafts` full; без выбранных каналов кнопка «Одобрить КП → в Исходящие»; неактивна с подписью, какой пункт чек-листа не зелёный или что нет данных КП из ERP | EDS `POST /approvals/{id}/decision`: чек-лист проверяет EDS (визы и маржа блокируют — 409 `checklist_not_green`; «срок» — предупреждение, КП одобряется с отметкой «с опозданием», C1-G-1), присваивает ИСХ-номер; ERP по `approval.decided` сама отправляет КП клиенту по доступным из выбранных каналов (ERP-11: проверка канала на сервере, недоступные и сбои — в `send_report` с причиной и уведомлением менеджеру); без каналов — «Готово к отправке», отправляет менеджер заявки (`quote.send`, C1-G-4) | ✓ экран D1-4 (BFF 0.24.0); ✓ ERP-11 (W16-D1-2) |
 | Вернуть на доработку | `POST /eds/quotes/{id}/decision {decision: return, comment}` (комментарий обязателен — 422 в BFF до EDS) | EDS `POST /approvals/{id}/decision`; новая версия КП — новое событие ERP | ✓ **D1-4 (волна 16)** |
 | Исходящие, «Напомнить клиенту» | `GET /outbox`, `POST /quotes/{КП}/remind` | `GET /crm/quotes/?status=SENT…`; напоминание — событие для бота | Δ ERP-12 |
 | Все проекты, карточка проекта | `GET /projects`, `GET /projects/{ПР}` | `GET /crm/deals/{id}/`, `/documents/`, `GET /crm/contracts|invoices|acts|fulfillments/?deal=` | ✓ |
@@ -73,7 +73,7 @@
 | Акт: выпустить, прикрепить скан, возврат | `POST /acts/{АКТ}/…` | `POST /crm/invoices/{id}/generate-act/`, `/acts/{id}/reissue/`, `/remind/`; загрузка скана сотрудником — новое; событие `act.returned` — FIX-62 | Δ ERP-13 |
 | На согласовании, служебная записка | `GET /eds/memo-approvals` (на моём шаге / все), `GET /eds/memo-approvals/{id или СЗ-2026/014}`, `POST /eds/memo-approvals/{id}/decision {decision: approve\|return\|reject, comment}` — раздел `eds.memo.approve` full, чтение также у `eds.memo.create` (автор видит свой документ) | EDS `GET /approvals?template=memo,application,report`, `GET /documents/{id}`, `POST /approvals/{id}/decision`; маршрут «директор → бухгалтер, если сумма» ведёт EDS; вложения — `GET /eds/document-files/{id}` | ✓ **D1-4 (волна 16)** (EDS-02); шаг бухгалтера (`payments.confirm`) решает держатель `eds.payments` full — «Принять к оплате» / «Вернуть» |
 | Создать документ (служебка, заявление, отчёт, письмо) | `POST /eds/documents {kind, subject, text, amount?, due_date?, file_ids, erp_deal_id?, recipient?, submit}`; сохранить черновик — `PUT /eds/documents/{id}`; вложения — `POST /eds/document-files`, `GET /eds/document-files/{id}`; связь с проектом — `GET /eds/deal-options?q=` | EDS `POST /documents`, `PATCH /documents/{id}` (eds.yaml 0.4.0), `POST /documents/{id}/submit`, `POST /files`; поиск заявки — сделки ERP (как сквозной поиск); бланк, PDF и шаблоны (`GET /crm/document-templates/`) — волна D-DOC | ✓ (BFF 0.17.0, D1-5): простой текст; письмо — `letter_out`, нужен `eds.inbox: full`; «Кому» — директор, выбор адресата — Q-D15-1 |
-| Все документы | `GET /eds/documents?scope=mine\|all&kind=&status=&cursor=`; карточка — `GET /eds/documents/{id}` (шаги маршрута из `GET /approvals/{id}`) | «Мои» — EDS `GET /documents?mine=1`; «Все» — EDS `GET /registry` (письма, КП, служебные, заявления, отчёты); договоры, счета и акты — когда EDS начнёт вести их проекции | ✓ частично (BFF 0.17.0, D1-5): «Мои» и реестр EDS; договоры, счета, акты — позже |
+| Все документы | `GET /eds/documents?scope=mine\|all&kind=&status=&cursor=`; карточка — `GET /eds/documents/{id}` (шаги маршрута из `GET /approvals/{id}`) | «Мои» — EDS `GET /documents?mine=1`; «Все» — EDS `GET /registry` (письма — только при `letters.read`, КП, служебные, заявления, отчёты; чужие черновики не видны — D1-10, реестр не шире прав на вид документа; вкладка без прав — пусто, не ошибка); договоры, счета и акты — когда EDS начнёт вести их проекции | ✓ частично (BFF 0.17.0, D1-5): «Мои» и реестр EDS; договоры, счета, акты — позже |
 
 ### 1.5. ERP
 
@@ -138,14 +138,19 @@
 
 ### 3.1. Лид (CRM → Платформа)
 
-| Платформа | CRM |
-|---|---|
-| Новый | `new` |
-| В диалоге | `engaged`, `qualified` при `owner_mode = bot` |
-| Просит КП | `handoff`/`in_progress` с причиной эскалации `price_or_contract_asked` или фактом квалификации «просит цену» — Δ CRM-02 (вычисляемое поле `platform_status` в CRM) |
-| Без ответа | `unresponsive` или истёк SLA передачи |
-| Клиент | `customer` |
-| (Отказ) | `lost` — во вкладке «Все» с тегом |
+CRM считает статус сама — поле `platform_status` лида и фильтр `GET /leads?platform_status=` (CRM-02, W16-D1-2; правило —
+`apps/crm/backend/app/domain/client_requests.py`, SQL — `repositories/lead_status.py`).
+
+| Платформа | `platform_status` | CRM |
+|---|---|---|
+| Новый | `new` | `new` |
+| В диалоге | `dialog` | `engaged`, `qualified`; `handoff`/`in_progress` без просьбы о КП |
+| Просит КП | `wants_quote` | `handoff`/`in_progress` с активной передачей по причине `price_or_contract_asked` |
+| Без ответа | `no_answer` | `unresponsive` или `handoff` с истёкшим SLA передачи (просьба о КП важнее просрочки) |
+| Клиент | `client` | `customer`, `won` |
+| (Отказ) | `lost` | `lost` — во вкладке «Все» с тегом |
+
+«Просроченные» (фильтр «мои / все / просроченные») — `GET /leads?overdue=true`: открытая передача с истёкшим SLA ответа.
 
 ### 3.2. Документы (ERP → Платформа, SPEC-v3 §2.4)
 
@@ -189,8 +194,8 @@
 | Номер | Где формируется | Статус |
 |---|---|---|
 | L-NNNN | BFF из `leads.id` | ✓ |
-| ЗВ-ГГГГ-NNN / ПР-ГГГГ-NNN | ERP: новое поле `Deal.number` (NNN общий, префикс по шагу) | Δ ERP-09 |
-| ВХ-NNN/ГГ, ИСХ-NNN/ГГ, СЗ-ГГГГ/NNN | ERP `DocumentNumberingScheme` с новыми типами | Δ ERP-09 |
+| ЗВ-ГГГГ-NNN / ПР-ГГГГ-NNN | ERP `Deal.number`: счётчик года под блокировкой, без пропусков; ПР — тот же NNN после принятия КП; старым сделкам — миграцией | ✓ ERP-09 (W16-D1-2) |
+| ВХ-NNN/ГГ, ИСХ-NNN/ГГ, СЗ-ГГГГ/NNN | сервис EDS (счётчики EDS, волна 12) | ✓ |
 | КП-ГГГГ/NNN vN, ДОГ-, СЧ-, АКТ- | ERP `next_document_number` — схема компании задаётся шаблонами SPEC-v3 §2.2 | ✓ настройкой нумерации |
 | ЗП-ГГГГ-NNN | ERP — вместе с заказами поставщикам | Δ ERP-14 |
 
@@ -223,12 +228,12 @@
 | ERP-03 | статусы и журнал договора (Проект → Согласован клиентом → Выставлен у оператора → Подписан (скан) / Отклонён), скан — файл; «подпись кликом» для процесса v3 выключена; автосчёт на предоплату по подписи договора | P3 |
 | ERP-04 | `PaymentConfirmation` (файл, источник CABINET/BOT/MANUAL, сумма, дата, кто подтвердил); связь с `record-payment`; «запросить платёжку» — событие для бота и письмо | P3 |
 | ERP-06 | задача по расписанию: `OVERDUE` по сроку, событие `invoice.overdue`; включить `crm.send_payment_reminders` в расписание | P3 |
-| ERP-07 | признак `Deal.process = v3`; запрет переходов в обход резолюции, виз и одобрения для таких заявок в сервисном слое | P2 |
-| ERP-09 | `Deal.number` (ЗВ/ПР), типы нумерации ВХ, ИСХ, СЗ; поиск сделки по номеру и названию (`search_fields` у списка сделок) | P2 |
+| ERP-07 | признак `Deal.process = v3` — **есть** (W16-D1-2: заявки «Создать заявку»); открыто — запрет переходов в обход резолюции, виз и одобрения для таких заявок в сервисном слое | P2 |
+| ~~ERP-09~~ | закрыт (W16-D1-2): `Deal.number` ЗВ/ПР, поиск `?search=`; ВХ, ИСХ, СЗ — в EDS | — |
 | ERP-16 | уведомления сотрудника: `unread_count` и признак прочитанного в выдаче (для колокольчика без перебора страниц); лента «Сегодня» для сотрудника — события компании по правам, а не `activity-logs` только администратору | P2 |
 | ERP-17 | часовой пояс компании в API (сейчас BFF берёт `Asia/Tashkent` константой) | P2 |
 | ERP-10 | публикация доменных событий для BFF — через шину `rt_bus` (ADR-0014; задачи B1–B8 стратегии), не Redis Streams | B |
-| ERP-11 | атомарное «одобрить и отправить» КП: виза директора, ИСХ-номер, каналы (бот, кабинет, почта), одна транзакция | P2 |
+| ~~ERP-11~~ | закрыт (W16-D1-2, решение архитектора 2026-10-28): одобрение директора в EDS с каналами → ERP отправляет КП по доступным каналам в транзакции решения, недоступные — в итоге с причиной | — |
 | ERP-12 | «Напомнить клиенту» по КП и напоминание за 2 дня до истечения срока — событие для бота | P3 |
 | ERP-13 | загрузка подписанного скана акта сотрудником; статусы акта SPEC-v3 §2.4 (вместе с FIX-62) | P3 |
 | ERP-14 | склад и закупки (бывшая веха M4): остатки как сумма движений, резерв под проект, заказы поставщикам ЗП, приёмка, отгрузки по строкам, ожидаемые даты; до этого Расчёт показывает наличие из предложений поставщиков | P4 (минимум резерва — P3, вопрос 9) |
@@ -258,8 +263,8 @@
 | ID | Что | Фаза |
 |---|---|---|
 | CRM-01 → R-1/R-1b | роли Платформы как данные (`platform_roles`, `user_platform_roles`, `version`), выдача `platform_role_ids`, провижининг ERP вычисленными правами; `GET /me` отдаёт `platform_role_refs` | P1 → волна 9 |
-| CRM-02 | вычисляемый статус лида для Платформы (`platform_status`: new, dialog, wants_quote, no_answer, client) и фильтр по нему | P2 |
-| CRM-03 | действие «Создать заявку»: из любой активной стадии лида и из клиента, без требования e-mail, с полями письма и срочности; передача в ERP с `letter`, `process = v3`; приглашение в канал контакта (`invite.requested`, бывшая FIX-68) и кнопка «Открыть кабинет» в боте | P2; **частично D1-9 (2026-10-27):** событие `invite.requested` и канал `telegram` в приглашении, «Заявка принята» с «Открыть кабинет» (`request.created`), итог приглашения и «Отправить повторно другим каналом» в API CRM (`GET /clients/{id}`, `GET /leads/{id}` → `invitation`, `POST /clients/{id}/invitation`); остальное — D1-2 |
+| ~~CRM-02~~ | закрыт (W16-D1-2): `platform_status` (new, dialog, wants_quote, no_answer, client, lost) в ответе лида, фильтры `platform_status` и `overdue` | — |
+| ~~CRM-03~~ | закрыт: «Создать заявку» из любой активной стадии и из клиента, без e-mail, со срочностью и файлом письма, `process = v3` (W16-D1-2); приглашение в канал контакта, «Заявка принята» с «Открыть кабинет», «Отправить повторно другим каналом» — D1-9 | — |
 | CRM-04 | уведомления сотрудникам из событий CRM (SLA лида, сбой интеграции, новое обращение) — хранение и API чтения | P3; **частично D1-9:** новый запрос с сайта — строка «Моей очереди» (`GET /inbox` → `unassigned`, BFF обновляет её по `lead.created`), личное сообщение менеджерам в Telegram по их настройке `notify_leads` и напоминание «никто не взял» через `settings.web_form.first_response_sla_minutes` (рабочие минуты); хранилища уведомлений сотрудникам в CRM по-прежнему нет — колокольчик строит BFF |
 | CRM-05 | тикеты от команды | P4 |
 | CRM-06 | записка handoff (запрос, факты, причина, рекомендуемый шаг) в выдаче `GET /inbox` | ✓ закрыт D1-1 (`LeadOut.handoff_note`) |

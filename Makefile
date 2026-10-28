@@ -139,6 +139,7 @@ deploy-check: ## Проверка конфигурации прода без з�
 	@bash $(INFRA)/deploy/tests/reset-prod-test.sh
 	@bash $(INFRA)/deploy/tests/bus-contracts-image-test.sh
 	@bash $(INFRA)/deploy/tests/crm-backup-source-test.sh
+	@bash $(INFRA)/deploy/tests/crm-status-sources-test.sh
 	@bash $(INFRA)/deploy/tests/telegram-webhook-url-test.sh
 	@bash $(INFRA)/deploy/tests/crm-bot-test.sh
 	@bash $(INFRA)/deploy/tests/cpu-baseline-test.sh

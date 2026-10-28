@@ -16,6 +16,18 @@ interface MockSession {
   activeRole: string | null;
   language: Language;
   mustChangePassword: boolean;
+  /** Приветствие и тур первого входа закрыты (W15-H7); без поля — закрыты */
+  onboardingDone?: boolean;
+}
+
+/** Сценарий «первый вход»: `localStorage["rt-pf-mock-onboarding"] = "pending"` до входа — приветствие ещё не показано. */
+const ONBOARDING_KEY = "rt-pf-mock-onboarding";
+function onboardingPending(): boolean {
+  try {
+    return window.localStorage.getItem(ONBOARDING_KEY) === "pending";
+  } catch {
+    return false;
+  }
 }
 
 let memory: MockSession | null = null;
@@ -45,6 +57,7 @@ export function startSession(user: DemoUser): MockSession {
     activeRole: null,
     language: user.language,
     mustChangePassword: user.mustChangePassword ?? false,
+    onboardingDone: !onboardingPending(),
   };
   writeSession(session);
   setCookie("rt_pf_csrf", "mock-csrf-token-0123456789abcdef");
@@ -102,6 +115,7 @@ export function buildMe(session: MockSession): Me | undefined {
     restricted_fields: computed.restricted_fields,
     // R-1: роли Платформы дают доступ к CRM и ERP.
     access: { crm: true, erp: all.length > 0 },
+    onboarding_done: session.onboardingDone ?? true,
   };
 }
 

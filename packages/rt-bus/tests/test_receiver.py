@@ -192,5 +192,6 @@ async def test_invalid_data_errors_do_not_leak_secret(
     assert result.status_code == 422
     [record] = [r for r in caplog.records if r.getMessage() == "rt_bus_receive_rejected"]
     reason: str = record.reason  # type: ignore[attr-defined]
-    assert "482913" not in reason
-    assert "***" in reason
+    # в журнал уходит только код отказа: сообщения схемы цитируют значения из тела (B-006, ревью безопасности)
+    assert reason == "invalid_data"
+    assert "482913" not in repr(record.__dict__)
