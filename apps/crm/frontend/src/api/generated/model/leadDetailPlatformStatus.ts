@@ -6,7 +6,7 @@
  */
 
 export type LeadDetailPlatformStatus =
-  (typeof LeadDetailPlatformStatus)[keyof typeof LeadDetailPlatformStatus];
+  (typeof LeadDetailPlatformStatus)[keyof typeof LeadDetailPlatformStatus] | null;
 
 export const LeadDetailPlatformStatus = {
   new: "new",

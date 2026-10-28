@@ -3867,15 +3867,17 @@ components:
           - type: 'null'
           title: Phone E164
         platform_status:
-          enum:
-          - new
-          - dialog
-          - wants_quote
-          - no_answer
-          - client
-          - lost
+          anyOf:
+          - enum:
+            - new
+            - dialog
+            - wants_quote
+            - no_answer
+            - client
+            - lost
+            type: string
+          - type: 'null'
           title: Platform Status
-          type: string
         product_interest:
           items:
             type: string
@@ -3922,7 +3924,6 @@ components:
       - product_interest
       - last_lead_msg_at
       - created_at
-      - platform_status
       - qualification
       - consent_given_at
       - tg_username
@@ -3983,15 +3984,17 @@ components:
           title: Owner Mode
           type: string
         platform_status:
-          enum:
-          - new
-          - dialog
-          - wants_quote
-          - no_answer
-          - client
-          - lost
+          anyOf:
+          - enum:
+            - new
+            - dialog
+            - wants_quote
+            - no_answer
+            - client
+            - lost
+            type: string
+          - type: 'null'
           title: Platform Status
-          type: string
         product_interest:
           items:
             type: string
@@ -4023,7 +4026,6 @@ components:
       - product_interest
       - last_lead_msg_at
       - created_at
-      - platform_status
       title: LeadOut
       type: object
     LeadPage:

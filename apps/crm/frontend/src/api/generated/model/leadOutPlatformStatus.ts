@@ -6,7 +6,7 @@
  */
 
 export type LeadOutPlatformStatus =
-  (typeof LeadOutPlatformStatus)[keyof typeof LeadOutPlatformStatus];
+  (typeof LeadOutPlatformStatus)[keyof typeof LeadOutPlatformStatus] | null;
 
 export const LeadOutPlatformStatus = {
   new: "new",
