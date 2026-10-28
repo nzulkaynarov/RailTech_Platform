@@ -198,6 +198,8 @@ import type {
   ListManufacturersParams,
   ListMemoApprovalsParams,
   ListNotificationsParams,
+  ListPaymentMemosParams,
+  ListPaymentsParams,
   ListQuoteApprovalsParams,
   ListStockBalancesParams,
   ListStockReservationsParams,
@@ -235,6 +237,14 @@ import type {
   OffsiteBackupIn,
   OffsiteCheck,
   PasswordConfirm,
+  PaymentBoard,
+  PaymentCard,
+  PaymentConfirmIn,
+  PaymentConflictResponse,
+  PaymentMemoCard,
+  PaymentMemoPage,
+  PaymentMemoPayIn,
+  PaymentProofUpload,
   PlatformSettings,
   PlatformSettingsUpdate,
   PriceRequest,
@@ -7260,6 +7270,1368 @@ export const useDecideMemoApproval = <
   TContext
 > => {
   return useMutation(getDecideMemoApprovalMutationOptions(options), queryClient);
+};
+
+export const getListPaymentsUrl = (params?: ListPaymentsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/eds/payments?${stringifiedParams}`
+    : `/api/v1/eds/payments`;
+};
+
+/**
+ * ERP `GET /finance/receivables/`. Вкладки не пересекаются, чтобы счёт стоял ровно в одной очереди: `to_issue` («К выставлению» — черновики), `proofs` («Платёжки на подтверждение» — есть платёжка клиента без подтверждения), `overdue` («Просрочены» — срок оплаты прошёл, остаток есть), `awaiting` («Ждут оплаты»), `all` («Все счета», в том числе оплаченные). «Просрочен» не хранится статусом, а вычисляется по сроку. `counts` — число счетов на каждой вкладке, `memos_to_pay` — число служебок к оплате из EDS (до 100; `null` — EDS не ответил, `sources.eds = unavailable`). Номер проекта `ПР-ГГГГ-NNN` BFF составляет из года и id сделки (до ERP-09). Раздел `eds.payments` — чтение (менеджер, директор, бухгалтер); читать счета вправе сотрудник с правом ERP на финансы — иначе ERP отвечает 403 (`source = erp`). В данных нет себестоимости, маржи и цен поставщиков. ERP не ответил — 503.
+ * @summary EDS · Счета и оплаты: таблица счетов вкладки
+ */
+export const listPayments = async (
+  params?: ListPaymentsParams,
+  options?: Parameters<typeof http>[1],
+): Promise<PaymentBoard> => {
+  return http<PaymentBoard>(getListPaymentsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListPaymentsQueryKey = (params?: ListPaymentsParams) => {
+  return [`/api/v1/eds/payments`, ...(params ? [params] : [])] as const;
+};
+
+export const getListPaymentsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listPayments>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListPaymentsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listPayments>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListPaymentsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listPayments>>> = ({ signal }) =>
+    listPayments(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listPayments>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListPaymentsQueryResult = NonNullable<Awaited<ReturnType<typeof listPayments>>>;
+export type ListPaymentsQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse | BackendUnavailableResponse
+>;
+
+export function useListPayments<
+  TData = Awaited<ReturnType<typeof listPayments>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params: undefined | ListPaymentsParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listPayments>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listPayments>>,
+          TError,
+          Awaited<ReturnType<typeof listPayments>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListPayments<
+  TData = Awaited<ReturnType<typeof listPayments>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListPaymentsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listPayments>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listPayments>>,
+          TError,
+          Awaited<ReturnType<typeof listPayments>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListPayments<
+  TData = Awaited<ReturnType<typeof listPayments>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListPaymentsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listPayments>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary EDS · Счета и оплаты: таблица счетов вкладки
+ */
+
+export function useListPayments<
+  TData = Awaited<ReturnType<typeof listPayments>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListPaymentsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listPayments>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListPaymentsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getListPaymentMemosUrl = (params?: ListPaymentMemosParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/eds/payment-memos?${stringifiedParams}`
+    : `/api/v1/eds/payment-memos`;
+};
+
+/**
+ * EDS `GET /documents?kind=memo&status=to_accountant` (`status=paid` — оплаченные). Служебная записка с суммой после согласования директора передана бухгалтеру (SPEC-v3 §3.2 п. 5); `invoice_attached` — приложен ли файл (счёт поставщика). Раздел `eds.payments` — чтение; видимость записок решает EDS (`registry.read`).
+ * @summary EDS · Служебки к оплате: список
+ */
+export const listPaymentMemos = async (
+  params?: ListPaymentMemosParams,
+  options?: Parameters<typeof http>[1],
+): Promise<PaymentMemoPage> => {
+  return http<PaymentMemoPage>(getListPaymentMemosUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListPaymentMemosQueryKey = (params?: ListPaymentMemosParams) => {
+  return [`/api/v1/eds/payment-memos`, ...(params ? [params] : [])] as const;
+};
+
+export const getListPaymentMemosQueryOptions = <
+  TData = Awaited<ReturnType<typeof listPaymentMemos>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListPaymentMemosParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listPaymentMemos>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListPaymentMemosQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listPaymentMemos>>> = ({ signal }) =>
+    listPaymentMemos(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listPaymentMemos>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListPaymentMemosQueryResult = NonNullable<Awaited<ReturnType<typeof listPaymentMemos>>>;
+export type ListPaymentMemosQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse | BackendUnavailableResponse
+>;
+
+export function useListPaymentMemos<
+  TData = Awaited<ReturnType<typeof listPaymentMemos>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params: undefined | ListPaymentMemosParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listPaymentMemos>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listPaymentMemos>>,
+          TError,
+          Awaited<ReturnType<typeof listPaymentMemos>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListPaymentMemos<
+  TData = Awaited<ReturnType<typeof listPaymentMemos>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListPaymentMemosParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listPaymentMemos>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listPaymentMemos>>,
+          TError,
+          Awaited<ReturnType<typeof listPaymentMemos>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListPaymentMemos<
+  TData = Awaited<ReturnType<typeof listPaymentMemos>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListPaymentMemosParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listPaymentMemos>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary EDS · Служебки к оплате: список
+ */
+
+export function useListPaymentMemos<
+  TData = Awaited<ReturnType<typeof listPaymentMemos>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListPaymentMemosParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listPaymentMemos>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListPaymentMemosQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getGetPaymentMemoUrl = (id: string) => {
+  return `/api/v1/eds/payment-memos/${id}`;
+};
+
+/**
+ * EDS `GET /documents/{id}` и `GET /approvals/{approval_id}`. `can_pay` — шаг «Бухгалтер» ждёт этого сотрудника (чей шаг, решает EDS: автор записки не платит свою записку, если есть другой бухгалтер); `can_return` — можно вернуть автору (через `POST /eds/memo-approvals/{approval_id}/decision`). Вложения (счёт поставщика, платёжка) скачиваются через `GET /eds/document-files/{file_id}`. Документ не служебная записка — 404.
+ * @summary EDS · Служебка к оплате: карточка
+ */
+export const getPaymentMemo = async (
+  id: string,
+  options?: Parameters<typeof http>[1],
+): Promise<PaymentMemoCard> => {
+  return http<PaymentMemoCard>(getGetPaymentMemoUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetPaymentMemoQueryKey = (id: string) => {
+  return [`/api/v1/eds/payment-memos/${id}`] as const;
+};
+
+export const getGetPaymentMemoQueryOptions = <
+  TData = Awaited<ReturnType<typeof getPaymentMemo>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getPaymentMemo>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetPaymentMemoQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getPaymentMemo>>> = ({ signal }) =>
+    getPaymentMemo(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: id !== null && id !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getPaymentMemo>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetPaymentMemoQueryResult = NonNullable<Awaited<ReturnType<typeof getPaymentMemo>>>;
+export type GetPaymentMemoQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useGetPaymentMemo<
+  TData = Awaited<ReturnType<typeof getPaymentMemo>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getPaymentMemo>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getPaymentMemo>>,
+          TError,
+          Awaited<ReturnType<typeof getPaymentMemo>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetPaymentMemo<
+  TData = Awaited<ReturnType<typeof getPaymentMemo>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getPaymentMemo>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getPaymentMemo>>,
+          TError,
+          Awaited<ReturnType<typeof getPaymentMemo>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetPaymentMemo<
+  TData = Awaited<ReturnType<typeof getPaymentMemo>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getPaymentMemo>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary EDS · Служебка к оплате: карточка
+ */
+
+export function useGetPaymentMemo<
+  TData = Awaited<ReturnType<typeof getPaymentMemo>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getPaymentMemo>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetPaymentMemoQueryOptions(id, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getPayPaymentMemoUrl = (id: string) => {
+  return `/api/v1/eds/payment-memos/${id}/pay`;
+};
+
+/**
+ * EDS `POST /documents/{id}/payment` (право `payments.confirm`). Закрывает шаг «Бухгалтер»: записка `to_accountant` → `paid`, журнал `document.paid`; сумма — не больше согласованной, валюта записки, дата не в будущем (422 в BFF до EDS и в EDS — `details.messages`: `exceeds_approved`, `currency_mismatch`, `must_be_positive`, `in_future`). Повтор с теми же датой и суммой возвращает ту же записку; другие данные по оплаченной — 409 (`already_paid`); записка не у бухгалтера — 409 (`invalid_state`, `route_closed`); шаг не этого сотрудника — 403 (`not_your_step`). `receipt_file_id` — файл из `POST /eds/payment-receipt-files`. Раздел `eds.payments` — полный.
+ * @summary EDS · Оплачено: оплата служебной записки (дата, сумма, платёжка)
+ */
+export const payPaymentMemo = async (
+  id: string,
+  paymentMemoPayIn: PaymentMemoPayIn,
+  options?: Parameters<typeof http>[1],
+): Promise<PaymentMemoCard> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<PaymentMemoCard>(getPayPaymentMemoUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(paymentMemoPayIn),
+  });
+};
+
+export const getPayPaymentMemoMutationKey = () => ["payPaymentMemo"] as const;
+
+export const getPayPaymentMemoMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | EdsConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof payPaymentMemo>>,
+    TError,
+    PayPaymentMemoMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof payPaymentMemo>>,
+  TError,
+  PayPaymentMemoMutationVariables,
+  TContext
+> => {
+  const mutationKey = getPayPaymentMemoMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof payPaymentMemo>>,
+    PayPaymentMemoMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return payPaymentMemo(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PayPaymentMemoMutationResult = NonNullable<Awaited<ReturnType<typeof payPaymentMemo>>>;
+export type PayPaymentMemoMutationBody = PaymentMemoPayIn;
+export type PayPaymentMemoMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | EdsConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type PayPaymentMemoMutationVariables = { id: string; data: PaymentMemoPayIn };
+
+/**
+ * @summary EDS · Оплачено: оплата служебной записки (дата, сумма, платёжка)
+ */
+export const usePayPaymentMemo = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | EdsConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof payPaymentMemo>>,
+      TError,
+      PayPaymentMemoMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof payPaymentMemo>>,
+  TError,
+  PayPaymentMemoMutationVariables,
+  TContext
+> => {
+  return useMutation(getPayPaymentMemoMutationOptions(options), queryClient);
+};
+
+export const getUploadPaymentReceiptFileUrl = () => {
+  return `/api/v1/eds/payment-receipt-files`;
+};
+
+/**
+ * EDS `POST /files` (multipart), как `POST /eds/document-files`, но с правом раздела `eds.payments` (полный): бухгалтеру не нужен раздел «Создать документ». Файл привязывается к записке операцией `pay`. До 25 МБ (413), PDF, изображение или документ Office (415).
+ * @summary EDS · Загрузить платёжку бухгалтера для «Оплачено»
+ */
+export const uploadPaymentReceiptFile = async (
+  edsFileUpload: EdsFileUpload,
+  options?: Parameters<typeof http>[1],
+): Promise<EdsFile> => {
+  const formData = new FormData();
+  formData.append(`file`, edsFileUpload.file);
+
+  return http<EdsFile>(getUploadPaymentReceiptFileUrl(), {
+    ...options,
+    method: "POST",
+    body: formData,
+  });
+};
+
+export const getUploadPaymentReceiptFileMutationKey = () => ["uploadPaymentReceiptFile"] as const;
+
+export const getUploadPaymentReceiptFileMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | EdsPayloadTooLargeResponse
+    | EdsUnsupportedMediaResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof uploadPaymentReceiptFile>>,
+    TError,
+    UploadPaymentReceiptFileMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof uploadPaymentReceiptFile>>,
+  TError,
+  UploadPaymentReceiptFileMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUploadPaymentReceiptFileMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof uploadPaymentReceiptFile>>,
+    UploadPaymentReceiptFileMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return uploadPaymentReceiptFile(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UploadPaymentReceiptFileMutationResult = NonNullable<
+  Awaited<ReturnType<typeof uploadPaymentReceiptFile>>
+>;
+export type UploadPaymentReceiptFileMutationBody = EdsFileUpload;
+export type UploadPaymentReceiptFileMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | EdsPayloadTooLargeResponse
+  | EdsUnsupportedMediaResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type UploadPaymentReceiptFileMutationVariables = { data: EdsFileUpload };
+
+/**
+ * @summary EDS · Загрузить платёжку бухгалтера для «Оплачено»
+ */
+export const useUploadPaymentReceiptFile = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | EdsPayloadTooLargeResponse
+    | EdsUnsupportedMediaResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof uploadPaymentReceiptFile>>,
+      TError,
+      UploadPaymentReceiptFileMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof uploadPaymentReceiptFile>>,
+  TError,
+  UploadPaymentReceiptFileMutationVariables,
+  TContext
+> => {
+  return useMutation(getUploadPaymentReceiptFileMutationOptions(options), queryClient);
+};
+
+export const getGetPaymentUrl = (id: number) => {
+  return `/api/v1/eds/payments/${id}`;
+};
+
+/**
+ * ERP `GET /finance/receivables/{id}/`. Платёжки клиента (файл, откуда пришла — кабинет, бот, почта или приложил бухгалтер, когда), платежи с остатком, журнал счёта. Флаги `can_*` считает ERP по праву `finance.payment` и состоянию счёта: директор и менеджер видят карточку без кнопок. Раздел `eds.payments` — чтение. Счёта нет — 404.
+ * @summary EDS · Счёт: карточка (платёжки, оплаты, остаток, журнал)
+ */
+export const getPayment = async (
+  id: number,
+  options?: Parameters<typeof http>[1],
+): Promise<PaymentCard> => {
+  return http<PaymentCard>(getGetPaymentUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetPaymentQueryKey = (id: number) => {
+  return [`/api/v1/eds/payments/${id}`] as const;
+};
+
+export const getGetPaymentQueryOptions = <
+  TData = Awaited<ReturnType<typeof getPayment>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getPayment>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetPaymentQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getPayment>>> = ({ signal }) =>
+    getPayment(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: id !== null && id !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getPayment>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetPaymentQueryResult = NonNullable<Awaited<ReturnType<typeof getPayment>>>;
+export type GetPaymentQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useGetPayment<
+  TData = Awaited<ReturnType<typeof getPayment>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: number,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getPayment>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getPayment>>,
+          TError,
+          Awaited<ReturnType<typeof getPayment>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetPayment<
+  TData = Awaited<ReturnType<typeof getPayment>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getPayment>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getPayment>>,
+          TError,
+          Awaited<ReturnType<typeof getPayment>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetPayment<
+  TData = Awaited<ReturnType<typeof getPayment>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getPayment>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary EDS · Счёт: карточка (платёжки, оплаты, остаток, журнал)
+ */
+
+export function useGetPayment<
+  TData = Awaited<ReturnType<typeof getPayment>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getPayment>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetPaymentQueryOptions(id, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getConfirmPaymentUrl = (id: number) => {
+  return `/api/v1/eds/payments/${id}/confirm`;
+};
+
+/**
+ * ERP `POST /finance/receivables/{id}/confirm-payment/` (право `finance.payment`). `amount` и `date` — по выписке банка; сумма меньше остатка — счёт «Частично оплачен» и виден остаток, равная остатку — «Оплачен» (событие шины `invoice.paid`, стадия проекта «Оплата выполнена» выводится из оплаченных счетов проекта); больше остатка — 409 `CONFLICT` (`details.reason = exceeds_balance`), ничего не записывается. `proof_id` — подтверждаемая платёжка клиента. Повтор идемпотентен: `Idempotency-Key` (ERP отдаёт прежний ответ), тот же `proof_id` или тот же номер операции `reference` возвращают прежний платёж (`replayed = true`), по уже оплаченному счёту та же сумма и дата — тоже. Сумма не больше нуля и дата в будущем — 422 в BFF. Раздел `eds.payments` — полный.
+ * @summary EDS · Подтвердить оплату (полную или частичную) по выписке
+ */
+export const confirmPayment = async (
+  id: number,
+  paymentConfirmIn: PaymentConfirmIn,
+  options?: Parameters<typeof http>[1],
+): Promise<PaymentCard> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<PaymentCard>(getConfirmPaymentUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(paymentConfirmIn),
+  });
+};
+
+export const getConfirmPaymentMutationKey = () => ["confirmPayment"] as const;
+
+export const getConfirmPaymentMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | PaymentConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof confirmPayment>>,
+    TError,
+    ConfirmPaymentMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof confirmPayment>>,
+  TError,
+  ConfirmPaymentMutationVariables,
+  TContext
+> => {
+  const mutationKey = getConfirmPaymentMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof confirmPayment>>,
+    ConfirmPaymentMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return confirmPayment(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ConfirmPaymentMutationResult = NonNullable<Awaited<ReturnType<typeof confirmPayment>>>;
+export type ConfirmPaymentMutationBody = PaymentConfirmIn;
+export type ConfirmPaymentMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | PaymentConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type ConfirmPaymentMutationVariables = { id: number; data: PaymentConfirmIn };
+
+/**
+ * @summary EDS · Подтвердить оплату (полную или частичную) по выписке
+ */
+export const useConfirmPayment = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | PaymentConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof confirmPayment>>,
+      TError,
+      ConfirmPaymentMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof confirmPayment>>,
+  TError,
+  ConfirmPaymentMutationVariables,
+  TContext
+> => {
+  return useMutation(getConfirmPaymentMutationOptions(options), queryClient);
+};
+
+export const getAttachPaymentProofUrl = (id: number) => {
+  return `/api/v1/eds/payments/${id}/proofs`;
+};
+
+/**
+ * ERP `POST /finance/receivables/{id}/confirmations/` (multipart: `file`, необязательно `source` — `EMAIL`, `BOT`, `CABINET`, `MANUAL`, `claimed_amount`, `claimed_date`, `note`). BFF читает тело потоком до 25 МБ и передаёт ERP как есть. Платёжка не деньги: пока бухгалтер её не подтвердил, счёт стоит на вкладке «Платёжки на подтверждение». Счёт не ждёт оплаты — 409 (`not_open`). Раздел `eds.payments` — полный.
+ * @summary EDS · Приложить платёжку клиента к счёту
+ */
+export const attachPaymentProof = async (
+  id: number,
+  paymentProofUpload: PaymentProofUpload,
+  options?: Parameters<typeof http>[1],
+): Promise<PaymentCard> => {
+  const formData = new FormData();
+  formData.append(`file`, paymentProofUpload.file);
+  if (paymentProofUpload.source !== undefined) {
+    formData.append(`source`, paymentProofUpload.source);
+  }
+  if (paymentProofUpload.claimed_amount !== undefined) {
+    formData.append(`claimed_amount`, paymentProofUpload.claimed_amount);
+  }
+  if (paymentProofUpload.claimed_date !== undefined) {
+    formData.append(`claimed_date`, paymentProofUpload.claimed_date);
+  }
+  if (paymentProofUpload.note !== undefined) {
+    formData.append(`note`, paymentProofUpload.note);
+  }
+
+  return http<PaymentCard>(getAttachPaymentProofUrl(id), {
+    ...options,
+    method: "POST",
+    body: formData,
+  });
+};
+
+export const getAttachPaymentProofMutationKey = () => ["attachPaymentProof"] as const;
+
+export const getAttachPaymentProofMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | PaymentConflictResponse
+    | EdsPayloadTooLargeResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof attachPaymentProof>>,
+    TError,
+    AttachPaymentProofMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof attachPaymentProof>>,
+  TError,
+  AttachPaymentProofMutationVariables,
+  TContext
+> => {
+  const mutationKey = getAttachPaymentProofMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof attachPaymentProof>>,
+    AttachPaymentProofMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return attachPaymentProof(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AttachPaymentProofMutationResult = NonNullable<
+  Awaited<ReturnType<typeof attachPaymentProof>>
+>;
+export type AttachPaymentProofMutationBody = PaymentProofUpload;
+export type AttachPaymentProofMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | PaymentConflictResponse
+  | EdsPayloadTooLargeResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type AttachPaymentProofMutationVariables = { id: number; data: PaymentProofUpload };
+
+/**
+ * @summary EDS · Приложить платёжку клиента к счёту
+ */
+export const useAttachPaymentProof = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | PaymentConflictResponse
+    | EdsPayloadTooLargeResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof attachPaymentProof>>,
+      TError,
+      AttachPaymentProofMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof attachPaymentProof>>,
+  TError,
+  AttachPaymentProofMutationVariables,
+  TContext
+> => {
+  return useMutation(getAttachPaymentProofMutationOptions(options), queryClient);
+};
+
+export const getDownloadPaymentProofUrl = (id: number, proofId: number) => {
+  return `/api/v1/eds/payments/${id}/proofs/${proofId}/file`;
+};
+
+/**
+ * ERP `GET /finance/receivables/{id}/confirmations/{proof_id}/file/`. Файл потоком, как вложение документа; платёжка другого счёта — 404. Раздел `eds.payments` — чтение.
+ * @summary EDS · Скачать платёжку клиента
+ */
+export const downloadPaymentProof = async (
+  id: number,
+  proofId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<Blob> => {
+  return http<Blob>(getDownloadPaymentProofUrl(id, proofId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getDownloadPaymentProofQueryKey = (id: number, proofId: number) => {
+  return [`/api/v1/eds/payments/${id}/proofs/${proofId}/file`] as const;
+};
+
+export const getDownloadPaymentProofQueryOptions = <
+  TData = Awaited<ReturnType<typeof downloadPaymentProof>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: number,
+  proofId: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadPaymentProof>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getDownloadPaymentProofQueryKey(id, proofId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof downloadPaymentProof>>> = ({ signal }) =>
+    downloadPaymentProof(id, proofId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: id !== null && id !== undefined && proofId !== null && proofId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof downloadPaymentProof>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type DownloadPaymentProofQueryResult = NonNullable<
+  Awaited<ReturnType<typeof downloadPaymentProof>>
+>;
+export type DownloadPaymentProofQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useDownloadPaymentProof<
+  TData = Awaited<ReturnType<typeof downloadPaymentProof>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: number,
+  proofId: number,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadPaymentProof>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof downloadPaymentProof>>,
+          TError,
+          Awaited<ReturnType<typeof downloadPaymentProof>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useDownloadPaymentProof<
+  TData = Awaited<ReturnType<typeof downloadPaymentProof>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: number,
+  proofId: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadPaymentProof>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof downloadPaymentProof>>,
+          TError,
+          Awaited<ReturnType<typeof downloadPaymentProof>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useDownloadPaymentProof<
+  TData = Awaited<ReturnType<typeof downloadPaymentProof>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: number,
+  proofId: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadPaymentProof>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary EDS · Скачать платёжку клиента
+ */
+
+export function useDownloadPaymentProof<
+  TData = Awaited<ReturnType<typeof downloadPaymentProof>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  id: number,
+  proofId: number,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof downloadPaymentProof>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getDownloadPaymentProofQueryOptions(id, proofId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getRequestPaymentDocUrl = (id: number) => {
+  return `/api/v1/eds/payments/${id}/request-payment-doc`;
+};
+
+/**
+ * ERP `POST /finance/receivables/{id}/request-payment-doc/`. Фиксирует в журнале счёта, что платёжку запросили. Автоматической отправки клиенту в бот или почту в main нет (клиенту пишет бот по событиям шины, письма ERP уходят сотрудникам клиента, которых нет): текст сообщения сотрудник отправляет сам через «Чаты». Автоотправка — хвост (B-D24-1). Раздел `eds.payments` — полный.
+ * @summary EDS · Запросить платёжку у клиента (отметка в журнале счёта)
+ */
+export const requestPaymentDoc = async (
+  id: number,
+  options?: Parameters<typeof http>[1],
+): Promise<PaymentCard> => {
+  return http<PaymentCard>(getRequestPaymentDocUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getRequestPaymentDocMutationKey = () => ["requestPaymentDoc"] as const;
+
+export const getRequestPaymentDocMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | PaymentConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof requestPaymentDoc>>,
+    TError,
+    RequestPaymentDocMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof requestPaymentDoc>>,
+  TError,
+  RequestPaymentDocMutationVariables,
+  TContext
+> => {
+  const mutationKey = getRequestPaymentDocMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof requestPaymentDoc>>,
+    RequestPaymentDocMutationVariables
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return requestPaymentDoc(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RequestPaymentDocMutationResult = NonNullable<
+  Awaited<ReturnType<typeof requestPaymentDoc>>
+>;
+
+export type RequestPaymentDocMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | PaymentConflictResponse
+  | BackendUnavailableResponse
+>;
+export type RequestPaymentDocMutationVariables = { id: number };
+
+/**
+ * @summary EDS · Запросить платёжку у клиента (отметка в журнале счёта)
+ */
+export const useRequestPaymentDoc = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | PaymentConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof requestPaymentDoc>>,
+      TError,
+      RequestPaymentDocMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof requestPaymentDoc>>,
+  TError,
+  RequestPaymentDocMutationVariables,
+  TContext
+> => {
+  return useMutation(getRequestPaymentDocMutationOptions(options), queryClient);
 };
 
 export const getListEdsDealOptionsUrl = (params?: ListEdsDealOptionsParams) => {

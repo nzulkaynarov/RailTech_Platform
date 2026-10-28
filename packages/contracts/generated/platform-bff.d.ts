@@ -1019,6 +1019,206 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/eds/payments": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * EDS · Счета и оплаты: таблица счетов вкладки
+     * @description ERP `GET /finance/receivables/`. Вкладки не пересекаются, чтобы счёт стоял ровно в одной очереди: `to_issue` («К выставлению» — черновики), `proofs` («Платёжки на подтверждение» — есть платёжка клиента без подтверждения), `overdue` («Просрочены» — срок оплаты прошёл, остаток есть), `awaiting` («Ждут оплаты»), `all` («Все счета», в том числе оплаченные). «Просрочен» не хранится статусом, а вычисляется по сроку. `counts` — число счетов на каждой вкладке, `memos_to_pay` — число служебок к оплате из EDS (до 100; `null` — EDS не ответил, `sources.eds = unavailable`). Номер проекта `ПР-ГГГГ-NNN` BFF составляет из года и id сделки (до ERP-09). Раздел `eds.payments` — чтение (менеджер, директор, бухгалтер); читать счета вправе сотрудник с правом ERP на финансы — иначе ERP отвечает 403 (`source = erp`). В данных нет себестоимости, маржи и цен поставщиков. ERP не ответил — 503.
+     */
+    get: operations["listPayments"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/payment-memos": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * EDS · Служебки к оплате: список
+     * @description EDS `GET /documents?kind=memo&status=to_accountant` (`status=paid` — оплаченные). Служебная записка с суммой после согласования директора передана бухгалтеру (SPEC-v3 §3.2 п. 5); `invoice_attached` — приложен ли файл (счёт поставщика). Раздел `eds.payments` — чтение; видимость записок решает EDS (`registry.read`).
+     */
+    get: operations["listPaymentMemos"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/payment-memos/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * EDS · Служебка к оплате: карточка
+     * @description EDS `GET /documents/{id}` и `GET /approvals/{approval_id}`. `can_pay` — шаг «Бухгалтер» ждёт этого сотрудника (чей шаг, решает EDS: автор записки не платит свою записку, если есть другой бухгалтер); `can_return` — можно вернуть автору (через `POST /eds/memo-approvals/{approval_id}/decision`). Вложения (счёт поставщика, платёжка) скачиваются через `GET /eds/document-files/{file_id}`. Документ не служебная записка — 404.
+     */
+    get: operations["getPaymentMemo"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/payment-memos/{id}/pay": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * EDS · Оплачено: оплата служебной записки (дата, сумма, платёжка)
+     * @description EDS `POST /documents/{id}/payment` (право `payments.confirm`). Закрывает шаг «Бухгалтер»: записка `to_accountant` → `paid`, журнал `document.paid`; сумма — не больше согласованной, валюта записки, дата не в будущем (422 в BFF до EDS и в EDS — `details.messages`: `exceeds_approved`, `currency_mismatch`, `must_be_positive`, `in_future`). Повтор с теми же датой и суммой возвращает ту же записку; другие данные по оплаченной — 409 (`already_paid`); записка не у бухгалтера — 409 (`invalid_state`, `route_closed`); шаг не этого сотрудника — 403 (`not_your_step`). `receipt_file_id` — файл из `POST /eds/payment-receipt-files`. Раздел `eds.payments` — полный.
+     */
+    post: operations["payPaymentMemo"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/payment-receipt-files": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * EDS · Загрузить платёжку бухгалтера для «Оплачено»
+     * @description EDS `POST /files` (multipart), как `POST /eds/document-files`, но с правом раздела `eds.payments` (полный): бухгалтеру не нужен раздел «Создать документ». Файл привязывается к записке операцией `pay`. До 25 МБ (413), PDF, изображение или документ Office (415).
+     */
+    post: operations["uploadPaymentReceiptFile"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/payments/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * EDS · Счёт: карточка (платёжки, оплаты, остаток, журнал)
+     * @description ERP `GET /finance/receivables/{id}/`. Платёжки клиента (файл, откуда пришла — кабинет, бот, почта или приложил бухгалтер, когда), платежи с остатком, журнал счёта. Флаги `can_*` считает ERP по праву `finance.payment` и состоянию счёта: директор и менеджер видят карточку без кнопок. Раздел `eds.payments` — чтение. Счёта нет — 404.
+     */
+    get: operations["getPayment"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/payments/{id}/confirm": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * EDS · Подтвердить оплату (полную или частичную) по выписке
+     * @description ERP `POST /finance/receivables/{id}/confirm-payment/` (право `finance.payment`). `amount` и `date` — по выписке банка; сумма меньше остатка — счёт «Частично оплачен» и виден остаток, равная остатку — «Оплачен» (событие шины `invoice.paid`, стадия проекта «Оплата выполнена» выводится из оплаченных счетов проекта); больше остатка — 409 `CONFLICT` (`details.reason = exceeds_balance`), ничего не записывается. `proof_id` — подтверждаемая платёжка клиента. Повтор идемпотентен: `Idempotency-Key` (ERP отдаёт прежний ответ), тот же `proof_id` или тот же номер операции `reference` возвращают прежний платёж (`replayed = true`), по уже оплаченному счёту та же сумма и дата — тоже. Сумма не больше нуля и дата в будущем — 422 в BFF. Раздел `eds.payments` — полный.
+     */
+    post: operations["confirmPayment"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/payments/{id}/proofs": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * EDS · Приложить платёжку клиента к счёту
+     * @description ERP `POST /finance/receivables/{id}/confirmations/` (multipart: `file`, необязательно `source` — `EMAIL`, `BOT`, `CABINET`, `MANUAL`, `claimed_amount`, `claimed_date`, `note`). BFF читает тело потоком до 25 МБ и передаёт ERP как есть. Платёжка не деньги: пока бухгалтер её не подтвердил, счёт стоит на вкладке «Платёжки на подтверждение». Счёт не ждёт оплаты — 409 (`not_open`). Раздел `eds.payments` — полный.
+     */
+    post: operations["attachPaymentProof"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/payments/{id}/proofs/{proof_id}/file": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * EDS · Скачать платёжку клиента
+     * @description ERP `GET /finance/receivables/{id}/confirmations/{proof_id}/file/`. Файл потоком, как вложение документа; платёжка другого счёта — 404. Раздел `eds.payments` — чтение.
+     */
+    get: operations["downloadPaymentProof"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/payments/{id}/request-payment-doc": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * EDS · Запросить платёжку у клиента (отметка в журнале счёта)
+     * @description ERP `POST /finance/receivables/{id}/request-payment-doc/`. Фиксирует в журнале счёта, что платёжку запросили. Автоматической отправки клиенту в бот или почту в main нет (клиенту пишет бот по событиям шины, письма ERP уходят сотрудникам клиента, которых нет): текст сообщения сотрудник отправляет сам через «Чаты». Автоотправка — хвост (B-D24-1). Раздел `eds.payments` — полный.
+     */
+    post: operations["requestPaymentDoc"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/eds/deal-options": {
     parameters: {
       query?: never;
@@ -6648,6 +6848,276 @@ export interface components {
       /** @description Только `approve` — каналы отправки клиенту; пусто — одобрить без отправки (отправит менеджер заявки) */
       channels?: components["schemas"]["QuoteSendChannel"][];
     };
+    /**
+     * @description Вкладки «Счетов и оплат»: К выставлению, Ждут оплаты, Платёжки на подтверждение, Просрочены, Все счета
+     * @enum {string}
+     */
+    PaymentTab: "to_issue" | "awaiting" | "proofs" | "overdue" | "all";
+    /**
+     * @description Выставлен (`issued`), Платёжка получена (`proof_received`), Частично (`partially_paid`), Оплачен (`paid`), Просрочен (`overdue`); `draft` — не выставлен
+     * @enum {string}
+     */
+    PaymentDisplayStatus:
+      | "draft"
+      | "issued"
+      | "proof_received"
+      | "partially_paid"
+      | "paid"
+      | "overdue"
+      | "cancelled";
+    PaymentMoney: {
+      /** @description Деньги строкой с двумя знаками; может быть `0.00` */
+      amount: string;
+      /** @example UZS */
+      currency: string;
+    };
+    PaymentSources: {
+      /** @enum {string} */
+      erp: "ok" | "unavailable";
+      /** @enum {string} */
+      eds: "ok" | "unavailable";
+    };
+    PaymentCounts: {
+      to_issue: number;
+      awaiting: number;
+      proofs: number;
+      overdue: number;
+    };
+    PaymentRow: {
+      /** @description Счёт ERP; идёт в `GET /eds/payments/{id}` */
+      id: number;
+      /** @example СЧ-2026/142 */
+      number: string;
+      /** @example ПР-2026-104 */
+      project_number: string;
+      deal_id: number;
+      client_name: string;
+      amount: components["schemas"]["PaymentMoney"];
+      paid: components["schemas"]["PaymentMoney"];
+      balance: components["schemas"]["PaymentMoney"];
+      /** Format: date */
+      issued_at: string | null;
+      /** Format: date */
+      due_date: string | null;
+      status: components["schemas"]["PaymentDisplayStatus"];
+      days_overdue: number | null;
+      has_pending_proof: boolean;
+      /** Format: date-time */
+      proof_received_at: string | null;
+    };
+    PaymentBoard: {
+      tab: components["schemas"]["PaymentTab"];
+      /** @description Всего счетов на вкладке */
+      count: number;
+      counts: components["schemas"]["PaymentCounts"];
+      /** @description Служебок ждёт оплаты (до 100); `null` — EDS не ответил */
+      memos_to_pay: number | null;
+      items: components["schemas"]["PaymentRow"][];
+      sources: components["schemas"]["PaymentSources"];
+    };
+    PaymentItem: {
+      description: string;
+      quantity: number;
+      unit_price: string;
+      total: string;
+    };
+    PaymentRecord: {
+      id: number;
+      amount: string;
+      /**
+       * Format: date
+       * @description Дата поступления по выписке
+       */
+      paid_at: string;
+      method: string;
+      /** @description Номер операции банка */
+      reference: string;
+      receipt_number: string;
+      has_proof: boolean;
+      recorded_by: string | null;
+      /** Format: date-time */
+      created_at: string;
+    };
+    /**
+     * @description Откуда платёжка: кабинет клиента, Telegram-бот, почта или приложил бухгалтер
+     * @enum {string}
+     */
+    PaymentProofSource: "CABINET" | "BOT" | "EMAIL" | "MANUAL";
+    PaymentProof: {
+      /** @description Идёт в `proof_id` подтверждения и в скачивание */
+      id: number;
+      source: components["schemas"]["PaymentProofSource"];
+      /** @enum {string} */
+      status: "PENDING" | "CONFIRMED";
+      original_name: string;
+      /** @description Сумма по словам клиента (не доверяется; сумму подтверждает бухгалтер по выписке) */
+      claimed_amount: string | null;
+      /** Format: date */
+      claimed_date: string | null;
+      note: string;
+      /** Format: date-time */
+      received_at: string;
+      /** @description Кто приложил; пусто — клиент (кабинет, бот) */
+      recorded_by: string | null;
+      payment_id: number | null;
+    };
+    PaymentHistoryEntry: {
+      /** Format: date-time */
+      at: string;
+      /** @example payment.recorded */
+      code: string;
+      text: string;
+      by: string | null;
+    };
+    PaymentCard: {
+      id: number;
+      number: string;
+      project_number: string;
+      deal_id: number;
+      client_name: string;
+      amount: components["schemas"]["PaymentMoney"];
+      paid: components["schemas"]["PaymentMoney"];
+      balance: components["schemas"]["PaymentMoney"];
+      /** Format: date */
+      issued_at: string | null;
+      /** Format: date */
+      due_date: string | null;
+      status: components["schemas"]["PaymentDisplayStatus"];
+      days_overdue: number | null;
+      has_pending_proof: boolean;
+      /** Format: date-time */
+      proof_received_at: string | null;
+      /** @description Без НДС */
+      subtotal: string;
+      vat: string;
+      notes: string;
+      has_pdf: boolean;
+      items: components["schemas"]["PaymentItem"][];
+      payments: components["schemas"]["PaymentRecord"][];
+      proofs: components["schemas"]["PaymentProof"][];
+      history: components["schemas"]["PaymentHistoryEntry"][];
+      /** Format: date-time */
+      payment_doc_requested_at: string | null;
+      /** @description Право `finance.payment`, счёт открыт и остаток есть */
+      can_confirm: boolean;
+      can_attach_proof: boolean;
+      can_request_proof: boolean;
+      /** @description Повтор подтверждения: платёж уже был записан */
+      replayed: boolean;
+    };
+    PaymentConfirmIn: {
+      /** @description Сумма по выписке, больше нуля, не больше остатка */
+      amount: string;
+      /**
+       * Format: date
+       * @description Дата поступления по выписке, не в будущем (Asia/Tashkent)
+       */
+      date: string;
+      /** @description Номер операции банка */
+      reference?: string | null;
+      /** @description Подтверждаемая платёжка клиента */
+      proof_id?: number | null;
+    };
+    PaymentProofUpload: {
+      /** Format: binary */
+      file: string;
+      source?: components["schemas"]["PaymentProofSource"];
+      claimed_amount?: string;
+      /** Format: date */
+      claimed_date?: string;
+      note?: string;
+    };
+    /**
+     * @description `to_pay` — «Передана бухгалтеру», `paid` — «Оплачена»
+     * @enum {string}
+     */
+    PaymentMemoStatus: "to_pay" | "paid";
+    PaymentMemoRow: {
+      /**
+       * Format: uuid
+       * @description Документ EDS
+       */
+      id: string;
+      /** @example СЗ-2026/031 */
+      number: string | null;
+      subject: string;
+      author: components["schemas"]["EdsPerson"];
+      amount: components["schemas"]["PaymentMoney"] | null;
+      /** Format: date */
+      due_date: string | null;
+      files_count: number;
+      /** @description Приложен счёт поставщика (есть файл) */
+      invoice_attached: boolean;
+      status: components["schemas"]["PaymentMemoStatus"];
+      /** Format: date */
+      paid_on: string | null;
+      /** Format: date-time */
+      created_at: string;
+    };
+    PaymentMemoPage: {
+      items: components["schemas"]["PaymentMemoRow"][];
+      next_cursor: string | null;
+    };
+    PaymentMemoPayment: {
+      /** Format: date */
+      paid_on: string;
+      amount: components["schemas"]["PaymentMoney"];
+      /** Format: uuid */
+      receipt_file_id: string | null;
+      note: string | null;
+      paid_by: components["schemas"]["EdsPerson"];
+      /** Format: date-time */
+      recorded_at: string;
+    };
+    PaymentMemoJournal: {
+      /** Format: date-time */
+      at: string;
+      /** @example document.paid */
+      action: string;
+      by: components["schemas"]["EdsPerson"] | null;
+      comment: string | null;
+    };
+    PaymentMemoCard: {
+      /** Format: uuid */
+      id: string;
+      /** Format: uuid */
+      approval_id: string | null;
+      number: string | null;
+      subject: string;
+      text: string;
+      author: components["schemas"]["EdsPerson"];
+      amount: components["schemas"]["PaymentMoney"] | null;
+      /** Format: date */
+      due_date: string | null;
+      deal: components["schemas"]["EdsDealRef"] | null;
+      files: components["schemas"]["EdsFile"][];
+      document_status: string;
+      /** @enum {string} */
+      status: "to_pay" | "paid" | "other";
+      can_pay: boolean;
+      can_return: boolean;
+      payment: components["schemas"]["PaymentMemoPayment"] | null;
+      journal: components["schemas"]["PaymentMemoJournal"][];
+      /** Format: date-time */
+      created_at: string;
+    };
+    PaymentMemoPayIn: {
+      /**
+       * Format: date
+       * @description Дата платежа, не в будущем
+       */
+      paid_on: string;
+      /** @description Сумма оплаты, больше нуля, не больше согласованной */
+      amount: string;
+      /** @description Валюта записки */
+      currency: string;
+      /**
+       * Format: uuid
+       * @description Платёжка из `POST /eds/payment-receipt-files`
+       */
+      receipt_file_id?: string | null;
+      note?: string | null;
+    };
     MemoApprovalRow: {
       /**
        * Format: uuid
@@ -9547,6 +10017,15 @@ export interface components {
         "application/json": components["schemas"]["Error"];
       };
     };
+    /** @description 409 `CONFLICT` — состояние счёта не позволяет действие: `details.reason` — `exceeds_balance` (сумма больше остатка), `already_paid`, `not_issued`, `not_open`, `cancelled`, `reference_conflict` (номер операции уже записан с другой суммой или датой); обновите карточку */
+    PaymentConflict: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["Error"];
+      };
+    };
     /** @description 409 `CONFLICT` — `details.reason = checklist_not_green` (одобрение КП при красной блокирующей строке чек-листа, `details.failed` — коды строк) или `route_closed` (маршрут уже решён другим или заменён новой версией КП); обновите карточку */
     ApprovalConflict: {
       headers: {
@@ -9587,6 +10066,8 @@ export interface components {
     EdsIdempotencyKey: string;
     /** @description Id документа EDS (UUID); номер `СЗ-2026/031` содержит «/» и в адресе не используется */
     EdsDocumentId: string;
+    /** @description Id счёта ERP (из строки `GET /eds/payments`) */
+    PaymentInvoiceId: number;
     /** @description Значение cookie `rt_pf_csrf` */
     CsrfToken: string;
     /** @description Id документа базы знаний (CRM) */
@@ -11370,6 +11851,324 @@ export interface operations {
       404: components["responses"]["NotFound"];
       409: components["responses"]["ApprovalConflict"];
       422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listPayments: {
+    parameters: {
+      query?: {
+        tab?: components["schemas"]["PaymentTab"];
+        /** @description Поиск по номеру счёта и названию клиента */
+        q?: string;
+        limit?: number;
+        offset?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Счета вкладки и счётчики */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PaymentBoard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listPaymentMemos: {
+    parameters: {
+      query?: {
+        status?: components["schemas"]["PaymentMemoStatus"];
+        /** @description Непрозрачный курсор из `next_cursor` */
+        cursor?: components["parameters"]["BusCursor"];
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Служебки к оплате */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PaymentMemoPage"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getPaymentMemo: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Id документа EDS (UUID); номер `СЗ-2026/031` содержит «/» и в адресе не используется */
+        id: components["parameters"]["EdsDocumentId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Карточка */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PaymentMemoCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  payPaymentMemo: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id документа EDS (UUID); номер `СЗ-2026/031` содержит «/» и в адресе не используется */
+        id: components["parameters"]["EdsDocumentId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PaymentMemoPayIn"];
+      };
+    };
+    responses: {
+      /** @description Записка оплачена */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PaymentMemoCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["EdsConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  uploadPaymentReceiptFile: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["EdsFileUpload"];
+      };
+    };
+    responses: {
+      /** @description Файл сохранён */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EdsFile"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      413: components["responses"]["EdsPayloadTooLarge"];
+      415: components["responses"]["EdsUnsupportedMedia"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getPayment: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Id счёта ERP (из строки `GET /eds/payments`) */
+        id: components["parameters"]["PaymentInvoiceId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Карточка счёта */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PaymentCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  confirmPayment: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+        /** @description Ключ повтора создания (8–128 знаков, на экземпляр формы и тело запроса); EDS хранит его 24 часа */
+        "Idempotency-Key"?: components["parameters"]["EdsIdempotencyKey"];
+      };
+      path: {
+        /** @description Id счёта ERP (из строки `GET /eds/payments`) */
+        id: components["parameters"]["PaymentInvoiceId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PaymentConfirmIn"];
+      };
+    };
+    responses: {
+      /** @description Оплата подтверждена (или повтор) */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PaymentCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["PaymentConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  attachPaymentProof: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id счёта ERP (из строки `GET /eds/payments`) */
+        id: components["parameters"]["PaymentInvoiceId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["PaymentProofUpload"];
+      };
+    };
+    responses: {
+      /** @description Платёжка приложена */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PaymentCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["PaymentConflict"];
+      413: components["responses"]["EdsPayloadTooLarge"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  downloadPaymentProof: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Id счёта ERP (из строки `GET /eds/payments`) */
+        id: components["parameters"]["PaymentInvoiceId"];
+        proof_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Содержимое файла */
+      200: {
+        headers: {
+          /** @description `attachment; filename*=UTF-8''…` */
+          "Content-Disposition"?: string;
+          [name: string]: unknown;
+        };
+        content: {
+          "application/octet-stream": string;
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  requestPaymentDoc: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id счёта ERP (из строки `GET /eds/payments`) */
+        id: components["parameters"]["PaymentInvoiceId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Запрос отмечен */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PaymentCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["PaymentConflict"];
       503: components["responses"]["BackendUnavailable"];
     };
   };

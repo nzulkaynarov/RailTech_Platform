@@ -1,4 +1,4 @@
-import { fireEvent, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, screen, within } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { describe, expect, it } from "vitest";
 
@@ -152,10 +152,16 @@ describe("Согласование: шаг бухгалтера", () => {
     expect(within(panel).queryByRole("form")).toBeNull();
   });
 
-  it("директор держит и право шага бухгалтера (`eds.payments`): на этом шаге у него тоже «Принять к оплате»", async () => {
-    const { form } = await openForm("СЗ-2026/015");
-
+  it("шаг бухгалтера решает держатель `eds.payments` full: у бухгалтера «Принять к оплате», у директора (только чтение счетов, D2-4) формы нет", async () => {
+    const { form } = await openForm("СЗ-2026/015", "accountant@demo.example");
     expect(within(form).getByRole("button", { name: "Принять к оплате" })).toBeEnabled();
+    cleanup();
+
+    signIn("director@demo.example");
+    renderAt(MEMO("СЗ-2026/015"));
+    const panel = await panelEl();
+    expect((await screen.findAllByText(/СЗ-2026\/015/)).length).toBeGreaterThan(0);
+    expect(within(panel).queryByRole("form", { name: "Согласование документа" })).toBeNull();
   });
 });
 

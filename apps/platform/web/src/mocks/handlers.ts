@@ -16,6 +16,7 @@ import { crmLeadsHandlers } from "./crmLeads";
 import { crmMessagesHandlers } from "./crmMessages";
 import { edsApprovalsHandlers } from "./edsApprovals";
 import { erpCatalogHandlers } from "./erpCatalog";
+import { edsPaymentsHandlers } from "./edsPayments";
 import { bridgeHandlers } from "./bridgeHandlers";
 import { edsLettersHandlers } from "./edsLetters";
 import { erpCalcHandlers } from "./erpCalc";
@@ -161,6 +162,8 @@ export const handlers = [
   ...crmLeadsHandlers,
   ...bridgeHandlers,
   ...ticketsHandlers,
+  // Раньше «Создать документ»: вложения служебок к оплате (счёт поставщика, платёжка) отдаются здесь, остальное — дальше.
+  ...edsPaymentsHandlers,
   ...edsDocumentsHandlers,
   ...edsLettersHandlers,
   ...edsApprovalsHandlers,

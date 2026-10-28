@@ -657,6 +657,7 @@ def to_tech_doc(raw: Mapping[str, Any]) -> TechDoc:
                 number=deal_number(
                     {
                         "id": deal["id"],
+                        "number": deal.get("number"),
                         "created_at": deal.get("created_at"),
                         "stage_code": deal.get("stage_code"),
                     }

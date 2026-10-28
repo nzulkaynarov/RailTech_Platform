@@ -83,6 +83,7 @@ def doc_row(doc) -> dict:
         "deal": (
             {
                 "id": deal.pk,
+                "number": deal.number or "",
                 "title": deal.title or "",
                 "client": _client_name(deal),
                 "stage_code": deal.stage.code if deal.stage_id else "",

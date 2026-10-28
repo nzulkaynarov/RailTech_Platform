@@ -131,3 +131,22 @@ def test_duplicate_code_across_levels_is_not_a_change() -> None:
     changed: Any = copy.deepcopy(BACKEND)
     changed["eds.inbox"]["full"] = ("letters.read", "letters.register", "letters.read")
     assert _fp(changed) == _fp()
+
+
+def test_erp_fingerprint_moves_when_finance_view_leaves_the_catalog() -> None:
+    """D2-4: `finance.view` у `eds.payments` — часть отпечатка ERP; без него заведённым сотрудникам
+    права ERP не доехали бы (механизм переопубликации #289 сравнивает именно этот отпечаток)."""
+    from app.domain.platform_roles import erp_catalog_fingerprint
+
+    assert generated.ERP_BACKEND["eds.payments"]["read"] == ("finance.view",)
+    assert "finance.view" in generated.ERP_BACKEND["eds.payments"]["full"]
+    before = erp_catalog_fingerprint()
+    assert re.fullmatch(r"[0-9a-f]{64}", before)
+    backend = copy.deepcopy(dict(generated.ERP_BACKEND))
+    backend["eds.payments"] = {
+        "full": tuple(c for c in backend["eds.payments"]["full"] if c != "finance.view")
+    }
+    without = eds_catalog_fingerprint(backend, generated.ROLE_ACCESS, generated.SYSTEM_ROLE_CODES)
+    assert without != eds_catalog_fingerprint(
+        generated.ERP_BACKEND, generated.ROLE_ACCESS, generated.SYSTEM_ROLE_CODES
+    )

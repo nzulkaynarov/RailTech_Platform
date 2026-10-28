@@ -8,6 +8,7 @@ import { DocumentsPage } from "./documents/DocumentsPage";
 import { DraftsScreen } from "./drafts/DraftsScreen";
 import { InboxScreen } from "./inbox/InboxScreen";
 import { NewDocumentPage } from "./new/NewDocumentPage";
+import { PaymentsScreen } from "./payments/PaymentsScreen";
 
 /**
  * Модуль EDS. «Входящие письма» (D1-3), «Все документы» (реестр и «Мои документы») и «Создать документ» (D1-5), «КП на одобрение»
@@ -34,6 +35,13 @@ export function Component() {
     return (
       <RequireAccess rule={match.section.access}>
         <ApprovalsScreen objectId={match.objectId} />
+      </RequireAccess>
+    );
+  }
+  if (match?.module.code === "eds" && match.section.key === "payments") {
+    return (
+      <RequireAccess rule={match.section.access}>
+        <PaymentsScreen objectId={match.objectId} />
       </RequireAccess>
     );
   }

@@ -88,7 +88,8 @@ async def present(session: AsyncSession, employee: Employee, route: ApprovalRout
     allowed: list[Decision] = []
     if can_decide:
         allowed = [Decision.RETURN, Decision.REJECT]
-        if checklist.is_green(items):
+        # Шаг бухгалтера закрывает «Оплачено» (`POST /documents/{id}/payment`), а не «согласовать».
+        if checklist.is_green(items) and not (current is not None and approvals.is_payment_step(route, current)):
             allowed.insert(0, Decision.APPROVE)
     return Approval(
         id=route.id,

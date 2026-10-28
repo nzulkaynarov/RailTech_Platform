@@ -33,10 +33,8 @@ from app.eds_documents import (
 from app.errors import PlatformError
 from app.feeds.feed import SNAPSHOT_TTL_SECONDS, Feed, rows
 from app.feeds.numbers import (
-    cyrillic_prefix,
     deal_number,
     deal_title,
-    number_query,
 )
 from app.feeds.rework import drop_returned
 from app.feeds.snapshot import DEALS_PARAMS, DEALS_PATH
@@ -320,35 +318,24 @@ async def download_file(file_id: FileId, authed: Reader) -> Response:
 # --- связь с проектом -----------------------------------------------------------------------------
 
 
-def _matches(deal: dict[str, Any], needles: tuple[str, ...]) -> bool:
-    haystack = (
-        deal_number(deal),
-        str(deal.get("title") or ""),
-        str(deal.get("company_name") or ""),
-    )
-    return any(needle in part.casefold() for part in haystack for needle in needles)
-
-
 @router.get("/eds/deal-options", response_model=EdsDealOptions, operation_id="listEdsDealOptions")
 async def deal_options(
     authed: DealReader, q: Annotated[str | None, Query(max_length=100)] = None
 ) -> EdsDealOptions:
     feed = Feed(authed)
-    payload = await feed.get("erp", DEALS_PATH, DEALS_PARAMS, ttl=SNAPSHOT_TTL_SECONDS)
+    text = (q or "").strip()
+    if text:
+        # Номер, название и компанию ищет ERP (`?search=`): запрос уходит как набран.
+        payload = await feed.get(
+            "erp", DEALS_PATH, {"search": text, "page_size": DEAL_OPTIONS_LIMIT}
+        )
+    else:
+        payload = await feed.get("erp", DEALS_PATH, DEALS_PARAMS, ttl=SNAPSHOT_TTL_SECONDS)
     deals = sorted(
         (d for d in rows(payload) if isinstance(d.get("id"), int)),
         key=lambda d: int(d["id"]),
         reverse=True,
     )
-    text = (q or "").strip()
-    if text:
-        # Запрос как набран, с кириллическим префиксом номера и в каноническом виде `ЗВ-2026-001`.
-        needles = tuple(
-            dict.fromkeys(
-                n.casefold() for n in (text, cyrillic_prefix(text), number_query(text)) if n
-            )
-        )
-        deals = [d for d in deals if _matches(d, needles)]
     items = [
         EdsDealOption(
             erp_deal_id=int(d["id"]),

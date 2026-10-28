@@ -189,9 +189,10 @@ class DeskTechDocProduct(serializers.Serializer):
 
 class DeskTechDocDeal(serializers.Serializer):
     id = serializers.IntegerField()
+    number = serializers.CharField(help_text="Номер ЗВ/ПР, который выдал ERP (ERP-09); пусто — у сделки номера ещё нет.")
     title = serializers.CharField()
     client = serializers.CharField()
-    stage_code = serializers.CharField(help_text="Код стадии сделки: по нему Платформа составляет номер ЗВ/ПР (B-010).")
+    stage_code = serializers.CharField(help_text="Код стадии сделки.")
     created_at = serializers.DateTimeField()
 
 

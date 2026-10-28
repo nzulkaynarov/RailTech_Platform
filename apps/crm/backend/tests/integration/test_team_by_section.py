@@ -92,11 +92,8 @@ async def test_zone_sections_list_their_holders_at_full(
 
     assert names(goods) == ["Рустам Директоров", "Сардор Снабженцев", "Универсал Двоякин"]
     assert names(services) == ["Ильдар Инженеров", "Рустам Директоров"]
-    assert names(payments) == [
-        "Бахтиёр Бухгалтеров",
-        "Рустам Директоров",
-        "Универсал Двоякин",
-    ]
+    # D2-4: директор читает «Счета и оплаты» (read), оплату ведёт бухгалтер — на full его нет
+    assert names(payments) == ["Бахтиёр Бухгалтеров", "Универсал Двоякин"]
 
 
 async def test_read_level_includes_full_and_full_excludes_read_only_holders(
@@ -123,7 +120,9 @@ async def test_reply_has_only_id_name_initials_and_position(
         "initials": "ББ",
         "position": "Бухгалтер",
     }
-    director = next(m for m in body if m["id"] == team["director"])
+    assert team["director"] not in {m["id"] for m in body}, "директор на уровне full не числится"
+    on_read = ask(client, "dir@railtech.uz", "?section=eds.payments&level=read").json()
+    director = next(m for m in on_read if m["id"] == team["director"])
     assert director["position"] is None
     assert "@" not in str(body), "почты нет"
     for member in body:

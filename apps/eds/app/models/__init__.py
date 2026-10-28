@@ -2,7 +2,7 @@
 
 from app.models.approvals import ApprovalRoute, ApprovalStep
 from app.models.base import Base
-from app.models.documents import Document, DocumentVersion
+from app.models.documents import Document, DocumentPayment, DocumentVersion
 from app.models.employee import Employee, SsoJti
 from app.models.files import FileVersion, StoredFile
 from app.models.idempotency import IdempotencyKey
@@ -15,6 +15,7 @@ __all__ = [
     "ApprovalStep",
     "Base",
     "Document",
+    "DocumentPayment",
     "DocumentVersion",
     "Employee",
     "FileVersion",

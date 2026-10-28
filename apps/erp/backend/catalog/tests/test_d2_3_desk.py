@@ -359,6 +359,7 @@ def test_tech_doc_binds_to_a_deal(world):
         created.status_code == 201
         and created.json()["deal"]["client"] == "ООО Поставщик Север"
         and created.json()["deal"]["id"] == deal.pk
+        and created.json()["deal"]["number"] == (deal.number or "")
         and created.json()["previewable"] is True
     )
     assert get(world, "manager", "catalog/tech-docs/", deal=deal.pk).json()["count"] == 1

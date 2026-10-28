@@ -30,9 +30,9 @@ EXPECTED: dict[tuple[str, str], set[str]] = {
     ("eds.drafts", "read"): set(),
     ("eds.drafts", "full"): {"approvals.decide"},
     ("eds.projects", "read"): {"registry.read"},
-    ("eds.projects", "full"): {"registry.read"},
+    ("eds.projects", "full"): {"registry.read", "registry.export"},
     ("eds.payments", "read"): {"registry.read"},
-    ("eds.payments", "full"): {"registry.read", "registry.export", "payments.confirm"},
+    ("eds.payments", "full"): {"registry.read", "payments.confirm"},
     ("eds.memo.create", "read"): set(),
     ("eds.memo.create", "full"): {"memos.create"},
     ("eds.memo.approve", "read"): set(),
@@ -51,7 +51,8 @@ BUS = "bus.manage"
 UPLOAD = "files.upload"
 ROLE_EDS: dict[str, set[str]] = {
     "ADMIN": {"memos.create", BUS},
-    "DIRECTOR": set(EDS_PERMISSIONS) - {BUS},
+    # D2-4: «Счета и оплаты» у директора — read: оплату подтверждает бухгалтер
+    "DIRECTOR": set(EDS_PERMISSIONS) - {BUS, "payments.confirm"},
     "MANAGER": {"letters.read", "registry.read", "memos.create", UPLOAD},
     "SUPPLY": {"registry.read", "memos.create"},
     "ENGINEER": {"registry.read", "memos.create"},
@@ -111,8 +112,13 @@ def test_every_system_role_and_template_gives_the_expected_eds_codes(legacy: str
     assert list(codes) == sorted(codes), "список сортирован"
 
 
-def test_director_has_the_nine_document_codes_and_administrator_memos_and_bus_journal() -> None:
-    assert set(eds_permissions_of([make_grant("DIRECTOR")])) == set(EDS_PERMISSIONS) - {BUS}
+def test_director_exports_the_registry_but_does_not_confirm_payments() -> None:
+    """D2-4 (Q-D2-4-1 п. 1): директор читает счета и выгружает реестр, оплату ведёт бухгалтер."""
+    codes = set(eds_permissions_of([make_grant("DIRECTOR")]))
+    assert codes == set(EDS_PERMISSIONS) - {BUS, "payments.confirm"}
+    assert {"registry.read", "registry.export"} <= codes
+    # бухгалтер сохраняет всё, что имел
+    assert set(eds_permissions_of([make_grant("ACCOUNTANT")])) == ACCOUNTANT
     assert eds_permissions_of([make_grant("ADMIN")]) == (BUS, "memos.create")
 
 
@@ -131,7 +137,6 @@ def test_union_takes_the_maximum_level_and_is_independent_of_order() -> None:
         "registry.read",
         "letters.register",
         "letters.resolve",
-        "registry.export",
         "payments.confirm",
     }
     assert set(eds_permissions_of([read, full])) == expected

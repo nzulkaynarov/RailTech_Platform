@@ -335,6 +335,8 @@ tags:
     description: Admin · Настройки бота — разделы настроек CRM, шаблоны ответов, выгрузки CSV (прокси к CRM; раздел `admin`)
   - name: eds-approvals
     description: EDS · КП на одобрение и документы на согласовании — списки, карточки, решения директора (сервис EDS, ERP для состава КП; разделы `eds.drafts`, `eds.memo.approve`)
+  - name: eds-payments
+    description: EDS · Счета и оплаты бухгалтера — счета, платёжки клиентов, подтверждение оплаты (ERP), служебки к оплате и «Оплачено» (EDS); раздел `eds.payments`
   - name: letters
     description: EDS · Входящие письма — список, карточка, резолюция директора, возврат менеджеру, отказ, вложения (сервис EDS; раздел `eds.inbox`)
   - name: calc
@@ -2118,6 +2120,371 @@ paths:
           $ref: '#/components/responses/ApprovalConflict'
         '422':
           $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /eds/payments:
+    get:
+      tags: [eds-payments]
+      operationId: listPayments
+      summary: 'EDS · Счета и оплаты: таблица счетов вкладки'
+      description: >-
+        ERP `GET /finance/receivables/`. Вкладки не пересекаются, чтобы счёт стоял ровно в одной очереди: `to_issue` («К выставлению» —
+        черновики), `proofs` («Платёжки на подтверждение» — есть платёжка клиента без подтверждения), `overdue` («Просрочены» —
+        срок оплаты прошёл, остаток есть), `awaiting` («Ждут оплаты»), `all` («Все счета», в том числе оплаченные). «Просрочен» не
+        хранится статусом, а вычисляется по сроку. `counts` — число счетов на каждой вкладке, `memos_to_pay` — число служебок к
+        оплате из EDS (до 100; `null` — EDS не ответил, `sources.eds = unavailable`). Номер проекта `ПР-ГГГГ-NNN` BFF составляет из
+        года и id сделки (до ERP-09). Раздел `eds.payments` — чтение (менеджер, директор, бухгалтер); читать счета вправе сотрудник
+        с правом ERP на финансы — иначе ERP отвечает 403 (`source = erp`). В данных нет себестоимости, маржи и цен поставщиков.
+        ERP не ответил — 503.
+      parameters:
+        - name: tab
+          in: query
+          required: false
+          schema: {$ref: '#/components/schemas/PaymentTab'}
+        - name: q
+          in: query
+          required: false
+          description: Поиск по номеру счёта и названию клиента
+          schema: {type: string, maxLength: 200}
+        - name: limit
+          in: query
+          required: false
+          schema: {type: integer, minimum: 1, maximum: 100, default: 50}
+        - name: offset
+          in: query
+          required: false
+          schema: {type: integer, minimum: 0, maximum: 100000, default: 0}
+      responses:
+        '200':
+          description: Счета вкладки и счётчики
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentBoard'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /eds/payment-memos:
+    get:
+      tags: [eds-payments]
+      operationId: listPaymentMemos
+      summary: 'EDS · Служебки к оплате: список'
+      description: >-
+        EDS `GET /documents?kind=memo&status=to_accountant` (`status=paid` — оплаченные). Служебная записка с суммой после согласования
+        директора передана бухгалтеру (SPEC-v3 §3.2 п. 5); `invoice_attached` — приложен ли файл (счёт поставщика). Раздел
+        `eds.payments` — чтение; видимость записок решает EDS (`registry.read`).
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema: {$ref: '#/components/schemas/PaymentMemoStatus'}
+        - $ref: '#/components/parameters/BusCursor'
+        - name: limit
+          in: query
+          required: false
+          schema: {type: integer, minimum: 1, maximum: 100, default: 25}
+      responses:
+        '200':
+          description: Служебки к оплате
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentMemoPage'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /eds/payment-memos/{id}:
+    get:
+      tags: [eds-payments]
+      operationId: getPaymentMemo
+      summary: 'EDS · Служебка к оплате: карточка'
+      description: >-
+        EDS `GET /documents/{id}` и `GET /approvals/{approval_id}`. `can_pay` — шаг «Бухгалтер» ждёт этого сотрудника (чей шаг, решает
+        EDS: автор записки не платит свою записку, если есть другой бухгалтер); `can_return` — можно вернуть автору (через
+        `POST /eds/memo-approvals/{approval_id}/decision`). Вложения (счёт поставщика, платёжка) скачиваются через
+        `GET /eds/document-files/{file_id}`. Документ не служебная записка — 404.
+      parameters:
+        - $ref: '#/components/parameters/EdsDocumentId'
+      responses:
+        '200':
+          description: Карточка
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentMemoCard'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /eds/payment-memos/{id}/pay:
+    post:
+      tags: [eds-payments]
+      operationId: payPaymentMemo
+      summary: 'EDS · Оплачено: оплата служебной записки (дата, сумма, платёжка)'
+      description: >-
+        EDS `POST /documents/{id}/payment` (право `payments.confirm`). Закрывает шаг «Бухгалтер»: записка `to_accountant` → `paid`,
+        журнал `document.paid`; сумма — не больше согласованной, валюта записки, дата не в будущем (422 в BFF до EDS и в EDS —
+        `details.messages`: `exceeds_approved`, `currency_mismatch`, `must_be_positive`, `in_future`). Повтор с теми же датой и суммой
+        возвращает ту же записку; другие данные по оплаченной — 409 (`already_paid`); записка не у бухгалтера — 409 (`invalid_state`,
+        `route_closed`); шаг не этого сотрудника — 403 (`not_your_step`). `receipt_file_id` — файл из `POST /eds/payment-receipt-files`.
+        Раздел `eds.payments` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/EdsDocumentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentMemoPayIn'
+      responses:
+        '200':
+          description: Записка оплачена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentMemoCard'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/EdsConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /eds/payment-receipt-files:
+    post:
+      tags: [eds-payments]
+      operationId: uploadPaymentReceiptFile
+      summary: 'EDS · Загрузить платёжку бухгалтера для «Оплачено»'
+      description: >-
+        EDS `POST /files` (multipart), как `POST /eds/document-files`, но с правом раздела `eds.payments` (полный): бухгалтеру не
+        нужен раздел «Создать документ». Файл привязывается к записке операцией `pay`. До 25 МБ (413), PDF, изображение или документ Office
+        (415).
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EdsFileUpload'
+      responses:
+        '201':
+          description: Файл сохранён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EdsFile'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '413':
+          $ref: '#/components/responses/EdsPayloadTooLarge'
+        '415':
+          $ref: '#/components/responses/EdsUnsupportedMedia'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /eds/payments/{id}:
+    get:
+      tags: [eds-payments]
+      operationId: getPayment
+      summary: 'EDS · Счёт: карточка (платёжки, оплаты, остаток, журнал)'
+      description: >-
+        ERP `GET /finance/receivables/{id}/`. Платёжки клиента (файл, откуда пришла — кабинет, бот, почта или приложил бухгалтер,
+        когда), платежи с остатком, журнал счёта. Флаги `can_*` считает ERP по праву `finance.payment` и состоянию счёта: директор
+        и менеджер видят карточку без кнопок. Раздел `eds.payments` — чтение. Счёта нет — 404.
+      parameters:
+        - $ref: '#/components/parameters/PaymentInvoiceId'
+      responses:
+        '200':
+          description: Карточка счёта
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentCard'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /eds/payments/{id}/confirm:
+    post:
+      tags: [eds-payments]
+      operationId: confirmPayment
+      summary: 'EDS · Подтвердить оплату (полную или частичную) по выписке'
+      description: >-
+        ERP `POST /finance/receivables/{id}/confirm-payment/` (право `finance.payment`). `amount` и `date` — по выписке банка;
+        сумма меньше остатка — счёт «Частично оплачен» и виден остаток, равная остатку — «Оплачен» (событие шины `invoice.paid`,
+        стадия проекта «Оплата выполнена» выводится из оплаченных счетов проекта); больше остатка — 409 `CONFLICT`
+        (`details.reason = exceeds_balance`), ничего не записывается. `proof_id` — подтверждаемая платёжка клиента.
+        Повтор идемпотентен: `Idempotency-Key` (ERP отдаёт прежний ответ), тот же `proof_id` или тот же номер операции `reference`
+        возвращают прежний платёж (`replayed = true`), по уже оплаченному счёту та же сумма и дата — тоже. Сумма не больше нуля
+        и дата в будущем — 422 в BFF. Раздел `eds.payments` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/PaymentInvoiceId'
+        - $ref: '#/components/parameters/EdsIdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentConfirmIn'
+      responses:
+        '200':
+          description: Оплата подтверждена (или повтор)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentCard'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/PaymentConflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /eds/payments/{id}/proofs:
+    post:
+      tags: [eds-payments]
+      operationId: attachPaymentProof
+      summary: 'EDS · Приложить платёжку клиента к счёту'
+      description: >-
+        ERP `POST /finance/receivables/{id}/confirmations/` (multipart: `file`, необязательно `source` — `EMAIL`, `BOT`, `CABINET`,
+        `MANUAL`, `claimed_amount`, `claimed_date`, `note`). BFF читает тело потоком до 25 МБ и передаёт ERP как есть. Платёжка
+        не деньги: пока бухгалтер её не подтвердил, счёт стоит на вкладке «Платёжки на подтверждение». Счёт не ждёт оплаты — 409
+        (`not_open`). Раздел `eds.payments` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/PaymentInvoiceId'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PaymentProofUpload'
+      responses:
+        '201':
+          description: Платёжка приложена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentCard'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/PaymentConflict'
+        '413':
+          $ref: '#/components/responses/EdsPayloadTooLarge'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /eds/payments/{id}/proofs/{proof_id}/file:
+    get:
+      tags: [eds-payments]
+      operationId: downloadPaymentProof
+      summary: 'EDS · Скачать платёжку клиента'
+      description: >-
+        ERP `GET /finance/receivables/{id}/confirmations/{proof_id}/file/`. Файл потоком, как вложение документа; платёжка другого
+        счёта — 404. Раздел `eds.payments` — чтение.
+      parameters:
+        - $ref: '#/components/parameters/PaymentInvoiceId'
+        - name: proof_id
+          in: path
+          required: true
+          schema: {type: integer, minimum: 1}
+      responses:
+        '200':
+          description: Содержимое файла
+          headers:
+            Content-Disposition:
+              description: "`attachment; filename*=UTF-8''…`"
+              schema: {type: string}
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /eds/payments/{id}/request-payment-doc:
+    post:
+      tags: [eds-payments]
+      operationId: requestPaymentDoc
+      summary: 'EDS · Запросить платёжку у клиента (отметка в журнале счёта)'
+      description: >-
+        ERP `POST /finance/receivables/{id}/request-payment-doc/`. Фиксирует в журнале счёта, что платёжку запросили. Автоматической
+        отправки клиенту в бот или почту в main нет (клиенту пишет бот по событиям шины, письма ERP уходят сотрудникам клиента,
+        которых нет): текст сообщения сотрудник отправляет сам через «Чаты». Автоотправка — хвост (B-D24-1). Раздел `eds.payments` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/PaymentInvoiceId'
+      responses:
+        '200':
+          description: Запрос отмечен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentCard'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/PaymentConflict'
         '503':
           $ref: '#/components/responses/BackendUnavailable'
 
@@ -8788,6 +9155,12 @@ components:
       required: true
       description: Id документа EDS (UUID); номер `СЗ-2026/031` содержит «/» и в адресе не используется
       schema: {type: string, format: uuid}
+    PaymentInvoiceId:
+      name: id
+      in: path
+      required: true
+      description: Id счёта ERP (из строки `GET /eds/payments`)
+      schema: {type: integer, minimum: 1}
     CsrfToken:
       name: X-CSRF-Token
       in: header
@@ -9048,6 +9421,15 @@ components:
           schema:
             $ref: '#/components/schemas/Error'
 
+    PaymentConflict:
+      description: >-
+        409 `CONFLICT` — состояние счёта не позволяет действие: `details.reason` — `exceeds_balance` (сумма больше остатка),
+        `already_paid`, `not_issued`, `not_open`, `cancelled`, `reference_conflict` (номер операции уже записан с другой суммой
+        или датой); обновите карточку
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
     ApprovalConflict:
       description: >-
         409 `CONFLICT` — `details.reason = checklist_not_green` (одобрение КП при красной блокирующей строке чек-листа,
@@ -11935,7 +12317,7 @@ components:
       required: [currency, subtotal, vat_rate, vat_amount, total]
       properties:
         currency: {type: string, pattern: '^[A-Z]{3}$'}
-        subtotal: {type: [string, 'null'], pattern: '^-?\d+(\.\d+)?$', description: Без НДС}
+        subtotal: {type: [string, 'null'], pattern: '^-?\d+(\.\d+)?$', description: 'Без НДС'}
         vat_rate: {type: [string, 'null'], description: 'Ставка НДС, %'}
         vat_amount: {type: [string, 'null'], pattern: '^-?\d+(\.\d+)?$'}
         total: {type: string, pattern: '^-?\d+(\.\d+)?$', description: С НДС}
@@ -12075,6 +12457,273 @@ components:
           items: {$ref: '#/components/schemas/QuoteSendChannel'}
           description: Только `approve` — каналы отправки клиенту; пусто — одобрить без отправки (отправит менеджер заявки)
 
+    PaymentTab:
+      type: string
+      enum: [to_issue, awaiting, proofs, overdue, all]
+      description: 'Вкладки «Счетов и оплат»: К выставлению, Ждут оплаты, Платёжки на подтверждение, Просрочены, Все счета'
+    PaymentDisplayStatus:
+      type: string
+      enum: [draft, issued, proof_received, partially_paid, paid, overdue, cancelled]
+      description: 'Выставлен (`issued`), Платёжка получена (`proof_received`), Частично (`partially_paid`), Оплачен (`paid`), Просрочен (`overdue`); `draft` — не выставлен'
+    PaymentMoney:
+      type: object
+      additionalProperties: false
+      required: [amount, currency]
+      properties:
+        amount: {type: string, pattern: '^-?\d+\.\d{2}$', description: 'Деньги строкой с двумя знаками; может быть `0.00`'}
+        currency: {type: string, pattern: '^[A-Z]{3}$', examples: [UZS]}
+    PaymentSources:
+      type: object
+      additionalProperties: false
+      required: [erp, eds]
+      properties:
+        erp: {type: string, enum: [ok, unavailable]}
+        eds: {type: string, enum: [ok, unavailable]}
+    PaymentCounts:
+      type: object
+      additionalProperties: false
+      required: [to_issue, awaiting, proofs, overdue]
+      properties:
+        to_issue: {type: integer, minimum: 0}
+        awaiting: {type: integer, minimum: 0}
+        proofs: {type: integer, minimum: 0}
+        overdue: {type: integer, minimum: 0}
+    PaymentRow:
+      type: object
+      additionalProperties: false
+      required:
+        [id, number, project_number, deal_id, client_name, amount, paid, balance, issued_at, due_date, status, days_overdue,
+         has_pending_proof, proof_received_at]
+      properties:
+        id: {type: integer, description: 'Счёт ERP; идёт в `GET /eds/payments/{id}`'}
+        number: {type: string, examples: [СЧ-2026/142]}
+        project_number: {type: string, examples: [ПР-2026-104]}
+        deal_id: {type: integer}
+        client_name: {type: string}
+        amount: {$ref: '#/components/schemas/PaymentMoney'}
+        paid: {$ref: '#/components/schemas/PaymentMoney'}
+        balance: {$ref: '#/components/schemas/PaymentMoney'}
+        issued_at: {type: [string, 'null'], format: date}
+        due_date: {type: [string, 'null'], format: date}
+        status: {$ref: '#/components/schemas/PaymentDisplayStatus'}
+        days_overdue: {type: [integer, 'null'], minimum: 1}
+        has_pending_proof: {type: boolean}
+        proof_received_at: {type: [string, 'null'], format: date-time}
+    PaymentBoard:
+      type: object
+      additionalProperties: false
+      required: [tab, count, counts, memos_to_pay, items, sources]
+      properties:
+        tab: {$ref: '#/components/schemas/PaymentTab'}
+        count: {type: integer, minimum: 0, description: 'Всего счетов на вкладке'}
+        counts: {$ref: '#/components/schemas/PaymentCounts'}
+        memos_to_pay:
+          type: [integer, 'null']
+          minimum: 0
+          description: 'Служебок ждёт оплаты (до 100); `null` — EDS не ответил'
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/PaymentRow'}
+        sources: {$ref: '#/components/schemas/PaymentSources'}
+    PaymentItem:
+      type: object
+      additionalProperties: false
+      required: [description, quantity, unit_price, total]
+      properties:
+        description: {type: string}
+        quantity: {type: integer, minimum: 0}
+        unit_price: {type: string}
+        total: {type: string}
+    PaymentRecord:
+      type: object
+      additionalProperties: false
+      required: [id, amount, paid_at, method, reference, receipt_number, has_proof, recorded_by, created_at]
+      properties:
+        id: {type: integer}
+        amount: {type: string}
+        paid_at: {type: string, format: date, description: 'Дата поступления по выписке'}
+        method: {type: string}
+        reference: {type: string, description: 'Номер операции банка'}
+        receipt_number: {type: string}
+        has_proof: {type: boolean}
+        recorded_by: {type: [string, 'null']}
+        created_at: {type: string, format: date-time}
+    PaymentProofSource:
+      type: string
+      enum: [CABINET, BOT, EMAIL, MANUAL]
+      description: 'Откуда платёжка: кабинет клиента, Telegram-бот, почта или приложил бухгалтер'
+    PaymentProof:
+      type: object
+      additionalProperties: false
+      required: [id, source, status, original_name, claimed_amount, claimed_date, note, received_at, recorded_by, payment_id]
+      properties:
+        id: {type: integer, description: 'Идёт в `proof_id` подтверждения и в скачивание'}
+        source: {$ref: '#/components/schemas/PaymentProofSource'}
+        status: {type: string, enum: [PENDING, CONFIRMED]}
+        original_name: {type: string}
+        claimed_amount: {type: [string, 'null'], description: 'Сумма по словам клиента (не доверяется; сумму подтверждает бухгалтер по выписке)'}
+        claimed_date: {type: [string, 'null'], format: date}
+        note: {type: string}
+        received_at: {type: string, format: date-time}
+        recorded_by: {type: [string, 'null'], description: 'Кто приложил; пусто — клиент (кабинет, бот)'}
+        payment_id: {type: [integer, 'null']}
+    PaymentHistoryEntry:
+      type: object
+      additionalProperties: false
+      required: [at, code, text, by]
+      properties:
+        at: {type: string, format: date-time}
+        code: {type: string, examples: [payment.recorded]}
+        text: {type: string}
+        by: {type: [string, 'null']}
+    PaymentCard:
+      type: object
+      additionalProperties: false
+      required:
+        [id, number, project_number, deal_id, client_name, amount, paid, balance, issued_at, due_date, status, days_overdue,
+         has_pending_proof, proof_received_at, subtotal, vat, notes, has_pdf, items, payments, proofs, history,
+         payment_doc_requested_at, can_confirm, can_attach_proof, can_request_proof, replayed]
+      properties:
+        id: {type: integer}
+        number: {type: string}
+        project_number: {type: string}
+        deal_id: {type: integer}
+        client_name: {type: string}
+        amount: {$ref: '#/components/schemas/PaymentMoney'}
+        paid: {$ref: '#/components/schemas/PaymentMoney'}
+        balance: {$ref: '#/components/schemas/PaymentMoney'}
+        issued_at: {type: [string, 'null'], format: date}
+        due_date: {type: [string, 'null'], format: date}
+        status: {$ref: '#/components/schemas/PaymentDisplayStatus'}
+        days_overdue: {type: [integer, 'null'], minimum: 1}
+        has_pending_proof: {type: boolean}
+        proof_received_at: {type: [string, 'null'], format: date-time}
+        subtotal: {type: string, description: 'Без НДС'}
+        vat: {type: string}
+        notes: {type: string}
+        has_pdf: {type: boolean}
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/PaymentItem'}
+        payments:
+          type: array
+          items: {$ref: '#/components/schemas/PaymentRecord'}
+        proofs:
+          type: array
+          items: {$ref: '#/components/schemas/PaymentProof'}
+        history:
+          type: array
+          items: {$ref: '#/components/schemas/PaymentHistoryEntry'}
+        payment_doc_requested_at: {type: [string, 'null'], format: date-time}
+        can_confirm: {type: boolean, description: 'Право `finance.payment`, счёт открыт и остаток есть'}
+        can_attach_proof: {type: boolean}
+        can_request_proof: {type: boolean}
+        replayed: {type: boolean, description: 'Повтор подтверждения: платёж уже был записан'}
+    PaymentConfirmIn:
+      type: object
+      additionalProperties: false
+      required: [amount, date]
+      properties:
+        amount: {type: string, pattern: '^\d{1,12}\.\d{2}$', description: 'Сумма по выписке, больше нуля, не больше остатка'}
+        date: {type: string, format: date, description: 'Дата поступления по выписке, не в будущем (Asia/Tashkent)'}
+        reference: {type: [string, 'null'], maxLength: 255, description: 'Номер операции банка'}
+        proof_id: {type: [integer, 'null'], minimum: 1, description: 'Подтверждаемая платёжка клиента'}
+    PaymentProofUpload:
+      type: object
+      required: [file]
+      properties:
+        file: {type: string, format: binary}
+        source: {$ref: '#/components/schemas/PaymentProofSource'}
+        claimed_amount: {type: string, pattern: '^\d{1,12}\.\d{2}$'}
+        claimed_date: {type: string, format: date}
+        note: {type: string, maxLength: 500}
+    PaymentMemoStatus:
+      type: string
+      enum: [to_pay, paid]
+      description: '`to_pay` — «Передана бухгалтеру», `paid` — «Оплачена»'
+    PaymentMemoRow:
+      type: object
+      additionalProperties: false
+      required: [id, number, subject, author, amount, due_date, files_count, invoice_attached, status, paid_on, created_at]
+      properties:
+        id: {type: string, format: uuid, description: 'Документ EDS'}
+        number: {type: [string, 'null'], examples: [СЗ-2026/031]}
+        subject: {type: string}
+        author: {$ref: '#/components/schemas/EdsPerson'}
+        amount: {oneOf: [{$ref: '#/components/schemas/PaymentMoney'}, {type: 'null'}]}
+        due_date: {type: [string, 'null'], format: date}
+        files_count: {type: integer, minimum: 0}
+        invoice_attached: {type: boolean, description: 'Приложен счёт поставщика (есть файл)'}
+        status: {$ref: '#/components/schemas/PaymentMemoStatus'}
+        paid_on: {type: [string, 'null'], format: date}
+        created_at: {type: string, format: date-time}
+    PaymentMemoPage:
+      type: object
+      additionalProperties: false
+      required: [items, next_cursor]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/PaymentMemoRow'}
+        next_cursor: {type: [string, 'null']}
+    PaymentMemoPayment:
+      type: object
+      additionalProperties: false
+      required: [paid_on, amount, receipt_file_id, note, paid_by, recorded_at]
+      properties:
+        paid_on: {type: string, format: date}
+        amount: {$ref: '#/components/schemas/PaymentMoney'}
+        receipt_file_id: {type: [string, 'null'], format: uuid}
+        note: {type: [string, 'null']}
+        paid_by: {$ref: '#/components/schemas/EdsPerson'}
+        recorded_at: {type: string, format: date-time}
+    PaymentMemoJournal:
+      type: object
+      additionalProperties: false
+      required: [at, action, by, comment]
+      properties:
+        at: {type: string, format: date-time}
+        action: {type: string, examples: [document.paid]}
+        by: {oneOf: [{$ref: '#/components/schemas/EdsPerson'}, {type: 'null'}]}
+        comment: {type: [string, 'null']}
+    PaymentMemoCard:
+      type: object
+      additionalProperties: false
+      required:
+        [id, approval_id, number, subject, text, author, amount, due_date, deal, files, document_status, status, can_pay,
+         can_return, payment, journal, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        approval_id: {type: [string, 'null'], format: uuid}
+        number: {type: [string, 'null']}
+        subject: {type: string}
+        text: {type: string}
+        author: {$ref: '#/components/schemas/EdsPerson'}
+        amount: {oneOf: [{$ref: '#/components/schemas/PaymentMoney'}, {type: 'null'}]}
+        due_date: {type: [string, 'null'], format: date}
+        deal: {oneOf: [{$ref: '#/components/schemas/EdsDealRef'}, {type: 'null'}]}
+        files:
+          type: array
+          items: {$ref: '#/components/schemas/EdsFile'}
+        document_status: {type: string}
+        status: {type: string, enum: [to_pay, paid, other]}
+        can_pay: {type: boolean}
+        can_return: {type: boolean}
+        payment: {oneOf: [{$ref: '#/components/schemas/PaymentMemoPayment'}, {type: 'null'}]}
+        journal:
+          type: array
+          items: {$ref: '#/components/schemas/PaymentMemoJournal'}
+        created_at: {type: string, format: date-time}
+    PaymentMemoPayIn:
+      type: object
+      additionalProperties: false
+      required: [paid_on, amount, currency]
+      properties:
+        paid_on: {type: string, format: date, description: 'Дата платежа, не в будущем'}
+        amount: {type: string, pattern: '^\d{1,12}\.\d{2}$', description: 'Сумма оплаты, больше нуля, не больше согласованной'}
+        currency: {type: string, pattern: '^[A-Z]{3}$', description: Валюта записки}
+        receipt_file_id: {type: [string, 'null'], format: uuid, description: 'Платёжка из `POST /eds/payment-receipt-files`'}
+        note: {type: [string, 'null'], maxLength: 500}
     MemoApprovalRow:
       type: object
       additionalProperties: false

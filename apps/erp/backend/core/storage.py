@@ -239,6 +239,12 @@ def payment_proof_path(instance, filename):
     return f"deals/{instance.invoice.deal_id}/payments/{name}"
 
 
+def payment_confirmation_path(instance, filename):
+    """deals/{deal_id}/payments/proofs/{uuid}.{ext} (D2-4: платёжка клиента на подтверждение)"""
+    name = _uuid_filename(instance, filename)
+    return f"deals/{instance.invoice.deal_id}/payments/proofs/{name}"
+
+
 def payment_receipt_path(instance, filename):
     """deals/{deal_id}/payments/receipts/{uuid}.pdf (D2a: квитанция об оплате)"""
     name = _uuid_filename(instance, filename)

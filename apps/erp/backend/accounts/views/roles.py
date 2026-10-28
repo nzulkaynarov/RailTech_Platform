@@ -59,6 +59,7 @@ _PERM_LABELS_EN = {
     "supply.manage": "Maintain suppliers & their offers",
     "fulfillment.manage": "Handle shipments & delivery notes",
     "fulfillment.act": "Issue acceptance acts",
+    "finance.view": "See customer invoices & payments",
     "finance.invoice": "Issue customer invoices",
     "finance.payment": "Record payments",
     "settings.edit": "Edit company details, templates & numbering",

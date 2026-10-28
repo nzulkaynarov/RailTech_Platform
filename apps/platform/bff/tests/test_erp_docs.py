@@ -25,6 +25,7 @@ DOC = {
     "product": {"id": 4, "name": "Реле защиты РЗ-1", "sku": "RT-0002"},
     "deal": {
         "id": 905,
+        "number": "ЗВ-2026-905",
         "title": "Монтаж",
         "client": "АО «Пример-Рельс»",
         "stage_code": "DRAFT",
@@ -222,6 +223,7 @@ async def test_deal_options_find_a_project_by_number(
                 "results": [
                     {
                         "id": 905,
+                        "number": "ЗВ-2026-905",
                         "title": "Монтаж",
                         "company_name": "АО «Пример-Рельс»",
                         "stage_code": "DRAFT",
