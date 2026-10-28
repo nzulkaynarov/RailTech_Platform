@@ -38,6 +38,8 @@ class DeskViewSet(RoleGatedViewMixin, viewsets.GenericViewSet):
 
     permission_classes = [permissions.IsAuthenticated, IsBackOfficeStaff]
     pagination_class = DefaultPageNumberPagination
+    #: Поиск и фильтры у этих операций свои (`q`, `kind`…): общие `search` и `ordering` в схему не попадают.
+    filter_backends: list = []
 
     def page_of(self, queryset, build):
         """Страница `{count, next, previous, results}`; `build(page_rows)` превращает строки модели в словари."""

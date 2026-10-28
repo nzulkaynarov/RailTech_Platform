@@ -19033,8 +19033,6 @@ export interface operations {
                 page_size?: number;
                 /** @description Поиск по названию и коду. */
                 q?: string;
-                /** @description A search term. */
-                search?: string;
             };
             header?: never;
             path?: never;
@@ -19605,8 +19603,6 @@ export interface operations {
                 page_size?: number;
                 /** @description Поиск по названию и коду. */
                 q?: string;
-                /** @description A search term. */
-                search?: string;
             };
             header?: never;
             path?: never;
@@ -21053,8 +21049,6 @@ export interface operations {
                 page_size?: number;
                 /** @description Поиск по названию и коду. */
                 q?: string;
-                /** @description A search term. */
-                search?: string;
             };
             header?: never;
             path?: never;
@@ -21176,8 +21170,6 @@ export interface operations {
                 product?: number;
                 /** @description Поиск по названию и коду. */
                 q?: string;
-                /** @description A search term. */
-                search?: string;
             };
             header?: never;
             path?: never;
@@ -26002,8 +25994,6 @@ export interface operations {
                 page?: number;
                 /** @description Строк на странице, до 200. */
                 page_size?: number;
-                /** @description A search term. */
-                search?: string;
             };
             header?: never;
             path?: never;
@@ -26994,8 +26984,6 @@ export interface operations {
                 page_size?: number;
                 /** @description Поиск по названию и коду. */
                 q?: string;
-                /** @description A search term. */
-                search?: string;
             };
             header?: never;
             path?: never;

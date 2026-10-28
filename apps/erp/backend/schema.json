@@ -6551,15 +6551,6 @@
                             "type": "string"
                         },
                         "description": "Поиск по названию и коду."
-                    },
-                    {
-                        "name": "search",
-                        "required": false,
-                        "in": "query",
-                        "description": "A search term.",
-                        "schema": {
-                            "type": "string"
-                        }
                     }
                 ],
                 "tags": [
@@ -7603,15 +7594,6 @@
                             "type": "string"
                         },
                         "description": "Поиск по названию и коду."
-                    },
-                    {
-                        "name": "search",
-                        "required": false,
-                        "in": "query",
-                        "description": "A search term.",
-                        "schema": {
-                            "type": "string"
-                        }
                     }
                 ],
                 "tags": [
@@ -10219,15 +10201,6 @@
                             "type": "string"
                         },
                         "description": "Поиск по названию и коду."
-                    },
-                    {
-                        "name": "search",
-                        "required": false,
-                        "in": "query",
-                        "description": "A search term.",
-                        "schema": {
-                            "type": "string"
-                        }
                     }
                 ],
                 "tags": [
@@ -10470,15 +10443,6 @@
                             "type": "string"
                         },
                         "description": "Поиск по названию и коду."
-                    },
-                    {
-                        "name": "search",
-                        "required": false,
-                        "in": "query",
-                        "description": "A search term.",
-                        "schema": {
-                            "type": "string"
-                        }
                     }
                 ],
                 "tags": [
@@ -19375,15 +19339,6 @@
                             "type": "integer"
                         },
                         "description": "Строк на странице, до 200."
-                    },
-                    {
-                        "name": "search",
-                        "required": false,
-                        "in": "query",
-                        "description": "A search term.",
-                        "schema": {
-                            "type": "string"
-                        }
                     }
                 ],
                 "tags": [
@@ -21292,15 +21247,6 @@
                             "type": "string"
                         },
                         "description": "Поиск по названию и коду."
-                    },
-                    {
-                        "name": "search",
-                        "required": false,
-                        "in": "query",
-                        "description": "A search term.",
-                        "schema": {
-                            "type": "string"
-                        }
                     }
                 ],
                 "tags": [

@@ -8,6 +8,7 @@ from rest_framework import filters, mixins, permissions, viewsets
 from rest_framework.exceptions import APIException
 from rest_framework.response import Response
 
+from catalog.desk.audit import record, snapshot
 from core.permissions import RoleGatedViewMixin
 
 from ..models import Category, DomainType, ProductStatus, StockStatus
@@ -199,15 +200,36 @@ class ManufacturerViewSet(
             existing = existing.exclude(pk=serializer.instance.pk)
         return bool(name) and existing.exists()
 
+    _AUDIT_FIELDS = ("name", "country", "website", "is_active")
+
     def perform_create(self, serializer):
         if self._duplicate(serializer):
             raise ManufacturerExists("MANUFACTURER_EXISTS")
-        serializer.save()
+        brand = serializer.save()
+        record(
+            self.request.user,
+            entity="manufacturer",
+            instance=brand,
+            event="created",
+            action="Производитель добавлен",
+            before=None,
+            after=snapshot(brand, self._AUDIT_FIELDS),
+        )
 
     def perform_update(self, serializer):
         if self._duplicate(serializer):
             raise ManufacturerExists("MANUFACTURER_EXISTS")
-        serializer.save()
+        before = snapshot(serializer.instance, self._AUDIT_FIELDS)
+        brand = serializer.save()
+        record(
+            self.request.user,
+            entity="manufacturer",
+            instance=brand,
+            event="updated",
+            action="Производитель изменён",
+            before=before,
+            after=snapshot(brand, self._AUDIT_FIELDS),
+        )
 
 
 @extend_schema_view(

@@ -6,6 +6,7 @@ from decimal import Decimal, InvalidOperation
 from django.db.models import Q
 
 from catalog.desk.access import can_view_crew_rates
+from catalog.desk.audit import record, snapshot
 from catalog.desk.items import ItemError
 from catalog.models import Brigade
 from core.models import Currency
@@ -75,7 +76,12 @@ def _apply_rate(brigade, data: dict, user) -> None:
     brigade.rate, brigade.currency = amount, currency
 
 
+BRIGADE_FIELDS = ("name", "kind", "specialization", "headcount", "rate", "rate_unit", "currency", "note", "is_active")
+
+
 def save_brigade(brigade, data: dict, user) -> Brigade:
+    created = brigade.pk is None
+    before = None if created else snapshot(brigade, BRIGADE_FIELDS)
     if "name" in data or brigade.pk is None:
         name = (data.get("name") or "").strip()
         if not name:
@@ -98,4 +104,13 @@ def save_brigade(brigade, data: dict, user) -> Brigade:
         brigade.is_active = bool(data["is_active"])
     _apply_rate(brigade, data, user)
     brigade.save()
+    record(
+        user,
+        entity="brigade",
+        instance=brigade,
+        event="created" if created else "updated",
+        action="Бригада добавлена" if created else "Бригада изменена",
+        before=before,
+        after=snapshot(brigade, BRIGADE_FIELDS),
+    )
     return brigade

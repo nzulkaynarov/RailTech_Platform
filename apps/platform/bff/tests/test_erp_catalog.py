@@ -389,10 +389,47 @@ async def test_offer_update_forwards_terms_and_keeps_the_price_cut(
     assert body_of(route) == {"quota_qty": 250, "valid_until": "2027-01-31", "stock_status": None}
 
 
-async def test_offer_price_without_the_right_is_refused_by_erp_as_forbidden(
+async def test_offer_price_without_the_right_is_refused_before_erp(web: Web, be: Any) -> None:
+    await web.login(["ENGINEER"])  # у гл. инженера нет supplier_prices
+    route = (
+        mock(be)
+        .patch(f"{API}/catalog/suppliers/9/offers/31/")
+        .mock(return_value=httpx.Response(200, json=OFFER))
+    )
+    response = await call(
+        web,
+        "PATCH",
+        "/erp/catalog/suppliers/9/offers/31",
+        {"price": {"amount": "1.00", "currency": "USD"}},
+    )
+    assert response.status_code == 403
+    assert response.json()["code"] == "FORBIDDEN"
+    assert response.json()["details"]["restricted"] == "supplier_prices"
+    assert not route.called
+
+
+async def test_offer_price_with_the_right_goes_to_erp(web: Web, be: Any) -> None:
+    await web.login(["SUPPLY"])
+    route = (
+        mock(be)
+        .patch(f"{API}/catalog/suppliers/9/offers/31/")
+        .mock(return_value=httpx.Response(200, json=OFFER))
+    )
+    response = await call(
+        web,
+        "PATCH",
+        "/erp/catalog/suppliers/9/offers/31",
+        {"price": {"amount": "1.00", "currency": "USD"}},
+    )
+    assert response.status_code == 200
+    assert route.called
+    assert response.json()["price"] == {"amount": "12.50", "currency": "USD"}
+
+
+async def test_offer_price_refusal_by_erp_is_still_forwarded_as_forbidden(
     web: Web, be: Any
 ) -> None:
-    await web.login(["ENGINEER"])
+    await web.login(["SUPPLY"])
     mock(be).patch(f"{API}/catalog/suppliers/9/offers/31/").mock(
         return_value=httpx.Response(403, json={"detail": "SUPPLIER_PRICES_REQUIRED"})
     )

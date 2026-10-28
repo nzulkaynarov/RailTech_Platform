@@ -14,6 +14,7 @@ from django.utils import timezone
 from parties.models import Company
 
 from catalog.desk.access import can_view_supplier_prices
+from catalog.desk.audit import record, snapshot
 from catalog.desk.items import EXPIRING_SOON_DAYS, ItemError, current_offer_q, offer_row
 from catalog.models import StockStatus, SupplierOffer
 from catalog.services import offer_validity_error
@@ -94,8 +95,24 @@ def supplier_detail(company, user) -> dict:
     return row
 
 
+OFFER_FIELDS = (
+    "base_price",
+    "currency",
+    "stock_quantity",
+    "min_order_qty",
+    "in_stock_lead_time_days",
+    "order_lead_time_days",
+    "stock_status",
+    "valid_from",
+    "valid_until",
+    "is_active",
+)
+
+
 def update_offer(offer: SupplierOffer, data: dict, user) -> SupplierOffer:
-    """Условия предложения: квота, минимальный заказ, сроки, окно действия цены, признак «действует»; цена — отдельное право."""
+    """Условия предложения: квота, минимальный заказ, сроки, окно действия цены, признак «действует»; цена — отдельное право.
+    Правка пишется в журнал (кто, что было и что стало)."""
+    before = snapshot(offer, OFFER_FIELDS)
     if "price" in data:
         if not can_view_supplier_prices(user):
             raise ItemError("SUPPLIER_PRICES_REQUIRED", "price")
@@ -130,6 +147,15 @@ def update_offer(offer: SupplierOffer, data: dict, user) -> SupplierOffer:
     if error:
         raise ItemError(error, "valid_until")
     offer.save()
+    record(
+        user,
+        entity="supplier_offer",
+        instance=offer,
+        event="updated",
+        action="Предложение поставщика изменено",
+        before=before,
+        after=snapshot(offer, OFFER_FIELDS),
+    )
     return offer
 
 

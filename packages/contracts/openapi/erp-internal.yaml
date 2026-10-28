@@ -3265,12 +3265,6 @@ paths:
         schema:
           type: string
         description: Поиск по названию и коду.
-      - name: search
-        required: false
-        in: query
-        description: A search term.
-        schema:
-          type: string
       tags:
       - Catalog
       security:
@@ -3940,12 +3934,6 @@ paths:
         schema:
           type: string
         description: Поиск по названию и коду.
-      - name: search
-        required: false
-        in: query
-        description: A search term.
-        schema:
-          type: string
       tags:
       - Catalog
       security:
@@ -5636,12 +5624,6 @@ paths:
         schema:
           type: string
         description: Поиск по названию и коду.
-      - name: search
-        required: false
-        in: query
-        description: A search term.
-        schema:
-          type: string
       tags:
       - Catalog
       security:
@@ -5792,12 +5774,6 @@ paths:
         schema:
           type: string
         description: Поиск по названию и коду.
-      - name: search
-        required: false
-        in: query
-        description: A search term.
-        schema:
-          type: string
       tags:
       - Catalog
       security:
@@ -11628,12 +11604,6 @@ paths:
         schema:
           type: integer
         description: Строк на странице, до 200.
-      - name: search
-        required: false
-        in: query
-        description: A search term.
-        schema:
-          type: string
       tags:
       - Finance
       security:
@@ -12828,12 +12798,6 @@ paths:
         schema:
           type: string
         description: Поиск по названию и коду.
-      - name: search
-        required: false
-        in: query
-        description: A search term.
-        schema:
-          type: string
       tags:
       - Master Data
       security:

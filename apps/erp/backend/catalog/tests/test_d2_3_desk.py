@@ -534,3 +534,81 @@ def test_exchange_rate_rows_are_readable_by_staff(world):
         ).status_code
         == 403
     )
+
+
+# --- ревью #299: журнал правок, заголовки файла, устойчивость удаления -----------------------------------------------
+
+
+def _log(event_code):
+    from crm.models import ActivityLog
+
+    return list(ActivityLog.objects.filter(event_code=event_code).order_by("id"))
+
+
+def test_offer_edit_is_written_to_the_audit_log_with_before_and_after(world):
+    live = world["offers"]["live"]
+    path = f"catalog/suppliers/{world['supplier'].pk}/offers/{live.pk}/"
+    assert (
+        send(
+            world, "supply", "patch", path, {"quota_qty": 250, "price": {"amount": "13.75", "currency": "UZS"}}
+        ).status_code
+        == 200
+    )
+    (entry,) = _log("admin.supplier_offer.updated")
+    assert entry.user == world["users"]["supply"] and entry.entity_id == live.pk
+    assert entry.before_data["stock_quantity"] == 500 and entry.after_data["stock_quantity"] == 250
+    assert (entry.before_data["base_price"], entry.after_data["base_price"]) == ("12.50", "13.75")
+    assert entry.after_data["currency"] == "UZS"
+    # правка без изменений следа не оставляет
+    send(world, "supply", "patch", path, {"quota_qty": 250})
+    assert len(_log("admin.supplier_offer.updated")) == 1
+
+
+def test_brigade_hs_code_manufacturer_and_file_deletion_are_audited(world):
+    created = send(
+        world, "supply", "post", "catalog/brigades/", {"name": "Б", "rate": {"amount": "100", "currency": "UZS"}}
+    ).json()
+    send(world, "supply", "patch", f"catalog/brigades/{created['id']}/", {"rate": {"amount": "200", "currency": "UZS"}})
+    (made, changed) = _log("admin.brigade.created"), _log("admin.brigade.updated")
+    assert (
+        made[0].after_data["rate"] == "100.00"
+        and changed[0].before_data["rate"] == "100.00"
+        and changed[0].after_data["rate"] == "200.00"
+    )
+    code = send(world, "supply", "post", "master-data/hs-codes/", {"code": "8536", "name": "x"}).json()
+    send(world, "supply", "patch", f"master-data/hs-codes/{code['id']}/", {"valid_until": "2020-01-01"})
+    assert _log("admin.hs_code.created") and _log("admin.hs_code.updated")[0].after_data["valid_until"] == "2020-01-01"
+    brand = send(world, "supply", "post", "catalog/manufacturers/", {"name": "Brand-A"}).json()
+    send(world, "supply", "patch", f"catalog/manufacturers/{brand['id']}/", {"is_active": False})
+    assert _log("admin.manufacturer.created") and _log("admin.manufacturer.updated")[0].before_data["is_active"] is True
+    doc = upload(world, "supply", product_id=world["relay"].pk).json()
+    assert world["clients"]["supply"].delete(f"/api/v1/catalog/tech-docs/{doc['id']}/").status_code == 204
+    (deleted,) = _log("admin.tech_doc.deleted")
+    assert deleted.level == "WARNING" and deleted.before_data["original_name"] == "tz.pdf"
+
+
+def test_tech_doc_file_is_served_under_a_sandbox_csp(world):
+    doc = upload(world, "supply", product_id=world["relay"].pk).json()
+    response = get(world, "manager", f"catalog/tech-docs/{doc['id']}/file/")
+    assert response["Content-Security-Policy"] == "default-src 'none'; sandbox"
+
+
+def test_deleting_a_doc_survives_a_storage_failure(world, monkeypatch):
+    doc = upload(world, "supply", product_id=world["relay"].pk).json()
+    from django.core.files.storage import FileSystemStorage
+
+    def broken(self, name):
+        raise OSError("down")
+
+    monkeypatch.setattr(FileSystemStorage, "delete", broken)
+    assert world["clients"]["supply"].delete(f"/api/v1/catalog/tech-docs/{doc['id']}/").status_code == 204
+    assert not TechDocument.objects.filter(pk=doc["id"]).exists()
+
+
+def test_item_card_reports_the_full_number_of_files(world):
+    for _ in range(22):
+        TechDocument.objects.create(kind="other", title="t", file="x", original_name="x.pdf", product=world["relay"])
+    card = get(world, "manager", f"catalog/items/{world['relay'].pk}/").json()
+    assert len(card["tech_docs"]) == 20 and card["docs_count"] == 22
+    listed = {r["id"]: r for r in get(world, "manager", "catalog/items/", page_size=50).json()["results"]}
+    assert listed[world["relay"].pk]["docs_count"] == 22

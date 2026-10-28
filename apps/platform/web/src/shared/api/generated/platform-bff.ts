@@ -27289,7 +27289,7 @@ export const getUploadTechDocUrl = () => {
 };
 
 /**
- * ERP `POST catalog/tech-docs/` (multipart) — право `catalog.manage`. BFF читает тело потоком до 21 МБ, multipart не разбирает и передаёт ERP как есть; файл ≤ 20 МБ (PDF, PNG, JPEG, DOC(X), XLS(X)), содержимое сверяется с расширением. Нужна привязка к позиции или заявке. Раздел `erp.stock` — полный.
+ * ERP `POST catalog/tech-docs/` (multipart) — право `catalog.manage`. BFF читает тело до 21 МБ (копится в памяти BFF, B-086), multipart не разбирает и передаёт ERP как есть; файл ≤ 20 МБ (PDF, PNG, JPEG, DOC(X), XLS(X)), содержимое сверяется с расширением. Нужна привязка к позиции или заявке. Раздел `erp.stock` — полный.
  * @summary Расчёт · Техдокументация: загрузить файл
  */
 export const uploadTechDoc = async (

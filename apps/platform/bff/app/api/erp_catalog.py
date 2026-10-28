@@ -15,6 +15,7 @@ from fastapi import APIRouter, Depends, Path, Query, status
 
 from app.clients.erp_company import ErpCompany
 from app.deps import Authed, require
+from app.errors import PlatformError
 from app.rbac import allows
 from app.schemas_company import (
     CategoryRequest,
@@ -210,6 +211,14 @@ async def get_supplier(id: ItemId, authed: Reader) -> SupplierDetail:
     operation_id="updateSupplierOffer",
 )
 async def update_offer(id: ItemId, offer_id: ItemId, body: OfferUpdate, authed: Writer) -> Offer:
+    if body.price is not None and not show_prices(authed):
+        # Цену закупки меняет только тот, кому она открыта: отказ до ERP (ERP отказал бы так же).
+        raise PlatformError(
+            "FORBIDDEN",
+            "Цены поставщиков меняет тот, кому они открыты.",
+            status_code=403,
+            details={"restricted": "supplier_prices"},
+        )
     raw = await _erp(authed).data(
         "PATCH", f"catalog/suppliers/{id}/offers/{offer_id}/", json=body.sent()
     )

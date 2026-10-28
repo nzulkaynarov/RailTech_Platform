@@ -184,7 +184,7 @@ def item_detail(product, user) -> dict:
             ],
         }
     )
-    row["docs_count"] = len(row["tech_docs"])
+    row["docs_count"] = product.tech_documents.count()  # полное число, как в списке (в карточке показаны последние 20)
     return row
 
 

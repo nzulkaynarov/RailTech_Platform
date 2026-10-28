@@ -3,8 +3,9 @@
 
 BFF проксирует к ERP `catalog/tech-docs/` с токеном сотрудника и проверяет раздел `erp.stock`
 (чтение — `read`, загрузка и удаление — `full`; право `catalog.manage` решает ERP). Загрузка: тело
-читается потоком до предела (21 МБ), multipart BFF не разбирает и передаёт ERP как есть; файл —
-потоком, в памяти BFF не накапливается. Файл всегда отдаётся вложением с `nosniff`: просмотр PDF и
+читается до предела (21 МБ) и копится в памяти BFF (как в `crm_kb` и `eds_documents`, B-086),
+multipart BFF не разбирает и передаёт ERP как есть; скачивание — потоком, файл в памяти BFF не
+накапливается. Файл всегда отдаётся вложением с `nosniff`: просмотр PDF и
 изображений собирает интерфейс сам из полученных байт (CSP Платформы запрещает встроенные
 просмотрщики). «Отправить клиенту в чат» в этом разделе нет — чатов ещё нет (B-019, D3)."""
 
@@ -127,6 +128,8 @@ async def download_file(id: DocId, authed: Reader) -> Response:
         "Content-Disposition": disposition,
         "X-Content-Type-Options": "nosniff",
         "Cache-Control": "private, no-store",
+        # Как у файлов EDS: открытый во вкладке файл не исполняет скрипты и вложенное содержимое.
+        "Content-Security-Policy": "default-src 'none'; sandbox",
     }
     return FileStream(response, headers, "application/octet-stream")
 

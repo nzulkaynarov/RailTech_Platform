@@ -178,6 +178,7 @@ async def test_download_is_always_an_attachment_with_nosniff(web: Web, be: Backe
     assert response.headers["content-type"] == "application/octet-stream"
     assert response.headers["content-disposition"] == 'attachment; filename="tz.pdf"'
     assert response.headers["x-content-type-options"] == "nosniff"
+    assert response.headers["content-security-policy"] == "default-src 'none'; sandbox"
     assert response.headers["cache-control"] == "private, no-store"
     assert dict(route.calls.last.request.url.params) == {"download": "1"}
 

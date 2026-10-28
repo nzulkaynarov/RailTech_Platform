@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { App, Button, Drawer, Input, Select, Skeleton } from "antd";
 import type { TFunction } from "i18next";
-import { Suspense, lazy, useId, useState } from "react";
+import { Suspense, lazy, useEffect, useId, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useSearchParams } from "react-router";
 
@@ -251,8 +251,9 @@ export function DocsScreen() {
   );
 }
 
-function useFileBytes(id: string) {
+function useFileBytes(id: string, enabled: boolean) {
   return useQuery({
+    enabled,
     queryKey: getDownloadTechDocQueryKey(id),
     staleTime: 60_000,
     queryFn: async (): Promise<{ data: ArrayBuffer; type: string }> => {
@@ -284,7 +285,7 @@ function DocDrawer({
   const { message } = App.useApp();
   const queryClient = useQueryClient();
   const doc = docs.find((d) => d.id === id);
-  const bytes = useFileBytes(id);
+  const bytes = useFileBytes(id, doc?.previewable === true);
   const remove = useDeleteTechDoc({
     mutation: {
       onSuccess: () => {
@@ -396,8 +397,16 @@ function DocDrawer({
 }
 
 function ImagePreview({ data, type, name }: { data: ArrayBuffer; type: string; name: string }) {
-  const [url] = useState(() => URL.createObjectURL(new Blob([data], { type })));
-  return <img className="pf-doc-viewer-image" src={url} alt={name} />;
+  const img = useRef<HTMLImageElement>(null);
+  useEffect(() => {
+    const objectUrl = URL.createObjectURL(new Blob([data], { type }));
+    const element = img.current;
+    if (element) element.src = objectUrl;
+    return () => {
+      URL.revokeObjectURL(objectUrl);
+    };
+  }, [data, type]);
+  return <img ref={img} className="pf-doc-viewer-image" alt={name} />;
 }
 
 function UploadForm({

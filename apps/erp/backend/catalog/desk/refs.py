@@ -9,6 +9,7 @@ from django.db.models import Q
 from django.utils import timezone
 from finance.services.fx import rate_to_str
 
+from catalog.desk.audit import record, snapshot
 from catalog.desk.items import ItemError
 from catalog.models import HSCode
 from core.models import ExchangeRate
@@ -66,7 +67,10 @@ def _text(code, data: dict) -> None:
             setattr(code, field, (data[field] or "").strip()[:64])
 
 
-def create_hs(data: dict) -> HSCode:
+HS_FIELDS = ("code", "name", "unit_name", "extra_unit_name", "valid_from", "valid_until")
+
+
+def create_hs(data: dict, actor=None) -> HSCode:
     value = (data.get("code") or "").strip()
     if not value.isdigit() or len(value) not in HS_LEVELS:
         raise ItemError("HS_CODE_INVALID", "code")
@@ -78,13 +82,32 @@ def create_hs(data: dict) -> HSCode:
     prefixes = [value[:n] for n in HS_LEVELS if n < len(value)]
     code.parent = HSCode.objects.filter(code__in=prefixes).order_by("-level").first()
     code.save()
+    record(
+        actor,
+        entity="hs_code",
+        instance=code,
+        event="created",
+        action="Код ТН ВЭД добавлен",
+        before=None,
+        after=snapshot(code, HS_FIELDS),
+    )
     return code
 
 
-def update_hs(code: HSCode, data: dict) -> HSCode:
+def update_hs(code: HSCode, data: dict, actor=None) -> HSCode:
+    before = snapshot(code, HS_FIELDS)
     _text(code, data)
     _dates(code, data)
     code.save()
+    record(
+        actor,
+        entity="hs_code",
+        instance=code,
+        event="updated",
+        action="Код ТН ВЭД изменён",
+        before=before,
+        after=snapshot(code, HS_FIELDS),
+    )
     return code
 
 

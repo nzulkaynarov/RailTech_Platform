@@ -48,9 +48,7 @@
     "erpQuotes": "«Документы» → «Коммерческие предложения»",
     "erpDocuments": "«Документы» (TT, shartnomalar, hisoblar, dalolatnomalar)",
     "erpPayments": "«Документы» → «Платежи»",
-    "erpStock": "«Товары» → «Мои товары» (qoldiq va yetkazish muddati — tovar kartochkasida)",
-    "erpCatalog": "«Товары» → «Справочники»",
-    "erpFiles": "«Документы» → «Файлы»"
+    "erpStock": "«Товары» → «Мои товары» (qoldiq va yetkazish muddati — tovar kartochkasida)"
   },
   "who": {
     "memos": "direktor va buxgalter — xizmat yozuvlarini hozircha og‘zaki yoki qog‘ozda kelishadi",

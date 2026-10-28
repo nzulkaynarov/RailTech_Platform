@@ -23,7 +23,10 @@ export default function PdfViewer({ data, name }: { data: ArrayBuffer; name: str
     const container = host.current;
     if (!container) return;
     container.replaceChildren();
-    const task = getDocument({ data: new Uint8Array(data.slice(0)) });
+    const task = getDocument({
+      data: new Uint8Array(data.slice(0)),
+      isEvalSupported: false,
+    });
     void (async () => {
       try {
         const pdf = await task.promise;

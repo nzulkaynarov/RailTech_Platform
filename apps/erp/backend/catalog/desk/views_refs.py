@@ -57,7 +57,7 @@ class HsCodeDeskViewSet(DeskViewSet):
         body.is_valid(raise_exception=True)
         try:
             with transaction.atomic():
-                code = refs.create_hs(dict(body.validated_data))
+                code = refs.create_hs(dict(body.validated_data), request.user)
         except ItemError as error:
             return refuse(error)
         return Response(refs.hs_row(code), status=status.HTTP_201_CREATED)
@@ -79,7 +79,7 @@ class HsCodeDeskViewSet(DeskViewSet):
         data = {k: v for k, v in body.validated_data.items() if k != "code"}
         try:
             with transaction.atomic():
-                refs.update_hs(code, data)
+                refs.update_hs(code, data, request.user)
         except ItemError as error:
             return refuse(error)
         return Response(refs.hs_row(code))

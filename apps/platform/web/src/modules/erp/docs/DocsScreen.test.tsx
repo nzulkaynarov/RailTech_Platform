@@ -167,7 +167,8 @@ describe("Техдокументация: загрузка и удаление",
     expect(within(form).getByRole("button", { name: /Загрузить$/ })).toBeDisabled();
   });
 
-  it("документ Word не открывается для просмотра, его скачивают", async () => {
+  it("документ Word не открывается для просмотра, его скачивают; байты файла не запрашиваются", async () => {
+    const fetched = vi.spyOn(globalThis, "fetch");
     await open("engineer@demo.example", "?product_id=1");
     fireEvent.click(await screen.findByRole("button", { name: "Загрузить файл" }));
     const form = await findModal("Загрузить файл");
@@ -189,6 +190,11 @@ describe("Техдокументация: загрузка и удаление",
       await within(drawer).findByText(/Этот формат не открывается для просмотра/),
     ).toBeVisible();
     expect(within(drawer).queryByTestId("pdf-stub")).toBeNull();
+    const asked = fetched.mock.calls.map(([input]) =>
+      input instanceof Request ? input.url : String(input),
+    );
+    expect(asked.some((url) => url.includes("/files/") && url.endsWith("/content"))).toBe(false);
+    fetched.mockRestore();
   });
 
   it("удаление: окно «Что произойдёт», после подтверждения файла нет в списке", async () => {

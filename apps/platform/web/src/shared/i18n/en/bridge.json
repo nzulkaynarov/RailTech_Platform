@@ -48,9 +48,7 @@
     "erpQuotes": "“Документы” → “Коммерческие предложения”",
     "erpDocuments": "“Документы” (quotes, contracts, invoices, acts)",
     "erpPayments": "“Документы” → “Платежи”",
-    "erpStock": "“Товары” → “Мои товары” (stock and lead time are on the product card)",
-    "erpCatalog": "“Товары” → “Справочники”",
-    "erpFiles": "“Документы” → “Файлы”"
+    "erpStock": "“Товары” → “Мои товары” (stock and lead time are on the product card)"
   },
   "who": {
     "memos": "the director and the accountant: memos are still approved verbally or on paper",
