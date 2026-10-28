@@ -90,7 +90,8 @@ def page(rows: list[dict[str, Any]]) -> dict[str, Any]:
 
 
 def mock(be: Any) -> respx.MockRouter:
-    return be.router
+    router: respx.MockRouter = be.router
+    return router
 
 
 def body_of(route: respx.Route) -> Any:
