@@ -3,7 +3,8 @@
 «Написать администратору» и раздел «Настройки · Обращения сотрудников». Решения и данные — в CRM
 (ADR-0015), токеном самого сотрудника: автор видит только своё, список всех, ответ и статус — права
 раздела `admin` (директор читает, администратор правит; проверяют и BFF, и CRM). BFF подставляет
-роль автора из сессии, переводит номер `ОБР-0012` в id CRM, а ошибки — в формат `Error`.
+роль автора из сессии, переводит номер `ОБР-0012` в id CRM, а ошибки — в формат `Error`. В текст
+нового обращения BFF дописывает версию Платформы (W-REL), если она известна и помещается в предел.
 """
 
 from typing import Annotated, Any
@@ -11,8 +12,10 @@ from typing import Annotated, Any
 import httpx
 from fastapi import APIRouter, Depends, Path, Query, status
 
-from app.deps import Authed, require, require_any_section
+from app.config import Settings
+from app.deps import Authed, SettingsDep, require, require_any_section
 from app.errors import PlatformError, backend_reason, from_backend
+from app.release import release_label, release_of
 from app.schemas_tickets import (
     NUMBER_PATTERN,
     Ticket,
@@ -33,6 +36,8 @@ router = APIRouter(tags=["tickets"])
 
 CRM = "/api/v1/staff-tickets"
 CRM_MINE = "/api/v1/me/tickets"
+# Предел текста обращения в CRM после обрезки пробелов (`ticket_text_too_long`).
+TICKET_TEXT_MAX = 4000
 Author = Annotated[Authed, Depends(require_any_section)]
 AdminRead = Annotated[Authed, Depends(require("admin", "read"))]
 AdminWrite = Annotated[Authed, Depends(require("admin", "full"))]
@@ -110,14 +115,29 @@ def _id(number: str) -> int:
     status_code=status.HTTP_201_CREATED,
     operation_id="createTicket",
 )
-async def create_ticket(body: TicketCreate, authed: Author) -> Ticket:
+async def create_ticket(body: TicketCreate, authed: Author, settings: SettingsDep) -> Ticket:
     payload = {
         "subject": body.subject,
-        "body": body.body,
+        "body": with_version(body.body, settings),
         "page": body.page,
         "role": author_role_of(authed.data),
     }
     return to_ticket(_json(await authed.call("crm", "POST", CRM_MINE, json=payload)))
+
+
+def with_version(text: str, settings: Settings) -> str:
+    """«Версия: Платформа 2026.10.28 · 1a2b3c4» в конце текста (W-REL).
+
+    Администратор видит, на какой версии случилось. Локальная сборка (`dev`) и текст, которому
+    строка не помещается в предел CRM, остаются как есть: сотрудник не получает 422 из-за того,
+    чего сам не писал.
+    """
+    release = release_of(settings)
+    trimmed = text.strip()
+    if release.version == "dev" or not trimmed:
+        return text
+    signed = f"{trimmed}\n\nВерсия: {release_label(release)}"
+    return signed if len(signed) <= TICKET_TEXT_MAX else text
 
 
 @router.get(

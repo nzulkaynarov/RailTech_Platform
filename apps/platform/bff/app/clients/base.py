@@ -104,6 +104,24 @@ class BackendClient:
             return False
         return response.status_code == httpx.codes.OK
 
+    async def health_info(self) -> tuple[bool, str | None]:
+        """Жив ли бэкенд и его версия, если health её сообщает (W-REL).
+
+        Версия — поле `version` ответа health (как у EDS); нет — None.
+        """
+        try:
+            response = await self.http.get(self.health_path)
+        except httpx.HTTPError:
+            return False, None
+        version: str | None = None
+        try:
+            body = response.json()
+        except ValueError:
+            body = None
+        if isinstance(body, dict) and isinstance(body.get("version"), str):
+            version = body["version"][:64] or None
+        return response.status_code == httpx.codes.OK, version
+
     async def send(
         self,
         method: str,

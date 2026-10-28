@@ -1,6 +1,13 @@
+import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 
 import { useAuth } from "../../app/auth/useAuth";
+import { StatusTag } from "../../shared/ui/StatusTag";
+import { ArticleView } from "./ArticleView";
+import { findArticle } from "./articles";
+import { CHANGELOG, entryDate } from "./changelog";
+import { InlineMarkdown } from "./Markdown";
+import { useWhatsNew } from "./whatsNew";
 import { START_KINDS, type StartKind, rolesText, startKindsOf, useStartSteps } from "./startKinds";
 
 import "./help.css";
@@ -126,26 +133,54 @@ export function Hotkeys() {
   );
 }
 
-/** «Что нового»: изменения Платформы для сотрудников. */
+/**
+ * «Что нового» (W-REL): записи `docs/kb/help/changelog/<дата>.md` по датам выкладки, новые сверху; у пункта — для кого
+ * (роль словом), без пометки — для всех. Открытие раздела снимает отметку «Новое» у «?» (`PUT /me/whats-new {read}`).
+ */
 export function News() {
-  const { t } = useTranslation("help");
-  const items = t("news.items", { returnObjects: true }) as {
-    date: string;
-    title: string;
-    text: string;
-  }[];
+  const { t, i18n } = useTranslation("help");
+  const { latest, fresh, mark } = useWhatsNew();
+  useEffect(() => {
+    if (fresh && latest) mark({ read: latest });
+  }, [fresh, latest, mark]);
   return (
     <div className="pf-help-block">
       <p style={{ margin: 0 }}>{t("news.intro")}</p>
-      <ul className="pf-help-list">
-        {items.map((item) => (
-          <li key={item.title}>
-            <div className="pf-hint">{item.date}</div>
-            <div style={{ fontWeight: 600 }}>{item.title}</div>
-            <div>{item.text}</div>
-          </li>
-        ))}
-      </ul>
+      {CHANGELOG.length === 0 ? <p style={{ margin: 0 }}>{t("news.empty")}</p> : null}
+      {CHANGELOG.map((entry) => (
+        <section key={entry.date} aria-labelledby={`news-${entry.date}`}>
+          <h2
+            id={`news-${entry.date}`}
+            style={{ margin: "0 0 4px", fontSize: 16, lineHeight: "24px", fontWeight: 600 }}
+          >
+            {entry.title}
+          </h2>
+          <p className="pf-hint" style={{ margin: 0 }}>
+            <time dateTime={entry.date}>{entryDate(entry.date, i18n.language)}</time>
+          </p>
+          <ul className="pf-help-list">
+            {entry.items.map((item) => (
+              <li key={item.text}>
+                <span className="pf-news-roles">
+                  {(item.roles.length > 0 ? item.roles : [t("news.forAll")]).map((role) => (
+                    <StatusTag key={role} tone={item.roles.length > 0 ? "blue" : "default"}>
+                      {role}
+                    </StatusTag>
+                  ))}
+                </span>
+                <InlineMarkdown text={item.text} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
     </div>
   );
+}
+
+/** «Что ожидается» (W-REL): статья `docs/kb/help/roadmap.md` — «Сейчас делаем · Дальше · Позже», без дат. */
+export function Roadmap() {
+  const { t } = useTranslation("help");
+  const article = findArticle("roadmap");
+  return article ? <ArticleView article={article} /> : <p>{t("roadmap.missing")}</p>;
 }

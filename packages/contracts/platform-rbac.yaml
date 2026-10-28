@@ -343,6 +343,8 @@ queue:
   resolve_letter: { resource: eds.inbox, level: full }
   approve_quote: { resource: eds.drafts, level: full }
   approve_memo: { resource: eds.memo.approve, level: full }
+  # D1-6b: автор правит документ, который директор вернул на доработку (EDS «Возвращён на доработку»)
+  rework_document: { resource: eds.memo.create, level: full }
   problem_project: { resource: eds.projects, level: full }
   calc_task: { resource: erp.calc, level: full }
   supplier_overdue: { resource: erp.stock, level: full }

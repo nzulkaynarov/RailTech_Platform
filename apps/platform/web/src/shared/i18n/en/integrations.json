@@ -533,7 +533,8 @@
   },
   "system": {
     "overall": "Overall:",
-    "checkedAt": "Checked: {{date}}"
+    "checkedAt": "Checked: {{date}}",
+    "versions": "Version and services"
   },
   "errors": {
     "DEFAULT": "Could not complete the action. Try again later.",

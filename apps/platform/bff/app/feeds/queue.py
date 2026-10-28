@@ -35,6 +35,7 @@ from app.feeds.numbers import (
     quote_ref,
     ticket_ref,
 )
+from app.feeds.rework import rework_item
 from app.feeds.snapshot import (
     Covered,
     Snapshot,
@@ -223,6 +224,12 @@ def quote_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
     return out
 
 
+def rework_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
+    """Мои документы, которые вернули на доработку (EDS по токену автора): «Доработать»."""
+    role_id = _role_id(view, "rework_document")
+    return [Row(*rework_item(entry, now, role_id=role_id)) for entry in snap.rework or []]
+
+
 def _dict(value: Any) -> dict[str, Any]:
     return value if isinstance(value, dict) else {}
 
@@ -365,6 +372,7 @@ def build_queue(feed: Feed, view: View, snap: Snapshot) -> list[QueueItem]:
             rows_ += covered_rows(covered, now, view, taken)
     if wants_approvals(view):
         rows_ += quote_rows(snap, now, view)
+    rows_ += rework_rows(snap, now, view)
     if wants_letters(view):
         rows_ += letter_rows(snap, now, view)
     if wants_memos(view):

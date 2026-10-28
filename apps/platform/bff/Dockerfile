@@ -47,6 +47,12 @@ CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload
 
 FROM deps AS prod
 COPY --chown=app:app app ./app
+# Версия Платформы для «О системе» (W-REL): sha и дата сборки — build-args deploy.yml; пусто — локальная сборка (версия dev).
+# Тег и дату выкладки добавляет prod.yml (PLATFORM_RELEASE, PLATFORM_RELEASE_DATE). ARG — после кода: кэш слоёв не теряется.
+ARG PLATFORM_BUILD_SHA=""
+ARG PLATFORM_BUILD_DATE=""
+ENV PLATFORM_BUILD_SHA=$PLATFORM_BUILD_SHA \
+    PLATFORM_BUILD_DATE=$PLATFORM_BUILD_DATE
 USER app
 EXPOSE 8000
 HEALTHCHECK --interval=10s --timeout=4s --start-period=10s --retries=5 \

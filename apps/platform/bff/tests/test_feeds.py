@@ -65,7 +65,7 @@ async def test_manager_queue_comes_from_crm_inbox(
     assert response.status_code == 200
     check(response, "/queue", "get")
     body = response.json()
-    assert body["sources"] == {"crm": "ok", "erp": "ok"}
+    assert body["sources"] == {"crm": "ok", "erp": "ok", "eds": "ok"}
     assert [(i["object"]["number"], i["kind"]) for i in body["items"]] == [
         ("L-2041", "take_lead"),
         ("L-2050", "answer_lead"),
@@ -242,9 +242,7 @@ async def test_other_roles_have_an_empty_queue(
     response = await web.client.get("/api/v1/queue")
 
     check(response, "/queue", "get")
-    # бухгалтер читает EDS (служебки на своём шаге): EDS ответил пустым списком — `eds: ok`
-    eds = {"eds": "ok"} if role == "ACCOUNTANT" else {}
-    assert response.json() == {"items": [], "sources": {"crm": "ok", "erp": "ok", **eds}}
+    assert response.json() == {"items": [], "sources": {"crm": "ok", "erp": "ok", "eds": "ok"}}
     assert fb.calls(fb.crm["inbox"]) == 0
     assert fb.calls(fb.erp["approvals"]) == 0
 

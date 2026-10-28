@@ -119,6 +119,21 @@ class FeedBackends:
         self.mark_all = router.patch(f"{base}/notifications/mark_all_read/").mock(
             side_effect=lambda _r: self._respond_status(self.mark_all_status)
         )
+        # EDS (D1-6b): возвращённые документы автора и карточки с решением «Вернуть»
+        self.state["returned"] = {"items": [], "next_cursor": None}
+        self.cards: dict[str, Any] = {}
+        self.eds["returned"] = self._eds("returned", router.get(f"{EDS_URL}/api/v1/documents"))
+        self.eds["card"] = router.get(
+            url__regex=re.compile(rf"^{EDS_URL}/api/v1/documents/[0-9a-f-]+$")
+        ).mock(side_effect=self._card)
+
+    def _card(self, request: httpx.Request) -> httpx.Response:
+        if self.eds_down is not None:
+            return self._respond("returned", self.eds_down)
+        found = self.cards.get(request.url.path.rsplit("/", 1)[-1])
+        if found is None:
+            return httpx.Response(404, json={"code": "NOT_FOUND", "message": "x", "source": "eds"})
+        return httpx.Response(200, json=found)
 
     def _eds(self, key: str, route: respx.Route) -> respx.Route:
         return route.mock(side_effect=lambda _r: self._respond(key, self.eds_down))
