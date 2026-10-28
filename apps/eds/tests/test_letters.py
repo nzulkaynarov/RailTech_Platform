@@ -9,7 +9,7 @@ import pytest
 from app.container import Container
 from tests.conftest import FakeClock
 from tests.domain import Person, outbox, validate
-from tests.helpers import seed_employee
+from tests.helpers import seed_employee, signed, user_event
 from tests.test_api_auth import assert_error
 
 pytestmark = pytest.mark.pg
@@ -232,6 +232,31 @@ async def test_resolution_zone_needs_full_level_and_a_projection_with_sections(
     )
     _, full = await _resolve_with(client, staff, [{"crm_user_id": 11, "zone": "goods"}])
     assert full.status_code == 200, full.text
+
+
+async def test_after_a_deploy_the_republished_snapshot_restores_the_zone(
+    client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
+) -> None:
+    """Выкладка D1-8: проекция без разделов (старый снимок) -> 422; CRM по новому отпечатку каталога
+    переопубликует `identity.user.updated` с `permissions.sections` -> резолюция проходит."""
+    old = {"eds": ["registry.read"]}
+    await seed_employee(container, 11, full_name="Сардор Снабженцев", permissions=old)
+    pair = [{"crm_user_id": 11, "zone": "goods"}]
+    _, before = await _resolve_with(client, staff, pair)
+    assert_error(before, 422, "VALIDATION_FAILED")
+
+    republished = user_event(
+        "updated",
+        crm_user_id=11,
+        full_name="Сардор Снабженцев",
+        permissions={"eds": ["registry.read"], "sections": {"erp.calc": "full", "erp.calc.goods": "full"}},
+    )
+    headers, body = signed(republished)
+    assert (await client.post("/bus/v1/events", headers=headers, content=body)).status_code == 200
+    assert await container.bus.process_inbox(republished["id"]) == "processed"
+
+    _, after = await _resolve_with(client, staff, pair)
+    assert after.status_code == 200, after.text
 
 
 async def test_resolution_due_in_the_past_is_rejected_today_is_accepted(

@@ -47,6 +47,7 @@ from app.domain.platform_roles_generated import (
 __all__ = [
     "LEGACY_ROLE_CODES",
     "POLICY_DOMAIN",
+    "PUBLISHED_SECTION_PREFIXES",
     "SUBJECT_PREFIX",
     "TEMPLATE_PREFIX",
     "AccessDiff",
@@ -232,6 +233,11 @@ def eds_permissions_for(access: Mapping[str, str]) -> tuple[str, ...]:
     return tuple(sorted(granted))
 
 
+# Разделы каталога, которые CRM публикует в `identity.user.*` (`permissions.sections`): модулей EDS
+# и ERP по префиксу ключа. Остальное (CRM, чаты, настройки) подписчикам не нужно.
+PUBLISHED_SECTION_PREFIXES: Final = ("eds.", "erp.")
+
+
 def eds_catalog_fingerprint(
     backend: Mapping[str, Mapping[str, tuple[str, ...]]] = EDS_BACKEND,
     role_access: Mapping[str, Mapping[str, str]] = ROLE_ACCESS,
@@ -242,7 +248,10 @@ def eds_catalog_fingerprint(
     Входит: действующий состав кодов EDS по каждому разделу и уровню (с учётом `full ⊇ read`; пустые
     уровни и разделы не считаются) и права EDS системных ролей по их матрицам. Не входит: права CRM
     и ERP, названия, описания, порядок записей и комментарии каталога — их правка отпечаток не
-    меняет. Роли с произвольной матрицей — данные, их правки идут обычными событиями сотрудника."""
+    меняет. Роли с произвольной матрицей — данные, их правки идут обычными событиями сотрудника.
+    С D1-8 входят и опубликованные разделы (`permissions.sections`: ключи `eds.*`/`erp.*`) всех
+    ролей каталога, системных и шаблонов `tpl:*`, с уровнями: правка раздела `erp.calc.*` меняет
+    отпечаток. `v` — версия формата отпечатка, не содержимое."""
     effective = {
         resource: {
             level: sorted(set(_accumulated(backend, resource, level))) for level in ("read", "full")
@@ -269,6 +278,14 @@ def eds_catalog_fingerprint(
         "v": 2,
         "backend": {r: lv for r, lv in sorted(effective.items()) if lv},
         "system_roles": dict(sorted(system.items())),
+        "system_sections": {
+            code: {
+                resource: level
+                for resource, level in sorted(role_access.get(code, {}).items())
+                if resource.startswith(PUBLISHED_SECTION_PREFIXES)
+            }
+            for code in sorted(role_access)
+        },
     }
     return hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
 

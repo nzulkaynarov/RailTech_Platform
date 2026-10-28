@@ -21,6 +21,13 @@ from app.services import team as team_service
 
 router = APIRouter(prefix="/api/v1", tags=["leads"])
 
+SECTION_DESCRIPTION = (
+    "Раздел каталога (`erp.calc.goods`, `eds.payments`, …): сотрудники с этим разделом. "
+    "Нужен `level`. "
+    "Право — чтение сотрудников (`users:read`, раздел `admin` не ниже чтения); без `section` — "
+    "`leads:read`. Раздела нет в каталоге — 422."
+)
+
 _leads_reader = require("leads", "read")
 _directory_reader = require("users", "read")
 
@@ -28,7 +35,7 @@ _directory_reader = require("users", "read")
 async def team_reader(
     principal: PrincipalDep,
     rbac: Annotated[Rbac, Depends(get_rbac)],
-    section: Annotated[str | None, Query(max_length=64)] = None,
+    section: Annotated[str | None, Query(max_length=64, description=SECTION_DESCRIPTION)] = None,
 ) -> Principal:
     """Право зависит от режима: список для передачи — `leads:read`, по разделу — `users:read`."""
     check = _directory_reader if section is not None else _leads_reader
@@ -39,14 +46,7 @@ async def team_reader(
 async def team(
     _: Annotated[Principal, Depends(team_reader)],
     container: ContainerDep,
-    section: Annotated[
-        str | None,
-        Query(
-            max_length=64,
-            description="Раздел каталога (`erp.calc.goods`, `eds.payments`, …): сотрудники с этим "
-            "разделом. Нужен `level`; право — чтение сотрудников (`users:read`).",
-        ),
-    ] = None,
+    section: Annotated[str | None, Query(max_length=64, description=SECTION_DESCRIPTION)] = None,
     level: Annotated[
         Literal["full", "read"] | None,
         Query(description="Уровень раздела не ниже: `full` или `read` (`full` ⊇ `read`)."),

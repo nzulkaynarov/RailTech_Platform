@@ -20,7 +20,12 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.bot_menu import normalize_phone
-from app.domain.platform_roles import RoleGrant, eds_permissions_of, merge_access
+from app.domain.platform_roles import (
+    PUBLISHED_SECTION_PREFIXES,
+    RoleGrant,
+    eds_permissions_of,
+    merge_access,
+)
 from app.domain.platform_roles_generated import ROLE_ACCESS, SYSTEM_ROLE_CODES
 from app.models.auth import User
 from app.models.clients import Client, ClientContact
@@ -199,12 +204,6 @@ def eds_permissions(roles: Sequence[PlatformRole], *, is_active: bool) -> list[s
     return list(eds_permissions_of(_grants(roles), is_active=is_active))
 
 
-# Разделы, которые уходят в `permissions.sections`: модулей EDS и ERP (по префиксу ключа каталога).
-# Остальное (CRM, чаты, настройки) нужно только CRM и подписчикам не публикуется: правка таких
-# разделов роли не создаёт событий.
-_PUBLISHED_SECTIONS: Final = ("eds.", "erp.")
-
-
 def catalog_sections(roles: Sequence[PlatformRole], *, is_active: bool) -> dict[str, str]:
     """Разделы каталога модулей EDS и ERP, которые дают сотруднику его роли: объединение матриц
     (максимум по разделу, порядок каталога); неактивный — пусто. Нужны EDS для зоны исполнителя
@@ -212,7 +211,9 @@ def catalog_sections(roles: Sequence[PlatformRole], *, is_active: bool) -> dict[
     if not is_active:
         return {}
     merged = merge_access(_grants(roles))
-    return {key: level for key, level in merged.items() if key.startswith(_PUBLISHED_SECTIONS)}
+    return {
+        key: level for key, level in merged.items() if key.startswith(PUBLISHED_SECTION_PREFIXES)
+    }
 
 
 def user_fields(user: User, roles: Sequence[PlatformRole]) -> dict[str, Any]:

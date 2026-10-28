@@ -33,7 +33,6 @@ from app.errors import PlatformError
 from app.feeds.feed import Feed
 from app.rbac import strip_restricted
 from app.rbac_generated import RESOURCE_MODULE
-from app.schemas import initials_of
 from app.schemas_eds_letters import (
     NUMBER_RE,
     UUID_RE,
@@ -226,15 +225,12 @@ def _candidates(team: list[dict[str, Any]], author_id: str) -> list[ResolutionCa
             continue  # автор резолюции не исполнитель собственного задания (по id, не по роли)
         name = str(member.get("full_name") or "")
         position = member.get("position")
-        given = member.get("initials")
-        initials = given if isinstance(given, str) and given else initials_of(name, "")
+        initials = member.get("initials")  # считает CRM (`GET /team`), BFF своих не выдумывает
         found.append(
             ResolutionCandidate(
                 id=str(member["id"]),
                 name=name,
-                initials=initials
-                if isinstance(initials, str) and initials
-                else initials_of(name, ""),
+                initials=initials if isinstance(initials, str) else "",
                 position=position if isinstance(position, str) and position else None,
             )
         )

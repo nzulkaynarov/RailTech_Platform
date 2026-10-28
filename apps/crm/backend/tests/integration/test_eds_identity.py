@@ -283,6 +283,51 @@ async def test_role_change_outside_eds_publishes_nothing(
     assert await events(sessions) == []
 
 
+async def test_role_edit_only_in_erp_sections_publishes_the_new_sections(
+    client: TestClient, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    """D1-8 (зона исполнителя): правка роли только в `erp.calc.services` не меняет коды EDS, но
+    меняет разделы в снимке — держателю уходит событие; снятие раздела тоже; `crm.*` — нет."""
+    admin, password = await make_user(sessions, "admin@railtech.uz", ["admin"])
+    holder, _ = await make_user(sessions, "holder@railtech.uz", ["manager"])
+    boss = login(client, admin.email, password)
+    role = custom_role(client, boss, {"eds.inbox": "read", "erp.calc": "full"}, name="Расчёт")
+    assign(client, boss, holder.id, [role])
+    await clear_outbox(sessions)
+
+    added = patch_role(
+        client,
+        boss,
+        role,
+        {"access": {"eds.inbox": "read", "erp.calc": "full", "erp.calc.services": "full"}},
+    )
+    assert added.status_code == 200, added.text
+    (event,) = await events(sessions)
+    assert event["user"]["permissions"]["sections"] == {
+        "eds.inbox": "read",
+        "erp.calc": "full",
+        "erp.calc.services": "full",
+    }
+    assert event["user"]["permissions"]["eds"] == INBOX_READ  # коды EDS те же
+    assert event["changed_fields"] == ["permissions"]
+
+    await clear_outbox(sessions)
+    removed = patch_role(client, boss, role, {"access": {"eds.inbox": "read", "erp.calc": "full"}})
+    assert removed.status_code == 200
+    (back,) = await events(sessions)
+    assert "erp.calc.services" not in back["user"]["permissions"]["sections"]
+
+    await clear_outbox(sessions)
+    only_crm = patch_role(
+        client,
+        boss,
+        role,
+        {"access": {"eds.inbox": "read", "erp.calc": "full", "crm.leads": "full"}},
+    )
+    assert only_crm.status_code == 200
+    assert await events(sessions) == []
+
+
 async def test_role_matrix_change_that_removes_eds_access_publishes_empty_permissions(
     client: TestClient, sessions: async_sessionmaker[AsyncSession]
 ) -> None:
