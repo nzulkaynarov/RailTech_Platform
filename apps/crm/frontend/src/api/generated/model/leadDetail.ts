@@ -43,7 +43,7 @@ export interface LeadDetail {
   open_service_request_id?: number | null;
   owner_mode: string;
   phone_e164?: string | null;
-  platform_status?: LeadDetailPlatformStatus;
+  platform_status: LeadDetailPlatformStatus;
   product_interest: string[];
   qualification: LeadDetailQualification;
   score: number;

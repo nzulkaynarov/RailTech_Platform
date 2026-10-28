@@ -3867,7 +3867,6 @@ components:
           - type: 'null'
           title: Phone E164
         platform_status:
-          default: dialog
           enum:
           - new
           - dialog
@@ -3923,6 +3922,7 @@ components:
       - product_interest
       - last_lead_msg_at
       - created_at
+      - platform_status
       - qualification
       - consent_given_at
       - tg_username
@@ -3983,7 +3983,6 @@ components:
           title: Owner Mode
           type: string
         platform_status:
-          default: dialog
           enum:
           - new
           - dialog
@@ -4024,6 +4023,7 @@ components:
       - product_interest
       - last_lead_msg_at
       - created_at
+      - platform_status
       title: LeadOut
       type: object
     LeadPage:

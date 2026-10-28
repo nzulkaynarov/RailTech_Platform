@@ -735,9 +735,7 @@ class LeadDetail(BaseModel):
     ] = None
     owner_mode: Annotated[str, Field(title="Owner Mode")]
     phone_e164: Annotated[str | None, Field(title="Phone E164")] = None
-    platform_status: Annotated[
-        PlatformStatus | None, Field(title="Platform Status")
-    ] = "dialog"
+    platform_status: Annotated[PlatformStatus, Field(title="Platform Status")]
     product_interest: Annotated[list[str], Field(title="Product Interest")]
     qualification: Annotated[dict[str, Any], Field(title="Qualification")]
     score: Annotated[int, Field(title="Score")]
@@ -761,9 +759,7 @@ class LeadOut(BaseModel):
     last_lead_msg_at: Annotated[AwareDatetime | None, Field(title="Last Lead Msg At")]
     need_summary: Annotated[str | None, Field(title="Need Summary")]
     owner_mode: Annotated[str, Field(title="Owner Mode")]
-    platform_status: Annotated[
-        PlatformStatus | None, Field(title="Platform Status")
-    ] = "dialog"
+    platform_status: Annotated[PlatformStatus, Field(title="Platform Status")]
     product_interest: Annotated[list[str], Field(title="Product Interest")]
     score: Annotated[int, Field(title="Score")]
     source: Annotated[str | None, Field(title="Source")] = "telegram"
