@@ -1,0 +1,119 @@
+{
+  "admin": {
+    "title": "Kompaniya maqolalari",
+    "subtitle": "Ichki yo‘riqnomalar — «bizda qanday qabul qilingan»: kim kelishadi, shablonlar qayerda, jadval qanday. E’lon qilingan maqolalarni barcha xodimlar Yordamda ko‘radi.",
+    "listLabel": "Kompaniya maqolalari",
+    "new": "Yangi maqola",
+    "filtersLabel": "Maqolalar filtri",
+    "status": "Holati",
+    "allStatuses": "Barcha maqolalar",
+    "reset": "Hammasini ko‘rsatish",
+    "columns": {
+      "title": "Sarlavha",
+      "language": "Til",
+      "status": "Holati",
+      "updated": "O‘zgartirilgan",
+      "actions": "Amallar"
+    },
+    "status_draft": "Qoralama",
+    "status_published": "E’lon qilingan",
+    "language": {
+      "ru": "Rus tili",
+      "uz": "O‘zbek tili",
+      "en": "Ingliz tili"
+    },
+    "empty": "Kompaniya maqolalari hali yo‘q",
+    "emptyText": "Birinchi yo‘riqnomani yozing: masalan, shartnomani kim kelishadi yoki xat shablonlari qayerda. Maqola qoralama bo‘lib turganda uni faqat siz ko‘rasiz.",
+    "emptyReadOnly": "Administrator hali birorta maqola yozmagan. E’lon qilingan maqolalar Yordamda paydo bo‘ladi.",
+    "noMatch": "Bunday maqolalar yo‘q",
+    "noMatchText": "Barcha maqolalarni ko‘rish uchun filtrni bekor qiling.",
+    "loadError": "Maqolalarni yuklab bo‘lmadi",
+    "loadErrorText": "Ulanishni tekshirib, qayta urinib ko‘ring. Yordam bermasa, administratorga yozing.",
+    "retry": "Qayta urinish",
+    "readOnly": "Siz maqolalarni, shu jumladan qoralamalarni ham o‘qiy olasiz. Yozish va e’lon qilish administratorning ishi.",
+    "counts": "Jami maqolalar: {{total}}, shundan qoralamalar: {{drafts}}",
+    "actions": {
+      "edit": "Tahrirlash",
+      "view": "Ochish",
+      "publish": "E’lon qilish",
+      "unpublish": "E’londan olish",
+      "delete": "O‘chirish"
+    },
+    "actionFor": "{{action}}: {{title}}",
+    "done": {
+      "created": "Qoralama saqlandi.",
+      "updated": "O‘zgarishlar saqlandi.",
+      "published": "Maqola e’lon qilindi: endi uni barcha xodimlar ko‘radi.",
+      "unpublished": "Maqola e’londan olindi va yana qoralama.",
+      "deleted": "Maqola o‘chirildi."
+    },
+    "delete": {
+      "title": "Maqola o‘chirilsinmi?",
+      "text": "«{{title}}» maqolasi butunlay o‘chiriladi, uni tiklab bo‘lmaydi. E’lon qilingan bo‘lsa, hamma uchun Yordamdan yo‘qoladi.",
+      "ok": "O‘chirish",
+      "cancel": "O‘chirmaslik"
+    },
+    "unpublishConfirm": {
+      "title": "Maqola e’londan olinsinmi?",
+      "text": "«{{title}}» maqolasi barcha xodimlar uchun Yordamdan yo‘qoladi va qoralamaga aylanadi.",
+      "ok": "E’londan olish",
+      "cancel": "Qoldirish"
+    },
+    "panelTitle": "Xodimlar buni qanday ko‘radi",
+    "panelText": "E’lon qilingan maqola Yordamda, «Bizda qanday qabul qilingan» bo‘limida paydo bo‘ladi va umumiy qidiruvda Platforma maqolalari bilan birga topiladi."
+  },
+  "editor": {
+    "titleNew": "Yangi maqola",
+    "titleEdit": "Kompaniya maqolasi",
+    "titleView": "Kompaniya maqolasi (o‘qish)",
+    "back": "Maqolalar ro‘yxatiga",
+    "titleField": "Sarlavha",
+    "titlePlaceholder": "Masalan: Shartnomani kim kelishadi",
+    "titleRequired": "Sarlavha yozing.",
+    "titleTooLong": "Sarlavha {{max}} belgidan uzun: qisqartiring.",
+    "languageField": "Maqola tili",
+    "bodyField": "Maqola matni",
+    "bodyRequired": "Maqola matnini yozing.",
+    "bodyTooLong": "Matn {{max}} belgidan uzun: qisqartiring.",
+    "bodyHelp": "Mumkin: ## sarlavha, xatboshilar, ro‘yxatlar (- band yoki 1. band), **qalin**, `kod`. Havolalar va HTML ishlamaydi: burchakli qavslar ichidagi hamma narsa oddiy matn bo‘lib qoladi.",
+    "counter": "{{count}} / {{max}} belgi",
+    "previewTitle": "Maqola Yordamda shunday ko‘rinadi",
+    "previewEmpty": "Yozishni boshlaganingizda maqola matni shu yerda paydo bo‘ladi.",
+    "previewHeading": "Sarlavha ko‘rsatilmagan",
+    "status": "Holati: {{status}}",
+    "save": "Saqlash",
+    "saveDraft": "Qoralamani saqlash",
+    "saveAndPublish": "Saqlash va e’lon qilish",
+    "cancel": "Yopish",
+    "unsaved": "Saqlanmagan o‘zgarishlar bor",
+    "saved": "Saqlandi",
+    "consequenceTitle": "Nima bo‘ladi",
+    "consequenceDraft": "«Qoralamani saqlash» — maqolani faqat siz va direktor ko‘rasiz.",
+    "consequencePublish": "«Saqlash va e’lon qilish» — maqola darhol barcha xodimlarning Yordamida, «Bizda qanday qabul qilingan» bo‘limida paydo bo‘ladi.",
+    "consequencePublished": "Maqola allaqachon e’lon qilingan: tahrir hammaga darhol ko‘rinadi.",
+    "errors": {
+      "article_title_empty": "Sarlavha yozing.",
+      "article_title_too_long": "Sarlavha 200 belgidan uzun: qisqartiring.",
+      "article_body_empty": "Maqola matnini yozing.",
+      "article_body_too_long": "Matn 20000 belgidan uzun: qisqartiring.",
+      "article_language_unknown": "Tilni ro‘yxatdan tanlang.",
+      "NOT_FOUND": "Maqola endi yo‘q: uni boshqa administrator o‘chirgan bo‘lishi mumkin. Ro‘yxatga qayting.",
+      "FORBIDDEN": "Kompaniya maqolalarini faqat administrator tahrirlay oladi.",
+      "default": "Maqolani saqlab bo‘lmadi. Ulanishni tekshirib, qayta urinib ko‘ring."
+    },
+    "discardTitle": "Saqlamasdan yopilsinmi?",
+    "discardText": "Kiritilgan o‘zgarishlar yo‘qoladi.",
+    "discardOk": "Saqlamasdan yopish",
+    "discardCancel": "Tahrirni davom ettirish"
+  },
+  "help": {
+    "section": "Bizda qanday qabul qilingan",
+    "sectionHint": "Kompaniyangiz yo‘riqnomalari: kim kelishadi, shablonlar qayerda, jadval qanday.",
+    "empty": "Kompaniya maqolalari hali yo‘q.",
+    "loadError": "Kompaniya maqolalari hozir mavjud emas. Platforma maqolalari odatdagidek ochiladi.",
+    "productSection": "Platforma maqolalari",
+    "kindCompany": "Bizda qanday qabul qilingan",
+    "otherLanguage": "Maqola quyidagi tilda yozilgan: {{language}}.",
+    "updated": "Yangilangan: {{when}}"
+  }
+}

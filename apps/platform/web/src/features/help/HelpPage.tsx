@@ -1,4 +1,4 @@
-import { Button, Card } from "antd";
+import { Button, Card, Skeleton } from "antd";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useParams } from "react-router";
@@ -10,7 +10,7 @@ import { MyRequests } from "../tickets/MyRequests";
 import { WriteToAdminModal } from "../tickets/WriteToAdminModal";
 import { ArticleList } from "./ArticleList";
 import { ArticleView } from "./ArticleView";
-import { findArticle } from "./articles";
+import { useHelpArticles, isCompanySlug } from "./companyArticles";
 import { Glossary, Hotkeys, News, PathGuide, StartGuide } from "./HelpSections";
 
 import "./help.css";
@@ -32,6 +32,7 @@ export function HelpPage() {
   const tab: Tab = isTab(head) ? head : "start";
   const unknown = head !== undefined && !isTab(head);
   const [writing, setWriting] = useState(false);
+  const { all, pending } = useHelpArticles();
   const title = t("page.title");
   useDocumentTitle(title);
 
@@ -55,7 +56,8 @@ export function HelpPage() {
   else if (tab === "news") content = <News />;
   else if (tab === "requests") content = <MyRequests {...(rest[1] ? { number: rest[1] } : {})} />;
   else if (rest[1]) {
-    const article = findArticle(rest[1]);
+    const article = all.find((item) => item.slug === rest[1]);
+    // Статья компании приходит из CRM: пока она грузится, «Такой статьи нет» говорить рано.
     content = article ? (
       <div className="pf-help-block">
         <Link to="/help/articles" className="pf-help-link pf-focusable">
@@ -63,6 +65,8 @@ export function HelpPage() {
         </Link>
         <ArticleView article={article} />
       </div>
+    ) : pending && isCompanySlug(rest[1]) ? (
+      <Skeleton active paragraph={{ rows: 6 }} />
     ) : (
       <EmptyState
         title={t("page.notFoundTitle")}

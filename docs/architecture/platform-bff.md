@@ -208,7 +208,24 @@ SPA  PUT  /api/v1/me/onboarding            → CRM PATCH /me {onboarding_done: t
 - **Колокольчик: лента CRM.** `GET /notifications` теперь сливает ленту ERP с `GET /me/notifications` CRM: id `crm:<id>`, вкладка «Система», ссылка на объект строится в BFF (`ticket` → `/help/requests/ОБР-0012` автору, `/admin/tickets/ОБР-0012` администратору). Прочитать — `POST /notifications/crm:<id>/read` → CRM `POST /me/notifications/{id}/read`; «прочитать всё» — обе ленты, сбой одной не отменяет отметку другой (ответ 204; ошибка — только если не отмечена ни одна). Недоступность ленты CRM не ломает ленту ERP: в `sources` ответа источник `crm` получает своё состояние, как у остальных составных ответов. Это общий механизм «событие CRM → колокольчик»: новое событие CRM — строка `staff_notifications`, без правок BFF и SPA, кроме адреса объекта.
 - **«Мои задачи» администратора.** Новые обращения (`status=new`) приходят строками вида `ticket` («Ответить на обращение ОБР-0012»), счётчик пункта «Обращения сотрудников» — число новых. Директору (раздел `admin` — только чтение) строки не показываются: ответить он не может.
 - **Первый вход.** `Me.onboarding_done` — флаг из CRM (`users.onboarding_done_at`), общий для всех устройств. `false` — SPA показывает «Добро пожаловать» и тур; «Пропустить» скрывает их на сеанс (`sessionStorage`), «Больше не показывать» и «Готово» вызывают `PUT /me/onboarding`; ответ — новый `Me`, снимок сессии обновляется.
-- **Статьи помощи** BFF не отдаёт: это файлы репозитория `docs/kb/help/*.md`, которые `pnpm kb:sync` копирует в сборку SPA (`src/generated/help-articles`). Редактирует их тот, у кого есть доступ к репозиторию (PR); редактора статей в интерфейсе нет (`docs/QUESTIONS.md`, Q-W15-H7-1).
+- **Продуктовые статьи помощи** BFF не отдаёт: это файлы репозитория `docs/kb/help/*.md`, которые `pnpm kb:sync` копирует в сборку SPA (`src/generated/help-articles`); правит их тот, у кого есть доступ к репозиторию (PR). Редактора продуктовых статей в интерфейсе нет и не будет (DECISIONS 2026-10-28). **Статьи компании** — другое: их пишет администратор в интерфейсе (см. ниже).
+
+#### Статьи компании в §3.4 (W18A-P5, B-079; добавление к 0.27.0, версия контракта не меняется)
+
+```
+SPA  GET    /api/v1/help/company-articles            → CRM GET /me/company-articles   только опубликованные, любому сотруднику (require_any_section)
+SPA  GET    /api/v1/admin/company-articles           → CRM GET /company-articles      все, с черновиками (admin: чтение)
+SPA  POST   /api/v1/admin/company-articles           → CRM POST /company-articles     {title, body, language?} → CompanyArticle (201, всегда черновик)
+SPA  PATCH  /api/v1/admin/company-articles/{id}      → CRM PATCH /company-articles/{id}   {title?, body?, language?}
+SPA  POST   /api/v1/admin/company-articles/{id}/publish|unpublish → CRM POST …/publish|unpublish
+SPA  DELETE /api/v1/admin/company-articles/{id}      → CRM DELETE /company-articles/{id}  (204)
+```
+
+- **Данные — в CRM** (таблица `company_articles`, ADR-0015); BFF ничего не хранит и текст не обрабатывает. Права: чтение с черновиками — `admin` от чтения (директор), запись — `admin` полный (CRM-права `company_articles:read|write` каталога); опубликованные читает любой сотрудник с хотя бы одним разделом.
+- **Безопасный показ — забота SPA.** Текст — Markdown ограниченного вида (`##`, абзацы, списки, жирный, код); `features/help/Markdown.tsx` строит дерево React без `dangerouslySetInnerHTML`, ссылок и картинок: HTML и скрипты остаются текстом (тесты `Markdown.test.tsx`, `ArticlesPage.test.tsx`). BFF и CRM текст не «чистят» молча.
+- **Ошибки значений** — 422 `VALIDATION_FAILED` с `details.fields` (`title`, `body`, `language`) и `details.reason` (`article_title_empty`, `article_title_too_long` > 200, `article_body_empty`, `article_body_too_long` > 20000, `article_language_unknown`); статьи нет — 404. Публикация и снятие повторяются безопасно (второй раз ничего не меняют и в журнал не пишутся).
+- **Журнал действий CRM:** `company_article.create|update|publish|unpublish|delete` (до/после — заголовок, язык, статус, длина текста; сам текст в журнал не попадает).
+- **В Помощи** SPA кладёт статьи компании рядом с продуктовыми под адресом `/help/articles/company-<id>`; недоступность CRM не ломает Помощь — продуктовые статьи открываются, в разделе «Как у нас принято» сказано, что статьи компании сейчас недоступны.
 
 ### 3.5. Расчёт по заявке (D2-1, BFF 0.26.0)
 

@@ -3,6 +3,9 @@
  * равенство проверяет `articles.test.ts`). Это не база знаний бота для клиентов: у статей свой каталог. Правит статьи тот,
  * у кого есть доступ к репозиторию (PR в `docs/kb/help`); из интерфейса админ их пока не редактирует — хвост в QUESTIONS.
  *
+ * Статьи компании («Как у нас принято», W18A-P5) приходят из CRM через BFF — `companyArticles.ts`; поиск и просмотр
+ * у тех и других общие.
+ *
  * Формат: front matter (`title`, `sections` — ключи разделов `<модуль>.<раздел>` или `me`, `order`), затем текст в простом
  * markdown: `##`-заголовки, абзацы, списки `-` и `1.`, **жирный**, `код`.
  */
@@ -19,6 +22,12 @@ export interface HelpArticle {
   sections: readonly string[];
   order: number;
   body: string;
+  /** Откуда статья: без поля — продуктовая (`docs/kb/help`); `company` — статья компании из CRM (W18A-P5, B-079) */
+  source?: "company";
+  /** Язык статьи компании (`ru`, `uz`, `en`); у продуктовых статей поля нет — они русские */
+  language?: string;
+  /** Когда статья компании обновлена (ISO) */
+  updatedAt?: string;
 }
 
 export function parseArticle(slug: string, source: string): HelpArticle {

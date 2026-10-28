@@ -36,6 +36,7 @@ describe("i18n", () => {
     "quotes",
     "approvals",
     "help",
+    "articles",
   ] as const)("пространство %s: uz и en — те же ключи, что ru", (ns) => {
     for (const lng of ["uz", "en"] as const) {
       expect(keys(resources[lng][ns]).sort()).toEqual(keys(resources.ru[ns]).sort());
@@ -65,6 +66,7 @@ describe("i18n", () => {
         "quotes",
         "approvals",
         "help",
+        "articles",
       ] as const) {
         for (const key of keys(resources[lng][ns])) {
           const value = key

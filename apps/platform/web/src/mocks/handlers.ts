@@ -11,6 +11,7 @@ import { adminIntegrationsHandlers } from "./adminIntegrations";
 import { adminCompanyHandlers } from "./adminCompany";
 import { adminRolesHandlers } from "./adminRoles";
 import { botKbHandlers } from "./botKb";
+import { companyArticlesHandlers } from "./companyArticlesHandlers";
 import { crmMessagesHandlers } from "./crmMessages";
 import { edsApprovalsHandlers } from "./edsApprovals";
 import { bridgeHandlers } from "./bridgeHandlers";
@@ -155,6 +156,7 @@ export const handlers = [
   ...crmMessagesHandlers,
   ...bridgeHandlers,
   ...ticketsHandlers,
+  ...companyArticlesHandlers,
   ...edsDocumentsHandlers,
   ...edsLettersHandlers,
   ...edsApprovalsHandlers,
