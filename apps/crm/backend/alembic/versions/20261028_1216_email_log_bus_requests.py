@@ -17,7 +17,7 @@ ERP и EDS письма сами больше не шлют: публикуют 
 пришедшие не из CRM (их получатели в узкий столбец могут не поместиться).
 
 Revision ID: ac71231f330f
-Revises: aa1221ec032b
+Revises: 5153a46e65f4
 Create Date: 2026-10-28 12:16:55.566647+00:00
 """
 
@@ -28,7 +28,7 @@ from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision: str = "ac71231f330f"
-down_revision: str | Sequence[str] | None = "aa1221ec032b"
+down_revision: str | Sequence[str] | None = "5153a46e65f4"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
