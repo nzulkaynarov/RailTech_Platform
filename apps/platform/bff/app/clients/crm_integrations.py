@@ -110,7 +110,7 @@ def integration_error(response: httpx.Response) -> PlatformError:
         field = _failed_field(response)
         if field:
             base.body.details = {**(base.body.details or {}), "fields": [_FIELDS.get(field, field)]}
-        # Что именно не так с полем (ключ внешней копии: `not_json`, `foreign_token_uri`, …) — короткий код CRM.
+        # Что не так с полем (ключ внешней копии: `not_json`, `foreign_token_uri`, …) — код CRM.
         problem = _detail(response, "problem")
         if problem:
             base.body.details = {**(base.body.details or {}), "problem": problem}
