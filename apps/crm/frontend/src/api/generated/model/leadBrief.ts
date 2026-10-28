@@ -9,5 +9,6 @@ export interface LeadBrief {
   created_at: string;
   display_name: string;
   id: number;
+  last_lead_msg_at?: string | null;
   stage: string;
 }

@@ -88,7 +88,12 @@ async def test_card_360_collects_contacts_leads_requests_and_documents(
     assert second["channels"] == ["email"]
     assert second["telegram"] is None
     assert card["leads"] == [
-        {"lead": "L-2041", "name": "Азиз Демо", "status": "client", "last_message_at": None}
+        {
+            "lead": "L-2041",
+            "name": "Азиз Демо",
+            "status": "client",
+            "last_message_at": "2026-10-27T09:00:00Z",
+        }
     ]
     quote, failed, paid, lost = card["requests"]
     assert quote == {

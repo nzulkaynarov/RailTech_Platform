@@ -3305,6 +3305,11 @@ components:
       type: object
     IdentityOut:
       properties:
+        id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Id
         lead_id:
           anyOf:
           - type: integer
@@ -3715,6 +3720,12 @@ components:
         id:
           title: Id
           type: integer
+        last_lead_msg_at:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          title: Last Lead Msg At
         stage:
           title: Stage
           type: string

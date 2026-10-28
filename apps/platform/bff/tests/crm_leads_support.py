@@ -90,6 +90,7 @@ def client_detail(client_id: int = 12, **over: Any) -> dict[str, Any]:
         "erp_handoff_error": None,
         "identities": [
             {
+                "id": 9,
                 "tg_user_id": 5001,
                 "tg_username": "aziz_demo",
                 "tg_first_name": "Азиз",
@@ -100,7 +101,13 @@ def client_detail(client_id: int = 12, **over: Any) -> dict[str, Any]:
         ],
         "candidates": [],
         "leads": [
-            {"id": 2041, "display_name": "Азиз Демо", "stage": "customer", "created_at": EARLIER}
+            {
+                "id": 2041,
+                "display_name": "Азиз Демо",
+                "stage": "customer",
+                "created_at": EARLIER,
+                "last_lead_msg_at": NOW,
+            }
         ],
         "service_requests": [],
         "invitation": invitation_out(status="sent", error=None, error_text=None, sent_at=NOW),

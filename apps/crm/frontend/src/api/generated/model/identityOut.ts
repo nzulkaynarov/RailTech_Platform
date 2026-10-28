@@ -6,6 +6,7 @@
  */
 
 export interface IdentityOut {
+  id?: number | null;
   lead_id: number | null;
   tg_first_name: string | null;
   tg_user_id: number;

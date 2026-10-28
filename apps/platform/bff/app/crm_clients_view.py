@@ -52,9 +52,11 @@ class CrmLeadBrief(_Crm):
     display_name: str
     stage: str
     created_at: datetime
+    last_lead_msg_at: datetime | None = None
 
 
 class CrmIdentity(_Crm):
+    id: int | None = None
     tg_user_id: int
     tg_username: str | None = None
 
@@ -258,10 +260,12 @@ def contact_view(contact: CrmContact, telegram: dict[int, str | None]) -> Client
 
 
 def telegram_names(detail: CrmClientDetail, contacts: CrmContacts) -> dict[int, str | None]:
-    """Имя Telegram по id привязки: из подсказок CRM; у клиента одна привязка — её имя."""
+    """Имя Telegram по id привязки: привязки клиента (CRM отдаёт их id), подсказки CRM; старая CRM
+    без id и одна привязка у клиента — её имя."""
     names: dict[int, str | None] = {
         s.telegram_identity_id: s.tg_username for s in contacts.suggestions
     }
+    names.update({i.id: i.tg_username for i in detail.identities if i.id is not None})
     if len(detail.identities) == 1:
         only = detail.identities[0].tg_username
         for c in contacts.contacts:
@@ -275,7 +279,7 @@ def lead_link(brief: CrmLeadBrief) -> ClientLeadLink:
         lead=lead_number(brief.id),
         name=brief.display_name or lead_number(brief.id),
         status=status_of(None, brief.stage),
-        last_message_at=None,
+        last_message_at=brief.last_lead_msg_at,
     )
 
 
