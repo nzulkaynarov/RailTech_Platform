@@ -30,3 +30,11 @@ exceptions:
     operation: POST
     reason: "B4: вебхук ERP → CRM заменён шиной rt_bus (POST /bus/v1/events), вызывающая сторона ERP переведена в B3; потребителей нет"
     until: 2026-12-31
+  # OPS-GDRIVE-2: новые подкоды Reason внешней копии (offsite_key_invalid, offsite_folder_invalid, offsite_not_configured,
+  # offsite_delivery_failed). Reason — открытое множество подкодов `details.reason` (`anyOf [Reason, string]`): BFF пересылает
+  # незнакомый подкод строкой, Платформа без своего текста показывает общий по коду. Добавляющее изменение, версия CRM не
+  # поднимается (решение владельца: контракт добавляющий). Удалить после слияния OPS-GDRIVE-2 (проверка напечатает предупреждение).
+  - file: crm.yaml
+    id: response-property-enum-value-added
+    reason: "OPS-GDRIVE-2: новые подкоды Reason; Reason открыт (anyOf со string), BFF пересылает подкод строкой"
+    until: 2026-12-31

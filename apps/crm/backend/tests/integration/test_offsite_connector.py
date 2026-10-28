@@ -187,9 +187,10 @@ async def test_key_is_write_only_delivered_to_the_copy_service_and_checked(
     assert b"SECRETBODY" not in secret.ciphertext
     offsite = [a for a in audits if a.action == "integrations.offsite_gdrive"]
     assert len(offsite) == 2
-    assert offsite[0].after["key_suffix"] == "1a2b"
-    assert offsite[0].after["key_changed"] is True
-    assert offsite[1].after["key_changed"] is False
+    after = [a.after or {} for a in offsite]
+    assert after[0]["key_suffix"] == "1a2b"
+    assert after[0]["key_changed"] is True
+    assert after[1]["key_changed"] is False
     assert all("SECRETBODY" not in repr((a.before, a.after)) for a in audits)
 
 
