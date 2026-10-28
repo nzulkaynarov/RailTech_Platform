@@ -34,10 +34,19 @@
 
 | BFF | Источники | Статус |
 |---|---|---|
-| `GET /queue` — строки «Что сделать сейчас» для всех ролей сотрудника | MANAGER: CRM `GET /inbox`, `GET /leads?stage=…`, `GET /service-requests`. DIRECTOR: письма без резолюции (Δ EDS-01), `GET /crm/quotes/my-approval-queue/`, служебки на согласовании (Δ EDS-02), проблемные проекты (вывод BFF). SUPPLY, ENGINEER: задания на расчёт по резолюции (Δ EDS-01, ERP-02). ACCOUNTANT: платёжки на подтверждение (Δ ERP-04), `GET /crm/invoices/?status=DRAFT`, договоры к выставлению (Δ ERP-03), служебки к оплате (Δ EDS-02), просроченные счета (Δ ERP-06). ADMIN: тикеты (Δ CRM-05), CRM `GET /admin/external-services` с проблемами | частично ✓ |
+| `GET /queue` — строки «Что сделать сейчас» для всех ролей сотрудника | MANAGER: CRM `GET /inbox`, `GET /leads?stage=…`, `GET /service-requests`. DIRECTOR: письма без резолюции — **EDS `GET /letters?status=awaiting_resolution` ✓ (D1-6, BFF 0.25.0)**, `GET /crm/quotes/my-approval-queue/`, служебки, заявления и отчёты на моём шаге — **EDS `GET /approvals?mine=true&status=open&template=memo|application|report` ✓ (D1-6)**, проблемные проекты (вывод BFF). SUPPLY, ENGINEER: задания на расчёт по резолюции (Δ EDS-01, ERP-02). ACCOUNTANT: платёжки на подтверждение (Δ ERP-04), `GET /crm/invoices/?status=DRAFT`, договоры к выставлению (Δ ERP-03), служебки к оплате — **EDS `GET /approvals` на шаге бухгалтера ✓ (D1-6)**, просроченные счета (Δ ERP-06). ADMIN: тикеты (Δ CRM-05), CRM `GET /admin/external-services` с проблемами | частично ✓ |
 | `GET /queue/counters` | то же, только числа | частично ✓ |
 | `GET /activity/today` (вкладка «Сегодня») | ERP `GET /crm/activity-logs/`, `GET /crm/timeline/`; CRM `GET /audit` | ✓ |
 | `GET /summary` (воронка, застрявшие, дебиторка, причины отказов) | CRM `GET /dashboard`, `GET /deals/summary`; ERP `GET /crm/analytics/dashboard/`, `GET /crm/analytics/time-to-first-quote/` | ✓ (застрявшие по 7 шагам — вывод BFF) |
+
+**EDS в очереди, счётчиках и поиске (D1-6, BFF 0.25.0).** `Feed` читает EDS тем же обменом токена `aud=eds`, что экраны D1-3…D1-5: по виду работы
+секции `queue` каталога (`resolve_letter` — `eds.inbox` full, `approve_memo` — `eds.memo.approve` full, `pay_memo` — `eds.payments` full) и только у ролей с разделами EDS
+(`EDS_SECTIONS`); что вернул EDS по токену сотрудника, то и строки — BFF прав EDS не вычисляет. Карточки `letters_without_resolution` и `memos_to_approve` и бейджи
+`eds.inbox`, `eds.approvals` показываются, только если EDS ответил. `Sources.eds` — необязательное: `unavailable` — плашка «Не загрузились письма и документы: раздел
+«Документы» не ответил», остальное показано; `not_applicable` — EDS не пустил сотрудника (403 обмена или запроса). Поиск ⌘K: реестр EDS `GET /registry?q=` (номера ВХ, ИСХ,
+КП, СЗ, ЗЯ, ОТ и тема), запись показывается, если раздел каталога роли открывает её вид (ВХ — `eds.inbox`, КП — `eds.drafts`, СЗ/ЗЯ/ОТ — `eds.memo.approve` или `eds.memo.create`).
+События EDS (`uz.railtech.eds.*`) дают подсказки `queue`, `counters`, `notifications`: письмо, поступившее в EDS, видно директору в «Моей очереди» без перезагрузки. Своих возвращённых
+документов (автору) в очереди нет — нужен вид работы в каталоге (B-079); колокольчика по событиям EDS нет — B-080.
 
 **Ссылки объектов (`ObjectRef.path`) в очереди, поиске и уведомлениях (D1-6, без изменения контракта).** Строка очереди «ждут ответа клиенту»
 (`answer_lead`, `take_lead`: передача бота, новое сообщение, лид без менеджера) ведёт в диалог «Клиенты · Ждут ответа» —

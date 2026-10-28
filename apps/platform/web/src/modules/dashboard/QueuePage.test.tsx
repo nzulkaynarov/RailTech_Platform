@@ -2,7 +2,11 @@ import { act, fireEvent, screen, waitFor, within } from "@testing-library/react"
 import { HttpResponse, http } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { MOCK_QUEUE_STUB_KEY } from "../../mocks/feedHandlers";
+import {
+  MOCK_EDS_DOWN_KEY,
+  MOCK_ERP_DOWN_KEY,
+  MOCK_QUEUE_STUB_KEY,
+} from "../../mocks/feedHandlers";
 import { endSession } from "../../mocks/mockSession";
 import { usePanelsStore } from "../../app/shell/panelsStore";
 import i18n from "../../shared/i18n";
@@ -272,6 +276,35 @@ describe("Dashboard · Моя очередь", () => {
     expect(
       within(page).getByRole("link", { name: "Открыть: Одобрить КП-2026/118 (черновик)" }),
     ).not.toHaveClass("ant-btn-primary");
+  });
+
+  it("EDS не отвечает: КП и остальное показаны, письма и служебок нет, плашка называет «Документы» (D1-6)", async () => {
+    window.localStorage.setItem(MOCK_EDS_DOWN_KEY, "1");
+    signInAs("director@demo.example");
+    renderApp("/dashboard/queue");
+    const page = await main();
+
+    expect(await within(page).findByText("Одобрить КП-2026/118 (черновик)")).toBeVisible();
+    expect(within(page).queryByText(/Наложить резолюцию на письмо/)).toBeNull();
+    expect(within(page).queryByText(/Согласовать СЗ-2026\/031/)).toBeNull();
+    expect(within(page).getByRole("status")).toHaveTextContent(
+      "Не загрузились письма и документы: раздел «Документы» не ответил. Остальное показано.",
+    );
+    // карточки EDS без числа не показываются: ноль был бы ложью
+    expect(within(page).queryByRole("link", { name: /Входящие без резолюции/ })).toBeNull();
+    expect(within(page).getByRole("link", { name: /КП на одобрение/ })).toBeVisible();
+  });
+
+  it("не ответили ERP и EDS: одна плашка с названиями обоих разделов", async () => {
+    window.localStorage.setItem(MOCK_EDS_DOWN_KEY, "1");
+    window.localStorage.setItem(MOCK_ERP_DOWN_KEY, "1");
+    signInAs("all@demo.example");
+    renderApp("/dashboard/queue");
+    const page = await main();
+
+    expect(await within(page).findByRole("status")).toHaveTextContent(
+      "Не загрузились данные из разделов «Расчёт», «Документы». Остальное показано.",
+    );
   });
 
   it("ERP не отвечает: данные CRM остаются, сверху плашка с названиями разделов", async () => {

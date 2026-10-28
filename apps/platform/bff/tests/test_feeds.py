@@ -228,7 +228,9 @@ async def test_other_roles_have_an_empty_queue(
     response = await web.client.get("/api/v1/queue")
 
     check(response, "/queue", "get")
-    assert response.json() == {"items": [], "sources": {"crm": "ok", "erp": "ok"}}
+    # бухгалтер читает EDS (служебки на своём шаге): EDS ответил пустым списком — `eds: ok`
+    eds = {"eds": "ok"} if role == "ACCOUNTANT" else {}
+    assert response.json() == {"items": [], "sources": {"crm": "ok", "erp": "ok", **eds}}
     assert fb.calls(fb.crm["inbox"]) == 0
     assert fb.calls(fb.erp["approvals"]) == 0
 
@@ -296,7 +298,7 @@ async def test_erp_down_keeps_crm_part_and_marks_source(
     assert response.status_code == 200
     check(response, "/queue", "get")
     body = response.json()
-    assert body["sources"] == {"crm": "ok", "erp": "unavailable"}
+    assert body["sources"] == {"crm": "ok", "erp": "unavailable", "eds": "ok"}
     assert [i["object"]["number"] for i in body["items"]] == ["L-2060"]
 
 
@@ -311,7 +313,7 @@ async def test_crm_down_keeps_erp_part_and_marks_source(
 
     check(response, "/queue", "get")
     body = response.json()
-    assert body["sources"] == {"crm": "unavailable", "erp": "ok"}
+    assert body["sources"] == {"crm": "unavailable", "erp": "ok", "eds": "ok"}
     assert [i["role_id"] for i in body["items"]] == [rid("DIRECTOR"), rid("DIRECTOR")]
 
 
@@ -324,7 +326,10 @@ async def test_both_backends_down_is_still_a_200(
     response = await web.client.get("/api/v1/queue")
 
     check(response, "/queue", "get")
-    assert response.json() == {"items": [], "sources": {"crm": "unavailable", "erp": "unavailable"}}
+    assert response.json() == {
+        "items": [],
+        "sources": {"crm": "unavailable", "erp": "unavailable", "eds": "ok"},
+    }
 
 
 async def test_employee_without_erp_access_gets_not_applicable(
@@ -338,7 +343,7 @@ async def test_employee_without_erp_access_gets_not_applicable(
 
     check(response, "/queue", "get")
     body = response.json()
-    assert body["sources"] == {"crm": "ok", "erp": "not_applicable"}
+    assert body["sources"] == {"crm": "ok", "erp": "not_applicable", "eds": "ok"}
     assert [i["object"]["number"] for i in body["items"]] == ["L-2060"]
     assert fb.calls(fb.erp["approvals"]) == 0
 
@@ -401,7 +406,12 @@ async def test_cards_for_director(web: Web, fb: FeedBackends, check: ContractChe
     check(response, "/queue/cards", "get")
     cards = {c["key"]: c for c in response.json()["cards"]}
     # R-1b: лиды у директора только на чтение — карточек «Лиды без ответа / без менеджера» нет.
-    assert list(cards) == ["quotes_to_approve", "projects_in_work"]
+    assert list(cards) == [
+        "letters_without_resolution",
+        "quotes_to_approve",
+        "memos_to_approve",
+        "projects_in_work",
+    ]
     assert cards["quotes_to_approve"]["count"] == 2
     assert cards["quotes_to_approve"]["path"] == "/eds/drafts"
     assert cards["projects_in_work"]["count"] == 2  # исполнение закрыто целиком у одного
@@ -847,7 +857,7 @@ async def test_search_merges_crm_and_erp_into_module_groups(
     assert response.status_code == 200
     check(response, "/search", "get")
     body = response.json()
-    assert body["sources"] == {"crm": "ok", "erp": "ok"}
+    assert body["sources"] == {"crm": "ok", "erp": "ok", "eds": "ok"}
     groups = {g["module"]: g["items"] for g in body["groups"]}
     assert list(groups) == ["crm", "eds"]
     assert [h["object"]["kind"] for h in groups["crm"]] == ["lead", "client", "request"]
@@ -1001,7 +1011,7 @@ async def test_search_with_erp_down_returns_crm_part(
     assert response.status_code == 200
     check(response, "/search", "get")
     body = response.json()
-    assert body["sources"] == {"crm": "ok", "erp": "unavailable"}
+    assert body["sources"] == {"crm": "ok", "erp": "unavailable", "eds": "ok"}
     assert [g["module"] for g in body["groups"]] == ["crm"]
 
 

@@ -217,8 +217,8 @@ SPA  POST /api/v1/bridge/erp-sso    → BFF → CRM POST /auth/sso/token   {url:
 - **Поток подсказок (B5, волна 11, ADR-0014).** BFF — подписчик шины `rt_bus` (строка `platform-bff` в
   `packages/contracts/bus/subscriptions.yaml`: события ERP, лидов CRM, сотрудников; приёмник `POST /bus/v1/events` на
   `rt_bus.fastapi.bus_router` + `MemoryReceiver`, без базы; секреты пар `RT_BUS_SECRET_ERP_PLATFORM_BFF`,
-  `RT_BUS_SECRET_CRM_PLATFORM_BFF`, с волны 12 `RT_BUS_SECRET_EDS_PLATFORM_BFF` — события EDS подписаны, но до этапа D
-  подсказок не дают, приёмник отвечает `skipped`; Caddy `/bus/*` на домене Платформы не отдаёт). Событие превращается в подсказку
+  `RT_BUS_SECRET_CRM_PLATFORM_BFF`, с волны 12 `RT_BUS_SECRET_EDS_PLATFORM_BFF` — события EDS (D1-6) дают подсказки
+  `queue`, `counters`, `notifications`; Caddy `/bus/*` на домене Платформы не отдаёт). Событие превращается в подсказку
   `{"topics": ["notifications"|"counters"|"queue"|"activity"|"messages"], "reason": "<тип события>"}` и уходит в браузер по
   `GET /api/v1/events/stream` (SSE, только вошедшему сотруднику с разделом «Моя очередь»). **В потоке нет данных**:
   браузер перезапрашивает обычные API (с RBAC), поэтому чужое в поток не попадает. Устройство:
@@ -391,6 +391,10 @@ BFF отдаёт сам (`/admin/company/logo/image`, `/admin/company/brand/logo
   Создание с `submit` — два вызова EDS (`POST /documents`, `POST …/submit`): если отправка отклонена, ошибка называет сохранённый черновик
   (`details.document_id`, `saved`). Ошибки EDS переводятся в `Error` с `source = eds` (текст EDS сохраняется; 422 — `details.fields`, `messages`).
   Загрузка файла — как W13-A5 (поток до 25 МБ и поля формы, multipart не разбирается; сверх предела — 413), скачивание — потоком как `attachment`.
+- **EDS в «Моей очереди», счётчиках и поиске (D1-6, 0.25.0).** `Feed` читает EDS (`GET /letters?status=awaiting_resolution`, `GET /approvals?mine=true&status=open&template=…`,
+  `GET /registry?q=`) тем же токеном `aud=eds`; только роли с разделами EDS (`EDS_SECTIONS`), строки — по секции `queue` каталога (`resolve_letter`, `approve_memo`,
+  `pay_memo`). Права внутри EDS решает EDS (403 — `Sources.eds = not_applicable`), BFF их не вычисляет; недоступность — `Sources.eds = unavailable` (необязательное поле,
+  есть только когда EDS читали). Строки «ждут ответа клиенту» ведут в `/crm/messages?lead=`. Подробно — [integration-map](integration-map.md) §1.2.
 - **EDS · КП на одобрение и «На согласовании» (D1-4, 0.24.0).** `/eds/quotes*` (раздел `eds.drafts`: чтение — менеджер, решение — директор) и
   `/eds/memo-approvals*` (раздел `eds.memo.approve` для решений, чтение также у `eds.memo.create`: автор видит свой документ) — тем же токеном доступа EDS.
   Маршрут, шаги, чек-лист КП и `allowed_decisions` отдаёт EDS, **BFF чек-лист не проверяет** (409 `checklist_not_green` с `details.failed`; 409

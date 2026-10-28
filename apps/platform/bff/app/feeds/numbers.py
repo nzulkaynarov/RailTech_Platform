@@ -149,6 +149,26 @@ def lead_ref(lead_id: int, title: str | None, *, conversation: bool = False) -> 
     return ObjectRef(kind="lead", number=number, title=title, path=path)
 
 
+def letter_ref(number: str, title: str | None) -> ObjectRef:
+    """Входящее письмо — карточка во «Входящих», вкладка «Резолюция»."""
+    return ObjectRef(
+        kind="letter",
+        number=number,
+        title=title,
+        path=f"/eds/inbox/{segment(number)}?panel=open&tab=resolution",
+    )
+
+
+def memo_ref(number: str, title: str | None) -> ObjectRef:
+    """Служебная записка, заявление, отчёт — «На согласовании», вкладка «Согласование»."""
+    return ObjectRef(
+        kind="memo",
+        number=number,
+        title=title,
+        path=f"/eds/approvals/{segment(number)}?panel=open&tab=agree",
+    )
+
+
 def quote_number(quote: dict[str, Any]) -> str:
     number = quote.get("number")
     if isinstance(number, str) and number:

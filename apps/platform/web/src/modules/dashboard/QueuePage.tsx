@@ -14,7 +14,7 @@ import { EmptyState } from "../../shared/ui/EmptyState";
 import { LinkButton } from "../../shared/ui/LinkButton";
 import { PageHeader } from "../../shared/ui/PageHeader";
 import { QueueList, type QueueItem as RowItem } from "../../shared/ui/QueueList";
-import { SourceBanner } from "../../shared/ui/SourceBanner";
+import { SourceBanner, bannerKind } from "../../shared/ui/SourceBanner";
 import { matchSection } from "../registry";
 import { viewRoleNames } from "../../entities/role/roles";
 import { isActionable } from "../bridge";
@@ -33,7 +33,13 @@ function mergeSources(...all: (Sources | undefined)[]): Sources | undefined {
       : known.every((s) => pick(s) === "not_applicable")
         ? "not_applicable"
         : "ok";
-  return { crm: worst((s) => s.crm), erp: worst((s) => s.erp) };
+  // EDS в ответе есть не всегда (только если его читали): пока ни один ответ о нём не сказал, поля нет
+  const eds = known.some((s) => s.eds === "unavailable")
+    ? "unavailable"
+    : known.some((s) => s.eds === "ok")
+      ? "ok"
+      : undefined;
+  return { crm: worst((s) => s.crm), erp: worst((s) => s.erp), ...(eds ? { eds } : {}) };
 }
 
 /**
@@ -88,22 +94,25 @@ export function QueuePage() {
   });
 
   const sources = mergeSources(queue.data?.sources, cards.data?.sources);
-  const partial =
-    sources?.crm === "unavailable" && sources.erp === "unavailable"
-      ? "both"
-      : sources?.crm === "unavailable"
-        ? "crm"
-        : sources?.erp === "unavailable"
-          ? "erp"
-          : null;
+  const crmDown = sources?.crm === "unavailable";
+  const erpDown = sources?.erp === "unavailable";
+  const edsDown = sources?.eds === "unavailable";
+  const partial = crmDown || erpDown || edsDown ? bannerKind(crmDown, erpDown, edsDown) : null;
   const names = {
     crm: t("modules:crm.name"),
     erp: t("modules:erp.name"),
+    eds: t("modules:eds.name"),
   };
+  const downNames = [crmDown && names.crm, erpDown && names.erp, edsDown && names.eds]
+    .filter(Boolean)
+    .map((name) => `«${String(name)}»`)
+    .join(", ");
   const partialMessages = {
     crm: t("modules:dashboard.queue.partial.crm", names),
     erp: t("modules:dashboard.queue.partial.erp", names),
+    eds: t("modules:dashboard.queue.partial.eds", names),
     both: t("modules:dashboard.queue.partial.both", names),
+    multi: t("modules:dashboard.queue.partial.multi", { names: downNames }),
   };
   const emptyKind = queueEmptyKind(me);
 

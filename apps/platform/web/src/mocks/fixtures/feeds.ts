@@ -531,10 +531,17 @@ const SEARCH_INDEX: readonly SearchEntry[] = [
 ];
 
 /** Поиск по подстроке без учёта регистра; результаты — группами по модулям, только разделы, видимые роли. */
-export function searchIndex(query: string, resources: ReadonlySet<string>): SearchGroup[] {
+export function searchIndex(
+  query: string,
+  resources: ReadonlySet<string>,
+  withoutEds = false,
+): SearchGroup[] {
   const needle = query.trim().toLowerCase();
   const found = SEARCH_INDEX.filter((entry) => {
     if (!resources.has(entry.resource)) return false;
+    // EDS не отвечает: письма и служебки не находятся
+    if (withoutEds && (entry.object.kind === "letter" || entry.object.kind === "memo"))
+      return false;
     const haystack = [entry.object.number, entry.title, entry.subtitle ?? ""]
       .join(" ")
       .toLowerCase();

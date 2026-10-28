@@ -69,9 +69,24 @@ const STUB_ROW: QueueItem = {
   },
 };
 
+/** То же для EDS (D1-6): `localStorage["rt-pf-mock-eds-down"] = "1"` — без писем и служебок, `sources.eds = "unavailable"`. */
+export const MOCK_EDS_DOWN_KEY = "rt-pf-mock-eds-down";
+
+function edsDown(): boolean {
+  try {
+    return window.localStorage.getItem(MOCK_EDS_DOWN_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+/** Работа, которую даёт только EDS (письма, служебки): КП в очереди ведёт ERP. */
+const EDS_KINDS: readonly QueueItem["kind"][] = ["resolve_letter", "approve_memo", "pay_memo"];
+
 const sources = (): Sources => ({
   crm: crmDown() ? "unavailable" : "ok",
   erp: erpDown() ? "unavailable" : "ok",
+  ...(edsDown() ? { eds: "unavailable" as const } : {}),
 });
 
 function expired() {
@@ -132,7 +147,9 @@ export const feedHandlers = [
     if (!roles) return expired();
     const denied = noQueue(roles);
     if (denied) return denied;
-    const cards = cardsForView(roles.view).filter((c) => !erpDown() || c.path.startsWith("/crm"));
+    const cards = cardsForView(roles.view)
+      .filter((c) => !erpDown() || c.path.startsWith("/crm"))
+      .filter((c) => !edsDown() || !["/eds/inbox", "/eds/approvals"].includes(c.path));
     return HttpResponse.json({ cards, sources: sources() });
   }),
 
@@ -142,7 +159,7 @@ export const feedHandlers = [
     const denied = noQueue(roles);
     if (denied) return denied;
     const own = queueForView(roles.view).filter((i) =>
-      i.kind.endsWith("_lead") ? !crmDown() : !erpDown(),
+      i.kind.endsWith("_lead") ? !crmDown() : EDS_KINDS.includes(i.kind) ? !edsDown() : !erpDown(),
     );
     const director = own.find((i) => i.kind === "resolve_letter");
     if (queueStub() && director) own.push({ ...STUB_ROW, role_id: director.role_id });
@@ -163,7 +180,11 @@ export const feedHandlers = [
       // ERP не отвечает: бейджи разделов ERP (EDS, ERP, «Все проекты») не показываются, остаются очередь и CRM
       items: menuCountersFor(
         queueForView(roles.view).filter((i) => !erpDown() || i.kind.endsWith("_lead")).length,
-      ).filter((c) => !erpDown() || c.module === "crm" || c.section === "queue"),
+      )
+        .filter((c) => !erpDown() || c.module === "crm" || c.section === "queue")
+        .filter(
+          (c) => !edsDown() || !(c.module === "eds" && ["inbox", "approvals"].includes(c.section)),
+        ),
       sources: sources(),
     });
   }),
@@ -215,7 +236,9 @@ export const feedHandlers = [
       );
     }
     const resources = new Set(Object.keys(computeAccess(roles.view).resources));
-    const groups = searchIndex(q, resources).filter((g) => !erpDown() || g.module === "crm");
+    const groups = searchIndex(q, resources, edsDown()).filter(
+      (g) => !erpDown() || g.module === "crm",
+    );
     return HttpResponse.json({ groups, sources: sources() });
   }),
 ];

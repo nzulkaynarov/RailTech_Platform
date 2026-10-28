@@ -206,6 +206,25 @@ test.describe("Мои задачи: пустые состояния и част�
   });
 });
 
+test.describe("Мои задачи: EDS не отвечает", () => {
+  test.skip(({ isMobile }) => isMobile, "ширины задаёт сам сценарий");
+
+  test("директор: КП и остальное показаны, плашка называет «Документы», писем и служебок нет", async ({
+    page,
+  }) => {
+    await loginAndWait(page, "director@demo.example");
+    await setMock(page, "rt-pf-mock-eds-down", "1");
+    await page.reload();
+    const main = page.getByRole("main");
+    await expect(main.getByText("Одобрить КП-2026/118 (черновик)")).toBeVisible();
+    await expect(main.getByRole("status").first()).toContainText(
+      "Не загрузились письма и документы: раздел «Документы» не ответил. Остальное показано.",
+    );
+    await expect(main.getByText(/Наложить резолюцию на письмо/)).toHaveCount(0);
+    await shoot(page, "queue-partial-eds");
+  });
+});
+
 test.describe("Поиск: объект, «Где посмотреть», действия", () => {
   test.skip(({ isMobile }) => isMobile, "ширины задаёт сам сценарий");
 
