@@ -9,6 +9,7 @@ from typing import Annotated, Any
 
 import httpx
 from fastapi import APIRouter, Path, Request, Response, status
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.deps import AuthedDep
 from app.errors import PlatformError, backend_reason, from_backend
@@ -280,6 +281,39 @@ async def set_deputy(body: DeputyUpdate, authed: AuthedDep) -> Profile:
 )
 async def clear_deputy(authed: AuthedDep) -> Profile:
     return await _profile_of(authed, _json(await authed.call("crm", "DELETE", f"{ME}/deputy")))
+
+
+class WhatsNewMark(BaseModel):
+    """W-REL: окно «Платформа обновлена» показано (`shown`) или «Что нового» открыт (`read`).
+
+    Значение — дата записи `ГГГГ-ММ-ДД`.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    shown: str | None = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")
+    read: str | None = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")
+
+    @model_validator(mode="after")
+    def _not_empty(self) -> "WhatsNewMark":
+        if self.shown is None and self.read is None:
+            raise ValueError("нужно shown или read")
+        return self
+
+
+@router.put("/me/whats-new", response_model=Me, operation_id="markWhatsNew")
+async def mark_whats_new(body: WhatsNewMark, authed: AuthedDep) -> Me:
+    """Отметки «Что нового» хранит CRM (`PATCH /me`), не браузер.
+
+    Окно — один раз на сотрудника, на любом устройстве.
+    """
+    payload = {
+        key: value
+        for key, value in (("whats_new_shown", body.shown), ("whats_new_read", body.read))
+        if value is not None
+    }
+    crm_me = _json(await authed.call("crm", "PATCH", ME, json=payload))
+    return build_me(await authed.service.apply_profile(authed.sid, crm_me))
 
 
 @router.put("/me/onboarding", response_model=Me, operation_id="finishOnboarding")

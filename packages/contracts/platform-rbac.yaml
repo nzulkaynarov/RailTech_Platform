@@ -108,8 +108,11 @@ templates:
     # себестоимости и маржи.
     restricted_fields: [totals_only]
 
-# Базовая роль CRM (admin|manager|viewer) для старого фронта до T4: максимум по ролям сотрудника.
-# Роль с кодом из `by_code` (системные и шаблоны) — как в версии 1; роль без кода — по `by_access`; иначе viewer.
+# Базовая роль CRM (admin|manager|viewer) — признак, прав она не даёт (D1-8, B-014): права CRM сотрудника с ролями
+# Платформы — только из матриц его ролей. Признак нужен там, где считают людей, а не права: «последний администратор»,
+# кого можно назначить на лида, замещающий, режим интерфейса старого фронта. У сотрудника — максимум по ролям.
+# Признак роли вычисляется по матрице (`by_access`, иначе viewer); `by_code` (версия 1) CRM больше не применяет —
+# оставлен для обратной совместимости контракта.
 crm_base_role:
   by_code:
     MANAGER: manager
@@ -343,6 +346,8 @@ queue:
   resolve_letter: { resource: eds.inbox, level: full }
   approve_quote: { resource: eds.drafts, level: full }
   approve_memo: { resource: eds.memo.approve, level: full }
+  # D1-6b: автор правит документ, который директор вернул на доработку (EDS «Возвращён на доработку»)
+  rework_document: { resource: eds.memo.create, level: full }
   problem_project: { resource: eds.projects, level: full }
   calc_task: { resource: erp.calc, level: full }
   supplier_overdue: { resource: erp.stock, level: full }

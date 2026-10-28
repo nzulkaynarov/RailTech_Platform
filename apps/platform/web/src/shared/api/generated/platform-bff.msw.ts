@@ -61,6 +61,7 @@ import {
   TicketSubject,
 } from "./model";
 import type {
+  About,
   ActionOk,
   ActivityFeed,
   AiModelChange,
@@ -240,6 +241,14 @@ export const getLoginResponseMock = (
     ]),
     access: { crm: faker.datatype.boolean(), erp: faker.datatype.boolean() },
     onboarding_done: faker.datatype.boolean(),
+    whats_new_shown: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^\\d{4}-\\d{2}-\\d{2}$"),
+      null,
+    ]),
+    whats_new_read: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^\\d{4}-\\d{2}-\\d{2}$"),
+      null,
+    ]),
   },
   must_change_password: faker.datatype.boolean(),
   expires_at: faker.date.past().toISOString().slice(0, 19) + "Z",
@@ -292,6 +301,14 @@ export const getGetSessionResponseMock = (
     ]),
     access: { crm: faker.datatype.boolean(), erp: faker.datatype.boolean() },
     onboarding_done: faker.datatype.boolean(),
+    whats_new_shown: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^\\d{4}-\\d{2}-\\d{2}$"),
+      null,
+    ]),
+    whats_new_read: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^\\d{4}-\\d{2}-\\d{2}$"),
+      null,
+    ]),
   },
   must_change_password: faker.datatype.boolean(),
   expires_at: faker.date.past().toISOString().slice(0, 19) + "Z",
@@ -341,6 +358,14 @@ export const getCreateFirstAdminResponseMock = (
     ]),
     access: { crm: faker.datatype.boolean(), erp: faker.datatype.boolean() },
     onboarding_done: faker.datatype.boolean(),
+    whats_new_shown: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^\\d{4}-\\d{2}-\\d{2}$"),
+      null,
+    ]),
+    whats_new_read: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^\\d{4}-\\d{2}-\\d{2}$"),
+      null,
+    ]),
   },
   must_change_password: faker.datatype.boolean(),
   expires_at: faker.date.past().toISOString().slice(0, 19) + "Z",
@@ -432,6 +457,14 @@ export const getGetMeResponseMock = (overrideResponse: Partial<Extract<Me, objec
   ]),
   access: { crm: faker.datatype.boolean(), erp: faker.datatype.boolean() },
   onboarding_done: faker.datatype.boolean(),
+  whats_new_shown: faker.helpers.arrayElement([
+    faker.helpers.fromRegExp("^\\d{4}-\\d{2}-\\d{2}$"),
+    null,
+  ]),
+  whats_new_read: faker.helpers.arrayElement([
+    faker.helpers.fromRegExp("^\\d{4}-\\d{2}-\\d{2}$"),
+    null,
+  ]),
   ...overrideResponse,
 });
 
@@ -471,6 +504,14 @@ export const getUpdateMeResponseMock = (
   ]),
   access: { crm: faker.datatype.boolean(), erp: faker.datatype.boolean() },
   onboarding_done: faker.datatype.boolean(),
+  whats_new_shown: faker.helpers.arrayElement([
+    faker.helpers.fromRegExp("^\\d{4}-\\d{2}-\\d{2}$"),
+    null,
+  ]),
+  whats_new_read: faker.helpers.arrayElement([
+    faker.helpers.fromRegExp("^\\d{4}-\\d{2}-\\d{2}$"),
+    null,
+  ]),
   ...overrideResponse,
 });
 
@@ -536,6 +577,61 @@ export const getFinishOnboardingResponseMock = (
   ]),
   access: { crm: faker.datatype.boolean(), erp: faker.datatype.boolean() },
   onboarding_done: faker.datatype.boolean(),
+  whats_new_shown: faker.helpers.arrayElement([
+    faker.helpers.fromRegExp("^\\d{4}-\\d{2}-\\d{2}$"),
+    null,
+  ]),
+  whats_new_read: faker.helpers.arrayElement([
+    faker.helpers.fromRegExp("^\\d{4}-\\d{2}-\\d{2}$"),
+    null,
+  ]),
+  ...overrideResponse,
+});
+
+export const getMarkWhatsNewResponseMock = (
+  overrideResponse: Partial<Extract<Me, object>> = {},
+): Me => ({
+  id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  email: faker.internet.email(),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  initials: faker.string.alpha({ length: { min: 3, max: 3 } }),
+  position: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  avatar_url: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  language: faker.helpers.arrayElement(Object.values(Language)),
+  roles: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.helpers.fromRegExp("^[1-9][0-9]*$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    system: faker.datatype.boolean(),
+    code: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+  })),
+  active_role: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[1-9][0-9]*$"), null]),
+  modules: faker.helpers.arrayElements(Object.values(ModuleCode)),
+  resources: {
+    [faker.string.alphanumeric(5)]: faker.helpers.arrayElement(Object.values(AccessLevel)),
+  },
+  restricted_fields: faker.helpers.arrayElement([
+    faker.helpers.arrayElements(Object.values(RestrictedField)),
+    undefined,
+  ]),
+  access: { crm: faker.datatype.boolean(), erp: faker.datatype.boolean() },
+  onboarding_done: faker.datatype.boolean(),
+  whats_new_shown: faker.helpers.arrayElement([
+    faker.helpers.fromRegExp("^\\d{4}-\\d{2}-\\d{2}$"),
+    null,
+  ]),
+  whats_new_read: faker.helpers.arrayElement([
+    faker.helpers.fromRegExp("^\\d{4}-\\d{2}-\\d{2}$"),
+    null,
+  ]),
   ...overrideResponse,
 });
 
@@ -935,6 +1031,14 @@ export const getUploadAvatarResponseMock = (
   ]),
   access: { crm: faker.datatype.boolean(), erp: faker.datatype.boolean() },
   onboarding_done: faker.datatype.boolean(),
+  whats_new_shown: faker.helpers.arrayElement([
+    faker.helpers.fromRegExp("^\\d{4}-\\d{2}-\\d{2}$"),
+    null,
+  ]),
+  whats_new_read: faker.helpers.arrayElement([
+    faker.helpers.fromRegExp("^\\d{4}-\\d{2}-\\d{2}$"),
+    null,
+  ]),
   ...overrideResponse,
 });
 
@@ -974,6 +1078,14 @@ export const getDeleteAvatarResponseMock = (
   ]),
   access: { crm: faker.datatype.boolean(), erp: faker.datatype.boolean() },
   onboarding_done: faker.datatype.boolean(),
+  whats_new_shown: faker.helpers.arrayElement([
+    faker.helpers.fromRegExp("^\\d{4}-\\d{2}-\\d{2}$"),
+    null,
+  ]),
+  whats_new_read: faker.helpers.arrayElement([
+    faker.helpers.fromRegExp("^\\d{4}-\\d{2}-\\d{2}$"),
+    null,
+  ]),
   ...overrideResponse,
 });
 
@@ -1164,6 +1276,35 @@ export const getGetHealthResponseMock = (
   ...overrideResponse,
 });
 
+export const getGetAboutResponseMock = (
+  overrideResponse: Partial<Extract<About, object>> = {},
+): About => ({
+  release: {
+    version: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    sha: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+    released_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 10),
+      undefined,
+    ]),
+    built_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), undefined]),
+  },
+  services: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      key: faker.helpers.arrayElement(["bff", "crm", "erp", "eds"] as const),
+      status: faker.helpers.arrayElement(["ok", "fail", "disabled"] as const),
+      version: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        undefined,
+      ]),
+    }),
+  ),
+  checked_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  ...overrideResponse,
+});
+
 export const getGetMenuCountersResponseMock = (
   overrideResponse: Partial<Extract<MenuCounters, object>> = {},
 ): MenuCounters => ({
@@ -1176,6 +1317,10 @@ export const getGetMenuCountersResponseMock = (
   sources: {
     crm: faker.helpers.arrayElement(Object.values(SourceState)),
     erp: faker.helpers.arrayElement(Object.values(SourceState)),
+    eds: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(SourceState)),
+      undefined,
+    ]),
   },
   ...overrideResponse,
 });
@@ -1218,6 +1363,10 @@ export const getGetQueueResponseMock = (
   sources: {
     crm: faker.helpers.arrayElement(Object.values(SourceState)),
     erp: faker.helpers.arrayElement(Object.values(SourceState)),
+    eds: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(SourceState)),
+      undefined,
+    ]),
   },
   ...overrideResponse,
 });
@@ -1238,6 +1387,10 @@ export const getGetQueueCardsResponseMock = (
   sources: {
     crm: faker.helpers.arrayElement(Object.values(SourceState)),
     erp: faker.helpers.arrayElement(Object.values(SourceState)),
+    eds: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(SourceState)),
+      undefined,
+    ]),
   },
   ...overrideResponse,
 });
@@ -1276,6 +1429,10 @@ export const getGetActivityTodayResponseMock = (
   sources: {
     crm: faker.helpers.arrayElement(Object.values(SourceState)),
     erp: faker.helpers.arrayElement(Object.values(SourceState)),
+    eds: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(SourceState)),
+      undefined,
+    ]),
   },
   ...overrideResponse,
 });
@@ -1318,6 +1475,10 @@ export const getListNotificationsResponseMock = (
   sources: {
     crm: faker.helpers.arrayElement(Object.values(SourceState)),
     erp: faker.helpers.arrayElement(Object.values(SourceState)),
+    eds: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(SourceState)),
+      undefined,
+    ]),
   },
   ...overrideResponse,
 });
@@ -1357,6 +1518,10 @@ export const getSearchResponseMock = (
   sources: {
     crm: faker.helpers.arrayElement(Object.values(SourceState)),
     erp: faker.helpers.arrayElement(Object.values(SourceState)),
+    eds: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(SourceState)),
+      undefined,
+    ]),
   },
   ...overrideResponse,
 });
@@ -2031,6 +2196,10 @@ export const getGetQuoteApprovalResponseMock = (
   sources: {
     crm: faker.helpers.arrayElement(Object.values(SourceState)),
     erp: faker.helpers.arrayElement(Object.values(SourceState)),
+    eds: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(SourceState)),
+      undefined,
+    ]),
   },
   ...overrideResponse,
 });
@@ -2239,6 +2408,10 @@ export const getDecideQuoteApprovalResponseMock = (
   sources: {
     crm: faker.helpers.arrayElement(Object.values(SourceState)),
     erp: faker.helpers.arrayElement(Object.values(SourceState)),
+    eds: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(SourceState)),
+      undefined,
+    ]),
   },
   ...overrideResponse,
 });
@@ -2541,6 +2714,10 @@ export const getListEdsDealOptionsResponseMock = (
   sources: {
     crm: faker.helpers.arrayElement(Object.values(SourceState)),
     erp: faker.helpers.arrayElement(Object.values(SourceState)),
+    eds: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(SourceState)),
+      undefined,
+    ]),
   },
   ...overrideResponse,
 });
@@ -5872,6 +6049,10 @@ export const getGetLetterResponseMock = (
   sources: {
     crm: faker.helpers.arrayElement(Object.values(SourceState)),
     erp: faker.helpers.arrayElement(Object.values(SourceState)),
+    eds: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(SourceState)),
+      undefined,
+    ]),
   },
   ...overrideResponse,
 });
@@ -6010,6 +6191,10 @@ export const getResolveLetterResponseMock = (
   sources: {
     crm: faker.helpers.arrayElement(Object.values(SourceState)),
     erp: faker.helpers.arrayElement(Object.values(SourceState)),
+    eds: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(SourceState)),
+      undefined,
+    ]),
   },
   ...overrideResponse,
 });
@@ -6148,6 +6333,10 @@ export const getReturnLetterResponseMock = (
   sources: {
     crm: faker.helpers.arrayElement(Object.values(SourceState)),
     erp: faker.helpers.arrayElement(Object.values(SourceState)),
+    eds: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(SourceState)),
+      undefined,
+    ]),
   },
   ...overrideResponse,
 });
@@ -6286,6 +6475,10 @@ export const getRejectLetterResponseMock = (
   sources: {
     crm: faker.helpers.arrayElement(Object.values(SourceState)),
     erp: faker.helpers.arrayElement(Object.values(SourceState)),
+    eds: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(SourceState)),
+      undefined,
+    ]),
   },
   ...overrideResponse,
 });
@@ -8956,6 +9149,27 @@ export const getFinishOnboardingMockHandler = (
   );
 };
 
+export const getMarkWhatsNewMockHandler = (
+  overrideResponse?:
+    Me | ((info: Parameters<Parameters<typeof http.put>[1]>[0]) => Promise<Me> | Me),
+  options?: RequestHandlerOptions,
+) => {
+  return http.put(
+    "*/me/whats-new",
+    async (info: Parameters<Parameters<typeof http.put>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getMarkWhatsNewResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getListMyTicketsMockHandler = (
   overrideResponse?:
     | TicketList
@@ -9335,6 +9549,27 @@ export const getGetHealthMockHandler = (
             ? await overrideResponse(info)
             : overrideResponse
           : getGetHealthResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetAboutMockHandler = (
+  overrideResponse?:
+    About | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<About> | About),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/about",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetAboutResponseMock(),
         { status: 200 },
       );
     },
@@ -13550,6 +13785,7 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getUpdateNotificationSettingsMockHandler(),
   getSendTestNotificationMockHandler(),
   getFinishOnboardingMockHandler(),
+  getMarkWhatsNewMockHandler(),
   getListMyTicketsMockHandler(),
   getCreateTicketMockHandler(),
   getGetMyTicketMockHandler(),
@@ -13568,6 +13804,7 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getSetDeputyMockHandler(),
   getClearDeputyMockHandler(),
   getGetHealthMockHandler(),
+  getGetAboutMockHandler(),
   getGetMenuCountersMockHandler(),
   getGetQueueMockHandler(),
   getGetQueueCardsMockHandler(),

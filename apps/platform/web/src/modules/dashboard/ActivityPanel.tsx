@@ -10,6 +10,7 @@ import { type StatusTone, TONE_STYLE } from "../../shared/lib/statuses";
 import { useFormat } from "../../shared/lib/useFormat";
 import { EmptyState } from "../../shared/ui/EmptyState";
 import { SourceBanner } from "../../shared/ui/SourceBanner";
+import { objectLink } from "../objectLinks";
 import { moduleName } from "../registry";
 import "../../features/notifications/notifications.css";
 
@@ -51,7 +52,7 @@ function Row({ item }: { item: ActivityItem }) {
   return (
     <li>
       {item.object ? (
-        <Link to={item.object.path} className="pf-feed-row">
+        <Link to={objectLink(item.object)} className="pf-feed-row">
           {body}
         </Link>
       ) : (

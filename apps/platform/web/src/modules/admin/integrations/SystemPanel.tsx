@@ -1,14 +1,21 @@
 import { useTranslation } from "react-i18next";
 
+import { ServiceVersions } from "../../../features/about/AboutPanel";
+import { useAbout, useReleaseText } from "../../../features/about/release";
 import { useGetSystemStatus } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { LevelTag, PanelState, PanelTitle } from "./parts";
 
-/** Карточка «Состояние системы»: общий итог и компоненты в порядке «сбой, предупреждение, нет данных, норма». */
+/**
+ * Карточка «Состояние системы»: общий итог и компоненты в порядке «сбой, предупреждение, нет данных, норма»; ниже — версия
+ * Платформы и версии сервисов BFF, CRM, ERP, EDS, если их health её сообщает (W-REL).
+ */
 export function SystemPanel() {
   const { t } = useTranslation("integrations");
   const { date } = useFormat();
   const query = useGetSystemStatus();
+  const about = useAbout();
+  const release = useReleaseText();
   return (
     <div className="pf-panel-stack">
       <PanelTitle>{t("cards.system.title")}</PanelTitle>
@@ -38,6 +45,17 @@ export function SystemPanel() {
           </>
         )}
       </PanelState>
+      {about.data ? (
+        <section aria-labelledby="pf-system-versions">
+          <h3 id="pf-system-versions" className="pf-int-item-title" style={{ margin: "8px 0 4px" }}>
+            {t("system.versions")}
+          </h3>
+          <p className="pf-int-sub" data-testid="system-release">
+            {release}
+          </p>
+          <ServiceVersions services={about.data.services} />
+        </section>
+      ) : null}
     </div>
   );
 }

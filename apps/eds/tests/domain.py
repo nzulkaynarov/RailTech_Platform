@@ -1,7 +1,7 @@
 """Помощники доменных тестов: сотрудники по ролям каталога, события outbox, проверка ответов по схемам `eds.yaml`."""
 
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -39,6 +39,8 @@ class Person:
     id: int
     name: str
     permissions: list[str]
+    # Разделы каталога (D1-8, `permissions.sections` в identity): зона исполнителя резолюции.
+    sections: dict[str, str] = field(default_factory=dict)
 
     @property
     def headers(self) -> dict[str, str]:
@@ -47,16 +49,26 @@ class Person:
 
 # Роли каталога (CONTRACTS §10.4); «Регистратор» — письма без прав директора.
 ROSTER: dict[str, Person] = {
-    "director": Person(3, "Рустам Директоров", ALL),
+    "director": Person(
+        3,
+        "Рустам Директоров",
+        ALL,
+        {"erp.calc.goods": "full", "erp.calc.services": "full", "eds.payments": "full", "admin": "read"},
+    ),
     "registrar": Person(4, "Регина Регистраторова", ["letters.read", "letters.register", "memos.create"]),
     "manager": Person(5, "Алия Каримова", ["letters.read", "registry.read", "memos.create", "files.upload"]),
     "accountant": Person(
         6,
         "Бахтиёр Бухгалтеров",
         ["letters.read", "registry.read", "registry.export", "payments.confirm", "memos.create"],
+        {"eds.payments": "full", "eds.projects": "full", "erp.calc": "read"},
     ),
-    "supplier": Person(11, "Сардор Снабженцев", ["registry.read", "memos.create"]),
-    "engineer": Person(12, "Ильдар Инженеров", ["registry.read", "memos.create"]),
+    "supplier": Person(
+        11, "Сардор Снабженцев", ["registry.read", "memos.create"], {"erp.calc": "full", "erp.calc.goods": "full"}
+    ),
+    "engineer": Person(
+        12, "Ильдар Инженеров", ["registry.read", "memos.create"], {"erp.calc": "full", "erp.calc.services": "full"}
+    ),
     # «Администратор» каталога: служебные записки и журнал шины (`admin: full` → `bus.manage`, W13-A2).
     "admin": Person(9, "Админ Админов", ["memos.create", "bus.manage"]),
     "nobody": Person(10, "Без Прав", []),
@@ -70,7 +82,7 @@ async def seed_staff(container: Container) -> dict[str, Person]:
             person.id,
             full_name=person.name,
             email=f"user{person.id}@example.com",
-            permissions={"eds": person.permissions},
+            permissions={"eds": person.permissions, "sections": person.sections},
         )
     return ROSTER
 

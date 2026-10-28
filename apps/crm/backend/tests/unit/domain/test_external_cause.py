@@ -86,6 +86,46 @@ def test_different_vendors_do_not_merge() -> None:
     ]
 
 
+def test_four_stale_services_are_one_row_with_the_services_listed() -> None:
+    """W15-G-2: «фоновые проверки не идут» — одна причина, одна строка, сервисы списком."""
+    keys = ("telegram", "litellm", "s3", "docling")
+    items = [
+        _diagnose(
+            key,
+            CheckResult(
+                key, "unknown", f"Последняя проверка {27 + i} мин назад — фоновые проверки не идут"
+            ),
+            stale=True,
+        )
+        for i, key in enumerate(keys)
+    ]
+
+    groups = cause.build_groups(items)
+
+    assert len(groups) == 1
+    group = groups[0]
+    assert group.id == "worker:checks_stale"
+    assert group.state == "not_checked"
+    assert group.owner == "hosting"
+    assert group.service_keys == keys
+    assert len(group.titles) == 4
+    assert "фоновые проверки не идут" in group.headline
+
+
+def test_stale_and_never_checked_are_different_rows() -> None:
+    stale = _diagnose(
+        "s3", CheckResult("s3", "unknown", "Последняя проверка 30 мин назад"), stale=True
+    )
+    fresh = _diagnose(
+        "docling", CheckResult("docling", "unknown", "Не проверено"), never_checked=True
+    )
+
+    assert {g.id for g in cause.build_groups([stale, fresh])} == {
+        "worker:checks_stale",
+        "docling:not_checked",
+    }
+
+
 def test_groups_are_sorted_broken_first_and_ok_is_left_out() -> None:
     ok = _diagnose("s3", rules.s3(HttpFacts(None, None, 5)))
     docling = _diagnose("docling", rules.docling(HttpFacts("unavailable", "refused")))

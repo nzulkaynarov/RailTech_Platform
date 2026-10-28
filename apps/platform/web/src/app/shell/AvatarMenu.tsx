@@ -1,9 +1,11 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { Dropdown } from "antd";
 import type { MenuProps } from "antd";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router";
 
+import { useReleaseText } from "../../features/about/release";
 import { getGetMeQueryKey, useLogout, useUpdateMe } from "../../shared/api/generated/platform-bff";
 import type { Language, Me } from "../../shared/api/generated/model";
 import { LANGUAGES } from "../../shared/i18n";
@@ -13,6 +15,8 @@ import { roleCaption } from "./roleCaption";
 
 /**
  * Меню аватара (SPEC-v3 §6.1 зона 6): профиль (страница `/me`, W15-H6), помощь (W15-H7), активная роль (если ролей несколько), язык ru/uz/en, смена пароля, выход.
+ * Внизу — версия Платформы «Платформа 2026.10.28 · 1a2b3c4» (W-REL): пункт ведёт в «Помощь → О системе»; версия
+ * запрашивается при первом открытии меню.
  * Роль и язык сохраняются в `PATCH /me`; ответ — новый `Me` с пересчитанными модулями и разделами.
  */
 export function AvatarMenu({
@@ -27,6 +31,8 @@ export function AvatarMenu({
 }) {
   const { t } = useTranslation("shell");
   const navigate = useNavigate();
+  const [opened, setOpened] = useState(false);
+  const release = useReleaseText(opened);
   const queryClient = useQueryClient();
 
   const update = useUpdateMe({
@@ -103,12 +109,25 @@ export function AvatarMenu({
     },
     { type: "divider" },
     { key: "logout", label: t("avatar.logout"), danger: true },
+    { type: "divider" },
+    {
+      key: "about",
+      label: (
+        <span style={{ display: "block", lineHeight: "18px" }}>
+          <span style={{ display: "block" }}>{t("help:about.menu")}</span>
+          {release ? (
+            <span style={{ display: "block", fontSize: 12, color: "#595959" }}>{release}</span>
+          ) : null}
+        </span>
+      ),
+    },
   ];
 
   const onClick: MenuProps["onClick"] = ({ key }) => {
     if (key === "profile") void navigate("/me");
     else if (key === "help") onHelp?.();
     else if (key === "password") void navigate("/change-password");
+    else if (key === "about") void navigate("/help/about");
     else if (key === "logout") logout.mutate();
     else if (key.startsWith("role:")) {
       const value = key.slice(5);
@@ -122,6 +141,9 @@ export function AvatarMenu({
     <Dropdown
       trigger={["click"]}
       placement={placement}
+      onOpenChange={(open) => {
+        if (open) setOpened(true);
+      }}
       menu={{
         items,
         onClick,

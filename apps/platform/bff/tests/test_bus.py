@@ -56,6 +56,16 @@ def test_every_subscribed_type_maps_to_known_topics() -> None:
     assert topics_for(message, {"handoff": False}) == ("messages",)
     assert set(TOPICS) == {*erp, "messages"}
     assert topics_for("uz.railtech.identity.user.updated.v1") == ("counters", "queue")
+    for name in (
+        "letter.registered",
+        "letter.resolved",
+        "letter.returned",
+        "letter.rejected",
+        "approval.requested",
+        "approval.decided",
+        "document.registered",
+    ):
+        assert topics_for(f"uz.railtech.eds.{name}.v1") == ("notifications", "counters", "queue")
     assert topics_for("uz.railtech.crm.client.updated.v1") == ()
 
 
@@ -90,10 +100,10 @@ async def test_duplicate_delivery_does_not_repeat_the_hint(web: Web) -> None:
     assert len(hints(web)) == 1
 
 
-async def test_eds_event_is_skipped_until_the_screens_of_stage_d(
+async def test_eds_event_hints_queue_counters_and_notifications(
     web: Web, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Волна 12: подписка на события EDS есть, обработчика нет — 200 `skipped`, подсказки нет."""
+    """D1-6: письмо, поступившее в EDS, — подсказка, «Моя очередь» директора обновится сама."""
     monkeypatch.setenv("RT_BUS_SECRET_EDS_PLATFORM_BFF", "test-pair-secret-eds-platform-bff")
     headers, raw = delivery(
         envelope("eds", "letter.registered"),
@@ -101,8 +111,13 @@ async def test_eds_event_is_skipped_until_the_screens_of_stage_d(
         secret="test-pair-secret-eds-platform-bff",
     )
     status, body = await post(web, headers, raw)
-    assert (status, body["status"]) == (200, "skipped")
-    assert hints(web) == []
+    assert (status, body["status"]) == (200, "processed")
+    assert hints(web) == [
+        {
+            "topics": ["notifications", "counters", "queue"],
+            "reason": "uz.railtech.eds.letter.registered.v1",
+        }
+    ]
 
 
 async def test_event_without_a_handler_is_skipped(web: Web) -> None:

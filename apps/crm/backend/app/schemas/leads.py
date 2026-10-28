@@ -127,6 +127,9 @@ class MessageOut(BaseModel):
     id: int
     role: str
     text: str
+    # Вложения сообщения по порядку: `kind`, `name`, `mime`, `size`, `stored` (файл сохранён),
+    # `too_large`/`note` (почему не сохранён). Ключа хранилища нет (D1-8, B-014): файл отдаёт только
+    # `GET /leads/{lead_id}/messages/{message_id}/attachments/{index}` по номеру в этом списке.
     attachments: list[dict[str, Any]]
     sent_by_user_id: int | None
     created_at: datetime
@@ -160,8 +163,13 @@ class Assign(BaseModel):
 
 
 class TeamMember(BaseModel):
+    """Сотрудник в выборе («кому передать лида», «исполнитель зоны»): без почты, телефона, ролей."""
+
     id: int
     full_name: str
+    # Первые буквы имени и фамилии (до двух, заглавные); нет имени — первая буква почты (D1-8).
+    initials: str = Field(max_length=3)
+    position: str | None = None
 
 
 class Close(BaseModel):

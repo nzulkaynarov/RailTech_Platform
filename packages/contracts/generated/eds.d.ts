@@ -120,7 +120,10 @@ export interface paths {
      * Утвердить резолюцию → задание в ERP
      * @description Только письмо в статусе `awaiting_resolution` (иначе 409 `CONFLICT`, `details.reason = invalid_state`). Статус →
      *     `resolved`; публикуется `letter.resolved` (исполнители, срок, мин. маржа, ссылки на заявку и сделку ERP) — ERP создаёт
-     *     задание расчёта (EDS-01). Исполнители — активные сотрудники проекции (иначе 422, `details.fields.assignees`). Срок
+     *     задание расчёта (EDS-01). Исполнители — активные сотрудники проекции (иначе 422, `details.fields.assignees =
+     *     not_active_employee`), у каждого — раздел каталога его зоны на уровне `full`: товары — `erp.calc.goods`, услуги —
+     *     `erp.calc.services`, условия оплаты — `eds.payments` (проекция берёт разделы из `identity.user.*`,
+     *     `user.permissions.sections`; иначе 422, `details.fields.assignees = assignee_zone_mismatch`; D1-8, B-007). Срок
      *     `due` — не раньше сегодняшней даты по `Asia/Tashkent` (иначе 422, `details.fields.due`; решение архитектора
      *     2026-10-26, C1-G-1).
      */

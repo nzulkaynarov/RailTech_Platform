@@ -20,6 +20,9 @@ TIMEOUT_SECONDS = 3.0
 PROBE_TIMEOUT_SECONDS = 30.0
 # CRM: вход (хеш пароля) под нагрузкой не укладывался в 3 с; `PLATFORM_CRM_TIMEOUT_SECONDS`.
 CRM_TIMEOUT_SECONDS = 5.0
+# Создание первого администратора: хеш пароля и вход под нагрузкой дольше 5 с (гейт W15: CRM создала
+# администратора, а BFF уже не ждал). Как у остальных долгих операций (проба — 30 с).
+SETUP_TIMEOUT_SECONDS = 30.0
 
 Backend = Literal["crm", "erp", "eds"]
 
@@ -101,6 +104,24 @@ class BackendClient:
             return False
         return response.status_code == httpx.codes.OK
 
+    async def health_info(self) -> tuple[bool, str | None]:
+        """Жив ли бэкенд и его версия, если health её сообщает (W-REL).
+
+        Версия — поле `version` ответа health (как у EDS); нет — None.
+        """
+        try:
+            response = await self.http.get(self.health_path)
+        except httpx.HTTPError:
+            return False, None
+        version: str | None = None
+        try:
+            body = response.json()
+        except ValueError:
+            body = None
+        if isinstance(body, dict) and isinstance(body.get("version"), str):
+            version = body["version"][:64] or None
+        return response.status_code == httpx.codes.OK, version
+
     async def send(
         self,
         method: str,
@@ -114,6 +135,7 @@ class BackendClient:
         probe: bool = False,
         content: bytes | None = None,
         stream: bool = False,
+        wait_seconds: float | None = None,
     ) -> httpx.Response:
         """Вызов бэкенда от имени сотрудника. 2xx и 4xx возвращаются как есть (решает вызывающий),
         сеть, таймаут и 5xx — `BackendUnavailableError`. `content` — готовое тело (загрузка файла
@@ -140,7 +162,9 @@ class BackendClient:
                 json=json,
                 params=params,
                 content=content,
-                timeout=httpx.Timeout(PROBE_TIMEOUT_SECONDS)
+                timeout=httpx.Timeout(wait_seconds)
+                if wait_seconds is not None
+                else httpx.Timeout(PROBE_TIMEOUT_SECONDS)
                 if probe or stream
                 else httpx.USE_CLIENT_DEFAULT,
             )

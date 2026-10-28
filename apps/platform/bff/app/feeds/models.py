@@ -5,9 +5,9 @@
 """
 
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_serializer
 
 from app.rbac_generated import ModuleCode
 
@@ -38,6 +38,7 @@ QueueItemKind = Literal[
     "resolve_letter",
     "approve_quote",
     "approve_memo",
+    "rework_document",
     "problem_project",
     "calc_task",
     "supplier_overdue",
@@ -55,8 +56,20 @@ NotificationTab = Literal["all", "decisions", "clients", "system"]
 
 
 class Sources(BaseModel):
+    """Состояние источников ответа. `eds` — только когда ответ собран и из EDS (письма, документы
+    на согласовании, реестр поиска): без доступа сотрудника к EDS и без обращения к нему поля нет
+    (добавляющее поле контракта 0.25.0)."""
+
     crm: SourceState
     erp: SourceState
+    eds: SourceState | None = None
+
+    @model_serializer(mode="wrap")
+    def _without_unused_eds(self, handler: Any) -> dict[str, Any]:
+        data: dict[str, Any] = handler(self)
+        if data.get("eds") is None:
+            data.pop("eds", None)
+        return data
 
 
 class ObjectRef(BaseModel):

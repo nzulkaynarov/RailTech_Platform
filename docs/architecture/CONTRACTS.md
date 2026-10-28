@@ -440,7 +440,7 @@ subscribers:
 `uz.railtech.crm.contact.*.v1` (ERP обновляет проекции компании и контактов, B4) и с волны 12 `uz.railtech.eds.letter.resolved.v1`,
 `uz.railtech.eds.letter.rejected.v1`, `uz.railtech.eds.approval.decided.v1`; `eds` — §10.2.
 `platform-bff` (B5) ← `uz.railtech.erp.*.v1`, `uz.railtech.crm.lead.*.v1`, `uz.railtech.identity.user.*.v1` и с волны 12
-`uz.railtech.eds.*.v1` (обработчика в BFF пока нет — `skipped`; колокольчик и счётчики — этап D): BFF Платформы
+`uz.railtech.eds.*.v1` (с D1-6 — подсказки `queue`, `counters`, `notifications`): BFF Платформы
 превращает события в подсказки инвалидации SSE (`GET /api/v1/events/stream`, `platform-bff.yaml` 0.5.0), данных событий не
 хранит; приёмник `http://platform-bff:8000/bus/v1/events` виден только внутри сети compose (Caddy `/bus/*` на домене
 Платформы отдаёт 404); секреты пар — `RT_BUS_SECRET_ERP_PLATFORM_BFF`, `RT_BUS_SECRET_CRM_PLATFORM_BFF`, с волны 12
@@ -563,7 +563,7 @@ ADR-0015 (EDS — отдельный сервис, владелец реестр
 | `openapi/eds.yaml` | API EDS `/api/v1` для BFF Платформы: обмен токена, `/me`, письма и резолюции, документы, маршруты согласования, реестр и экспорт, файлы с версиями; `/health` | 0.2.0 |
 | `events/eds/*.v1.json` (+ `_defs.v1.json`, `examples/`) | 8 типов `uz.railtech.eds.*.v1` | v1 |
 | `events/erp/quote.ready_for_approval.v1.json` | КП готово к одобрению (определения — `QuoteReadyForApproval`, `QuoteVisa` в `erp/_defs.v1.json`) | v1 |
-| `events/identity/_defs.v1.json` | `User.permissions.eds` — необязательное, аддитивно в v1 | v1 |
+| `events/identity/_defs.v1.json` | `User.permissions.eds` — необязательное, аддитивно в v1; `User.permissions.sections` — разделы модулей EDS и ERP и уровень (`full`/`read`), необязательное, аддитивно в v1 (D1-8: зона исполнителя резолюции в EDS, `assignee_zone_mismatch`) | v1 |
 | `bus/subscriptions.yaml` | подписчик `eds`; новые типы `erp` и `platform-bff`; `crm` без `quote.ready_for_approval` | — |
 | `platform-rbac.yaml` (+ схема) | `backend.eds` разделов EDS → коды прав EDS | каталог v2 |
 

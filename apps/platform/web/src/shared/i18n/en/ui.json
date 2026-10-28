@@ -29,6 +29,8 @@
     "erp": "ERP is not responding, data is incomplete",
     "crm": "CRM is not responding, data is incomplete",
     "both": "CRM and ERP are not responding, data is incomplete",
+    "eds": "Documents are not responding, data is incomplete",
+    "multi": "Some sources are not responding, data is incomplete",
     "retry": "Retry"
   },
   "whereToDo": "Where to do it",

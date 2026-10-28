@@ -77,6 +77,26 @@ def test_system_roles_and_templates_map_to_their_eds_codes(code: str, expected: 
     assert eds_permissions(role(code)) == expected
 
 
+def test_rework_row_belongs_to_the_author_of_documents_not_to_the_approver() -> None:
+    """D1-6b: строка «Доработать» очереди (`rework_document`) — раздел `eds.memo.create` уровня `full`, то есть право
+    автора `memos.create` (EDS отдаёт автору его возвращённые документы); право согласующего её не даёт."""
+    rule = CATALOG["queue"]["rework_document"]
+    assert (rule["resource"], rule["level"]) == ("eds.memo.create", "full")
+    memos_create = {
+        r["key"]
+        for r in CATALOG["resources"]
+        if "memos.create" in ((r.get("backend") or {}).get("eds") or {}).get("full", ())
+    }
+    assert rule["resource"] in memos_create
+    assert rule["resource"] != "eds.memo.approve"
+    holders = {
+        code
+        for code in {**CATALOG["system_roles"], **CATALOG["templates"]}
+        if role(code).get(rule["resource"]) == "full"
+    }
+    assert {"ADMIN", "DIRECTOR", "MANAGER", "SUPPLY", "ENGINEER", "ACCOUNTANT"} <= holders
+
+
 def test_director_gets_every_eds_code_except_the_bus_journal() -> None:
     assert len(EDS_CODES) == 11
     assert eds_permissions(role("DIRECTOR")) == EDS_CODES - {BUS}
@@ -200,8 +220,9 @@ def test_eds_api_global_security_is_the_eds_access_token() -> None:
     assert EDS_YAML["security"] == [{"edsAccess": []}]
     scheme = EDS_YAML["components"]["securitySchemes"]["edsAccess"]
     assert (scheme["type"], scheme["scheme"], scheme["bearerFormat"]) == ("http", "bearer", "JWT")
-    # 0.5.0 — новый код files.upload в перечне ответов EdsPermission (D1-2b); 0.4.0 — PATCH (D1-5)
-    assert EDS_YAML["info"]["version"] == "0.5.0"
+    # 0.6.0 — код files.upload в перечне ответов EdsPermission (D1-2b); 0.5.0 — зона исполнителя резолюции (D1-8);
+    # 0.4.0 — PATCH /documents/{id} (D1-5); 0.3.0 — журнал шины (W13-A2)
+    assert EDS_YAML["info"]["version"] == "0.6.0"
 
 
 def test_numbers_are_not_path_parameters() -> None:

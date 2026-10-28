@@ -9,6 +9,7 @@ import type { ModuleCode } from "./moduleCode";
 import type { RestrictedField } from "./restrictedField";
 import type { RoleId } from "./roleId";
 import type { RoleRef } from "./roleRef";
+import type { WhatsNewDate } from "./whatsNewDate";
 
 export interface Me {
   /** `crm_user_id` */
@@ -38,4 +39,8 @@ export interface Me {
   access: MeAccess;
   /** Приветствие и тур первого входа уже показаны («Пропустить» или «Больше не показывать»); `false` — SPA показывает карточку «Добро пожаловать». Флаг хранит CRM (`PUT /me/onboarding`), а не браузер. */
   onboarding_done: boolean;
+  /** W-REL. Дата записи «Что нового» (`2026-10-28`), о которой окно «Платформа обновлена» уже показано; `null` — ни одной. Запись новее — SPA один раз показывает окно. Хранит CRM (`PUT /me/whats-new`). */
+  whats_new_shown?: WhatsNewDate | null;
+  /** W-REL. Дата последней открытой записи «Что нового»; запись новее — у «?» отметка «Новое», пока сотрудник её не откроет. `null` — не открывал ни одной. */
+  whats_new_read?: WhatsNewDate | null;
 }

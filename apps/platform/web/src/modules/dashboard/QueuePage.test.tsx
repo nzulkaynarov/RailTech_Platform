@@ -2,6 +2,11 @@ import { act, fireEvent, screen, waitFor, within } from "@testing-library/react"
 import { HttpResponse, http } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import {
+  MOCK_EDS_DOWN_KEY,
+  MOCK_ERP_DOWN_KEY,
+  MOCK_QUEUE_STUB_KEY,
+} from "../../mocks/feedHandlers";
 import { endSession } from "../../mocks/mockSession";
 import { usePanelsStore } from "../../app/shell/panelsStore";
 import i18n from "../../shared/i18n";
@@ -77,7 +82,8 @@ describe("Dashboard · Моя очередь", () => {
 
     expect(await within(page).findByText("Взять в работу лида L-2041")).toBeVisible();
     expect(within(page).getByText("Ответить лиду L-2050")).toBeVisible();
-    expect(within(page).getByText(/Менеджер · .* · 2 решения/)).toBeVisible();
+    // третья строка — «Доработать» (D1-6b): служебку менеджера вернул директор, она лежит в его документах
+    expect(within(page).getByText(/Менеджер · .* · 3 решения/)).toBeVisible();
     expect(within(page).queryByRole("status")).toBeNull();
   });
 
@@ -138,56 +144,89 @@ describe("Dashboard · Моя очередь", () => {
     expect(await within(page).findByText("Клиенты вас сейчас не ждут")).toBeVisible();
   });
 
-  it("строка без экрана — «Где сделать» с мостом, строка с экраном — «Открыть»; primary у всех срочных", async () => {
+  it("менеджер: передача и сообщение клиента открывают диалог в «Ждут ответа» — «Открыть», без «Где сделать»; primary у срочных", async () => {
+    signInAs("manager@demo.example");
+    renderApp("/dashboard/queue");
+    const page = await main();
+
+    const take = await within(page).findByRole("link", {
+      name: "Открыть: Взять в работу лида L-2041",
+    });
+    expect(take).toHaveAttribute("href", "/crm/messages?lead=L-2041");
+    expect(take).toHaveClass("ant-btn-primary");
+    expect(
+      within(page).getByRole("link", { name: "Открыть: Ответить лиду L-2050" }),
+    ).toHaveAttribute("href", "/crm/messages?lead=L-2050");
+    expect(within(page).queryByRole("button", { name: /^Где сделать/ })).toBeNull();
+  });
+
+  it("строка без экрана (проект) — «Где сделать» с мостом, ссылки на заглушку нет; письмо, КП и служебка рядом — «Открыть»", async () => {
+    window.localStorage.setItem(MOCK_QUEUE_STUB_KEY, "1");
+    signInAs("director@demo.example");
+    renderApp("/dashboard/queue");
+    const page = await main();
+
+    const where = await within(page).findByRole("button", {
+      name: "Где сделать: Разобраться с проектом ПР-2026-099",
+    });
+    fireEvent.click(where);
+    expect(await screen.findByText(/Сейчас — в старом ERP: раздел «Сделки»/)).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: /Открыть в старом ERP/ })).toHaveAttribute(
+      "href",
+      "http://erp.localhost:8088/#crm-deals",
+    );
+    // письмо, КП и служебка — «Открыть» с адресом объекта и вкладкой решения; «Где сделать» у них нет
+    const open = within(page).getAllByRole("link", { name: /^Открыть:/ });
+    expect(open.map((link) => link.getAttribute("href"))).toEqual([
+      "/eds/inbox/%D0%92%D0%A5-104%2F26?panel=open&tab=resolution",
+      "/eds/drafts/%D0%9A%D0%9F-2026%2F118?panel=open&tab=approve",
+      "/eds/approvals/%D0%A1%D0%97-2026%2F031?panel=open&tab=agree",
+    ]);
+    expect(within(page).getAllByRole("button", { name: /^Где сделать/ })).toHaveLength(1);
+  });
+
+  it("BFF прислал короткие адреса объектов — вкладка решения достраивается в Платформе", async () => {
     server.use(
       http.get("*/queue", () =>
         HttpResponse.json({
           items: [
             {
-              id: "lead:2041:take",
-              role_id: "3",
-              kind: "take_lead",
-              title: "Взять в работу лида L-2041",
+              id: "letter:104",
+              role_id: "2",
+              kind: "resolve_letter",
+              title: "Наложить резолюцию на письмо ВХ-104/26",
               subtitle: "ООО «Демо-Депо»",
-              due_label: "today",
+              due_label: "later",
               object: {
-                kind: "lead",
-                number: "L-2041",
-                path: "/crm/leads?lead=L-2041&panel=open&tab=card",
+                kind: "letter",
+                number: "ВХ-104/26",
+                path: "/eds/inbox/%D0%92%D0%A5-104%2F26",
               },
             },
             {
-              id: "invoice:142",
-              role_id: "3",
-              kind: "overdue_invoice",
-              title: "Счёт СЧ-2026/142 просрочен",
-              subtitle: "ООО «Демо-Депо»",
-              due_label: "today",
-              object: {
-                kind: "invoice",
-                number: "СЧ-2026/142",
-                path: "/eds/payments/%D0%A1%D0%A7-2026%2F142?panel=open&tab=payment",
-              },
+              id: "memo:31",
+              role_id: "2",
+              kind: "approve_memo",
+              title: "Согласовать СЗ-2026/031",
+              subtitle: "от Демо Офисовой",
+              due_label: "memo",
+              object: { kind: "memo", number: "СЗ-2026/031", path: "/eds/approvals" },
             },
           ],
-          cards: [],
           sources: { crm: "ok", erp: "ok" },
         }),
       ),
     );
-    signInAs("manager@demo.example");
+    signInAs("director@demo.example");
     renderApp("/dashboard/queue");
     const page = await main();
 
-    // «Лиды» — настоящий экран (D1-2b): строка лида — «Открыть»
     expect(
-      await within(page).findByRole("link", { name: "Открыть: Взять в работу лида L-2041" }),
-    ).toHaveAttribute("href", "/crm/leads?lead=L-2041&panel=open&tab=card");
-    const where = within(page).getByRole("button", {
-      name: "Где сделать: Счёт СЧ-2026/142 просрочен",
-    });
-    fireEvent.click(where);
-    expect(await screen.findByText(/Сейчас — в старом ERP/)).toBeInTheDocument();
+      await within(page).findByRole("link", { name: /Открыть: Наложить резолюцию на письмо/ }),
+    ).toHaveAttribute("href", "/eds/inbox/%D0%92%D0%A5-104%2F26?panel=open&tab=resolution");
+    expect(
+      within(page).getByRole("link", { name: "Открыть: Согласовать СЗ-2026/031" }),
+    ).toHaveAttribute("href", "/eds/approvals/%D0%A1%D0%97-2026%2F031?panel=open&tab=agree");
   });
 
   it("строка директора с родным экраном (письмо, КП) — «Открыть»: у писем primary, у КП обычная кнопка", async () => {
@@ -254,6 +293,37 @@ describe("Dashboard · Моя очередь", () => {
     expect(
       within(page).getByRole("link", { name: "Открыть: Одобрить КП-2026/118 (черновик)" }),
     ).not.toHaveClass("ant-btn-primary");
+  });
+
+  it("EDS не отвечает: КП и остальное показаны, письма и служебок нет, плашка называет «Документы» (D1-6)", async () => {
+    window.localStorage.setItem(MOCK_EDS_DOWN_KEY, "1");
+    signInAs("director@demo.example");
+    renderApp("/dashboard/queue");
+    const page = await main();
+
+    expect(await within(page).findByText("Одобрить КП-2026/118 (черновик)")).toBeVisible();
+    expect(within(page).queryByText(/Наложить резолюцию на письмо/)).toBeNull();
+    expect(within(page).queryByText(/Согласовать СЗ-2026\/031/)).toBeNull();
+    expect(within(page).getByRole("status")).toHaveTextContent(
+      "Не загрузились письма и документы: раздел «Документы» не ответил. Остальное показано.",
+    );
+    // карточки EDS без числа не показываются: ноль был бы ложью
+    expect(within(page).queryByRole("link", { name: /Входящие без резолюции/ })).toBeNull();
+    expect(within(page).getByRole("link", { name: /КП на одобрение/ })).toBeVisible();
+  });
+
+  it("не ответили ERP и EDS: одна плашка с названиями обоих разделов", async () => {
+    window.localStorage.setItem(MOCK_EDS_DOWN_KEY, "1");
+    window.localStorage.setItem(MOCK_ERP_DOWN_KEY, "1");
+    signInAs("all@demo.example");
+    renderApp("/dashboard/queue");
+    const page = await main();
+
+    expect(
+      await within(page).findByText(
+        "Не загрузились данные из разделов «Расчёт», «Документы». Остальное показано.",
+      ),
+    ).toBeVisible();
   });
 
   it("ERP не отвечает: данные CRM остаются, сверху плашка с названиями разделов", async () => {

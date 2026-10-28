@@ -110,7 +110,7 @@ describe("Раздел /help", () => {
     cleanup();
     renderApp("/help/news");
     expect(
-      await screen.findByText("Помощь, первый вход и обращения к администратору"),
+      await screen.findByRole("heading", { name: "Помощь, профиль и первые рабочие экраны" }),
     ).toBeInTheDocument();
   });
 

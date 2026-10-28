@@ -180,6 +180,38 @@ async def test_lock_held_by_another_session_is_skipped_within_the_limit(
     assert (retry.republished, retry.users) == (True, 3)
 
 
+# Отпечаток каталога в формате до D1-8 (main a7c55df73: только коды EDS, `v: 1`) на нынешних данных.
+PRE_D1_8_FINGERPRINT = "e63fc509f2738a144af1918be11b5cfd62d054f8481e4d62b5d964be60a92106"
+
+
+async def test_state_written_before_d1_8_triggers_a_republish_with_sections(
+    sessions: async_sessionmaker[AsyncSession], bus: Any
+) -> None:
+    """Выкладка D1-8: в базе отпечаток старого формата -> при старте воркера все сотрудники
+    переопубликованы, и в снимках уже есть `permissions.sections` (EDS заполнит проекцию)."""
+    ids = await _staff(sessions)
+    async with sessions() as session, session.begin():
+        await session.execute(
+            text(
+                "INSERT INTO identity_catalog_state (key, fingerprint, published_users) "
+                "VALUES (:k, :f, 3)"
+            ),
+            {"k": EDS_KEY, "f": PRE_D1_8_FINGERPRINT},
+        )
+    assert eds_catalog_fingerprint() != PRE_D1_8_FINGERPRINT
+
+    await sync_eds_rights_on_start(sessions)
+
+    assert sorted(await _outbox_subjects(sessions)) == sorted(f"user/{i}" for i in ids)
+    async with sessions() as session:
+        rows = await session.execute(
+            text("SELECT envelope FROM rt_bus_outbox WHERE type = :t"), {"t": USER_UPDATED}
+        )
+        permissions = [r[0]["data"]["user"]["permissions"] for r in rows]
+    assert len(permissions) == 3
+    assert all("sections" in p and "eds" in p for p in permissions)
+
+
 # --- права ERP (D2-1, B-073): провижининг заново по отпечатку ERP-части каталога ----------------
 
 

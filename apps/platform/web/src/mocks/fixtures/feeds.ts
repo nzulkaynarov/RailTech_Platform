@@ -70,6 +70,13 @@ const lead = (id: number, title: string): ObjectRef => ({
   title,
   path: `/crm/leads?lead=L-${String(id)}&panel=open&tab=card`,
 });
+/** Лид, от которого ждут ответа (передача бота, новое сообщение): строка очереди и уведомление ведут в диалог «Ждут ответа» (D1-6). */
+const leadDialog = (id: number, title: string): ObjectRef => ({
+  kind: "lead",
+  number: `L-${String(id)}`,
+  title,
+  path: `/crm/messages?lead=L-${String(id)}`,
+});
 
 /** Демо-очередь предустановки (docs/architecture/integration-map.md §1.2); у снабженца, инженера, бухгалтера и админа — пусто. */
 function queueFor(preset: PresetCode, now: number): QueueItem[] {
@@ -118,7 +125,7 @@ function queueFor(preset: PresetCode, now: number): QueueItem[] {
         subtitle: "ООО «Демо-Депо» · просит КП на стрелочные приводы · 20 мин назад",
         due_label: "today",
         due_at: new Date(now + 2 * HOUR).toISOString(),
-        object: lead(2041, "ООО «Демо-Депо»"),
+        object: leadDialog(2041, "ООО «Демо-Депо»"),
       },
       {
         id: "lead:2050:answer",
@@ -127,7 +134,7 @@ function queueFor(preset: PresetCode, now: number): QueueItem[] {
         title: "Ответить лиду L-2050",
         subtitle: "Демо Клиентов · уточняет сроки поставки · 3 ч назад",
         due_label: "today",
-        object: lead(2050, "Демо Клиентов"),
+        object: leadDialog(2050, "Демо Клиентов"),
       },
     ];
   }
@@ -365,7 +372,25 @@ export function notificationSeed(preset: PresetCode | undefined): SeedNotificati
           "контакт без Telegram · письмо-подтверждение отправлено",
           2 * HOUR,
           true,
-          lead(2044, "Лид с веб-формы"),
+          leadDialog(2044, "Лид с веб-формы"),
+        ),
+        note(
+          6,
+          "decisions",
+          "Письмо ВХ-104/26 ждёт резолюции",
+          "ООО «Демо-Депо» · срок сегодня",
+          3 * HOUR,
+          true,
+          letter,
+        ),
+        note(
+          7,
+          "decisions",
+          "СЗ-2026/031 на согласовании",
+          "от Демо Офисовой (офис-менеджер) · 450 000 сум",
+          5 * HOUR,
+          true,
+          memo,
         ),
         note(
           5,
@@ -385,7 +410,7 @@ export function notificationSeed(preset: PresetCode | undefined): SeedNotificati
           "ООО «Демо-Депо» · передача от бота",
           10 * MINUTE,
           false,
-          lead(2041, "ООО «Демо-Депо»"),
+          leadDialog(2041, "ООО «Демо-Депо»"),
         ),
         note(
           12,
@@ -470,10 +495,24 @@ const SEARCH_INDEX: readonly SearchEntry[] = [
   },
   {
     module: "eds",
+    resource: "eds.inbox",
+    object: letter,
+    title: "Письмо ВХ-104/26",
+    subtitle: "Запрос на стрелочные приводы",
+  },
+  {
+    module: "eds",
     resource: "eds.drafts",
     object: quote,
     title: "КП-2026/118",
     subtitle: "Стрелочные приводы",
+  },
+  {
+    module: "eds",
+    resource: "eds.memo.approve",
+    object: memo,
+    title: "СЗ-2026/031",
+    subtitle: "Закупка кофе и воды в офис",
   },
   {
     module: "eds",
@@ -492,10 +531,17 @@ const SEARCH_INDEX: readonly SearchEntry[] = [
 ];
 
 /** Поиск по подстроке без учёта регистра; результаты — группами по модулям, только разделы, видимые роли. */
-export function searchIndex(query: string, resources: ReadonlySet<string>): SearchGroup[] {
+export function searchIndex(
+  query: string,
+  resources: ReadonlySet<string>,
+  withoutEds = false,
+): SearchGroup[] {
   const needle = query.trim().toLowerCase();
   const found = SEARCH_INDEX.filter((entry) => {
     if (!resources.has(entry.resource)) return false;
+    // EDS не отвечает: письма и служебки не находятся
+    if (withoutEds && (entry.object.kind === "letter" || entry.object.kind === "memo"))
+      return false;
     const haystack = [entry.object.number, entry.title, entry.subtitle ?? ""]
       .join(" ")
       .toLowerCase();

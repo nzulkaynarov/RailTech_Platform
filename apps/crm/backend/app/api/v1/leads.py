@@ -15,7 +15,6 @@ from app.models.qualification import Escalation
 from app.repositories import crm, lead_status, service_requests
 from app.repositories import decisions as repo
 from app.repositories import leads as leads_repo
-from app.repositories import users as users_repo
 from app.schemas.decisions import (
     DecisionsResponse,
     QualifierRunItem,
@@ -39,7 +38,6 @@ from app.schemas.leads import (
     Reply,
     ReturnToBot,
     Snooze,
-    TeamMember,
 )
 from app.schemas.notices import NoticeOut
 from app.security.principal import Principal
@@ -117,12 +115,24 @@ def _unread(lead: Lead) -> bool:
     return lead.last_human_msg_at is None or lead.last_lead_msg_at > lead.last_human_msg_at
 
 
+# Ключи вложения, которые уходят клиентам API (D1-8, B-014): ключ хранилища (`storage_key`) не
+# входит — файл отдаёт только маршрут вложения с проверкой доступа к лиду.
+_ATTACHMENT_FIELDS = ("kind", "name", "mime", "size", "stored", "too_large", "note")
+
+
+def attachment_out(item: object) -> dict[str, object]:
+    """Вложение без адреса в хранилище: имя, тип, размер и признак «файл сохранён»."""
+    if not isinstance(item, dict):
+        return {}
+    return {key: item[key] for key in _ATTACHMENT_FIELDS if key in item}
+
+
 def message_out(m: Message) -> MessageOut:
     return MessageOut(
         id=m.id,
         role=m.role,
         text=m.text,
-        attachments=list(m.attachments or []),
+        attachments=[attachment_out(a) for a in m.attachments or []],
         sent_by_user_id=m.sent_by_user_id,
         created_at=m.created_at,
         meta=dict(m.meta or {}),
@@ -392,19 +402,6 @@ async def new_deal(lead_id: int, who: Worker, container: ContainerDep) -> Action
 async def assign(lead_id: int, body: Assign, who: Worker, container: ContainerDep) -> ActionResult:
     await container.lead_service.assign(who, lead_id, body.user_id)
     return ActionResult()
-
-
-@router.get("/team", response_model=list[TeamMember])
-async def team(_: Reader, container: ContainerDep) -> list[TeamMember]:
-    """Активные менеджеры и админы: кому передать лида, чьё имя показать (без email и ролей)."""
-    async with container.session_factory() as session:
-        users = await users_repo.list_users(session)
-        roles = await users_repo.roles_by_user(session)
-    return [
-        TeamMember(id=u.id, full_name=u.full_name)
-        for u in users
-        if u.is_active and {"manager", "admin"} & set(roles.get(u.id, []))
-    ]
 
 
 @router.post("/leads/{lead_id}/actions/note", response_model=ActionResult)

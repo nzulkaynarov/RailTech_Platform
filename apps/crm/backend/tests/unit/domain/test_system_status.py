@@ -1,5 +1,6 @@
 """Экран «Состояние системы»: правила статуса по фактам."""
 
+import re
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -45,6 +46,32 @@ def test_models_from_monitor_rows() -> None:
         ("model:fallback-model", "ok"),
     ]
     assert result[0].reason.startswith("закончились кредиты")
+
+
+@pytest.mark.parametrize(
+    ("facts", "text"),
+    [
+        (
+            QueueFacts(0, 1, 1),
+            "1 задача выполняется дольше 15 минут; 1 задача упала за последний час",
+        ),
+        (
+            QueueFacts(0, 2, 3),
+            "2 задачи выполняются дольше 15 минут; 3 задачи упали за последний час",
+        ),
+        (
+            QueueFacts(0, 5, 11),
+            "5 задач выполняются дольше 15 минут; 11 задач упали за последний час",
+        ),
+        (QueueFacts(101, 21, 0), "21 задача выполняется дольше 15 минут"),
+    ],
+    ids=["one", "few", "many", "twenty-one"],
+)
+def test_queue_text_agrees_in_number(facts: QueueFacts, text: str) -> None:
+    """W15-G-7: «1 задач выполняются» — нет; число согласовано со словом."""
+    reason = rules.queue(facts, NOW).reason
+    assert text in reason
+    assert not re.search(r"(?<![\d])1 задач ", reason)
 
 
 @pytest.mark.parametrize(

@@ -10,21 +10,36 @@ export interface SourceBannerProps {
   sources: Sources | undefined;
   /** Повторить запрос; без обработчика кнопки нет */
   onRetry?: () => void;
-  /** Свои тексты вместо «ERP не отвечает, данные неполные» (например, для очереди — с названиями разделов) */
-  messages?: Partial<Record<"crm" | "erp" | "both", string>>;
+  /**
+   * Свои тексты вместо «ERP не отвечает, данные неполные» (например, для очереди — с названиями разделов): по одному
+   * источнику — `crm`, `erp`, `eds`; CRM и ERP вместе — `both`; любые другие сочетания (с EDS) — `multi`.
+   */
+  messages?: Partial<Record<"crm" | "erp" | "eds" | "both" | "multi", string>>;
 }
 
 /**
  * Плашка частичных данных (docs/architecture/platform-frontend.md §5, контракт BFF «Частичные данные»): «ERP не отвечает, данные неполные».
- * `role="status"` — вежливое объявление, не прерывающее чтение; если оба бэкенда в порядке, плашки нет.
+ * `role="status"` — вежливое объявление, не прерывающее чтение; если все источники в порядке, плашки нет.
  */
+/** Какой текст плашки: один источник — его ключ, CRM и ERP — `both`, всё остальное (с EDS) — `multi`. */
+export function bannerKind(
+  crm: boolean,
+  erp: boolean,
+  eds: boolean,
+): "crm" | "erp" | "eds" | "both" | "multi" {
+  const down = [crm, erp, eds].filter(Boolean).length;
+  if (down > 1) return crm && erp && !eds ? "both" : "multi";
+  return crm ? "crm" : erp ? "erp" : "eds";
+}
+
 export function SourceBanner({ sources, onRetry, messages }: SourceBannerProps) {
   const { t } = useTranslation("ui");
   if (!sources) return null;
   const crm = sources.crm === "unavailable";
   const erp = sources.erp === "unavailable";
-  if (!crm && !erp) return null;
-  const kind = crm && erp ? "both" : erp ? "erp" : "crm";
+  const eds = sources.eds === "unavailable";
+  if (!crm && !erp && !eds) return null;
+  const kind = bannerKind(crm, erp, eds);
   return (
     <div className="pf-source" role="status">
       <span className="pf-source-icon">

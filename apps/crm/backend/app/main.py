@@ -41,6 +41,7 @@ from app.api.v1 import (
     stream,
     system,
     system_status,
+    team,
     users,
 )
 from app.api.v1 import settings as settings_api
@@ -98,6 +99,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app = FastAPI(
         title="RailTech CRM API",
+        # D1-8: GET /team?section=&level=, MessageOut без storage_key — добавляющие, версия прежняя.
         # 0.13.0 (W15-H8b): WAL, Redis и шина в «Состоянии»; смена пароля выдаёт сессии
         # новую пару (POST /auth/change-password — 200 с токенами, было 204).
         # 0.12.0 (W16-D1-2): «Создать заявку» из лида и клиента, `platform_status` и фильтры
@@ -137,6 +139,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         lead_intake,
         leads,
         lead_attachments,
+        team,
         stream,
         kb,
         settings_api,
