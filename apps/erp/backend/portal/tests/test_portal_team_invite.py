@@ -12,7 +12,7 @@ from integration.models import CrmClientMapping
 from integration.tests import bus_support
 from parties.models import Contact
 from portal.models import MagicLinkToken
-from portal.tests.conftest import LOCMEM_CHANNELS
+from portal.tests.conftest import LOCMEM_BACKEND, break_mail_handoff
 from portal.tests.contract_support import check_response, component
 
 from notifications.models import EmailLog
@@ -24,7 +24,7 @@ URL = "/api/portal/v1/team/invite"
 
 @pytest.fixture(autouse=True)
 def locmem(settings):
-    settings.EMAIL_CHANNELS = LOCMEM_CHANNELS
+    settings.EMAIL_BACKEND = LOCMEM_BACKEND
     mail.outbox = []
 
 
@@ -88,7 +88,7 @@ def test_email_invitation_is_delivered(portal_client, client_company):
     assert contact.invited_at is not None and not contact.is_primary
     assert [m.to for m in mail.outbox] == [["dilshod@example.uz"]]
     assert "/auth/magic#token=" in mail.outbox[0].body
-    assert EmailLog.objects.filter(to_emails__contains="dilshod@example.uz", status=EmailLog.STATUS_SENT).count() == 1
+    assert EmailLog.objects.filter(to_emails__contains="dilshod@example.uz", status=EmailLog.STATUS_QUEUED).count() == 1
     assert MagicLinkToken.objects.filter(contact=contact, purpose="invite").count() == 1
 
     event = bus_support.only("invite.sent")
@@ -151,11 +151,9 @@ def test_duplicate_phone_in_company_is_refused(portal_client, client_contact):
 # ── Сбой доставки: не «отправлено» ────────────────────────────────────────────────────────────────
 
 
-def test_failed_delivery_is_an_error_and_leaves_no_member(portal_client, client_company, settings):
-    settings.EMAIL_CHANNELS = {
-        name: {**cfg, "backend": "django.core.mail.backends.smtp.EmailBackend", "host": "127.0.0.1", "port": 1}
-        for name, cfg in LOCMEM_CHANNELS.items()
-    }
+def test_failed_delivery_is_an_error_and_leaves_no_member(portal_client, client_company, settings, monkeypatch):
+    # W18A-P1: письмо уходит событием в почтовый сервис CRM; синхронный сбой — только передача (публикация) письма.
+    break_mail_handoff(settings, monkeypatch)
     response = portal_client.post(URL, body(), format="json")
     assert response.status_code == 503
     assert response.json() == {"detail": "DELIVERY_FAILED"}
@@ -164,14 +162,11 @@ def test_failed_delivery_is_an_error_and_leaves_no_member(portal_client, client_
     assert not bus_support.published("invite.sent")
 
 
-def test_retry_after_failed_delivery_is_possible(portal_client, client_company, settings):
-    good = settings.EMAIL_CHANNELS
-    settings.EMAIL_CHANNELS = {
-        name: {**cfg, "backend": "django.core.mail.backends.smtp.EmailBackend", "host": "127.0.0.1", "port": 1}
-        for name, cfg in good.items()
-    }
-    assert portal_client.post(URL, body(), format="json").status_code == 503
-    settings.EMAIL_CHANNELS = good
+def test_retry_after_failed_delivery_is_possible(portal_client, client_company, settings, monkeypatch):
+    with monkeypatch.context() as broken:
+        break_mail_handoff(settings, broken)
+        assert portal_client.post(URL, body(), format="json").status_code == 503
+    settings.EMAIL_BACKEND = LOCMEM_BACKEND
     assert portal_client.post(URL, body(), format="json").status_code == 201
 
 

@@ -68,7 +68,8 @@ def test_the_24_types_of_the_erp_are_the_files_of_the_contract():
     events_dir = Path(os.environ["RT_BUS_CONTRACTS_DIR"]) / "erp"
     names = {p.name[: -len(".v1.json")] for p in events_dir.glob("*.v1.json") if not p.name.startswith("_")}
     # Волна 12 (E5): quote.ready_for_approval публикует ERP (EDS-03); волна 16 (D1-9): invite.requested — файлы контракта = VALID_EVENT_TYPES.
-    assert names == VALID_EVENT_TYPES and len(VALID_EVENT_TYPES) == 24
+    # W18A-P1: mail.requested — не событие сущности, его публикует почтовый шов (`notifications/mail_bus.py`).
+    assert names - {"mail.requested"} == VALID_EVENT_TYPES and len(VALID_EVENT_TYPES) == 24
     for short in VALID_EVENT_TYPES:
         assert event_type_name(short) == f"uz.railtech.erp.{short}.v1"
         assert json.loads((events_dir / f"{short}.v1.json").read_text(encoding="utf-8"))["type"] == "object"

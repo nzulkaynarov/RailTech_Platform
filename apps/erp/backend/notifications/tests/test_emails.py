@@ -156,25 +156,8 @@ TEMPLATE_CASES = [
 ]
 
 
-def _locmem_channel() -> dict:
-    """Тестовый канал: locmem-бэкенд, чтобы письма попадали в mail.outbox.
-
-    Файл был написан ДО механики EMAIL_CHANNELS и никогда не собирался pytest'ом из-за
-    имени tests_emails.py (уборка 02-08): канальный get_connection(backend=...) обходит
-    подмену EMAIL_BACKEND тест-раннером, поэтому канал переопределяется явно.
-    """
-    return {
-        "backend": "django.core.mail.backends.locmem.EmailBackend",
-        "host": "",
-        "port": 25,
-        "username": "",
-        "password": "",
-        "use_tls": False,
-        "from_email": "test@example.com",
-    }
-
-
-LOCMEM_CHANNELS = {ch: _locmem_channel() for ch in ("transactional", "marketing", "system")}
+#: Почта в память: письма видны в mail.outbox. Боевой бэкенд ERP — событие почтовому сервису CRM (W18A-P1).
+LOCMEM_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
 
 
 class _BrokenBackend:
@@ -187,17 +170,18 @@ class _BrokenBackend:
         raise OSError("smtp down (test)")
 
 
-@override_settings(EMAIL_CHANNELS=LOCMEM_CHANNELS)
+@override_settings(EMAIL_BACKEND=LOCMEM_BACKEND)
 class TemplatedEmailRenderingTests(TestCase):
     """Each template renders + sends without errors and logs to EmailLog."""
 
-    def test_channels_are_configured(self):
-        self.assertIn("transactional", settings.EMAIL_CHANNELS)
-        self.assertIn("marketing", settings.EMAIL_CHANNELS)
-        self.assertIn("system", settings.EMAIL_CHANNELS)
-        for ch, cfg in settings.EMAIL_CHANNELS.items():
-            self.assertIn("backend", cfg, f"channel {ch} missing 'backend'")
-            self.assertIn("from_email", cfg, f"channel {ch} missing 'from_email'")
+    def test_production_backend_is_the_crm_mail_service(self):
+        """W18A-P1: SMTP-каналов в ERP нет — боевой бэкенд публикует письмо почтовому сервису CRM."""
+        from core.settings import ai
+
+        self.assertEqual(ai.EMAIL_BACKEND, "notifications.bus_backend.BusEmailBackend")
+        self.assertFalse(hasattr(settings, "EMAIL_CHANNELS"))
+        for name in ("EMAIL_HOST", "EMAIL_HOST_USER", "EMAIL_HOST_PASSWORD"):
+            self.assertFalse(hasattr(ai, name), name)
 
     def test_all_templates_render_and_send(self):
         for template, ctx in TEMPLATE_CASES:
@@ -218,7 +202,7 @@ class TemplatedEmailRenderingTests(TestCase):
                     any(alt[1] == "text/html" for alt in msg.alternatives),
                     f"{template}: no HTML alternative",
                 )
-                self.assertEqual(log.status, EmailLog.STATUS_SENT)
+                self.assertEqual(log.status, EmailLog.STATUS_QUEUED)
                 self.assertEqual(log.template, template)
                 self.assertEqual(log.to_emails, ["recipient@example.com"])
 
@@ -256,15 +240,6 @@ class TemplatedEmailRenderingTests(TestCase):
                     self.assertNotIn("fake-fragment-value", body)
                     self.assertIn("/auth/magic#token=[REDACTED]", body)
 
-    def test_unknown_channel_raises(self):
-        with self.assertRaises(ValueError):
-            send_templated_email(
-                "setup_password",
-                {"first_name": "X", "setup_url": "https://x"},
-                to=["a@b.com"],
-                channel="does_not_exist",
-            )
-
     def test_empty_recipients_rejected(self):
         with self.assertRaises(ValueError):
             send_templated_email(
@@ -274,15 +249,7 @@ class TemplatedEmailRenderingTests(TestCase):
             )
 
     def test_transport_failure_records_failed_log(self):
-        broken = {
-            **settings.EMAIL_CHANNELS,
-            "transactional": {
-                **settings.EMAIL_CHANNELS["transactional"],
-                # Force a send-time failure via a non-existent module path.
-                "backend": "notifications.tests.test_emails._BrokenBackend",
-            },
-        }
-        with override_settings(EMAIL_CHANNELS=broken):
+        with override_settings(EMAIL_BACKEND="notifications.tests.test_emails._BrokenBackend"):
             with self.assertRaises(EmailDeliveryError):
                 send_templated_email(
                     "setup_password",
@@ -295,7 +262,7 @@ class TemplatedEmailRenderingTests(TestCase):
         )
 
 
-@override_settings(EMAIL_CHANNELS=LOCMEM_CHANNELS)
+@override_settings(EMAIL_BACKEND=LOCMEM_BACKEND)
 class EmailLinkIntegrityTests(TestCase):
     """Regression guard for the &-escaping bug (2026-06-08).
 

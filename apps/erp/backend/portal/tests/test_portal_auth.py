@@ -15,7 +15,7 @@ from parties.models import Contact
 from portal.models import MagicLinkToken, PortalSession
 from portal.services.magic_link import exchange_magic_link
 from portal.services.tokens import hash_token
-from portal.tests.conftest import LOCMEM_CHANNELS, make_telegram_init_data
+from portal.tests.conftest import LOCMEM_BACKEND, make_telegram_init_data
 from rest_framework import status
 
 from core.logging import RedactPortalTokenFilter
@@ -27,7 +27,7 @@ MAGIC_EXCHANGE_URL = "/api/portal/v1/auth/magic"
 
 @pytest.fixture(autouse=True)
 def _locmem_mail(settings, inline_magic_link_task):
-    settings.EMAIL_CHANNELS = LOCMEM_CHANNELS
+    settings.EMAIL_BACKEND = LOCMEM_BACKEND
     settings.CABINET_URL = "http://cabinet.localhost"
     mail.outbox.clear()
 
@@ -182,7 +182,7 @@ class TestMagicLinkAuth:
         assert len(mail.outbox) == 1
         assert mail.outbox[0].to == [client_contact.email]
         log = EmailLog.objects.get(template="portal_magic_link")
-        assert log.status == EmailLog.STATUS_SENT
+        assert log.status == EmailLog.STATUS_QUEUED
         assert log.to_emails == [client_contact.email]
 
         # 2. В базе — только хеш; сырой токен в письме не совпадает ни с одним значением в базе

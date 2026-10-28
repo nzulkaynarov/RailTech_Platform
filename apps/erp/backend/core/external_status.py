@@ -28,6 +28,10 @@ logger = logging.getLogger(__name__)
 
 #: Коды сервисов — те же, что в контракте (`ExternalServiceCode`).
 CODES: tuple[str, ...] = ("cbu_rates", "customs_tariff", "mail", "litellm", "s3", "sentry")
+#: Что ERP показывает в `/health` externals. Почты в ERP больше нет (W18A-P1): письма отправляет почтовый сервис CRM, строка
+#: здоровья «Почта» одна на ансамбль — в CRM. Код `mail` остаётся в контракте (`ExternalServiceCode`), выключатель
+#: `PUT /externals/mail/switch` принимается и хранится, но ни на что в ERP не влияет (паузу почты держит очередь CRM).
+REPORTED_CODES: tuple[str, ...] = tuple(code for code in CODES if code != "mail")
 #: Sentry выключить нельзя: перехватчик ошибок приложения не вызывается «по требованию» — выключать нечего.
 SWITCHABLE: frozenset[str] = frozenset(CODES) - {"sentry"}
 WINDOW_HOURS = 24
@@ -35,7 +39,7 @@ BUCKET_TTL_S = 26 * 3600
 MARK_TTL_S = 90 * 24 * 3600
 SWITCH_CACHE_TTL_S = 300
 ERROR_MAX_LEN = 200
-#: Начало `EmailLog.error` у письма, не отправленного из-за выключателя: это не сбой почты.
+#: Начало текста ошибки вызова, не выполненного из-за выключателя: это не сбой сервиса.
 SWITCHED_OFF_MARK = "SWITCHED_OFF"
 
 

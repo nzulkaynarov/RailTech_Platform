@@ -11,7 +11,7 @@ from portal.models import MagicLinkToken
 from portal.services.magic_link import request_magic_link
 from portal.services.tokens import hash_token
 from portal.tasks import send_magic_link
-from portal.tests.conftest import LOCMEM_CHANNELS
+from portal.tests.conftest import LOCMEM_BACKEND
 from rest_framework import status
 
 from notifications.models import EmailLog
@@ -86,7 +86,7 @@ def delay(monkeypatch):
 
 @pytest.fixture(autouse=True)
 def _locmem_mail(settings):
-    settings.EMAIL_CHANNELS = LOCMEM_CHANNELS
+    settings.EMAIL_BACKEND = LOCMEM_BACKEND
     settings.CABINET_URL = "http://cabinet.localhost"
     mail.outbox.clear()
 

@@ -22,19 +22,19 @@ from rest_framework.test import APIClient
 
 from core.tenant import own_company
 
-# Почта в память: письма портала видны в `mail.outbox`, а в `EmailLog` пишутся как обычно.
-LOCMEM_CHANNELS = {
-    channel: {
-        "backend": "django.core.mail.backends.locmem.EmailBackend",
-        "host": "",
-        "port": 25,
-        "username": "",
-        "password": "",
-        "use_tls": False,
-        "from_email": "test@example.com",
-    }
-    for channel in ("transactional", "marketing", "system")
-}
+# Почта в память: письма портала видны в `mail.outbox`, а в `EmailLog` пишутся как обычно. Боевой бэкенд ERP —
+# `notifications.bus_backend.BusEmailBackend` (письмо — событие почтовому сервису CRM, W18A-P1); тестраннер Django и так
+# ставит locmem, явное значение — для читаемости тестов.
+LOCMEM_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
+
+
+def break_mail_handoff(settings, monkeypatch):
+    """Письмо не передаётся почтовому сервису CRM (нет секрета пары erp → crm): боевой бэкенд падает на публикации —
+    единственный синхронный сбой почты, который остался у ERP после W18A-P1."""
+    import integration.bus
+
+    settings.EMAIL_BACKEND = "notifications.bus_backend.BusEmailBackend"
+    monkeypatch.setattr(integration.bus, "pair_secrets", lambda publisher, subscriber: [])
 
 
 @pytest.fixture

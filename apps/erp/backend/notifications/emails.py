@@ -1,4 +1,4 @@
-"""Templated email delivery — single entry point for all outbound mail.
+"""Templated email delivery — single entry point for all outbound mail of ERP.
 
 Usage:
     from notifications.emails import send_templated_email
@@ -7,23 +7,21 @@ Usage:
         'setup_password',
         {'first_name': 'Алиса', 'setup_url': 'https://...'},
         to=['user@example.com'],
-        channel='transactional',
         user=user_obj,               # optional — for searchability in admin
+        ref=('quote', quote.pk),     # optional — объект ERP, к которому относится письмо (итог доставки)
     )
 
-Every call renders three templates from backend/templates/emails/:
+Every call renders three templates from backend/templates/emails/ (or an active DB EmailTemplate row):
     emails/{name}_subject.txt   — subject line (stripped)
     emails/{name}.txt           — plain-text body
     emails/{name}.html          — HTML body (extends emails/base.html)
 
-Every attempt is persisted in notifications.EmailLog so Ops can audit
-"what was sent to whom" via Django Unfold admin.
-
-Why channels (transactional / marketing / system):
-    Different purposes demand different SMTP/ESP providers in production —
-    transactional reputation is destroyed when marketing gets spam-flagged.
-    The channel is chosen in code (service layer), never in admin UI:
-    transport is infra configuration, not business data.
+Доставка (W18A-P1, B-INB-6): ERP письма сама не шлёт и SMTP не знает. Шаблон рендерит ERP (шаблоны — у системы-владельца),
+а письмо уходит событием шины `uz.railtech.erp.mail.requested.v1` почтовому сервису CRM (`notifications/bus_backend.py`,
+`notifications/mail_bus.py`) — один отправитель на ансамбль, SMTP задаёт админ в карточке «Почта» Платформы. Строка
+`EmailLog` пишется в той же транзакции со статусом QUEUED («в очереди почты»); итог (SENT / FAILED с причиной) приходит
+обратным событием CRM (`uz.railtech.crm.mail.sent|failed.v1`). Пауза почты — выключатель «Почта» в CRM: очередь CRM копит
+письма и отправляет их после включения.
 """
 
 from __future__ import annotations
@@ -34,27 +32,26 @@ from typing import Iterable, Optional
 
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives, get_connection
-from django.db import DatabaseError
+from django.db import DatabaseError, transaction
 from django.template import Context, Template, TemplateDoesNotExist
 from django.template.loader import get_template, render_to_string
 from django.utils import translation
 
-from core.external_status import SWITCHED_OFF_MARK, is_enabled
-
+from .bus_backend import (
+    HEADER_LANGUAGE,
+    HEADER_NOTIFY,
+    HEADER_PURPOSE,
+    HEADER_REF_ID,
+    HEADER_REF_KIND,
+    HEADER_REQUEST_KEY,
+)
 from .models import EmailLog
 
 logger = logging.getLogger(__name__)
 
 
 class EmailDeliveryError(Exception):
-    """Raised when SMTP/ESP transport fails. Callers decide whether to retry or roll back."""
-
-
-def _channel_config(channel: str) -> dict:
-    try:
-        return settings.EMAIL_CHANNELS[channel]
-    except KeyError as exc:
-        raise ValueError(f"Unknown email channel '{channel}'. " f"Available: {list(settings.EMAIL_CHANNELS)}") from exc
+    """Письмо не передано почтовому сервису CRM (публикация не удалась). Callers decide whether to retry or roll back."""
 
 
 def _render_plaintext(template_path: str, context: dict) -> str:
@@ -162,17 +159,23 @@ def send_templated_email(
     *,
     channel: str = "transactional",
     user=None,
-    cc: Optional[Iterable[str]] = None,
-    bcc: Optional[Iterable[str]] = None,
     attachments: Optional[Iterable[tuple]] = None,
     fail_silently: bool = False,
     language: Optional[str] = None,
+    purpose: Optional[str] = None,
+    ref: Optional[tuple] = None,
+    notify: bool = True,
 ) -> EmailLog:
-    """Render a template bundle and send it through the named channel.
+    """Render a template bundle and hand the letter to the CRM mail service (W18A-P1).
 
-    Returns the EmailLog row. On transport failure:
-      - fail_silently=False (default) → raises EmailDeliveryError AFTER logging.
+    Returns the EmailLog row (QUEUED — письмо в очереди почты CRM; итог придёт событием). Если письмо передать не удалось
+    (публикация в шину упала: нет сопряжения с CRM, нет хранилища для вложения…):
+      - fail_silently=False (default) → raises EmailDeliveryError AFTER logging FAILED.
       - fail_silently=True            → logs FAILED and returns normally.
+
+    `channel` — историческая метка журнала (transactional / system), на доставку не влияет. `purpose` — назначение письма
+    в журнале доставки CRM (по умолчанию — код шаблона); `ref` — `(kind, id)` объекта ERP, итог доставки которого нужен
+    (КП → `Quote.send_report`); `notify` — получать ли итог (по умолчанию да: журнал ERP узнаёт SENT / FAILED).
 
     L2 (spec-bilingual-ru-en): письмо рендерится на языке ПОЛУЧАТЕЛЯ — канон Odoo
     (`partner.lang`) и Stripe (`preferred_locales`). Счёт выставляет продавец, а письмо
@@ -207,7 +210,6 @@ def send_templated_email(
         **context,
     }
 
-    cfg = _channel_config(channel)
     from core.i18n import resolve_user_language, supported_languages
 
     requested = (language or "").strip().lower()
@@ -217,43 +219,50 @@ def send_templated_email(
     with translation.override(target_language):
         subject, text_body, html_body = _render_bodies(template_name, context)
 
-    connection = get_connection(
-        backend=cfg["backend"],
-        host=cfg["host"],
-        port=cfg["port"],
-        username=cfg["username"],
-        password=cfg["password"],
-        use_tls=cfg["use_tls"],
-        fail_silently=False,
-    )
+    headers = {
+        HEADER_PURPOSE: purpose or template_name,
+        HEADER_NOTIFY: "true" if notify else "false",
+        HEADER_LANGUAGE: target_language or "",
+    }
+    if ref is not None:
+        headers[HEADER_REF_KIND], headers[HEADER_REF_ID] = str(ref[0]), str(ref[1])
 
-    message = EmailMultiAlternatives(
-        subject=subject,
-        body=text_body,
-        from_email=cfg["from_email"],
-        to=recipients,
-        cc=list(cc) if cc else None,
-        bcc=list(bcc) if bcc else None,
-        connection=connection,
-    )
-    if html_body:
-        message.attach_alternative(html_body, "text/html")
-    # Optional binary attachments, e.g. a rendered КП PDF: (filename, content_bytes, mimetype).
-    for filename, content, mimetype in attachments or []:
-        message.attach(filename, content, mimetype)
-
-    status = EmailLog.STATUS_SENT
-    error_text = ""
-    if not is_enabled("mail"):
-        # M3-ERP-06: выключатель из центра внешних сервисов CRM — в SMTP письмо не уходит. Попытка остаётся в журнале
-        # (FAILED с меткой SWITCHED_OFF — это не сбой почты) и сообщается вызывающему как неудачная доставка.
-        error_text = f"{SWITCHED_OFF_MARK}: отправка выключена из CRM"
-        logger.warning("Email not sent — mail switched off from CRM: template=%s channel=%s", template_name, channel)
+    try:
+        with transaction.atomic():
+            log = EmailLog.objects.create(
+                template=template_name,
+                channel=channel,
+                subject=subject[:255],
+                from_email=MAIL_SENDER,
+                to_emails=recipients,
+                user=user,
+                body_text=_redact_secrets(text_body),
+                body_html=_redact_secrets(html_body),
+                status=EmailLog.STATUS_QUEUED,
+                error="",
+            )
+            headers[HEADER_REQUEST_KEY] = f"erp:email_log:{log.pk}"
+            message = EmailMultiAlternatives(
+                subject=subject,
+                body=text_body,
+                to=recipients,
+                headers=headers,
+                connection=get_connection(fail_silently=False),
+            )
+            if html_body:
+                message.attach_alternative(html_body, "text/html")
+            # Optional binary attachments, e.g. a rendered КП PDF: (filename, content_bytes, mimetype).
+            for filename, content, mimetype in attachments or []:
+                message.attach(filename, content, mimetype)
+            message.send(fail_silently=False)
+    except Exception as exc:  # noqa: BLE001 — любой сбой передачи письма → EmailLog(FAILED)
+        error_text = f"{getattr(exc, 'code', exc.__class__.__name__)}: {exc}"[:2000]
+        logger.exception("Email hand-off to CRM failed: template=%s channel=%s", template_name, channel)
         failed_log = _record_log(
             template_name,
             channel,
             subject,
-            cfg["from_email"],
+            MAIL_SENDER,
             recipients,
             user,
             text_body,
@@ -263,47 +272,12 @@ def send_templated_email(
         )
         if fail_silently:
             return failed_log
-        raise EmailDeliveryError(error_text)
-    try:
-        message.send(fail_silently=False)
-    except Exception as exc:  # noqa: BLE001 — transport fault barrier: ANY backend failure → EmailLog(FAILED)
-        status = EmailLog.STATUS_FAILED
-        error_text = f"{exc.__class__.__name__}: {exc}"
-        logger.exception(
-            "Email delivery failed: template=%s channel=%s to=%s",
-            template_name,
-            channel,
-            recipients,
-        )
-        if not fail_silently:
-            # Persist the failure first so Ops can see it in Unfold,
-            # THEN propagate so the caller can compensate (e.g. roll back user).
-            _record_log(
-                template_name,
-                channel,
-                subject,
-                cfg["from_email"],
-                recipients,
-                user,
-                text_body,
-                html_body,
-                status,
-                error_text,
-            )
-            raise EmailDeliveryError(error_text) from exc
+        raise EmailDeliveryError(error_text) from exc
+    return log
 
-    return _record_log(
-        template_name,
-        channel,
-        subject,
-        cfg["from_email"],
-        recipients,
-        user,
-        text_body,
-        html_body,
-        status,
-        error_text,
-    )
+
+#: Кто отправляет письма ERP: почтовый сервис CRM (адрес отправителя — в карточке «Почта» Платформы).
+MAIL_SENDER = "crm"
 
 
 # SEC-02: one-time credential params carried in email links (setup/reset). The SENT email

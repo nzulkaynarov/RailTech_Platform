@@ -126,17 +126,10 @@ INN_VALIDATION_REGEX = r"^\d{9}$"
 # Uzbekistan phone: +998 followed by 9 digits (e.g. +998901234567).
 UZ_PHONE_REGEX = r"^\+998\d{9}$"
 
-# Email — backend can be explicitly overridden via EMAIL_BACKEND env var.
-# Default: console in DEBUG, SMTP in production. For local testing with DEBUG=False
-# and no real SMTP credentials, set EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
-_default_email_backend = (
-    "django.core.mail.backends.console.EmailBackend" if DEBUG else "django.core.mail.backends.smtp.EmailBackend"
-)
-EMAIL_BACKEND = os.environ.get("EMAIL_BACKEND", _default_email_backend)
-EMAIL_HOST = os.environ.get("EMAIL_HOST", "localhost")
-EMAIL_PORT = int(os.environ.get("EMAIL_PORT", 587))
-EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
-EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
-EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "True") == "True"
+# Email (W18A-P1, B-INB-6): ERP письма сама не отправляет и SMTP не знает. Любое письмо (`send_mail`, `EmailMessage.send`,
+# `notifications.emails.send_templated_email`) — событие шины `uz.railtech.erp.mail.requested.v1` почтовому сервису CRM;
+# SMTP один на ансамбль — его задаёт админ в карточке «Почта» Платформы. Настроек EMAIL_HOST… и переменных окружения нет.
+EMAIL_BACKEND = "notifications.bus_backend.BusEmailBackend"
 
-DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "noreply@example.com")
+# Отправителя задаёт CRM (карточка «Почта»); значение нужно только Django для писем без From.
+DEFAULT_FROM_EMAIL = "noreply@example.com"

@@ -22,7 +22,7 @@ from integration.services import events as bus_events
 from integration.tests import bus_support
 from parties.models import Contact
 from portal.services import acceptance
-from portal.tests.conftest import LOCMEM_CHANNELS, PortalAPIClient, issue_test_acceptance_code, make_portal_session
+from portal.tests.conftest import LOCMEM_BACKEND, PortalAPIClient, issue_test_acceptance_code, make_portal_session
 from sales.models.acceptance import QuoteAcceptanceCode
 
 from crm.constants import QuoteStatusCode
@@ -38,7 +38,7 @@ CODE_EVENT = "quote.acceptance_code_requested"
 
 @pytest.fixture(autouse=True)
 def _locmem_mail(settings):
-    settings.EMAIL_CHANNELS = LOCMEM_CHANNELS
+    settings.EMAIL_BACKEND = LOCMEM_BACKEND
     mail.outbox.clear()
 
 

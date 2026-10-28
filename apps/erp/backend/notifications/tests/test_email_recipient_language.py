@@ -14,18 +14,7 @@ from accounts.models import CustomUser
 from notifications.emails import send_templated_email
 from notifications.models import EmailTemplate
 
-LOCMEM = {
-    channel: {
-        "backend": "django.core.mail.backends.locmem.EmailBackend",
-        "host": "",
-        "port": 25,
-        "username": "",
-        "password": "",
-        "use_tls": False,
-        "from_email": "test@example.com",
-    }
-    for channel in ("transactional", "marketing", "system")
-}
+LOCMEM = "django.core.mail.backends.locmem.EmailBackend"
 
 CONTEXT = {"first_name": "X", "setup_url": "https://example.test/setup"}
 
@@ -45,7 +34,7 @@ def ru_user(db):
 
 
 @pytest.mark.django_db
-@override_settings(EMAIL_CHANNELS=LOCMEM)
+@override_settings(EMAIL_BACKEND=LOCMEM)
 def test_explicit_language_wins(ru_user):
     """Внешнему адресату язык задаётся явно — учётной записи у него может не быть вовсе."""
     mail.outbox = []
@@ -56,7 +45,7 @@ def test_explicit_language_wins(ru_user):
 
 
 @pytest.mark.django_db
-@override_settings(EMAIL_CHANNELS=LOCMEM)
+@override_settings(EMAIL_BACKEND=LOCMEM)
 def test_language_of_the_recipient_not_of_the_sender(en_user):
     """Главный инвариант волны: язык берётся у получателя, а не из активного контекста."""
     mail.outbox = []
@@ -68,7 +57,7 @@ def test_language_of_the_recipient_not_of_the_sender(en_user):
 
 
 @pytest.mark.django_db
-@override_settings(EMAIL_CHANNELS=LOCMEM)
+@override_settings(EMAIL_BACKEND=LOCMEM)
 def test_render_language_is_restored_after_send(ru_user):
     """Отправка не должна протекать языком в вызывающий код."""
     mail.outbox = []
@@ -78,7 +67,7 @@ def test_render_language_is_restored_after_send(ru_user):
 
 
 @pytest.mark.django_db
-@override_settings(EMAIL_CHANNELS=LOCMEM)
+@override_settings(EMAIL_BACKEND=LOCMEM)
 def test_unknown_language_falls_back_to_platform_default():
     mail.outbox = []
     send_templated_email("setup_password", CONTEXT, to=["x@b.com"], language="klingon")
@@ -86,7 +75,7 @@ def test_unknown_language_falls_back_to_platform_default():
 
 
 @pytest.mark.django_db
-@override_settings(EMAIL_CHANNELS=LOCMEM)
+@override_settings(EMAIL_BACKEND=LOCMEM)
 def test_db_override_is_picked_per_language(en_user):
     """Оверрайды теперь живут по паре (ключ, язык): английский не вытесняет русский."""
     EmailTemplate.objects.create(
@@ -106,7 +95,7 @@ def test_db_override_is_picked_per_language(en_user):
 
 
 @pytest.mark.django_db
-@override_settings(EMAIL_CHANNELS=LOCMEM)
+@override_settings(EMAIL_BACKEND=LOCMEM)
 def test_language_agnostic_override_still_applies(en_user):
     """Строка, заведённая ДО L2 (пустой language), продолжает работать для всех языков."""
     EmailTemplate.objects.create(
