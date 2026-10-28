@@ -2954,6 +2954,10 @@
       }
     },
     "contract": {
+      "signed_file_uploaded": {
+        "title": "Signed copy of the contract uploaded",
+        "detail": "Contract {{number}} for deal #{{deal_id}}"
+      },
       "created": {
         "title": "Contract created",
         "detail": "Contract {{number}} for deal #{{deal_id}}"
@@ -3001,6 +3005,12 @@
         "detail": "Invoice {{number}} for deal #{{deal_id}} (no contract)"
       }
     },
+    "project": {
+      "done": {
+        "title": "Project completed",
+        "detail": "Deal #{{deal_id}}: act signed, invoices paid"
+      }
+    },
     "payment": {
       "recorded": {
         "title": "Payment recorded",
@@ -3008,6 +3018,10 @@
       }
     },
     "act": {
+      "scan_attached": {
+        "title": "Scan of the signed act attached",
+        "detail": "Act {{number}} for deal #{{deal_id}}"
+      },
       "signed": {
         "title": "Act signed — manual",
         "detail": "Act {{number}} for deal #{{deal_id}}"

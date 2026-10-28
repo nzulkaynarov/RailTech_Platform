@@ -163,16 +163,17 @@ describe("исполнимость адреса: есть ли экран в П�
     ["/erp/calc", true],
     ["/erp/stock", true],
     ["/erp/stock/%D0%97%D0%9F-2026-029", true],
-    ["/erp/catalog", false],
+    ["/erp/catalog", true],
+    ["/erp/docs?doc=2", true],
     ["/nowhere/at-all", true],
   ])("%s → %s", (path, expected) => {
     expect(isActionable(path)).toBe(expected);
   });
 
   it("раздел с родным экраном исполним, а стоит убрать запись моста — адрес становится исполнимым сам", () => {
-    const key = "eds.projects";
+    const key = "eds.outbox";
     const entry = BRIDGE[key];
-    const path = "/eds/projects/%D0%9F%D0%A0-2026-099";
+    const path = "/eds/outbox/%D0%9A%D0%9F-2026%2F118";
     expect(isActionable(path)).toBe(false);
     // имитация переноса раздела: запись моста удалена
     Reflect.deleteProperty(BRIDGE, key);

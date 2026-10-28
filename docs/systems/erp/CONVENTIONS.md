@@ -171,6 +171,26 @@ Makefile · .env.example · docs/ (ADR и runbooks ERP в docs/runbooks/erp/ —
   (`DEFAULT_RENDERER_CLASSES`): Browsable API раскрывал справочники в формах; неприемлемый `Accept` → JSON, не 406
   (`core/negotiation.py` — публичные страницы КП и документов сами отдают HTML по `Accept`).
 
+### Номенклатура, поставщики, бригады, техдокументация и справочники для Платформы (D2-3)
+
+- **Пакет `catalog/desk/`** (не `services.py` — тот модуль занят): `items.py`, `suppliers.py`, `brigades.py`, `tech_docs.py`, `refs.py` — логика;
+  `serializers.py` — явные схемы; `views_*.py` — тонкие вьюхи (`DeskViewSet` = `RoleGatedViewMixin` + `IsBackOfficeStaff`). Операции `/api/v1`:
+  `catalog/items/` (список с типом, единицей, НДС; карточка с предложениями; создание и правка — `catalog.manage`), `catalog/suppliers/`
+  (+ `PATCH …/offers/{id}/` — `supply.manage`), `catalog/brigades/`, `catalog/tech-docs/` (+ `{id}/file/` потоком), `master-data/hs-codes/`,
+  `exchange-rates/` (список; ввод — прежний `…/manual/` с `settings.edit`), запись `catalog/manufacturers/`. Чтение — любому сотруднику бэк-офиса.
+- **Закрытые поля режет ERP, не только BFF** (`catalog/desk/access.py`): цена закупки в предложениях — `quote.view_cost_margin` или зона товаров
+  расчёта (`quote.visa_goods`); ставка бригады — `quote.view_cost_margin` или зона услуг (`quote.visa_services`). Без права поле `null`, а запись
+  поля — 403 `SUPPLIER_PRICES_REQUIRED` / `CREW_RATES_REQUIRED`. Права зон приходят с D2-1: пока их нет в `accounts.constants.Permission`,
+  `staff_permissions` их отбрасывает и действует только `cost_margin`. Негативные тесты прямого вызова ERP — `catalog/tests/test_d2_3_desk.py`.
+- **Тип позиции вычисляется**: услуга — по домену и `fulfillment_policy`; товар «со склада» — если у действующего предложения (активно, в окне
+  цены) есть остаток или статус «в наличии» (то же правило, что `catalog.published.availability`). Квота предложения — `SupplierOffer.stock_quantity`.
+  НДС позиции — `Product.vat_rate` (пусто — `CompanySettings.default_vat_rate`); в опубликованный слой поле не попадает (белый список).
+- **Техдокументация** (`catalog.TechDocument`, приватный бакет `erp-private`, путь `tech-docs/<год>/<uuid>`): вид (ТЗ, чертёж, сертификат,
+  регламент ПНР, другое), привязка к позиции и/или сделке (хотя бы одна), ≤ 20 МБ, PDF/PNG/JPEG/DOC(X)/XLS(X) с проверкой подписи файла.
+  Выдача — потоком через представление; `ProductDocument` (паспорт в карточке товара) остаётся для старого фронта.
+- **Бригады** (`catalog.Brigade`) — справочник исполнителей услуг (название, вид, состав, специализация, ставка за день или час); из справочника
+  ставку берёт расчёт услуги (D2-1). Не удаляются — `is_active = false`.
+
 ## 6. Роли бэк-офиса (ARCHITECTURE §7, §9; BUSINESS §11; M1-ERP-05 — сделано)
 
 Каталог прав — `accounts.constants.Permission` (21 код, разделы `PERMISSION_GROUPS`); роль — `accounts.CompanyRole`
@@ -244,6 +264,8 @@ Makefile · .env.example · docs/ (ADR и runbooks ERP в docs/runbooks/erp/ —
 Правила: эндпоинты — kebab-case, множественное число; `Idempotency-Key` на всех POST интеграции (ключ хранится 7 дней);
 деньги — строка с двумя знаками + ISO-4217; даты — ISO-8601 с зоной; версия — префикс `v1`, несовместимое изменение — новый префикс.
 Любое изменение здесь начинается с `packages/contracts` и PR с обеих сторон в одной вехе.
+
+**Договор и акт проекта (D2-5, SPEC-v3 §2.4).** Договор подписывают вне платформы (оператор ЭДО или бумага): подписи кликом нет. Переходы договора — одна таблица `TRANSITIONS` в `crm/services/contract_flow.py` (`send_to_client`, `client_agreed`, `reject` с причиной, `revise`, `mark_issued`, `attach_scan` → «Подписан (скан)»); недопустимый переход — `409` с кодом `contract_transition_not_allowed`, а не молчаливый отказ. Акт — `crm/services/act_flow.py` (`attach_act_scan`, `record_act_return`; выпуск и повторный выпуск — `billing.py`). Право проверяется в сервисе (`contract.manage`, `contract.sign`, `fulfillment.act`; `RoleGatedViewMixin` — fail-closed), скан — `core/validators.validate_scan_upload` (PDF, jpg, png, webp по сигнатуре и расширению, до 20 МБ). Каждый переход — в транзакции: блокировка строки, журнал `ActivityLog` с `event_code`, событие шины `contract.status_changed` / `act.accepted` / `act.returned` (схемы и совместимость — `packages/contracts/events/erp`). Проект как чтение — `crm/services/projects.py` (`GET /crm/projects/`): шаг, документы, «действия сейчас» с учётом прав, «Выполнено», когда акт подписан и счета оплачены (одна запись `project.done`). Подпись продавца кликом (`sign-manager/`) закрыта: `409 CONTRACT_SIGN_VIA_SCAN`; согласие клиента в портале (`sign_contract_by_client`) даёт только «Согласован клиентом» (`PENDING_MANAGER`), а не «Подписан» — «Подписан» ставит один путь, скан после «Выставлен у оператора»; `revise` сбрасывает все подписи; `upload-signed/` на «Подписан» и «Отменён» — `409 CONTRACT_SCAN_LOCKED`, тип проверяется как у скана, загрузка пишется в журнал. Запись `project.done` пишет `projects.log_project_done_once` (под блокировкой сделки) из трёх мест: скан акта, приёмка акта заказчиком в портале и оплата счёта. Свои PDF (счёт, акт, договор) никогда не называются «счёт-фактурой».
 
 ## 8. Команды
 

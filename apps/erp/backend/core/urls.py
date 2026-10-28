@@ -87,6 +87,10 @@ from accounts.views import (
 )
 from accounts.views.setup import SetupCompanyView, SetupStatusView
 from accounts.wizard import WIZARD_FORMS, CompanyWizardView
+from catalog.desk.views_items import ItemDeskViewSet, SupplierDeskViewSet
+from catalog.desk.views_people import BrigadeDeskViewSet
+from catalog.desk.views_refs import ExchangeRateListViewSet, HsCodeDeskViewSet
+from catalog.desk.views_tech_docs import TechDocDeskViewSet
 from catalog.views import (
     CategoryRequestViewSet,
     CategoryViewSet,
@@ -124,6 +128,8 @@ from crm.views import (
     NumberingSchemePreviewView,
     NumberingSchemeView,
     PaymentViewSet,
+    ProjectDetailView,
+    ProjectListView,
     QuoteChargeViewSet,
     QuoteItemViewSet,
     QuoteRequestDiffView,
@@ -170,6 +176,13 @@ from sourcing.views import (  # noqa: F811
 )
 
 router = DefaultRouter()
+# D2-3: «Номенклатура и поставщики», бригады, техдокументация и справочники для Платформы (`catalog.desk`).
+router.register(r"catalog/items", ItemDeskViewSet, basename="desk-item")
+router.register(r"catalog/suppliers", SupplierDeskViewSet, basename="desk-supplier")
+router.register(r"catalog/brigades", BrigadeDeskViewSet, basename="desk-brigade")
+router.register(r"catalog/tech-docs", TechDocDeskViewSet, basename="desk-tech-doc")
+router.register(r"master-data/hs-codes", HsCodeDeskViewSet, basename="desk-hs-code")
+router.register(r"exchange-rates", ExchangeRateListViewSet, basename="desk-exchange-rate")
 router.register(r"catalog/products", ProductViewSet, basename="product")
 router.register(r"catalog/offers", SupplierOfferViewSet, basename="offer")
 router.register(r"catalog/categories", CategoryViewSet, basename="category")
@@ -224,6 +237,9 @@ urlpatterns = (
     [
         path("admin/accounts/company/wizard/", CompanyWizardView.as_view(WIZARD_FORMS), name="company-wizard"),
         path("admin/", admin.site.urls),
+        # D2-5: Все проекты — только чтение; пути раньше роутера, чтобы `crm/projects/<id>/` не искал вьюсет.
+        path("api/v1/crm/projects/", ProjectListView.as_view(), name="project-list"),
+        path("api/v1/crm/projects/<int:deal_id>/", ProjectDetailView.as_view(), name="project-detail"),
         path("api/v1/", include(router.urls)),
         path("api/portal/v1/", include("portal.urls")),
         re_path(r"^api/portal/", portal_not_found, name="portal-not-found"),  # FIX-54: JSON 404 вместо HTML Django

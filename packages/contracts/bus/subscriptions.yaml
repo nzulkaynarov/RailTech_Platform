@@ -13,7 +13,8 @@ subscribers:
     endpoint_env: RT_BUS_ENDPOINT_CRM
     types:
       - uz.railtech.erp.act.*.v1
-      - uz.railtech.erp.contract.*.v1
+      # D2-5: contract.status_changed адресован EDS (проекция реестра) — CRM его не получает (NOT_FOR_CRM).
+      - uz.railtech.erp.contract.signed.v1
       - uz.railtech.erp.deal.*.v1
       - uz.railtech.erp.delivery.*.v1
       - uz.railtech.erp.document.*.v1
@@ -69,3 +70,11 @@ subscribers:
       - uz.railtech.identity.user.*.v1
       - uz.railtech.erp.request.created.v1
       - uz.railtech.erp.quote.ready_for_approval.v1
+      # D2-5: договоры, счета и акты проектов — проекция реестра «Все документы» (без общих таблиц).
+      - uz.railtech.erp.contract.status_changed.v1
+      - uz.railtech.erp.invoice.issued.v1
+      - uz.railtech.erp.invoice.paid.v1
+      - uz.railtech.erp.invoice.overdue.v1
+      - uz.railtech.erp.act.issued.v1
+      - uz.railtech.erp.act.accepted.v1
+      - uz.railtech.erp.act.returned.v1

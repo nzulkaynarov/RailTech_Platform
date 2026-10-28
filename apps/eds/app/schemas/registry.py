@@ -16,6 +16,9 @@ class RegistryKind(StrEnum):
     MEMO = "memo"
     APPLICATION = "application"
     REPORT = "report"
+    CONTRACT = "contract"  # D2-5: договоры, счета и акты проектов — проекция по событиям ERP
+    INVOICE = "invoice"
+    ACT = "act"
 
 
 class RegistryItem(BaseModel):

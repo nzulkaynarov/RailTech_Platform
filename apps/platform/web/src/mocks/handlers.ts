@@ -16,6 +16,8 @@ import { companyArticlesHandlers } from "./companyArticlesHandlers";
 import { crmLeadsHandlers } from "./crmLeads";
 import { crmMessagesHandlers } from "./crmMessages";
 import { edsApprovalsHandlers } from "./edsApprovals";
+import { edsProjectsHandlers } from "./edsProjects";
+import { erpCatalogHandlers } from "./erpCatalog";
 import { edsPaymentsHandlers } from "./edsPayments";
 import { bridgeHandlers } from "./bridgeHandlers";
 import { edsLettersHandlers } from "./edsLetters";
@@ -168,8 +170,10 @@ export const handlers = [
   ...edsDocumentsHandlers,
   ...edsLettersHandlers,
   ...edsApprovalsHandlers,
+  ...erpCatalogHandlers,
   ...erpCalcHandlers,
   ...erpStockHandlers,
+  ...edsProjectsHandlers,
 
   getGetHealthMockHandler({
     status: "ok",

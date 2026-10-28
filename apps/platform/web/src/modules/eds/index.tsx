@@ -9,10 +9,11 @@ import { DraftsScreen } from "./drafts/DraftsScreen";
 import { InboxScreen } from "./inbox/InboxScreen";
 import { NewDocumentPage } from "./new/NewDocumentPage";
 import { PaymentsScreen } from "./payments/PaymentsScreen";
+import { ProjectsScreen } from "./projects/ProjectsScreen";
 
 /**
  * Модуль EDS. «Входящие письма» (D1-3), «Все документы» (реестр и «Мои документы») и «Создать документ» (D1-5), «КП на одобрение»
- * и «На согласовании» (D1-4) — настоящие экраны; остальные разделы пока заглушки каркаса.
+ * и «На согласовании» (D1-4), «Проекты: договоры и акты» (D2-5) — настоящие экраны; остальные разделы пока заглушки каркаса.
  */
 export function Component() {
   const location = useLocation();
@@ -28,6 +29,13 @@ export function Component() {
     return (
       <RequireAccess rule={match.section.access}>
         <DraftsScreen objectId={match.objectId} />
+      </RequireAccess>
+    );
+  }
+  if (match?.module.code === "eds" && match.section.key === "projects") {
+    return (
+      <RequireAccess rule={match.section.access}>
+        <ProjectsScreen objectId={match.objectId} />
       </RequireAccess>
     );
   }

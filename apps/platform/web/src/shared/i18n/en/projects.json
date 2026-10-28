@@ -1,0 +1,444 @@
+{
+  "title": "Projects: contracts and acts",
+  "list": {
+    "subtitle": "A project is a request after the client accepted the quote. Here: the contract, invoices, the act and scans of signed documents.",
+    "caption": "Projects: number, client, step, documents, due date, owner",
+    "scroll": "Projects table, scrolls horizontally",
+    "filters": "Project filters",
+    "scope": {
+      "label": "Show",
+      "all": "All projects",
+      "mine": "Mine"
+    },
+    "problems": "With problems",
+    "step": {
+      "label": "Step",
+      "all": "Any step"
+    },
+    "search": {
+      "label": "Search",
+      "placeholder": "Project number, client, contract, invoice"
+    },
+    "columns": {
+      "number": "Project",
+      "client": "Client",
+      "step": "Step",
+      "status": "Client sees",
+      "documents": "Documents",
+      "due": "Due",
+      "responsible": "Owner",
+      "action": "Action"
+    },
+    "open": "Open",
+    "openLabel": "Open project {{number}}",
+    "more": "Show more",
+    "total": "Projects: {{count}}",
+    "noDocuments": "No documents yet",
+    "empty": {
+      "all": {
+        "title": "No projects yet",
+        "text": "A project appears when a client accepts a quote: then the contract, invoices and act open up. No quotes have been accepted yet."
+      },
+      "filtered": {
+        "title": "No projects match the filters",
+        "text": "Remove some filters or change the search.",
+        "action": "Reset filters"
+      }
+    }
+  },
+  "clientStatus": {
+    "contract_review": "Please agree the contract wording",
+    "contract_signing": "Contract is being signed",
+    "awaiting_payment": "Awaiting payment",
+    "fulfilling": "In progress",
+    "awaiting_acceptance": "Awaiting acceptance of the act",
+    "done": "Completed"
+  },
+  "status": {
+    "quote": {
+      "accepted": "Accepted by client"
+    },
+    "contract": {
+      "project": "Draft",
+      "client_agreed": "Agreed by client",
+      "issued_at_operator": "Issued at operator",
+      "signed": "Signed (scan)",
+      "rejected": "Rejected by client",
+      "cancelled": "Cancelled"
+    },
+    "invoice": {
+      "to_issue": "To be issued",
+      "issued": "Issued",
+      "partial": "Partially paid",
+      "paid": "Paid",
+      "overdue": "Overdue",
+      "cancelled": "Cancelled"
+    },
+    "act": {
+      "project": "Draft",
+      "returned": "Returned with a reason",
+      "issued": "Issued",
+      "signed": "Signed (scan)",
+      "cancelled": "Voided"
+    }
+  },
+  "problem": {
+    "no_contract": "No contract draft",
+    "contract_rejected": "Contract rejected by client",
+    "act_returned": "Act returned",
+    "invoice_overdue": "Invoice overdue"
+  },
+  "card": {
+    "title": "Project {{number}}",
+    "back": "All projects",
+    "steps": "Request path",
+    "doneNote": "The project is completed: the act is signed and all invoices are paid.",
+    "doneRule": "The project becomes “Completed” when the act is signed and all invoices are paid.",
+    "fields": {
+      "client": "Client",
+      "request": "Request",
+      "total": "Total incl. VAT",
+      "manager": "Manager",
+      "responsible": "Owner",
+      "opened": "Opened",
+      "quote": "From quote",
+      "due": "Due",
+      "clientStatus": "Client sees"
+    },
+    "readOnly": "Read only",
+    "readOnlyHint": "The contract, invoice and act are handled by the director and the accountant. You see statuses and history.",
+    "documents": {
+      "title": "Project documents",
+      "quote": "Quote",
+      "contract": "Contract",
+      "invoice": "Invoice",
+      "act": "Act",
+      "quoteType": "Commercial quote, version {{version}}",
+      "contractType": "Supply contract",
+      "invoiceType": "Invoice for payment",
+      "actType": "Act of work or delivery",
+      "none": "—",
+      "contractMissing": "No contract draft yet: the accountant creates it from the accepted quote.",
+      "invoiceMissing": "The invoice appears after the contract is signed: ERP creates a draft prepayment invoice.",
+      "actMissing": "The act is issued against an issued invoice.",
+      "invoiceDue": "due {{date}}",
+      "invoiceCount": "invoices: {{count}}",
+      "openContract": "Contract",
+      "openAct": "Act",
+      "openContractLabel": "Open contract {{number}}",
+      "openActLabel": "Open act {{number}}",
+      "createContract": "Create",
+      "createContractLabel": "Create a contract draft from the quote",
+      "issueAct": "Issue",
+      "issueActLabel": "Issue the act for the project",
+      "file": "PDF",
+      "fileLabel": "Download PDF {{number}}",
+      "scan": "Scan",
+      "scanLabel": "Download scan {{number}}",
+      "openQuote": "Open",
+      "openQuoteLabel": "Open quote {{number}}",
+      "payments": "Invoices & payments",
+      "paymentsLater": "Issuing and payment live in “Invoices & payments” (the section is connected separately)",
+      "invoiceHint": "Issuing and confirming payment are in “Invoices & payments”."
+    },
+    "execution": {
+      "title": "Fulfilment",
+      "hint": "Data from ERP, read only. Stock, purchasing and services for the project will appear with the “Stock” and “Costing” sections.",
+      "shipment": "Shipment",
+      "none": "No shipment yet: it is created after the contract is signed.",
+      "status": "Status",
+      "expected": "Expected date",
+      "shipped": "Shipped",
+      "delivered": "Delivered",
+      "accepted": "Accepted by client",
+      "carrier": "Carrier",
+      "tracking": "Tracking number",
+      "lines": "Delivery lines",
+      "linesNone": "No delivery lines yet.",
+      "line": {
+        "title": "Item",
+        "quantity": "Qty",
+        "status": "Status",
+        "eta": "Expected"
+      },
+      "lineStatus": {
+        "assembling": "Being assembled",
+        "in_transit": "In transit",
+        "ready_to_ship": "Ready to ship",
+        "shipped": "Shipped",
+        "delivered": "Delivered",
+        "accepted": "Accepted by client",
+        "disputed": "Disputed by client"
+      }
+    },
+    "journal": {
+      "title": "Document log",
+      "empty": "No entries yet. Here you will see who did what with the contract, invoice and act, and when."
+    }
+  },
+  "journal": {
+    "contract": {
+      "created": "Contract draft created",
+      "sent_to_client": "Contract draft sent to the client for agreement",
+      "client_agreed": "Contract wording agreed by the client",
+      "rejected": "Contract rejected by the client",
+      "revised": "Contract draft returned to work",
+      "issued_external": "Contract issued at the operator",
+      "scan_attached": "Scan of the signed contract attached",
+      "signed": "Contract signed",
+      "signed_client": "Contract signed by the client",
+      "signed_manager": "Contract signed by the company",
+      "cancelled": "Contract cancelled"
+    },
+    "act": {
+      "issued": "Act issued",
+      "rejected": "Act returned by the customer",
+      "scan_attached": "Scan of the signed act attached",
+      "signed": "Act accepted by the customer",
+      "reissued": "Act issued again",
+      "cancelled": "Act voided"
+    },
+    "project": {
+      "done": "Project completed"
+    },
+    "by": "{{date}} · {{name}}",
+    "bySystem": "{{date}} · system",
+    "reason": "Reason: {{reason}}"
+  },
+  "panel": {
+    "contractLabel": "Project contract",
+    "actLabel": "Project act",
+    "sheetClose": "Close",
+    "sheetContract": "Contract {{number}}",
+    "sheetAct": "Act {{number}}",
+    "sheetContractNone": "Contract",
+    "sheetActNone": "Act",
+    "journalEmpty": "The log is empty",
+    "journalHint": "Entries appear after the first actions on the contract and act."
+  },
+  "contract": {
+    "number": "Contract {{number}}",
+    "next": "Next step",
+    "none": {
+      "title": "No contract yet",
+      "text": "The contract draft is created from the accepted quote by the accountant or the director.",
+      "create": "Create contract draft",
+      "consequence": {
+        "title": "What will happen",
+        "step1": "A contract draft with the status “Draft” appears from the accepted quote.",
+        "step2": "The client cannot see it yet: you send it for agreement.",
+        "step3": "The project log records who created the draft and when."
+      }
+    },
+    "fields": {
+      "total": "Amount",
+      "created": "Created",
+      "agreed": "Agreed by client",
+      "signed": "Signed",
+      "toClient": "At the client"
+    },
+    "toClientYes": "wording under agreement",
+    "toClientNo": "not sent",
+    "state": {
+      "project": "The draft has not been sent to the client yet.",
+      "atClient": "The draft is with the client for wording agreement.",
+      "client_agreed": "The client agreed the wording. Next, issue the contract at the e-document operator (outside the platform).",
+      "issued_at_operator": "The contract is issued at the operator. When both sides have signed, attach the scan.",
+      "signed": "The contract is signed by both sides, the scan is stored.",
+      "rejected": "The client rejected the contract. Fix the draft and send it for agreement again.",
+      "cancelled": "The contract is cancelled."
+    },
+    "action": {
+      "send_to_client": "Send to client for agreement",
+      "client_agreed": "Mark: agreed by client",
+      "mark_issued": "Mark: issued at operator",
+      "attach_scan": "Attach signed scan",
+      "reject": "Client rejected the contract…",
+      "revise": "Return to draft"
+    },
+    "consequence": {
+      "title": "What will happen",
+      "send_to_client": [
+        "The client sees the contract draft in the cabinet: “Please agree the contract wording”.",
+        "The client gets a notification on their channels.",
+        "The log records who sent the draft and when."
+      ],
+      "client_agreed": [
+        "The contract gets the status “Agreed by client”.",
+        "Next it is issued at the e-document operator, outside the platform.",
+        "The log records who marked the agreement and when."
+      ],
+      "mark_issued": [
+        "The contract gets the status “Issued at operator”.",
+        "The client sees “Contract is being signed”.",
+        "When both sides have signed at the operator, attach the scan: the contract becomes “Signed”."
+      ],
+      "attach_scan": [
+        "The contract becomes “Signed (scan)”; the file is stored.",
+        "The project moves to payment: ERP creates a draft prepayment invoice.",
+        "The log records who attached the scan and when."
+      ],
+      "revise": [
+        "The draft returns to “Draft”; the client's agreement is reset.",
+        "Send the corrected draft to the client as a separate action."
+      ]
+    },
+    "note": {
+      "label": "Operator or number in the e-document system",
+      "hint": "Optional: goes to the log.",
+      "placeholder": "For example: Didox, No. 77"
+    },
+    "reject": {
+      "title": "The client rejected the contract",
+      "reason": {
+        "label": "Reason for rejection",
+        "hint": "Required: as told by the client, it goes to the log."
+      },
+      "submit": "Record the rejection",
+      "cancel": "Cancel",
+      "disabled": "The button becomes available when you write a reason."
+    },
+    "scan": {
+      "label": "Scan of the signed contract",
+      "hint": "PDF, JPG, PNG or WEBP, up to 20 MB.",
+      "submit": "Attach scan → Signed",
+      "choose": "Choose a scan file — the button becomes available."
+    },
+    "history": "Contract history",
+    "historyEmpty": "No actions on the contract yet.",
+    "files": {
+      "pdf": "Contract PDF",
+      "scan": "Signed scan"
+    },
+    "done": {
+      "create": "Contract draft created.",
+      "send_to_client": "Draft sent to the client.",
+      "client_agreed": "Marked: the client agreed the wording.",
+      "mark_issued": "Marked: contract issued at the operator.",
+      "attach_scan": "Scan attached, contract signed.",
+      "reject": "Rejection recorded.",
+      "revise": "Draft returned to work."
+    },
+    "readOnly": "Actions on the contract are available to the director and the accountant."
+  },
+  "act": {
+    "number": "Act {{number}}",
+    "none": {
+      "title": "No act yet",
+      "noInvoice": "The act is issued against an issued invoice. No invoice has been issued yet — issue it in “Invoices & payments”.",
+      "forbidden": "Acts are issued by the director and the accountant.",
+      "ready": "The invoice is issued: you can issue the act.",
+      "issue": "Issue the act",
+      "consequence": [
+        "The act gets a number and the status “Issued”.",
+        "The client sees “Awaiting your acceptance”.",
+        "The act PDF is built from the invoice; the log records who issued it and when."
+      ]
+    },
+    "fields": {
+      "total": "Amount",
+      "issued": "Issued",
+      "signed": "Signed"
+    },
+    "state": {
+      "project": "The act is a draft.",
+      "issued": "The act is with the client for acceptance. When they sign, attach the scan.",
+      "signed": "The act is signed, the scan is stored.",
+      "returned": "The client returned the act with a reason. Fix it and issue it again.",
+      "cancelled": "The act is voided."
+    },
+    "action": {
+      "attach_scan": "Attach signed scan",
+      "return": "The customer returned the act…",
+      "reissue": "Issue again"
+    },
+    "consequence": {
+      "title": "What will happen",
+      "attach_scan": [
+        "The act becomes “Signed (scan)”; the file is stored.",
+        "When all invoices are paid, the project becomes “Completed”.",
+        "The log records who attached the scan and when."
+      ],
+      "reissue": [
+        "The same act with the same number is issued again.",
+        "The client sees “Awaiting your acceptance”."
+      ]
+    },
+    "return": {
+      "title": "The customer returned the act",
+      "reason": {
+        "label": "Reason for return",
+        "hint": "Required: as told by the customer, it goes to the log and to the issuer."
+      },
+      "submit": "Record the return",
+      "cancel": "Cancel",
+      "disabled": "The button becomes available when you write a reason."
+    },
+    "scan": {
+      "label": "Scan of the signed act",
+      "hint": "PDF, JPG, PNG or WEBP, up to 20 MB.",
+      "submit": "Attach scan → Signed",
+      "choose": "Choose a scan file — the button becomes available."
+    },
+    "history": "Act history",
+    "historyEmpty": "No actions on the act yet.",
+    "files": {
+      "pdf": "Act PDF",
+      "scan": "Signed scan"
+    },
+    "returnedReason": "Reason for return: {{reason}}",
+    "done": {
+      "issue": "Act issued.",
+      "attach_scan": "Scan attached, act signed.",
+      "return": "Return recorded.",
+      "reissue": "Act issued again."
+    },
+    "readOnly": "Actions on the act are available to the director and the accountant."
+  },
+  "files": {
+    "choose": "Choose file",
+    "selected": "Selected file: {{name}}, {{size}}",
+    "tooLarge": "The file is larger than 20 MB.",
+    "wrongType": "A PDF or an image is needed: JPG, PNG, WEBP.",
+    "generating": "The file is still being prepared. Try again in a few seconds.",
+    "remove": "Remove the file"
+  },
+  "errors": {
+    "contract_transition_not_allowed": "The contract is already in another status. Refresh the page.",
+    "act_sign_not_allowed": "The act is already in another status. Refresh the page.",
+    "act_already_exists": "The project already has an act.",
+    "no_invoice": "The act is issued against an issued invoice: there is none yet.",
+    "contract_exists": "The contract draft is already created.",
+    "contract_create_not_allowed": "Only the accountant or the director can create the contract draft.",
+    "act_issue_not_allowed": "Only the accountant or the director can issue the act.",
+    "reason_required": "Write a reason.",
+    "scan_invalid": "The file does not look like a scan: a PDF or an image up to 20 MB is needed.",
+    "scan_required": "Choose a scan file.",
+    "no_file_provided": "Choose a scan file.",
+    "forbidden": "This action is not allowed for your role.",
+    "unavailable": "ERP is not responding. Try again later.",
+    "payload": "The file is larger than 20 MB.",
+    "unknown": "It did not work. Try again.",
+    "failed": "It did not work: {{reason}}"
+  },
+  "state": {
+    "retry": "Retry",
+    "loadError": {
+      "title": "Could not load",
+      "text": "Check the connection and try again."
+    },
+    "unavailable": {
+      "title": "ERP is not responding",
+      "text": "Projects are stored in ERP. Try again in a minute."
+    },
+    "forbidden": {
+      "title": "No access",
+      "text": "Projects are available to the director, accountant, manager, supply specialist and chief engineer."
+    },
+    "notFound": {
+      "title": "Project not found",
+      "text": "There is no such project, or it is not open yet: a project appears when the client accepts the quote.",
+      "action": "To the project list"
+    }
+  }
+}

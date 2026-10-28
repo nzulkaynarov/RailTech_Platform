@@ -226,12 +226,70 @@ async def test_all_reads_the_registry(web: Web, eds: EdsFake, check: ContractChe
     assert "mine" not in query
 
 
+async def test_registry_shows_project_documents_with_a_link_to_the_project(
+    web: Web, eds: EdsFake, check: ContractChecker
+) -> None:
+    """D2-5: договоры, счета и акты проектов — проекция ERP в реестре EDS; строка ведёт в проект."""
+    await web.login(["ACCOUNTANT"])
+    eds.answer(
+        "GET",
+        "registry",
+        200,
+        {
+            "items": [
+                registry_item(
+                    "50000000-0000-4000-8000-000000000001",
+                    kind="contract",
+                    number="ДОГ-2026/104",
+                    title="Стрелочные приводы",
+                    status="issued_at_operator",
+                    links={"erp_deal_id": 104, "deal_number": "D-104"},
+                ),
+                registry_item(
+                    "50000000-0000-4000-8000-000000000002",
+                    kind="act",
+                    number="АКТ-2026/058",
+                    title="Стрелочные приводы",
+                    status="signed",
+                    links={},
+                ),
+            ],
+            "next_cursor": None,
+        },
+    )
+
+    response = await web.client.get(
+        f"{BASE}/documents?scope=all&kind=contract&kind=invoice&kind=act"
+    )
+
+    assert response.status_code == 200, response.text
+    check(response, "/eds/documents", "get")
+    contract, act = response.json()["items"]
+    assert (contract["kind"], contract["openable"], contract["project_ref"]) == (
+        "contract",
+        False,
+        "104",
+    )
+    assert (act["kind"], act["project_ref"]) == ("act", None), (
+        "без сделки в ссылках карточки проекта нет"
+    )
+    assert eds.last("GET", "registry").url.params.get_list("kind") == ["contract", "invoice", "act"]
+
+
+async def test_mine_has_no_project_documents(web: Web, eds: EdsFake) -> None:
+    await web.login(["ACCOUNTANT"])
+    response = await web.client.get(f"{BASE}/documents?scope=mine&kind=contract")
+    assert response.status_code == 200
+    assert response.json() == {"items": [], "next_cursor": None}
+    assert eds.requests("GET", "documents") == []
+
+
 async def test_list_validates_filters_before_eds(web: Web, eds: EdsFake) -> None:
     await web.login(["MANAGER"])
 
     for url in (
         f"{BASE}/documents?scope=everything",
-        f"{BASE}/documents?kind=contract",
+        f"{BASE}/documents?kind=nonsense",
         f"{BASE}/documents?status=DROP TABLE",
         f"{BASE}/documents?limit=0",
     ):

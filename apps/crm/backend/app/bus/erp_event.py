@@ -23,9 +23,14 @@ CODE_TYPE: Final = "uz.railtech.erp.quote.acceptance_code_requested.v1"
 INVITE_TYPE: Final = "uz.railtech.erp.invite.requested.v1"
 INLINE_TYPES: Final = frozenset({CODE_TYPE, INVITE_TYPE})
 #: Типы ERP не для CRM: КП на одобрение директором адресовано EDS (EDS-03), в нём
-#: себестоимость и маржа; CRM на него не подписана (`packages/contracts/bus/subscriptions.yaml`)
-#: и обработчика не регистрирует.
-NOT_FOR_CRM: Final = frozenset({"uz.railtech.erp.quote.ready_for_approval.v1"})
+#: себестоимость и маржа; статусы договора (D2-5) — проекция реестра EDS. CRM на них не подписана
+#: (`packages/contracts/bus/subscriptions.yaml`) и обработчика не регистрирует.
+NOT_FOR_CRM: Final = frozenset(
+    {
+        "uz.railtech.erp.quote.ready_for_approval.v1",
+        "uz.railtech.erp.contract.status_changed.v1",
+    }
+)
 #: Типы ERP со своим обработчиком вне `ErpEventsService`: запрос письма почтовому сервису CRM
 #: (W18A-P1, `app/services/mail_requests.py`) — не событие сделки, ленты и бота.
 OWN_HANDLER: Final = frozenset({"uz.railtech.erp.mail.requested.v1"})

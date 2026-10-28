@@ -30,3 +30,12 @@ exceptions:
     operation: POST
     reason: "B4: вебхук ERP → CRM заменён шиной rt_bus (POST /bus/v1/events), вызывающая сторона ERP переведена в B3; потребителей нет"
     until: 2026-12-31
+  # D2-5 (волна 17): выгрузка `POST /crm/contracts/generate-from-quote/` называла успех 200, а код всегда отвечал 201 (создание
+  # договора). Исправлено описание на фактический ответ; потребители (старый фронт ERP, BFF Платформы, e2e Cabinet) читают
+  # фактический 201 и от описания не зависят. Удалить после слияния D2-5 (проверка напечатает предупреждение).
+  - file: erp-internal.yaml
+    id: response-success-status-removed
+    path: /api/v1/crm/contracts/generate-from-quote/
+    operation: POST
+    reason: "D2-5: описание исправлено на фактический 201; код и потребители не менялись, ответ 200 этим эндпоинтом не отдавался никогда"
+    until: 2026-12-31

@@ -1,0 +1,539 @@
+{
+  "subtitle": "Items, suppliers and the validity of their prices, crews, reference lists and requests for new categories.",
+  "cancel": "Cancel",
+  "save": "Save",
+  "actions": "Actions",
+  "tabs": {
+    "label": "Catalog sections",
+    "items": "Items",
+    "suppliers": "Suppliers",
+    "brigades": "Crews",
+    "refs": "Reference lists",
+    "requests": "Category requests",
+    "requestsCount": "Category requests ({{count}})"
+  },
+  "kinds": {
+    "stock": "Goods from stock",
+    "on_order": "Goods to order",
+    "service_fixed": "Service: fixed price",
+    "service_milestones": "Service: by milestones",
+    "service_time": "Service: by time"
+  },
+  "itemStatus": {
+    "DRAFT": "Draft",
+    "PUBLISHED": "Published"
+  },
+  "docKinds": {
+    "tz": "Technical specification",
+    "drawing": "Drawing",
+    "certificate": "Certificate",
+    "pnr": "Commissioning procedure",
+    "other": "Other"
+  },
+  "brigadeKinds": {
+    "brigade": "Crew",
+    "person": "Individual",
+    "subcontractor": "Subcontractor"
+  },
+  "rateUnits": {
+    "day": "per day",
+    "hour": "per hour"
+  },
+  "validity": {
+    "ok": "Price valid",
+    "expiring": "Expires soon",
+    "expired": "Price expired"
+  },
+  "state": {
+    "retry": "Retry",
+    "loadError": {
+      "title": "Could not load",
+      "text": "Check the connection and retry. Nothing is lost."
+    },
+    "unavailable": {
+      "title": "ERP is unavailable",
+      "text": "This section shows ERP data. Retry in a minute."
+    },
+    "forbidden": {
+      "title": "This section is not for your role",
+      "text": "If you need it for work, write to the administrator."
+    }
+  },
+  "errors": {
+    "DEFAULT": "The action failed. Please retry.",
+    "FORBIDDEN": "This action is not allowed for your role.",
+    "ERP_FORBIDDEN": "ERP refused: you need the right to manage the catalogue or suppliers.",
+    "SUPPLIER_PRICES_REQUIRED": "Supplier prices can only be changed by those who can see them (supply, director).",
+    "CREW_RATES_REQUIRED": "Crew rates can only be changed by the chief engineer, supply or the director.",
+    "VALIDATION_FAILED": "Check the fields.",
+    "CONFLICT": "This record already exists. Refresh the list.",
+    "NOT_FOUND": "The record is gone. Refresh the list.",
+    "BACKEND_UNAVAILABLE": "ERP did not answer. Retry in a minute.",
+    "reason": {
+      "item_name_required": "Enter the item name.",
+      "item_kind_invalid": "Choose the item type.",
+      "vat_rate_invalid": "VAT is a number from 0 to 100, or empty.",
+      "unit_not_found": "No such unit of measure.",
+      "category_not_found": "No such category.",
+      "offer_price_invalid": "Price is a number not below zero, up to two decimals.",
+      "offer_currency_invalid": "No such currency.",
+      "offer_validity_range_invalid": "“Valid until” cannot be earlier than “Valid from”.",
+      "stock_status_not_found": "No such stock status.",
+      "brigade_name_required": "Enter the crew or performer name.",
+      "brigade_kind_invalid": "Choose the kind.",
+      "brigade_headcount_invalid": "Headcount is a number from 1 to 500.",
+      "rate_unit_invalid": "Choose per day or per hour.",
+      "crew_rate_invalid": "The rate is a number not below zero.",
+      "crew_currency_invalid": "No such currency.",
+      "hs_code_invalid": "An HS code has 2, 4, 6, 8 or 10 digits.",
+      "hs_name_required": "Enter the description.",
+      "hs_validity_range_invalid": "“Valid until” cannot be earlier than “valid from”.",
+      "hs_code_exists": "This HS code is already in the list.",
+      "manufacturer_exists": "This manufacturer is already in the list.",
+      "already_pending": "A request for this category is already pending.",
+      "category_request_name_required": "Enter the category name.",
+      "file_too_large": "The file is larger than 20 MB.",
+      "file_type_not_allowed": "PDF, PNG, JPEG, Word and Excel files are accepted.",
+      "file_content_mismatch": "The file content does not match its extension.",
+      "no_file_provided": "Choose a file.",
+      "tech_doc_link_required": "Link the file to an item or to a request.",
+      "tech_doc_kind_invalid": "Choose the document kind.",
+      "product_not_found": "No such item.",
+      "deal_not_found": "No such request.",
+      "multipart_required": "Send the file as a form.",
+      "name_required": "Enter the name.",
+      "already_reviewed": "The request is already decided. Refresh the list.",
+      "category_required": "Choose an existing category.",
+      "reason_required": "Enter the reason for refusal."
+    }
+  },
+  "items": {
+    "search": "Search by name, article and drawing",
+    "filterKind": "Type",
+    "anyKind": "Any type",
+    "filterCategory": "Category",
+    "anyCategory": "Any category",
+    "add": "Add item",
+    "table": "Catalogue items",
+    "open": "Open item {{name}}",
+    "card": "Item",
+    "edit": "Edit item",
+    "columns": {
+      "name": "Item",
+      "kind": "Type",
+      "unit": "Unit",
+      "vat": "VAT",
+      "category": "Category",
+      "offers": "Offers",
+      "docs": "Files"
+    },
+    "vatDefault": "(default)",
+    "vatCompany": "{{rate}} % — the company default",
+    "vatNone": "Not set",
+    "noOffers": "No offers",
+    "offersCount": "Offers: {{count}}",
+    "priceUntil": "price until {{date}}",
+    "docsLink": "Files of item {{name}}: {{count}}",
+    "empty": {
+      "title": "No items",
+      "text": "Items appear once they are added to the catalogue. Add the first one.",
+      "filtered": "Nothing found for these conditions. Change the search or filter."
+    },
+    "fields": {
+      "sku": "Article",
+      "kind": "Type",
+      "unit": "Unit",
+      "vat": "VAT",
+      "category": "Category",
+      "status": "Card status",
+      "brand": "Manufacturer",
+      "gost": "Standard / drawing",
+      "hs": "HS code"
+    },
+    "offers": "Supplier offers",
+    "offersTable": "Supplier offers for the item",
+    "techDocs": "Technical files",
+    "noDocs": "No files. Upload them in “Technical files”.",
+    "form": {
+      "addTitle": "Add item",
+      "editTitle": "Edit item",
+      "add": "Add",
+      "name": "Name",
+      "kind": "Item type",
+      "kindHint": "“From stock” or “to order” is decided by ERP from supplier offers.",
+      "unit": "Unit of measure",
+      "vat": "VAT, %",
+      "vatHint": "Empty — the company default.",
+      "category": "Category",
+      "description": "Description",
+      "addSteps": [
+        "The item appears in the catalogue as a draft.",
+        "It can be chosen in costing and have files linked.",
+        "Supply adds supplier prices."
+      ],
+      "editSteps": [
+        "Changes are saved in the item card.",
+        "New costings use the updated unit and VAT.",
+        "Quotes already sent do not change."
+      ]
+    }
+  },
+  "offers": {
+    "supplier": "Supplier",
+    "product": "Item",
+    "price": "Purchase price",
+    "quota": "Quota",
+    "lead": "Lead time",
+    "validUntil": "Price valid until",
+    "noLimit": "no end date",
+    "inactive": "Inactive",
+    "priceHidden": "hidden",
+    "pricesNote": "Supplier prices are not shown to you: supply and the director see them.",
+    "quotaValue": "{{qty}} pcs, from {{min}}",
+    "leadValue": "from stock {{stock}} d, to order {{order}} d",
+    "openSupplier": "Open supplier {{name}}",
+    "openProduct": "Open item {{name}}",
+    "edit": "Edit",
+    "editNamed": "Edit the offer for item {{name}}",
+    "form": {
+      "title": "Offer: {{name}}",
+      "price": "Purchase price, {{currency}}",
+      "noPrice": "You neither see nor change the supplier price: it is open to supply and the director.",
+      "quota": "Quota, pcs",
+      "quotaHint": "How many units the supplier will ship at this price.",
+      "min": "Minimum order, pcs",
+      "stockLead": "Lead time from stock, days",
+      "orderLead": "Lead time to order, days",
+      "validFrom": "Price valid from",
+      "validUntil": "Price valid until",
+      "active": "The offer is active",
+      "steps": [
+        "The offer terms are saved for the supplier and the item.",
+        "New costings use the updated lead time and quota.",
+        "The client price is not recalculated."
+      ]
+    }
+  },
+  "suppliers": {
+    "search": "Search by name and TIN",
+    "table": "Suppliers",
+    "open": "Open supplier {{name}}",
+    "card": "Supplier",
+    "tin": "TIN {{tin}}",
+    "columns": {
+      "name": "Supplier",
+      "offers": "Offers",
+      "terms": "Price validity"
+    },
+    "expired": "Expired: {{count}}",
+    "expiring": "Expiring soon: {{count}}",
+    "allValid": "All prices valid",
+    "nearest": "nearest end {{date}}",
+    "empty": {
+      "title": "No suppliers",
+      "text": "Suppliers appear together with their offers for items.",
+      "filtered": "No suppliers for this query."
+    },
+    "fields": {
+      "tin": "TIN",
+      "country": "Country",
+      "contact": "Contact",
+      "phone": "Phone",
+      "email": "Email",
+      "website": "Website",
+      "address": "Address"
+    },
+    "offers": "Offers by item",
+    "offersTable": "Supplier offers",
+    "noOffers": "No offers."
+  },
+  "brigades": {
+    "search": "Search by name and specialisation",
+    "showInactive": "Show those who no longer work",
+    "add": "Add crew",
+    "table": "Crews and service performers",
+    "editNamed": "Edit: {{name}}",
+    "inactive": "Not working",
+    "rateHidden": "hidden",
+    "ratesNote": "Crew rates are not shown to you: the chief engineer, supply and the director see them.",
+    "columns": {
+      "name": "Name",
+      "kind": "Kind",
+      "headcount": "Headcount",
+      "specialization": "Specialisation",
+      "rate": "Rate"
+    },
+    "empty": {
+      "title": "No crews",
+      "text": "Crews and performers are needed to cost a service: rate and days. Add the first one.",
+      "filtered": "Nobody for this query."
+    },
+    "form": {
+      "addTitle": "Add crew",
+      "editTitle": "Edit crew or performer",
+      "add": "Add",
+      "name": "Name",
+      "kind": "Kind",
+      "headcount": "People in the crew",
+      "specialization": "Specialisation",
+      "rate": "Rate, {{currency}}",
+      "rateHint": "Empty — no rate set.",
+      "unit": "Rate",
+      "noRate": "You neither see nor change the crew rate: it is open to the chief engineer, supply and the director.",
+      "note": "Note",
+      "active": "Works",
+      "addSteps": [
+        "The crew appears in the list.",
+        "The chief engineer picks it when costing a service.",
+        "The client does not see the rate."
+      ],
+      "editSteps": [
+        "Changes are saved in the list.",
+        "Services already costed do not change.",
+        "The client does not see the rate."
+      ]
+    }
+  },
+  "requests": {
+    "hint": "No suitable category? Request it: the request creates nothing, the director or administrator creates the category.",
+    "hintDecide": "Approving links a created category to the request; refusing needs a reason. New categories are created in Settings · Company.",
+    "add": "Request a category",
+    "table": "Requests for new categories",
+    "under": "in “{{name}}”",
+    "approve": "Approve",
+    "reject": "Reject",
+    "approveNamed": "Approve the request “{{name}}”",
+    "rejectNamed": "Reject the request “{{name}}”",
+    "columns": {
+      "name": "Category",
+      "why": "Why",
+      "author": "Author",
+      "created": "Submitted",
+      "status": "Status"
+    },
+    "status": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    },
+    "empty": {
+      "title": "No requests",
+      "text": "Whoever manages the catalogue submits a request when no suitable category exists."
+    },
+    "form": {
+      "title": "Request a new category",
+      "ok": "Send request",
+      "name": "Category name",
+      "parent": "Parent category",
+      "parentHint": "Optional: where to put it.",
+      "why": "Why it is needed",
+      "whyHint": "Briefly: which items will go there.",
+      "steps": [
+        "The request goes to the director in “Category requests”.",
+        "The director creates the category and links it, or refuses with a reason.",
+        "You get a notification about the decision."
+      ]
+    }
+  },
+  "refs": {
+    "parts": "Reference list",
+    "rates": {
+      "title": "Exchange rates",
+      "hint": "Rates to UZS: automatically from the central bank, or entered by hand for a date. Quotes use the latest rate not older than the limit set in company settings.",
+      "filter": "Currency",
+      "any": "All currencies",
+      "enter": "Enter USD rate",
+      "table": "Exchange rates to UZS",
+      "columns": {
+        "currency": "Currency",
+        "rate": "Rate, UZS",
+        "date": "Date",
+        "source": "Source"
+      },
+      "source": {
+        "CBU": "Central bank",
+        "MANUAL": "Manual"
+      },
+      "empty": {
+        "title": "No rates",
+        "text": "Rates come from the central bank automatically. If the load failed, the director enters the rate by hand."
+      },
+      "form": {
+        "title": "Enter the USD rate for a date",
+        "ok": "Save rate",
+        "date": "Rate date",
+        "rate": "Rate, UZS per 1 USD",
+        "rateHint": "Above 0, at most six decimals.",
+        "steps": [
+          "The rate for the date replaces the central bank or a previous manual one.",
+          "The previous value stays in the log.",
+          "The central bank auto-load will not overwrite a manual rate."
+        ]
+      }
+    },
+    "hs": {
+      "title": "HS codes",
+      "hint": "Goods classifier. A code taken out of use is not deleted, it is closed with a “valid until” date.",
+      "search": "Search by code and description",
+      "level": "Level",
+      "anyLevel": "Any",
+      "digits": "{{count}} digits",
+      "onlyActive": "Only valid ones",
+      "add": "Add code",
+      "table": "HS codes",
+      "editNamed": "Edit code {{code}}",
+      "active": "Valid",
+      "closed": "Closed",
+      "until": "until {{date}}",
+      "columns": {
+        "code": "Code",
+        "name": "Description",
+        "unit": "Units",
+        "level": "Digits",
+        "state": "State"
+      },
+      "empty": {
+        "title": "No codes",
+        "text": "HS codes are used in item cards and quotes."
+      },
+      "form": {
+        "addTitle": "Add HS code",
+        "editTitle": "Code {{code}}",
+        "add": "Add",
+        "code": "Code",
+        "codeHint": "2, 4, 6, 8 or 10 digits. The code cannot be changed after adding.",
+        "name": "Description",
+        "unit": "Unit of account",
+        "extraUnit": "Additional unit",
+        "until": "Valid until",
+        "untilHint": "Empty — no end. A past date closes the code.",
+        "addSteps": [
+          "The code appears in the list.",
+          "It can be put in item cards.",
+          "The parent entry is found by the code prefix."
+        ],
+        "editSteps": [
+          "Changes are saved in the list.",
+          "Items with this code do not change.",
+          "A closed code stays in old documents."
+        ]
+      }
+    },
+    "brands": {
+      "title": "Manufacturers",
+      "hint": "Brands chosen in the item card. A manufacturer is not deleted — it is removed from the choice.",
+      "search": "Search by name",
+      "showInactive": "Show those removed from the choice",
+      "add": "Add manufacturer",
+      "table": "Manufacturers",
+      "editNamed": "Edit: {{name}}",
+      "active": "In the choice",
+      "inactive": "Removed from the choice",
+      "columns": {
+        "name": "Name",
+        "country": "Country",
+        "website": "Website",
+        "state": "State"
+      },
+      "empty": {
+        "title": "No manufacturers",
+        "text": "A manufacturer is chosen in the item card. Add the first one."
+      },
+      "form": {
+        "addTitle": "Add manufacturer",
+        "editTitle": "Edit manufacturer",
+        "add": "Add",
+        "name": "Name",
+        "country": "Country",
+        "website": "Website",
+        "active": "Show in the choice",
+        "addSteps": [
+          "The manufacturer appears in the list.",
+          "It can be chosen in the item card.",
+          "The name must not repeat."
+        ],
+        "editSteps": [
+          "Changes are saved in the list.",
+          "Items with this manufacturer do not change.",
+          "One removed from the choice stays in old cards."
+        ]
+      }
+    }
+  },
+  "docs": {
+    "subtitle": "Specifications, drawings, certificates and commissioning procedures — linked to an item and to a request.",
+    "size": {
+      "kb": "{{value}} KB",
+      "mb": "{{value}} MB"
+    },
+    "search": "Search by name, file and item",
+    "filterKind": "Kind",
+    "anyKind": "Any kind",
+    "clearLinks": "Show all files",
+    "upload": "Upload file",
+    "table": "Technical files",
+    "open": "Open file “{{title}}”",
+    "card": "File",
+    "columns": {
+      "title": "Name",
+      "kind": "Kind",
+      "link": "Linked to",
+      "size": "Size",
+      "uploaded": "Uploaded by"
+    },
+    "empty": {
+      "title": "No files",
+      "text": "Upload a specification, drawing, certificate or procedure and link it to an item or a request.",
+      "filtered": "No files for these conditions. Change the search or filter."
+    },
+    "fields": {
+      "kind": "Kind",
+      "file": "File",
+      "product": "Item",
+      "deal": "Request or project",
+      "uploaded": "Uploaded"
+    },
+    "download": "Download",
+    "downloadError": "Could not download the file.",
+    "delete": "Delete file",
+    "deleted": "File deleted.",
+    "chatLater": "Send to the client in chat: will appear together with the “Chats” section. For now download the file and send it by hand.",
+    "preview": "Preview",
+    "noPreview": "This format cannot be previewed — download the file.",
+    "gone": {
+      "title": "The file is not in the list",
+      "text": "It was deleted or does not match the filter."
+    },
+    "deleteTitle": "Delete the file “{{title}}”?",
+    "deleteText": "The file disappears from technical files; it can only come back by uploading again.",
+    "deleteSteps": [
+      "The file is removed from storage.",
+      "Its links to the item and request are removed.",
+      "Copies already downloaded stay with those who downloaded them."
+    ],
+    "viewer": {
+      "region": "Pages of the file “{{name}}”",
+      "page": "“{{name}}”, page {{page}} of {{total}}",
+      "error": "Could not open the file for preview. Download it.",
+      "truncated": "Showing {{shown}} pages of {{total}}. The rest is in the downloaded file."
+    },
+    "form": {
+      "title": "Upload file",
+      "ok": "Upload",
+      "file": "File",
+      "fileHint": "PDF, PNG, JPEG, Word or Excel, up to 20 MB.",
+      "kind": "Kind",
+      "name": "Name",
+      "product": "Catalogue item",
+      "productPlaceholder": "Find an item",
+      "deal": "Request or project",
+      "dealPlaceholder": "Find by number or name",
+      "linkHint": "At least one link is needed: an item or a request.",
+      "steps": [
+        "The file is saved in the protected ERP storage.",
+        "It appears for the item and the request it is linked to.",
+        "The file is not sent to the client."
+      ]
+    }
+  }
+}

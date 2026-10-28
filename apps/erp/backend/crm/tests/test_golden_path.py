@@ -19,6 +19,7 @@ from decimal import Decimal
 
 import pytest
 from django.utils import timezone
+from integration.tests import world as w
 
 from accounts.models import Company, CompanyMember, CompanyType, CustomUser, SystemRole, WorkspaceRole
 from catalog.models import DomainType, ProductStatus, StockStatus
@@ -249,8 +250,7 @@ def test_golden_path_rfq_to_closed_won(deal, buyer, manager):
     contract, err = crm_services.sign_contract_by_client(contract.id, manager)
     assert err is None, f"sign_contract_by_client failed: {err}"
     assert contract.status_code == "PENDING_MANAGER"
-    contract, err = crm_services.sign_contract_by_manager(contract.id, manager)
-    assert err is None, f"sign_contract_by_manager failed: {err}"
+    contract = w.sign_via_scan(contract.id)  # подпись кликом закрыта (D2-5): оператор → скан
     assert contract.status_code == "SIGNED"
 
     # 8. Invoice created (DRAFT) from the signed contract, then explicitly ISSUED (Wave C:
@@ -311,10 +311,10 @@ def test_contract_and_billing_events_are_structured(deal, buyer, manager):
     signed_client = ActivityLog.objects.filter(event_code="contract.signed_client", deal=deal).order_by("-id").first()
     assert signed_client.event_params == {"number": contract.number, "deal_id": deal.id, "manual": True}
 
-    contract, err = crm_services.sign_contract_by_manager(contract.id, manager)
-    assert err is None
-    signed_manager = ActivityLog.objects.filter(event_code="contract.signed_manager", deal=deal).order_by("-id").first()
-    assert signed_manager.event_params == {"number": contract.number, "deal_id": deal.id, "manual": True}
+    contract = w.sign_via_scan(contract.id)
+    scanned = ActivityLog.objects.filter(event_code="contract.scan_attached", deal=deal).order_by("-id").first()
+    assert scanned.event_params["number"] == contract.number and scanned.event_params["deal_id"] == deal.id
+    assert ActivityLog.objects.filter(event_code="contract.issued_external", deal=deal).exists()
 
     # billing.py — invoice.issued + payment.recorded (money as str, manual flag). Wave C: creation
     # emits invoice.created (DRAFT); the invoice.issued event now rides the explicit issue step.

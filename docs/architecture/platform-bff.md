@@ -542,6 +542,15 @@ BFF отдаёт сам (`/admin/company/logo/image`, `/admin/company/brand/logo
   Создание с `submit` — два вызова EDS (`POST /documents`, `POST …/submit`): если отправка отклонена, ошибка называет сохранённый черновик
   (`details.document_id`, `saved`). Ошибки EDS переводятся в `Error` с `source = eds` (текст EDS сохраняется; 422 — `details.fields`, `messages`).
   Загрузка файла — как W13-A5 (поток до 25 МБ и поля формы, multipart не разбирается; сверх предела — 413), скачивание — потоком как `attachment`.
+- **ERP · Номенклатура и поставщики, бригады, справочники, Техдокументация (D2-3, 0.26.0).** `/erp/catalog/*` и `/erp/docs/*` (тег `erp-catalog`) — прокси к ERP
+  `catalog/items|suppliers|brigades|tech-docs|category-requests`, `master-data/hs-codes`, `exchange-rates`, `catalog/manufacturers` токеном сотрудника; раздел
+  `erp.stock` (чтение — `read`, изменения — `full`), право на операцию решает ERP (`catalog.manage`, `supply.manage`, ввод курса — `settings.edit` через прежний
+  `/admin/company/fx-rate`). **Закрытые поля режут оба**: цена закупки в предложениях — без поля `supplier_prices` (`price = null`, `prices_visible = false`), ставка
+  бригады — без `cost_margin` и без раздела `erp.calc.services`; ERP отдаёт `null` по своим правам, BFF вырезает ещё раз (администратор ERP видит всё, роль
+  «Администратор» Платформы — нет). Загрузка файла техдокументации — тело читается до 21 МБ и копится в памяти BFF (как у `crm_kb` и `eds_documents`, B-D23-6; ERP принимает до `FILE_UPLOAD_MAX_MEMORY_SIZE` 25 МБ), multipart не разбирается; скачивание — потоком, всегда вложением (`nosniff`):
+  просмотр PDF строит интерфейс сам (pdf.js в `canvas`), потому что CSP Платформы запрещает встроенные просмотрщики. Номер заявки у файла — составной `ЗВ/ПР-ГГГГ-NNN`
+  (как у EDS, до ERP-09). Ошибки ERP: `{detail: КОД}` -> 422 `VALIDATION_FAILED` с `details.reason` (код в нижнем регистре) и `details.fields`; повтор кода ТН ВЭД,
+  производителя или запроса на категорию — 409 `CONFLICT` (`details.reason`).
 - **EDS в «Моей очереди», счётчиках и поиске (D1-6, 0.25.0).** `Feed` читает EDS (`GET /letters?status=awaiting_resolution`, `GET /approvals?mine=true&status=open&template=…`,
   `GET /registry?q=`) тем же токеном `aud=eds`; только роли с разделами EDS (`EDS_SECTIONS`), строки — по секции `queue` каталога (`resolve_letter`, `approve_memo`,
   `pay_memo`). Права внутри EDS решает EDS (403 — `Sources.eds = not_applicable`), BFF их не вычисляет; недоступность — `Sources.eds = unavailable` (необязательное поле,

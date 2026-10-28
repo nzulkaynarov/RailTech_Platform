@@ -9,8 +9,12 @@ from .offers import SupplierOffer
 from .products import Product, ProductDocument, ProductImage
 from .requests import CategoryRequest
 from .taxonomy import Category, Manufacturer
+from .tech_docs import TechDocument
+
+from .brigades import Brigade  # isort:skip — после HSCode: master_data.models импортирует его отсюда
 
 __all__ = [
+    "Brigade",
     "Category",
     "CategoryRequest",
     "DomainType",
@@ -22,4 +26,5 @@ __all__ = [
     "ProductStatus",
     "StockStatus",
     "SupplierOffer",
+    "TechDocument",
 ]

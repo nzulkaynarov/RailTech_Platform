@@ -42,12 +42,12 @@ test.describe("Заглушки и мост", () => {
     page,
   }) => {
     await loginAndWait(page, "all@demo.example");
-    // «Лиды» (D1-2b) и «Счета и оплаты» (D2-4) — настоящие экраны; заглушка-карточка остаётся у разделов без экрана (проекты)
-    await spaGoto(page, "/eds/projects/%D0%9F%D0%A0-2026-099?panel=open&tab=documents");
-    await expect(page.getByRole("heading", { level: 1, name: "Проект ПР-2026-099" })).toBeVisible();
+    // «Лиды» (D1-2b), «Счета и оплаты» (D2-4) и «Проекты» (D2-5) — настоящие экраны; заглушка-карточка остаётся у разделов без экрана (исходящие КП)
+    await spaGoto(page, "/eds/outbox/%D0%9A%D0%9F-2026%2F118?panel=open&tab=card");
+    await expect(page.getByRole("heading", { level: 1, name: "КП-2026/118" })).toBeVisible();
     const main = page.getByRole("main");
     const open = main.getByRole("link", { name: /Открыть в старом ERP/ });
-    await expect(open).toHaveAttribute("href", "http://erp.localhost:8088/#crm-deals");
+    await expect(open).toHaveAttribute("href", "http://erp.localhost:8088/#crm-quotes");
     await expect(open).toHaveAttribute("target", "_blank");
     expect(await open.getAttribute("rel")).toContain("noopener");
     await expect(main.getByText("Когда появится: к пилоту.")).toBeVisible();
@@ -146,20 +146,18 @@ test.describe("Заглушки и мост", () => {
     await shoot(page, "stub-chats-external-accountant");
   });
 
-  test("снабженец: «Справочники» — мост в старый ERP; клик открывает SSO-адрес в новой вкладке", async ({
+  test("«Заявки» — мост в старый ERP; клик открывает SSO-адрес в новой вкладке", async ({
     page,
     context,
   }) => {
     await context.route("**/sso/exchange**", (route) =>
       route.fulfill({ contentType: "text/html", body: "<title>old erp</title>" }),
     );
-    await loginAndWait(page, "supply@demo.example");
-    await spaGoto(page, "/erp/catalog");
-    await expect(
-      page.getByRole("heading", { level: 1, name: "Номенклатура и поставщики" }),
-    ).toBeVisible();
+    await loginAndWait(page, "all@demo.example");
+    await spaGoto(page, "/crm/requests");
+    await expect(page.getByRole("heading", { level: 1, name: "Заявки" })).toBeVisible();
     const open = page.getByRole("main").getByRole("link", { name: /Открыть в старом ERP/ });
-    await expect(open).toHaveAttribute("href", "http://erp.localhost:8088/#catalog-reference");
+    await expect(open).toHaveAttribute("href", "http://erp.localhost:8088/#crm-deals");
     await expect(page.getByRole("main").getByText(/Вход выполнится сам/)).toBeVisible();
     await expectNoViolations(page, "erp bridge");
 

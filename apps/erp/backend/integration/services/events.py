@@ -1,6 +1,6 @@
 """Публикация событий ERP на шину rt_bus из сервисного слоя (B3, ADR-0014, CONTRACTS §3 и §9).
 
-Единственный способ, которым ERP сообщает о своих сущностях: 24 типа `uz.railtech.erp.<сущность>.<действие>.v1`
+Единственный способ, которым ERP сообщает о своих сущностях: 25 типов `uz.railtech.erp.<сущность>.<действие>.v1`
 (`packages/contracts/events/erp/`). Вызывает сервис, который меняет состояние (продажи, документы, портал, интеграция), и
 только внутри `transaction.atomic()` этого изменения: `rt_bus` пишет строку outbox в ту же транзакцию, поэтому
 
@@ -320,6 +320,37 @@ def publish_contract_signed(contract: Any, by: str = "both", actor: Optional[Dic
         "by": by,
     }
     return publish_event("contract.signed", erp_company_id=deal.company_id, payload=payload, deal=deal, actor=actor)
+
+
+def publish_contract_status_changed(
+    contract: Any,
+    status: str,
+    *,
+    sent_to_client: bool,
+    reason: Optional[str] = None,
+    actor: Optional[Dict[str, Any]] = None,
+) -> Optional[Event]:
+    """Событие `contract.status_changed` (D2-5, SPEC-v3 §2.4): договор сменил статус; адресат — проекция реестра EDS.
+
+    `status` — слово контракта (`project`, `client_agreed`, `issued_at_operator`, `signed`, `rejected`, `cancelled`),
+    не код ERP: сопоставление — `crm.services.contract_flow.contract_v3_status`.
+    """
+    deal = contract.deal
+    payload: Dict[str, Any] = {
+        "erp_contract_id": contract.id,
+        "number": contract.number or f"CT-{contract.id}",
+        "status": status,
+        "sent_to_client": bool(sent_to_client),
+        "amount": f"{contract.total_amount:.2f}",
+    }
+    currency = getattr(contract, "currency", None)
+    if currency is not None:
+        payload["currency"] = str(getattr(currency, "code", currency)).upper()
+    if reason:
+        payload["reason"] = reason
+    return publish_event(
+        "contract.status_changed", erp_company_id=deal.company_id, payload=payload, deal=deal, actor=actor
+    )
 
 
 def publish_invoice_event(

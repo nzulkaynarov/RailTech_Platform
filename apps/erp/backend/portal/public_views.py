@@ -48,6 +48,13 @@ _UNAVAILABLE_COPY = {
 }
 
 
+#: Недоступная публичная ссылка на КП: токена нет или КП ещё не отправлено — 404; ссылка отозвана или срок истёк — 410 (B-071).
+_LINK_ERRORS = {
+    404: OpenApiResponse(description="Unknown or not-yet-sent token"),
+    410: OpenApiResponse(description="Public link revoked or expired (QUOTE_LINK_REVOKED / QUOTE_LINK_EXPIRED)"),
+}
+
+
 def _resolve_quote(token: str):
     """Fetch quote by public token or None."""
     return Quote.objects.select_related("deal", "deal__company", "status").filter(public_access_token=token).first()
@@ -226,7 +233,12 @@ class PublicQuoteViewedView(_PublicQuoteBase):
 
     throttle_scope = "public_quote_view"
 
-    @extend_schema(summary="Mark public КП as viewed (beacon)", tags=["Portal"], request=None, responses={204: None})
+    @extend_schema(
+        summary="Mark public КП as viewed (beacon)",
+        tags=["Portal"],
+        request=None,
+        responses={204: None, **_LINK_ERRORS},
+    )
     def post(self, request, token):
         quote, gate_response = self._gate_or_response(request, token)
         if gate_response is not None:
@@ -246,7 +258,10 @@ class PublicQuoteRequestCodeView(_PublicQuoteBase):
         summary="Request КП acceptance code",
         tags=["Portal"],
         request=None,
-        responses={200: inline_serializer("PublicCodeSent", fields={"detail": drf_serializers.CharField()})},
+        responses={
+            200: inline_serializer("PublicCodeSent", fields={"detail": drf_serializers.CharField()}),
+            **_LINK_ERRORS,
+        },
     )
     def post(self, request, token):
         quote, gate_response = self._gate_or_response(request, token)
@@ -273,6 +288,7 @@ class PublicQuoteAcceptView(_PublicQuoteBase):
                 fields={"detail": drf_serializers.CharField(), "contract_number": drf_serializers.CharField()},
             ),
             400: OpenApiResponse(description="Wrong or expired code (error code from verify_code_and_accept)"),
+            **_LINK_ERRORS,
         },
     )
     def post(self, request, token):
@@ -305,6 +321,7 @@ class PublicQuoteRejectView(_PublicQuoteBase):
         responses={
             200: inline_serializer("PublicQuoteRejected", fields={"detail": drf_serializers.CharField()}),
             400: OpenApiResponse(description="Reason missing or quote not rejectable (error code)"),
+            **_LINK_ERRORS,
         },
     )
     def post(self, request, token):

@@ -392,7 +392,8 @@ export interface paths {
     /**
      * Реестр «Все документы» (SPEC-v3 §7.3)
      * @description Единый реестр с вкладками по типу и фильтрами статус · период · ответственный · клиент. КП — маршруты одобрения
-     *     (номер КП ERP); договоры, счета и акты ERP появятся, когда EDS начнёт вести их проекции (вне C1).
+     *     (номер КП ERP); договоры, счета и акты проектов (0.7.0, D2-5) — проекция событий ERP: `title` — название сделки,
+     *     `client` и `responsible` — из письма по той же заявке (нет письма — `null`), `links.deal_number` — номер сделки в ERP.
      *
      *     `registry.read` открывает сам реестр, но он **не шире прав на вид документа**: входящие и исходящие письма
      *     (`letter_in`, `letter_out`) попадают в выдачу только у сотрудника с `letters.read`; черновики (`status = draft`) —
@@ -1283,18 +1284,27 @@ export interface components {
       channels?: components["schemas"]["SendChannel"][];
     };
     /**
-     * @description Вкладки «Все документы» в C1: письма (входящие, исходящие), КП (маршруты одобрения), служебные, заявления, отчёты
+     * @description Вкладки «Все документы»: письма (входящие, исходящие), КП (маршруты одобрения), служебные, заявления, отчёты; с 0.7.0 — договоры, счета и акты проектов (проекция событий ERP)
      * @enum {string}
      */
-    RegistryKind: "letter_in" | "letter_out" | "quote" | "memo" | "application" | "report";
+    RegistryKind:
+      | "letter_in"
+      | "letter_out"
+      | "quote"
+      | "memo"
+      | "application"
+      | "report"
+      | "contract"
+      | "invoice"
+      | "act";
     RegistryItem: {
       kind: components["schemas"]["RegistryKind"];
-      /** @description Письмо (`letter_in`), документ (`letter_out`, `memo`, `application`, `report`) или маршрут (`quote`) */
+      /** @description Письмо (`letter_in`), документ (`letter_out`, `memo`, `application`, `report`), маршрут (`quote`) или проекция документа проекта (`contract`, `invoice`, `act`) */
       id: components["schemas"]["Uuid"];
-      /** @description Номер реестра EDS или номер КП ERP; `null` — исходящее до отправки */
+      /** @description Номер реестра EDS или номер КП, договора, счёта, акта ERP; `null` — исходящее до отправки */
       number: string | null;
       title: string;
-      /** @description Значение `LetterStatus`, `DocumentStatus` или `RouteStatus` по типу */
+      /** @description Значение `LetterStatus`, `DocumentStatus` или `RouteStatus` по типу; у `contract`, `invoice`, `act` — слово SPEC-v3 §2.4 (см. 0.5.0) */
       status: string;
       /** Format: date-time */
       registered_at: string;

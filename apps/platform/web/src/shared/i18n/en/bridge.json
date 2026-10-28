@@ -45,9 +45,7 @@
     "crmDashboard": "the “Дашборд” section",
     "erpDeals": "the “Сделки” section",
     "erpCalc": "“Сделки” → request card → quote calculation",
-    "erpQuotes": "“Документы” → “Коммерческие предложения”",
-    "erpCatalog": "“Товары” → “Справочники”",
-    "erpFiles": "“Документы” → “Файлы”"
+    "erpQuotes": "“Документы” → “Коммерческие предложения”"
   },
   "who": {
     "memos": "the director and the accountant: memos are still approved verbally or on paper",

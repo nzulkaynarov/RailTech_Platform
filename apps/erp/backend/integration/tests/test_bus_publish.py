@@ -2,7 +2,7 @@
 
 * золотой путь заявка → КП → договор → счёт → оплата → поставка на настоящих сервисах публикует цепочку событий, и каждое
   проходит схему контракта;
-* каждый из 24 типов `uz.railtech.erp.*.v1` рождается в своём сервисе (`test_every_event_type_is_published_by_its_service`);
+* каждый из 25 типов `uz.railtech.erp.*.v1` рождается в своём сервисе (`test_every_event_type_is_published_by_its_service`);
 * откат транзакции — нет события (в обе стороны: событие не переживает откат, откат не прячет событие другого действия);
 * ошибка публикации (в том числе `data` не по схеме) откатывает само изменение;
 * в ERP нет `except Exception` вокруг публикации, сигналов Django и вебхуков.
@@ -20,6 +20,7 @@ from django.utils import timezone
 from integration.models import CrmClientMapping, CrmContactMapping
 from integration.services import events
 from integration.tests import bus_support
+from integration.tests import world as w
 from parties.models import Contact
 from rt_bus import EventValidationError
 
@@ -86,8 +87,7 @@ def test_golden_path_publishes_the_events_of_the_whole_chain_in_the_same_transac
     assert error is None
     signed = bus_support.published("contract.signed")
     assert [e["data"]["payload"]["by"] for e in signed] == ["client"]
-    contract, error = crm_services.sign_contract_by_manager(contract.id, manager)
-    assert error is None
+    contract = w.sign_via_scan(contract.id)  # подпись кликом закрыта (D2-5): оператор → скан
     assert [e["data"]["payload"]["by"] for e in bus_support.published("contract.signed")] == ["client", "both"]
     assert len(bus_support.published("deal.won")) == 1, "подпись обеими сторонами закрывает сделку как выигранную"
 
@@ -120,7 +120,7 @@ def test_company_not_linked_to_crm_publishes_nothing_along_the_whole_chain(deal,
     quote = QuoteLifecycleService.approve_quote(quote.id, buyer_user)
     contract, _ = crm_services.generate_contract_from_quote(quote.id, actor=manager)
     crm_services.sign_contract_by_client(contract.id, manager)
-    crm_services.sign_contract_by_manager(contract.id, manager)
+    w.sign_via_scan(contract.id)
     assert bus_support.published() == []
 
 
@@ -255,7 +255,7 @@ def test_every_event_type_is_published_by_its_service(deal, buyer, manager, mapp
     quote = QuoteLifecycleService.approve_quote(quote.id, buyer_user)
     contract, _ = crm_services.generate_contract_from_quote(quote.id, actor=manager)
     crm_services.sign_contract_by_client(contract.id, manager)
-    crm_services.sign_contract_by_manager(contract.id, manager)
+    w.sign_via_scan(contract.id)
     # invoice.issued, invoice.overdue (напоминание по просроченному), invoice.paid
     invoice, _ = crm_services.generate_invoice_from_contract(contract.id, actor=manager)
     invoice, _ = crm_services.issue_invoice(invoice, manager)
@@ -460,4 +460,5 @@ ATOMIC_BY_CALLER = {
     "sales/services/delivery_lines.py::_publish_decision",  # из accept/dispute_delivery_line (@atomic)
     "portal/services/acceptance.py::_emit_code_event",  # из request_acceptance_code (with transaction.atomic)
     "integration/services/handoff.py::_create_request",  # из _handoff в transaction.atomic
+    "crm/services/contract_flow.py::_publish",  # из apply_transition, generate_contract_from_quote, sign_* (все @atomic)
 }

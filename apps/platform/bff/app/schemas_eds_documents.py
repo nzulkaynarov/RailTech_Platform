@@ -21,7 +21,17 @@ from app.feeds.models import Sources
 COMPANY_TZ = ZoneInfo("Asia/Tashkent")
 
 DocumentKind = Literal["memo", "application", "report", "letter_out"]
-RegistryKind = Literal["letter_in", "letter_out", "quote", "memo", "application", "report"]
+RegistryKind = Literal[
+    "letter_in",
+    "letter_out",
+    "quote",
+    "memo",
+    "application",
+    "report",
+    "contract",
+    "invoice",
+    "act",
+]
 DocumentStatus = Literal[
     "draft", "on_approval", "returned", "rejected", "approved", "to_accountant", "paid", "sent"
 ]
@@ -76,6 +86,7 @@ class EdsDocumentRow(BaseModel):
     due_date: date | None
     created_at: datetime
     openable: bool
+    project_ref: str | None = None
 
 
 class EdsDocumentPage(BaseModel):

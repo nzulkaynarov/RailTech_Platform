@@ -30,4 +30,9 @@ export interface EdsDocumentRow {
   created_at: string;
   /** Документ (`memo`, `application`, `report`, `letter_out`) открывается в боковом окне; письма и КП — в своих разделах */
   openable: boolean;
+  /**
+   * Договор, счёт и акт проекта (0.26.0) — id сделки для адреса `/eds/projects/{project_ref}`; у остальных типов нет
+   * @nullable
+   */
+  project_ref?: string | null;
 }
