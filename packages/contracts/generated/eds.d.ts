@@ -204,6 +204,7 @@ export interface paths {
     /**
      * Документы (служебные записки, заявления, отчёты, исходящие письма)
      * @description Без `registry.read` — только документы, где сотрудник автор или участник маршрута; с `registry.read` — все.
+     *     В любом случае чужой черновик (`draft`) виден только автору, а исходящее письмо (`letter_out`) — только с `letters.read`.
      */
     get: operations["listDocuments"];
     put?: never;
@@ -231,6 +232,7 @@ export interface paths {
     /**
      * Карточка документа
      * @description Автор, участник маршрута или сотрудник с `registry.read`; иначе 404 `NOT_FOUND` (существование не раскрывается).
+     *     Чужой черновик — всегда 404; исходящее письмо — 404 без `letters.read`.
      */
     get: operations["getDocument"];
     put?: never;
@@ -241,7 +243,7 @@ export interface paths {
     /**
      * Править черновик или возвращённый документ (без отправки)
      * @description Только автор; `memo`, `application`, `report` — из `draft` и `returned`, `letter_out` — из `draft`; другой статус —
-     *     409 `CONFLICT` (`details.reason = invalid_state`), не автор — 403 (`details.reason = not_author`). Меняются только
+     *     409 `CONFLICT` (`details.reason = invalid_state`), не автор — 403 (`details.reason = not_author`; чужой черновик не виден вовсе — 404). Меняются только
      *     переданные поля (`amount: null` и `due_date: null` очищают значение); `file_ids` привязывает файлы (уже привязанные
      *     к этому документу пропускаются, снять вложение нельзя); `erp_deal_id` — связь с проектом (заявкой) ERP. Версия
      *     не растёт (растёт при повторной отправке после возврата), номер и маршрут не меняются; в журнал — `document.updated`.
@@ -423,7 +425,7 @@ export interface paths {
     };
     /**
      * Скачать файл (поток)
-     * @description Последняя версия, или `version`. Видит тот, кому виден документ, к которому файл привязан, или загрузивший; иначе 404.
+     * @description Последняя версия, или `version`. Видит тот, кому виден документ, к которому файл привязан (чужой черновик и исходящее письмо без `letters.read` не видны), или загрузивший; иначе 404.
      */
     get: operations["downloadFile"];
     put?: never;

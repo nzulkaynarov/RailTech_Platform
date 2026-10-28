@@ -532,7 +532,7 @@ paths:
       summary: Править черновик или возвращённый документ (без отправки)
       description: |
         Только автор; `memo`, `application`, `report` — из `draft` и `returned`, `letter_out` — из `draft`; другой статус —
-        409 `CONFLICT` (`details.reason = invalid_state`), не автор — 403 (`details.reason = not_author`). Меняются только
+        409 `CONFLICT` (`details.reason = invalid_state`), не автор — 403 (`details.reason = not_author`; чужой черновик не виден вовсе — 404). Меняются только
         переданные поля (`amount: null` и `due_date: null` очищают значение); `file_ids` привязывает файлы (уже привязанные
         к этому документу пропускаются, снять вложение нельзя); `erp_deal_id` — связь с проектом (заявкой) ERP. Версия
         не растёт (растёт при повторной отправке после возврата), номер и маршрут не меняются; в журнал — `document.updated`.
