@@ -30326,7 +30326,6 @@
                     },
                     "country_name": {
                         "type": "string",
-                        "nullable": true,
                         "readOnly": true
                     },
                     "website": {

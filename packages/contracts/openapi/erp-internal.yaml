@@ -19526,7 +19526,6 @@ components:
           description: Страна происхождения производителя
         country_name:
           type: string
-          nullable: true
           readOnly: true
         website:
           title: Сайт

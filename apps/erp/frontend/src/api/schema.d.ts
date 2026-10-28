@@ -10540,7 +10540,7 @@ export interface components {
              * @description Страна происхождения производителя
              */
             country?: number | null;
-            readonly country_name: string | null;
+            readonly country_name: string;
             /**
              * Сайт
              * @description Официальный сайт производителя

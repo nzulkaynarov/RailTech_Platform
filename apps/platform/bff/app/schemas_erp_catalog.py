@@ -546,7 +546,7 @@ def to_manufacturer(raw: Mapping[str, Any]) -> Manufacturer:
         id=ident(raw.get("id")),
         name=text(raw.get("name")),
         country_id=opt_ident(raw.get("country")),
-        country_name=raw.get("country_name"),
+        country_name=raw.get("country_name") or None,
         website=text(raw.get("website")),
         is_active=bool(raw.get("is_active", True)),
     )

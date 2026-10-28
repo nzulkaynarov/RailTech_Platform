@@ -34,10 +34,11 @@ class ManufacturerSerializer(serializers.ModelSerializer):
 
     country_name = serializers.SerializerMethodField()
 
-    @extend_schema_field({"type": "string", "nullable": True})
-    def get_country_name(self, obj):
+    @extend_schema_field({"type": "string"})
+    def get_country_name(self, obj) -> str:
         # Не `CharField(source=…, default=None)`: при PATCH (partial) DRF пропускает такое поле, и ответ теряет ключ.
-        return obj.country.name if obj.country_id else None
+        # Пустая строка, а не null: схема всегда обещала строку (null в ответе нарушал её, а oasdiff считает nullable ломающим).
+        return obj.country.name if obj.country_id else ""
 
     class Meta:
         model = Manufacturer
