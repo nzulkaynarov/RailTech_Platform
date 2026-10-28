@@ -227,7 +227,7 @@ async def test_items_list_rejects_unknown_kind_before_erp(web: Web, be: Any) -> 
         ("DIRECTOR", True),
         ("ENGINEER", False),
         ("MANAGER", False),
-        ("ACCOUNTANT", True),
+        ("ACCOUNTANT", False),  # после D2-1 у бухгалтера только totals_only
     ],
 )
 async def test_item_card_supplier_price_follows_the_role_even_if_erp_sent_it(
