@@ -115,6 +115,9 @@ class User(TimestampMixin, Base):
     # Когда пароль сброшен (ссылкой, админом, приглашением): выпущенные раньше access-токены не
     # принимаются: сессии сотрудника, в том числе живые в BFF, закрываются сразу, не через 15 минут.
     password_changed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Когда сотрудник закрыл приветствие и тур первого входа («Пропустить» или «Больше не
+    # показывать», W15-H7); NULL — карточку «Добро пожаловать» ещё покажут. Хранится в CRM.
+    onboarding_done_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class Role(Base):

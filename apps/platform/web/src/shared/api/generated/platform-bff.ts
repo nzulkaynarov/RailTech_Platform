@@ -133,6 +133,21 @@
  * (директор читает), сброс пароля — `admin: full`; профиль доступен каждому вошедшему. Секреты из записей журнала BFF вырезает
  * (значения полей `password`, `secret`, `token`, `key`, `*_key`, `credentials`, `authorization`, `pin` и им подобных -> `***` целиком, любого типа).
  *
+ * **0.25.0 (W15-H7) — помощь, первый вход и обращения к администратору.** Добавляющее изменение (тег `tickets`). **Обращения
+ * сотрудников** (домен CRM, ADR-0015): `POST /tickets` (тема из списка `access|notification|template|error|other`, текст,
+ * адрес страницы; роль автора BFF берёт из сессии), `GET /tickets` и `GET /tickets/{number}` — только свои обращения
+ * (чужое — 404), не больше пяти в час (429 `TOO_MANY_REQUESTS`, `details.reason = ticket_rate_limited`). Админ:
+ * `GET /admin/tickets` (список с фильтрами `status`, `subject`, постранично, `counts` по статусам), `GET /admin/tickets/{number}`,
+ * `POST /admin/tickets/{number}/reply` (ответ; новое обращение берётся «В работу», `status` задаёт итог) и
+ * `POST /admin/tickets/{number}/status` («Новое → В работе → Решено», «Решено» можно вернуть «В работу»; иначе 409
+ * `CONFLICT`, `details.reason = ticket_status_transition`). Раздел `admin`: чтение — директор, ответ и статус — администратор.
+ * Номер обращения — `ОБР-0012`, внутренних id в адресах нет. Ошибки значений — 422 `VALIDATION_FAILED` с `details.fields`
+ * и `details.reason` (`ticket_subject_unknown`, `ticket_text_empty`, `ticket_text_too_long`, `ticket_reply_empty`…).
+ * **Колокольчик** (`GET /notifications`) получил ленту CRM: идентификаторы `crm:<id>`, объект — обращение (`kind = ticket`);
+ * ответ и решение уходят автору, новое обращение — администраторам; `POST /notifications/{id}/read` и `read-all` отмечают
+ * обе ленты. **Первый вход:** `Me.onboarding_done` и `PUT /me/onboarding` («Пропустить» / «Больше не показывать» —
+ * флаг хранит CRM, не браузер).
+ *
  * **0.24.0 (D1-4) — EDS · КП на одобрение и документы на согласовании.** Добавляющее изменение, тег `eds-approvals`: `GET /eds/quotes`
  * (КП на одобрение: «на моём шаге» или все), `GET /eds/quotes/{ref}` (карточка КП по id маршрута или номеру `КП-2026/115`: шаги маршрута,
  * чек-лист с датой и автором, состав и итоги из ERP, письмо и заявка, каналы отправки по контакту клиента; **внутренний блок**
@@ -238,7 +253,7 @@
  * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; «Забыли пароль?» — 5 запросов в час на IP и на адрес; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.24.0
+ * OpenAPI spec version: 0.25.0
  */
 import { useMutation, useQuery } from "@tanstack/react-query";
 import type {
@@ -392,6 +407,7 @@ import type {
   ListMemoApprovalsParams,
   ListNotificationsParams,
   ListQuoteApprovalsParams,
+  ListTicketsParams,
   LoginIn,
   LogoUpload,
   MailLog,
@@ -468,6 +484,12 @@ import type {
   TelegramConnector,
   TelegramLink,
   TelegramTokenIn,
+  Ticket,
+  TicketCreate,
+  TicketList,
+  TicketPage,
+  TicketReply,
+  TicketStatusChange,
   TooManyRequestsResponse,
   ValidationFailedResponse,
 } from "./model";
@@ -2301,6 +2323,989 @@ export const useSendTestNotification = <
   return useMutation(getSendTestNotificationMutationOptions(options), queryClient);
 };
 
+export const getFinishOnboardingUrl = () => {
+  return `/api/v1/me/onboarding`;
+};
+
+/**
+ * «Пропустить» и «Больше не показывать»: ставит `Me.onboarding_done = true` (CRM `PATCH /me {onboarding_done: true}`), обратно флаг не снимается. Только про себя; повторный вызов безвреден. Ответ — обновлённый профиль.
+ * @summary Закрыть приветствие и тур первого входа
+ */
+export const finishOnboarding = async (options?: Parameters<typeof http>[1]): Promise<Me> => {
+  return http<Me>(getFinishOnboardingUrl(), {
+    ...options,
+    method: "PUT",
+  });
+};
+
+export const getFinishOnboardingMutationKey = () => ["finishOnboarding"] as const;
+
+export const getFinishOnboardingMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof finishOnboarding>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<Awaited<ReturnType<typeof finishOnboarding>>, TError, void, TContext> => {
+  const mutationKey = getFinishOnboardingMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof finishOnboarding>>, void> = () => {
+    return finishOnboarding(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type FinishOnboardingMutationResult = NonNullable<
+  Awaited<ReturnType<typeof finishOnboarding>>
+>;
+
+export type FinishOnboardingMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse
+>;
+
+/**
+ * @summary Закрыть приветствие и тур первого входа
+ */
+export const useFinishOnboarding = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof finishOnboarding>>,
+      TError,
+      void,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<Awaited<ReturnType<typeof finishOnboarding>>, TError, void, TContext> => {
+  return useMutation(getFinishOnboardingMutationOptions(options), queryClient);
+};
+
+export const getListMyTicketsUrl = () => {
+  return `/api/v1/tickets`;
+};
+
+/**
+ * Только обращения самого сотрудника, новейшие первыми (CRM `GET /staff-tickets/mine`). Нужна сессия и хотя бы один раздел каталога; прав раздела не требуется.
+ * @summary Мои обращения к администратору
+ */
+export const listMyTickets = async (options?: Parameters<typeof http>[1]): Promise<TicketList> => {
+  return http<TicketList>(getListMyTicketsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListMyTicketsQueryKey = () => {
+  return [`/api/v1/tickets`] as const;
+};
+
+export const getListMyTicketsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listMyTickets>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyTickets>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListMyTicketsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listMyTickets>>> = ({ signal }) =>
+    listMyTickets({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listMyTickets>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListMyTicketsQueryResult = NonNullable<Awaited<ReturnType<typeof listMyTickets>>>;
+export type ListMyTicketsQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse
+>;
+
+export function useListMyTickets<
+  TData = Awaited<ReturnType<typeof listMyTickets>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyTickets>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listMyTickets>>,
+          TError,
+          Awaited<ReturnType<typeof listMyTickets>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListMyTickets<
+  TData = Awaited<ReturnType<typeof listMyTickets>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyTickets>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listMyTickets>>,
+          TError,
+          Awaited<ReturnType<typeof listMyTickets>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListMyTickets<
+  TData = Awaited<ReturnType<typeof listMyTickets>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyTickets>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Мои обращения к администратору
+ */
+
+export function useListMyTickets<
+  TData = Awaited<ReturnType<typeof listMyTickets>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyTickets>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListMyTicketsQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getCreateTicketUrl = () => {
+  return `/api/v1/tickets`;
+};
+
+/**
+ * Создаёт обращение: тема из списка, текст, адрес страницы (внутренний путь Платформы, `/eds/inbox?panel=open`). Роль автора подставляет BFF из сессии. Админам уходит строка в колокольчик и личное сообщение бота; не больше пяти обращений в час на сотрудника — иначе 429 `TOO_MANY_REQUESTS` с `details.reason = ticket_rate_limited`. Ошибка значения — 422 `VALIDATION_FAILED` (`details.fields`: `subject`, `body`, `page`; `details.reason`: `ticket_subject_unknown`, `ticket_text_empty`, `ticket_text_too_long`, `ticket_page_invalid`).
+ * @summary Написать администратору
+ */
+export const createTicket = async (
+  ticketCreate: TicketCreate,
+  options?: Parameters<typeof http>[1],
+): Promise<Ticket> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<Ticket>(getCreateTicketUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(ticketCreate),
+  });
+};
+
+export const getCreateTicketMutationKey = () => ["createTicket"] as const;
+
+export const getCreateTicketMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | TooManyRequestsResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createTicket>>,
+    TError,
+    CreateTicketMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createTicket>>,
+  TError,
+  CreateTicketMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateTicketMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createTicket>>,
+    CreateTicketMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createTicket(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateTicketMutationResult = NonNullable<Awaited<ReturnType<typeof createTicket>>>;
+export type CreateTicketMutationBody = TicketCreate;
+export type CreateTicketMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | ValidationFailedResponse
+  | TooManyRequestsResponse
+  | BackendUnavailableResponse
+>;
+export type CreateTicketMutationVariables = { data: TicketCreate };
+
+/**
+ * @summary Написать администратору
+ */
+export const useCreateTicket = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | TooManyRequestsResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createTicket>>,
+      TError,
+      CreateTicketMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createTicket>>,
+  TError,
+  CreateTicketMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateTicketMutationOptions(options), queryClient);
+};
+
+export const getGetMyTicketUrl = (number: string) => {
+  return `/api/v1/tickets/${number}`;
+};
+
+/**
+ * Чужое обращение отвечает 404: его для этого сотрудника не существует.
+ * @summary Моё обращение с ответами администратора
+ */
+export const getMyTicket = async (
+  number: string,
+  options?: Parameters<typeof http>[1],
+): Promise<Ticket> => {
+  return http<Ticket>(getGetMyTicketUrl(number), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetMyTicketQueryKey = (number: string) => {
+  return [`/api/v1/tickets/${number}`] as const;
+};
+
+export const getGetMyTicketQueryOptions = <
+  TData = Awaited<ReturnType<typeof getMyTicket>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  number: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyTicket>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetMyTicketQueryKey(number);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getMyTicket>>> = ({ signal }) =>
+    getMyTicket(number, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: number !== null && number !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getMyTicket>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetMyTicketQueryResult = NonNullable<Awaited<ReturnType<typeof getMyTicket>>>;
+export type GetMyTicketQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useGetMyTicket<
+  TData = Awaited<ReturnType<typeof getMyTicket>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  number: string,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyTicket>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getMyTicket>>,
+          TError,
+          Awaited<ReturnType<typeof getMyTicket>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetMyTicket<
+  TData = Awaited<ReturnType<typeof getMyTicket>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  number: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyTicket>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getMyTicket>>,
+          TError,
+          Awaited<ReturnType<typeof getMyTicket>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetMyTicket<
+  TData = Awaited<ReturnType<typeof getMyTicket>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  number: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyTicket>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Моё обращение с ответами администратора
+ */
+
+export function useGetMyTicket<
+  TData = Awaited<ReturnType<typeof getMyTicket>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  number: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyTicket>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetMyTicketQueryOptions(number, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getListTicketsUrl = (params?: ListTicketsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/admin/tickets?${stringifiedParams}`
+    : `/api/v1/admin/tickets`;
+};
+
+/**
+ * Раздел `admin` от чтения (директор читает, администратор правит). Порядок: «Новое» и «В работе» выше «Решено», внутри — свежее выше. `counts` — по статусам без учёта фильтра.
+ * @summary Все обращения сотрудников (Настройки · Обращения сотрудников)
+ */
+export const listTickets = async (
+  params?: ListTicketsParams,
+  options?: Parameters<typeof http>[1],
+): Promise<TicketPage> => {
+  return http<TicketPage>(getListTicketsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListTicketsQueryKey = (params?: ListTicketsParams) => {
+  return [`/api/v1/admin/tickets`, ...(params ? [params] : [])] as const;
+};
+
+export const getListTicketsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listTickets>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListTicketsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listTickets>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListTicketsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listTickets>>> = ({ signal }) =>
+    listTickets(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listTickets>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListTicketsQueryResult = NonNullable<Awaited<ReturnType<typeof listTickets>>>;
+export type ListTicketsQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse
+>;
+
+export function useListTickets<
+  TData = Awaited<ReturnType<typeof listTickets>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params: undefined | ListTicketsParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listTickets>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listTickets>>,
+          TError,
+          Awaited<ReturnType<typeof listTickets>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListTickets<
+  TData = Awaited<ReturnType<typeof listTickets>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListTicketsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listTickets>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listTickets>>,
+          TError,
+          Awaited<ReturnType<typeof listTickets>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListTickets<
+  TData = Awaited<ReturnType<typeof listTickets>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListTicketsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listTickets>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Все обращения сотрудников (Настройки · Обращения сотрудников)
+ */
+
+export function useListTickets<
+  TData = Awaited<ReturnType<typeof listTickets>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListTicketsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listTickets>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListTicketsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getGetTicketUrl = (number: string) => {
+  return `/api/v1/admin/tickets/${number}`;
+};
+
+/**
+ * @summary Обращение с ответами (карточка в боковом окне)
+ */
+export const getTicket = async (
+  number: string,
+  options?: Parameters<typeof http>[1],
+): Promise<Ticket> => {
+  return http<Ticket>(getGetTicketUrl(number), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetTicketQueryKey = (number: string) => {
+  return [`/api/v1/admin/tickets/${number}`] as const;
+};
+
+export const getGetTicketQueryOptions = <
+  TData = Awaited<ReturnType<typeof getTicket>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  number: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getTicket>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetTicketQueryKey(number);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getTicket>>> = ({ signal }) =>
+    getTicket(number, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: number !== null && number !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getTicket>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetTicketQueryResult = NonNullable<Awaited<ReturnType<typeof getTicket>>>;
+export type GetTicketQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useGetTicket<
+  TData = Awaited<ReturnType<typeof getTicket>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  number: string,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getTicket>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getTicket>>,
+          TError,
+          Awaited<ReturnType<typeof getTicket>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetTicket<
+  TData = Awaited<ReturnType<typeof getTicket>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  number: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getTicket>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getTicket>>,
+          TError,
+          Awaited<ReturnType<typeof getTicket>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetTicket<
+  TData = Awaited<ReturnType<typeof getTicket>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  number: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getTicket>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Обращение с ответами (карточка в боковом окне)
+ */
+
+export function useGetTicket<
+  TData = Awaited<ReturnType<typeof getTicket>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  number: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getTicket>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetTicketQueryOptions(number, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getReplyTicketUrl = (number: string) => {
+  return `/api/v1/admin/tickets/${number}/reply`;
+};
+
+/**
+ * Раздел `admin` — полный. Ответ уходит автору в колокольчик и в Telegram (если привязан); новое обращение берётся «В работу», `status` задаёт итог сразу («Решено»). Недопустимый переход — 409 `CONFLICT` (`details.reason = ticket_status_transition`), пустой или слишком длинный ответ — 422.
+ * @summary Ответить на обращение
+ */
+export const replyTicket = async (
+  number: string,
+  ticketReply: TicketReply,
+  options?: Parameters<typeof http>[1],
+): Promise<Ticket> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<Ticket>(getReplyTicketUrl(number), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(ticketReply),
+  });
+};
+
+export const getReplyTicketMutationKey = () => ["replyTicket"] as const;
+
+export const getReplyTicketMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | Error
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof replyTicket>>,
+    TError,
+    ReplyTicketMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof replyTicket>>,
+  TError,
+  ReplyTicketMutationVariables,
+  TContext
+> => {
+  const mutationKey = getReplyTicketMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof replyTicket>>,
+    ReplyTicketMutationVariables
+  > = (props) => {
+    const { number, data } = props ?? {};
+
+    return replyTicket(number, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ReplyTicketMutationResult = NonNullable<Awaited<ReturnType<typeof replyTicket>>>;
+export type ReplyTicketMutationBody = TicketReply;
+export type ReplyTicketMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | Error
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type ReplyTicketMutationVariables = { number: string; data: TicketReply };
+
+/**
+ * @summary Ответить на обращение
+ */
+export const useReplyTicket = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | Error
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof replyTicket>>,
+      TError,
+      ReplyTicketMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof replyTicket>>,
+  TError,
+  ReplyTicketMutationVariables,
+  TContext
+> => {
+  return useMutation(getReplyTicketMutationOptions(options), queryClient);
+};
+
+export const getSetTicketStatusUrl = (number: string) => {
+  return `/api/v1/admin/tickets/${number}/status`;
+};
+
+/**
+ * Раздел `admin` — полный. «Новое → В работе → Решено»; «Решено» можно вернуть «В работу». Решение без ответа тоже сообщается автору. Иначе — 409 `CONFLICT` (`details.reason = ticket_status_transition`).
+ * @summary Сменить статус обращения
+ */
+export const setTicketStatus = async (
+  number: string,
+  ticketStatusChange: TicketStatusChange,
+  options?: Parameters<typeof http>[1],
+): Promise<Ticket> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<Ticket>(getSetTicketStatusUrl(number), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(ticketStatusChange),
+  });
+};
+
+export const getSetTicketStatusMutationKey = () => ["setTicketStatus"] as const;
+
+export const getSetTicketStatusMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | Error
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof setTicketStatus>>,
+    TError,
+    SetTicketStatusMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof setTicketStatus>>,
+  TError,
+  SetTicketStatusMutationVariables,
+  TContext
+> => {
+  const mutationKey = getSetTicketStatusMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof setTicketStatus>>,
+    SetTicketStatusMutationVariables
+  > = (props) => {
+    const { number, data } = props ?? {};
+
+    return setTicketStatus(number, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SetTicketStatusMutationResult = NonNullable<
+  Awaited<ReturnType<typeof setTicketStatus>>
+>;
+export type SetTicketStatusMutationBody = TicketStatusChange;
+export type SetTicketStatusMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | Error
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type SetTicketStatusMutationVariables = { number: string; data: TicketStatusChange };
+
+/**
+ * @summary Сменить статус обращения
+ */
+export const useSetTicketStatus = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | Error
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof setTicketStatus>>,
+      TError,
+      SetTicketStatusMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof setTicketStatus>>,
+  TError,
+  SetTicketStatusMutationVariables,
+  TContext
+> => {
+  return useMutation(getSetTicketStatusMutationOptions(options), queryClient);
+};
+
 export const getGetProfileUrl = () => {
   return `/api/v1/me/profile`;
 };
@@ -4126,6 +5131,9 @@ export const getMarkAllNotificationsReadUrl = () => {
 };
 
 /**
+ * Отмечает обе ленты — ERP и CRM (у каждой своя). Недоступность одной ленты не отменяет отметку другой: ответ 204,
+ * недоступный источник остаётся непрочитанным и виден в `sources` следующей выдачи `GET /notifications`. Ошибка
+ * возвращается, только если не отмечена ни одна лента.
  * @summary Отметить все прочитанными
  */
 export const markAllNotificationsRead = async (

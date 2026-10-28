@@ -38,6 +38,9 @@ class Snapshot:
     approvals: list[dict[str, Any]] = field(default_factory=list)
     approvals_total: int = 0
     deals: list[dict[str, Any]] = field(default_factory=list)
+    # Новые обращения сотрудников (CRM `staff-tickets?status=new`): админу — «Мои задачи» (W15-H7).
+    tickets: list[dict[str, Any]] = field(default_factory=list)
+    tickets_total: int = 0
 
     @property
     def deal_index(self) -> dict[int, dict[str, Any]]:
@@ -55,6 +58,10 @@ def wants_inbox(view: View) -> bool:
 
 def wants_approvals(view: View) -> bool:
     return view.wants("approve_quote")
+
+
+def wants_tickets(view: View) -> bool:
+    return view.wants("ticket")
 
 
 def wants_projects(view: View) -> bool:
@@ -89,8 +96,12 @@ async def _covered(feed: Feed) -> list[Covered]:
     return [c for c in found if c is not None]
 
 
+TICKETS_PATH = "/api/v1/staff-tickets"
+TICKETS_PARAMS = {"status": "new", "limit": 20}
+
+
 async def load_snapshot(
-    feed: Feed, view: View, *, inbox: bool, approvals: bool, deals: bool
+    feed: Feed, view: View, *, inbox: bool, approvals: bool, deals: bool, tickets: bool = False
 ) -> Snapshot:
     """Параллельно прочитать нужные источники. `view` — роли «вида» (активная роль, если задана);
     сделки нужны и для подписей к очереди и уведомлениям, поэтому их читает тот, кто их просит."""
@@ -117,5 +128,12 @@ async def load_snapshot(
             payload = await feed.get("erp", DEALS_PATH, DEALS_PARAMS, ttl=SNAPSHOT_TTL_SECONDS)
             snap.deals = rows(payload)
 
-    await asyncio.gather(load_inbox(), load_approvals(), load_deals())
+    async def load_tickets() -> None:
+        if tickets and wants_tickets(view):
+            payload = await feed.get("crm", TICKETS_PATH, TICKETS_PARAMS, ttl=SNAPSHOT_TTL_SECONDS)
+            snap.tickets = rows(payload)
+            total = payload.get("total") if isinstance(payload, dict) else None
+            snap.tickets_total = total if isinstance(total, int) else len(snap.tickets)
+
+    await asyncio.gather(load_inbox(), load_approvals(), load_deals(), load_tickets())
     return snap

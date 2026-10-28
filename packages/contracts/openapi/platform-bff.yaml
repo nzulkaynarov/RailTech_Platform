@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.24.0
+  version: 0.25.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -134,6 +134,21 @@ info:
     привязан ли, подписки, последняя неудача доставки, пробное сообщение). Журнал и журнал роли — раздел `admin` от чтения
     (директор читает), сброс пароля — `admin: full`; профиль доступен каждому вошедшему. Секреты из записей журнала BFF вырезает
     (значения полей `password`, `secret`, `token`, `key`, `*_key`, `credentials`, `authorization`, `pin` и им подобных -> `***` целиком, любого типа).
+
+    **0.25.0 (W15-H7) — помощь, первый вход и обращения к администратору.** Добавляющее изменение (тег `tickets`). **Обращения
+    сотрудников** (домен CRM, ADR-0015): `POST /tickets` (тема из списка `access|notification|template|error|other`, текст,
+    адрес страницы; роль автора BFF берёт из сессии), `GET /tickets` и `GET /tickets/{number}` — только свои обращения
+    (чужое — 404), не больше пяти в час (429 `TOO_MANY_REQUESTS`, `details.reason = ticket_rate_limited`). Админ:
+    `GET /admin/tickets` (список с фильтрами `status`, `subject`, постранично, `counts` по статусам), `GET /admin/tickets/{number}`,
+    `POST /admin/tickets/{number}/reply` (ответ; новое обращение берётся «В работу», `status` задаёт итог) и
+    `POST /admin/tickets/{number}/status` («Новое → В работе → Решено», «Решено» можно вернуть «В работу»; иначе 409
+    `CONFLICT`, `details.reason = ticket_status_transition`). Раздел `admin`: чтение — директор, ответ и статус — администратор.
+    Номер обращения — `ОБР-0012`, внутренних id в адресах нет. Ошибки значений — 422 `VALIDATION_FAILED` с `details.fields`
+    и `details.reason` (`ticket_subject_unknown`, `ticket_text_empty`, `ticket_text_too_long`, `ticket_reply_empty`…).
+    **Колокольчик** (`GET /notifications`) получил ленту CRM: идентификаторы `crm:<id>`, объект — обращение (`kind = ticket`);
+    ответ и решение уходят автору, новое обращение — администраторам; `POST /notifications/{id}/read` и `read-all` отмечают
+    обе ленты. **Первый вход:** `Me.onboarding_done` и `PUT /me/onboarding` («Пропустить» / «Больше не показывать» —
+    флаг хранит CRM, не браузер).
 
     **0.24.0 (D1-4) — EDS · КП на одобрение и документы на согласовании.** Добавляющее изменение, тег `eds-approvals`: `GET /eds/quotes`
     (КП на одобрение: «на моём шаге» или все), `GET /eds/quotes/{ref}` (карточка КП по id маршрута или номеру `КП-2026/115`: шаги маршрута,
@@ -278,6 +293,8 @@ tags:
     description: EDS · КП на одобрение и документы на согласовании — списки, карточки, решения директора (сервис EDS, ERP для состава КП; разделы `eds.drafts`, `eds.memo.approve`)
   - name: letters
     description: EDS · Входящие письма — список, карточка, резолюция директора, возврат менеджеру, отказ, вложения (сервис EDS; раздел `eds.inbox`)
+  - name: tickets
+    description: Обращения сотрудников к администратору — «Написать администратору» и Настройки · Обращения сотрудников (CRM, ADR-0015)
 
 paths:
   /auth/login:
@@ -781,6 +798,262 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /me/onboarding:
+    put:
+      tags: [me]
+      operationId: finishOnboarding
+      summary: Закрыть приветствие и тур первого входа
+      description: >-
+        «Пропустить» и «Больше не показывать»: ставит `Me.onboarding_done = true` (CRM `PATCH /me {onboarding_done: true}`),
+        обратно флаг не снимается. Только про себя; повторный вызов безвреден. Ответ — обновлённый профиль.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      responses:
+        '200':
+          description: Профиль с `onboarding_done = true`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Me'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /tickets:
+    get:
+      tags: [tickets]
+      operationId: listMyTickets
+      summary: Мои обращения к администратору
+      description: >-
+        Только обращения самого сотрудника, новейшие первыми (CRM `GET /staff-tickets/mine`). Нужна сессия и хотя бы один
+        раздел каталога; прав раздела не требуется.
+      responses:
+        '200':
+          description: Мои обращения
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketList'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+    post:
+      tags: [tickets]
+      operationId: createTicket
+      summary: Написать администратору
+      description: >-
+        Создаёт обращение: тема из списка, текст, адрес страницы (внутренний путь Платформы, `/eds/inbox?panel=open`). Роль автора
+        подставляет BFF из сессии. Админам уходит строка в колокольчик и личное сообщение бота; не больше пяти обращений в
+        час на сотрудника — иначе 429 `TOO_MANY_REQUESTS` с `details.reason = ticket_rate_limited`. Ошибка значения — 422
+        `VALIDATION_FAILED` (`details.fields`: `subject`, `body`, `page`; `details.reason`: `ticket_subject_unknown`,
+        `ticket_text_empty`, `ticket_text_too_long`, `ticket_page_invalid`).
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TicketCreate'
+      responses:
+        '201':
+          description: Обращение создано
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ticket'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /tickets/{number}:
+    get:
+      tags: [tickets]
+      operationId: getMyTicket
+      summary: Моё обращение с ответами администратора
+      description: 'Чужое обращение отвечает 404: его для этого сотрудника не существует.'
+      parameters:
+        - $ref: '#/components/parameters/TicketNumberPath'
+      responses:
+        '200':
+          description: Обращение
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ticket'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /admin/tickets:
+    get:
+      tags: [tickets, admin]
+      operationId: listTickets
+      summary: Все обращения сотрудников (Настройки · Обращения сотрудников)
+      description: >-
+        Раздел `admin` от чтения (директор читает, администратор правит). Порядок: «Новое» и «В работе» выше «Решено», внутри
+        — свежее выше. `counts` — по статусам без учёта фильтра.
+      parameters:
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/TicketStatus'
+        - name: subject
+          in: query
+          schema:
+            $ref: '#/components/schemas/TicketSubject'
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 100000
+            default: 0
+      responses:
+        '200':
+          description: Страница обращений
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketPage'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /admin/tickets/{number}:
+    get:
+      tags: [tickets, admin]
+      operationId: getTicket
+      summary: Обращение с ответами (карточка в боковом окне)
+      parameters:
+        - $ref: '#/components/parameters/TicketNumberPath'
+      responses:
+        '200':
+          description: Обращение
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ticket'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /admin/tickets/{number}/reply:
+    post:
+      tags: [tickets, admin]
+      operationId: replyTicket
+      summary: Ответить на обращение
+      description: >-
+        Раздел `admin` — полный. Ответ уходит автору в колокольчик и в Telegram (если привязан); новое обращение берётся «В
+        работу», `status` задаёт итог сразу («Решено»). Недопустимый переход — 409 `CONFLICT`
+        (`details.reason = ticket_status_transition`), пустой или слишком длинный ответ — 422.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/TicketNumberPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TicketReply'
+      responses:
+        '200':
+          description: Обновлённое обращение
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ticket'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: '`CONFLICT` — статус так сменить нельзя'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
+  /admin/tickets/{number}/status:
+    post:
+      tags: [tickets, admin]
+      operationId: setTicketStatus
+      summary: Сменить статус обращения
+      description: >-
+        Раздел `admin` — полный. «Новое → В работе → Решено»; «Решено» можно вернуть «В работу». Решение без ответа тоже
+        сообщается автору. Иначе — 409 `CONFLICT` (`details.reason = ticket_status_transition`).
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/TicketNumberPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TicketStatusChange'
+      responses:
+        '200':
+          description: Обновлённое обращение
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Ticket'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: '`CONFLICT` — статус так сменить нельзя'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
   /me/profile:
     get:
       tags: [me]
@@ -1197,11 +1470,15 @@ paths:
       tags: [notifications]
       operationId: markAllNotificationsRead
       summary: Отметить все прочитанными
+      description: |
+        Отмечает обе ленты — ERP и CRM (у каждой своя). Недоступность одной ленты не отменяет отметку другой: ответ 204,
+        недоступный источник остаётся непрочитанным и виден в `sources` следующей выдачи `GET /notifications`. Ошибка
+        возвращается, только если не отмечена ни одна лента.
       parameters:
         - $ref: '#/components/parameters/CsrfToken'
       responses:
         '204':
-          description: Отмечены
+          description: Отмечены (хотя бы одна лента)
         '401':
           $ref: '#/components/responses/SessionExpired'
         '403':
@@ -6132,6 +6409,14 @@ components:
       name: rt_pf_session
 
   parameters:
+    TicketNumberPath:
+      name: number
+      in: path
+      required: true
+      description: Номер обращения `ОБР-0012` (в адресе — закодированный)
+      schema:
+        type: string
+        pattern: '^ОБР-[0-9]{1,9}$'
     LeadNumber:
       name: lead
       in: path
@@ -7876,7 +8161,7 @@ components:
     Me:
       type: object
       additionalProperties: false
-      required: [id, email, name, initials, language, roles, modules, resources, access]
+      required: [id, email, name, initials, language, roles, modules, resources, access, onboarding_done]
       properties:
         id:
           type: string
@@ -7937,6 +8222,203 @@ components:
               type: boolean
             erp:
               type: boolean
+        onboarding_done:
+          type: boolean
+          description: >-
+            Приветствие и тур первого входа уже показаны («Пропустить» или «Больше не показывать»); `false` — SPA показывает
+            карточку «Добро пожаловать». Флаг хранит CRM (`PUT /me/onboarding`), а не браузер.
+
+    TicketSubject:
+      type: string
+      enum: [access, notification, template, error, other]
+      description: Тема обращения — «Нужен доступ к разделу», «Не приходит уведомление», «Нужен шаблон документа», «Ошибка», «Другое»
+
+    TicketStatus:
+      type: string
+      enum: [new, in_progress, resolved]
+      description: «Новое», «В работе», «Решено»
+
+    TicketCreate:
+      type: object
+      additionalProperties: false
+      required: [subject, body]
+      properties:
+        subject:
+          $ref: '#/components/schemas/TicketSubject'
+        body:
+          type: string
+          minLength: 1
+          maxLength: 20000
+          description: Что случилось — до 4000 символов после обрезки пробелов (длиннее — 422 `ticket_text_too_long`)
+        page:
+          type: string
+          maxLength: 2000
+          description: Внутренний путь страницы Платформы с запросом (`/eds/inbox?panel=open`); внешний адрес — 422
+
+    TicketReply:
+      type: object
+      additionalProperties: false
+      required: [body]
+      properties:
+        body:
+          type: string
+          minLength: 1
+          maxLength: 20000
+        status:
+          $ref: '#/components/schemas/TicketStatus'
+
+    TicketStatusChange:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status:
+          $ref: '#/components/schemas/TicketStatus'
+
+    TicketAuthor:
+      type: object
+      additionalProperties: false
+      required: [id, name]
+      properties:
+        id:
+          type: string
+          description: '`crm_user_id`'
+        name:
+          type: string
+
+    TicketRow:
+      type: object
+      additionalProperties: false
+      required: [number, subject, status, author, preview, replies, created_at, updated_at]
+      properties:
+        number:
+          type: string
+          pattern: '^ОБР-[0-9]{1,9}$'
+          examples: [ОБР-0012]
+        subject:
+          $ref: '#/components/schemas/TicketSubject'
+        status:
+          $ref: '#/components/schemas/TicketStatus'
+        author:
+          $ref: '#/components/schemas/TicketAuthor'
+        author_role:
+          type: string
+          description: Роли автора на момент обращения (текст; подставляет BFF)
+        page:
+          type: string
+          description: Страница, с которой написано обращение
+        preview:
+          type: string
+          description: Начало текста для списка
+        replies:
+          type: integer
+          minimum: 0
+          description: Сколько ответов администратора
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    TicketMessage:
+      type: object
+      additionalProperties: false
+      required: [body, created_at]
+      properties:
+        author_name:
+          type: string
+          description: Кто ответил (администратор); пусто, если сотрудник удалён
+        body:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    Ticket:
+      type: object
+      additionalProperties: false
+      required: [number, subject, status, author, preview, replies, created_at, updated_at, body, messages]
+      properties:
+        number:
+          type: string
+          pattern: '^ОБР-[0-9]{1,9}$'
+          examples: [ОБР-0012]
+        subject:
+          $ref: '#/components/schemas/TicketSubject'
+        status:
+          $ref: '#/components/schemas/TicketStatus'
+        author:
+          $ref: '#/components/schemas/TicketAuthor'
+        author_role:
+          type: string
+          description: Роли автора на момент обращения (текст; подставляет BFF)
+        page:
+          type: string
+          description: Страница, с которой написано обращение
+        preview:
+          type: string
+        replies:
+          type: integer
+          minimum: 0
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        body:
+          type: string
+          description: Полный текст обращения
+        messages:
+          type: array
+          description: Ответы администратора по порядку
+          items:
+            $ref: '#/components/schemas/TicketMessage'
+        resolved_at:
+          type: string
+          format: date-time
+
+    TicketList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/TicketRow'
+
+    TicketCounts:
+      type: object
+      additionalProperties: false
+      required: [new, in_progress, resolved]
+      properties:
+        new:
+          type: integer
+          minimum: 0
+        in_progress:
+          type: integer
+          minimum: 0
+        resolved:
+          type: integer
+          minimum: 0
+
+    TicketPage:
+      type: object
+      additionalProperties: false
+      required: [items, total, counts]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/TicketRow'
+        total:
+          type: integer
+          minimum: 0
+          description: Сколько обращений подходит под фильтр
+        counts:
+          $ref: '#/components/schemas/TicketCounts'
 
     ChangePasswordIn:
       type: object

@@ -84,6 +84,8 @@ class Me(BaseModel):
     resources: dict[str, Literal["full", "read"]]
     restricted_fields: list[RestrictedField]
     access: AccessFlags
+    # Приветствие и тур первого входа показаны (W15-H7): `false` — показать «Добро пожаловать».
+    onboarding_done: bool
 
     @model_serializer(mode="wrap")
     def _omit_empty_position(self, handler: Any) -> dict[str, Any]:
@@ -123,6 +125,7 @@ def build_me(data: SessionData) -> Me:
         resources=dict(shown.access),
         restricted_fields=cast(list[RestrictedField], list(shown.fields)),
         access=AccessFlags(crm=True, erp="erp" in data.platform_access),
+        onboarding_done=data.onboarding_done,
     )
 
 

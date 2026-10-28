@@ -133,8 +133,6 @@ export const BRIDGE: Readonly<Record<string, BridgeEntry>> = {
   "chats.internal": { who: "chats", when: "pilot", objectKind: "chat" },
   "chats.external": { legacy: crm("/inbox", "crmInbox"), when: "pilot", objectKind: "chat" },
   "chats.contacts": { who: "chats", when: "pilot" },
-
-  "admin.tickets": { who: "tickets", when: "pilot", objectKind: "ticket" },
 };
 
 /** Разделы с настоящим экраном: моста у них нет. Новый настоящий экран — сюда, а запись из `BRIDGE` — удалить. */
@@ -153,6 +151,7 @@ export const NATIVE_SECTIONS: readonly string[] = [
   "admin.company",
   "admin.bot",
   "admin.audit",
+  "admin.tickets",
 ];
 
 /** Главные действия модулей без экрана (кнопка внизу подменю неактивна): когда появятся. Остальных модулей это не касается. */

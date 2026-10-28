@@ -88,24 +88,20 @@ test.describe("Заглушки и мост", () => {
     await shoot(page, "stub-with-bridge");
   });
 
-  test("администратор: «Обращения» — раздела нет в старых экранах, честно «её делает администратор», «Когда появится»", async ({
+  test("«Чаты · Команда» — раздела нет в старых экранах, честно «её делает команда», «Когда появится»", async ({
     page,
   }) => {
     await loginAndWait(page, "all@demo.example");
-    await spaGoto(page, "/admin/tickets");
-    await expect(
-      page.getByRole("heading", { level: 1, name: "Обращения сотрудников" }),
-    ).toBeVisible();
+    await spaGoto(page, "/chats?scope=internal");
+    await expect(page.getByRole("heading", { level: 1, name: "Команда" })).toBeVisible();
     const main = page.getByRole("main");
     await expect(
-      main.getByText(/Сейчас этой работы в интерфейсе нет; её делает администратор/),
+      main.getByText(/Сейчас этой работы в интерфейсе нет; её делает команда/),
     ).toBeVisible();
     await expect(main.getByText("Когда появится: к пилоту.")).toBeVisible();
     await expect(main.getByRole("link", { name: /Открыть в/ })).toHaveCount(0);
     const menu = page.getByRole("navigation", { name: "Разделы модуля" });
-    await expect(menu.getByRole("link", { name: /Обращения сотрудников/ })).toHaveAccessibleName(
-      "Обращения сотрудников",
-    );
+    await expect(menu.getByRole("link", { name: /^Команда/ })).toHaveAccessibleName("Команда");
     await shoot(page, "stub-without-bridge");
   });
 
