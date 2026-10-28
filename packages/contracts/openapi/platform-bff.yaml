@@ -6,7 +6,11 @@ info:
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
     сессия, профиль, счётчики меню, «Моя очередь», лента «Сегодня», уведомления, поиск. Экраны фаз P2–P4 добавляются
-    минорными версиями этого файла до кода (`docs/architecture/integration-map.md` §1).
+    в этот файл до кода (`docs/architecture/integration-map.md` §1).
+
+    **Версия и журнал (DECISIONS 2026-10-28).** Добавляющее изменение `info.version` не поднимает и строку журнала ниже не
+    добавляет — что изменилось, пишется в описании PR. Минор растёт только с ломающим изменением (до 1.0, oasdiff ERR).
+    Журнал версий ниже — история до 2026-10-28, новые строки в него не добавляются.
 
     Словарь — SPEC-v3 §2 (`docs/product/SPEC-v3.md`): старых кодов стадий и статусов CRM и ERP в ответах нет.
     BFF не имеет своей базы: данные приходят из CRM и ERP, каждый вызов бэкенда — с токеном сотрудника.
@@ -7162,7 +7166,7 @@ paths:
       operationId: uploadTechDoc
       summary: 'Расчёт · Техдокументация: загрузить файл'
       description: >-
-        ERP `POST catalog/tech-docs/` (multipart) — право `catalog.manage`. BFF читает тело до 21 МБ (копится в памяти BFF, B-100), multipart не разбирает и передаёт ERP как есть; файл ≤ 20 МБ (PDF, PNG, JPEG, DOC(X), XLS(X)), содержимое сверяется с расширением. Нужна привязка к позиции или заявке. Раздел `erp.stock` — полный.
+        ERP `POST catalog/tech-docs/` (multipart) — право `catalog.manage`. BFF читает тело до 21 МБ (копится в памяти BFF, B-D23-6), multipart не разбирает и передаёт ERP как есть; файл ≤ 20 МБ (PDF, PNG, JPEG, DOC(X), XLS(X)), содержимое сверяется с расширением. Нужна привязка к позиции или заявке. Раздел `erp.stock` — полный.
       parameters:
         - $ref: '#/components/parameters/CsrfToken'
       requestBody:

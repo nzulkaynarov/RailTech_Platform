@@ -418,7 +418,7 @@ BFF отдаёт сам (`/admin/company/logo/image`, `/admin/company/brand/logo
   `erp.stock` (чтение — `read`, изменения — `full`), право на операцию решает ERP (`catalog.manage`, `supply.manage`, ввод курса — `settings.edit` через прежний
   `/admin/company/fx-rate`). **Закрытые поля режут оба**: цена закупки в предложениях — без поля `supplier_prices` (`price = null`, `prices_visible = false`), ставка
   бригады — без `cost_margin` и без раздела `erp.calc.services`; ERP отдаёт `null` по своим правам, BFF вырезает ещё раз (администратор ERP видит всё, роль
-  «Администратор» Платформы — нет). Загрузка файла техдокументации — тело читается до 21 МБ и копится в памяти BFF (как у `crm_kb` и `eds_documents`, B-100; ERP принимает до `FILE_UPLOAD_MAX_MEMORY_SIZE` 25 МБ), multipart не разбирается; скачивание — потоком, всегда вложением (`nosniff`):
+  «Администратор» Платформы — нет). Загрузка файла техдокументации — тело читается до 21 МБ и копится в памяти BFF (как у `crm_kb` и `eds_documents`, B-D23-6; ERP принимает до `FILE_UPLOAD_MAX_MEMORY_SIZE` 25 МБ), multipart не разбирается; скачивание — потоком, всегда вложением (`nosniff`):
   просмотр PDF строит интерфейс сам (pdf.js в `canvas`), потому что CSP Платформы запрещает встроенные просмотрщики. Номер заявки у файла — составной `ЗВ/ПР-ГГГГ-NNN`
   (как у EDS, до ERP-09). Ошибки ERP: `{detail: КОД}` -> 422 `VALIDATION_FAILED` с `details.reason` (код в нижнем регистре) и `details.fields`; повтор кода ТН ВЭД,
   производителя или запроса на категорию — 409 `CONFLICT` (`details.reason`).
