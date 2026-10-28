@@ -35,10 +35,10 @@ from typing import Any, Iterable, Optional
 from django.db import transaction
 from django.db.models import Max, Q
 from django.utils import timezone
+from sales.services import deal_numbers
 
 from accounts.constants import Permission
 from accounts.services.permissions import is_seller, member_has_permission
-from sales.services import deal_numbers
 
 from ..constants import DealStageCode, QuoteStatusCode
 from ..models import ActivityLog, CalcLine, CalcLineKind, CalcTask
