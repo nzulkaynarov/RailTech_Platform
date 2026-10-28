@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { bannerKind } from "./SourceBanner";
+import { bannerKind } from "./bannerKind";
 
 describe("плашка частичных данных: какой текст", () => {
   it("один источник — его ключ; CRM и ERP — both; сочетания с EDS — multi", () => {
