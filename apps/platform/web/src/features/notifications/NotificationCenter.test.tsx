@@ -156,7 +156,7 @@ describe("Центр уведомлений", () => {
         HttpResponse.json({
           items: [
             {
-              id: "erp:2",
+              id: "erp:90",
               tab: "decisions",
               title: "КП-2026/118 отправлено клиенту",
               created_at: new Date().toISOString(),
@@ -196,7 +196,7 @@ describe("Центр уведомлений", () => {
     expect(router.state.location.pathname).toBe("/dashboard/queue");
     expect(center).toBeInTheDocument();
     await waitFor(() => {
-      expect(requests).toContain("/api/v1/notifications/erp:2/read");
+      expect(requests).toContain("/api/v1/notifications/erp:90/read");
     });
     fireEvent.click(item);
     expect(item).toHaveAttribute("aria-expanded", "false");
