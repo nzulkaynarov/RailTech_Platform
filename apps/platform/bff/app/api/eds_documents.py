@@ -97,7 +97,7 @@ def _proxy(authed: Authed) -> EdsProxy:
 async def list_documents(
     authed: Reader,
     scope: Literal["mine", "all"] = "mine",
-    kind: Annotated[list[RegistryKind] | None, Query(max_length=6)] = None,
+    kind: Annotated[list[RegistryKind] | None, Query(max_length=9)] = None,
     doc_status: Annotated[list[StatusFilter] | None, Query(alias="status", max_length=10)] = None,
     q: Annotated[str | None, Query(max_length=200)] = None,
     cursor: Annotated[str | None, Query(max_length=2000)] = None,
