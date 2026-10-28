@@ -200,6 +200,8 @@ SPA  GET  /api/v1/admin/tickets/{n}        → CRM GET /staff-tickets/{id}
 SPA  POST /api/v1/admin/tickets/{n}/reply  → CRM POST /staff-tickets/{id}/reply   {body, status?}
 SPA  POST /api/v1/admin/tickets/{n}/status → CRM POST /staff-tickets/{id}/status  {status}
 SPA  PUT  /api/v1/me/onboarding            → CRM PATCH /me {onboarding_done: true}   → Me
+SPA  PUT  /api/v1/me/whats-new             → CRM PATCH /me {whats_new_shown|whats_new_read}   → Me   (W-REL)
+SPA  GET  /api/v1/about                    → health CRM, ERP, EDS + версия релиза из окружения BFF   (W-REL)
 ```
 
 - **Номера, а не id.** Платформа знает обращение как `ОБР-0012`; BFF переводит номер в id CRM, id наружу не отдаётся. Неверный формат номера — 404.
@@ -208,6 +210,12 @@ SPA  PUT  /api/v1/me/onboarding            → CRM PATCH /me {onboarding_done: t
 - **Колокольчик: лента CRM.** `GET /notifications` теперь сливает ленту ERP с `GET /me/notifications` CRM: id `crm:<id>`, вкладка «Система», ссылка на объект строится в BFF (`ticket` → `/help/requests/ОБР-0012` автору, `/admin/tickets/ОБР-0012` администратору). Прочитать — `POST /notifications/crm:<id>/read` → CRM `POST /me/notifications/{id}/read`; «прочитать всё» — обе ленты, сбой одной не отменяет отметку другой (ответ 204; ошибка — только если не отмечена ни одна). Недоступность ленты CRM не ломает ленту ERP: в `sources` ответа источник `crm` получает своё состояние, как у остальных составных ответов. Это общий механизм «событие CRM → колокольчик»: новое событие CRM — строка `staff_notifications`, без правок BFF и SPA, кроме адреса объекта.
 - **«Мои задачи» администратора.** Новые обращения (`status=new`) приходят строками вида `ticket` («Ответить на обращение ОБР-0012»), счётчик пункта «Обращения сотрудников» — число новых. Директору (раздел `admin` — только чтение) строки не показываются: ответить он не может.
 - **Первый вход.** `Me.onboarding_done` — флаг из CRM (`users.onboarding_done_at`), общий для всех устройств. `false` — SPA показывает «Добро пожаловать» и тур; «Пропустить» скрывает их на сеанс (`sessionStorage`), «Больше не показывать» и «Готово» вызывают `PUT /me/onboarding`; ответ — новый `Me`, снимок сессии обновляется.
+- **Версия и «Что нового» (W-REL).** `GET /about` — версия «Платформа ГГГГ.ММ.ДД · sha» (дата выкладки и тег из окружения
+  `PLATFORM_RELEASE*`, без них — sha и дата сборки образа `PLATFORM_BUILD_*`, без всего — `dev`) и сервисы BFF, CRM, ERP, EDS:
+  состояние по health и версия, если health её сообщает. В текст нового обращения BFF дописывает «Версия: …», если она известна и
+  помещается в предел CRM. Отметки «Что нового» (`Me.whats_new_shown`, `Me.whats_new_read`) хранит CRM, как `onboarding_done`:
+  SPA показывает окно «Платформа обновлена», пока `shown` меньше даты последней записи, и отметку «Новое» у «?», пока меньше `read`.
+  Записи — файлы `docs/kb/help/changelog/<дата>.md` в сборке SPA, BFF их не отдаёт.
 - **Продуктовые статьи помощи** BFF не отдаёт: это файлы репозитория `docs/kb/help/*.md`, которые `pnpm kb:sync` копирует в сборку SPA (`src/generated/help-articles`); правит их тот, у кого есть доступ к репозиторию (PR). Редактора продуктовых статей в интерфейсе нет и не будет (DECISIONS 2026-10-28). **Статьи компании** — другое: их пишет администратор в интерфейсе (см. ниже).
 
 #### Статьи компании в §3.4 (W18A-P5, B-079; добавление к 0.27.0, версия контракта не меняется)

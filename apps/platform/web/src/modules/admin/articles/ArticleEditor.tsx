@@ -137,6 +137,7 @@ export function ArticleEditor({ article: initial, readOnly, onClose }: Props) {
     slug: "preview",
     title: trimmedTitle || t("editor.previewHeading"),
     sections: [],
+    screens: [],
     order: 0,
     body: trimmedBody,
     source: "company",

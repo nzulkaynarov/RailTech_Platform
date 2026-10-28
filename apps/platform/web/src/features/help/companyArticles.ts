@@ -17,6 +17,7 @@ export function toHelpArticle(article: CompanyArticle, index: number): HelpArtic
     slug: companySlug(article.id),
     title: article.title,
     sections: [],
+    screens: [],
     order: index,
     body: article.body,
     source: "company",

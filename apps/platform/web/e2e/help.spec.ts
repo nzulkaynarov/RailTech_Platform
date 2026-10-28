@@ -145,7 +145,9 @@ test.describe("Помощь", () => {
       .getByRole("navigation", { name: "Разделы помощи" })
       .getByRole("link", { name: "Что нового" })
       .click();
-    await expect(page.getByText("Помощь, первый вход и обращения к администратору")).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Помощь, профиль и первые рабочие экраны" }),
+    ).toBeVisible();
     await page
       .getByRole("navigation", { name: "Разделы помощи" })
       .getByRole("link", { name: "Статьи" })

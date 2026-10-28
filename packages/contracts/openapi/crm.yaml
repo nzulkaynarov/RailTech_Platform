@@ -4519,6 +4519,16 @@ components:
         ui_mode:
           title: Ui Mode
           type: string
+        whats_new_read:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Whats New Read
+        whats_new_shown:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Whats New Shown
       required:
       - id
       - email
@@ -4599,6 +4609,18 @@ components:
             type: string
           - type: 'null'
           title: Ui Mode
+        whats_new_read:
+          anyOf:
+          - pattern: ^\d{4}-\d{2}-\d{2}$
+            type: string
+          - type: 'null'
+          title: Whats New Read
+        whats_new_shown:
+          anyOf:
+          - pattern: ^\d{4}-\d{2}-\d{2}$
+            type: string
+          - type: 'null'
+          title: Whats New Shown
       title: MePatch
       type: object
     MessageOut:

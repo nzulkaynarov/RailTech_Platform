@@ -56,6 +56,8 @@ async def _me_out(view: UserView, container: Container) -> MeOut:
         platform_role_refs=refs,
         sso_enabled=container.settings.platform_sso_enabled,
         deputy_name=await container.staff_deputy.deputy_name(view.deputy_user_id),
+        whats_new_shown=view.whats_new_shown,
+        whats_new_read=view.whats_new_read,
     )
 
 
@@ -91,6 +93,10 @@ async def update_me(body: MePatch, principal: Settled, container: ContainerDep) 
         )
     if body.onboarding_done:
         view = await svc.set_onboarding_done(principal.actor, principal.user_id)
+    if body.whats_new_shown is not None or body.whats_new_read is not None:
+        view = await svc.set_whats_new(
+            principal.user_id, shown=body.whats_new_shown, read=body.whats_new_read
+        )
     if profile:
         # Только свой профиль: `user_id` — из токена, должность и роли в тело не принимаются.
         view = await container.staff_profile.update(principal.actor, principal.user_id, **profile)

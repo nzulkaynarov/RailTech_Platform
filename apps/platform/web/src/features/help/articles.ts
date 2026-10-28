@@ -6,7 +6,8 @@
  * Статьи компании («Как у нас принято», W18A-P5) приходят из CRM через BFF — `companyArticles.ts`; поиск и просмотр
  * у тех и других общие.
  *
- * Формат: front matter (`title`, `sections` — ключи разделов `<модуль>.<раздел>` или `me`, `order`), затем текст в простом
+ * Формат: front matter (`title`, `sections` — ключи разделов `<модуль>.<раздел>` или `me`, `order`, `screens` — адреса экранов
+ * `[/crm/leads, /crm/clients]`, по которым CI предупреждает, что экран поменяли, а статью нет; W-REL), затем текст в простом
  * markdown: `##`-заголовки, абзацы, списки `-` и `1.`, **жирный**, `код`.
  */
 const files = import.meta.glob<string>("../../generated/help-articles/*.md", {
@@ -20,6 +21,8 @@ export interface HelpArticle {
   title: string;
   /** Ключи разделов, к которым статья — «К этому разделу» (`dashboard.queue`, `me`) */
   sections: readonly string[];
+  /** Адреса экранов, о которых статья (`/crm/leads`); пусто — статья не про один экран */
+  screens: readonly string[];
   order: number;
   body: string;
   /** Откуда статья: без поля — продуктовая (`docs/kb/help`); `company` — статья компании из CRM (W18A-P5, B-079) */
@@ -28,6 +31,15 @@ export interface HelpArticle {
   language?: string;
   /** Когда статья компании обновлена (ISO) */
   updatedAt?: string;
+}
+
+/** Список во front matter: `a, b` или `[a, b]`. */
+export function listOf(value: string | undefined): string[] {
+  return (value ?? "")
+    .replace(/^\[|\]$/g, "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
 }
 
 export function parseArticle(slug: string, source: string): HelpArticle {
@@ -42,10 +54,8 @@ export function parseArticle(slug: string, source: string): HelpArticle {
   return {
     slug,
     title: meta.get("title") ?? slug,
-    sections: (meta.get("sections") ?? "")
-      .split(",")
-      .map((key) => key.trim())
-      .filter(Boolean),
+    sections: listOf(meta.get("sections")),
+    screens: listOf(meta.get("screens")),
     order: Number(meta.get("order") ?? 1000) || 1000,
     body,
   };

@@ -1,14 +1,16 @@
 import { useTranslation } from "react-i18next";
 
 import { useFormat } from "../../shared/lib/useFormat";
+import { ArticleFeedback } from "./ArticleFeedback";
 import { type HelpArticle } from "./articles";
 import { Markdown } from "./Markdown";
 
 import "./help.css";
 
 /**
- * Статья помощи: заголовок и текст. Продуктовые статьи пока на русском — на другом языке интерфейса честно сказано об
- * этом; статья компании помечена своим языком, если он не совпал с языком интерфейса (W18A-P5).
+ * Статья помощи: заголовок, текст и под ним «Помогла? Да / Нет» и «Здесь устарело» (W-REL). Продуктовые статьи пока на
+ * русском — на другом языке интерфейса честно сказано об этом; статья компании помечена своим языком, если он не
+ * совпал с языком интерфейса (W18A-P5).
  */
 export function ArticleView({
   article,
@@ -50,6 +52,7 @@ export function ArticleView({
         </p>
       )}
       <Markdown source={article.body} headingLevel={(headingLevel + 1) as 3 | 4} />
+      <ArticleFeedback article={article} />
     </article>
   );
 }

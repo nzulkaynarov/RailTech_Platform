@@ -3,6 +3,7 @@
  * RailTech Platform — BFF API (Платформа → CRM и ERP)
  */
 
+export * from "./about";
 export * from "./accessLevel";
 export * from "./accountLockedResponse";
 export * from "./actionOk";
@@ -408,6 +409,7 @@ export * from "./referenceItemIn";
 export * from "./referenceItemList";
 export * from "./referenceItemUpdate";
 export * from "./referenceKind";
+export * from "./release";
 export * from "./replyIn";
 export * from "./replyTemplate";
 export * from "./replyTemplateIn";
@@ -461,6 +463,9 @@ export * from "./serviceState";
 export * from "./serviceSwitch";
 export * from "./serviceSwitchIn";
 export * from "./serviceSwitchKind";
+export * from "./serviceVersion";
+export * from "./serviceVersionKey";
+export * from "./serviceVersionStatus";
 export * from "./session";
 export * from "./sessionExpiredResponse";
 export * from "./setupAdminIn";
@@ -515,3 +520,5 @@ export * from "./ticketSubject";
 export * from "./timezone";
 export * from "./tooManyRequestsResponse";
 export * from "./validationFailedResponse";
+export * from "./whatsNewDate";
+export * from "./whatsNewMark";

@@ -217,6 +217,7 @@ describe("слаг статьи компании", () => {
       slug: "company-4",
       title: "Т",
       sections: [],
+      screens: [],
       order: 2,
       body: "Текст",
       source: "company",
