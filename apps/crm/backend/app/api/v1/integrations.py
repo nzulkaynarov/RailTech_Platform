@@ -308,7 +308,8 @@ async def list_email_log(
     status: EmailStatus | None = None,
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
 ) -> list[EmailLogItem]:
-    """Журнал писем сотрудникам: последние `limit`, фильтр по статусу; тел писем в журнале нет."""
+    """Журнал доставки почты ансамбля: последние `limit`, фильтр по статусу; источник (CRM, ERP,
+    EDS) и назначение письма; тел писем в журнале нет (W18A-P1)."""
     rows = await container.mail_service.list_log(status, limit)
     return [EmailLogItem.model_validate(asdict(row)) for row in rows]
 

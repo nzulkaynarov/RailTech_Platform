@@ -330,6 +330,30 @@ channels:
     messages:
       uz.railtech.identity.user.updated.v1:
         $ref: '#/components/messages/uz.railtech.identity.user.updated.v1'
+  uz.railtech.crm.mail.sent.v1:
+    address: uz.railtech.crm.mail.sent.v1
+    title: Письмо отправлено
+    messages:
+      uz.railtech.crm.mail.sent.v1:
+        $ref: '#/components/messages/uz.railtech.crm.mail.sent.v1'
+  uz.railtech.crm.mail.failed.v1:
+    address: uz.railtech.crm.mail.failed.v1
+    title: Письмо не отправлено
+    messages:
+      uz.railtech.crm.mail.failed.v1:
+        $ref: '#/components/messages/uz.railtech.crm.mail.failed.v1'
+  uz.railtech.erp.mail.requested.v1:
+    address: uz.railtech.erp.mail.requested.v1
+    title: Запрошена отправка письма (ERP)
+    messages:
+      uz.railtech.erp.mail.requested.v1:
+        $ref: '#/components/messages/uz.railtech.erp.mail.requested.v1'
+  uz.railtech.eds.mail.requested.v1:
+    address: uz.railtech.eds.mail.requested.v1
+    title: Запрошена отправка письма (EDS)
+    messages:
+      uz.railtech.eds.mail.requested.v1:
+        $ref: '#/components/messages/uz.railtech.eds.mail.requested.v1'
 operations:
   publish.uz.railtech.crm.client.created.v1:
     action: send
@@ -752,6 +776,42 @@ operations:
       $ref: '#/channels/uz.railtech.identity.user.updated.v1'
     messages:
       - $ref: '#/channels/uz.railtech.identity.user.updated.v1/messages/uz.railtech.identity.user.updated.v1'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.crm.mail.sent.v1:
+    action: send
+    summary: rt://crm публикует uz.railtech.crm.mail.sent.v1
+    channel:
+      $ref: '#/channels/uz.railtech.crm.mail.sent.v1'
+    messages:
+      - $ref: '#/channels/uz.railtech.crm.mail.sent.v1/messages/uz.railtech.crm.mail.sent.v1'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.crm.mail.failed.v1:
+    action: send
+    summary: rt://crm публикует uz.railtech.crm.mail.failed.v1
+    channel:
+      $ref: '#/channels/uz.railtech.crm.mail.failed.v1'
+    messages:
+      - $ref: '#/channels/uz.railtech.crm.mail.failed.v1/messages/uz.railtech.crm.mail.failed.v1'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.erp.mail.requested.v1:
+    action: send
+    summary: rt://erp публикует uz.railtech.erp.mail.requested.v1
+    channel:
+      $ref: '#/channels/uz.railtech.erp.mail.requested.v1'
+    messages:
+      - $ref: '#/channels/uz.railtech.erp.mail.requested.v1/messages/uz.railtech.erp.mail.requested.v1'
+    bindings:
+      $ref: '#/components/operationBindings/delivery'
+  publish.uz.railtech.eds.mail.requested.v1:
+    action: send
+    summary: rt://eds публикует uz.railtech.eds.mail.requested.v1
+    channel:
+      $ref: '#/channels/uz.railtech.eds.mail.requested.v1'
+    messages:
+      - $ref: '#/channels/uz.railtech.eds.mail.requested.v1/messages/uz.railtech.eds.mail.requested.v1'
     bindings:
       $ref: '#/components/operationBindings/delivery'
 components:
@@ -1976,3 +2036,103 @@ components:
                   const: rt://contracts/events/identity/user.updated/v1
                 data:
                   $ref: './identity/user.updated.v1.json'
+    uz.railtech.crm.mail.sent.v1:
+      name: uz.railtech.crm.mail.sent.v1
+      title: Письмо отправлено
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://crm
+                type:
+                  const: uz.railtech.crm.mail.sent.v1
+                dataschema:
+                  const: rt://contracts/events/crm/mail.sent/v1
+                data:
+                  $ref: './crm/mail.sent.v1.json'
+    uz.railtech.crm.mail.failed.v1:
+      name: uz.railtech.crm.mail.failed.v1
+      title: Письмо не отправлено
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://crm
+                type:
+                  const: uz.railtech.crm.mail.failed.v1
+                dataschema:
+                  const: rt://contracts/events/crm/mail.failed/v1
+                data:
+                  $ref: './crm/mail.failed.v1.json'
+    uz.railtech.erp.mail.requested.v1:
+      name: uz.railtech.erp.mail.requested.v1
+      title: Запрошена отправка письма (ERP)
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://erp
+                type:
+                  const: uz.railtech.erp.mail.requested.v1
+                dataschema:
+                  const: rt://contracts/events/erp/mail.requested/v1
+                data:
+                  $ref: './erp/mail.requested.v1.json'
+    uz.railtech.eds.mail.requested.v1:
+      name: uz.railtech.eds.mail.requested.v1
+      title: Запрошена отправка письма (EDS)
+      contentType: application/cloudevents+json
+      correlationId:
+        location: '$message.payload#/correlationid'
+      headers:
+        $ref: '#/components/schemas/DeliveryHeaders'
+      bindings:
+        $ref: '#/components/messageBindings/delivery'
+      payload:
+        schemaFormat: application/schema+json;version=draft-07
+        schema:
+          allOf:
+            - $ref: './envelope.v1.json'
+            - type: object
+              properties:
+                source:
+                  const: rt://eds
+                type:
+                  const: uz.railtech.eds.mail.requested.v1
+                dataschema:
+                  const: rt://contracts/events/eds/mail.requested/v1
+                data:
+                  $ref: './eds/mail.requested.v1.json'

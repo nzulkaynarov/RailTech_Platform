@@ -15,7 +15,7 @@ from django.core import mail
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
 from portal.services import acceptance
-from portal.tests.conftest import LOCMEM_CHANNELS
+from portal.tests.conftest import LOCMEM_BACKEND
 from portal.tests.contract_support import check_response, component, response_schema
 from portal.tests.contract_world import make_quote
 from rest_framework.throttling import SimpleRateThrottle
@@ -33,7 +33,7 @@ VISIBLE = ("sent", "viewed", "accepted", "rejected", "expired", "expired_status"
 
 @pytest.fixture(autouse=True)
 def _locmem_mail(settings):
-    settings.EMAIL_CHANNELS = LOCMEM_CHANNELS
+    settings.EMAIL_BACKEND = LOCMEM_BACKEND
     mail.outbox.clear()
 
 
@@ -156,7 +156,7 @@ def test_request_code_by_email_is_202_with_masked_address_and_works_end_to_end(
     # письмо через шаблон ERP: в `EmailLog` и в почте клиента — по адресу контакта сессии
     assert mail.outbox[-1].to == [client_contact.email]
     log = EmailLog.objects.get(template="quote_acceptance_code")
-    assert log.status == EmailLog.STATUS_SENT and log.to_emails == [client_contact.email]
+    assert log.status == EmailLog.STATUS_QUEUED and log.to_emails == [client_contact.email]
     row = QuoteAcceptanceCode.objects.get(quote=quote)
     assert row.email == client_contact.email and row.consumed_at is None
 

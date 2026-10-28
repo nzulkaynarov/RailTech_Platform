@@ -88,8 +88,8 @@ def test_degraded_after_a_fresh_error_and_degraded_when_stale_read_differently()
 
 
 def test_disabled_from_crm_differs_from_not_configured() -> None:
-    off = rules.erp_external("erp.mail", facts(item("mail", "disabled", enabled=False)))
-    unconfigured = rules.erp_external("erp.mail", facts(item("mail", "disabled", enabled=True)))
+    off = rules.erp_external("erp.s3", facts(item("s3", "disabled", enabled=False)))
+    unconfigured = rules.erp_external("erp.s3", facts(item("s3", "disabled", enabled=True)))
     assert (off.status, unconfigured.status) == ("off", "off")
     assert "Выключен из CRM" in off.summary
     assert off.hint is None
@@ -106,20 +106,20 @@ def test_unknown_service_status_has_no_data_text() -> None:
 
 
 def test_erp_not_configured_is_off_not_a_failure() -> None:
-    result = rules.erp_external("erp.mail", ErpFacts(configured=False))
+    result = rules.erp_external("erp.s3", ErpFacts(configured=False))
     assert result.status == "off"
     assert "Подключения" in (result.hint or "")
 
 
 def test_unreachable_erp_is_unknown_so_six_services_do_not_open_six_incidents() -> None:
-    result = rules.erp_external("erp.mail", ErpFacts(configured=True, error="unavailable"))
+    result = rules.erp_external("erp.s3", ErpFacts(configured=True, error="unavailable"))
     assert result.status == "unknown"
     assert result.error == "unavailable"
     assert "Проверить связь" in (result.hint or "")
 
 
 def test_old_erp_without_the_field_is_no_data_with_an_upgrade_hint() -> None:
-    result = rules.erp_external("erp.mail", ErpFacts(configured=True, status="ok", externals=None))
+    result = rules.erp_external("erp.s3", ErpFacts(configured=True, status="ok", externals=None))
     assert result.status == "unknown"
     assert "не передаёт" in result.summary
     assert "M3-ERP-06" in (result.hint or "")
@@ -127,7 +127,7 @@ def test_old_erp_without_the_field_is_no_data_with_an_upgrade_hint() -> None:
 
 def test_service_missing_from_the_list_and_unknown_codes_are_tolerated() -> None:
     other = item("brand_new_service")
-    result = rules.erp_external("erp.mail", facts(other))
+    result = rules.erp_external("erp.s3", facts(other))
     assert result.status == "unknown"
     assert "не передала" in result.summary
     odd = rules.erp_external("erp.brand_new_service", facts(other))
@@ -135,4 +135,4 @@ def test_service_missing_from_the_list_and_unknown_codes_are_tolerated() -> None
 
 
 def test_unknown_status_value_from_a_newer_erp_reads_as_unknown() -> None:
-    assert rules.erp_external("erp.mail", facts(item("mail", "on_fire"))).status == "unknown"
+    assert rules.erp_external("erp.s3", facts(item("s3", "on_fire"))).status == "unknown"

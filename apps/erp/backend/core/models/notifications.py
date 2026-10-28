@@ -127,11 +127,15 @@ class EmailLog(models.Model):
     Populated by notifications.emails.send_templated_email. Viewable in Unfold
     admin — answers "what was sent to this user and when". Stores both plain
     and HTML bodies for inspection; failed sends are recorded with error text.
+    Письмо отправляет почтовый сервис CRM (W18A-P1): QUEUED — передано в очередь почты CRM, итог (SENT / FAILED с
+    причиной) приходит событием `uz.railtech.crm.mail.sent|failed.v1`.
     """
 
+    STATUS_QUEUED = "QUEUED"
     STATUS_SENT = "SENT"
     STATUS_FAILED = "FAILED"
     STATUS_CHOICES = [
+        (STATUS_QUEUED, _("В очереди почты")),
         (STATUS_SENT, _("Отправлено")),
         (STATUS_FAILED, _("Ошибка")),
     ]
@@ -147,7 +151,7 @@ class EmailLog(models.Model):
         db_index=True,
         default="transactional",
         verbose_name=_("Канал"),
-        help_text=_("Ключ из settings.EMAIL_CHANNELS: transactional / marketing / system"),
+        help_text=_("Историческая метка назначения: transactional / system (на доставку не влияет)"),
     )
     subject = models.CharField(
         max_length=255,

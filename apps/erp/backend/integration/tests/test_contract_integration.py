@@ -154,10 +154,11 @@ def test_every_get_response_matches_the_contract(client, world, catalog_product)
 
 
 def test_health_externals_cover_every_contract_code_and_status_is_in_the_enum(client, world):
-    """M3-ERP-06: `/health` несёт все шесть кодов контракта, статусы — из enum; сторож не проходит на пустом `externals`."""
+    """M3-ERP-06: `/health` несёт коды контракта, кроме `mail` (W18A-P1: почты в ERP нет, строка «Почта» — в CRM), статусы —
+    из enum; сторож не проходит на пустом `externals`."""
     health = client.get(f"{PREFIX}/health").json()
     codes = [item["code"] for item in health["externals"]]
-    assert sorted(codes) == sorted(enum_values("ExternalServiceCode")) and len(codes) == 6
+    assert sorted(codes) == sorted(set(enum_values("ExternalServiceCode")) - {"mail"}) and len(codes) == 5
     allowed = set(component("ExternalService")["properties"]["status"]["enum"])
     assert {item["status"] for item in health["externals"]} <= allowed
     assert not check_response(health, response_schema("/health"))

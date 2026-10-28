@@ -133,12 +133,26 @@ async def resolve_smtp(
 
 
 class SmtpProbeError(Exception):
-    """Соединение/отправка не удались; `kind` — стабильный класс причины, `detail` — для экрана."""
+    """Соединение/отправка не удались; `kind` — стабильный класс причины, `detail` — для экрана.
 
-    def __init__(self, kind: SmtpErrorKind, detail: str = "") -> None:
+    `permanent` — повтор не поможет (сервер ответил 5xx на адрес, отправителя или данные письма):
+    письмо сразу получает итог «ошибка». Остальное (сеть, TLS, вход, 4xx) — временное, повтор.
+    """
+
+    def __init__(self, kind: SmtpErrorKind, detail: str = "", *, permanent: bool = False) -> None:
         super().__init__(f"{kind}: {detail}" if detail else kind)
         self.kind: SmtpErrorKind = kind
         self.detail = detail
+        self.permanent = permanent
+
+
+@dataclass(frozen=True, slots=True)
+class MailAttachment:
+    """Вложение письма, уже скачанное из хранилища отправителя (W18A-P1)."""
+
+    filename: str
+    content_type: str
+    content: bytes
 
 
 @dataclass(frozen=True, slots=True)
@@ -153,17 +167,45 @@ class SmtpCheck:
 class SmtpTransport(Protocol):
     async def check(self, connection: SmtpConnection) -> SmtpCheck: ...
 
-    async def send(self, connection: SmtpConnection, to: str, subject: str, body: str) -> None: ...
+    async def send(self, connection: SmtpConnection, to: str, subject: str, body: str) -> None:
+        """Простое письмо: `to` — адрес или несколько через запятую.
+
+        Письмо с HTML, ответом на другой адрес или вложениями (запросы ERP и EDS, W18A-P1) —
+        тот же метод с ключевыми `html`, `reply_to`, `attachments`; транспорт `SmtplibTransport`
+        их принимает.
+        """
+        ...
 
 
-def build_message(connection: SmtpConnection, to: str, subject: str, body: str) -> EmailMessage:
+def build_message(
+    connection: SmtpConnection,
+    to: str,
+    subject: str,
+    body: str,
+    *,
+    html: str | None = None,
+    reply_to: str | None = None,
+    attachments: tuple[MailAttachment, ...] = (),
+) -> EmailMessage:
     message = EmailMessage()
     message["From"] = connection.sender
     message["To"] = to
     message["Subject"] = subject
     message["Date"] = formatdate(localtime=False, usegmt=True)
     message["Message-ID"] = make_msgid(domain=connection.from_email.rpartition("@")[2] or None)
+    if reply_to:
+        message["Reply-To"] = reply_to
     message.set_content(body, charset="utf-8")
+    if html:
+        message.add_alternative(html, subtype="html", charset="utf-8")
+    for item in attachments:
+        maintype, _, subtype = item.content_type.partition("/")
+        message.add_attachment(
+            item.content,
+            maintype=maintype or "application",
+            subtype=subtype or "octet-stream",
+            filename=item.filename,
+        )
     return message
 
 
@@ -176,10 +218,21 @@ class SmtplibTransport:
     async def check(self, connection: SmtpConnection) -> SmtpCheck:
         return await asyncio.to_thread(self._check, connection)
 
-    async def send(self, connection: SmtpConnection, to: str, subject: str, body: str) -> None:
-        await asyncio.to_thread(
-            self._send, connection, build_message(connection, to, subject, body)
+    async def send(
+        self,
+        connection: SmtpConnection,
+        to: str,
+        subject: str,
+        body: str,
+        *,
+        html: str | None = None,
+        reply_to: str | None = None,
+        attachments: tuple[MailAttachment, ...] = (),
+    ) -> None:
+        message = build_message(
+            connection, to, subject, body, html=html, reply_to=reply_to, attachments=attachments
         )
+        await asyncio.to_thread(self._send, connection, message)
 
     def _check(self, connection: SmtpConnection) -> SmtpCheck:
         started = time.monotonic()
@@ -194,9 +247,14 @@ class SmtplibTransport:
             try:
                 client.send_message(message)
             except smtplib.SMTPRecipientsRefused as exc:
-                raise SmtpProbeError("rejected", _codes(exc.recipients)) from exc
+                permanent = all(code >= 500 for code, _ in exc.recipients.values())
+                raise SmtpProbeError(
+                    "rejected", _codes(exc.recipients), permanent=permanent
+                ) from exc
             except (smtplib.SMTPSenderRefused, smtplib.SMTPDataError) as exc:
-                raise SmtpProbeError("rejected", f"SMTP {exc.smtp_code}") from exc
+                raise SmtpProbeError(
+                    "rejected", f"SMTP {exc.smtp_code}", permanent=exc.smtp_code >= 500
+                ) from exc
             except smtplib.SMTPException as exc:
                 raise SmtpProbeError("unavailable", type(exc).__name__) from exc
 

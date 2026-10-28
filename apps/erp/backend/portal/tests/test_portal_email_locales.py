@@ -12,7 +12,7 @@ import re
 import pytest
 from django.core import mail
 from django.test import override_settings
-from portal.tests.conftest import LOCMEM_CHANNELS
+from portal.tests.conftest import LOCMEM_BACKEND
 
 from notifications.emails import send_templated_email
 
@@ -72,7 +72,7 @@ def html_of(message):
     return message.alternatives[0][0]
 
 
-@override_settings(EMAIL_CHANNELS=LOCMEM_CHANNELS)
+@override_settings(EMAIL_BACKEND=LOCMEM_BACKEND)
 @pytest.mark.parametrize("language", ["ru", "uz", "en"])
 @pytest.mark.parametrize("template", ["portal_invitation", "portal_magic_link"])
 def test_email_is_rendered_in_the_language_of_the_contact(template, language):
@@ -88,7 +88,7 @@ def test_email_is_rendered_in_the_language_of_the_contact(template, language):
     assert URLS[template] in html
 
 
-@override_settings(EMAIL_CHANNELS=LOCMEM_CHANNELS)
+@override_settings(EMAIL_BACKEND=LOCMEM_BACKEND)
 @pytest.mark.parametrize("language", ["uz", "en"])
 @pytest.mark.parametrize("template", ["portal_invitation", "portal_magic_link"])
 def test_non_russian_email_has_no_russian_left(template, language):
@@ -100,14 +100,14 @@ def test_non_russian_email_has_no_russian_left(template, language):
         ), f"{template}/{language}: кириллица в части «{name}»: {CYRILLIC.findall(text)[:5]}"
 
 
-@override_settings(EMAIL_CHANNELS=LOCMEM_CHANNELS)
+@override_settings(EMAIL_BACKEND=LOCMEM_BACKEND)
 @pytest.mark.parametrize("template", ["portal_invitation", "portal_magic_link"])
 def test_russian_email_is_russian(template):
     message = send(template, "ru")
     assert CYRILLIC.search(message.body) and CYRILLIC.search(html_of(message))
 
 
-@override_settings(EMAIL_CHANNELS=LOCMEM_CHANNELS)
+@override_settings(EMAIL_BACKEND=LOCMEM_BACKEND)
 @pytest.mark.parametrize("template", ["portal_invitation", "portal_magic_link"])
 @pytest.mark.parametrize("language", ["", "fr", "uz-Cyrl", None])
 def test_unknown_language_falls_back_to_russian(template, language):
@@ -115,14 +115,14 @@ def test_unknown_language_falls_back_to_russian(template, language):
     assert message.subject == EXPECTED[(template, "ru")][0]
 
 
-@override_settings(EMAIL_CHANNELS=LOCMEM_CHANNELS)
+@override_settings(EMAIL_BACKEND=LOCMEM_BACKEND)
 def test_telegram_block_is_translated_in_every_locale():
     expected = {"ru": "войти через Telegram", "en": "log in via Telegram", "uz": "Telegram orqali kirishingiz"}
     for language, phrase in expected.items():
         assert phrase in send("portal_invitation", language).body
 
 
-@override_settings(EMAIL_CHANNELS=LOCMEM_CHANNELS)
+@override_settings(EMAIL_BACKEND=LOCMEM_BACKEND)
 def test_language_does_not_leak_into_the_caller():
     from django.utils import translation
 
@@ -136,7 +136,7 @@ def test_language_does_not_leak_into_the_caller():
 
 @pytest.fixture
 def locmem(settings):
-    settings.EMAIL_CHANNELS = LOCMEM_CHANNELS
+    settings.EMAIL_BACKEND = LOCMEM_BACKEND
     mail.outbox = []
 
 

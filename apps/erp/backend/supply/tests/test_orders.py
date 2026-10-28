@@ -217,7 +217,8 @@ def test_send_mails_the_supplier_and_writes_the_journal(world):
     assert message.reply_to == ["supply@demo.test"], "ответ поставщика придёт снабженцу"
     assert "Перевод стрелочный Р65 1/11" in message.body and "90000.00" in message.body
     log = EmailLog.objects.get(template="supplier_order")
-    assert log.status == "SENT" and log.to_emails == ["sales@vendor.example"]
+    # W18A-P1: письмо передано почтовому сервису CRM — «В очереди» до итога доставки
+    assert log.status == "QUEUED" and log.to_emails == ["sales@vendor.example"]
 
 
 def test_send_needs_an_address_and_a_failed_mail_leaves_the_order_a_draft(world, monkeypatch):

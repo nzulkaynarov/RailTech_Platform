@@ -196,7 +196,7 @@ describe("карточка Telegram", () => {
 });
 
 describe("карточка «Почта»", () => {
-  it("проверить связь, тестовое письмо — в журнале; фильтр журнала по статусу", async () => {
+  it("проверить связь, «Проверить отправку» с итогом словами; журнал доставки CRM и ERP, фильтр по статусу", async () => {
     const side = await openPanel("mail");
     expect(await within(side).findByText("smtp.demo.example:587")).toBeVisible();
     expect(within(side).getByText("•••• k3Zp")).toBeVisible();
@@ -204,22 +204,31 @@ describe("карточка «Почта»", () => {
     fireEvent.click(within(side).getByRole("button", { name: "Проверить связь" }));
     expect(await within(side).findByText("Сервер принял соединение и вход")).toBeVisible();
 
-    fireEvent.click(within(side).getByRole("button", { name: "Тестовое письмо" }));
+    fireEvent.click(within(side).getByRole("button", { name: "Проверить отправку" }));
     expect(
-      await screen.findByText(/Тестовое письмо поставлено в очередь для admin@demo.example/),
+      await within(side).findByText(
+        "Письмо отправлено на admin@demo.example: почтовый сервер его принял.",
+      ),
     ).toBeVisible();
     await waitFor(() => {
-      const log = within(side).getByRole("list", { name: "Журнал отправок" });
+      const log = within(side).getByRole("list", { name: "Журнал доставки" });
       expect(within(log).getByText("Тестовое письмо")).toBeVisible();
     });
+
+    // W18A-P1: письма ERP — в том же журнале, с источником и назначением словами
+    const log = within(side).getByRole("list", { name: "Журнал доставки" });
+    expect(within(log).getByText("ERP · КП клиенту · вложение: 1")).toBeVisible();
+    expect(
+      within(log).getByText("Причина: Почтовый сервер отклонил письмо (SMTP 550)"),
+    ).toBeVisible();
 
     // фильтр: только ошибки
     fireEvent.mouseDown(within(side).getByLabelText("Показать"));
     fireEvent.click(await screen.findByTitle("Ошибка"));
     await waitFor(() => {
-      const log = within(side).getByRole("list", { name: "Журнал отправок" });
-      expect(within(log).queryByText("Тестовое письмо")).not.toBeInTheDocument();
-      expect(within(log).getByText("Оповещение о сбое сервиса")).toBeVisible();
+      const filtered = within(side).getByRole("list", { name: "Журнал доставки" });
+      expect(within(filtered).queryByText("Тестовое письмо")).not.toBeInTheDocument();
+      expect(within(filtered).getByText("Оповещение о сбое сервиса")).toBeVisible();
     });
     expect(within(side).getByText("Причина: smtp_unavailable")).toBeVisible();
   });
@@ -253,9 +262,7 @@ describe("карточка «Внешние сервисы»", () => {
     const side = await openPanel("services");
     expect(await within(side).findByText("Telegram Bot API")).toBeVisible();
 
-    fireEvent.click(
-      within(side).getByRole("button", { name: "Проверить сервис: Почтовый релей (SMTP)" }),
-    );
+    fireEvent.click(within(side).getByRole("button", { name: "Проверить сервис: Почта (SMTP)" }));
     await waitFor(() => {
       expect(within(side).queryByText(/В очереди 3 письма/)).not.toBeInTheDocument();
     });

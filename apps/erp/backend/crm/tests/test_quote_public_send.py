@@ -16,11 +16,8 @@ from crm.tasks import send_quote_email
 
 @pytest.fixture(autouse=True)
 def locmem_email(settings):
-    """send_templated_email routes through EMAIL_CHANNELS[channel]['backend'] (not
-    settings.EMAIL_BACKEND), so point the transactional channel at locmem for tests."""
-    chans = {k: dict(v) for k, v in settings.EMAIL_CHANNELS.items()}
-    chans["transactional"]["backend"] = "django.core.mail.backends.locmem.EmailBackend"
-    settings.EMAIL_CHANNELS = chans
+    """Письма — в mail.outbox (боевой бэкенд ERP — событие почтовому сервису CRM, W18A-P1)."""
+    settings.EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
 
 
 @pytest.fixture

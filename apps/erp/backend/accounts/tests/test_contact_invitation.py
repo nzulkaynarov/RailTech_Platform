@@ -22,18 +22,8 @@ from rest_framework.test import APIClient
 from accounts.models import Company, CompanyMember, CompanyRole, CompanyType, Contact, CustomUser, WorkspaceRole
 from notifications.models import EmailLog
 
-LOCMEM_CHANNELS = {
-    ch: {
-        "backend": "django.core.mail.backends.locmem.EmailBackend",
-        "host": "",
-        "port": 25,
-        "username": "",
-        "password": "",
-        "use_tls": False,
-        "from_email": "test@example.com",
-    }
-    for ch in ("transactional", "marketing", "system")
-}
+#: Почта в память (боевой бэкенд — событие почтовому сервису CRM, W18A-P1).
+LOCMEM_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
 
 
 @pytest.fixture
@@ -119,7 +109,7 @@ def client_contact(db, client_company, seller_user):
 
 @pytest.fixture(autouse=True)
 def configure_email_and_portal_settings(settings, seller_company):
-    settings.EMAIL_CHANNELS = LOCMEM_CHANNELS
+    settings.EMAIL_BACKEND = LOCMEM_BACKEND
     settings.CABINET_URL = "http://cabinet.localhost"
     settings.TELEGRAM_BOT_USERNAME = "railtech_test_bot"
     settings.OWN_COMPANY_ID = seller_company.id
@@ -171,7 +161,7 @@ class TestContactInvitation:
             template="portal_invitation",
         ).first()
         assert log is not None
-        assert log.status == EmailLog.STATUS_SENT
+        assert log.status == EmailLog.STATUS_QUEUED
 
     def test_bilingual_email_rendering(self, client_contact, seller_user):
         """Письмо рендерится в обеих локалях (ru и en)."""

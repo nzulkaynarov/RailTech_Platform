@@ -11005,18 +11005,29 @@ components:
       type: object
       additionalProperties: false
     MailLogItem:
-      description: 'Строка журнала писем сотрудникам; тела письма (временного пароля) в журнале нет.'
+      description: 'Строка журнала доставки почты ансамбля: письма CRM и письма, которые ERP и EDS просят отправить по шине
+        (W18A-P1, один отправитель); тела письма (временного пароля, ссылок входа) в журнале нет.'
       properties:
+        attachments:
+          description: Число вложений (по ссылке на объект хранилища системы-источника)
+          type: integer
         attempts: {type: integer}
         created_at: {format: date-time, type: string}
         error: {type: [string, 'null']}
         id: {type: integer}
+        purpose:
+          description: Назначение письма — код шаблона системы-источника (quote_sent, portal_magic_link, invite…)
+          type: [string, 'null']
         sent_at: {format: date-time, type: [string, 'null']}
+        source:
+          description: 'Система-источник: crm — свои письма CRM; erp, eds — запрос по шине (W18A-P1)'
+          enum: [crm, erp, eds]
+          type: string
         status: {enum: [queued, sent, failed, skipped_no_smtp], type: string}
         subject: {type: string}
         template: {type: string}
         to_email: {type: string}
-      required: [attempts, created_at, error, id, sent_at, status, subject, template, to_email]
+      required: [attachments, attempts, created_at, error, id, purpose, sent_at, source, status, subject, template, to_email]
       type: object
       additionalProperties: false
     MailQueued:

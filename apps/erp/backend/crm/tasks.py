@@ -395,8 +395,11 @@ def send_quote_email(self, quote_id: int) -> dict:
         user=quote.deal.client if quote.deal.client else None,
         attachments=attachments,
         fail_silently=True,
+        # W18A-P1: письмо уходит через почтовый сервис CRM; итог (отправлено / ошибка) вернётся событием и попадёт в
+        # журнал КП и `Quote.send_report` (`notifications/mail_bus.py`).
+        ref=("quote", quote.pk),
     )
-    logger.info("Quote %s email sent to %s", quote_id, to_email)
+    logger.info("Quote %s email handed to the CRM mail service for %s", quote_id, to_email)
     return {"quote_id": quote_id, "status": "sent", "to": to_email}
 
 
@@ -458,8 +461,9 @@ def send_document_email(self, document_id: int, to_email: str) -> dict:
         user=None,
         attachments=attachments,
         fail_silently=True,
+        ref=("document", document.pk),
     )
-    logger.info("Generated document %s email sent to %s", document_id, to_email)
+    logger.info("Generated document %s email handed to the CRM mail service for %s", document_id, to_email)
     return {"document_id": document_id, "status": "sent", "to": to_email}
 
 

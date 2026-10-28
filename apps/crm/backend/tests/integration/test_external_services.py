@@ -624,7 +624,8 @@ async def test_background_pass_records_all_crm_services(
     keys = {r.key for r in results}
     assert {"telegram", "litellm", "langfuse", "mail", "s3", "docling", "backup"} <= keys
     assert not any(k.startswith("tls.") for k in keys)
-    assert {f"erp.{c}" for c in ("cbu_rates", "customs_tariff", "mail", "litellm", "s3")} <= keys
+    assert {f"erp.{c}" for c in ("cbu_rates", "customs_tariff", "litellm", "s3")} <= keys
+    assert "erp.mail" not in keys  # почта ERP — через почтовый сервис CRM (W18A-P1)
     body = client.get(URL, headers=auth).json()
     assert body["checked_at"] is not None
     assert sum(body["summary"].values()) - body["summary"]["disabled"] == len(body["services"])
@@ -980,10 +981,10 @@ async def test_erp_services_show_status_metrics_and_last_error(
         erp_facts(
             erp_item("cbu_rates"),
             erp_item(
-                "mail",
+                "customs_tariff",
                 "degraded",
                 last_error_at=ERP_NOW,
-                last_error="SMTPServerDisconnected: connection unexpectedly closed",
+                last_error="ConnectError: tarif.customs.uz unreachable",
                 errors_24h=2,
             ),
             erp_item("s3", "disabled", enabled=False),
@@ -994,25 +995,27 @@ async def test_erp_services_show_status_metrics_and_last_error(
     results = await container.external_checks.run("cheap", datetime.now(UTC))
     by_key = {r.key: r for r in results}
     assert by_key["erp.cbu_rates"].status == "ok"
-    assert by_key["erp.customs_tariff"].status == "unknown"  # ERP про него не передала
+    assert by_key["erp.litellm"].status == "unknown"  # ERP про него не передала
+    # Почта ERP — не отдельный сервис (W18A-P1): письма ERP отправляет почтовый сервис CRM.
+    assert "erp.mail" not in by_key
 
     services = {s["key"]: s for s in client.get(URL, headers=auth).json()["services"]}
-    mail = services["erp.mail"]
-    assert (mail["status"], mail["source"], mail["system"]) == ("warn", "erp", "erp")
-    assert mail["error"] == "SMTPServerDisconnected: connection unexpectedly closed"
-    assert mail["hint"]
-    assert "ERP" in mail["summary"] + mail["hint"]
-    assert mail["metrics"]["ok_24h"] == 5
-    assert mail["metrics"]["errors_24h"] == 2
-    assert mail["checked_at"] is not None
-    assert mail["stale"] is False
+    tariff = services["erp.customs_tariff"]
+    assert (tariff["status"], tariff["source"], tariff["system"]) == ("warn", "erp", "erp")
+    assert tariff["error"] == "ConnectError: tarif.customs.uz unreachable"
+    assert tariff["hint"]
+    assert "ERP" in tariff["summary"] + tariff["hint"]
+    assert tariff["metrics"]["ok_24h"] == 5
+    assert tariff["metrics"]["errors_24h"] == 2
+    assert tariff["checked_at"] is not None
+    assert tariff["stale"] is False
     assert services["erp.cbu_rates"]["status"] == "ok"
     assert (services["erp.s3"]["status"], services["erp.sentry"]["status"]) == ("off", "off")
     # Только сервисы ERP: токен Telegram в окружении CI не задан, его сбой — не предмет этого теста.
     assert [k for k, _ in alerts.sent if k.startswith("erp.")] == [], "degraded — не инцидент"
 
     # «Проверить сейчас» берёт свежий ответ ERP, а не кэш коннектора.
-    fresh = client.post(f"{URL}/erp.mail/check", headers=auth)
+    fresh = client.post(f"{URL}/erp.customs_tariff/check", headers=auth)
     assert fresh.status_code == 200, fresh.text
     assert connector.refreshed == 1
     assert "manual" in [c["tier"] for c in fresh.json()["checks"]]
@@ -1069,19 +1072,19 @@ async def test_unreachable_or_missing_erp_does_not_open_incidents(
     connector, _ = attach_erp(client, alerts, ErpFacts(configured=True, error="unavailable"))
     await container.external_checks.run("cheap", datetime.now(UTC))
     services = {s["key"]: s for s in client.get(URL, headers=auth).json()["services"]}
-    assert services["erp.mail"]["status"] == "unknown"
-    assert "ERP не отвечает" in services["erp.mail"]["summary"]
+    assert services["erp.cbu_rates"]["status"] == "unknown"
+    assert "ERP не отвечает" in services["erp.cbu_rates"]["summary"]
 
     connector.facts = ErpFacts(configured=False)
     await container.external_checks.run("cheap", datetime.now(UTC))
     container.external_view.invalidate()
     services = {s["key"]: s for s in client.get(URL, headers=auth).json()["services"]}
-    assert services["erp.mail"]["status"] == "off"
+    assert services["erp.cbu_rates"]["status"] == "off"
     connector.facts = ErpFacts(configured=True, status="ok", externals=None)  # ERP до M3-ERP-06
     await container.external_checks.run("cheap", datetime.now(UTC))
     container.external_view.invalidate()
     services = {s["key"]: s for s in client.get(URL, headers=auth).json()["services"]}
-    assert "не передаёт" in services["erp.mail"]["summary"]
+    assert "не передаёт" in services["erp.cbu_rates"]["summary"]
     assert [k for k, _ in alerts.sent if k.startswith("erp.")] == []
     async with sessions() as session:
         incidents = (await session.scalars(select(ExternalServiceIncident))).all()
@@ -1092,28 +1095,28 @@ async def test_erp_service_switch_goes_to_erp_with_password_and_audit(
     sessions: async_sessionmaker[AsyncSession], client: TestClient, alerts: FakeAlerts
 ) -> None:
     auth = await headers(sessions, client, "admin")
-    _, erp_switch = attach_erp(client, alerts, erp_facts(erp_item("mail")))
+    _, erp_switch = attach_erp(client, alerts, erp_facts(erp_item("s3")))
 
-    wrong = client.post(f"{URL}/erp.mail/disable", json={"password": "nope"}, headers=auth)
+    wrong = client.post(f"{URL}/erp.s3/disable", json={"password": "nope"}, headers=auth)
     assert wrong.status_code == 422
     assert erp_switch.calls == []
 
     off = client.post(
-        f"{URL}/erp.mail/disable",
-        json={"password": PASSWORD, "reason": "SMTP-ключ скомпрометирован"},
+        f"{URL}/erp.s3/disable",
+        json={"password": PASSWORD, "reason": "ключ S3 скомпрометирован"},
         headers=auth,
     )
     assert off.status_code == 200, off.text
     body = off.json()
-    assert erp_switch.calls == [("mail", False, "SMTP-ключ скомпрометирован")]
+    assert erp_switch.calls == [("s3", False, "ключ S3 скомпрометирован")]
     assert body["switch"]["kind"] == "erp"
     assert body["switch"]["disabled"] is True
-    assert "письма" in body["switch"]["effect"]
+    assert "файлы" in body["switch"]["effect"]
     assert body["status"] == "off", "выключатель виден сразу, не через минуту"
 
-    on = client.post(f"{URL}/erp.mail/enable", json={"password": PASSWORD}, headers=auth)
+    on = client.post(f"{URL}/erp.s3/enable", json={"password": PASSWORD}, headers=auth)
     assert on.status_code == 200, on.text
-    assert erp_switch.calls[-1] == ("mail", True, None)
+    assert erp_switch.calls[-1] == ("s3", True, None)
     assert on.json()["switch"]["disabled"] is False
 
     async with sessions() as session:
