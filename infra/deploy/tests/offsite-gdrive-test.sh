@@ -129,6 +129,9 @@ rc=0; run --now > "$tmp/out" 2>&1 || rc=$?
 printf '{"type": "authorized_user"}' > "$w/secrets/gdrive-sa.json"
 rc=0; run --now > "$tmp/out" 2>&1 || rc=$?
 [[ "$rc" == 3 && "$(field reason)" == bad_key ]] || { status; fail "ключ не сервисного аккаунта: not_configured/bad_key"; }
+printf '{"type": "service_account", "private_key": "x", "token_uri": "https://evil.example/token"}' > "$w/secrets/gdrive-sa.json"
+rc=0; run --now > "$tmp/out" 2>&1 || rc=$?
+[[ "$rc" == 3 && "$(field reason)" == bad_key ]] || { status; fail "ключ с чужим token_uri (SSRF) должен отклоняться: bad_key"; }
 printf '{"type": "service_account", "client_email": "x@example.iam.gserviceaccount.com", "private_key": "-----BEGIN PRIVATE KEY-----\\nfake\\n-----END PRIVATE KEY-----\\n"}' > "$w/secrets/gdrive-sa.json"
 rc=0; run --now > "$tmp/out" 2>&1 || rc=$?
 [[ "$rc" == 3 && "$(field reason)" == no_folder ]] || { status; fail "нет ID папки: not_configured/no_folder"; }

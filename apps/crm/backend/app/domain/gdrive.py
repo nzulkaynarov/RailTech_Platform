@@ -17,7 +17,10 @@ FOLDER_MIME: Final = "application/vnd.google-apps.folder"
 #: Ключ сервисного аккаунта — JSON ≈ 2,3 КБ; больше 16 КБ — точно не он.
 KEY_MAX_BYTES: Final = 16384
 
-KeyProblem = Literal["not_json", "not_service_account", "missing_fields"]
+KeyProblem = Literal["not_json", "not_service_account", "missing_fields", "foreign_token_uri"]
+#: Куда меняется подписанный JWT на токен. Только Google: `token_uri` из файла не используется —
+#: подложенный ключ увёл бы подписанное утверждение на чужой адрес (SSRF), здесь и в rclone.
+TOKEN_URI: Final = "https://oauth2.googleapis.com/token"  # noqa: S105 — адрес, не секрет
 ProbeReason = Literal[
     "ok",
     "key_rejected",
@@ -49,7 +52,6 @@ class ServiceAccountKey:
     client_email: str
     private_key_id: str
     private_key: str
-    token_uri: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -82,15 +84,9 @@ def parse_key(raw: str) -> ServiceAccountKey | KeyProblem:
     email, key_id, private_key = (str(v) for v in values)
     if "@" not in email or "PRIVATE KEY" not in private_key:
         return "missing_fields"
-    token_uri = data.get("token_uri")
-    return ServiceAccountKey(
-        client_email=email,
-        private_key_id=key_id,
-        private_key=private_key,
-        token_uri=token_uri
-        if isinstance(token_uri, str) and token_uri.startswith("https://")
-        else "https://oauth2.googleapis.com/token",
-    )
+    if data.get("token_uri", TOKEN_URI) != TOKEN_URI:
+        return "foreign_token_uri"
+    return ServiceAccountKey(client_email=email, private_key_id=key_id, private_key=private_key)
 
 
 def key_suffix(key_id: str) -> str:

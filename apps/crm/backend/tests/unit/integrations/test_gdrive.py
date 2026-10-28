@@ -1,5 +1,6 @@
 """«Проверить» внешней копии (OPS-GDRIVE-2): разбор ключа, ID папки, ответы Google → причина."""
 
+import asyncio
 import json
 from typing import Any
 
@@ -54,7 +55,6 @@ def test_parse_key_takes_only_what_is_needed() -> None:
     key = parsed()
     assert key.client_email == "rt-offsite-backup@rt-backups.iam.gserviceaccount.com"
     assert gdrive.key_suffix(key.private_key_id) == "1a2b"
-    assert key.token_uri == TOKEN_URI
 
 
 @pytest.mark.parametrize(
@@ -72,10 +72,39 @@ def test_parse_key_rejects_what_is_not_a_service_account_key(raw: str, problem: 
     assert gdrive.parse_key(raw) == problem
 
 
-def test_foreign_token_uri_is_not_trusted() -> None:
-    key = gdrive.parse_key(key_json(token_uri="http://evil.example/token"))
-    assert isinstance(key, gdrive.ServiceAccountKey)
-    assert key.token_uri == TOKEN_URI
+@pytest.mark.parametrize(
+    "uri", ["https://evil.example/token", "http://oauth2.googleapis.com/token", "", 42]
+)
+def test_key_with_a_foreign_token_uri_is_rejected(uri: object) -> None:
+    """SSRF: подписанный JWT уходит только на токен Google, адрес из файла не используется."""
+    assert gdrive.parse_key(key_json(token_uri=uri)) == "foreign_token_uri"
+
+
+def test_key_without_token_uri_is_accepted() -> None:
+    raw = json.loads(key_json())
+    del raw["token_uri"]
+    assert isinstance(gdrive.parse_key(json.dumps(raw)), gdrive.ServiceAccountKey)
+
+
+@respx.mock
+async def test_probe_never_calls_anything_but_google(monkeypatch: pytest.MonkeyPatch) -> None:
+    token = respx.post(TOKEN_URI).mock(
+        return_value=httpx.Response(200, json={"access_token": "ya29.test"})
+    )
+    respx.get(FILES).mock(return_value=httpx.Response(200, json=folder_body()))
+    assert (await gdrive_api.probe(parsed(), FOLDER)).reason == "ok"
+    assert token.called
+
+
+async def test_whole_probe_is_bounded_in_time(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def slow(*_: object) -> gdrive.ProbeResult:
+        await asyncio.sleep(5)
+        return gdrive.ProbeResult("ok")
+
+    monkeypatch.setattr(gdrive_api, "TOTAL_S", 0.05)
+    monkeypatch.setattr(gdrive_api, "_probe", slow)
+    result = await gdrive_api.probe(parsed(), FOLDER)
+    assert (result.reason, result.detail) == ("network", "timeout")
 
 
 @pytest.mark.parametrize(

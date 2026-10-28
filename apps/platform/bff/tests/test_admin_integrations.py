@@ -1167,3 +1167,4 @@ async def test_offsite_errors_are_translated(
     check(invalid, "/admin/integrations/offsite", "put")
     assert invalid.json()["details"]["reason"] == "offsite_key_invalid"
     assert invalid.json()["details"]["fields"] == ["key_json"]
+    assert invalid.json()["details"]["problem"] == "not_json"

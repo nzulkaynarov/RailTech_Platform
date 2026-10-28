@@ -208,6 +208,9 @@ load_config() {
 config_problem() { # пусто — настроено, иначе причина
   if [ ! -s "$SA" ] || [ ! -r "$SA" ]; then echo no_key; return; fi
   if ! grep -q '"type"[[:space:]]*:[[:space:]]*"service_account"' "$SA" || ! grep -q '"private_key"' "$SA"; then echo bad_key; return; fi
+  # SSRF: rclone меняет подписанный JWT на токен по `token_uri` из файла — принимаем только адрес Google.
+  if grep -q '"token_uri"' "$SA" \
+    && ! grep -q '"token_uri"[[:space:]]*:[[:space:]]*"https://oauth2.googleapis.com/token"' "$SA"; then echo bad_key; return; fi
   if [ -z "$FOLDER" ]; then echo no_folder; return; fi
 }
 

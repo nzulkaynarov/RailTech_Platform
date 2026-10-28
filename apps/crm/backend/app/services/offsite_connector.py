@@ -149,10 +149,11 @@ class OffsiteConnectorService:
             "delivered_at": now.isoformat(),
             "last_check": _check_payload(result, now),
         }
-        await self._settings.update(SETTINGS_KEY, payload, who.user_id)
+        # Секрет, настройки и аудит — одной транзакцией: ключ и папка не разъедутся при сбое.
         async with self._sessions() as session, session.begin():
             if key_json is not None:
                 await self._store.put(session, OFFSITE_GDRIVE_KEY, raw, who.user_id)
+            await self._settings.update_in(session, SETTINGS_KEY, payload, who.user_id)
             after = {
                 "folder_id": folder,
                 "client_email": key.client_email,
@@ -168,6 +169,7 @@ class OffsiteConnectorService:
                 before=before,
                 after=after,
             )
+        self._settings.invalidate()
         logger.info("offsite_gdrive_saved", user_id=who.user_id, check=result.reason)
         return await self.status()
 

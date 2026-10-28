@@ -15,8 +15,12 @@ from app.domain import gdrive
 from app.main import create_app
 from app.models.auth import AuditLog
 from app.models.integrations import IntegrationSecret
+from app.repositories import platform_roles as prepo
+from app.security.audit import Actor
 from app.security.reauth import LockoutPolicy
 from app.services.offsite_connector import OffsiteConnectorService
+from app.services.user_views import UserPatch
+from app.services.users import UserService
 from tests.integration.crm_helpers import PASSWORD, login, make_user
 
 pytestmark = pytest.mark.integration
@@ -110,6 +114,34 @@ async def test_only_admin_reads_and_writes(
     assert harness.client.put(URL, json=body(), headers=auth).status_code == 403
     assert harness.client.post(f"{URL}/check", headers=auth).status_code == 403
     assert harness.storage.objects == {}
+
+
+async def test_director_with_admin_read_sees_but_cannot_change_or_check(
+    sessions: async_sessionmaker[AsyncSession], harness: Harness
+) -> None:
+    """«Директор» (раздел admin — чтение): видит состояние, но не меняет и не проверяет."""
+    account, _ = await make_user(sessions, "director@railtech.uz", ["viewer"])
+    async with sessions() as session:
+        ids = [r.id for r in await prepo.by_codes(session, ["DIRECTOR"])]
+    await UserService(sessions).update(Actor.system(), account.id, UserPatch(platform_role_ids=ids))
+    auth = login(harness.client, account.email, PASSWORD)
+    assert harness.client.get(URL, headers=auth).status_code == 200
+    assert harness.client.put(URL, json=body(), headers=auth).status_code == 403
+    assert harness.client.post(f"{URL}/check", headers=auth).status_code == 403
+    assert harness.storage.objects == {}
+
+
+async def test_key_with_a_foreign_token_uri_is_rejected_before_anything_leaves(
+    sessions: async_sessionmaker[AsyncSession], harness: Harness
+) -> None:
+    """SSRF: ключ с чужим token_uri не принимается — ни доставки, ни проверки у «Google»."""
+    auth = await headers(sessions, harness.client, "admin")
+    evil = json.loads(KEY) | {"token_uri": "https://evil.example/token"}
+    rejected = harness.client.put(URL, json=body(key_json=json.dumps(evil)), headers=auth)
+    assert rejected.status_code == 422
+    assert rejected.json()["details"]["problem"] == "foreign_token_uri"
+    assert harness.storage.objects == {}
+    assert harness.probe.seen == []
 
 
 async def test_key_is_write_only_delivered_to_the_copy_service_and_checked(

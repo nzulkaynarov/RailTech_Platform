@@ -110,6 +110,10 @@ def integration_error(response: httpx.Response) -> PlatformError:
         field = _failed_field(response)
         if field:
             base.body.details = {**(base.body.details or {}), "fields": [_FIELDS.get(field, field)]}
+        # Что именно не так с полем (ключ внешней копии: `not_json`, `foreign_token_uri`, …) — короткий код CRM.
+        problem = _detail(response, "problem")
+        if problem:
+            base.body.details = {**(base.body.details or {}), "problem": problem}
     return base
 
 
@@ -117,6 +121,14 @@ def _replace(base: PlatformError, code: str, message: str) -> PlatformError:
     return PlatformError(
         code, message, status_code=base.status_code, source="crm", details=base.body.details
     )
+
+
+def _detail(response: httpx.Response, name: str) -> str | None:
+    try:
+        value = response.json()["details"][name]
+    except (ValueError, KeyError, TypeError):
+        return None
+    return value if isinstance(value, str) and len(value) <= 40 else None
 
 
 def _failed_field(response: httpx.Response) -> str | None:

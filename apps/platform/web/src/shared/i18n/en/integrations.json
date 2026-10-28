@@ -484,6 +484,7 @@
         "keyChosen": "Selected {{name}}: service account {{email}}.",
         "keyTooBig": "The file is too large for a service account key.",
         "keyNotServiceAccount": "This is not a Google service account key: a JSON with \"type\": \"service_account\" is required.",
+        "keyForeignTokenUri": "The key points to a foreign token address (token_uri) — such a key is not accepted. Download the key again in Google Cloud.",
         "folder": "Shared drive folder ID",
         "folderHint": "The part of the folder address after /folders/ — or paste the whole address."
       }

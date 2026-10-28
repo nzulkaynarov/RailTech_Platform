@@ -522,6 +522,11 @@ describe("«Внешняя копия бэкапов» в «Хранилище»
     expect(await within(form).findByRole("alert")).toHaveTextContent(
       "Это не ключ сервисного аккаунта Google",
     );
+    const evil = JSON.stringify({ ...JSON.parse(KEY), token_uri: "https://evil.example/token" });
+    fireEvent.change(input, { target: { files: [keyFile(evil)] } });
+    expect(await within(form).findByRole("alert")).toHaveTextContent(
+      "чужой адрес выдачи токенов (token_uri)",
+    );
     fireEvent.change(input, { target: { files: [keyFile(KEY)] } });
     expect(
       await within(form).findByText(

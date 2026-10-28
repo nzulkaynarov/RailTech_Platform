@@ -6,16 +6,24 @@
 Закрытый ключ из памяти никуда не уходит: только подпись запроса.
 """
 
+import asyncio
 import time
 
 import httpx
 import jwt
 
-from app.domain.gdrive import ProbeResult, ServiceAccountKey, classify_folder, classify_token_error
+from app.domain.gdrive import (
+    TOKEN_URI,
+    ProbeResult,
+    ServiceAccountKey,
+    classify_folder,
+    classify_token_error,
+)
 
 SCOPE = "https://www.googleapis.com/auth/drive.readonly"
 DRIVE_FILES = "https://www.googleapis.com/drive/v3/files"
 TIMEOUT_S = 15.0
+TOTAL_S = 20.0
 
 
 def assertion(key: ServiceAccountKey, now: float | None = None) -> str:
@@ -24,7 +32,7 @@ def assertion(key: ServiceAccountKey, now: float | None = None) -> str:
     claims = {
         "iss": key.client_email,
         "scope": SCOPE,
-        "aud": key.token_uri,
+        "aud": TOKEN_URI,
         "iat": issued,
         "exp": issued + 600,
     }
@@ -39,6 +47,17 @@ async def probe(
     *,
     transport: httpx.AsyncBaseTransport | None = None,
 ) -> ProbeResult:
+    """Вся проверка — не дольше `TOTAL_S`: BFF ждёт ответа пробы до 30 с."""
+    try:
+        async with asyncio.timeout(TOTAL_S):
+            return await _probe(key, folder_id, transport)
+    except TimeoutError:
+        return ProbeResult("network", detail="timeout")
+
+
+async def _probe(
+    key: ServiceAccountKey, folder_id: str, transport: httpx.AsyncBaseTransport | None
+) -> ProbeResult:
     try:
         signed = assertion(key)
     except (ValueError, TypeError, jwt.PyJWTError):
@@ -46,7 +65,7 @@ async def probe(
     try:
         async with httpx.AsyncClient(timeout=TIMEOUT_S, transport=transport) as http:
             token = await http.post(
-                key.token_uri,
+                TOKEN_URI,
                 data={
                     "grant_type": "urn:ietf:params:oauth:grant-type:jwt-bearer",
                     "assertion": signed,

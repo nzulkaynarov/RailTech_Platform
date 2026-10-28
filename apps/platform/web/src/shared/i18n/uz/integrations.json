@@ -494,6 +494,7 @@
         "keyChosen": "{{name}} tanlandi: xizmat hisobi {{email}}.",
         "keyTooBig": "Fayl xizmat hisobi kaliti uchun juda katta.",
         "keyNotServiceAccount": "Bu Google xizmat hisobi kaliti emas: \"type\": \"service_account\" bo'lgan JSON kerak.",
+        "keyForeignTokenUri": "Kalitda begona token manzili (token_uri) ko'rsatilgan — bunday kalit qabul qilinmaydi. Kalitni Google Cloud'dan qayta yuklab oling.",
         "folder": "Umumiy disk papkasi ID si",
         "folderHint": "Papka manzilining /folders/ dan keyingi qismi — yoki manzilni to'liq qo'ying."
       }

@@ -1237,7 +1237,7 @@ export interface paths {
     get: operations["getOffsiteBackup"];
     /**
      * Сохранить ключ сервисного аккаунта и папку и сразу проверить у Google
-     * @description CRM `PUT /integrations/offsite`. `key_json` — содержимое JSON-ключа сервисного аккаунта Google (`null` — оставить прежний), `folder_id` — ID папки общего диска или её адрес, `password` — пароль администратора. Ключ хранится зашифрованным и доставляется сервису копирования без захода на сервер. `INTEGRATION_INVALID` (422) — `details.reason`: `offsite_key_invalid` (`details.fields = [key_json]`), `offsite_folder_invalid` (`[folder_id]`); `INTEGRATION_FAILED` (502) — `offsite_delivery_failed` (хранилище недоступно, ничего не сохранено).
+     * @description CRM `PUT /integrations/offsite`. `key_json` — содержимое JSON-ключа сервисного аккаунта Google (`null` — оставить прежний), `folder_id` — ID папки общего диска или её адрес, `password` — пароль администратора. Ключ хранится зашифрованным и доставляется сервису копирования без захода на сервер. `INTEGRATION_INVALID` (422) — `details.reason`: `offsite_key_invalid` (`details.fields = [key_json]`; `details.problem`: `not_json`, `not_service_account`, `missing_fields`, `foreign_token_uri` — ключ ведёт не на `oauth2.googleapis.com`), `offsite_folder_invalid` (`[folder_id]`); `INTEGRATION_FAILED` (502) — `offsite_delivery_failed` (хранилище недоступно, ничего не сохранено).
      */
     put: operations["saveOffsiteBackup"];
     post?: never;

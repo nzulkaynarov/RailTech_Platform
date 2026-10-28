@@ -23,6 +23,9 @@ const LINKS = {
 /** Ключ сервисного аккаунта — JSON ≈ 2,3 КБ; больше 16 КБ — точно не он (как в CRM). */
 const KEY_MAX = 16384;
 
+/** Токен-эндпоинт Google: ключ с другим `token_uri` CRM не примет (подписанный JWT ушёл бы на чужой адрес). */
+const GOOGLE_TOKEN_URI = "https://oauth2.googleapis.com/token";
+
 /** Адрес сервисного аккаунта из выбранного файла — для подтверждения админу до отправки. */
 function previewEmail(text: string): string | null {
   try {
@@ -34,6 +37,15 @@ function previewEmail(text: string): string | null {
     return typeof email === "string" ? email : null;
   } catch {
     return null;
+  }
+}
+
+function foreignTokenUri(text: string): boolean {
+  try {
+    const uri = (JSON.parse(text) as Record<string, unknown>)["token_uri"];
+    return uri !== undefined && uri !== GOOGLE_TOKEN_URI;
+  } catch {
+    return false;
   }
 }
 
@@ -89,6 +101,10 @@ function SetupForm({ offsite, onDone }: { offsite: OffsiteBackup; onDone: () => 
     void file.text().then((text) => {
       if (previewEmail(text) === null) {
         setKeyProblem(t("storage.offsite.form.keyNotServiceAccount"));
+        return;
+      }
+      if (foreignTokenUri(text)) {
+        setKeyProblem(t("storage.offsite.form.keyForeignTokenUri"));
         return;
       }
       setKeyText(text);

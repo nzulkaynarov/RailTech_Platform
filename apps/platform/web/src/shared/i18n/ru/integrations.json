@@ -489,6 +489,7 @@
         "keyChosen": "Выбран {{name}}: сервисный аккаунт {{email}}.",
         "keyTooBig": "Файл слишком большой для ключа сервисного аккаунта.",
         "keyNotServiceAccount": "Это не ключ сервисного аккаунта Google: нужен JSON с «type»: «service_account».",
+        "keyForeignTokenUri": "В ключе указан чужой адрес выдачи токенов (token_uri) — такой ключ не принимается. Скачайте ключ заново в Google Cloud.",
         "folder": "ID папки общего диска",
         "folderHint": "Часть адреса папки после /folders/ — или вставьте адрес целиком."
       }
