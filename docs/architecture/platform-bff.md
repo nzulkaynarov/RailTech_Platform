@@ -347,6 +347,21 @@ SPA  PUT  /api/v1/me/onboarding            → CRM PATCH /me {onboarding_done: t
 бизнес-данные — второй ролью. У сотрудника хотя бы одна роль: пустой `role_ids` — 422 `ROLES_REQUIRED` (CRM — 422
 `roles_required`), закрыть доступ — `is_active = false`.
 
+**D1-8 (EDS API 0.5.0; BFF без смены контракта): права CRM только из каталога (B-014), сотрудники по разделу (B-007).**
+(1) Права прямого API CRM сотрудника с ролями Платформы — только политики его ролей `pr:<id>` по `platform-rbac.yaml` (`backend.crm`):
+предустановки и роли без `crm.leads` не получают `/inbox`, лиды, переписку и вложения сообщений только потому, что их базовая роль CRM
+`viewer`/`manager`. Сама базовая роль — **признак, не право**: она нужна «последнему администратору», выбору «кому передать лида» и
+замещающему, и вычисляется по матрице (`admin: full` — `admin`, `crm.leads: full` — `manager`, иначе `viewer`), а не по коду роли
+(шаблон «Бухгалтер» — теперь `viewer`; миграция CRM пересчитала сохранённое). Матрицу прямого API проверяет тест
+`tests/integration/test_catalog_rights_api.py`: ожидания строятся из `platform-rbac.yaml`, а не руками. Роли с `chats.external` дают
+`leads:read` (и ответ/заметку на `full`) по каталогу — это переписка с клиентами (см. Q-D1-8-1). (2) `MessageOut.attachments` не несёт
+`storage_key`: файл отдаёт только `GET /leads/{id}/messages/{m}/attachments/{i}` с проверкой доступа к лиду; BFF ходит потоком.
+(3) `GET /team?section=<раздел>&level=full|read` (CRM; право `users:read`, т. е. `admin` не ниже чтения): активные сотрудники, у которых
+объединение матриц ролей даёт раздел на уровне; только id, имя, инициалы, должность. `GET /eds/resolution/assignees` берёт зоны оттуда
+(по вызову на зону) и не сводит `/users` и `/platform-roles`; автор резолюции исключается в BFF по id. EDS при резолюции сверяет зону
+по проекции сотрудников (`identity.user.*` → `permissions.sections`) и отвечает 422 `assignee_zone_mismatch` (BFF сохраняет
+`details.reason`).
+
 **W13-A6 (BFF 0.12.0): сброс пароля, журнал аудита и профиль.** Чисто добавляющее изменение; новых бизнес-решений в BFF нет.
 (1) `POST /admin/users/{id}/reset-password/email` → CRM `/users/{id}/reset-password/email` (`admin: full`): новый временный пароль,
 письмо через коннектор «Почта», сессии сотрудника гаснут, статус «Приглашён». Себе сбросить нельзя: BFF отвечает 409 `CONFLICT`

@@ -323,13 +323,14 @@ ROLE_ERP: dict[str, set[str]] = {
     },
     "ADMIN": {"team.manage", "settings.edit", "settings.charge_templates"},
 }
-# Базовая роль CRM для старого фронта (как в версии 1 каталога).
+# Базовая роль CRM — признак по матрице (D1-8, B-014): «Бухгалтер» без `crm.leads` — viewer, а не
+# manager, как в версии 1 каталога (по коду роли).
 ROLE_BASE = {
     "MANAGER": "manager",
     "DIRECTOR": "viewer",
     "SUPPLY": "viewer",
     "ENGINEER": "viewer",
-    "ACCOUNTANT": "manager",
+    "ACCOUNTANT": "viewer",
     "ADMIN": "admin",
 }
 
@@ -544,10 +545,13 @@ def test_role_without_a_code_gets_the_base_role_from_its_matrix(
     assert role_crm_base(RoleGrant(access, code=None)) == expected
 
 
-def test_role_with_a_code_keeps_the_v1_base_role_even_if_edited() -> None:
-    edited = RoleGrant({"crm.leads": "full"}, code="DIRECTOR")  # директор не становится менеджером
-    assert role_crm_base(edited) == "viewer"
-    assert role_crm_base(RoleGrant({}, code="tpl:ACCOUNTANT")) == "manager"
+def test_base_role_follows_the_matrix_not_the_role_code() -> None:
+    """D1-8: код роли признака не задаёт — отредактированный шаблон «Менеджер» без `crm.leads`
+    перестаёт быть менеджером, а «Бухгалтер» не был им и в каталоге."""
+    assert role_crm_base(RoleGrant({}, code="tpl:MANAGER")) == "viewer"
+    assert role_crm_base(RoleGrant({}, code="tpl:ACCOUNTANT")) == "viewer"
+    assert role_crm_base(RoleGrant({"crm.leads": "full"}, code="tpl:ACCOUNTANT")) == "manager"
+    assert role_crm_base(RoleGrant({"crm.leads": "full"}, code="DIRECTOR")) == "manager"
 
 
 # --- коды ----------------------------------------------------------------------------------------

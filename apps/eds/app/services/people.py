@@ -2,12 +2,21 @@
 
 from collections.abc import Iterable
 from dataclasses import dataclass, field
+from typing import Final
 
 from sqlalchemy import any_, literal, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Employee
 from app.schemas.common import PersonRef
+
+# Зона резолюции -> раздел каталога `platform-rbac.yaml`, который делает сотрудника исполнителем зоны (уровень `full`):
+# снабженец — склад и цены поставщиков, гл. инженер — услуги, бухгалтер — условия оплаты (D1-8, B-007).
+ZONE_SECTION: Final[dict[str, str]] = {
+    "goods": "erp.calc.goods",
+    "services": "erp.calc.services",
+    "payment_terms": "eds.payments",
+}
 
 
 @dataclass
@@ -67,3 +76,16 @@ async def holds_permission(session: AsyncSession, crm_user_id: int, permission: 
         )
     )
     return row.scalar_one_or_none() is not None
+
+
+async def zone_mismatches(session: AsyncSession, pairs: Iterable[tuple[int, str]]) -> list[tuple[int, str]]:
+    """Пары `(сотрудник, зона)`, где у сотрудника нет раздела зоны на уровне `full` по проекции `employees.sections`.
+
+    Нет сотрудника или проекция без разделов (снимок до D1-8) — несоответствие: зону не подтвердить."""
+    wanted = list(pairs)
+    ids = {uid for uid, _ in wanted}
+    if not ids:
+        return []
+    rows = await session.execute(select(Employee.crm_user_id, Employee.sections).where(Employee.crm_user_id.in_(ids)))
+    held = {int(uid): sections or {} for uid, sections in rows.all()}
+    return [(uid, zone) for uid, zone in wanted if held.get(uid, {}).get(ZONE_SECTION[zone]) != "full"]

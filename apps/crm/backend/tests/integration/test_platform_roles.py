@@ -30,13 +30,14 @@ from tests.integration.test_platform_access import Queue
 
 pytestmark = pytest.mark.integration
 
-# Старый код роли -> базовая роль CRM для старого фронта (как до R-1).
+# Код роли каталога -> базовая роль CRM — признак по матрице (D1-8): «Бухгалтер» без `crm.leads` —
+# viewer (в версии 1 по коду был manager).
 BASE_ROLE = {
     "MANAGER": "manager",
     "DIRECTOR": "viewer",
     "SUPPLY": "viewer",
     "ENGINEER": "viewer",
-    "ACCOUNTANT": "manager",
+    "ACCOUNTANT": "viewer",
     "ADMIN": "admin",
 }
 
@@ -117,7 +118,7 @@ async def test_old_codes_field_is_gone_and_ignored(
     assert "platform_roles" not in body
     assert queue.jobs == []
 
-    ids = legacy_ids(client, boss, ["ACCOUNTANT", "DIRECTOR"])
+    ids = legacy_ids(client, boss, ["MANAGER", "DIRECTOR"])
     united = client.patch(
         f"/api/v1/users/{employee}", json={"platform_role_ids": ids + ids}, headers=boss
     ).json()

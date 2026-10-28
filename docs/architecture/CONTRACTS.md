@@ -563,7 +563,7 @@ ADR-0015 (EDS — отдельный сервис, владелец реестр
 | `openapi/eds.yaml` | API EDS `/api/v1` для BFF Платформы: обмен токена, `/me`, письма и резолюции, документы, маршруты согласования, реестр и экспорт, файлы с версиями; `/health` | 0.2.0 |
 | `events/eds/*.v1.json` (+ `_defs.v1.json`, `examples/`) | 8 типов `uz.railtech.eds.*.v1` | v1 |
 | `events/erp/quote.ready_for_approval.v1.json` | КП готово к одобрению (определения — `QuoteReadyForApproval`, `QuoteVisa` в `erp/_defs.v1.json`) | v1 |
-| `events/identity/_defs.v1.json` | `User.permissions.eds` — необязательное, аддитивно в v1 | v1 |
+| `events/identity/_defs.v1.json` | `User.permissions.eds` — необязательное, аддитивно в v1; `User.permissions.sections` — разделы модулей EDS и ERP и уровень (`full`/`read`), необязательное, аддитивно в v1 (D1-8: зона исполнителя резолюции в EDS, `assignee_zone_mismatch`) | v1 |
 | `bus/subscriptions.yaml` | подписчик `eds`; новые типы `erp` и `platform-bff`; `crm` без `quote.ready_for_approval` | — |
 | `platform-rbac.yaml` (+ схема) | `backend.eds` разделов EDS → коды прав EDS | каталог v2 |
 
