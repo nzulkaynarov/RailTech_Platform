@@ -52,6 +52,9 @@ class Settings(BaseSettings):
     # читает их список, чтобы показать возраст последнего сегмента в «Состоянии» (W15-H8b).
     s3_bucket_wal: str = "wal"
     wal_s3_prefix: str = "pg17"
+    # Отметка внешней копии архива на Google Drive (сервис offsite-backup на VPS 1, OPS-GDRIVE):
+    # status.json в бакете `offsite` — CRM только читает её, ни архива, ни Drive не видит.
+    s3_bucket_offsite: str = "offsite"
     # Redis ансамбля (CRM его не использует, адреса нужны пробе состояния): брокер (Celery ERP,
     # Channels, очереди Langfuse) и кэш (кэш ERP, сессии Платформы). Пусто — «не проверено».
     redis_broker_url: SecretStr = SecretStr("")

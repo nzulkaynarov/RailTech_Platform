@@ -511,6 +511,48 @@ def wal_objects(segment_age_min: int) -> list[Any]:
     ]
 
 
+class OffsiteStorage:
+    """Бакет offsite с отметкой сервиса копирования (OPS-GDRIVE); `calls` — что CRM запросила."""
+
+    def __init__(self, body: bytes | None, error: Exception | None = None) -> None:
+        self.body, self.error = body, error
+        self.calls: list[tuple[str, str]] = []
+
+    async def list_objects(self, bucket: str, prefix: str = "", start_after: str = "") -> list[Any]:
+        from app.integrations.s3 import StoredObject
+
+        self.calls.append(("list", bucket))
+        if self.error is not None:
+            raise self.error
+        return [StoredObject("status.json", 1, NOW)] if self.body is not None else []
+
+    async def get(self, bucket: str, key: str) -> bytes:
+        self.calls.append(("get", f"{bucket}/{key}"))
+        assert self.body is not None
+        return self.body
+
+
+async def test_offsite_backup_row_reads_only_the_status_file_of_the_offsite_bucket() -> None:
+    body = (
+        b'{"result":"ok","reason":"","last_success_at":"2026-10-14T03:00:00Z",'
+        b'"bytes":1048576000,"base_backups":3,"quota_bytes":107374182400}'
+    )
+    storage = OffsiteStorage(body)
+    ok = await collect(deps(storage=storage), ["offsite_backup"])
+    assert ok["offsite_backup"].status == "ok"
+    assert ok["offsite_backup"].metrics["base_backups"] == 3
+    assert storage.calls == [("list", "offsite"), ("get", "offsite/status.json")]
+
+    missing = await collect(deps(storage=OffsiteStorage(None)), ["offsite_backup"])
+    assert missing["offsite_backup"].status == "off"  # сервис ещё не отметился — «не настроено»
+    assert missing["offsite_backup"].cause == "offsite_not_configured"
+
+    denied = OffsiteStorage(None, error=PermissionError("denied"))
+    broken = await collect(deps(storage=denied), ["offsite_backup"])
+    assert broken["offsite_backup"].status == "unknown"  # честное «не проверено»
+    assert broken["offsite_backup"].error == "PermissionError"
+
+
 async def test_wal_archive_row_ok_stale_and_unreadable() -> None:
     ok = await collect(deps(storage=WalStorage(wal_objects(2))), ["wal_archive"])
     assert ok["wal_archive"].status == "ok"
