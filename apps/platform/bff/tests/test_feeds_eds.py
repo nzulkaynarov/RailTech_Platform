@@ -379,7 +379,8 @@ async def test_two_versions_of_one_quote_give_one_hit_and_returned_opens_the_dra
 async def test_memo_row_kind_follows_the_permission_of_the_current_step(
     web: Web, fb: FeedBackends
 ) -> None:
-    """Директор с правом бухгалтера на шаге бухгалтера: «Принять к оплате», а не «Согласовать»."""
+    """Директор с ролью бухгалтера на шаге бухгалтера: «Принять к оплате», а не «Согласовать»
+    (сам директор «Счета и оплаты» только читает, D2-4)."""
     director_step = route("СЗ-2026/031")
     director_step["current_step"]["assignee"] = {"crm_user_id": None, "permission": "memos.approve"}
     pay_step = route("СЗ-2026/015", step="Бухгалтер")
@@ -387,7 +388,7 @@ async def test_memo_row_kind_follows_the_permission_of_the_current_step(
     named = route("СЗ-2026/016")
     named["current_step"]["assignee"] = {"crm_user_id": 7, "permission": None}
     fb.state["memos"] = page(director_step, pay_step, named)
-    await web.login(["DIRECTOR"])
+    await web.login(["DIRECTOR", "ACCOUNTANT"])
 
     items = (await web.client.get("/api/v1/queue")).json()["items"]
 
