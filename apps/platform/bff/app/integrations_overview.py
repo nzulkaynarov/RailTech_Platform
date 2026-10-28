@@ -50,7 +50,7 @@ ERP_NOT_CONNECTED = "erp:erp_not_connected"  # корень «ERP не подк�
 BUDGET_WARN_RATIO = (
     0.8  # как в реестре CRM: расход ≥ 80 % бюджета провайдера — предупреждение, ≥ 100 % — сбой
 )
-STORAGE_KEYS = frozenset({"s3", "backup"})
+STORAGE_KEYS = frozenset({"s3", "backup", "wal_archive"})
 _RANK: dict[str, int] = {"ok": 0, "unknown": 1, "warn": 2, "fail": 3}
 _SEVERITY_ORDER: dict[Severity, int] = {"fail": 0, "warn": 1, "setup": 2}
 CARD_ORDER: tuple[CardKey, ...] = (

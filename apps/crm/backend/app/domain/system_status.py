@@ -274,7 +274,10 @@ _PLATFORM_HOSTING: Final = "Это настраивает хостинг: PLATFO
 def platform_url_problem(facts: PlatformUrlFacts) -> str | None:
     """Почему ссылка «Вход» в письмах сотрудникам не откроется; None — адрес годится."""
     if not facts.url:
-        return f"Адрес Платформы не задан — приглашения по почте не уходят. {_PLATFORM_HOSTING}"
+        return (
+            "Адрес Платформы не задан — приглашения по почте не уходят, а ссылки из Telegram "
+            f"ведут в старую CRM. {_PLATFORM_HOSTING}"
+        )
     if facts.prod and is_local_url(facts.url):
         return (
             "Адрес Платформы указывает на localhost — ссылка «Вход» в письмах сотрудникам "
@@ -284,11 +287,15 @@ def platform_url_problem(facts: PlatformUrlFacts) -> str | None:
 
 
 def crm_url(url: str, now: datetime, platform: PlatformUrlFacts | None = None) -> Component:
-    """Адреса для ссылок: CRM (Telegram, «Настройки» → «Компания») и Платформа (письма)."""
+    """Адреса для ссылок: Платформа (письма и ссылки Telegram) и CRM («Настройки» → «Компания»).
+
+    Ссылки из Telegram ведут в Платформу (B-009); адрес CRM нужен только как запасной, пока адреса
+    Платформы нет, поэтому его неполадки показываются лишь тогда."""
     title = "Адреса для ссылок"
     problems: list[str] = []
     crm_problem = crm_url_problem(url)
-    if crm_problem is not None:
+    platform_used = platform is not None and bool(platform.url)
+    if crm_problem is not None and not platform_used:
         problems.append(f"{crm_problem} — укажите адрес CRM в «Настройки» → «Компания»")
     platform_problem = platform_url_problem(platform) if platform is not None else None
     if platform_problem is not None:
