@@ -36,6 +36,8 @@ class LeadFilter:
     # передачи).
     platform_status: str | None = None
     overdue: bool | None = None
+    # Канал лида (`source`: telegram, web, email, phone, referral; через запятую), W16-D1-2b.
+    source: str | None = None
 
 
 def _filtered(f: LeadFilter, me: int) -> Select[Lead]:
@@ -61,6 +63,8 @@ def _filtered(f: LeadFilter, me: int) -> Select[Lead]:
         stmt = stmt.where(Lead.created_at < f.created_to)
     if f.platform_status:
         stmt = stmt.where(lead_status.status_in(f.platform_status.split(",")))
+    if f.source:
+        stmt = stmt.where(Lead.source.in_(f.source.split(",")))
     if f.overdue is not None:
         stmt = stmt.where(lead_status.overdue() if f.overdue else ~lead_status.overdue())
     return stmt

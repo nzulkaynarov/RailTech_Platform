@@ -10790,6 +10790,17 @@ paths:
           - type: 'null'
           description: 'Просроченные: открытая передача с истёкшим SLA ответа'
           title: Overdue
+      - description: Канал лида (источник), через запятую
+        in: query
+        name: source
+        required: false
+        schema:
+          anyOf:
+          - pattern: ^[a-z][a-z_]{0,15}(,[a-z][a-z_]{0,15})*$
+            type: string
+          - type: 'null'
+          description: Канал лида (источник), через запятую
+          title: Source
       responses:
         '200':
           content:
