@@ -168,3 +168,13 @@ def ticket_ref(number: str) -> ObjectRef:
     return ObjectRef(
         kind="ticket", number=number, path=f"/admin/tickets/{segment(number)}?panel=open&tab=card"
     )
+
+
+def supplier_order_ref(number: str, supplier: str | None) -> ObjectRef:
+    """Заказ поставщику (`ЗП-2026-031`): карточка в Расчёт · Склад (D2-2)."""
+    return ObjectRef(
+        kind="supplier_order",
+        number=number,
+        title=supplier,
+        path=f"/erp/stock/{segment(number)}",
+    )

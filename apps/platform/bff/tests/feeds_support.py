@@ -61,6 +61,8 @@ class FeedBackends:
                 "counts": {"new": 0, "in_progress": 0, "resolved": 0},
             },
             "documents": {"results": []},
+            # Просроченные заказы поставщикам (ERP `stock/overdue`, D2-2): пусто, пока нет строк
+            "overdue": {"results": []},
             "activity_logs": (403, {"detail": "PLATFORM_ADMIN_REQUIRED"}),
             "timeline": [],
         }
@@ -97,6 +99,7 @@ class FeedBackends:
             ),
             "activity_logs": self._erp("activity_logs", router.get(f"{base}/crm/activity-logs/")),
             "timeline": self._erp("timeline", router.get(f"{base}/crm/timeline/")),
+            "overdue": self._erp("overdue", router.get(f"{base}/stock/overdue/")),
         }
         self.mark_read = router.patch(
             url__regex=re.compile(rf"^{ERP_URL}/api/v1/notifications/\d+/mark_read/$")
