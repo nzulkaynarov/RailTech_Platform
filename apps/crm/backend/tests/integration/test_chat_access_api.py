@@ -216,7 +216,7 @@ def _dialog_reads(lead_id: int, message_id: int) -> list[str]:
 
 def _file_message(client: TestClient, headers: dict[str, str], lead_id: int) -> int:
     messages = client.get(f"/api/v1/leads/{lead_id}/messages", headers=headers).json()
-    return next(m["id"] for m in messages if m["attachments"])
+    return int(next(m["id"] for m in messages if m["attachments"]))
 
 
 REGISTRY = [

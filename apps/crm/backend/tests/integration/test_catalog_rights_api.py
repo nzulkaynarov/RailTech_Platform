@@ -228,23 +228,23 @@ async def _check(
     for method, template, body, action in DIALOG:
         path = template.format(**ids)
         response = client.request(method, path, json=body, headers=headers)
-        label = (method, path, action, sorted(merged.items()), response.status_code, response.text)
+        about = (method, path, action, sorted(merged.items()), response.status_code, response.text)
         if ("leads", action) in rights:
-            assert not _denied_by_right(response), label
+            assert not _denied_by_right(response), about
             if method == "GET":
-                assert response.status_code == 200, label
+                assert response.status_code == 200, about
         elif ("chats", action) in rights:
-            assert response.status_code == 404, label
+            assert response.status_code == 404, about
         else:
-            assert _denied_by_right(response), label
+            assert _denied_by_right(response), about
 
     for path in EITHER:
         response = client.get(path, headers=headers)
-        label = (path, sorted(merged.items()), response.status_code, response.text)
+        listed = (path, sorted(merged.items()), response.status_code, response.text)
         if {("leads", "read"), ("chats", "read")} & rights:
-            assert response.status_code == 200, label
+            assert response.status_code == 200, listed
         else:
-            assert _denied_by_right(response), label
+            assert _denied_by_right(response), listed
 
     # Таблица прав самого API (`/me/permissions`) совпадает с каталогом.
     perms = client.get("/api/v1/me/permissions", headers=headers).json()["permissions"]
