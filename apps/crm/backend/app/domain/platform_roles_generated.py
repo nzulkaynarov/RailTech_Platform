@@ -161,7 +161,9 @@ CRM_BACKEND: Final[dict[str, dict[str, tuple[str, ...]]]] = {
     "eds.inbox": {},
     "eds.drafts": {},
     "eds.projects": {},
-    "eds.payments": {},
+    "eds.payments": {
+        "full": ("chats:invoiced",),
+    },
     "eds.memo.create": {},
     "eds.memo.approve": {},
     "erp.calc": {},
@@ -170,12 +172,12 @@ CRM_BACKEND: Final[dict[str, dict[str, tuple[str, ...]]]] = {
     "erp.stock": {},
     "chats.internal": {},
     "chats.external": {
-        "read": ("leads:read",),
+        "read": ("chats:read",),
         "full": (
-            "leads:read",
-            "leads:reply",
-            "leads:note",
-            "leads:assist",
+            "chats:read",
+            "chats:reply",
+            "chats:note",
+            "chats:assist",
         ),
     },
     "admin": {
@@ -191,6 +193,7 @@ CRM_BACKEND: Final[dict[str, dict[str, tuple[str, ...]]]] = {
             "reply_templates:read",
             "kb:read",
             "tickets:read",
+            "company_articles:read",
         ),
         "full": (
             "users:read",
@@ -217,6 +220,8 @@ CRM_BACKEND: Final[dict[str, dict[str, tuple[str, ...]]]] = {
             "export:read",
             "tickets:read",
             "tickets:write",
+            "company_articles:read",
+            "company_articles:write",
         ),
     },
     "company.settings": {},
@@ -249,7 +254,9 @@ ERP_BACKEND: Final[dict[str, dict[str, tuple[str, ...]]]] = {
         ),
     },
     "eds.payments": {
+        "read": ("finance.view",),
         "full": (
+            "finance.view",
             "finance.invoice",
             "finance.payment",
             "finance.rates",
@@ -324,13 +331,15 @@ EDS_BACKEND: Final[dict[str, dict[str, tuple[str, ...]]]] = {
     },
     "eds.projects": {
         "read": ("registry.read",),
-        "full": ("registry.read",),
+        "full": (
+            "registry.read",
+            "registry.export",
+        ),
     },
     "eds.payments": {
         "read": ("registry.read",),
         "full": (
             "registry.read",
-            "registry.export",
             "payments.confirm",
         ),
     },
@@ -410,7 +419,7 @@ ROLE_ACCESS: Final[dict[str, dict[str, str]]] = {
         "eds.inbox": "full",
         "eds.drafts": "full",
         "eds.projects": "full",
-        "eds.payments": "full",
+        "eds.payments": "read",
         "eds.memo.create": "full",
         "eds.memo.approve": "full",
         "erp.calc": "full",

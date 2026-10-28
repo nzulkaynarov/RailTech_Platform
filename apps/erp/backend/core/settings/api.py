@@ -158,6 +158,22 @@ SPECTACULAR_SETTINGS = {
         "ContactPreferredChannelEnum": ["email", "telegram", "both"],
         "LanguageEnum": ["ru", "uz", "en"],
         "SecretSourceEnum": ["db", "env", "none"],
+        # Проекты (D2-5): слова статусов SPEC-v3 §2.4 у договора, счёта и акта — свои имена, а не хеши по полю `status`.
+        "ProjectContractStatusEnum": [
+            "project",
+            "client_agreed",
+            "issued_at_operator",
+            "signed",
+            "rejected",
+            "cancelled",
+        ],
+        "ProjectInvoiceStatusEnum": ["to_issue", "issued", "partial", "paid", "overdue", "cancelled"],
+        "ProjectActStatusEnum": ["project", "returned", "issued", "signed", "cancelled"],
+        # D2-3: «Номенклатура и поставщики» — одноимённые поля `kind` и `unit` у разных схем.
+        "DeskItemKindEnum": ["stock", "on_order", "service_fixed", "service_milestones", "service_time"],
+        "BrigadeKindEnum": ["brigade", "person", "subcontractor"],
+        "TechDocKindEnum": ["tz", "drawing", "certificate", "pnr", "other"],
+        "CrewRateUnitEnum": ["day", "hour"],
         # D2-1 «Расчёт по заявке» (crm.serializers.calc): наборы значений с явными именами.
         "CalcVisaStateEnum": "crm.serializers.calc.VISA_STATES",
         "CalcStateEnum": "crm.serializers.calc.CALC_STATES",

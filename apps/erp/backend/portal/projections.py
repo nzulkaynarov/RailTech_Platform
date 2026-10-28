@@ -37,6 +37,7 @@ CLIENT_QUOTE_STATUSES = (QuoteStatusCode.SENT, QuoteStatusCode.APPROVED, QuoteSt
 CLIENT_CONTRACT_STATUSES = (
     ContractStatusCode.PENDING_CLIENT,
     ContractStatusCode.PENDING_MANAGER,
+    ContractStatusCode.ISSUED_EXTERNAL,  # D2-5: выставлен у оператора — клиенту «Договор на подписании»
     ContractStatusCode.SIGNED,
 )
 
@@ -229,7 +230,9 @@ def contract_status(contract) -> str:
         raise ValueError(f"договор в статусе {code} клиенту не показывается")
     if code == ContractStatusCode.SIGNED:
         return "signed"
-    if code == ContractStatusCode.PENDING_MANAGER:
+    if code in (ContractStatusCode.PENDING_MANAGER, ContractStatusCode.ISSUED_EXTERNAL):
+        # Сторона клиента сделана (согласована редакция), договор выставлен/ждёт подписи у оператора (D2-5): значения
+        # контракта портала не меняются, CAB-02 заведёт для Cabinet отдельные слова.
         return "signed_by_client"
     if contract.manager_signed_at:
         return "signed_by_company"

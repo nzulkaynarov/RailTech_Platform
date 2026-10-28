@@ -5,7 +5,10 @@
     "report": "Report",
     "letter_out": "Letter",
     "letter_in": "Incoming letter",
-    "quote": "Quote"
+    "quote": "Quote",
+    "contract": "Contract",
+    "invoice": "Invoice",
+    "act": "Completion act"
   },
   "status": {
     "draft": "Draft",
@@ -45,7 +48,10 @@
       "application": "Applications",
       "report": "Reports",
       "letters": "Letters",
-      "quote": "Quotes"
+      "quote": "Quotes",
+      "contract": "Contracts",
+      "invoice": "Invoices",
+      "act": "Completion acts"
     },
     "status": {
       "label": "Status",
@@ -98,7 +104,9 @@
     "forbidden": {
       "title": "Documents are not open to you",
       "text": "The list is not granted to your role, or you have no rights in the documents service. Contact the administrator."
-    }
+    },
+    "inProject": "In project",
+    "inProjectLabel": "Open in project: {{subject}}"
   },
   "panel": {
     "label": "Document",

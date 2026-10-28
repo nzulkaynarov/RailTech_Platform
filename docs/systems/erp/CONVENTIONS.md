@@ -66,7 +66,7 @@ ERP сам их не описывает. Токены дизайна — из `p
 | `sales` | запрос → сделка (FSM) → КП (билдер, версии, экономика, согласование, курс на дату) → договор → публичная страница акцепта | `crm/` (deals, quotes, contracts, approvals, numbering, wording, document_blocks) |
 | `supply` (D2-2: заказы ЗП, приёмка, запросы цен, просрочка; остальное — M4) | поставщик, заказ поставщику (back-to-back, дропшип), приёмка, счёт и оплата поставщику, сроки; субподряд как этапы | `catalog.SupplierOffer`, `crm/services/availability.py`; остальное новое |
 | `inventory` (D2-2: остатки по ячейкам, журнал, резервы, отгрузки; `/api/v1/stock/*`) | журнал движений, остаток = сумма движений, резервы, «доступно к обещанию»; отгрузки по строкам | `crm` `Fulfillment` |
-| `finance` | счета клиентам, платежи, акты (двусторонние), напоминания, отклонение маржи по курсу | `crm/services/billing.py`, `invoice_lifecycle.py`, `deal_emails.py` |
+| `finance` | счета клиентам, платежи, акты (двусторонние), напоминания, отклонение маржи по курсу; **«Счета и оплаты» бухгалтера (D2-4)**: доска вкладок без пересечений, карточка, подтверждение оплаты (полное и частичное), платёжка клиента `PaymentConfirmation`, запрос платёжки — `/api/v1/finance/receivables/*`; чтение — `finance.invoice` или `finance.payment`, действия — `finance.payment`; «Просрочен» вычисляется по сроку, не статусом | `crm/services/billing.py`, `invoice_lifecycle.py`, `deal_emails.py`; `finance/services/receivables.py`, `finance/views_receivables.py`, `finance/serializers_receivables.py` |
 | `documents` | шаблоны компании, PDF off-thread, квитанции, накладные, поиск, «недавние» | `crm/services/documents/`, `generated_documents.py`, `crm.tasks.render_document_pdf` |
 | `ai` | очередь `ai`: разбор запроса, сопоставление с каталогом, черновик КП, обогащение карточки, разбор прайса (M4), диф КП; клиент LiteLLM; трейсы Langfuse; evals | `sourcing/` (`services_ai*.py`, `tasks_ai.py`, `AIJob`, `ImportTask`) минус прямой SDK |
 | `portal` (M2) | `/api/portal/v1/*`: только своя компания; вход Telegram `initData` / magic-link; действия клиента | покупательские вьюхи `crm`, `crm/views/documents_public.py`, `crm/services/public_page.py` |
@@ -170,6 +170,26 @@ Makefile · .env.example · docs/ (ADR и runbooks ERP в docs/runbooks/erp/ —
   (`DEFAULT_RENDERER_CLASSES`): Browsable API раскрывал справочники в формах; неприемлемый `Accept` → JSON, не 406
   (`core/negotiation.py` — публичные страницы КП и документов сами отдают HTML по `Accept`).
 
+### Номенклатура, поставщики, бригады, техдокументация и справочники для Платформы (D2-3)
+
+- **Пакет `catalog/desk/`** (не `services.py` — тот модуль занят): `items.py`, `suppliers.py`, `brigades.py`, `tech_docs.py`, `refs.py` — логика;
+  `serializers.py` — явные схемы; `views_*.py` — тонкие вьюхи (`DeskViewSet` = `RoleGatedViewMixin` + `IsBackOfficeStaff`). Операции `/api/v1`:
+  `catalog/items/` (список с типом, единицей, НДС; карточка с предложениями; создание и правка — `catalog.manage`), `catalog/suppliers/`
+  (+ `PATCH …/offers/{id}/` — `supply.manage`), `catalog/brigades/`, `catalog/tech-docs/` (+ `{id}/file/` потоком), `master-data/hs-codes/`,
+  `exchange-rates/` (список; ввод — прежний `…/manual/` с `settings.edit`), запись `catalog/manufacturers/`. Чтение — любому сотруднику бэк-офиса.
+- **Закрытые поля режет ERP, не только BFF** (`catalog/desk/access.py`): цена закупки в предложениях — `quote.view_cost_margin` или зона товаров
+  расчёта (`quote.visa_goods`); ставка бригады — `quote.view_cost_margin` или зона услуг (`quote.visa_services`). Без права поле `null`, а запись
+  поля — 403 `SUPPLIER_PRICES_REQUIRED` / `CREW_RATES_REQUIRED`. Права зон приходят с D2-1: пока их нет в `accounts.constants.Permission`,
+  `staff_permissions` их отбрасывает и действует только `cost_margin`. Негативные тесты прямого вызова ERP — `catalog/tests/test_d2_3_desk.py`.
+- **Тип позиции вычисляется**: услуга — по домену и `fulfillment_policy`; товар «со склада» — если у действующего предложения (активно, в окне
+  цены) есть остаток или статус «в наличии» (то же правило, что `catalog.published.availability`). Квота предложения — `SupplierOffer.stock_quantity`.
+  НДС позиции — `Product.vat_rate` (пусто — `CompanySettings.default_vat_rate`); в опубликованный слой поле не попадает (белый список).
+- **Техдокументация** (`catalog.TechDocument`, приватный бакет `erp-private`, путь `tech-docs/<год>/<uuid>`): вид (ТЗ, чертёж, сертификат,
+  регламент ПНР, другое), привязка к позиции и/или сделке (хотя бы одна), ≤ 20 МБ, PDF/PNG/JPEG/DOC(X)/XLS(X) с проверкой подписи файла.
+  Выдача — потоком через представление; `ProductDocument` (паспорт в карточке товара) остаётся для старого фронта.
+- **Бригады** (`catalog.Brigade`) — справочник исполнителей услуг (название, вид, состав, специализация, ставка за день или час); из справочника
+  ставку берёт расчёт услуги (D2-1). Не удаляются — `is_active = false`.
+
 ## 6. Роли бэк-офиса (ARCHITECTURE §7, §9; BUSINESS §11; M1-ERP-05 — сделано)
 
 Каталог прав — `accounts.constants.Permission` (21 код, разделы `PERMISSION_GROUPS`); роль — `accounts.CompanyRole`
@@ -184,7 +204,7 @@ Makefile · .env.example · docs/ (ADR и runbooks ERP в docs/runbooks/erp/ —
 | Каталог | `catalog.manage`, `catalog.publish` |
 | Снабжение | `supply.manage` (поставщики и их предложения; M4 добавит заказы поставщикам и приёмку) |
 | Исполнение и логистика | `fulfillment.manage` (отгрузки, накладные), `fulfillment.act` (акты: выставить из счёта, переоформить, отменить, напомнить) |
-| Финансы | `finance.invoice` (счета клиентам), `finance.payment` (фиксация оплат), `finance.rates` (договорной курс КП с причиной — `fx-override`; факт закупки для отклонения маржи — вместе с `supply.manage`; M1-ERP-08) |
+| Финансы | `finance.view` (читать счета и оплаты без права действовать — директор и менеджер Платформы, D2-4), `finance.invoice` (счета клиентам), `finance.payment` (фиксация оплат), `finance.rates` (договорной курс КП с причиной — `fx-override`; факт закупки для отклонения маржи — вместе с `supply.manage`; M1-ERP-08) |
 | Настройки и команда | `settings.edit` (реквизиты, бланк, шаблоны документов, нумерация, формулировки), `settings.charge_templates` (шаблоны статей расходов КП), `team.manage` (команда и роли) |
 | Данные | `data.export` |
 
@@ -196,7 +216,7 @@ Makefile · .env.example · docs/ (ADR и runbooks ERP в docs/runbooks/erp/ —
 | `CALCULATION` | Расчёт | `deal.manage`, `quote.build`, `quote.edit_pricing`, `quote.view_cost_margin`, `quote.send`, `quote.review`, `quote.visa_goods`, `quote.visa_services`, `contract.manage` |
 | `CATALOG_SUPPLY` | Каталог и закупки | `catalog.manage`, `catalog.publish`, `supply.manage`, `quote.view_cost_margin` |
 | `FULFILLMENT` | Исполнение и логистика | `fulfillment.manage`, `fulfillment.act` |
-| `FINANCE` | Финансы | `finance.invoice`, `finance.payment`, `finance.rates`, `quote.view_cost_margin`, `data.export` |
+| `FINANCE` | Финансы | `finance.view`, `finance.invoice`, `finance.payment`, `finance.rates`, `quote.view_cost_margin`, `data.export` |
 | `HEAD` | Руководитель | все коды (визы КП, подпись договора, команда, настройки; одобрение КП директором — в EDS) |
 | `VIEWER` | Наблюдатель | — (только просмотр) |
 
@@ -243,6 +263,8 @@ Makefile · .env.example · docs/ (ADR и runbooks ERP в docs/runbooks/erp/ —
 Правила: эндпоинты — kebab-case, множественное число; `Idempotency-Key` на всех POST интеграции (ключ хранится 7 дней);
 деньги — строка с двумя знаками + ISO-4217; даты — ISO-8601 с зоной; версия — префикс `v1`, несовместимое изменение — новый префикс.
 Любое изменение здесь начинается с `packages/contracts` и PR с обеих сторон в одной вехе.
+
+**Договор и акт проекта (D2-5, SPEC-v3 §2.4).** Договор подписывают вне платформы (оператор ЭДО или бумага): подписи кликом нет. Переходы договора — одна таблица `TRANSITIONS` в `crm/services/contract_flow.py` (`send_to_client`, `client_agreed`, `reject` с причиной, `revise`, `mark_issued`, `attach_scan` → «Подписан (скан)»); недопустимый переход — `409` с кодом `contract_transition_not_allowed`, а не молчаливый отказ. Акт — `crm/services/act_flow.py` (`attach_act_scan`, `record_act_return`; выпуск и повторный выпуск — `billing.py`). Право проверяется в сервисе (`contract.manage`, `contract.sign`, `fulfillment.act`; `RoleGatedViewMixin` — fail-closed), скан — `core/validators.validate_scan_upload` (PDF, jpg, png, webp по сигнатуре и расширению, до 20 МБ). Каждый переход — в транзакции: блокировка строки, журнал `ActivityLog` с `event_code`, событие шины `contract.status_changed` / `act.accepted` / `act.returned` (схемы и совместимость — `packages/contracts/events/erp`). Проект как чтение — `crm/services/projects.py` (`GET /crm/projects/`): шаг, документы, «действия сейчас» с учётом прав, «Выполнено», когда акт подписан и счета оплачены (одна запись `project.done`). Подпись продавца кликом (`sign-manager/`) закрыта: `409 CONTRACT_SIGN_VIA_SCAN`; согласие клиента в портале (`sign_contract_by_client`) даёт только «Согласован клиентом» (`PENDING_MANAGER`), а не «Подписан» — «Подписан» ставит один путь, скан после «Выставлен у оператора»; `revise` сбрасывает все подписи; `upload-signed/` на «Подписан» и «Отменён» — `409 CONTRACT_SCAN_LOCKED`, тип проверяется как у скана, загрузка пишется в журнал. Запись `project.done` пишет `projects.log_project_done_once` (под блокировкой сделки) из трёх мест: скан акта, приёмка акта заказчиком в портале и оплата счёта. Свои PDF (счёт, акт, договор) никогда не называются «счёт-фактурой».
 
 ## 8. Команды
 

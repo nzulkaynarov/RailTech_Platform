@@ -53,7 +53,7 @@ const ORACLE: Record<string, string> = {
   "eds.inbox": "HFRHHR",
   "eds.drafts": "HFRHHH",
   "eds.projects": "HFRRRF",
-  "eds.payments": "HFRHHF",
+  "eds.payments": "HRRHHF",
   "eds.memo.create": "FFFFFF",
   "eds.memo.approve": "HFHHHH",
   "erp.calc": "HFHFFR",
@@ -169,9 +169,10 @@ describe("rbac.generated: доступ по матрицам ролей", () => 
     expect(menuItemVisible(mixed, "crm", "no-such-item")).toBe(false);
   });
 
-  it("разделы с правами бэкенда: CRM у лидов, ERP у счетов и оплат", () => {
+  it("разделы с правами бэкенда: CRM у лидов и у счетов (зона переписки), ERP у счетов и оплат", () => {
     const mixed: Access = { "crm.leads": "full", "eds.payments": "full" };
-    expect(sectionsWithBackend(mixed, "crm")).toEqual(["crm.leads"]);
+    // B-D18-1: «Счета и оплаты» дают CRM зону переписки `chats:invoiced`.
+    expect(sectionsWithBackend(mixed, "crm")).toEqual(["crm.leads", "eds.payments"]);
     expect(sectionsWithBackend(mixed, "erp")).toEqual(["eds.payments"]);
     expect(sectionsWithBackend({ "dashboard.queue": "full" }, "erp")).toEqual([]);
   });

@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 
 import type { Sources } from "../api/generated/model";
 import { WarningIcon } from "./icons";
+import { bannerKind } from "./bannerKind";
 import "./ui.css";
 
 export interface SourceBannerProps {
@@ -21,17 +22,6 @@ export interface SourceBannerProps {
  * Плашка частичных данных (docs/architecture/platform-frontend.md §5, контракт BFF «Частичные данные»): «ERP не отвечает, данные неполные».
  * `role="status"` — вежливое объявление, не прерывающее чтение; если все источники в порядке, плашки нет.
  */
-/** Какой текст плашки: один источник — его ключ, CRM и ERP — `both`, всё остальное (с EDS) — `multi`. */
-export function bannerKind(
-  crm: boolean,
-  erp: boolean,
-  eds: boolean,
-): "crm" | "erp" | "eds" | "both" | "multi" {
-  const down = [crm, erp, eds].filter(Boolean).length;
-  if (down > 1) return crm && erp && !eds ? "both" : "multi";
-  return crm ? "crm" : erp ? "erp" : "eds";
-}
-
 export function SourceBanner({ sources, onRetry, messages }: SourceBannerProps) {
   const { t } = useTranslation("ui");
   if (!sources) return null;

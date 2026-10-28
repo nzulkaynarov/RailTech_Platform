@@ -94,7 +94,7 @@ export const RESOURCES = {
   "eds.payments": {
     module: "eds",
     levels: ["read", "full"],
-    backends: ["erp"],
+    backends: ["crm", "erp"],
     label: {
       ru: "Документы · Счета и оплаты · подтвердить оплату, запросить платёжку",
       uz: "Hujjatlar · Hisoblar va to‘lovlar · to‘lovni tasdiqlash, to‘lov topshiriqnomasini so‘rash",
@@ -186,9 +186,9 @@ export const RESOURCES = {
     levels: ["read", "full"],
     backends: ["crm", "erp"],
     label: {
-      ru: "Настройки · Роли и права, Сотрудники, Подключения, Telegram-бот, Журнал, Обращения сотрудников",
-      uz: "Sozlamalar · Rollar va huquqlar, xodimlar, ulanishlar, Telegram-bot, jurnal, xodimlar murojaatlari",
-      en: "Settings · Roles & permissions, employees, connections, Telegram bot, log, staff requests",
+      ru: "Настройки · Роли и права, Сотрудники, Подключения, Telegram-бот, Журнал, Обращения сотрудников, Статьи компании",
+      uz: "Sozlamalar · Rollar va huquqlar, xodimlar, ulanishlar, Telegram-bot, jurnal, xodimlar murojaatlari, kompaniya maqolalari",
+      en: "Settings · Roles & permissions, employees, connections, Telegram bot, log, staff requests, company articles",
     },
   },
   "company.settings": {
@@ -255,6 +255,7 @@ export const MENU = {
     org: ["admin"],
     integrations: ["admin"],
     tickets: ["admin"],
+    articles: ["admin"],
     company: ["company.settings"],
     bot: ["admin"],
     audit: ["admin"],
@@ -401,7 +402,7 @@ export const SYSTEM_ROLES = {
       "eds.inbox": "full",
       "eds.drafts": "full",
       "eds.projects": "full",
-      "eds.payments": "full",
+      "eds.payments": "read",
       "eds.memo.create": "full",
       "eds.memo.approve": "full",
       "erp.calc": "full",

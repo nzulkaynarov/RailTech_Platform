@@ -392,7 +392,9 @@
       "units": "Units",
       "delivery-basis": "Delivery bases"
     },
-    "noApi": "Exchange rates, customs (HS) codes and manufacturers are still kept in the ERP panel: they have no API for the Platform yet.",
+    "moved": "Exchange rates, customs (HS) codes and manufacturers are kept in “Costing · Items & suppliers” → “Reference lists”.",
+    "movedLink": "Open the reference lists",
+    "movedNoAccess": "Exchange rates, customs (HS) codes and manufacturers are kept in “Costing · Items & suppliers”; it is open to supply and management roles.",
     "code": "Code",
     "name": "Name",
     "alpha2": "ISO alpha-2",

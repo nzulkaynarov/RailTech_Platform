@@ -1,0 +1,539 @@
+{
+  "subtitle": "Pozitsiyalar, yetkazib beruvchilar va narx muddatlari, brigadalar, ma'lumotnomalar va yangi kategoriyalar so'rovlari.",
+  "cancel": "Bekor qilish",
+  "save": "Saqlash",
+  "actions": "Amallar",
+  "tabs": {
+    "label": "Nomenklatura bo'limlari",
+    "items": "Pozitsiyalar",
+    "suppliers": "Yetkazib beruvchilar",
+    "brigades": "Brigadalar",
+    "refs": "Ma'lumotnomalar",
+    "requests": "Kategoriya so'rovlari",
+    "requestsCount": "Kategoriya so'rovlari ({{count}})"
+  },
+  "kinds": {
+    "stock": "Ombordagi tovar",
+    "on_order": "Buyurtma bo'yicha tovar",
+    "service_fixed": "Xizmat: qat'iy narx",
+    "service_milestones": "Xizmat: bosqichlar bo'yicha",
+    "service_time": "Xizmat: vaqt bo'yicha"
+  },
+  "itemStatus": {
+    "DRAFT": "Qoralama",
+    "PUBLISHED": "E'lon qilingan"
+  },
+  "docKinds": {
+    "tz": "Texnik topshiriq",
+    "drawing": "Chizma",
+    "certificate": "Sertifikat",
+    "pnr": "Ishga tushirish reglamenti",
+    "other": "Boshqa"
+  },
+  "brigadeKinds": {
+    "brigade": "Brigada",
+    "person": "Ijrochi",
+    "subcontractor": "Pudratchi"
+  },
+  "rateUnits": {
+    "day": "kuniga",
+    "hour": "soatiga"
+  },
+  "validity": {
+    "ok": "Narx amalda",
+    "expiring": "Tez orada tugaydi",
+    "expired": "Narx muddati tugagan"
+  },
+  "state": {
+    "retry": "Qayta urinish",
+    "loadError": {
+      "title": "Yuklab bo'lmadi",
+      "text": "Ulanishni tekshirib, qayta urinib ko'ring. Ma'lumotlar yo'qolmagan."
+    },
+    "unavailable": {
+      "title": "ERP hozir mavjud emas",
+      "text": "Bo'lim ERP ma'lumotlarini ko'rsatadi. Bir daqiqadan so'ng qayta urinib ko'ring."
+    },
+    "forbidden": {
+      "title": "Bu bo'lim rolingiz uchun emas",
+      "text": "Ish uchun kerak bo'lsa, administratorga yozing."
+    }
+  },
+  "errors": {
+    "DEFAULT": "Amalni bajarib bo'lmadi. Qayta urinib ko'ring.",
+    "FORBIDDEN": "Bu amal rolingizga ruxsat etilmagan.",
+    "ERP_FORBIDDEN": "ERP ruxsat bermadi: katalogni yoki yetkazib beruvchilarni yuritish huquqi kerak.",
+    "SUPPLIER_PRICES_REQUIRED": "Yetkazib beruvchi narxlarini faqat ularni ko'ra oladiganlar (ta'minot, direktor) o'zgartiradi.",
+    "CREW_RATES_REQUIRED": "Brigada stavkalarini bosh muhandis, ta'minot yoki direktor o'zgartiradi.",
+    "VALIDATION_FAILED": "Maydonlarni tekshiring.",
+    "CONFLICT": "Bunday yozuv allaqachon bor. Ro'yxatni yangilang.",
+    "NOT_FOUND": "Yozuv endi yo'q. Ro'yxatni yangilang.",
+    "BACKEND_UNAVAILABLE": "ERP javob bermadi. Bir daqiqadan so'ng qayta urinib ko'ring.",
+    "reason": {
+      "item_name_required": "Pozitsiya nomini kiriting.",
+      "item_kind_invalid": "Pozitsiya turini tanlang.",
+      "vat_rate_invalid": "QQS — 0 dan 100 gacha son yoki bo'sh.",
+      "unit_not_found": "Bunday o'lchov birligi yo'q.",
+      "category_not_found": "Bunday kategoriya yo'q.",
+      "offer_price_invalid": "Narx — noldan kam bo'lmagan son, o'nlik kasrdan keyin ikki belgigacha.",
+      "offer_currency_invalid": "Bunday valyuta yo'q.",
+      "offer_validity_range_invalid": "«Amal qilish tugashi» «Amal qilish boshlanishi»dan oldin bo'lmasligi kerak.",
+      "stock_status_not_found": "Bunday mavjudlik holati yo'q.",
+      "brigade_name_required": "Brigada yoki ijrochi nomini kiriting.",
+      "brigade_kind_invalid": "Turini tanlang.",
+      "brigade_headcount_invalid": "Tarkib — 1 dan 500 gacha son.",
+      "rate_unit_invalid": "Kuniga yoki soatiga ni tanlang.",
+      "crew_rate_invalid": "Stavka — noldan kam bo'lmagan son.",
+      "crew_currency_invalid": "Bunday valyuta yo'q.",
+      "hs_code_invalid": "TIF TN kodi 2, 4, 6, 8 yoki 10 raqamdan iborat.",
+      "hs_name_required": "Nomini kiriting.",
+      "hs_validity_range_invalid": "«Amal qilish tugashi» «amal qilish boshlanishi»dan oldin bo'lmasligi kerak.",
+      "hs_code_exists": "Bunday TIF TN kodi ma'lumotnomada allaqachon bor.",
+      "manufacturer_exists": "Bunday ishlab chiqaruvchi ma'lumotnomada allaqachon bor.",
+      "already_pending": "Bunday kategoriya so'rovi allaqachon ko'rib chiqilmoqda.",
+      "category_request_name_required": "Kategoriya nomini kiriting.",
+      "file_too_large": "Fayl 20 MB dan katta.",
+      "file_type_not_allowed": "PDF, PNG, JPEG, Word va Excel fayllari qabul qilinadi.",
+      "file_content_mismatch": "Fayl mazmuni uning kengaytmasiga mos kelmaydi.",
+      "no_file_provided": "Faylni tanlang.",
+      "tech_doc_link_required": "Faylni pozitsiyaga yoki arizaga bog'lang.",
+      "tech_doc_kind_invalid": "Hujjat turini tanlang.",
+      "product_not_found": "Bunday pozitsiya yo'q.",
+      "deal_not_found": "Bunday ariza yo'q.",
+      "multipart_required": "Faylni forma orqali yuboring.",
+      "name_required": "Nomini kiriting.",
+      "already_reviewed": "So'rov allaqachon hal qilingan. Ro'yxatni yangilang.",
+      "category_required": "Yaratilgan kategoriyani tanlang.",
+      "reason_required": "Rad etish sababini kiriting."
+    }
+  },
+  "items": {
+    "search": "Nomi, artikuli va chizmasi bo'yicha qidiruv",
+    "filterKind": "Turi",
+    "anyKind": "Istalgan tur",
+    "filterCategory": "Kategoriya",
+    "anyCategory": "Istalgan kategoriya",
+    "add": "Pozitsiya qo'shish",
+    "table": "Nomenklatura pozitsiyalari",
+    "open": "{{name}} pozitsiyasini ochish",
+    "card": "Pozitsiya",
+    "edit": "Pozitsiyani o'zgartirish",
+    "columns": {
+      "name": "Pozitsiya",
+      "kind": "Turi",
+      "unit": "Birlik",
+      "vat": "QQS",
+      "category": "Kategoriya",
+      "offers": "Takliflar",
+      "docs": "Fayllar"
+    },
+    "vatDefault": "(odatdagi)",
+    "vatCompany": "{{rate}} % — kompaniyaning odatdagi stavkasi",
+    "vatNone": "Belgilanmagan",
+    "noOffers": "Takliflar yo'q",
+    "offersCount": "Takliflar: {{count}}",
+    "priceUntil": "narx {{date}} gacha",
+    "docsLink": "{{name}} pozitsiyasi fayllari: {{count}}",
+    "empty": {
+      "title": "Pozitsiyalar yo'q",
+      "text": "Pozitsiyalar nomenklaturaga qo'shilgach paydo bo'ladi. Birinchisini qo'shing.",
+      "filtered": "Bu shartlar bo'yicha hech narsa topilmadi. Qidiruv yoki filtrni o'zgartiring."
+    },
+    "fields": {
+      "sku": "Artikul",
+      "kind": "Turi",
+      "unit": "Birlik",
+      "vat": "QQS",
+      "category": "Kategoriya",
+      "status": "Karta holati",
+      "brand": "Ishlab chiqaruvchi",
+      "gost": "GOST / chizma",
+      "hs": "TIF TN kodi"
+    },
+    "offers": "Yetkazib beruvchilar takliflari",
+    "offersTable": "Pozitsiya bo'yicha yetkazib beruvchilar takliflari",
+    "techDocs": "Texnik hujjatlar",
+    "noDocs": "Fayllar yo'q. Ularni «Texnik hujjatlar» bo'limida yuklang.",
+    "form": {
+      "addTitle": "Pozitsiya qo'shish",
+      "editTitle": "Pozitsiyani o'zgartirish",
+      "add": "Qo'shish",
+      "name": "Nomi",
+      "kind": "Pozitsiya turi",
+      "kindHint": "«Ombordan» yoki «buyurtma bo'yicha»ni ERP yetkazib beruvchilar takliflaridan aniqlaydi.",
+      "unit": "O'lchov birligi",
+      "vat": "QQS, %",
+      "vatHint": "Bo'sh — kompaniyaning odatdagi stavkasi.",
+      "category": "Kategoriya",
+      "description": "Tavsif",
+      "addSteps": [
+        "Pozitsiya nomenklaturada qoralama sifatida paydo bo'ladi.",
+        "Uni hisob-kitobda tanlash va fayllarni bog'lash mumkin.",
+        "Yetkazib beruvchi narxlarini ta'minotchi qo'shadi."
+      ],
+      "editSteps": [
+        "O'zgarishlar pozitsiya kartasida saqlanadi.",
+        "Yangi hisob-kitoblar yangilangan birlik va QQS dan foydalanadi.",
+        "Yuborilgan TT lar o'zgarmaydi."
+      ]
+    }
+  },
+  "offers": {
+    "supplier": "Yetkazib beruvchi",
+    "product": "Pozitsiya",
+    "price": "Xarid narxi",
+    "quota": "Kvota",
+    "lead": "Yetkazib berish muddati",
+    "validUntil": "Narx amal qiladi",
+    "noLimit": "muddatsiz",
+    "inactive": "Amalda emas",
+    "priceHidden": "yashirin",
+    "pricesNote": "Yetkazib beruvchi narxlari sizga ko'rsatilmaydi: ularni ta'minotchi va direktor ko'radi.",
+    "quotaValue": "{{qty}} dona, {{min}} dan",
+    "leadValue": "ombordan {{stock}} kun, buyurtma bo'yicha {{order}} kun",
+    "openSupplier": "{{name}} yetkazib beruvchisini ochish",
+    "openProduct": "{{name}} pozitsiyasini ochish",
+    "edit": "O'zgartirish",
+    "editNamed": "{{name}} pozitsiyasi bo'yicha taklifni o'zgartirish",
+    "form": {
+      "title": "Taklif: {{name}}",
+      "price": "Xarid narxi, {{currency}}",
+      "noPrice": "Yetkazib beruvchi narxini ko'rmaysiz va o'zgartirmaysiz: u ta'minotchi va direktorga ochiq.",
+      "quota": "Kvota, dona",
+      "quotaHint": "Yetkazib beruvchi shu narxda qancha birlik jo'natishga tayyor.",
+      "min": "Minimal buyurtma, dona",
+      "stockLead": "Ombordan muddat, kun",
+      "orderLead": "Buyurtma bo'yicha muddat, kun",
+      "validFrom": "Narx amal qiladi (dan)",
+      "validUntil": "Narx amal qiladi (gacha)",
+      "active": "Taklif amalda",
+      "steps": [
+        "Taklif shartlari yetkazib beruvchida va pozitsiyada saqlanadi.",
+        "Yangi hisob-kitoblar yangilangan muddat va kvotadan foydalanadi.",
+        "Mijoz narxi qayta hisoblanmaydi."
+      ]
+    }
+  },
+  "suppliers": {
+    "search": "Nomi va STIR bo'yicha qidiruv",
+    "table": "Yetkazib beruvchilar",
+    "open": "{{name}} yetkazib beruvchisini ochish",
+    "card": "Yetkazib beruvchi",
+    "tin": "STIR {{tin}}",
+    "columns": {
+      "name": "Yetkazib beruvchi",
+      "offers": "Takliflar",
+      "terms": "Narx muddatlari"
+    },
+    "expired": "Tugagan: {{count}}",
+    "expiring": "Tez orada tugaydi: {{count}}",
+    "allValid": "Barcha narxlar amalda",
+    "nearest": "eng yaqin muddat {{date}}",
+    "empty": {
+      "title": "Yetkazib beruvchilar yo'q",
+      "text": "Yetkazib beruvchilar pozitsiyalar bo'yicha takliflari bilan birga paydo bo'ladi.",
+      "filtered": "Bu so'rov bo'yicha yetkazib beruvchilar yo'q."
+    },
+    "fields": {
+      "tin": "STIR",
+      "country": "Mamlakat",
+      "contact": "Aloqa",
+      "phone": "Telefon",
+      "email": "Pochta",
+      "website": "Sayt",
+      "address": "Manzil"
+    },
+    "offers": "Pozitsiyalar bo'yicha takliflar",
+    "offersTable": "Yetkazib beruvchi takliflari",
+    "noOffers": "Takliflar yo'q."
+  },
+  "brigades": {
+    "search": "Nomi va ixtisosligi bo'yicha qidiruv",
+    "showInactive": "Ishlamayotganlarni ko'rsatish",
+    "add": "Brigada qo'shish",
+    "table": "Brigadalar va xizmat ijrochilari",
+    "editNamed": "O'zgartirish: {{name}}",
+    "inactive": "Ishlamaydi",
+    "rateHidden": "yashirin",
+    "ratesNote": "Brigada stavkalari sizga ko'rsatilmaydi: ularni bosh muhandis, ta'minotchi va direktor ko'radi.",
+    "columns": {
+      "name": "Nomi",
+      "kind": "Turi",
+      "headcount": "Tarkib, kishi",
+      "specialization": "Ixtisoslik",
+      "rate": "Stavka"
+    },
+    "empty": {
+      "title": "Brigadalar yo'q",
+      "text": "Brigadalar va ijrochilar xizmat xaridini hisoblash uchun kerak: stavka va kunlar. Birinchisini qo'shing.",
+      "filtered": "Bu so'rov bo'yicha hech kim yo'q."
+    },
+    "form": {
+      "addTitle": "Brigada qo'shish",
+      "editTitle": "Brigada yoki ijrochini o'zgartirish",
+      "add": "Qo'shish",
+      "name": "Nomi",
+      "kind": "Turi",
+      "headcount": "Tarkibdagi kishilar",
+      "specialization": "Ixtisoslik",
+      "rate": "Stavka, {{currency}}",
+      "rateHint": "Bo'sh — stavka belgilanmagan.",
+      "unit": "Stavka",
+      "noRate": "Brigada stavkasini ko'rmaysiz va o'zgartirmaysiz: u bosh muhandis, ta'minotchi va direktorga ochiq.",
+      "note": "Izoh",
+      "active": "Ishlaydi",
+      "addSteps": [
+        "Brigada ma'lumotnomada paydo bo'ladi.",
+        "Bosh muhandis uni xizmat hisob-kitobida tanlaydi.",
+        "Mijoz stavkani ko'rmaydi."
+      ],
+      "editSteps": [
+        "O'zgarishlar ma'lumotnomada saqlanadi.",
+        "Hisoblangan xizmatlar o'zgarmaydi.",
+        "Mijoz stavkani ko'rmaydi."
+      ]
+    }
+  },
+  "requests": {
+    "hint": "Kerakli kategoriya yo'qmi? So'rang: so'rov hech narsa yaratmaydi, kategoriyani direktor yoki administrator yaratadi.",
+    "hintDecide": "Ma'qullash so'rovga yaratilgan kategoriyani bog'laydi; rad etish sabab talab qiladi. Yangi kategoriyalar «Sozlamalar · Kompaniya»da yaratiladi.",
+    "add": "Kategoriya so'rash",
+    "table": "Yangi kategoriyalar so'rovlari",
+    "under": "«{{name}}» ichida",
+    "approve": "Ma'qullash",
+    "reject": "Rad etish",
+    "approveNamed": "«{{name}}» so'rovini ma'qullash",
+    "rejectNamed": "«{{name}}» so'rovini rad etish",
+    "columns": {
+      "name": "Kategoriya",
+      "why": "Nima uchun",
+      "author": "Muallif",
+      "created": "Berilgan",
+      "status": "Holati"
+    },
+    "status": {
+      "pending": "Ko'rib chiqilmoqda",
+      "approved": "Ma'qullangan",
+      "rejected": "Rad etilgan"
+    },
+    "empty": {
+      "title": "So'rovlar yo'q",
+      "text": "Mos kategoriya bo'lmaganda katalogni yurituvchi yangi kategoriya so'rovini beradi."
+    },
+    "form": {
+      "title": "Yangi kategoriya so'rash",
+      "ok": "So'rovni yuborish",
+      "name": "Kategoriya nomi",
+      "parent": "Yuqori kategoriya",
+      "parentHint": "Ixtiyoriy: uni qayerga joylash.",
+      "why": "Nima uchun kerak",
+      "whyHint": "Qisqacha: unga qaysi pozitsiyalar tushadi.",
+      "steps": [
+        "So'rov direktorga «Kategoriya so'rovlari»ga boradi.",
+        "Direktor kategoriyani yaratib bog'laydi yoki sabab bilan rad etadi.",
+        "Qaror haqida xabarnoma olasiz."
+      ]
+    }
+  },
+  "refs": {
+    "parts": "Ma'lumotnoma",
+    "rates": {
+      "title": "Valyuta kurslari",
+      "hint": "So'mga kurslar: Markaziy bankdan avtomatik yoki sanaga qo'lda. TT uchun kompaniya sozlamalarida belgilangan muddatdan eski bo'lmagan oxirgi kurs olinadi.",
+      "filter": "Valyuta",
+      "any": "Barcha valyutalar",
+      "enter": "USD kursini kiritish",
+      "table": "So'mga valyuta kurslari",
+      "columns": {
+        "currency": "Valyuta",
+        "rate": "Kurs, so'm",
+        "date": "Sana",
+        "source": "Manba"
+      },
+      "source": {
+        "CBU": "Markaziy bank",
+        "MANUAL": "Qo'lda"
+      },
+      "empty": {
+        "title": "Kurslar yo'q",
+        "text": "Kurslar Markaziy bankdan avtomatik keladi. Yuklash ishlamasa, direktor kursni qo'lda kiritadi."
+      },
+      "form": {
+        "title": "Sanaga USD kursini kiritish",
+        "ok": "Kursni saqlash",
+        "date": "Kurs sanasi",
+        "rate": "Kurs, 1 USD uchun so'm",
+        "rateHint": "0 dan katta, verguldan keyin oltitagacha belgi.",
+        "steps": [
+          "Sanadagi kurs Markaziy bank yoki avvalgi qo'lda kiritilgan kursni almashtiradi.",
+          "Avvalgi qiymat jurnalda qoladi.",
+          "Markaziy bank avtoyuklashi qo'lda kiritilgan kursni bosmaydi."
+        ]
+      }
+    },
+    "hs": {
+      "title": "TIF TN kodlari",
+      "hint": "Tovarlar klassifikatori. Muomaladan chiqarilgan kod o'chirilmaydi, «amal qilish tugashi» sanasi bilan yopiladi.",
+      "search": "Kod va nomi bo'yicha qidiruv",
+      "level": "Daraja",
+      "anyLevel": "Istalgan",
+      "digits": "{{count}} belgi",
+      "onlyActive": "Faqat amaldagilar",
+      "add": "Kod qo'shish",
+      "table": "TIF TN kodlari",
+      "editNamed": "{{code}} kodini o'zgartirish",
+      "active": "Amalda",
+      "closed": "Yopilgan",
+      "until": "{{date}} gacha",
+      "columns": {
+        "code": "Kod",
+        "name": "Nomi",
+        "unit": "Birliklar",
+        "level": "Belgilar",
+        "state": "Holati"
+      },
+      "empty": {
+        "title": "Kodlar yo'q",
+        "text": "TIF TN kodlari pozitsiya kartalari va TT larda ko'rsatish uchun kerak."
+      },
+      "form": {
+        "addTitle": "TIF TN kodini qo'shish",
+        "editTitle": "Kod {{code}}",
+        "add": "Qo'shish",
+        "code": "Kod",
+        "codeHint": "2, 4, 6, 8 yoki 10 raqam. Qo'shilgach kodni o'zgartirib bo'lmaydi.",
+        "name": "Nomi",
+        "unit": "Hisob birligi",
+        "extraUnit": "Qo'shimcha birlik",
+        "until": "Amal qiladi (gacha)",
+        "untilHint": "Bo'sh — muddatsiz. O'tgan sana kodni yopadi.",
+        "addSteps": [
+          "Kod ma'lumotnomada paydo bo'ladi.",
+          "Uni pozitsiya kartalarida ko'rsatish mumkin.",
+          "Yuqori pozitsiya kod boshi bo'yicha topiladi."
+        ],
+        "editSteps": [
+          "O'zgarishlar ma'lumotnomada saqlanadi.",
+          "Bu kodli pozitsiyalar o'zgarmaydi.",
+          "Yopilgan kod eski hujjatlarda qoladi."
+        ]
+      }
+    },
+    "brands": {
+      "title": "Ishlab chiqaruvchilar",
+      "hint": "Pozitsiya kartasida tanlanadigan brendlar. Ishlab chiqaruvchi o'chirilmaydi — tanlovdan olib tashlanadi.",
+      "search": "Nomi bo'yicha qidiruv",
+      "showInactive": "Tanlovdan olinganlarni ko'rsatish",
+      "add": "Ishlab chiqaruvchi qo'shish",
+      "table": "Ishlab chiqaruvchilar",
+      "editNamed": "O'zgartirish: {{name}}",
+      "active": "Tanlovda",
+      "inactive": "Tanlovdan olingan",
+      "columns": {
+        "name": "Nomi",
+        "country": "Mamlakat",
+        "website": "Sayt",
+        "state": "Holati"
+      },
+      "empty": {
+        "title": "Ishlab chiqaruvchilar yo'q",
+        "text": "Ishlab chiqaruvchi pozitsiya kartasida tanlanadi. Birinchisini qo'shing."
+      },
+      "form": {
+        "addTitle": "Ishlab chiqaruvchi qo'shish",
+        "editTitle": "Ishlab chiqaruvchini o'zgartirish",
+        "add": "Qo'shish",
+        "name": "Nomi",
+        "country": "Mamlakat",
+        "website": "Sayt",
+        "active": "Tanlovda ko'rsatish",
+        "addSteps": [
+          "Ishlab chiqaruvchi ma'lumotnomada paydo bo'ladi.",
+          "Uni pozitsiya kartasida tanlash mumkin.",
+          "Nom takrorlanmasligi kerak."
+        ],
+        "editSteps": [
+          "O'zgarishlar ma'lumotnomada saqlanadi.",
+          "Bu ishlab chiqaruvchili pozitsiyalar o'zgarmaydi.",
+          "Tanlovdan olingani eski kartalarda qoladi."
+        ]
+      }
+    }
+  },
+  "docs": {
+    "subtitle": "TT, chizmalar, sertifikatlar va ishga tushirish reglamentlari — pozitsiya va arizaga bog'langan holda.",
+    "size": {
+      "kb": "{{value}} KB",
+      "mb": "{{value}} MB"
+    },
+    "search": "Nomi, fayl va pozitsiya bo'yicha qidiruv",
+    "filterKind": "Turi",
+    "anyKind": "Istalgan tur",
+    "clearLinks": "Barcha fayllarni ko'rsatish",
+    "upload": "Fayl yuklash",
+    "table": "Texnik hujjatlar",
+    "open": "«{{title}}» faylini ochish",
+    "card": "Fayl",
+    "columns": {
+      "title": "Nomi",
+      "kind": "Turi",
+      "link": "Bog'langan",
+      "size": "Hajmi",
+      "uploaded": "Yuklagan"
+    },
+    "empty": {
+      "title": "Fayllar yo'q",
+      "text": "TT, chizma, sertifikat yoki reglamentni yuklab, pozitsiya yoki arizaga bog'lang.",
+      "filtered": "Bu shartlar bo'yicha fayllar yo'q. Qidiruv yoki filtrni o'zgartiring."
+    },
+    "fields": {
+      "kind": "Turi",
+      "file": "Fayl",
+      "product": "Pozitsiya",
+      "deal": "Ariza yoki loyiha",
+      "uploaded": "Yuklangan"
+    },
+    "download": "Yuklab olish",
+    "downloadError": "Faylni yuklab bo'lmadi.",
+    "delete": "Faylni o'chirish",
+    "deleted": "Fayl o'chirildi.",
+    "chatLater": "Mijozga chatda yuborish: «Chatlar» bo'limi bilan birga paydo bo'ladi. Hozircha faylni yuklab olib, qo'lda yuboring.",
+    "preview": "Ko'rish",
+    "noPreview": "Bu format ko'rish uchun ochilmaydi — faylni yuklab oling.",
+    "gone": {
+      "title": "Fayl ro'yxatda yo'q",
+      "text": "U o'chirilgan yoki filtrga mos kelmaydi."
+    },
+    "deleteTitle": "«{{title}}» faylini o'chirasizmi?",
+    "deleteText": "Fayl texnik hujjatlardan yo'qoladi; uni faqat qayta yuklash bilan qaytarish mumkin.",
+    "deleteSteps": [
+      "Fayl omborxonadan o'chiriladi.",
+      "Pozitsiya va arizaga bog'lanish olib tashlanadi.",
+      "Yuklab olingan nusxalar yuklab olganlarda qoladi."
+    ],
+    "viewer": {
+      "region": "«{{name}}» fayli sahifalari",
+      "page": "«{{name}}», {{page}}-sahifa, jami {{total}}",
+      "error": "Faylni ko'rish uchun ochib bo'lmadi. Uni yuklab oling.",
+      "truncated": "{{total}} sahifadan {{shown}} tasi ko'rsatilgan. Qolgani yuklab olingan faylda."
+    },
+    "form": {
+      "title": "Fayl yuklash",
+      "ok": "Yuklash",
+      "file": "Fayl",
+      "fileHint": "PDF, PNG, JPEG, Word yoki Excel, 20 MB gacha.",
+      "kind": "Turi",
+      "name": "Nomi",
+      "product": "Nomenklatura pozitsiyasi",
+      "productPlaceholder": "Pozitsiyani topish",
+      "deal": "Ariza yoki loyiha",
+      "dealPlaceholder": "Raqam yoki nomi bo'yicha topish",
+      "linkHint": "Kamida bitta bog'lanish kerak: pozitsiya yoki ariza.",
+      "steps": [
+        "Fayl ERP ning himoyalangan omborxonasida saqlanadi.",
+        "U bog'langan pozitsiya va arizada paydo bo'ladi.",
+        "Fayl mijozga yuborilmaydi."
+      ]
+    }
+  }
+}

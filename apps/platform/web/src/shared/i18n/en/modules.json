@@ -168,6 +168,7 @@
       "integrations": "Connections",
       "bus": "System exchange",
       "tickets": "Staff requests",
+      "articles": "Company articles",
       "company": "Company & letterhead",
       "setup": "First-time setup",
       "bot": "Telegram bot",
@@ -584,7 +585,9 @@
     "role": "Role",
     "employees": "Employees",
     "journal": "Journal",
-    "step": "Step"
+    "step": "Step",
+    "contract": "Contract",
+    "act": "Act"
   },
   "panel": {
     "today": {
@@ -650,6 +653,14 @@
     "step": {
       "title": "No step selected",
       "text": "Press the button next to a step — its form opens here without leaving the wizard."
+    },
+    "contract": {
+      "title": "No contract selected",
+      "text": "Open a project to see the contract status and actions here: send to client, issued at operator, signed scan."
+    },
+    "act": {
+      "title": "No act selected",
+      "text": "Open a project to see the act, its scan and a return by the customer here."
     }
   }
 }

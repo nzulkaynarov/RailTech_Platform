@@ -20,6 +20,8 @@ from app.api import (
     admin_users,
     auth,
     bridge,
+    chats,
+    company_articles,
     crm_clients,
     crm_kb,
     crm_leads,
@@ -29,7 +31,11 @@ from app.api import (
     eds_approvals,
     eds_documents,
     eds_letters,
+    eds_payments,
+    eds_projects,
     erp_calc,
+    erp_catalog,
+    erp_docs,
     erp_stock,
     events,
     health,
@@ -103,6 +109,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(bridge.router, prefix=API_PREFIX)
     app.include_router(me_notifications.router, prefix=API_PREFIX)
     app.include_router(tickets.router, prefix=API_PREFIX)
+    app.include_router(company_articles.router, prefix=API_PREFIX)
     app.include_router(me_profile.router, prefix=API_PREFIX)
     app.include_router(admin_users.router, prefix=API_PREFIX)
     app.include_router(admin_passwords.router, prefix=API_PREFIX)
@@ -115,12 +122,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(admin_bot.router, prefix=API_PREFIX)
     app.include_router(crm_kb.router, prefix=API_PREFIX)
     app.include_router(crm_messages.router, prefix=API_PREFIX)
+    app.include_router(chats.router, prefix=API_PREFIX)
     app.include_router(crm_leads.router, prefix=API_PREFIX)
     app.include_router(crm_clients.router, prefix=API_PREFIX)
     app.include_router(crm_requests.router, prefix=API_PREFIX)
     app.include_router(eds_documents.router, prefix=API_PREFIX)
     app.include_router(eds_letters.router, prefix=API_PREFIX)
     app.include_router(eds_approvals.router, prefix=API_PREFIX)
+    app.include_router(eds_projects.router, prefix=API_PREFIX)
+    app.include_router(erp_catalog.router, prefix=API_PREFIX)
+    app.include_router(erp_docs.router, prefix=API_PREFIX)
+    app.include_router(eds_payments.router, prefix=API_PREFIX)
     app.include_router(erp_calc.router, prefix=API_PREFIX)
     app.include_router(erp_stock.router, prefix=API_PREFIX)
     app.include_router(dashboard.router, prefix=API_PREFIX)

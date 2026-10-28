@@ -19,6 +19,17 @@ export function filenameFrom(disposition: string | null, fallback: string): stri
   return match?.[1] ?? fallback;
 }
 
+/** Файл ещё готовится (BFF ответил 202 с `Retry-After`): повторить позже; сам ответ файлом не является. */
+export class FileNotReadyError extends Error {
+  readonly retryAfter: number;
+
+  constructor(retryAfter: number) {
+    super("file is not ready");
+    this.name = "FileNotReadyError";
+    this.retryAfter = retryAfter;
+  }
+}
+
 /**
  * Скачивание файла из BFF (выгрузка CSV): запрос с cookie сессии, ошибка BFF — `ApiError` (как у остальных вызовов),
  * успех — файл сохраняется браузером под именем из `Content-Disposition` (имя содержит дату). BFF отдаёт файл потоком;
@@ -34,6 +45,10 @@ export async function downloadFile(url: string, fallbackName: string): Promise<s
       body = undefined;
     }
     throw toApiError(response.status, body);
+  }
+  if (response.status === 202) {
+    const wait = Number(response.headers.get("retry-after"));
+    throw new FileNotReadyError(Number.isFinite(wait) && wait > 0 ? wait : 2);
   }
   const name = filenameFrom(response.headers.get("content-disposition"), fallbackName);
   const blob = await response.blob();

@@ -163,6 +163,24 @@ def validate_avatar_upload(file):
     )
 
 
+#: Скан подписанного документа (D2-5): PDF или изображение — сигнатура байтов обязательна для каждого формата.
+ALLOWED_SCAN_EXTENSIONS = {".pdf", ".jpg", ".jpeg", ".png", ".webp"}
+ALLOWED_SCAN_CONTENT_TYPES = {"application/pdf", "image/jpeg", "image/png", "image/webp"}
+
+
+def validate_scan_upload(file):
+    """Скан подписанного договора или акта: PDF / jpg / png / webp, сигнатура совпадает с расширением, до 20 МБ, не пустой."""
+    if not getattr(file, "size", 0):
+        raise ValidationError("Scan: the file is empty.")
+    _validate_file(
+        file,
+        allowed_extensions=ALLOWED_SCAN_EXTENSIONS,
+        allowed_content_types=ALLOWED_SCAN_CONTENT_TYPES,
+        max_size=DOCUMENT_MAX_SIZE,
+        label="Scan",
+    )
+
+
 def validate_document_upload(file):
     """Validate a document upload: images + pdf,doc,docx,xls,xlsx,csv,txt, 20MB limit."""
     _validate_file(

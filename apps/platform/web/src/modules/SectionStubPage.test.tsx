@@ -56,6 +56,29 @@ describe("SectionStubPage · раздел с мостом", () => {
     expect(within(page).getByText("Когда появится: к пилоту.")).toBeVisible();
   });
 
+  it("«Чаты · С клиентами» (B-D18-1): с разделом лидов — «Входящие» старой CRM, без него — кто делает, без кнопки", async () => {
+    signInAs("manager@demo.example");
+    renderApp("/chats?scope=external");
+    let page = await main();
+    expect(await within(page).findByRole("link", { name: /Открыть в старой CRM/ })).toHaveAttribute(
+      "href",
+      "http://crm.localhost:8088/inbox",
+    );
+    cleanup();
+    endSession();
+
+    signInAs("accountant@demo.example");
+    renderApp("/chats?scope=external");
+    page = await main();
+    expect(
+      within(page).getByText(
+        "Сейчас этой работы в интерфейсе нет; её делает менеджер клиента: попросите его переслать нужное сообщение или файл.",
+      ),
+    ).toBeVisible();
+    expect(within(page).queryByRole("link", { name: /Открыть в/ })).toBeNull();
+    expect(page).not.toHaveTextContent("старой CRM");
+  });
+
   it("«Каналы связи» отсылают в «Настройки · Telegram-бот», а не в «Подключения» (W15-G-8)", async () => {
     signInAs("all@demo.example");
     renderApp("/crm/channels");
@@ -67,7 +90,7 @@ describe("SectionStubPage · раздел с мостом", () => {
 
   it("ни «пока нет», ни «фаза Pn» нет ни на одной заглушке", async () => {
     signInAs("all@demo.example");
-    for (const path of ["/crm/requests", "/eds/payments", "/erp/catalog", "/chats"]) {
+    for (const path of ["/crm/requests", "/chats"]) {
       renderApp(path);
       await main();
       const text = document.body.textContent;
@@ -78,11 +101,11 @@ describe("SectionStubPage · раздел с мостом", () => {
   });
 
   it("ERP: ссылка ведёт на хэш-маршрут старого ERP, под кнопкой — путь после входа", async () => {
-    signInAs("supply@demo.example");
-    renderApp("/erp/catalog");
+    signInAs("all@demo.example");
+    renderApp("/crm/requests");
     const page = await main();
     const open = await within(page).findByRole("link", { name: /Открыть в старом ERP/ });
-    expect(open).toHaveAttribute("href", "http://erp.localhost:8088/#catalog-reference");
+    expect(open).toHaveAttribute("href", "http://erp.localhost:8088/#crm-deals");
     expect(open).toHaveAttribute("target", "_blank");
     expect(
       within(page).getByText(/Вход выполнится сам\. Старый ERP откроется на главной странице/),
@@ -91,8 +114,8 @@ describe("SectionStubPage · раздел с мостом", () => {
   });
 
   it("ERP: клик берёт одноразовый SSO-адрес у BFF и открывает его в новой вкладке", async () => {
-    signInAs("supply@demo.example");
-    renderApp("/erp/catalog");
+    signInAs("all@demo.example");
+    renderApp("/crm/requests");
     const open = await screen.findByRole("link", { name: /Открыть в старом ERP/ });
     const replace = vi.fn();
     const tab = { opener: {}, location: { replace } };
@@ -111,8 +134,8 @@ describe("SectionStubPage · раздел с мостом", () => {
 
   it("ERP: SSO не вышел — вкладка получает обычную ссылку, под кнопкой честное пояснение", async () => {
     setBridgeMock({ ssoFails: true });
-    signInAs("supply@demo.example");
-    renderApp("/erp/catalog");
+    signInAs("all@demo.example");
+    renderApp("/crm/requests");
     const open = await screen.findByRole("link", { name: /Открыть в старом ERP/ });
     const replace = vi.fn();
     vi.spyOn(window, "open").mockReturnValue({
@@ -123,7 +146,7 @@ describe("SectionStubPage · раздел с мостом", () => {
     fireEvent.click(open);
 
     await waitFor(() => {
-      expect(replace).toHaveBeenCalledWith("http://erp.localhost:8088/#catalog-reference");
+      expect(replace).toHaveBeenCalledWith("http://erp.localhost:8088/#crm-deals");
     });
     expect(await screen.findByText(/Вход без второго пароля не получился/)).toBeVisible();
   });
@@ -132,8 +155,8 @@ describe("SectionStubPage · раздел с мостом", () => {
     server.use(
       http.post("*/bridge/erp-sso", () => HttpResponse.json({ url: "javascript:alert(1)" })),
     );
-    signInAs("supply@demo.example");
-    renderApp("/erp/catalog");
+    signInAs("all@demo.example");
+    renderApp("/crm/requests");
     const open = await screen.findByRole("link", { name: /Открыть в старом ERP/ });
     const replace = vi.fn();
     vi.spyOn(window, "open").mockReturnValue({
@@ -144,14 +167,14 @@ describe("SectionStubPage · раздел с мостом", () => {
     fireEvent.click(open);
 
     await waitFor(() => {
-      expect(replace).toHaveBeenCalledWith("http://erp.localhost:8088/#catalog-reference");
+      expect(replace).toHaveBeenCalledWith("http://erp.localhost:8088/#crm-deals");
     });
     expect(replace).not.toHaveBeenCalledWith(expect.stringContaining("javascript:"));
   });
 
   it("всплывающие окна закрыты — срабатывает обычная ссылка, запросов SSO нет", async () => {
-    signInAs("supply@demo.example");
-    renderApp("/erp/catalog");
+    signInAs("all@demo.example");
+    renderApp("/crm/requests");
     const open = await screen.findByRole("link", { name: /Открыть в старом ERP/ });
     vi.spyOn(window, "open").mockReturnValue(null);
     const notPrevented = fireEvent.click(open);
@@ -198,24 +221,24 @@ describe("SectionStubPage · адрес старой системы не опр�
 });
 
 describe("SectionStubPage · карточка объекта по прямой ссылке", () => {
-  it("счёт по прямой ссылке: «Счёт СЧ-2026/142», кнопка ведёт в раздел старого ERP", async () => {
+  it("КП из «Исходящих» по прямой ссылке: «КП-2026/118», кнопка ведёт в раздел старого ERP (у проектов экран есть, D2-5)", async () => {
     signInAs("all@demo.example");
-    renderApp("/eds/payments/%D0%A1%D0%A7-2026%2F142");
+    renderApp("/eds/outbox/%D0%9A%D0%9F-2026%2F118");
     const page = await main();
 
-    expect(within(page).getByRole("heading", { level: 1, name: "Счёт СЧ-2026/142" })).toBeVisible();
+    expect(within(page).getByRole("heading", { level: 1, name: "КП-2026/118" })).toBeVisible();
     expect(await within(page).findByRole("link", { name: /Открыть в старом ERP/ })).toHaveAttribute(
       "href",
-      "http://erp.localhost:8088/#payments",
+      "http://erp.localhost:8088/#crm-quotes",
     );
   });
 
   it("очередь о нём ничего не знает — только номер и кнопка", async () => {
     signInAs("all@demo.example");
-    renderApp("/eds/payments/%D0%A1%D0%A7-2026%2F999");
+    renderApp("/eds/outbox/%D0%9A%D0%9F-2026%2F998");
     const page = await main();
 
-    expect(within(page).getByRole("heading", { level: 1, name: "Счёт СЧ-2026/999" })).toBeVisible();
+    expect(within(page).getByRole("heading", { level: 1, name: "КП-2026/998" })).toBeVisible();
     expect(await within(page).findByRole("link", { name: /Открыть в старом ERP/ })).toBeVisible();
     expect(within(page).queryByRole("region", { name: /Моей очереди/ })).not.toBeInTheDocument();
   });

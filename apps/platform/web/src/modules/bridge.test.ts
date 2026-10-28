@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { RESOURCES } from "../app/rbac.generated";
 import { resources } from "../shared/i18n";
 import {
   BRIDGE,
@@ -34,6 +35,16 @@ describe("мост в старые экраны: карта разделов-з�
     for (const [id, entry] of Object.entries(BRIDGE)) {
       expect(Boolean(entry.legacy || entry.who || entry.internal), id).toBe(true);
       expect(["soon", "pilot"], id).toContain(entry.when);
+    }
+  });
+
+  it("старый экран с нужным разделом (B-D18-1): раздел есть в каталоге, и без него есть текст «кто делает»", () => {
+    const needing = Object.entries(BRIDGE).filter(([, entry]) => entry.legacyNeeds !== undefined);
+    expect(needing.map(([id]) => id)).toEqual(["chats.external"]);
+    for (const [id, entry] of needing) {
+      expect(Object.keys(RESOURCES), id).toContain(entry.legacyNeeds);
+      expect(entry.legacy, id).toBeDefined();
+      expect(entry.who, id).toBeDefined();
     }
   });
 
@@ -148,20 +159,21 @@ describe("исполнимость адреса: есть ли экран в П�
     ["/crm/messages?lead=L-2041", true],
     ["/eds/documents?doc=5f0c7a52-3b1e-4c53-9d0a-1c6a1f0e2b77", true],
     ["/eds/new?type=memo", true],
-    ["/eds/payments/%D0%A1%D0%A7-2026%2F142", false],
+    ["/eds/payments/%D0%A1%D0%A7-2026%2F142", true],
     ["/erp/calc", true],
     ["/erp/stock", true],
     ["/erp/stock/%D0%97%D0%9F-2026-029", true],
-    ["/erp/catalog", false],
+    ["/erp/catalog", true],
+    ["/erp/docs?doc=2", true],
     ["/nowhere/at-all", true],
   ])("%s → %s", (path, expected) => {
     expect(isActionable(path)).toBe(expected);
   });
 
   it("раздел с родным экраном исполним, а стоит убрать запись моста — адрес становится исполнимым сам", () => {
-    const key = "eds.payments";
+    const key = "eds.outbox";
     const entry = BRIDGE[key];
-    const path = "/eds/payments/%D0%A1%D0%A7-2026%2F142";
+    const path = "/eds/outbox/%D0%9A%D0%9F-2026%2F118";
     expect(isActionable(path)).toBe(false);
     // имитация переноса раздела: запись моста удалена
     Reflect.deleteProperty(BRIDGE, key);

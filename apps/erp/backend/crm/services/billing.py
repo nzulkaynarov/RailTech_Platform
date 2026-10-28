@@ -417,6 +417,10 @@ def record_payment(
 
         # Событие шины (rt_bus) в транзакции платежа: сбой публикации откатывает и платёж.
         events.publish_invoice_event("invoice.paid", invoice)
+        # Оплата может оказаться последним условием «Выполнено» (акт подписан раньше): запись `project.done` — здесь же.
+        from .projects import log_project_done_once
+
+        log_project_done_once(invoice.deal, actor)
 
     marker = "[MANUAL_MODE] " if manual else ""
     ActivityLog.objects.create(
@@ -743,6 +747,9 @@ def sign_act(
     from .deal_notifications import notify_act_signed
 
     transaction.on_commit(lambda: notify_act_signed(act, actor))
+    from .projects import log_project_done_once
+
+    log_project_done_once(act.deal, actor)  # приёмка заказчиком в портале может закрыть проект (оплата уже была)
     # Перерисовать PDF акта после приёмки: кэшированный файл создан при выпуске и не знает о
     # подписи заказчика (глазами 17-08 — скачанный «подписанный» акт с пустыми линиями).
     from ..tasks import render_document_pdf
@@ -776,40 +783,50 @@ def reject_act(
         return None, "ACT_SIGN_NOT_ALLOWED"
     if act_viewer_side(actor, act, portal_contact) != "acceptor":
         return None, "ACT_ACCEPTOR_SIDE_REQUIRED"
+    return apply_act_return(act, actor, clean_reason, portal_contact=portal_contact), None
 
+
+@transaction.atomic
+def apply_act_return(act, actor, reason: str, *, portal_contact=None):
+    """Акт `ISSUED` → `DRAFT` с причиной (возврат заказчиком): общая часть `reject_act` (клиент в портале) и записи
+    возврата сотрудником (`act_flow.record_act_return`, D2-5). Проверки статуса, причины и стороны — у вызывающего.
+    CRM об этом узнаёт из события шины `act.returned` с причиной (FIX-62): статуса «возвращён» у акта нет, событие
+    публикуется здесь, в транзакции возврата (rt_bus)."""
     act.status = _astatus(ActStatusCode.DRAFT)
-    act.rejection_reason = clean_reason
+    act.rejection_reason = reason
     act.issuer_signed_at = None
     act.save(update_fields=["status", "rejection_reason", "issuer_signed_at", "updated_at"])
-    # Событие `act.returned` (FIX-62) — на шину rt_bus в транзакции возврата. Статуса «возвращён» у акта нет: возврат — это
-    # ISSUED → DRAFT с причиной. Лицо — клиент из портала (`portal_contact`), иначе система.
+    # Лицо — клиент из портала (`portal_contact`), иначе система.
     from integration.services import events
 
     events.publish_act_event(
         "act.returned",
         act,
-        reason=clean_reason,
+        reason=reason,
         actor=events.client_actor(portal_contact) if portal_contact is not None else None,
     )
     ActivityLog.objects.create(
         action="Акт отклонён заказчиком",
-        detail=f"Акт {act.number} по сделке #{act.deal_id}: {clean_reason}",
+        detail=f"Акт {act.number} по сделке #{act.deal_id}: {reason}",
         event_code="act.rejected",
         event_params={
             "number": act.number,
             "deal_id": act.deal_id,
-            "reason": clean_reason,
+            "reason": reason,
             **({"channel": "portal", "contact_id": portal_contact.pk} if portal_contact is not None else {}),
         },
         user=actor,
         level="WARNING",
+        entity_type="act",
+        entity_id=act.id,
+        reason=reason,
         deal=act.deal,
         company_id=act.deal.company_id,
     )
     from .deal_notifications import notify_act_rejected
 
-    transaction.on_commit(lambda: notify_act_rejected(act, actor, clean_reason))
-    return act, None
+    transaction.on_commit(lambda: notify_act_rejected(act, actor, reason))
+    return act
 
 
 # ── Действия ВЫПУСТИВШЕЙ стороны по акту (A4 спеки карточки акта) ─────────────

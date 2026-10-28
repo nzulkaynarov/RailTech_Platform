@@ -45,7 +45,7 @@ ASYNCAPI = yaml.safe_load((EVENTS / "asyncapi.yaml").read_text(encoding="utf-8")
 def test_types_present() -> None:
     domains = {t.domain for t in TYPES}
     assert {"erp", "crm", "identity", "eds"} <= domains
-    assert len([t for t in TYPES if t.domain == "erp"]) == 24
+    assert len([t for t in TYPES if t.domain == "erp"]) == 25
 
 
 @pytest.mark.parametrize("path", schema_files(), ids=lambda p: p.relative_to(CONTRACTS).as_posix())
@@ -150,11 +150,14 @@ ERP_EVENTS_C1 = {"quote.ready_for_approval"}
 #: Волна 16 (D1-9): приглашение контакта в Cabinet через бот CRM — ERP в Telegram не пишет.
 ERP_EVENTS_D1 = {"invite.requested"}
 
+#: Волна 17 (D2-5): статусы договора SPEC-v3 §2.4 — проекция реестра EDS; CRM тип не получает.
+ERP_EVENTS_D2 = {"contract.status_changed"}
+
 
 def test_erp_types_are_the_22_events_of_the_former_webhook_and_the_c1_ones() -> None:
     """22 события бывшего вебхука (events.schema.json удалён в B4) — по-прежнему uz.railtech.erp.<тип>.v1; плюс C1."""
     erp = {f"{t.entity}.{t.action}" for t in TYPES if t.domain == "erp" and t.version == 1}
-    assert erp == ERP_EVENTS | ERP_EVENTS_C1 | ERP_EVENTS_D1
+    assert erp == ERP_EVENTS | ERP_EVENTS_C1 | ERP_EVENTS_D1 | ERP_EVENTS_D2
 
 
 EDS_EVENTS = {
@@ -390,15 +393,20 @@ def test_initial_subscriptions_v1() -> None:
     ]
 
 
-def test_crm_gets_every_erp_event_except_the_quote_for_eds_approval() -> None:
-    """CRM — все типы ERP, кроме quote.ready_for_approval: в нём себестоимость и маржа, адресат — EDS (волна 12)."""
+def test_crm_gets_every_erp_event_except_those_for_eds() -> None:
+    """CRM — все типы ERP, кроме адресованных EDS: quote.ready_for_approval (себестоимость и маржа, волна 12) и
+    contract.status_changed (проекция реестра, D2-5)."""
     crm = {s["name"]: s for s in SUBSCRIPTIONS["subscribers"]}["crm"]
     erp_types = {t.name for t in TYPES if t.domain == "erp"}
-    assert _gets(crm) == erp_types - {"uz.railtech.erp.quote.ready_for_approval.v1"}
+    assert _gets(crm) == erp_types - {
+        "uz.railtech.erp.quote.ready_for_approval.v1",
+        "uz.railtech.erp.contract.status_changed.v1",
+    }
 
 
 def test_eds_subscription_c1() -> None:
-    """EDS (волна 12 §2.4): сотрудники, заявка ERP (связать письмо), КП на одобрение; адрес — внутри сети compose."""
+    """EDS (волна 12 §2.4): сотрудники, заявка ERP (связать письмо), КП на одобрение,
+    документы проектов (D2-5); адрес — внутри сети compose."""
     eds = {s["name"]: s for s in SUBSCRIPTIONS["subscribers"]}["eds"]
     assert eds["endpoint"] == "http://eds-api:8000/bus/v1/events"
     assert eds["endpoint_env"] == "RT_BUS_ENDPOINT_EDS"
@@ -408,6 +416,14 @@ def test_eds_subscription_c1() -> None:
         "uz.railtech.identity.user.deactivated.v1",
         "uz.railtech.erp.request.created.v1",
         "uz.railtech.erp.quote.ready_for_approval.v1",
+        # D2-5: проекция документов проектов (договор, счёт, акт) в реестре «Все документы».
+        "uz.railtech.erp.contract.status_changed.v1",
+        "uz.railtech.erp.invoice.issued.v1",
+        "uz.railtech.erp.invoice.paid.v1",
+        "uz.railtech.erp.invoice.overdue.v1",
+        "uz.railtech.erp.act.issued.v1",
+        "uz.railtech.erp.act.accepted.v1",
+        "uz.railtech.erp.act.returned.v1",
     }
 
 

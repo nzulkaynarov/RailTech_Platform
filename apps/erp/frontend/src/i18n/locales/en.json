@@ -2513,6 +2513,7 @@
     "supply_manage": "Maintain suppliers & their offers",
     "fulfillment_manage": "Handle shipments & delivery notes",
     "fulfillment_act": "Issue acceptance acts",
+    "finance_view": "See customer invoices & payments",
     "finance_invoice": "Issue customer invoices",
     "finance_payment": "Record payments",
     "settings_edit": "Edit company details, templates & numbering",
@@ -2945,6 +2946,10 @@
       }
     },
     "contract": {
+      "signed_file_uploaded": {
+        "title": "Signed copy of the contract uploaded",
+        "detail": "Contract {{number}} for deal #{{deal_id}}"
+      },
       "created": {
         "title": "Contract created",
         "detail": "Contract {{number}} for deal #{{deal_id}}"
@@ -2992,6 +2997,12 @@
         "detail": "Invoice {{number}} for deal #{{deal_id}} (no contract)"
       }
     },
+    "project": {
+      "done": {
+        "title": "Project completed",
+        "detail": "Deal #{{deal_id}}: act signed, invoices paid"
+      }
+    },
     "payment": {
       "recorded": {
         "title": "Payment recorded",
@@ -2999,6 +3010,10 @@
       }
     },
     "act": {
+      "scan_attached": {
+        "title": "Scan of the signed act attached",
+        "detail": "Act {{number}} for deal #{{deal_id}}"
+      },
       "signed": {
         "title": "Act signed — manual",
         "detail": "Act {{number}} for deal #{{deal_id}}"

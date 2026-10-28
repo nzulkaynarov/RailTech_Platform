@@ -348,6 +348,7 @@ export const edsDocumentsHandlers = [
           due_date: null,
           created_at: entry.registered_at,
           openable: false,
+          ...(entry.project_ref ? { project_ref: entry.project_ref } : {}),
         })),
       ];
       return HttpResponse.json(

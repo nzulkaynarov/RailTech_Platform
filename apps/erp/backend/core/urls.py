@@ -4,6 +4,14 @@ from django.urls import include, path, re_path
 from drf_spectacular.utils import extend_schema
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 from finance.views import DealMarginDeviationView, DealPurchaseActualDetailView, DealPurchaseActualsView
+from finance.views_receivables import (
+    ReceivableBoardView,
+    ReceivableCardView,
+    ReceivableConfirmationFileView,
+    ReceivableConfirmationsView,
+    ReceivableConfirmPaymentView,
+    ReceivableRequestPaymentDocView,
+)
 from integration.bus import get_bus
 from integration.bus_journal_views import (
     BusDeliveriesView,
@@ -79,6 +87,10 @@ from accounts.views import (
 )
 from accounts.views.setup import SetupCompanyView, SetupStatusView
 from accounts.wizard import WIZARD_FORMS, CompanyWizardView
+from catalog.desk.views_items import ItemDeskViewSet, SupplierDeskViewSet
+from catalog.desk.views_people import BrigadeDeskViewSet
+from catalog.desk.views_refs import ExchangeRateListViewSet, HsCodeDeskViewSet
+from catalog.desk.views_tech_docs import TechDocDeskViewSet
 from catalog.views import (
     CategoryRequestViewSet,
     CategoryViewSet,
@@ -116,6 +128,8 @@ from crm.views import (
     NumberingSchemePreviewView,
     NumberingSchemeView,
     PaymentViewSet,
+    ProjectDetailView,
+    ProjectListView,
     QuoteChargeViewSet,
     QuoteItemViewSet,
     QuoteRequestDiffView,
@@ -162,6 +176,13 @@ from sourcing.views import (  # noqa: F811
 )
 
 router = DefaultRouter()
+# D2-3: «Номенклатура и поставщики», бригады, техдокументация и справочники для Платформы (`catalog.desk`).
+router.register(r"catalog/items", ItemDeskViewSet, basename="desk-item")
+router.register(r"catalog/suppliers", SupplierDeskViewSet, basename="desk-supplier")
+router.register(r"catalog/brigades", BrigadeDeskViewSet, basename="desk-brigade")
+router.register(r"catalog/tech-docs", TechDocDeskViewSet, basename="desk-tech-doc")
+router.register(r"master-data/hs-codes", HsCodeDeskViewSet, basename="desk-hs-code")
+router.register(r"exchange-rates", ExchangeRateListViewSet, basename="desk-exchange-rate")
 router.register(r"catalog/products", ProductViewSet, basename="product")
 router.register(r"catalog/offers", SupplierOfferViewSet, basename="offer")
 router.register(r"catalog/categories", CategoryViewSet, basename="category")
@@ -216,6 +237,9 @@ urlpatterns = (
     [
         path("admin/accounts/company/wizard/", CompanyWizardView.as_view(WIZARD_FORMS), name="company-wizard"),
         path("admin/", admin.site.urls),
+        # D2-5: Все проекты — только чтение; пути раньше роутера, чтобы `crm/projects/<id>/` не искал вьюсет.
+        path("api/v1/crm/projects/", ProjectListView.as_view(), name="project-list"),
+        path("api/v1/crm/projects/<int:deal_id>/", ProjectDetailView.as_view(), name="project-detail"),
         path("api/v1/", include(router.urls)),
         path("api/portal/v1/", include("portal.urls")),
         re_path(r"^api/portal/", portal_not_found, name="portal-not-found"),  # FIX-54: JSON 404 вместо HTML Django
@@ -356,6 +380,29 @@ urlpatterns = (
             "api/v1/finance/deals/<int:deal_id>/purchase-actuals/<str:currency>/",
             DealPurchaseActualDetailView.as_view(),
             name="deal-purchase-actual-detail",
+        ),
+        # D2-4 — «Счета и оплаты» бухгалтера: доска по вкладкам, карточка, подтверждение оплаты, платёжка клиента.
+        path("api/v1/finance/receivables/", ReceivableBoardView.as_view(), name="receivables-board"),
+        path("api/v1/finance/receivables/<int:invoice_id>/", ReceivableCardView.as_view(), name="receivable-card"),
+        path(
+            "api/v1/finance/receivables/<int:invoice_id>/confirm-payment/",
+            ReceivableConfirmPaymentView.as_view(),
+            name="receivable-confirm-payment",
+        ),
+        path(
+            "api/v1/finance/receivables/<int:invoice_id>/confirmations/",
+            ReceivableConfirmationsView.as_view(),
+            name="receivable-confirmations",
+        ),
+        path(
+            "api/v1/finance/receivables/<int:invoice_id>/confirmations/<int:confirmation_id>/file/",
+            ReceivableConfirmationFileView.as_view(),
+            name="receivable-confirmation-file",
+        ),
+        path(
+            "api/v1/finance/receivables/<int:invoice_id>/request-payment-doc/",
+            ReceivableRequestPaymentDocView.as_view(),
+            name="receivable-request-payment-doc",
         ),
         # CRM Phase A — counterparty / deal activity timeline (read-only).
         path("api/v1/crm/timeline/", TimelineView.as_view(), name="crm-timeline"),

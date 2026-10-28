@@ -22,6 +22,10 @@ import type {
   AccessOut,
   ActionResult,
   AiSpendReport,
+  ArticleIn,
+  ArticleListOut,
+  ArticleOut,
+  ArticlePatch,
   Assign,
   AssistOut,
   AssistRequest,
@@ -62,6 +66,7 @@ import type {
   DecisionsResponse,
   DeputyCandidate,
   DeputyIn,
+  DialogPage,
   DocumentOut,
   DocumentUpdate,
   DryRunResponse,
@@ -100,9 +105,11 @@ import type {
   LeadMessagesParams,
   LeadPage,
   LinkTelegram,
+  ListArticlesParams,
   ListAuditParams,
   ListClientsParams,
   ListDealsParams,
+  ListDialogsParams,
   ListDocumentsParams,
   ListEmailLogParams,
   ListKbDocumentsParams,
@@ -2465,6 +2472,137 @@ export function useBusOverview<
   return withQueryKey(query, queryOptions.queryKey);
 }
 
+export const getListDialogsUrl = (params?: ListDialogsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/chats?${stringifiedParams}` : `/api/v1/chats`;
+};
+
+/**
+ * @summary List Dialogs
+ */
+export const listDialogs = async (
+  params?: ListDialogsParams,
+  options?: Parameters<typeof http>[1],
+): Promise<DialogPage> => {
+  return http<DialogPage>(getListDialogsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListDialogsQueryKey = (params?: ListDialogsParams) => {
+  return [`/api/v1/chats`, ...(params ? [params] : [])] as const;
+};
+
+export const getListDialogsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listDialogs>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ListDialogsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listDialogs>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListDialogsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listDialogs>>> = ({ signal }) =>
+    listDialogs(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listDialogs>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListDialogsQueryResult = NonNullable<Awaited<ReturnType<typeof listDialogs>>>;
+export type ListDialogsQueryError = ErrorType<ErrorOut>;
+
+export function useListDialogs<
+  TData = Awaited<ReturnType<typeof listDialogs>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params: undefined | ListDialogsParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listDialogs>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listDialogs>>,
+          TError,
+          Awaited<ReturnType<typeof listDialogs>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListDialogs<
+  TData = Awaited<ReturnType<typeof listDialogs>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ListDialogsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listDialogs>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listDialogs>>,
+          TError,
+          Awaited<ReturnType<typeof listDialogs>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListDialogs<
+  TData = Awaited<ReturnType<typeof listDialogs>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ListDialogsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listDialogs>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary List Dialogs
+ */
+
+export function useListDialogs<
+  TData = Awaited<ReturnType<typeof listDialogs>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ListDialogsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listDialogs>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListDialogsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
 export const getListClientsUrl = (params?: ListClientsParams) => {
   const normalizedParams = new URLSearchParams();
 
@@ -3913,6 +4051,725 @@ export const useUnlinkTelegram = <TError = ErrorType<ErrorOut>, TContext = unkno
   TContext
 > => {
   return useMutation(getUnlinkTelegramMutationOptions(options), queryClient);
+};
+
+export const getListArticlesUrl = (params?: ListArticlesParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/company-articles?${stringifiedParams}`
+    : `/api/v1/company-articles`;
+};
+
+/**
+ * @summary List Articles
+ */
+export const listArticles = async (
+  params?: ListArticlesParams,
+  options?: Parameters<typeof http>[1],
+): Promise<ArticleListOut> => {
+  return http<ArticleListOut>(getListArticlesUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListArticlesQueryKey = (params?: ListArticlesParams) => {
+  return [`/api/v1/company-articles`, ...(params ? [params] : [])] as const;
+};
+
+export const getListArticlesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listArticles>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ListArticlesParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listArticles>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListArticlesQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listArticles>>> = ({ signal }) =>
+    listArticles(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listArticles>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListArticlesQueryResult = NonNullable<Awaited<ReturnType<typeof listArticles>>>;
+export type ListArticlesQueryError = ErrorType<ErrorOut>;
+
+export function useListArticles<
+  TData = Awaited<ReturnType<typeof listArticles>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params: undefined | ListArticlesParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listArticles>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listArticles>>,
+          TError,
+          Awaited<ReturnType<typeof listArticles>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListArticles<
+  TData = Awaited<ReturnType<typeof listArticles>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ListArticlesParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listArticles>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listArticles>>,
+          TError,
+          Awaited<ReturnType<typeof listArticles>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListArticles<
+  TData = Awaited<ReturnType<typeof listArticles>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ListArticlesParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listArticles>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary List Articles
+ */
+
+export function useListArticles<
+  TData = Awaited<ReturnType<typeof listArticles>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ListArticlesParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listArticles>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListArticlesQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getCreateArticleUrl = () => {
+  return `/api/v1/company-articles`;
+};
+
+/**
+ * Новая статья всегда черновик: опубликовать — отдельное действие.
+ * @summary Create Article
+ */
+export const createArticle = async (
+  articleIn: ArticleIn,
+  options?: Parameters<typeof http>[1],
+): Promise<ArticleOut> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<ArticleOut>(getCreateArticleUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(articleIn),
+  });
+};
+
+export const getCreateArticleMutationKey = () => ["createArticle"] as const;
+
+export const getCreateArticleMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createArticle>>,
+    TError,
+    CreateArticleMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createArticle>>,
+  TError,
+  CreateArticleMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateArticleMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createArticle>>,
+    CreateArticleMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createArticle(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateArticleMutationResult = NonNullable<Awaited<ReturnType<typeof createArticle>>>;
+export type CreateArticleMutationBody = ArticleIn;
+export type CreateArticleMutationError = ErrorType<ErrorOut>;
+export type CreateArticleMutationVariables = { data: ArticleIn };
+
+/**
+ * @summary Create Article
+ */
+export const useCreateArticle = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createArticle>>,
+      TError,
+      CreateArticleMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createArticle>>,
+  TError,
+  CreateArticleMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateArticleMutationOptions(options), queryClient);
+};
+
+export const getDeleteArticleUrl = (articleId: number) => {
+  return `/api/v1/company-articles/${articleId}`;
+};
+
+/**
+ * @summary Delete Article
+ */
+export const deleteArticle = async (
+  articleId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<void> => {
+  return http<void>(getDeleteArticleUrl(articleId), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteArticleMutationKey = () => ["deleteArticle"] as const;
+
+export const getDeleteArticleMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteArticle>>,
+    TError,
+    DeleteArticleMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteArticle>>,
+  TError,
+  DeleteArticleMutationVariables,
+  TContext
+> => {
+  const mutationKey = getDeleteArticleMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteArticle>>,
+    DeleteArticleMutationVariables
+  > = (props) => {
+    const { articleId } = props ?? {};
+
+    return deleteArticle(articleId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteArticleMutationResult = NonNullable<Awaited<ReturnType<typeof deleteArticle>>>;
+
+export type DeleteArticleMutationError = ErrorType<ErrorOut>;
+export type DeleteArticleMutationVariables = { articleId: number };
+
+/**
+ * @summary Delete Article
+ */
+export const useDeleteArticle = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof deleteArticle>>,
+      TError,
+      DeleteArticleMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof deleteArticle>>,
+  TError,
+  DeleteArticleMutationVariables,
+  TContext
+> => {
+  return useMutation(getDeleteArticleMutationOptions(options), queryClient);
+};
+
+export const getGetArticleUrl = (articleId: number) => {
+  return `/api/v1/company-articles/${articleId}`;
+};
+
+/**
+ * @summary Get Article
+ */
+export const getArticle = async (
+  articleId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<ArticleOut> => {
+  return http<ArticleOut>(getGetArticleUrl(articleId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetArticleQueryKey = (articleId: number) => {
+  return [`/api/v1/company-articles/${articleId}`] as const;
+};
+
+export const getGetArticleQueryOptions = <
+  TData = Awaited<ReturnType<typeof getArticle>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  articleId: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getArticle>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetArticleQueryKey(articleId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getArticle>>> = ({ signal }) =>
+    getArticle(articleId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: articleId !== null && articleId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getArticle>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetArticleQueryResult = NonNullable<Awaited<ReturnType<typeof getArticle>>>;
+export type GetArticleQueryError = ErrorType<ErrorOut>;
+
+export function useGetArticle<
+  TData = Awaited<ReturnType<typeof getArticle>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  articleId: number,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getArticle>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getArticle>>,
+          TError,
+          Awaited<ReturnType<typeof getArticle>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetArticle<
+  TData = Awaited<ReturnType<typeof getArticle>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  articleId: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getArticle>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getArticle>>,
+          TError,
+          Awaited<ReturnType<typeof getArticle>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetArticle<
+  TData = Awaited<ReturnType<typeof getArticle>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  articleId: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getArticle>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Get Article
+ */
+
+export function useGetArticle<
+  TData = Awaited<ReturnType<typeof getArticle>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  articleId: number,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getArticle>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetArticleQueryOptions(articleId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getUpdateArticleUrl = (articleId: number) => {
+  return `/api/v1/company-articles/${articleId}`;
+};
+
+/**
+ * @summary Update Article
+ */
+export const updateArticle = async (
+  articleId: number,
+  articlePatch: ArticlePatch,
+  options?: Parameters<typeof http>[1],
+): Promise<ArticleOut> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<ArticleOut>(getUpdateArticleUrl(articleId), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(articlePatch),
+  });
+};
+
+export const getUpdateArticleMutationKey = () => ["updateArticle"] as const;
+
+export const getUpdateArticleMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateArticle>>,
+    TError,
+    UpdateArticleMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateArticle>>,
+  TError,
+  UpdateArticleMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateArticleMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateArticle>>,
+    UpdateArticleMutationVariables
+  > = (props) => {
+    const { articleId, data } = props ?? {};
+
+    return updateArticle(articleId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateArticleMutationResult = NonNullable<Awaited<ReturnType<typeof updateArticle>>>;
+export type UpdateArticleMutationBody = ArticlePatch;
+export type UpdateArticleMutationError = ErrorType<ErrorOut>;
+export type UpdateArticleMutationVariables = { articleId: number; data: ArticlePatch };
+
+/**
+ * @summary Update Article
+ */
+export const useUpdateArticle = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateArticle>>,
+      TError,
+      UpdateArticleMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateArticle>>,
+  TError,
+  UpdateArticleMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateArticleMutationOptions(options), queryClient);
+};
+
+export const getPublishArticleUrl = (articleId: number) => {
+  return `/api/v1/company-articles/${articleId}/publish`;
+};
+
+/**
+ * @summary Publish Article
+ */
+export const publishArticle = async (
+  articleId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<ArticleOut> => {
+  return http<ArticleOut>(getPublishArticleUrl(articleId), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getPublishArticleMutationKey = () => ["publishArticle"] as const;
+
+export const getPublishArticleMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof publishArticle>>,
+    TError,
+    PublishArticleMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof publishArticle>>,
+  TError,
+  PublishArticleMutationVariables,
+  TContext
+> => {
+  const mutationKey = getPublishArticleMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof publishArticle>>,
+    PublishArticleMutationVariables
+  > = (props) => {
+    const { articleId } = props ?? {};
+
+    return publishArticle(articleId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PublishArticleMutationResult = NonNullable<Awaited<ReturnType<typeof publishArticle>>>;
+
+export type PublishArticleMutationError = ErrorType<ErrorOut>;
+export type PublishArticleMutationVariables = { articleId: number };
+
+/**
+ * @summary Publish Article
+ */
+export const usePublishArticle = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof publishArticle>>,
+      TError,
+      PublishArticleMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof publishArticle>>,
+  TError,
+  PublishArticleMutationVariables,
+  TContext
+> => {
+  return useMutation(getPublishArticleMutationOptions(options), queryClient);
+};
+
+export const getUnpublishArticleUrl = (articleId: number) => {
+  return `/api/v1/company-articles/${articleId}/unpublish`;
+};
+
+/**
+ * Вернуть опубликованную статью в черновики: из «Помощи» она исчезает.
+ * @summary Unpublish Article
+ */
+export const unpublishArticle = async (
+  articleId: number,
+  options?: Parameters<typeof http>[1],
+): Promise<ArticleOut> => {
+  return http<ArticleOut>(getUnpublishArticleUrl(articleId), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getUnpublishArticleMutationKey = () => ["unpublishArticle"] as const;
+
+export const getUnpublishArticleMutationOptions = <
+  TError = ErrorType<ErrorOut>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof unpublishArticle>>,
+    TError,
+    UnpublishArticleMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof unpublishArticle>>,
+  TError,
+  UnpublishArticleMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUnpublishArticleMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof unpublishArticle>>,
+    UnpublishArticleMutationVariables
+  > = (props) => {
+    const { articleId } = props ?? {};
+
+    return unpublishArticle(articleId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UnpublishArticleMutationResult = NonNullable<
+  Awaited<ReturnType<typeof unpublishArticle>>
+>;
+
+export type UnpublishArticleMutationError = ErrorType<ErrorOut>;
+export type UnpublishArticleMutationVariables = { articleId: number };
+
+/**
+ * @summary Unpublish Article
+ */
+export const useUnpublishArticle = <TError = ErrorType<ErrorOut>, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof unpublishArticle>>,
+      TError,
+      UnpublishArticleMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof unpublishArticle>>,
+  TError,
+  UnpublishArticleMutationVariables,
+  TContext
+> => {
+  return useMutation(getUnpublishArticleMutationOptions(options), queryClient);
 };
 
 export const getGetDashboardUrl = (params?: GetDashboardParams) => {
@@ -12580,6 +13437,132 @@ export const usePutAvatar = <TError = ErrorType<ErrorOut>, TContext = unknown>(
 > => {
   return useMutation(getPutAvatarMutationOptions(options), queryClient);
 };
+
+export const getListPublishedArticlesUrl = () => {
+  return `/api/v1/me/company-articles`;
+};
+
+/**
+ * Опубликованные статьи компании для «Помощи»; черновиков здесь нет ни у кого.
+ * @summary List Published Articles
+ */
+export const listPublishedArticles = async (
+  options?: Parameters<typeof http>[1],
+): Promise<ArticleListOut> => {
+  return http<ArticleListOut>(getListPublishedArticlesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListPublishedArticlesQueryKey = () => {
+  return [`/api/v1/me/company-articles`] as const;
+};
+
+export const getListPublishedArticlesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listPublishedArticles>>,
+  TError = ErrorType<ErrorOut>,
+>(options?: {
+  query?: Partial<
+    UseQueryOptions<Awaited<ReturnType<typeof listPublishedArticles>>, TError, TData>
+  >;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListPublishedArticlesQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listPublishedArticles>>> = ({ signal }) =>
+    listPublishedArticles({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listPublishedArticles>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListPublishedArticlesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listPublishedArticles>>
+>;
+export type ListPublishedArticlesQueryError = ErrorType<ErrorOut>;
+
+export function useListPublishedArticles<
+  TData = Awaited<ReturnType<typeof listPublishedArticles>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listPublishedArticles>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listPublishedArticles>>,
+          TError,
+          Awaited<ReturnType<typeof listPublishedArticles>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListPublishedArticles<
+  TData = Awaited<ReturnType<typeof listPublishedArticles>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listPublishedArticles>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listPublishedArticles>>,
+          TError,
+          Awaited<ReturnType<typeof listPublishedArticles>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListPublishedArticles<
+  TData = Awaited<ReturnType<typeof listPublishedArticles>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listPublishedArticles>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary List Published Articles
+ */
+
+export function useListPublishedArticles<
+  TData = Awaited<ReturnType<typeof listPublishedArticles>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listPublishedArticles>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListPublishedArticlesQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getCoveringUrl = () => {
   return `/api/v1/me/covering`;

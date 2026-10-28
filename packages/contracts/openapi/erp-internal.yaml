@@ -3762,6 +3762,151 @@ paths:
           description: Состояние не позволяет (КП не черновик, нет виз, ИИ выключен)
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
+  /api/v1/catalog/brigades/:
+    get:
+      operationId: catalog_brigades_list
+      description: Ставка (`rate`) — `null` без зоны услуг расчёта и без `quote.view_cost_margin`; `rate_visible` говорит,
+        почему.
+      summary: Crews and service performers
+      parameters:
+      - in: query
+        name: include_inactive
+        schema:
+          type: boolean
+        description: Вместе с теми, кто не работает.
+      - in: query
+        name: kind
+        schema:
+          type: string
+          enum:
+          - brigade
+          - person
+          - subcontractor
+      - in: query
+        name: page
+        schema:
+          type: integer
+        description: Номер страницы.
+      - in: query
+        name: page_size
+        schema:
+          type: integer
+        description: Строк на странице, до 200.
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: Поиск по названию и коду.
+      tags:
+      - Catalog
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedDeskBrigadeList'
+          description: ''
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenResponse'
+    post:
+      operationId: catalog_brigades_create
+      description: Needs `catalog.manage`; ставка — ещё и зона услуг или `quote.view_cost_margin` (403 `CREW_RATES_REQUIRED`).
+      summary: Add a crew or performer
+      tags:
+      - Catalog
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeskBrigadeInRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DeskBrigadeInRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DeskBrigadeInRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeskBrigade'
+          description: ''
+        '400':
+          description: 'Отказ проверки: код в `detail` или ошибки полей.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '403':
+          description: Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+  /api/v1/catalog/brigades/{id}/:
+    patch:
+      operationId: catalog_brigades_update
+      description: Needs `catalog.manage`; ставка — ещё и зона услуг или `quote.view_cost_margin` (403 `CREW_RATES_REQUIRED`).
+        `is_active=false` убирает из выбора.
+      summary: Edit a crew or performer
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - Catalog
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedDeskBrigadeInRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedDeskBrigadeInRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedDeskBrigadeInRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeskBrigade'
+          description: ''
+        '400':
+          description: 'Отказ проверки: код в `detail` или ошибки полей.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '403':
+          description: Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: Объекта нет.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
   /api/v1/catalog/categories/:
     get:
       operationId: catalog_categories_list
@@ -4283,11 +4428,191 @@ paths:
           description: ''
         '404':
           $ref: '#/components/responses/NotFoundResponse'
+  /api/v1/catalog/items/:
+    get:
+      operationId: catalog_items_list
+      description: Позиции номенклатуры с типом, единицей, НДС и числом предложений. Цены поставщиков здесь нет вовсе — они
+        в карточке и только с правом на `supplier_prices`.
+      summary: Catalog items for the nomenclature screen
+      parameters:
+      - in: query
+        name: category
+        schema:
+          type: integer
+        description: Id категории.
+      - in: query
+        name: kind
+        schema:
+          type: string
+          enum:
+          - on_order
+          - service_fixed
+          - service_milestones
+          - service_time
+          - stock
+        description: Тип позиции.
+      - in: query
+        name: page
+        schema:
+          type: integer
+        description: Номер страницы.
+      - in: query
+        name: page_size
+        schema:
+          type: integer
+        description: Строк на странице, до 200.
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: Поиск по названию и коду.
+      tags:
+      - Catalog
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedDeskItemRowList'
+          description: ''
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenResponse'
+    post:
+      operationId: catalog_items_create
+      description: Needs `catalog.manage`. Новая позиция — черновик; тип задаёт домен и политику исполнения.
+      summary: Create a catalog item
+      tags:
+      - Catalog
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeskItemInRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DeskItemInRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DeskItemInRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeskItemDetail'
+          description: ''
+        '400':
+          description: 'Отказ проверки: код в `detail` или ошибки полей.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '403':
+          description: Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+  /api/v1/catalog/items/{id}/:
+    get:
+      operationId: catalog_items_retrieve
+      description: 'Предложения поставщиков: цена закупки (`price`) — `null` без права на цены поставщиков.'
+      summary: Catalog item card with supplier offers
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - Catalog
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeskItemDetail'
+          description: ''
+        '404':
+          description: Объекта нет.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenResponse'
+    patch:
+      operationId: catalog_items_update
+      description: 'Needs `catalog.manage`. НДС: пусто — ставка компании по умолчанию.'
+      summary: Edit a catalog item
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - Catalog
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedDeskItemInRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedDeskItemInRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedDeskItemInRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeskItemDetail'
+          description: ''
+        '400':
+          description: 'Отказ проверки: код в `detail` или ошибки полей.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '403':
+          description: Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: Объекта нет.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
   /api/v1/catalog/manufacturers/:
     get:
       operationId: catalog_manufacturers_list
       description: Returns OEM brands from the `catalog.Manufacturer` reference table — the canonical source for `Product.brand`.
-        A brand is catalog metadata, not a platform participant (sellers/clients are the participant roles).
+        A brand is catalog metadata, not a platform participant (sellers/clients are the participant roles). `?include_inactive=1`
+        adds disabled brands — only for a `catalog.manage` holder.
       summary: List manufacturers (OEM brands)
       parameters:
       - name: page
@@ -4320,10 +4645,48 @@ paths:
               schema:
                 $ref: '#/components/schemas/PaginatedManufacturerList'
           description: ''
+    post:
+      operationId: catalog_manufacturers_create
+      description: Needs `catalog.manage` (D2-3, B-035). The name is unique, case-insensitively.
+      summary: Add a manufacturer
+      tags:
+      - Catalog
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ManufacturerRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ManufacturerRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ManufacturerRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Manufacturer'
+          description: ''
+        '400':
+          description: Field errors or MANUFACTURER_EXISTS
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenResponse'
   /api/v1/catalog/manufacturers/{id}/:
     get:
       operationId: catalog_manufacturers_retrieve
-      description: Read-only list of OEM brands (catalog.Manufacturer) for the `brand` selector.
+      description: 'OEM brands (catalog.Manufacturer): public read for the `brand` selector; create/edit — `catalog.manage`
+        (D2-3).'
       summary: Get manufacturer (OEM brand)
       parameters:
       - in: path
@@ -4344,6 +4707,51 @@ paths:
               schema:
                 $ref: '#/components/schemas/Manufacturer'
           description: ''
+        '404':
+          $ref: '#/components/responses/NotFoundResponse'
+    patch:
+      operationId: catalog_manufacturers_partial_update
+      description: Needs `catalog.manage` (D2-3, B-035). `is_active=false` hides the brand in selectors; brands are not deleted.
+      summary: Edit a manufacturer
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Производитель.
+        required: true
+      tags:
+      - Catalog
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedManufacturerRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedManufacturerRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedManufacturerRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Manufacturer'
+          description: ''
+        '400':
+          description: Field errors or MANUFACTURER_EXISTS
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenResponse'
         '404':
           $ref: '#/components/responses/NotFoundResponse'
   /api/v1/catalog/offers/:
@@ -5727,6 +6135,302 @@ paths:
           $ref: '#/components/responses/ForbiddenResponse'
         '404':
           $ref: '#/components/responses/NotFoundResponse'
+  /api/v1/catalog/suppliers/:
+    get:
+      operationId: catalog_suppliers_list
+      description: 'Поставщики: число предложений, истёкшие и истекающие сроки цен. Цен нет.'
+      summary: Suppliers with offers summary
+      parameters:
+      - in: query
+        name: page
+        schema:
+          type: integer
+        description: Номер страницы.
+      - in: query
+        name: page_size
+        schema:
+          type: integer
+        description: Строк на странице, до 200.
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: Поиск по названию и коду.
+      tags:
+      - Catalog
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedDeskSupplierRowList'
+          description: ''
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenResponse'
+  /api/v1/catalog/suppliers/{id}/:
+    get:
+      operationId: catalog_suppliers_retrieve
+      description: 'Предложения поставщика: квота, сроки поставки и действия цены; `price` — `null` без права на цены поставщиков.'
+      summary: Supplier card with offers
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - Catalog
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeskSupplierDetail'
+          description: ''
+        '404':
+          description: Объекта нет.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenResponse'
+  /api/v1/catalog/suppliers/{id}/offers/{offer_id}/:
+    patch:
+      operationId: catalog_suppliers_offer_update
+      description: 'Needs `supply.manage`. Квота, минимальный заказ, сроки поставки, окно действия цены, признак «действует».
+        Цена (`price`) — только с правом на цены поставщиков: иначе 403 `SUPPLIER_PRICES_REQUIRED`.'
+      summary: Edit a supplier offer
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      - in: path
+        name: offer_id
+        schema:
+          type: string
+          pattern: ^[0-9]+$
+        required: true
+      tags:
+      - Catalog
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedDeskOfferInRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedDeskOfferInRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedDeskOfferInRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeskOffer'
+          description: ''
+        '400':
+          description: 'Отказ проверки: код в `detail` или ошибки полей.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '403':
+          description: Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: Объекта нет.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+  /api/v1/catalog/tech-docs/:
+    get:
+      operationId: catalog_tech_docs_list
+      description: Реестр читает любой сотрудник бэк-офиса; загрузка и удаление — `catalog.manage`.
+      summary: Technical documentation registry
+      parameters:
+      - in: query
+        name: deal
+        schema:
+          type: integer
+        description: Id заявки или проекта.
+      - in: query
+        name: kind
+        schema:
+          type: string
+          enum:
+          - certificate
+          - drawing
+          - other
+          - pnr
+          - tz
+      - in: query
+        name: page
+        schema:
+          type: integer
+        description: Номер страницы.
+      - in: query
+        name: page_size
+        schema:
+          type: integer
+        description: Строк на странице, до 200.
+      - in: query
+        name: product
+        schema:
+          type: integer
+        description: Id позиции номенклатуры.
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: Поиск по названию и коду.
+      tags:
+      - Catalog
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedDeskTechDocList'
+          description: ''
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenResponse'
+    post:
+      operationId: catalog_tech_docs_create
+      description: 'Needs `catalog.manage`. PDF, PNG, JPEG, DOC(X), XLS(X) до 20 МБ; содержимое сверяется с расширением. Нужна
+        привязка к позиции (`product_id`) или заявке (`deal_id`). Коды: FILE_TOO_LARGE, FILE_TYPE_NOT_ALLOWED, FILE_CONTENT_MISMATCH,
+        TECH_DOC_LINK_REQUIRED, PRODUCT_NOT_FOUND, DEAL_NOT_FOUND, NO_FILE_PROVIDED.'
+      summary: Upload a technical document
+      tags:
+      - Catalog
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DeskTechDocUploadRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeskTechDoc'
+          description: ''
+        '400':
+          description: 'Отказ проверки: код в `detail` или ошибки полей.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '403':
+          description: Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+  /api/v1/catalog/tech-docs/{id}/:
+    delete:
+      operationId: catalog_tech_docs_destroy
+      description: Needs `catalog.manage`. Файл удаляется из хранилища.
+      summary: Delete a technical document
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - Catalog
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+        '403':
+          description: Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: Объекта нет.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+  /api/v1/catalog/tech-docs/{id}/file/:
+    get:
+      operationId: catalog_tech_docs_file
+      description: Файл потоком из приватного хранилища. PDF и изображения — `inline` (просмотр), `?download=1` и прочие форматы
+        — вложением. Тип содержимого браузер не угадывает (`nosniff`).
+      summary: Stream the file of a technical document
+      parameters:
+      - in: query
+        name: download
+        schema:
+          type: boolean
+        description: Отдать вложением.
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - Catalog
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+          description: ''
+        '404':
+          description: Документа или файла нет.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenResponse'
   /api/v1/crm/activity-logs/:
     get:
       operationId: crm_activity_logs_list
@@ -5892,6 +6596,61 @@ paths:
           $ref: '#/components/responses/ForbiddenResponse'
         '404':
           $ref: '#/components/responses/NotFoundResponse'
+  /api/v1/crm/acts/{id}/attach-scan/:
+    post:
+      operationId: crm_acts_attach_scan_create
+      description: PDF или изображение (jpg, png, webp) до 20 МБ. Акт становится «Подписан (скан)»; публикуется `act.accepted`.
+      summary: Прикрепить скан подписанного акта (ISSUED → SIGNED)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Акт.
+        required: true
+      tags:
+      - CRM
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ActScanInRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActFlow'
+          description: ''
+        '400':
+          description: REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '403':
+          description: MEMBER_REQUIRED_FOR_ACTION / ROLE_NOT_PERMITTED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: Не найдено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '409':
+          description: 'CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
   /api/v1/crm/acts/{id}/cancel/:
     post:
       operationId: crm_acts_cancel_create
@@ -6007,6 +6766,72 @@ paths:
           $ref: '#/components/responses/ForbiddenResponse'
         '404':
           $ref: '#/components/responses/NotFoundResponse'
+  /api/v1/crm/acts/{id}/record-return/:
+    post:
+      operationId: crm_acts_record_return_create
+      description: |-
+        Акты — только чтение плюс сервисные экшены ниже (Rule 8).
+
+        Выпуск — через `invoices/{id}/generate-act/` (там же проверяется роутинг
+        продавца, аудит H4), подпись — через `acts/{id}/sign/`. Сырые create/update/
+        destroy обходили обе проверки и позволяли проставить номер, статус и даты руками.
+      summary: Записать возврат акта заказчиком (ISSUED → DRAFT с причиной)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Акт.
+        required: true
+      tags:
+      - CRM
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActReturnInRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ActReturnInRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ActReturnInRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActFlow'
+          description: ''
+        '400':
+          description: REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '403':
+          description: MEMBER_REQUIRED_FOR_ACTION / ROLE_NOT_PERMITTED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: Не найдено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '409':
+          description: 'CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
   /api/v1/crm/acts/{id}/reissue/:
     post:
       operationId: crm_acts_reissue_create
@@ -6582,18 +7407,26 @@ paths:
       security:
       - jwtAuth: []
       responses:
-        '200':
+        '201':
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Contract'
+                $ref: '#/components/schemas/ContractFlow'
           description: ''
         '400':
-          $ref: '#/components/responses/BadRequestResponse'
+          description: QUOTE_ID_REQUIRED / CONTRACT_NEEDS_APPROVAL / MEMBER_REQUIRED_FOR_ACTION (код в `detail`)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '403':
+          description: 'ROLE_NOT_PERMITTED: нет права `contract.manage`'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
         '401':
           $ref: '#/components/responses/UnauthorizedResponse'
-        '403':
-          $ref: '#/components/responses/ForbiddenResponse'
   /api/v1/crm/contracts/{id}/:
     get:
       operationId: crm_contracts_retrieve
@@ -6726,6 +7559,62 @@ paths:
           $ref: '#/components/responses/ForbiddenResponse'
         '404':
           $ref: '#/components/responses/NotFoundResponse'
+  /api/v1/crm/contracts/{id}/attach-scan/:
+    post:
+      operationId: crm_contracts_attach_scan_create
+      description: PDF или изображение (jpg, png, webp) до 20 МБ; сигнатура байтов должна совпадать с расширением. Договор
+        становится «Подписан», сделка уходит в `CLOSED_WON` — задача создаёт черновик счёта на предоплату.
+      summary: Прикрепить скан подписанного договора (ISSUED_EXTERNAL → SIGNED)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Контракт.
+        required: true
+      tags:
+      - CRM
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ContractScanInRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContractFlow'
+          description: ''
+        '400':
+          description: REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '403':
+          description: MEMBER_REQUIRED_FOR_ACTION / ROLE_NOT_PERMITTED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: Не найдено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '409':
+          description: 'CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
   /api/v1/crm/contracts/{id}/cancel/:
     post:
       operationId: crm_contracts_cancel_create
@@ -6769,6 +7658,66 @@ paths:
           $ref: '#/components/responses/ForbiddenResponse'
         '404':
           $ref: '#/components/responses/NotFoundResponse'
+  /api/v1/crm/contracts/{id}/client-agreed/:
+    post:
+      operationId: crm_contracts_client_agreed_create
+      description: Contracts -- generated from approved quotes, double-signed.
+      summary: 'Отметить: редакция согласована клиентом (PENDING_CLIENT → PENDING_MANAGER)'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Контракт.
+        required: true
+      tags:
+      - CRM
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContractTransitionInRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ContractTransitionInRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ContractTransitionInRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContractFlow'
+          description: ''
+        '400':
+          description: REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '403':
+          description: MEMBER_REQUIRED_FOR_ACTION / ROLE_NOT_PERMITTED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: Не найдено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '409':
+          description: 'CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
   /api/v1/crm/contracts/{id}/download-pdf/:
     get:
       operationId: crm_contracts_download_pdf_retrieve
@@ -6873,6 +7822,186 @@ paths:
           $ref: '#/components/responses/ForbiddenResponse'
         '404':
           $ref: '#/components/responses/NotFoundResponse'
+  /api/v1/crm/contracts/{id}/mark-issued/:
+    post:
+      operationId: crm_contracts_mark_issued_create
+      description: Contracts -- generated from approved quotes, double-signed.
+      summary: 'Отметить: договор выставлен у оператора ЭДО (PENDING_MANAGER → ISSUED_EXTERNAL)'
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Контракт.
+        required: true
+      tags:
+      - CRM
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContractTransitionInRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ContractTransitionInRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ContractTransitionInRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContractFlow'
+          description: ''
+        '400':
+          description: REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '403':
+          description: MEMBER_REQUIRED_FOR_ACTION / ROLE_NOT_PERMITTED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: Не найдено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '409':
+          description: 'CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+  /api/v1/crm/contracts/{id}/reject/:
+    post:
+      operationId: crm_contracts_reject_create
+      description: Contracts -- generated from approved quotes, double-signed.
+      summary: Записать отклонение договора клиентом (→ REJECTED), причина обязательна
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Контракт.
+        required: true
+      tags:
+      - CRM
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContractTransitionInRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ContractTransitionInRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ContractTransitionInRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContractFlow'
+          description: ''
+        '400':
+          description: REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '403':
+          description: MEMBER_REQUIRED_FOR_ACTION / ROLE_NOT_PERMITTED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: Не найдено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '409':
+          description: 'CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+  /api/v1/crm/contracts/{id}/revise/:
+    post:
+      operationId: crm_contracts_revise_create
+      description: Contracts -- generated from approved quotes, double-signed.
+      summary: Вернуть отклонённый проект договора в работу (REJECTED → DRAFT)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Контракт.
+        required: true
+      tags:
+      - CRM
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContractTransitionInRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ContractTransitionInRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ContractTransitionInRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContractFlow'
+          description: ''
+        '400':
+          description: REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '403':
+          description: MEMBER_REQUIRED_FOR_ACTION / ROLE_NOT_PERMITTED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: Не найдено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '409':
+          description: 'CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
   /api/v1/crm/contracts/{id}/select-wording/:
     post:
       operationId: crm_contracts_select_wording_create
@@ -6916,6 +8045,66 @@ paths:
           $ref: '#/components/responses/ForbiddenResponse'
         '404':
           $ref: '#/components/responses/NotFoundResponse'
+  /api/v1/crm/contracts/{id}/send-to-client/:
+    post:
+      operationId: crm_contracts_send_to_client_create
+      description: Contracts -- generated from approved quotes, double-signed.
+      summary: Отправить проект договора клиенту на согласование редакции (DRAFT → PENDING_CLIENT)
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this Контракт.
+        required: true
+      tags:
+      - CRM
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContractTransitionInRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ContractTransitionInRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ContractTransitionInRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContractFlow'
+          description: ''
+        '400':
+          description: REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '403':
+          description: MEMBER_REQUIRED_FOR_ACTION / ROLE_NOT_PERMITTED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: Не найдено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '409':
+          description: 'CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
   /api/v1/crm/contracts/{id}/sign-manager/:
     post:
       operationId: crm_contracts_sign_manager_create
@@ -6962,7 +8151,9 @@ paths:
   /api/v1/crm/contracts/{id}/upload-signed/:
     post:
       operationId: crm_contracts_upload_signed_create
-      description: Contracts -- generated from approved quotes, double-signed.
+      description: 'Файл подписанного экземпляра к договору, который ещё не подписан. На «Подписан» и «Отменён» — 409 `CONTRACT_SCAN_LOCKED`:
+        подписанный скан не заменяется. Тип проверяется как у скана (PDF, jpg, png, webp по сигнатуре, до 20 МБ), загрузка
+        пишется в журнал. Статус не меняет: «Подписан» ставит `attach-scan`.'
       summary: Upload signed copy
       parameters:
       - in: path
@@ -9313,6 +10504,109 @@ paths:
           $ref: '#/components/responses/ForbiddenResponse'
         '404':
           $ref: '#/components/responses/NotFoundResponse'
+  /api/v1/crm/projects/:
+    get:
+      operationId: crm_projects_list
+      description: Сделки от принятия КП клиентом. Шаг (`CONTRACT`/`PAYMENT`/`DONE`), статус для клиента и «проблемы» выводятся
+        из документов. Порядок — от новых; страница — `limit`/`offset`. Читает сотрудник компании-владельца.
+      summary: 'Проекты: список'
+      parameters:
+      - in: query
+        name: deal_id
+        schema:
+          type: integer
+        description: Одна сделка (точный поиск по номеру ПР)
+      - in: query
+        name: limit
+        schema:
+          type: integer
+        description: Размер страницы, 1–100 (по умолчанию 25)
+      - in: query
+        name: mine
+        schema:
+          type: boolean
+        description: Только проекты, где сотрудник — менеджер или взявший в работу
+      - in: query
+        name: offset
+        schema:
+          type: integer
+        description: Сдвиг
+      - in: query
+        name: problems
+        schema:
+          type: boolean
+        description: 'Только с проблемами: договор отклонён, акт возвращён, счёт просрочен'
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: Название, клиент, номер КП, договора, счёта или акта
+      - in: query
+        name: step
+        schema:
+          type: string
+          enum:
+          - CONTRACT
+          - DONE
+          - PAYMENT
+        description: Шаг пути заявки
+      tags:
+      - CRM
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectPage'
+          description: ''
+        '403':
+          description: PROJECT_STAFF_ONLY
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+  /api/v1/crm/projects/{deal_id}/:
+    get:
+      operationId: crm_projects_retrieve
+      description: Документы проекта (КП, договор, счета, акт) с историей и действиями, доступными ЭТОМУ сотруднику, исполнение
+        (отгрузка и строки поставки — только чтение) и журнал документов.
+      summary: 'Проект: карточка'
+      parameters:
+      - in: path
+        name: deal_id
+        schema:
+          type: integer
+        description: Сделка ERP (`deal_id` строки списка)
+        required: true
+      tags:
+      - CRM
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectCard'
+          description: ''
+        '403':
+          description: PROJECT_STAFF_ONLY
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: 'NOT_FOUND: сделки нет или она не проект'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
   /api/v1/crm/quote-charges/:
     get:
       operationId: crm_quote_charges_list
@@ -11412,6 +12706,42 @@ paths:
           $ref: '#/components/responses/ForbiddenResponse'
         '404':
           $ref: '#/components/responses/NotFoundResponse'
+  /api/v1/exchange-rates/:
+    get:
+      operationId: exchange_rates_list
+      description: Курсы к UZS по дням, новые первыми. Читает любой сотрудник; ручной ввод — `settings.edit` (`POST exchange-rates/manual/`).
+      summary: Exchange rate rows
+      parameters:
+      - in: query
+        name: currency
+        schema:
+          type: string
+        description: Код валюты (USD, EUR, RUB).
+      - in: query
+        name: page
+        schema:
+          type: integer
+        description: Номер страницы.
+      - in: query
+        name: page_size
+        schema:
+          type: integer
+        description: Строк на странице, до 200.
+      tags:
+      - Finance
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedDeskExchangeRateList'
+          description: ''
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenResponse'
   /api/v1/exchange-rates/current/:
     get:
       operationId: exchange_rates_current_retrieve
@@ -11651,6 +12981,294 @@ paths:
           $ref: '#/components/responses/UnauthorizedResponse'
         '404':
           $ref: '#/components/responses/NotFoundResponse'
+  /api/v1/finance/receivables/:
+    get:
+      operationId: finance_receivables_board
+      description: GET — счета вкладки «Счетов и оплат» и число счетов на каждой вкладке.
+      summary: 'Счета и оплаты: таблица вкладки'
+      parameters:
+      - in: query
+        name: limit
+        schema:
+          type: integer
+        description: Строк на странице, 1–100 (по умолчанию 50).
+      - in: query
+        name: offset
+        schema:
+          type: integer
+        description: Сколько строк пропустить.
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: Поиск по номеру счёта и названию клиента.
+      - in: query
+        name: tab
+        schema:
+          type: string
+          enum:
+          - all
+          - awaiting
+          - overdue
+          - proofs
+          - to_issue
+        description: Вкладка; по умолчанию `awaiting`.
+      tags:
+      - Finance
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReceivableBoard'
+          description: ''
+        '400':
+          description: TAB_INVALID / PAGINATION_INVALID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '403':
+          description: ROLE_NOT_PERMITTED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+  /api/v1/finance/receivables/{invoice_id}/:
+    get:
+      operationId: finance_receivables_card
+      description: 'GET — карточка счёта: платёжки, платежи, остаток, журнал.'
+      summary: 'Счета и оплаты: карточка счёта'
+      parameters:
+      - in: path
+        name: invoice_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Finance
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReceivableCard'
+          description: ''
+        '403':
+          description: ROLE_NOT_PERMITTED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: NOT_FOUND
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+  /api/v1/finance/receivables/{invoice_id}/confirm-payment/:
+    post:
+      operationId: finance_receivables_confirm_payment
+      description: POST — «Подтвердить оплату» (полная или частичная) по выписке банка.
+      summary: Подтвердить оплату счёта (сумма и дата по выписке)
+      parameters:
+      - in: path
+        name: invoice_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Finance
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfirmPaymentRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ConfirmPaymentRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ConfirmPaymentRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReceivableCard'
+          description: ''
+        '400':
+          description: NOT_FOUND / CONFIRMATION_NOT_FOUND (404); ROLE_NOT_PERMITTED / MEMBER_REQUIRED_FOR_ACTION (403); PAYMENT_EXCEEDS_BALANCE_DUE
+            / INVOICE_NOT_ISSUED / INVOICE_NOT_OPEN / INVOICE_CANCELLED / INVOICE_ALREADY_PAID / PAYMENT_REFERENCE_CONFLICT
+            (409); PAYMENT_DATE_IN_FUTURE / PAYMENT_AMOUNT_MUST_BE_POSITIVE (400)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '403':
+          description: ROLE_NOT_PERMITTED / MEMBER_REQUIRED_FOR_ACTION
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: NOT_FOUND / CONFIRMATION_NOT_FOUND
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '409':
+          description: PAYMENT_EXCEEDS_BALANCE_DUE / INVOICE_ALREADY_PAID / ...
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+  /api/v1/finance/receivables/{invoice_id}/confirmations/:
+    post:
+      operationId: finance_receivables_attach_confirmation
+      description: POST — приложить платёжку клиента (файл) к открытому счёту.
+      summary: Приложить платёжку клиента к счёту
+      parameters:
+      - in: path
+        name: invoice_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Finance
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AttachConfirmationRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReceivableCard'
+          description: ''
+        '400':
+          description: Файл не принят или поле неверно
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '403':
+          description: ROLE_NOT_PERMITTED / MEMBER_REQUIRED_FOR_ACTION
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: NOT_FOUND
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '409':
+          description: INVOICE_NOT_OPEN
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+  /api/v1/finance/receivables/{invoice_id}/confirmations/{confirmation_id}/file/:
+    get:
+      operationId: finance_receivables_confirmation_file
+      description: GET — файл платёжки клиента потоком (приватное хранилище, только после проверки права и привязки к счёту).
+      summary: Файл платёжки клиента
+      parameters:
+      - in: path
+        name: confirmation_id
+        schema:
+          type: integer
+        required: true
+      - in: path
+        name: invoice_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Finance
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: Содержимое файла
+        '403':
+          description: ROLE_NOT_PERMITTED
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: Платёжки нет или она относится к другому счёту
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+  /api/v1/finance/receivables/{invoice_id}/request-payment-doc/:
+    post:
+      operationId: finance_receivables_request_payment_doc
+      description: POST — отметить «платёжку запросили у клиента» (запись в журнале счёта).
+      summary: Отметить запрос платёжки у клиента
+      parameters:
+      - in: path
+        name: invoice_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - Finance
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReceivableCard'
+          description: ''
+        '403':
+          description: ROLE_NOT_PERMITTED / MEMBER_REQUIRED_FOR_ACTION
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: NOT_FOUND
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '409':
+          description: INVOICE_NOT_OPEN
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
   /api/v1/integration/bus/deliveries/:
     get:
       operationId: busDeliveries
@@ -12552,6 +14170,107 @@ paths:
           $ref: '#/components/responses/ForbiddenResponse'
         '404':
           $ref: '#/components/responses/NotFoundResponse'
+  /api/v1/master-data/hs-codes/:
+    get:
+      operationId: master_data_hs_codes_list
+      description: |-
+        Классификатор ТН ВЭД: чтение — любой сотрудник; добавить код и править наименование и срок — `catalog.manage`.
+        Код выведенный из обращения не удаляется, а закрывается датой (`valid_until`).
+      summary: HS (TN VED) code classifier
+      parameters:
+      - in: query
+        name: active
+        schema:
+          type: boolean
+        description: Только действующие на сегодня.
+      - in: query
+        name: level
+        schema:
+          type: integer
+          enum:
+          - 10
+          - 2
+          - 4
+          - 6
+          - 8
+        description: Число знаков кода.
+      - in: query
+        name: page
+        schema:
+          type: integer
+        description: Номер страницы.
+      - in: query
+        name: page_size
+        schema:
+          type: integer
+        description: Строк на странице, до 200.
+      - in: query
+        name: q
+        schema:
+          type: string
+        description: Поиск по названию и коду.
+      tags:
+      - Master Data
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedDeskHsCodeList'
+          description: ''
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
+        '403':
+          $ref: '#/components/responses/ForbiddenResponse'
+    post:
+      operationId: master_data_hs_codes_create
+      description: Needs `catalog.manage`. Код — 2, 4, 6, 8 или 10 цифр; повтор — 409 `HS_CODE_EXISTS`. Родитель находится
+        по самому длинному существующему префиксу.
+      summary: Add an HS code
+      tags:
+      - Master Data
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeskHsCodeInRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DeskHsCodeInRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DeskHsCodeInRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeskHsCode'
+          description: ''
+        '400':
+          description: 'Отказ проверки: код в `detail` или ошибки полей.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '403':
+          description: Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '409':
+          description: HS_CODE_EXISTS — такой код уже есть.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
   /api/v1/master-data/hs-codes/{code}/duties/:
     get:
       operationId: master_data_hs_codes_duties_retrieve
@@ -12583,6 +14302,60 @@ paths:
           $ref: '#/components/responses/ForbiddenResponse'
         '404':
           $ref: '#/components/responses/NotFoundResponse'
+  /api/v1/master-data/hs-codes/{id}/:
+    patch:
+      operationId: master_data_hs_codes_update
+      description: Needs `catalog.manage`. Менять можно наименование, единицы и срок действия; сам код — нет.
+      summary: Edit an HS code
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          pattern: ^\d+$
+        required: true
+      tags:
+      - Master Data
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedDeskHsCodeInRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedDeskHsCodeInRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedDeskHsCodeInRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeskHsCode'
+          description: ''
+        '400':
+          description: 'Отказ проверки: код в `detail` или ошибки полей.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BadRequest'
+        '403':
+          description: Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '404':
+          description: Объекта нет.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '401':
+          $ref: '#/components/responses/UnauthorizedResponse'
   /api/v1/master-data/units/:
     get:
       operationId: master_data_units_list
@@ -13070,7 +14843,17 @@ paths:
               schema:
                 $ref: '#/components/schemas/BadRequest'
         '404':
-          $ref: '#/components/responses/NotFoundResponse'
+          description: Unknown or not-yet-sent token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '410':
+          description: Public link revoked or expired (QUOTE_LINK_REVOKED / QUOTE_LINK_EXPIRED)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
   /api/v1/public/quotes/{token}/reject/:
     post:
       operationId: public_quotes_reject_create
@@ -13112,7 +14895,17 @@ paths:
               schema:
                 $ref: '#/components/schemas/BadRequest'
         '404':
-          $ref: '#/components/responses/NotFoundResponse'
+          description: Unknown or not-yet-sent token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '410':
+          description: Public link revoked or expired (QUOTE_LINK_REVOKED / QUOTE_LINK_EXPIRED)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
   /api/v1/public/quotes/{token}/request-code/:
     post:
       operationId: public_quotes_request_code_create
@@ -13136,7 +14929,17 @@ paths:
                 $ref: '#/components/schemas/PublicCodeSent'
           description: ''
         '404':
-          $ref: '#/components/responses/NotFoundResponse'
+          description: Unknown or not-yet-sent token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '410':
+          description: Public link revoked or expired (QUOTE_LINK_REVOKED / QUOTE_LINK_EXPIRED)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
   /api/v1/public/quotes/{token}/viewed/:
     post:
       operationId: public_quotes_viewed_create
@@ -13156,7 +14959,17 @@ paths:
         '204':
           description: No response body
         '404':
-          $ref: '#/components/responses/NotFoundResponse'
+          description: Unknown or not-yet-sent token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
+        '410':
+          description: Public link revoked or expired (QUOTE_LINK_REVOKED / QUOTE_LINK_EXPIRED)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorDetail'
   /api/v1/settings/email-templates/:
     get:
       operationId: settings_email_templates_list
@@ -15585,6 +17398,271 @@ components:
       - viewer_can_reject
       - viewer_can_remind
       - viewer_can_sign
+    ActBlockerEnum:
+      enum:
+      - no_invoice
+      - act_exists
+      - forbidden
+      type: string
+      description: |-
+        * `no_invoice` - no_invoice
+        * `act_exists` - act_exists
+        * `forbidden` - forbidden
+    ActCard:
+      type: object
+      properties:
+        id:
+          type: integer
+        number:
+          type: string
+        status:
+          $ref: '#/components/schemas/ProjectActStatusEnum'
+        total:
+          allOf:
+          - $ref: '#/components/schemas/ProjectMoney'
+          nullable: true
+        issued_at:
+          type: string
+          format: date
+          nullable: true
+        signed_at:
+          type: string
+          format: date-time
+          nullable: true
+        rejection_reason:
+          type: string
+        has_pdf:
+          type: boolean
+        has_scan:
+          type: boolean
+        actions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ActCardActionsEnum'
+        history:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectJournalEntry'
+      required:
+      - actions
+      - has_pdf
+      - has_scan
+      - history
+      - id
+      - issued_at
+      - number
+      - rejection_reason
+      - signed_at
+      - status
+      - total
+    ActCardActionsEnum:
+      enum:
+      - attach_scan
+      - return
+      - reissue
+      type: string
+      description: |-
+        * `attach_scan` - attach_scan
+        * `return` - return
+        * `reissue` - reissue
+    ActFlow:
+      type: object
+      description: 'Ответ действий по акту (D2-5): подписанты акта могут быть неизвестны (скан, возврат).'
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        deal:
+          type: integer
+          title: Сделка
+        contract:
+          type: integer
+          nullable: true
+        invoice:
+          type: integer
+          nullable: true
+        number:
+          type: string
+          readOnly: true
+          title: Номер акта
+        status:
+          type: string
+          readOnly: true
+        status_name:
+          type: string
+          readOnly: true
+        issued_at:
+          type: string
+          format: date
+          nullable: true
+        signed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        total_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        pdf_file:
+          type: string
+          format: uri
+          nullable: true
+          readOnly: true
+        pdf_url:
+          type: string
+          nullable: true
+          readOnly: true
+        signed_file:
+          type: string
+          format: uri
+          nullable: true
+        signed_file_url:
+          type: string
+          nullable: true
+          readOnly: true
+        issuer_signer:
+          type: integer
+          readOnly: true
+          nullable: true
+          title: Выпустил (сторона исполнителя)
+        issuer_signer_name:
+          type: string
+          readOnly: true
+          nullable: true
+        issuer_signed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+          title: Выпущен
+        acceptor_signer:
+          type: integer
+          readOnly: true
+          nullable: true
+          title: Принял (сторона заказчика)
+        acceptor_signer_name:
+          type: string
+          readOnly: true
+          nullable: true
+        acceptor_signed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+          title: Принят
+        rejection_reason:
+          type: string
+          readOnly: true
+          title: Причина отклонения
+          description: 'Заполняется, когда заказчик отклоняет акт: основание попадает в аудит'
+        cancellation_reason:
+          type: string
+          readOnly: true
+          title: Причина аннулирования
+          description: 'Заполняется, когда акт аннулирует ВЫПУСТИВШАЯ сторона. Отдельно от причины отклонения: отклонение
+            — ответ заказчика, аннулирование — отзыв исполнителя, и смешивать их в одном поле значит терять, кто именно закрыл
+            документ.'
+        reminder_sent_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+          title: Напоминание отправлено
+        viewer_can_sign:
+          type: boolean
+          readOnly: true
+        viewer_can_reject:
+          type: boolean
+          readOnly: true
+        viewer_can_remind:
+          type: boolean
+          description: |-
+            Напомнить может исполнитель по ВЫСТАВЛЕННОМУ акту и не чаще раза в сутки.
+
+            Кулдаун показывается заранее, а не выясняется отказом после нажатия: PandaDoc так же
+            гасит кнопку до истечения суток.
+          readOnly: true
+        viewer_can_cancel:
+          type: boolean
+          description: |-
+            Отозвать акт может ТОЛЬКО выпустившая сторона и только пока он не согласован обеими:
+            закрытый документ не «разподписывают» (у DocuSign и Adobe отзыв тоже терминален).
+          readOnly: true
+        viewer_can_reissue:
+          type: boolean
+          description: |-
+            Возвращённый заказчиком акт выпускает заново ТОЛЬКО исполнитель.
+
+            До 24-08 у отклонённого акта оставалась одна кнопка — «Аннулировать», хотя диалог
+            отказа обещал заказчику, что исполнитель «выставит акт заново». Единственным способом
+            было вернуться на счета и нажать «Сформировать акт», что порождало ВТОРОЙ документ.
+          readOnly: true
+        notes:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - acceptor_signed_at
+      - acceptor_signer
+      - acceptor_signer_name
+      - cancellation_reason
+      - created_at
+      - deal
+      - id
+      - issuer_signed_at
+      - issuer_signer
+      - issuer_signer_name
+      - number
+      - pdf_file
+      - pdf_url
+      - rejection_reason
+      - reminder_sent_at
+      - signed_at
+      - signed_file_url
+      - updated_at
+      - viewer_can_cancel
+      - viewer_can_reissue
+      - viewer_can_reject
+      - viewer_can_remind
+      - viewer_can_sign
+    ActRef:
+      type: object
+      properties:
+        id:
+          type: integer
+        number:
+          type: string
+        status:
+          $ref: '#/components/schemas/ProjectActStatusEnum'
+      required:
+      - id
+      - number
+      - status
+    ActReturnInRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          minLength: 1
+          description: Причина возврата акта заказчиком — обязательна
+      required:
+      - reason
+    ActScanInRequest:
+      type: object
+      properties:
+        file:
+          type: string
+          format: binary
+          description: 'Скан подписанного акта: PDF, jpg, png или webp до 20 МБ'
+      required:
+      - file
     ActiveSession:
       type: object
       description: |-
@@ -15733,6 +17811,32 @@ components:
       required:
       - member_id
       - role_ids
+    AttachConfirmationRequest:
+      type: object
+      properties:
+        file:
+          type: string
+          format: binary
+          description: 'Платёжное поручение: PDF, изображение или документ, до 20 МБ.'
+        source:
+          allOf:
+          - $ref: '#/components/schemas/SourceEnum'
+          default: MANUAL
+        claimed_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+          nullable: true
+        claimed_date:
+          type: string
+          format: date
+          nullable: true
+        note:
+          type: string
+          default: ''
+          maxLength: 500
+      required:
+      - file
     Attachment:
       type: object
       properties:
@@ -15871,6 +17975,16 @@ components:
         * `not_draft` - not_draft
         * `no_lines` - no_lines
         * `visas_missing` - visas_missing
+    BrigadeKindEnum:
+      enum:
+      - brigade
+      - person
+      - subcontractor
+      type: string
+      description: |-
+        * `brigade` - brigade
+        * `person` - person
+        * `subcontractor` - subcontractor
     BulkCreateQuoteItemsRequestRequest:
       type: object
       properties:
@@ -17284,6 +19398,22 @@ components:
             type: integer
       required:
       - order
+    ClientStatusEnum:
+      enum:
+      - contract_review
+      - contract_signing
+      - awaiting_payment
+      - fulfilling
+      - awaiting_acceptance
+      - done
+      type: string
+      description: |-
+        * `contract_review` - contract_review
+        * `contract_signing` - contract_signing
+        * `awaiting_payment` - awaiting_payment
+        * `fulfilling` - fulfilling
+        * `awaiting_acceptance` - awaiting_acceptance
+        * `done` - done
     Company:
       type: object
       properties:
@@ -18056,6 +20186,30 @@ components:
       - field
       - text
       - title
+    ConfirmPaymentRequest:
+      type: object
+      properties:
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+          description: Сумма по выписке; не больше остатка.
+        paid_at:
+          type: string
+          format: date
+          description: Дата поступления по выписке; не позже сегодняшней.
+        reference:
+          type: string
+          default: ''
+          description: Номер операции банка.
+          maxLength: 255
+        confirmation_id:
+          type: integer
+          nullable: true
+          description: Платёжка клиента, которую подтверждает платёж.
+      required:
+      - amount
+      - paid_at
     Contact:
       type: object
       properties:
@@ -18320,6 +20474,226 @@ components:
       - viewer_can_sign_client
       - viewer_can_sign_manager
       - wording_selections
+    ContractCard:
+      type: object
+      properties:
+        id:
+          type: integer
+        number:
+          type: string
+        status:
+          $ref: '#/components/schemas/ProjectContractStatusEnum'
+        sent_to_client:
+          type: boolean
+          description: Проект ушёл клиенту на согласование и виден ему в портале
+        total:
+          allOf:
+          - $ref: '#/components/schemas/ProjectMoney'
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        client_agreed_at:
+          type: string
+          format: date-time
+          nullable: true
+        signed_at:
+          type: string
+          format: date-time
+          nullable: true
+        has_pdf:
+          type: boolean
+        has_scan:
+          type: boolean
+        actions:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContractCardActionsEnum'
+          description: 'Что можно сделать СЕЙЧАС этому сотруднику: допустимо из статуса и разрешено правами роли'
+        history:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectJournalEntry'
+      required:
+      - actions
+      - client_agreed_at
+      - created_at
+      - has_pdf
+      - has_scan
+      - history
+      - id
+      - number
+      - sent_to_client
+      - signed_at
+      - status
+      - total
+    ContractCardActionsEnum:
+      enum:
+      - send_to_client
+      - client_agreed
+      - reject
+      - revise
+      - mark_issued
+      - attach_scan
+      type: string
+      description: |-
+        * `send_to_client` - send_to_client
+        * `client_agreed` - client_agreed
+        * `reject` - reject
+        * `revise` - revise
+        * `mark_issued` - mark_issued
+        * `attach_scan` - attach_scan
+    ContractFlow:
+      type: object
+      description: |-
+        Ответ действий по договору (D2-5): тот же договор, но имена подписантов честно могут быть пустыми — подпись
+        вне платформы, подписантов ERP может не знать. Отдельный компонент: у прежних операций схема не меняется.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        deal:
+          type: integer
+          title: Сделка
+        quote:
+          type: integer
+          title: КП-источник
+        number:
+          type: string
+          readOnly: true
+          title: Номер контракта
+        status:
+          type: string
+          readOnly: true
+        status_name:
+          type: string
+          readOnly: true
+        invoice_id:
+          type: integer
+          nullable: true
+          readOnly: true
+        total_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+          readOnly: true
+          title: Сумма контракта
+        currency:
+          type: integer
+          nullable: true
+          title: Валюта
+        pdf_file:
+          type: string
+          format: uri
+          nullable: true
+          readOnly: true
+          title: PDF контракта
+        pdf_url:
+          type: string
+          nullable: true
+          readOnly: true
+        signed_file:
+          type: string
+          format: uri
+          nullable: true
+          title: Подписанный скан/скан-копия
+        signed_file_url:
+          type: string
+          nullable: true
+          readOnly: true
+        client_signer:
+          type: integer
+          readOnly: true
+          nullable: true
+          title: Подписал со стороны клиента
+        client_signer_name:
+          type: string
+          readOnly: true
+          nullable: true
+        client_signed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        manager_signer:
+          type: integer
+          readOnly: true
+          nullable: true
+          title: Подписал со стороны продавца
+        manager_signer_name:
+          type: string
+          readOnly: true
+          nullable: true
+        manager_signed_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+        viewer_can_sign_client:
+          type: boolean
+          readOnly: true
+        viewer_can_sign_manager:
+          type: boolean
+          readOnly: true
+        valid_from:
+          type: string
+          format: date
+          nullable: true
+        valid_until:
+          type: string
+          format: date
+          nullable: true
+        notes:
+          type: string
+        wording_selections:
+          readOnly: true
+          title: Формулировки договора
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - client_signed_at
+      - client_signer
+      - client_signer_name
+      - created_at
+      - deal
+      - id
+      - invoice_id
+      - manager_signed_at
+      - manager_signer
+      - manager_signer_name
+      - number
+      - pdf_file
+      - pdf_url
+      - quote
+      - signed_file_url
+      - total_amount
+      - updated_at
+      - viewer_can_sign_client
+      - viewer_can_sign_manager
+      - wording_selections
+    ContractRef:
+      type: object
+      properties:
+        id:
+          type: integer
+        number:
+          type: string
+        status:
+          $ref: '#/components/schemas/ProjectContractStatusEnum'
+        sent_to_client:
+          type: boolean
+          description: Проект ушёл клиенту на согласование и виден ему в портале
+      required:
+      - id
+      - number
+      - sent_to_client
+      - status
     ContractRequest:
       type: object
       properties:
@@ -18351,6 +20725,26 @@ components:
       required:
       - deal
       - quote
+    ContractScanInRequest:
+      type: object
+      properties:
+        file:
+          type: string
+          format: binary
+          description: 'Скан подписанного договора: PDF, jpg, png или webp до 20 МБ'
+        note:
+          type: string
+      required:
+      - file
+    ContractTransitionInRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          description: Обязательна для `reject`
+        note:
+          type: string
+          description: Заметка в журнал (оператор ЭДО, ссылка)
     Country:
       type: object
       properties:
@@ -18469,6 +20863,14 @@ components:
             $ref: '#/components/schemas/ManualInvoiceLineRequest'
       required:
       - deal
+    CrewRateUnitEnum:
+      enum:
+      - day
+      - hour
+      type: string
+      description: |-
+        * `day` - day
+        * `hour` - hour
     CrmPairingStatus:
       type: object
       properties:
@@ -19022,6 +21424,734 @@ components:
       required:
       - code
       - name
+    DeliveryLineCard:
+      type: object
+      properties:
+        line_no:
+          type: integer
+        title:
+          type: string
+        quantity:
+          type: integer
+          nullable: true
+        unit:
+          type: string
+        status:
+          type: string
+        eta:
+          type: string
+          format: date
+          nullable: true
+        shipped_at:
+          type: string
+          format: date-time
+          nullable: true
+        tracking:
+          type: string
+      required:
+      - eta
+      - line_no
+      - quantity
+      - shipped_at
+      - status
+      - title
+      - tracking
+      - unit
+    DeskBrigade:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        kind:
+          $ref: '#/components/schemas/BrigadeKindEnum'
+        specialization:
+          type: string
+        headcount:
+          type: integer
+        rate:
+          allOf:
+          - $ref: '#/components/schemas/DeskCrewRate'
+          nullable: true
+          description: 'Ставка: держатель зоны услуг или cost_margin; иначе null.'
+        rate_visible:
+          type: boolean
+        note:
+          type: string
+        is_active:
+          type: boolean
+      required:
+      - headcount
+      - id
+      - is_active
+      - kind
+      - name
+      - note
+      - rate
+      - rate_visible
+      - specialization
+    DeskBrigadeInRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        kind:
+          $ref: '#/components/schemas/BrigadeKindEnum'
+        specialization:
+          type: string
+          maxLength: 255
+        headcount:
+          type: integer
+          maximum: 500
+          minimum: 1
+        rate:
+          allOf:
+          - $ref: '#/components/schemas/DeskCrewRateInRequest'
+          nullable: true
+        rate_unit:
+          $ref: '#/components/schemas/CrewRateUnitEnum'
+        note:
+          type: string
+          maxLength: 500
+        is_active:
+          type: boolean
+    DeskCrewRate:
+      type: object
+      properties:
+        amount:
+          type: string
+        currency:
+          type: string
+          nullable: true
+        unit:
+          $ref: '#/components/schemas/CrewRateUnitEnum'
+      required:
+      - amount
+      - currency
+      - unit
+    DeskCrewRateInRequest:
+      type: object
+      properties:
+        amount:
+          type: string
+          minLength: 1
+        currency:
+          type: string
+          minLength: 1
+      required:
+      - amount
+      - currency
+    DeskExchangeRate:
+      type: object
+      properties:
+        id:
+          type: integer
+        currency:
+          type: string
+        rate_to_uzs:
+          type: string
+        rate_date:
+          type: string
+          format: date
+        source:
+          type: string
+          description: CBU (автозагрузка ЦБ РУз) или MANUAL.
+      required:
+      - currency
+      - id
+      - rate_date
+      - rate_to_uzs
+      - source
+    DeskHsCode:
+      type: object
+      properties:
+        id:
+          type: integer
+        code:
+          type: string
+        name:
+          type: string
+        unit_name:
+          type: string
+        extra_unit_name:
+          type: string
+        level:
+          type: integer
+        valid_from:
+          type: string
+          format: date
+          nullable: true
+        valid_until:
+          type: string
+          format: date
+          nullable: true
+        is_active:
+          type: boolean
+        source:
+          type: string
+      required:
+      - code
+      - extra_unit_name
+      - id
+      - is_active
+      - level
+      - name
+      - source
+      - unit_name
+      - valid_from
+      - valid_until
+    DeskHsCodeInRequest:
+      type: object
+      properties:
+        code:
+          type: string
+          minLength: 1
+          description: 'Только при создании: 2, 4, 6, 8 или 10 цифр.'
+        name:
+          type: string
+        unit_name:
+          type: string
+          maxLength: 64
+        extra_unit_name:
+          type: string
+          maxLength: 64
+        valid_from:
+          type: string
+          format: date
+          nullable: true
+        valid_until:
+          type: string
+          format: date
+          nullable: true
+    DeskItemDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        sku:
+          type: string
+        name:
+          type: string
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/DeskItemKindEnum'
+          description: |-
+            Тип вычисляется: товар со склада или под заказ, услуга фикс / по этапам / по времени.
+
+            * `stock` - stock
+            * `on_order` - on_order
+            * `service_fixed` - service_fixed
+            * `service_milestones` - service_milestones
+            * `service_time` - service_time
+        is_service:
+          type: boolean
+        unit:
+          allOf:
+          - $ref: '#/components/schemas/DeskUnit'
+          nullable: true
+        vat_rate:
+          type: string
+          nullable: true
+          description: НДС позиции, %; null — ставка компании по умолчанию.
+        vat_effective:
+          type: string
+          nullable: true
+          description: 'Действующая ставка: своя или компании по умолчанию.'
+        category:
+          allOf:
+          - $ref: '#/components/schemas/DeskRef'
+          nullable: true
+        status:
+          type: string
+          nullable: true
+          description: 'Код статуса карточки: DRAFT, PUBLISHED.'
+        offers_count:
+          type: integer
+        nearest_valid_until:
+          type: string
+          format: date
+          nullable: true
+        docs_count:
+          type: integer
+        description:
+          type: string
+        gost_drawing:
+          type: string
+        hs_code:
+          type: string
+        manufacturer_part_number:
+          type: string
+        brand:
+          type: string
+          nullable: true
+        offers:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeskOffer'
+        prices_visible:
+          type: boolean
+          description: Видит ли сотрудник цены поставщиков (иначе price = null).
+        tech_docs:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeskTechDocRef'
+      required:
+      - brand
+      - category
+      - description
+      - docs_count
+      - gost_drawing
+      - hs_code
+      - id
+      - is_service
+      - kind
+      - manufacturer_part_number
+      - name
+      - nearest_valid_until
+      - offers
+      - offers_count
+      - prices_visible
+      - sku
+      - status
+      - tech_docs
+      - unit
+      - vat_effective
+      - vat_rate
+    DeskItemInRequest:
+      type: object
+      description: Создание и правка позиции. При правке приходят только изменяемые поля.
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+        kind:
+          $ref: '#/components/schemas/DeskItemKindEnum'
+        unit_id:
+          type: integer
+          nullable: true
+        category_id:
+          type: integer
+          nullable: true
+        vat_rate:
+          type: string
+          nullable: true
+          description: Процент 0..100; пусто — по умолчанию компании.
+    DeskItemKindEnum:
+      enum:
+      - stock
+      - on_order
+      - service_fixed
+      - service_milestones
+      - service_time
+      type: string
+      description: |-
+        * `stock` - stock
+        * `on_order` - on_order
+        * `service_fixed` - service_fixed
+        * `service_milestones` - service_milestones
+        * `service_time` - service_time
+    DeskItemRow:
+      type: object
+      properties:
+        id:
+          type: integer
+        sku:
+          type: string
+        name:
+          type: string
+        kind:
+          allOf:
+          - $ref: '#/components/schemas/DeskItemKindEnum'
+          description: |-
+            Тип вычисляется: товар со склада или под заказ, услуга фикс / по этапам / по времени.
+
+            * `stock` - stock
+            * `on_order` - on_order
+            * `service_fixed` - service_fixed
+            * `service_milestones` - service_milestones
+            * `service_time` - service_time
+        is_service:
+          type: boolean
+        unit:
+          allOf:
+          - $ref: '#/components/schemas/DeskUnit'
+          nullable: true
+        vat_rate:
+          type: string
+          nullable: true
+          description: НДС позиции, %; null — ставка компании по умолчанию.
+        vat_effective:
+          type: string
+          nullable: true
+          description: 'Действующая ставка: своя или компании по умолчанию.'
+        category:
+          allOf:
+          - $ref: '#/components/schemas/DeskRef'
+          nullable: true
+        status:
+          type: string
+          nullable: true
+          description: 'Код статуса карточки: DRAFT, PUBLISHED.'
+        offers_count:
+          type: integer
+        nearest_valid_until:
+          type: string
+          format: date
+          nullable: true
+        docs_count:
+          type: integer
+      required:
+      - category
+      - docs_count
+      - id
+      - is_service
+      - kind
+      - name
+      - nearest_valid_until
+      - offers_count
+      - sku
+      - status
+      - unit
+      - vat_effective
+      - vat_rate
+    DeskMoneyInRequest:
+      type: object
+      properties:
+        amount:
+          type: string
+          minLength: 1
+        currency:
+          type: string
+          minLength: 1
+      required:
+      - amount
+      - currency
+    DeskOffer:
+      type: object
+      properties:
+        id:
+          type: integer
+        supplier:
+          $ref: '#/components/schemas/DeskOfferSupplier'
+        product:
+          $ref: '#/components/schemas/DeskOfferProduct'
+        supplier_sku:
+          type: string
+        price:
+          allOf:
+          - $ref: '#/components/schemas/Money'
+          nullable: true
+          description: 'Цена закупки: только с правом на цены поставщиков (иначе null).'
+        quota_qty:
+          type: integer
+          description: 'Квота: сколько единиц поставщик готов отгрузить по этой цене.'
+        min_order_qty:
+          type: integer
+        in_stock_lead_days:
+          type: integer
+        order_lead_days:
+          type: integer
+        stock_status:
+          type: string
+          nullable: true
+        valid_from:
+          type: string
+          format: date
+          nullable: true
+        valid_until:
+          type: string
+          format: date
+          nullable: true
+        is_active:
+          type: boolean
+        validity:
+          $ref: '#/components/schemas/ValidityEnum'
+      required:
+      - id
+      - in_stock_lead_days
+      - is_active
+      - min_order_qty
+      - order_lead_days
+      - price
+      - product
+      - quota_qty
+      - stock_status
+      - supplier
+      - supplier_sku
+      - valid_from
+      - valid_until
+      - validity
+    DeskOfferProduct:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        sku:
+          type: string
+      required:
+      - id
+      - name
+      - sku
+    DeskOfferSupplier:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+      required:
+      - id
+      - name
+    DeskRef:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+      required:
+      - id
+      - name
+    DeskSupplierDetail:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        tin:
+          type: string
+        country:
+          type: string
+          nullable: true
+        offers_count:
+          type: integer
+        expired_count:
+          type: integer
+          description: Действующих предложений с истёкшим сроком цены.
+        expiring_count:
+          type: integer
+          description: Срок цены истекает в ближайшие 14 дней.
+        nearest_valid_until:
+          type: string
+          format: date
+          nullable: true
+        contact_person:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        website:
+          type: string
+        legal_address:
+          type: string
+        offers:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeskOffer'
+        prices_visible:
+          type: boolean
+      required:
+      - contact_person
+      - country
+      - email
+      - expired_count
+      - expiring_count
+      - id
+      - legal_address
+      - name
+      - nearest_valid_until
+      - offers
+      - offers_count
+      - phone
+      - prices_visible
+      - tin
+      - website
+    DeskSupplierRow:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        tin:
+          type: string
+        country:
+          type: string
+          nullable: true
+        offers_count:
+          type: integer
+        expired_count:
+          type: integer
+          description: Действующих предложений с истёкшим сроком цены.
+        expiring_count:
+          type: integer
+          description: Срок цены истекает в ближайшие 14 дней.
+        nearest_valid_until:
+          type: string
+          format: date
+          nullable: true
+      required:
+      - country
+      - expired_count
+      - expiring_count
+      - id
+      - name
+      - nearest_valid_until
+      - offers_count
+      - tin
+    DeskTechDoc:
+      type: object
+      properties:
+        id:
+          type: integer
+        kind:
+          $ref: '#/components/schemas/TechDocKindEnum'
+        title:
+          type: string
+        original_name:
+          type: string
+        content_type:
+          type: string
+        size_bytes:
+          type: integer
+        previewable:
+          type: boolean
+          description: PDF и изображения открываются для просмотра; остальное скачивается.
+        product:
+          allOf:
+          - $ref: '#/components/schemas/DeskTechDocProduct'
+          nullable: true
+        deal:
+          allOf:
+          - $ref: '#/components/schemas/DeskTechDocDeal'
+          nullable: true
+        uploaded_by:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+      required:
+      - content_type
+      - created_at
+      - deal
+      - id
+      - kind
+      - original_name
+      - previewable
+      - product
+      - size_bytes
+      - title
+      - uploaded_by
+    DeskTechDocDeal:
+      type: object
+      properties:
+        id:
+          type: integer
+        number:
+          type: string
+          description: Номер ЗВ/ПР, который выдал ERP (ERP-09); пусто — у сделки номера ещё нет.
+        title:
+          type: string
+        client:
+          type: string
+        stage_code:
+          type: string
+          description: Код стадии сделки.
+        created_at:
+          type: string
+          format: date-time
+      required:
+      - client
+      - created_at
+      - id
+      - number
+      - stage_code
+      - title
+    DeskTechDocProduct:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        sku:
+          type: string
+      required:
+      - id
+      - name
+      - sku
+    DeskTechDocRef:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        kind:
+          $ref: '#/components/schemas/TechDocKindEnum'
+      required:
+      - id
+      - kind
+      - title
+    DeskTechDocUploadRequest:
+      type: object
+      description: 'multipart/form-data: файл ≤ 20 МБ (PDF, PNG, JPEG, DOC(X), XLS(X)), хотя бы одна привязка — позиция или
+        заявка.'
+      properties:
+        file:
+          type: string
+          format: binary
+        kind:
+          $ref: '#/components/schemas/TechDocKindEnum'
+        title:
+          type: string
+          maxLength: 255
+        product_id:
+          type: integer
+        deal_id:
+          type: integer
+      required:
+      - file
+    DeskUnit:
+      type: object
+      properties:
+        id:
+          type: integer
+        code:
+          type: string
+        name:
+          type: string
+      required:
+      - code
+      - id
+      - name
+    DisplayStatusEnum:
+      enum:
+      - draft
+      - issued
+      - proof_received
+      - partially_paid
+      - paid
+      - overdue
+      - cancelled
+      type: string
+      description: |-
+        * `draft` - draft
+        * `issued` - issued
+        * `proof_received` - proof_received
+        * `partially_paid` - partially_paid
+        * `paid` - paid
+        * `overdue` - overdue
+        * `cancelled` - cancelled
     DisplayTypeEnum:
       enum:
       - ITEM
@@ -19084,6 +22214,20 @@ components:
       - seller_name
       - signatory_name
       - signatory_position
+    DocumentEnum:
+      enum:
+      - contract
+      - act
+      - invoice
+      - quote
+      - project
+      type: string
+      description: |-
+        * `contract` - contract
+        * `act` - act
+        * `invoice` - invoice
+        * `quote` - quote
+        * `project` - project
     DocumentPlaceholder:
       type: object
       properties:
@@ -19701,6 +22845,44 @@ components:
       - updated_at
       - viewer_can_accept
       - viewer_can_ship
+    FulfillmentCard:
+      type: object
+      properties:
+        status:
+          type: string
+          nullable: true
+        status_name:
+          type: string
+          nullable: true
+        expected_delivery_date:
+          type: string
+          format: date
+          nullable: true
+        shipped_at:
+          type: string
+          format: date-time
+          nullable: true
+        delivered_at:
+          type: string
+          format: date-time
+          nullable: true
+        accepted_at:
+          type: string
+          format: date-time
+          nullable: true
+        tracking_number:
+          type: string
+        carrier:
+          type: string
+      required:
+      - accepted_at
+      - carrier
+      - delivered_at
+      - expected_delivery_date
+      - shipped_at
+      - status
+      - status_name
+      - tracking_number
     FulfillmentPolicyEnum:
       enum:
       - fixed
@@ -19775,6 +22957,11 @@ components:
           type: string
           minLength: 1
           default: ''
+        send_to_client:
+          type: boolean
+          default: true
+          description: 'false (Платформа, D2-5): проект остаётся в DRAFT, клиенту не виден; на согласование его отправляет
+            `send-to-client`. По умолчанию — прежнее поведение (сразу PENDING_CLIENT).'
       required:
       - quote_id
     GenerateDocumentRequest:
@@ -20079,6 +23266,47 @@ components:
       - updated_at
       - viewer_can_manage
       - viewer_can_pay
+    InvoiceCard:
+      type: object
+      properties:
+        id:
+          type: integer
+        number:
+          type: string
+        status:
+          $ref: '#/components/schemas/ProjectInvoiceStatusEnum'
+        total:
+          allOf:
+          - $ref: '#/components/schemas/ProjectMoney'
+          nullable: true
+        paid:
+          allOf:
+          - $ref: '#/components/schemas/ProjectMoney'
+          nullable: true
+        balance_due:
+          allOf:
+          - $ref: '#/components/schemas/ProjectMoney'
+          nullable: true
+        issued_at:
+          type: string
+          format: date
+          nullable: true
+        due_date:
+          type: string
+          format: date
+          nullable: true
+        has_pdf:
+          type: boolean
+      required:
+      - balance_due
+      - due_date
+      - has_pdf
+      - id
+      - issued_at
+      - number
+      - paid
+      - status
+      - total
     InvoiceItem:
       type: object
       properties:
@@ -20106,6 +23334,24 @@ components:
       required:
       - description
       - id
+    InvoiceRef:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Последний не отменённый счёт проекта
+        number:
+          type: string
+        status:
+          $ref: '#/components/schemas/ProjectInvoiceStatusEnum'
+        count:
+          type: integer
+          description: Сколько не отменённых счетов у проекта
+      required:
+      - count
+      - id
+      - number
+      - status
     InvoiceRequest:
       type: object
       description: |-
@@ -20348,6 +23594,45 @@ components:
       - country_name
       - id
       - name
+    ManufacturerRequest:
+      type: object
+      description: |-
+        OEM brand lookup (catalog.Manufacturer) — the canonical `Product.brand` source.
+
+        NOT a platform participant (that's the seller/owner). A brand needn't have an
+        account; `company` optionally links it to one if the OEM is registered.
+      properties:
+        name:
+          type: string
+          minLength: 1
+          title: Название
+          description: Название бренда/производителя (OEM)
+          maxLength: 255
+        country:
+          type: integer
+          nullable: true
+          title: Страна
+          description: Страна происхождения производителя
+        website:
+          title: Сайт
+          description: Официальный сайт производителя
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 200
+          - type: string
+            maxLength: 0
+        company:
+          type: integer
+          nullable: true
+          title: Связанная компания
+          description: Платформенная компания, если производитель зарегистрирован (местный)
+        is_active:
+          type: boolean
+          title: Активен
+          description: Неактивные бренды скрыты в формах выбора
+      required:
+      - name
     MarginDeviation:
       type: object
       description: 'Отклонение маржи сделки: опорное КП, построчно по валютам, итог. Суммы — строки, UZS.'
@@ -20513,6 +23798,19 @@ components:
       required:
       - code
       - label
+    Money:
+      type: object
+      properties:
+        amount:
+          type: string
+          description: Сумма строкой с двумя знаками.
+        currency:
+          type: string
+          nullable: true
+          description: Код валюты ISO 4217.
+      required:
+      - amount
+      - currency
     Notification:
       type: object
       properties:
@@ -21514,6 +24812,144 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/DealList'
+    PaginatedDeskBrigadeList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeskBrigade'
+    PaginatedDeskExchangeRateList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeskExchangeRate'
+    PaginatedDeskHsCodeList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeskHsCode'
+    PaginatedDeskItemRowList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeskItemRow'
+    PaginatedDeskSupplierRowList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeskSupplierRow'
+    PaginatedDeskTechDocList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeskTechDoc'
     PaginatedEmailTemplateList:
       type: object
       required:
@@ -22492,6 +25928,108 @@ components:
           type: boolean
           title: Продавец оплачивает доставку до места
           description: Доставка до названного места назначения (D-термы)
+    PatchedDeskBrigadeInRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        kind:
+          $ref: '#/components/schemas/BrigadeKindEnum'
+        specialization:
+          type: string
+          maxLength: 255
+        headcount:
+          type: integer
+          maximum: 500
+          minimum: 1
+        rate:
+          allOf:
+          - $ref: '#/components/schemas/DeskCrewRateInRequest'
+          nullable: true
+        rate_unit:
+          $ref: '#/components/schemas/CrewRateUnitEnum'
+        note:
+          type: string
+          maxLength: 500
+        is_active:
+          type: boolean
+    PatchedDeskHsCodeInRequest:
+      type: object
+      properties:
+        code:
+          type: string
+          minLength: 1
+          description: 'Только при создании: 2, 4, 6, 8 или 10 цифр.'
+        name:
+          type: string
+        unit_name:
+          type: string
+          maxLength: 64
+        extra_unit_name:
+          type: string
+          maxLength: 64
+        valid_from:
+          type: string
+          format: date
+          nullable: true
+        valid_until:
+          type: string
+          format: date
+          nullable: true
+    PatchedDeskItemInRequest:
+      type: object
+      description: Создание и правка позиции. При правке приходят только изменяемые поля.
+      properties:
+        name:
+          type: string
+          maxLength: 255
+        description:
+          type: string
+        kind:
+          $ref: '#/components/schemas/DeskItemKindEnum'
+        unit_id:
+          type: integer
+          nullable: true
+        category_id:
+          type: integer
+          nullable: true
+        vat_rate:
+          type: string
+          nullable: true
+          description: Процент 0..100; пусто — по умолчанию компании.
+    PatchedDeskOfferInRequest:
+      type: object
+      properties:
+        price:
+          allOf:
+          - $ref: '#/components/schemas/DeskMoneyInRequest'
+          description: Цена закупки; нужно право на цены поставщиков (403 SUPPLIER_PRICES_REQUIRED).
+        quota_qty:
+          type: integer
+          minimum: 0
+        min_order_qty:
+          type: integer
+          minimum: 1
+        in_stock_lead_days:
+          type: integer
+          minimum: 0
+        order_lead_days:
+          type: integer
+          minimum: 0
+        stock_status:
+          type: string
+          nullable: true
+        valid_from:
+          type: string
+          format: date
+          nullable: true
+        valid_until:
+          type: string
+          format: date
+          nullable: true
+        is_active:
+          type: boolean
     PatchedDocumentTemplateWriteRequest:
       type: object
       description: |-
@@ -22604,6 +26142,43 @@ components:
           nullable: true
         notes:
           type: string
+    PatchedManufacturerRequest:
+      type: object
+      description: |-
+        OEM brand lookup (catalog.Manufacturer) — the canonical `Product.brand` source.
+
+        NOT a platform participant (that's the seller/owner). A brand needn't have an
+        account; `company` optionally links it to one if the OEM is registered.
+      properties:
+        name:
+          type: string
+          minLength: 1
+          title: Название
+          description: Название бренда/производителя (OEM)
+          maxLength: 255
+        country:
+          type: integer
+          nullable: true
+          title: Страна
+          description: Страна происхождения производителя
+        website:
+          title: Сайт
+          description: Официальный сайт производителя
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 200
+          - type: string
+            maxLength: 0
+        company:
+          type: integer
+          nullable: true
+          title: Связанная компания
+          description: Платформенная компания, если производитель зарегистрирован (местный)
+        is_active:
+          type: boolean
+          title: Активен
+          description: Неактивные бренды скрыты в формах выбора
     PatchedNotificationRequest:
       type: object
       properties:
@@ -23331,6 +26906,16 @@ components:
       - received_quantity
       - supplier_name
       - unit
+    Person:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+      required:
+      - id
+      - name
     PlatformUserCreateRequest:
       type: object
       description: |-
@@ -23549,6 +27134,18 @@ components:
       - company_types
       - id
       - name
+    ProblemsEnum:
+      enum:
+      - no_contract
+      - contract_rejected
+      - act_returned
+      - invoice_overdue
+      type: string
+      description: |-
+        * `no_contract` - no_contract
+        * `contract_rejected` - contract_rejected
+        * `act_returned` - act_returned
+        * `invoice_overdue` - invoice_overdue
     ProcessEnum:
       enum:
       - legacy
@@ -24205,6 +27802,322 @@ components:
       - code
       - id
       - name
+    ProjectActStatusEnum:
+      enum:
+      - project
+      - returned
+      - issued
+      - signed
+      - cancelled
+      type: string
+      description: |-
+        * `project` - project
+        * `returned` - returned
+        * `issued` - issued
+        * `signed` - signed
+        * `cancelled` - cancelled
+    ProjectCard:
+      type: object
+      properties:
+        deal_id:
+          type: integer
+          description: Сделка ERP; номер ПР-ГГГГ-NNN составляет BFF (B-010)
+        title:
+          type: string
+        company_id:
+          type: integer
+          nullable: true
+        company_name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        step:
+          $ref: '#/components/schemas/StepEnum'
+        client_status:
+          allOf:
+          - $ref: '#/components/schemas/ClientStatusEnum'
+          description: |-
+            Ключ `client-statuses.yaml`
+
+            * `contract_review` - contract_review
+            * `contract_signing` - contract_signing
+            * `awaiting_payment` - awaiting_payment
+            * `fulfilling` - fulfilling
+            * `awaiting_acceptance` - awaiting_acceptance
+            * `done` - done
+        total:
+          allOf:
+          - $ref: '#/components/schemas/ProjectMoney'
+          nullable: true
+          description: Сумма последнего КП, видимого клиенту, с НДС
+        manager:
+          allOf:
+          - $ref: '#/components/schemas/Person'
+          nullable: true
+        responsible:
+          allOf:
+          - $ref: '#/components/schemas/Person'
+          nullable: true
+          description: 'Кто ведёт: взявший в работу, иначе менеджер'
+        due_date:
+          type: string
+          format: date
+          nullable: true
+        documents:
+          $ref: '#/components/schemas/ProjectDocuments'
+        problems:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProblemsEnum'
+        quote:
+          allOf:
+          - $ref: '#/components/schemas/QuoteCard'
+          nullable: true
+        contract:
+          allOf:
+          - $ref: '#/components/schemas/ContractCard'
+          nullable: true
+        can_create_contract:
+          type: boolean
+          description: 'КП принято, договора нет, и у сотрудника есть право `contract.manage`: можно сформировать проект'
+        invoices:
+          type: array
+          items:
+            $ref: '#/components/schemas/InvoiceCard'
+        act:
+          allOf:
+          - $ref: '#/components/schemas/ActCard'
+          nullable: true
+        act_blocker:
+          nullable: true
+          description: |-
+            Почему акт сейчас выпустить нельзя: нет счёта, акт уже есть, нет права `fulfillment.act`
+
+            * `no_invoice` - no_invoice
+            * `act_exists` - act_exists
+            * `forbidden` - forbidden
+          oneOf:
+          - $ref: '#/components/schemas/ActBlockerEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        fulfillment:
+          allOf:
+          - $ref: '#/components/schemas/FulfillmentCard'
+          nullable: true
+        delivery_lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeliveryLineCard'
+        journal:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectJournalEntry'
+      required:
+      - act
+      - act_blocker
+      - can_create_contract
+      - client_status
+      - company_id
+      - company_name
+      - contract
+      - created_at
+      - deal_id
+      - delivery_lines
+      - documents
+      - due_date
+      - fulfillment
+      - invoices
+      - journal
+      - manager
+      - problems
+      - quote
+      - responsible
+      - step
+      - title
+      - total
+    ProjectContractStatusEnum:
+      enum:
+      - project
+      - client_agreed
+      - issued_at_operator
+      - signed
+      - rejected
+      - cancelled
+      type: string
+      description: |-
+        * `project` - project
+        * `client_agreed` - client_agreed
+        * `issued_at_operator` - issued_at_operator
+        * `signed` - signed
+        * `rejected` - rejected
+        * `cancelled` - cancelled
+    ProjectDocuments:
+      type: object
+      properties:
+        quote:
+          allOf:
+          - $ref: '#/components/schemas/QuoteRef'
+          nullable: true
+        contract:
+          allOf:
+          - $ref: '#/components/schemas/ContractRef'
+          nullable: true
+        invoice:
+          allOf:
+          - $ref: '#/components/schemas/InvoiceRef'
+          nullable: true
+        act:
+          allOf:
+          - $ref: '#/components/schemas/ActRef'
+          nullable: true
+      required:
+      - act
+      - contract
+      - invoice
+      - quote
+    ProjectInvoiceStatusEnum:
+      enum:
+      - to_issue
+      - issued
+      - partial
+      - paid
+      - overdue
+      - cancelled
+      type: string
+      description: |-
+        * `to_issue` - to_issue
+        * `issued` - issued
+        * `partial` - partial
+        * `paid` - paid
+        * `overdue` - overdue
+        * `cancelled` - cancelled
+    ProjectJournalEntry:
+      type: object
+      properties:
+        at:
+          type: string
+          format: date-time
+        code:
+          type: string
+          description: Код события журнала (`contract.scan_attached`, …); пусто у прежних записей
+        text:
+          type: string
+          description: 'Фраза на русском: запасной текст, если у кода нет перевода'
+        actor_name:
+          type: string
+          nullable: true
+        document:
+          nullable: true
+          oneOf:
+          - $ref: '#/components/schemas/DocumentEnum'
+          - $ref: '#/components/schemas/NullEnum'
+        number:
+          type: string
+          nullable: true
+        reason:
+          type: string
+          description: Причина или заметка к действию
+      required:
+      - actor_name
+      - at
+      - code
+      - document
+      - number
+      - reason
+      - text
+    ProjectMoney:
+      type: object
+      properties:
+        amount:
+          type: string
+          description: Сумма строкой с двумя знаками, `-?\d+\.\d{2}`
+        currency:
+          type: string
+          description: Код валюты, три заглавные буквы
+      required:
+      - amount
+      - currency
+    ProjectPage:
+      type: object
+      properties:
+        count:
+          type: integer
+          description: Сколько проектов подошло под фильтры
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectRow'
+      required:
+      - count
+      - results
+    ProjectRow:
+      type: object
+      properties:
+        deal_id:
+          type: integer
+          description: Сделка ERP; номер ПР-ГГГГ-NNN составляет BFF (B-010)
+        title:
+          type: string
+        company_id:
+          type: integer
+          nullable: true
+        company_name:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        step:
+          $ref: '#/components/schemas/StepEnum'
+        client_status:
+          allOf:
+          - $ref: '#/components/schemas/ClientStatusEnum'
+          description: |-
+            Ключ `client-statuses.yaml`
+
+            * `contract_review` - contract_review
+            * `contract_signing` - contract_signing
+            * `awaiting_payment` - awaiting_payment
+            * `fulfilling` - fulfilling
+            * `awaiting_acceptance` - awaiting_acceptance
+            * `done` - done
+        total:
+          allOf:
+          - $ref: '#/components/schemas/ProjectMoney'
+          nullable: true
+          description: Сумма последнего КП, видимого клиенту, с НДС
+        manager:
+          allOf:
+          - $ref: '#/components/schemas/Person'
+          nullable: true
+        responsible:
+          allOf:
+          - $ref: '#/components/schemas/Person'
+          nullable: true
+          description: 'Кто ведёт: взявший в работу, иначе менеджер'
+        due_date:
+          type: string
+          format: date
+          nullable: true
+        documents:
+          $ref: '#/components/schemas/ProjectDocuments'
+        problems:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProblemsEnum'
+      required:
+      - client_status
+      - company_id
+      - company_name
+      - created_at
+      - deal_id
+      - documents
+      - due_date
+      - manager
+      - problems
+      - responsible
+      - step
+      - title
+      - total
     PublicCodeSent:
       type: object
       properties:
@@ -24618,6 +28531,31 @@ components:
       - total_incl_vat
       - updated_at
       - vat_amount
+      - version
+    QuoteCard:
+      type: object
+      properties:
+        id:
+          type: integer
+        number:
+          type: string
+        status:
+          type: string
+          description: 'Всегда `accepted`: КП проекта принято клиентом'
+        version:
+          type: integer
+        outgoing_number:
+          type: string
+        valid_until:
+          type: string
+          format: date
+          nullable: true
+      required:
+      - id
+      - number
+      - outgoing_number
+      - status
+      - valid_until
       - version
     QuoteCharge:
       type: object
@@ -25199,6 +29137,23 @@ components:
           type: integer
       required:
       - quote
+    QuoteRef:
+      type: object
+      properties:
+        id:
+          type: integer
+        number:
+          type: string
+        status:
+          type: string
+          description: 'Всегда `accepted`: КП проекта принято клиентом'
+        version:
+          type: integer
+      required:
+      - id
+      - number
+      - status
+      - version
     QuoteRequest:
       type: object
       properties:
@@ -25378,6 +29333,384 @@ components:
       - done
       - pending
       - rights
+    ReceivableBoard:
+      type: object
+      properties:
+        tab:
+          $ref: '#/components/schemas/TabEnum'
+        count:
+          type: integer
+          description: Всего счетов на вкладке.
+        counts:
+          allOf:
+          - $ref: '#/components/schemas/ReceivableCounts'
+          description: Счета на каждой вкладке (вкладки не пересекаются).
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReceivableRow'
+      required:
+      - count
+      - counts
+      - results
+      - tab
+    ReceivableCard:
+      type: object
+      properties:
+        display_status:
+          $ref: '#/components/schemas/DisplayStatusEnum'
+        id:
+          type: integer
+        number:
+          type: string
+        deal_id:
+          type: integer
+        deal_title:
+          type: string
+        deal_year:
+          type: integer
+          description: 'Год создания сделки: из него и id BFF составляет номер ЗВ/ПР (ERP-09).'
+        client_id:
+          type: integer
+        client_name:
+          type: string
+        currency:
+          type: string
+          nullable: true
+        total_incl_vat:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        amount_paid:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        balance_due:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        issued_at:
+          type: string
+          format: date
+          nullable: true
+        due_date:
+          type: string
+          format: date
+          nullable: true
+        status:
+          type: string
+          description: 'Код статуса счёта ERP: DRAFT, ISSUED, PARTIAL, PAID, OVERDUE, CANCELLED.'
+        is_overdue:
+          type: boolean
+          description: Срок оплаты прошёл, остаток есть (вычисляется по сроку, не хранится).
+        days_overdue:
+          type: integer
+          nullable: true
+        has_pending_proof:
+          type: boolean
+          description: Есть платёжка клиента, которую бухгалтер ещё не подтвердил.
+        proof_received_at:
+          type: string
+          format: date-time
+          nullable: true
+        subtotal_excl_vat:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        vat_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        notes:
+          type: string
+        has_pdf:
+          type: boolean
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReceivableItem'
+        payments:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReceivablePayment'
+        confirmations:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReceivableConfirmation'
+        history:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReceivableHistory'
+        payment_doc_requested_at:
+          type: string
+          format: date-time
+          nullable: true
+        can_confirm:
+          type: boolean
+          description: Сотрудник вправе подтвердить оплату, счёт открыт и остаток есть.
+        can_attach_proof:
+          type: boolean
+        can_request_proof:
+          type: boolean
+        replayed:
+          type: boolean
+          description: 'Повтор подтверждения: платёж уже был записан, ничего не добавлено.'
+      required:
+      - amount_paid
+      - balance_due
+      - can_attach_proof
+      - can_confirm
+      - can_request_proof
+      - client_id
+      - client_name
+      - confirmations
+      - currency
+      - days_overdue
+      - deal_id
+      - deal_title
+      - deal_year
+      - display_status
+      - due_date
+      - has_pdf
+      - has_pending_proof
+      - history
+      - id
+      - is_overdue
+      - issued_at
+      - items
+      - notes
+      - number
+      - payment_doc_requested_at
+      - payments
+      - proof_received_at
+      - replayed
+      - status
+      - subtotal_excl_vat
+      - total_incl_vat
+      - vat_amount
+    ReceivableConfirmation:
+      type: object
+      properties:
+        id:
+          type: integer
+        source:
+          $ref: '#/components/schemas/SourceEnum'
+        status:
+          $ref: '#/components/schemas/ReceivableConfirmationStatusEnum'
+        original_name:
+          type: string
+        claimed_amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+          nullable: true
+        claimed_date:
+          type: string
+          format: date
+          nullable: true
+        note:
+          type: string
+        received_at:
+          type: string
+          format: date-time
+        recorded_by:
+          type: string
+          nullable: true
+          description: 'Кто приложил: сотрудник; пусто — клиент (кабинет, бот).'
+        payment_id:
+          type: integer
+          nullable: true
+      required:
+      - claimed_amount
+      - claimed_date
+      - id
+      - note
+      - original_name
+      - payment_id
+      - received_at
+      - recorded_by
+      - source
+      - status
+    ReceivableConfirmationStatusEnum:
+      enum:
+      - PENDING
+      - CONFIRMED
+      type: string
+      description: |-
+        * `PENDING` - PENDING
+        * `CONFIRMED` - CONFIRMED
+    ReceivableCounts:
+      type: object
+      properties:
+        to_issue:
+          type: integer
+        awaiting:
+          type: integer
+        proofs:
+          type: integer
+        overdue:
+          type: integer
+      required:
+      - awaiting
+      - overdue
+      - proofs
+      - to_issue
+    ReceivableHistory:
+      type: object
+      properties:
+        at:
+          type: string
+          format: date-time
+        code:
+          type: string
+        text:
+          type: string
+        by:
+          type: string
+          nullable: true
+      required:
+      - at
+      - by
+      - code
+      - text
+    ReceivableItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        description:
+          type: string
+        quantity:
+          type: integer
+        unit_price_excl_vat:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        line_total_excl_vat:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+      required:
+      - description
+      - id
+      - line_total_excl_vat
+      - quantity
+      - unit_price_excl_vat
+    ReceivablePayment:
+      type: object
+      properties:
+        id:
+          type: integer
+        amount:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        paid_at:
+          type: string
+          format: date
+        method:
+          type: string
+        reference:
+          type: string
+        receipt_number:
+          type: string
+        has_proof:
+          type: boolean
+        recorded_by:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+      required:
+      - amount
+      - created_at
+      - has_proof
+      - id
+      - method
+      - paid_at
+      - receipt_number
+      - recorded_by
+      - reference
+    ReceivableRow:
+      type: object
+      properties:
+        display_status:
+          $ref: '#/components/schemas/DisplayStatusEnum'
+        id:
+          type: integer
+        number:
+          type: string
+        deal_id:
+          type: integer
+        deal_title:
+          type: string
+        deal_year:
+          type: integer
+          description: 'Год создания сделки: из него и id BFF составляет номер ЗВ/ПР (ERP-09).'
+        client_id:
+          type: integer
+        client_name:
+          type: string
+        currency:
+          type: string
+          nullable: true
+        total_incl_vat:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        amount_paid:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        balance_due:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,12}(?:\.\d{0,2})?$
+        issued_at:
+          type: string
+          format: date
+          nullable: true
+        due_date:
+          type: string
+          format: date
+          nullable: true
+        status:
+          type: string
+          description: 'Код статуса счёта ERP: DRAFT, ISSUED, PARTIAL, PAID, OVERDUE, CANCELLED.'
+        is_overdue:
+          type: boolean
+          description: Срок оплаты прошёл, остаток есть (вычисляется по сроку, не хранится).
+        days_overdue:
+          type: integer
+          nullable: true
+        has_pending_proof:
+          type: boolean
+          description: Есть платёжка клиента, которую бухгалтер ещё не подтвердил.
+        proof_received_at:
+          type: string
+          format: date-time
+          nullable: true
+      required:
+      - amount_paid
+      - balance_due
+      - client_id
+      - client_name
+      - currency
+      - days_overdue
+      - deal_id
+      - deal_title
+      - deal_year
+      - display_status
+      - due_date
+      - has_pending_proof
+      - id
+      - is_overdue
+      - issued_at
+      - number
+      - proof_received_at
+      - status
+      - total_incl_vat
     RecentDocument:
       type: object
       properties:
@@ -25671,6 +30004,18 @@ components:
       required:
       - detail
       - fields
+    SourceEnum:
+      enum:
+      - CABINET
+      - BOT
+      - EMAIL
+      - MANUAL
+      type: string
+      description: |-
+        * `CABINET` - CABINET
+        * `BOT` - BOT
+        * `EMAIL` - EMAIL
+        * `MANUAL` - MANUAL
     SsoExchangeRequestRequest:
       type: object
       properties:
@@ -25735,6 +30080,16 @@ components:
       - permissions
       - platform_access
       - roles
+    StepEnum:
+      enum:
+      - CONTRACT
+      - PAYMENT
+      - DONE
+      type: string
+      description: |-
+        * `CONTRACT` - CONTRACT
+        * `PAYMENT` - PAYMENT
+        * `DONE` - DONE
     StockAdjustInRequest:
       type: object
       properties:
@@ -26581,6 +30936,34 @@ components:
       - code
       - current_password
       - secret
+    TabEnum:
+      enum:
+      - to_issue
+      - awaiting
+      - proofs
+      - overdue
+      - all
+      type: string
+      description: |-
+        * `to_issue` - to_issue
+        * `awaiting` - awaiting
+        * `proofs` - proofs
+        * `overdue` - overdue
+        * `all` - all
+    TechDocKindEnum:
+      enum:
+      - tz
+      - drawing
+      - certificate
+      - pnr
+      - other
+      type: string
+      description: |-
+        * `tz` - tz
+        * `drawing` - drawing
+        * `certificate` - certificate
+        * `pnr` - pnr
+        * `other` - other
     TimelineEntry:
       type: object
       properties:
@@ -26938,6 +31321,16 @@ components:
       description: 'Ошибки полей от сериализатора DRF: ключ — имя поля (или `non_field_errors`), значение — список текстов
         (у вложенных объектов и списков — вложенная структура).'
       additionalProperties: {}
+    ValidityEnum:
+      enum:
+      - ok
+      - expiring
+      - expired
+      type: string
+      description: |-
+        * `ok` - ok
+        * `expiring` - expiring
+        * `expired` - expired
     WorkspaceRoleLookup:
       type: object
       description: Response shape for the WorkspaceRole lookup feed ({code, name, applicable_to_types}).

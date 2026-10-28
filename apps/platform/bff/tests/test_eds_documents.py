@@ -32,6 +32,7 @@ from tests.eds_documents_support import (
     file_ref,
     registry_item,
 )
+from tests.feeds_support import deal_matches
 from tests.roles import custom
 
 BASE = "/api/v1/eds"
@@ -225,12 +226,70 @@ async def test_all_reads_the_registry(web: Web, eds: EdsFake, check: ContractChe
     assert "mine" not in query
 
 
+async def test_registry_shows_project_documents_with_a_link_to_the_project(
+    web: Web, eds: EdsFake, check: ContractChecker
+) -> None:
+    """D2-5: договоры, счета и акты проектов — проекция ERP в реестре EDS; строка ведёт в проект."""
+    await web.login(["ACCOUNTANT"])
+    eds.answer(
+        "GET",
+        "registry",
+        200,
+        {
+            "items": [
+                registry_item(
+                    "50000000-0000-4000-8000-000000000001",
+                    kind="contract",
+                    number="ДОГ-2026/104",
+                    title="Стрелочные приводы",
+                    status="issued_at_operator",
+                    links={"erp_deal_id": 104, "deal_number": "D-104"},
+                ),
+                registry_item(
+                    "50000000-0000-4000-8000-000000000002",
+                    kind="act",
+                    number="АКТ-2026/058",
+                    title="Стрелочные приводы",
+                    status="signed",
+                    links={},
+                ),
+            ],
+            "next_cursor": None,
+        },
+    )
+
+    response = await web.client.get(
+        f"{BASE}/documents?scope=all&kind=contract&kind=invoice&kind=act"
+    )
+
+    assert response.status_code == 200, response.text
+    check(response, "/eds/documents", "get")
+    contract, act = response.json()["items"]
+    assert (contract["kind"], contract["openable"], contract["project_ref"]) == (
+        "contract",
+        False,
+        "104",
+    )
+    assert (act["kind"], act["project_ref"]) == ("act", None), (
+        "без сделки в ссылках карточки проекта нет"
+    )
+    assert eds.last("GET", "registry").url.params.get_list("kind") == ["contract", "invoice", "act"]
+
+
+async def test_mine_has_no_project_documents(web: Web, eds: EdsFake) -> None:
+    await web.login(["ACCOUNTANT"])
+    response = await web.client.get(f"{BASE}/documents?scope=mine&kind=contract")
+    assert response.status_code == 200
+    assert response.json() == {"items": [], "next_cursor": None}
+    assert eds.requests("GET", "documents") == []
+
+
 async def test_list_validates_filters_before_eds(web: Web, eds: EdsFake) -> None:
     await web.login(["MANAGER"])
 
     for url in (
         f"{BASE}/documents?scope=everything",
-        f"{BASE}/documents?kind=contract",
+        f"{BASE}/documents?kind=nonsense",
         f"{BASE}/documents?status=DROP TABLE",
         f"{BASE}/documents?limit=0",
     ):
@@ -700,36 +759,44 @@ async def test_download_not_found_is_translated(web: Web, eds: EdsFake) -> None:
 # --- связь с проектом -----------------------------------------------------------------------------
 
 
-def _deals(be: Backends) -> None:
-    be.router.get(f"{ERP_URL}/api/v1/crm/deals/").mock(
-        return_value=httpx.Response(
-            200,
-            json={
-                "results": [
-                    {
-                        "id": 904,
-                        "title": "Поставка рельсов Р65",
-                        "company_name": "ООО «Демо-Путь»",
-                        "stage_code": "CALCULATING",
-                        "created_at": "2026-10-01T09:00:00Z",
-                    },
-                    {
-                        "id": 905,
-                        "title": "Монтаж стрелочных переводов",
-                        "company_name": "АО «Пример-Рельс»",
-                        "stage_code": "DRAFT",
-                        "created_at": "2026-10-05T09:00:00Z",
-                    },
-                ]
-            },
-        )
-    )
+DEALS = [
+    {
+        "id": 904,
+        "number": "ЗВ-2026-904",
+        "title": "Поставка рельсов Р65",
+        "company_name": "ООО «Демо-Путь»",
+        "stage_code": "CALCULATING",
+        "created_at": "2026-10-01T09:00:00Z",
+    },
+    {
+        "id": 905,
+        "number": "ЗВ-2026-905",
+        "title": "Монтаж стрелочных переводов",
+        "company_name": "АО «Пример-Рельс»",
+        "stage_code": "DRAFT",
+        "created_at": "2026-10-05T09:00:00Z",
+    },
+]
+
+
+def _deals(be: Backends) -> list[httpx.Request]:
+    """Сделки ERP; с `?search=` ищет «ERP» (ERP-09): номер, название, компания."""
+    seen: list[httpx.Request] = []
+
+    def answer(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        term = request.url.params.get("search")
+        found = [d for d in DEALS if term is None or deal_matches(d, term)]
+        return httpx.Response(200, json={"results": found})
+
+    be.router.get(f"{ERP_URL}/api/v1/crm/deals/").mock(side_effect=answer)
+    return seen
 
 
 async def test_deal_options_find_requests_by_number_title_or_company(
     web: Web, be: Backends, eds: EdsFake, check: ContractChecker
 ) -> None:
-    _deals(be)
+    seen = _deals(be)
     await web.login(["MANAGER"])
 
     everything = await web.client.get(f"{BASE}/deal-options")
@@ -746,6 +813,8 @@ async def test_deal_options_find_requests_by_number_title_or_company(
     assert [o["erp_deal_id"] for o in by_title.json()["items"]] == [904]
     assert [o["company"] for o in by_company.json()["items"]] == ["АО «Пример-Рельс»"]
     assert eds.count == 0  # EDS не нужен: сделки — ERP
+    # поиск — на стороне ERP: запрос уходит как набран
+    assert [r.url.params.get("search") for r in seen] == [None, "zv-2026-905", "рельсов", "пример"]
 
 
 async def test_deal_options_when_erp_is_down_are_empty_with_source(

@@ -216,7 +216,24 @@ SPA  GET  /api/v1/about                    → health CRM, ERP, EDS + верси
   помещается в предел CRM. Отметки «Что нового» (`Me.whats_new_shown`, `Me.whats_new_read`) хранит CRM, как `onboarding_done`:
   SPA показывает окно «Платформа обновлена», пока `shown` меньше даты последней записи, и отметку «Новое» у «?», пока меньше `read`.
   Записи — файлы `docs/kb/help/changelog/<дата>.md` в сборке SPA, BFF их не отдаёт.
-- **Статьи помощи** BFF не отдаёт: это файлы репозитория `docs/kb/help/*.md`, которые `pnpm kb:sync` копирует в сборку SPA (`src/generated/help-articles`). Редактирует их тот, у кого есть доступ к репозиторию (PR); редактора статей в интерфейсе нет (`docs/QUESTIONS.md`, Q-W15-H7-1).
+- **Продуктовые статьи помощи** BFF не отдаёт: это файлы репозитория `docs/kb/help/*.md`, которые `pnpm kb:sync` копирует в сборку SPA (`src/generated/help-articles`); правит их тот, у кого есть доступ к репозиторию (PR). Редактора продуктовых статей в интерфейсе нет и не будет (DECISIONS 2026-10-28). **Статьи компании** — другое: их пишет администратор в интерфейсе (см. ниже).
+
+#### Статьи компании в §3.4 (W18A-P5, B-079; добавление к 0.27.0, версия контракта не меняется)
+
+```
+SPA  GET    /api/v1/help/company-articles            → CRM GET /me/company-articles   только опубликованные, любому сотруднику (require_any_section)
+SPA  GET    /api/v1/admin/company-articles           → CRM GET /company-articles      все, с черновиками (admin: чтение)
+SPA  POST   /api/v1/admin/company-articles           → CRM POST /company-articles     {title, body, language?} → CompanyArticle (201, всегда черновик)
+SPA  PATCH  /api/v1/admin/company-articles/{id}      → CRM PATCH /company-articles/{id}   {title?, body?, language?}
+SPA  POST   /api/v1/admin/company-articles/{id}/publish|unpublish → CRM POST …/publish|unpublish
+SPA  DELETE /api/v1/admin/company-articles/{id}      → CRM DELETE /company-articles/{id}  (204)
+```
+
+- **Данные — в CRM** (таблица `company_articles`, ADR-0015); BFF ничего не хранит и текст не обрабатывает. Права: чтение с черновиками — `admin` от чтения (директор), запись — `admin` полный (CRM-права `company_articles:read|write` каталога); опубликованные читает любой сотрудник с хотя бы одним разделом.
+- **Безопасный показ — забота SPA.** Текст — Markdown ограниченного вида (`##`, абзацы, списки, жирный, код); `features/help/Markdown.tsx` строит дерево React без `dangerouslySetInnerHTML`, ссылок и картинок: HTML и скрипты остаются текстом (тесты `Markdown.test.tsx`, `ArticlesPage.test.tsx`). BFF и CRM текст не «чистят» молча.
+- **Ошибки значений** — 422 `VALIDATION_FAILED` с `details.fields` (`title`, `body`, `language`) и `details.reason` (`article_title_empty`, `article_title_too_long` > 200, `article_body_empty`, `article_body_too_long` > 20000, `article_language_unknown`); статьи нет — 404. Публикация и снятие повторяются безопасно (второй раз ничего не меняют и в журнал не пишутся).
+- **Журнал действий CRM:** `company_article.create|update|publish|unpublish|delete` (до/после — заголовок, язык, статус, длина текста; сам текст в журнал не попадает).
+- **В Помощи** SPA кладёт статьи компании рядом с продуктовыми под адресом `/help/articles/company-<id>`; недоступность CRM не ломает Помощь — продуктовые статьи открываются, в разделе «Как у нас принято» сказано, что статьи компании сейчас недоступны.
 
 ### 3.5. Расчёт по заявке (D2-1, BFF 0.26.0)
 
@@ -396,8 +413,8 @@ BFF не решает: остаток, резерв, переходы стату
 `viewer`/`manager`. Сама базовая роль — **признак, не право**: она нужна «последнему администратору», выбору «кому передать лида» и
 замещающему, и вычисляется по матрице (`admin: full` — `admin`, `crm.leads: full` — `manager`, иначе `viewer`), а не по коду роли
 (шаблон «Бухгалтер» — теперь `viewer`; миграция CRM пересчитала сохранённое). Матрицу прямого API проверяет тест
-`tests/integration/test_catalog_rights_api.py`: ожидания строятся из `platform-rbac.yaml`, а не руками. Роли с `chats.external` дают
-`leads:read` (и ответ/заметку на `full`) по каталогу — это переписка с клиентами (см. Q-D1-8-1). (2) `MessageOut.attachments` не несёт
+`tests/integration/test_catalog_rights_api.py`: ожидания строятся из `platform-rbac.yaml`, а не руками. Роли с `chats.external` с
+W18A-P3 дают не `leads:*`, а `chats:*` — только переписку своих диалогов и зоны (ниже, B-D18-1). (2) `MessageOut.attachments` не несёт
 `storage_key`: файл отдаёт только `GET /leads/{id}/messages/{m}/attachments/{i}` с проверкой доступа к лиду; BFF ходит потоком.
 (3) `GET /team?section=<раздел>&level=full|read` (CRM; право `users:read`, т. е. `admin` не ниже чтения): активные сотрудники, у которых
 объединение матриц ролей даёт раздел на уровне; только id, имя, инициалы, должность. `GET /eds/resolution/assignees` берёт зоны оттуда
@@ -439,6 +456,17 @@ Telegram не ответил вовремя — 502 `INTEGRATION_FAILED` `delive
 доставленного ответа, «Заметка команде», «Подсказать ответ» (ИИ — только CRM/LiteLLM, таймаут пробы), «Вернуть боту»; шаблоны —
 `GET /crm/reply-templates`. Раздел `crm.leads`: чтение — `read` (директор видит очередь без действий; CRM `/inbox` с D1-1 —
 `leads:read`), действия и шаблоны — `full`. Служебные пометки причины CRM (`dialog: …`) и неизвестные коды экрану не отдаются.
+
+**W18A-P3 (B-D18-1; BFF без смены версии, CRM — `GET /chats`, миграция `deals.invoice_issued_at`): переписка отдельно от
+реестра лидов.** Права — CONTRACTS §8: `crm.leads` → `leads:*` (реестр и любой диалог), `chats.external` → `chats:*` (только
+диалоги, где сотрудник участвует: ответственный за лида, клиента или сделку, автор ответа), `eds.payments: full` → зона
+`chats:invoiced` (диалоги клиентов со счётом по сделке; вместе с `chats:read`). BFF: очередь и карточка
+(`/crm/messages`, `/crm/messages/{lead}`) — только `crm.leads`; лента и вложение (`/thread`, `/attachments`) — `crm.leads` или
+`chats.external` от чтения, объект решает CRM (чужой диалог — 404 как есть, BFF его не обходит); `GET /chats/external` → CRM
+`GET /chats` — список открытых диалогов с причиной `access` (`registry` | `participant` | `invoiced`) и фильтром `erp_deal_id`
+(«Запросить платёжку» — переписка клиента заявки). Заглушка «Чаты · С клиентами» ведёт во «Входящие» старой CRM только при
+`crm.leads` (`legacyNeeds` моста), иначе честно «её делает менеджер клиента». Раздел `eds.payments` теперь значит и CRM
+(`gives_backend`), поэтому источник CRM для роли «только счета» — `ok`, а не `not_applicable`; за агрегатами BFF в CRM для неё не ходит.
 
 **W16-D1-2b: Клиенты · Лиды, Клиенты и «+ Создать заявку».** `/crm/leads*` (раздел `crm.leads`, чтение) — CRM
 `GET /leads`: вкладка → `platform_status` (CRM-02), «мои» → `owner=me`, «просроченные» → `overdue=true`, канал → `source`, страница
@@ -514,6 +542,15 @@ BFF отдаёт сам (`/admin/company/logo/image`, `/admin/company/brand/logo
   Создание с `submit` — два вызова EDS (`POST /documents`, `POST …/submit`): если отправка отклонена, ошибка называет сохранённый черновик
   (`details.document_id`, `saved`). Ошибки EDS переводятся в `Error` с `source = eds` (текст EDS сохраняется; 422 — `details.fields`, `messages`).
   Загрузка файла — как W13-A5 (поток до 25 МБ и поля формы, multipart не разбирается; сверх предела — 413), скачивание — потоком как `attachment`.
+- **ERP · Номенклатура и поставщики, бригады, справочники, Техдокументация (D2-3, 0.26.0).** `/erp/catalog/*` и `/erp/docs/*` (тег `erp-catalog`) — прокси к ERP
+  `catalog/items|suppliers|brigades|tech-docs|category-requests`, `master-data/hs-codes`, `exchange-rates`, `catalog/manufacturers` токеном сотрудника; раздел
+  `erp.stock` (чтение — `read`, изменения — `full`), право на операцию решает ERP (`catalog.manage`, `supply.manage`, ввод курса — `settings.edit` через прежний
+  `/admin/company/fx-rate`). **Закрытые поля режут оба**: цена закупки в предложениях — без поля `supplier_prices` (`price = null`, `prices_visible = false`), ставка
+  бригады — без `cost_margin` и без раздела `erp.calc.services`; ERP отдаёт `null` по своим правам, BFF вырезает ещё раз (администратор ERP видит всё, роль
+  «Администратор» Платформы — нет). Загрузка файла техдокументации — тело читается до 21 МБ и копится в памяти BFF (как у `crm_kb` и `eds_documents`, B-D23-6; ERP принимает до `FILE_UPLOAD_MAX_MEMORY_SIZE` 25 МБ), multipart не разбирается; скачивание — потоком, всегда вложением (`nosniff`):
+  просмотр PDF строит интерфейс сам (pdf.js в `canvas`), потому что CSP Платформы запрещает встроенные просмотрщики. Номер заявки у файла — составной `ЗВ/ПР-ГГГГ-NNN`
+  (как у EDS, до ERP-09). Ошибки ERP: `{detail: КОД}` -> 422 `VALIDATION_FAILED` с `details.reason` (код в нижнем регистре) и `details.fields`; повтор кода ТН ВЭД,
+  производителя или запроса на категорию — 409 `CONFLICT` (`details.reason`).
 - **EDS в «Моей очереди», счётчиках и поиске (D1-6, 0.25.0).** `Feed` читает EDS (`GET /letters?status=awaiting_resolution`, `GET /approvals?mine=true&status=open&template=…`,
   `GET /registry?q=`) тем же токеном `aud=eds`; только роли с разделами EDS (`EDS_SECTIONS`), строки — по секции `queue` каталога (`resolve_letter`, `approve_memo`,
   `pay_memo`). Права внутри EDS решает EDS (403 — `Sources.eds = not_applicable`), BFF их не вычисляет; недоступность — `Sources.eds = unavailable` (необязательное поле,
@@ -527,10 +564,22 @@ BFF отдаёт сам (`/admin/company/logo/image`, `/admin/company/brand/logo
   передаётся совсем). Адреса и идентификаторы контакта клиента наружу не отдаются — только «есть ли канал». Списки: `scope=mine` — на шаге сотрудника, `all` —
   всё, что видит сотрудник; клиент, сумма и срок строк — из снимка (параллельные вызовы EDS, отказ строки не роняет список). Комментарий для `return` и `reject`
   обязателен — 422 в BFF до EDS.
-  Служебные записки решает директор (`eds.memo.approve` full) и бухгалтер на своём шаге (`eds.payments` full, «Принять к оплате» / «Вернуть»; `accountant_step`
-  в карточке): чей это шаг и какие решения доступны, говорит EDS (`can_decide`, `allowed_decisions` — BFF их не вычисляет, в списках тоже). С выбранными `channels` ERP
-  сама отправляет одобренное КП клиенту по доступным каналам (ERP-11, W16-D1-2); без каналов — «Готово к отправке», отправляет менеджер заявки. Карточка КП при другой редакции КП в ERP (закрытые круги) строк ERP не
+  Служебные записки решает директор (`eds.memo.approve` full) и бухгалтер на своём шаге (`eds.payments` full; `accountant_step`
+  в карточке): чей это шаг и какие решения доступны, говорит EDS (`can_decide`, `allowed_decisions` — BFF их не вычисляет, в списках тоже). С D2-4 шаг
+  бухгалтера закрывает «Оплачено» (раздел «Счета и оплаты»), а не «Принять к оплате»: `approve` на этом шаге EDS отклоняет (409 `payment_required`), «Вернуть» работает. С выбранными `channels` ERP
+  сама отправляет одобренное КП клиенту по доступным каналам (ERP-11, W16-D1-2); без каналов — «Готово к отправке», отправляет менеджер заявки. Карточка КП при другой редакции КП в ERP (закрытые круги
   показывает, только снимок EDS (`snapshot_total`); расхождение итогов — `totals_mismatch`.
+- **EDS · Счета и оплаты бухгалтера (D2-4).** `/eds/payments*` — ERP (`/api/v1/finance/receivables/*`, токен ERP сотрудника), `/eds/payment-memos*` и
+  `/eds/payment-receipt-files` — EDS (токен доступа EDS). Раздел `eds.payments`: чтение — менеджер и директор, действия — полный (бухгалтер); BFF проверяет раздел и
+  отсекает неполные роли до домена, **остальное решают домены**: ERP читает счета только держателю `finance.invoice`/`finance.payment` (иначе 403 `source = erp`: роль с
+  чтением раздела, но без права ERP на финансы, видит служебки к оплате, но не счета — Q-D2-4-2), а подтверждает оплату только `finance.payment`; EDS — шаг «Бухгалтер»
+  записки (`payments.confirm`, автор не платит свою записку). Вкладки счетов не пересекаются (ERP): «К выставлению» → «Платёжки на подтверждение» → «Просрочены» → «Ждут
+  оплаты»; «Просрочен» вычисляется по сроку и остатку, статус `OVERDUE` не ставится. `memos_to_pay` (число служебок) берётся из EDS параллельно и необязателен
+  (`sources.eds = unavailable`). Подтверждение оплаты: BFF проверяет сумму (> 0, два знака) и дату (не позже сегодня по `Asia/Tashkent`) до сети, передаёт `Idempotency-Key`
+  ERP; остаток, «сумма больше остатка» (409 `exceeds_balance`), «уже оплачен», «не выставлен», конфликт референса приходят из ERP и переводятся в `Error` с `details.reason`.
+  Платёжка клиента и платёжка служебки — multipart потоком до 25 МБ без разбора; скачивание платёжки — потоком (`nosniff`, `attachment`). Себестоимости, маржи и цен
+  поставщиков в этих ответах нет ни в одном источнике (Q-D2-1-4). Номер проекта `ПР-ГГГГ-NNN` — из года и id сделки до ERP-09. Запрос платёжки у клиента — запись в
+  журнале счёта (канала «ERP → клиент» нет), текст сообщения даёт интерфейс; автоотправка — B-D24-1.
 - Агрегирующие эндпоинты BFF ходят в источники параллельно с таймаутом 3 с и отдают частичный результат с
   флагом `sources: {crm: ok, erp: unavailable}`; SPA показывает плашку «ERP не отвечает, данные неполные»,
   а не пустой экран.

@@ -227,6 +227,7 @@ def test_menu_examples() -> None:
         "org",
         "integrations",
         "tickets",
+        "articles",
         "company",
         "bot",
         "audit",
@@ -241,6 +242,7 @@ def test_menu_examples() -> None:
         "org",
         "integrations",
         "tickets",
+        "articles",
         "company",
         "bot",
         "audit",
@@ -279,10 +281,13 @@ def test_queue_kinds_follow_the_catalog_queue_section() -> None:
 
 
 def test_backends_of_the_sections() -> None:
-    only_payments = rbac.merge(roles(custom(44, "Касса", {"eds.payments": "full"})))
-    assert not rbac.gives_backend(only_payments, "crm")
-    assert rbac.gives_backend(only_payments, "erp")
+    only_projects = rbac.merge(roles(custom(44, "Архив", {"eds.projects": "full"})))
+    assert not rbac.gives_backend(only_projects, "crm")
+    assert rbac.gives_backend(only_projects, "erp")
     assert rbac.gives_backend(rbac.merge(roles(MIXED)), "crm")
+    # B-D18-1: «Счета и оплаты» полный — ещё и зона переписки в CRM (`chats:invoiced`).
+    only_payments = rbac.merge(roles(custom(45, "Касса", {"eds.payments": "full"})))
+    assert rbac.gives_backend(only_payments, "crm")
 
 
 # --- поля с ограничением --------------------------------------------------------------------------

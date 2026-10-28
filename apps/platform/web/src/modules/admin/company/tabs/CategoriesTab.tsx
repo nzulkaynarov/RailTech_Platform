@@ -500,7 +500,7 @@ function RequestList() {
 }
 
 /** Решение по запросу: «Что произойдёт» перед кнопкой; одобрение — с выбором заведённой категории, отказ — с причиной. */
-function DecisionModal({
+export function DecisionModal({
   row,
   action,
   onClose,

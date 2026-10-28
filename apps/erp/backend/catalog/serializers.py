@@ -32,7 +32,13 @@ class ManufacturerSerializer(serializers.ModelSerializer):
     NOT a platform participant (that's the seller/owner). A brand needn't have an
     account; `company` optionally links it to one if the OEM is registered."""
 
-    country_name = serializers.CharField(source="country.name", read_only=True, default=None)
+    country_name = serializers.SerializerMethodField()
+
+    @extend_schema_field({"type": "string"})
+    def get_country_name(self, obj) -> str:
+        # Не `CharField(source=…, default=None)`: при PATCH (partial) DRF пропускает такое поле, и ответ теряет ключ.
+        # Пустая строка, а не null: схема всегда обещала строку (null в ответе нарушал её, а oasdiff считает nullable ломающим).
+        return obj.country.name if obj.country_id else ""
 
     class Meta:
         model = Manufacturer

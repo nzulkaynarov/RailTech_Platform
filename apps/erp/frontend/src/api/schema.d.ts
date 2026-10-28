@@ -2955,6 +2955,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/catalog/brigades/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Crews and service performers
+         * @description Ставка (`rate`) — `null` без зоны услуг расчёта и без `quote.view_cost_margin`; `rate_visible` говорит, почему.
+         */
+        get: operations["catalog_brigades_list"];
+        put?: never;
+        /**
+         * Add a crew or performer
+         * @description Needs `catalog.manage`; ставка — ещё и зона услуг или `quote.view_cost_margin` (403 `CREW_RATES_REQUIRED`).
+         */
+        post: operations["catalog_brigades_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/brigades/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Edit a crew or performer
+         * @description Needs `catalog.manage`; ставка — ещё и зона услуг или `quote.view_cost_margin` (403 `CREW_RATES_REQUIRED`). `is_active=false` убирает из выбора.
+         */
+        patch: operations["catalog_brigades_update"];
+        trace?: never;
+    };
     "/api/v1/catalog/categories/": {
         parameters: {
             query?: never;
@@ -3155,6 +3199,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/catalog/items/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Catalog items for the nomenclature screen
+         * @description Позиции номенклатуры с типом, единицей, НДС и числом предложений. Цены поставщиков здесь нет вовсе — они в карточке и только с правом на `supplier_prices`.
+         */
+        get: operations["catalog_items_list"];
+        put?: never;
+        /**
+         * Create a catalog item
+         * @description Needs `catalog.manage`. Новая позиция — черновик; тип задаёт домен и политику исполнения.
+         */
+        post: operations["catalog_items_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/items/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Catalog item card with supplier offers
+         * @description Предложения поставщиков: цена закупки (`price`) — `null` без права на цены поставщиков.
+         */
+        get: operations["catalog_items_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Edit a catalog item
+         * @description Needs `catalog.manage`. НДС: пусто — ставка компании по умолчанию.
+         */
+        patch: operations["catalog_items_update"];
+        trace?: never;
+    };
     "/api/v1/catalog/manufacturers/": {
         parameters: {
             query?: never;
@@ -3164,11 +3256,15 @@ export interface paths {
         };
         /**
          * List manufacturers (OEM brands)
-         * @description Returns OEM brands from the `catalog.Manufacturer` reference table — the canonical source for `Product.brand`. A brand is catalog metadata, not a platform participant (sellers/clients are the participant roles).
+         * @description Returns OEM brands from the `catalog.Manufacturer` reference table — the canonical source for `Product.brand`. A brand is catalog metadata, not a platform participant (sellers/clients are the participant roles). `?include_inactive=1` adds disabled brands — only for a `catalog.manage` holder.
          */
         get: operations["catalog_manufacturers_list"];
         put?: never;
-        post?: never;
+        /**
+         * Add a manufacturer
+         * @description Needs `catalog.manage` (D2-3, B-035). The name is unique, case-insensitively.
+         */
+        post: operations["catalog_manufacturers_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3184,7 +3280,7 @@ export interface paths {
         };
         /**
          * Get manufacturer (OEM brand)
-         * @description Read-only list of OEM brands (catalog.Manufacturer) for the `brand` selector.
+         * @description OEM brands (catalog.Manufacturer): public read for the `brand` selector; create/edit — `catalog.manage` (D2-3).
          */
         get: operations["catalog_manufacturers_retrieve"];
         put?: never;
@@ -3192,7 +3288,11 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
+        /**
+         * Edit a manufacturer
+         * @description Needs `catalog.manage` (D2-3, B-035). `is_active=false` hides the brand in selectors; brands are not deleted.
+         */
+        patch: operations["catalog_manufacturers_partial_update"];
         trace?: never;
     };
     "/api/v1/catalog/offers/": {
@@ -3892,6 +3992,130 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/catalog/suppliers/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Suppliers with offers summary
+         * @description Поставщики: число предложений, истёкшие и истекающие сроки цен. Цен нет.
+         */
+        get: operations["catalog_suppliers_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/suppliers/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Supplier card with offers
+         * @description Предложения поставщика: квота, сроки поставки и действия цены; `price` — `null` без права на цены поставщиков.
+         */
+        get: operations["catalog_suppliers_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/suppliers/{id}/offers/{offer_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Edit a supplier offer
+         * @description Needs `supply.manage`. Квота, минимальный заказ, сроки поставки, окно действия цены, признак «действует». Цена (`price`) — только с правом на цены поставщиков: иначе 403 `SUPPLIER_PRICES_REQUIRED`.
+         */
+        patch: operations["catalog_suppliers_offer_update"];
+        trace?: never;
+    };
+    "/api/v1/catalog/tech-docs/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Technical documentation registry
+         * @description Реестр читает любой сотрудник бэк-офиса; загрузка и удаление — `catalog.manage`.
+         */
+        get: operations["catalog_tech_docs_list"];
+        put?: never;
+        /**
+         * Upload a technical document
+         * @description Needs `catalog.manage`. PDF, PNG, JPEG, DOC(X), XLS(X) до 20 МБ; содержимое сверяется с расширением. Нужна привязка к позиции (`product_id`) или заявке (`deal_id`). Коды: FILE_TOO_LARGE, FILE_TYPE_NOT_ALLOWED, FILE_CONTENT_MISMATCH, TECH_DOC_LINK_REQUIRED, PRODUCT_NOT_FOUND, DEAL_NOT_FOUND, NO_FILE_PROVIDED.
+         */
+        post: operations["catalog_tech_docs_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/tech-docs/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete a technical document
+         * @description Needs `catalog.manage`. Файл удаляется из хранилища.
+         */
+        delete: operations["catalog_tech_docs_destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/tech-docs/{id}/file/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Stream the file of a technical document
+         * @description Файл потоком из приватного хранилища. PDF и изображения — `inline` (просмотр), `?download=1` и прочие форматы — вложением. Тип содержимого браузер не угадывает (`nosniff`).
+         */
+        get: operations["catalog_tech_docs_file"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/crm/activity-logs/": {
         parameters: {
             query?: never;
@@ -3978,6 +4202,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/crm/acts/{id}/attach-scan/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Прикрепить скан подписанного акта (ISSUED → SIGNED)
+         * @description PDF или изображение (jpg, png, webp) до 20 МБ. Акт становится «Подписан (скан)»; публикуется `act.accepted`.
+         */
+        post: operations["crm_acts_attach_scan_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/crm/acts/{id}/cancel/": {
         parameters: {
             query?: never;
@@ -4038,6 +4282,30 @@ export interface paths {
         get: operations["crm_acts_download_signed_retrieve"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/crm/acts/{id}/record-return/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Записать возврат акта заказчиком (ISSUED → DRAFT с причиной)
+         * @description Акты — только чтение плюс сервисные экшены ниже (Rule 8).
+         *
+         *     Выпуск — через `invoices/{id}/generate-act/` (там же проверяется роутинг
+         *     продавца, аудит H4), подпись — через `acts/{id}/sign/`. Сырые create/update/
+         *     destroy обходили обе проверки и позволяли проставить номер, статус и даты руками.
+         */
+        post: operations["crm_acts_record_return_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4312,6 +4580,26 @@ export interface paths {
         patch: operations["crm_contracts_partial_update"];
         trace?: never;
     };
+    "/api/v1/crm/contracts/{id}/attach-scan/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Прикрепить скан подписанного договора (ISSUED_EXTERNAL → SIGNED)
+         * @description PDF или изображение (jpg, png, webp) до 20 МБ; сигнатура байтов должна совпадать с расширением. Договор становится «Подписан», сделка уходит в `CLOSED_WON` — задача создаёт черновик счёта на предоплату.
+         */
+        post: operations["crm_contracts_attach_scan_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/crm/contracts/{id}/cancel/": {
         parameters: {
             query?: never;
@@ -4326,6 +4614,26 @@ export interface paths {
          * @description Contracts -- generated from approved quotes, double-signed.
          */
         post: operations["crm_contracts_cancel_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/crm/contracts/{id}/client-agreed/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Отметить: редакция согласована клиентом (PENDING_CLIENT → PENDING_MANAGER)
+         * @description Contracts -- generated from approved quotes, double-signed.
+         */
+        post: operations["crm_contracts_client_agreed_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4386,6 +4694,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/crm/contracts/{id}/mark-issued/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Отметить: договор выставлен у оператора ЭДО (PENDING_MANAGER → ISSUED_EXTERNAL)
+         * @description Contracts -- generated from approved quotes, double-signed.
+         */
+        post: operations["crm_contracts_mark_issued_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/crm/contracts/{id}/reject/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Записать отклонение договора клиентом (→ REJECTED), причина обязательна
+         * @description Contracts -- generated from approved quotes, double-signed.
+         */
+        post: operations["crm_contracts_reject_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/crm/contracts/{id}/revise/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Вернуть отклонённый проект договора в работу (REJECTED → DRAFT)
+         * @description Contracts -- generated from approved quotes, double-signed.
+         */
+        post: operations["crm_contracts_revise_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/crm/contracts/{id}/select-wording/": {
         parameters: {
             query?: never;
@@ -4400,6 +4768,26 @@ export interface paths {
          * @description Contracts -- generated from approved quotes, double-signed.
          */
         post: operations["crm_contracts_select_wording_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/crm/contracts/{id}/send-to-client/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Отправить проект договора клиенту на согласование редакции (DRAFT → PENDING_CLIENT)
+         * @description Contracts -- generated from approved quotes, double-signed.
+         */
+        post: operations["crm_contracts_send_to_client_create"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4437,7 +4825,7 @@ export interface paths {
         put?: never;
         /**
          * Upload signed copy
-         * @description Contracts -- generated from approved quotes, double-signed.
+         * @description Файл подписанного экземпляра к договору, который ещё не подписан. На «Подписан» и «Отменён» — 409 `CONTRACT_SCAN_LOCKED`: подписанный скан не заменяется. Тип проверяется как у скана (PDF, jpg, png, webp по сигнатуре, до 20 МБ), загрузка пишется в журнал. Статус не меняет: «Подписан» ставит `attach-scan`.
          */
         post: operations["crm_contracts_upload_signed_create"];
         delete?: never;
@@ -5525,6 +5913,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/crm/projects/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Проекты: список
+         * @description Сделки от принятия КП клиентом. Шаг (`CONTRACT`/`PAYMENT`/`DONE`), статус для клиента и «проблемы» выводятся из документов. Порядок — от новых; страница — `limit`/`offset`. Читает сотрудник компании-владельца.
+         */
+        get: operations["crm_projects_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/crm/projects/{deal_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Проект: карточка
+         * @description Документы проекта (КП, договор, счета, акт) с историей и действиями, доступными ЭТОМУ сотруднику, исполнение (отгрузка и строки поставки — только чтение) и журнал документов.
+         */
+        get: operations["crm_projects_retrieve"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/crm/quote-charges/": {
         parameters: {
             query?: never;
@@ -6296,6 +6724,26 @@ export interface paths {
         patch: operations["crm_wording_variants_partial_update"];
         trace?: never;
     };
+    "/api/v1/exchange-rates/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Exchange rate rows
+         * @description Курсы к UZS по дням, новые первыми. Читает любой сотрудник; ручной ввод — `settings.edit` (`POST exchange-rates/manual/`).
+         */
+        get: operations["exchange_rates_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/exchange-rates/current/": {
         parameters: {
             query?: never;
@@ -6411,6 +6859,126 @@ export interface paths {
          * @description DELETE — убрать факт закупки по валюте (маржа по этой валюте снова как в КП).
          */
         delete: operations["finance_deals_purchase_actuals_destroy"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/finance/receivables/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Счета и оплаты: таблица вкладки
+         * @description GET — счета вкладки «Счетов и оплат» и число счетов на каждой вкладке.
+         */
+        get: operations["finance_receivables_board"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/finance/receivables/{invoice_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Счета и оплаты: карточка счёта
+         * @description GET — карточка счёта: платёжки, платежи, остаток, журнал.
+         */
+        get: operations["finance_receivables_card"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/finance/receivables/{invoice_id}/confirm-payment/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Подтвердить оплату счёта (сумма и дата по выписке)
+         * @description POST — «Подтвердить оплату» (полная или частичная) по выписке банка.
+         */
+        post: operations["finance_receivables_confirm_payment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/finance/receivables/{invoice_id}/confirmations/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Приложить платёжку клиента к счёту
+         * @description POST — приложить платёжку клиента (файл) к открытому счёту.
+         */
+        post: operations["finance_receivables_attach_confirmation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/finance/receivables/{invoice_id}/confirmations/{confirmation_id}/file/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Файл платёжки клиента
+         * @description GET — файл платёжки клиента потоком (приватное хранилище, только после проверки права и привязки к счёту).
+         */
+        get: operations["finance_receivables_confirmation_file"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/finance/receivables/{invoice_id}/request-payment-doc/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Отметить запрос платёжки у клиента
+         * @description POST — отметить «платёжку запросили у клиента» (запись в журнале счёта).
+         */
+        post: operations["finance_receivables_request_payment_doc"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -6744,6 +7312,31 @@ export interface paths {
         patch: operations["master_data_delivery_basis_partial_update"];
         trace?: never;
     };
+    "/api/v1/master-data/hs-codes/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * HS (TN VED) code classifier
+         * @description Классификатор ТН ВЭД: чтение — любой сотрудник; добавить код и править наименование и срок — `catalog.manage`.
+         *     Код выведенный из обращения не удаляется, а закрывается датой (`valid_until`).
+         */
+        get: operations["master_data_hs_codes_list"];
+        put?: never;
+        /**
+         * Add an HS code
+         * @description Needs `catalog.manage`. Код — 2, 4, 6, 8 или 10 цифр; повтор — 409 `HS_CODE_EXISTS`. Родитель находится по самому длинному существующему префиксу.
+         */
+        post: operations["master_data_hs_codes_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/master-data/hs-codes/{code}/duties/": {
         parameters: {
             query?: never;
@@ -6762,6 +7355,26 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/master-data/hs-codes/{id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Edit an HS code
+         * @description Needs `catalog.manage`. Менять можно наименование, единицы и срок действия; сам код — нет.
+         */
+        patch: operations["master_data_hs_codes_update"];
         trace?: never;
     };
     "/api/v1/master-data/units/": {
@@ -8011,6 +8624,133 @@ export interface components {
             readonly updated_at: string;
         };
         /**
+         * @description * `no_invoice` - no_invoice
+         *     * `act_exists` - act_exists
+         *     * `forbidden` - forbidden
+         * @enum {string}
+         */
+        ActBlockerEnum: "no_invoice" | "act_exists" | "forbidden";
+        ActCard: {
+            id: number;
+            number: string;
+            status: components["schemas"]["ProjectActStatusEnum"];
+            total: components["schemas"]["ProjectMoney"] | null;
+            /** Format: date */
+            issued_at: string | null;
+            /** Format: date-time */
+            signed_at: string | null;
+            rejection_reason: string;
+            has_pdf: boolean;
+            has_scan: boolean;
+            actions: components["schemas"]["ActCardActionsEnum"][];
+            history: components["schemas"]["ProjectJournalEntry"][];
+        };
+        /**
+         * @description * `attach_scan` - attach_scan
+         *     * `return` - return
+         *     * `reissue` - reissue
+         * @enum {string}
+         */
+        ActCardActionsEnum: "attach_scan" | "return" | "reissue";
+        /** @description Ответ действий по акту (D2-5): подписанты акта могут быть неизвестны (скан, возврат). */
+        ActFlow: {
+            readonly id: number;
+            /** Сделка */
+            deal: number;
+            contract?: number | null;
+            invoice?: number | null;
+            /** Номер акта */
+            readonly number: string;
+            readonly status?: string;
+            readonly status_name?: string;
+            /** Format: date */
+            issued_at?: string | null;
+            /** Format: date-time */
+            readonly signed_at: string | null;
+            /** Format: decimal */
+            total_amount?: string;
+            /** Format: uri */
+            readonly pdf_file: string | null;
+            readonly pdf_url: string | null;
+            /** Format: uri */
+            signed_file?: string | null;
+            readonly signed_file_url: string | null;
+            /** Выпустил (сторона исполнителя) */
+            readonly issuer_signer: number | null;
+            readonly issuer_signer_name: string | null;
+            /**
+             * Выпущен
+             * Format: date-time
+             */
+            readonly issuer_signed_at: string | null;
+            /** Принял (сторона заказчика) */
+            readonly acceptor_signer: number | null;
+            readonly acceptor_signer_name: string | null;
+            /**
+             * Принят
+             * Format: date-time
+             */
+            readonly acceptor_signed_at: string | null;
+            /**
+             * Причина отклонения
+             * @description Заполняется, когда заказчик отклоняет акт: основание попадает в аудит
+             */
+            readonly rejection_reason: string;
+            /**
+             * Причина аннулирования
+             * @description Заполняется, когда акт аннулирует ВЫПУСТИВШАЯ сторона. Отдельно от причины отклонения: отклонение — ответ заказчика, аннулирование — отзыв исполнителя, и смешивать их в одном поле значит терять, кто именно закрыл документ.
+             */
+            readonly cancellation_reason: string;
+            /**
+             * Напоминание отправлено
+             * Format: date-time
+             */
+            readonly reminder_sent_at: string | null;
+            readonly viewer_can_sign: boolean;
+            readonly viewer_can_reject: boolean;
+            /**
+             * @description Напомнить может исполнитель по ВЫСТАВЛЕННОМУ акту и не чаще раза в сутки.
+             *
+             *     Кулдаун показывается заранее, а не выясняется отказом после нажатия: PandaDoc так же
+             *     гасит кнопку до истечения суток.
+             */
+            readonly viewer_can_remind: boolean;
+            /**
+             * @description Отозвать акт может ТОЛЬКО выпустившая сторона и только пока он не согласован обеими:
+             *     закрытый документ не «разподписывают» (у DocuSign и Adobe отзыв тоже терминален).
+             */
+            readonly viewer_can_cancel: boolean;
+            /**
+             * @description Возвращённый заказчиком акт выпускает заново ТОЛЬКО исполнитель.
+             *
+             *     До 24-08 у отклонённого акта оставалась одна кнопка — «Аннулировать», хотя диалог
+             *     отказа обещал заказчику, что исполнитель «выставит акт заново». Единственным способом
+             *     было вернуться на счета и нажать «Сформировать акт», что порождало ВТОРОЙ документ.
+             */
+            readonly viewer_can_reissue: boolean;
+            notes?: string;
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly updated_at: string;
+        };
+        ActRef: {
+            id: number;
+            number: string;
+            status: components["schemas"]["ProjectActStatusEnum"];
+        };
+        ActReturnInRequest: {
+            /** @description Причина возврата акта заказчиком — обязательна */
+            reason: string;
+        };
+        ActScanInRequest: {
+            /**
+             * Format: binary
+             * @description Скан подписанного акта: PDF, jpg, png или webp до 20 МБ
+             */
+            file: string;
+        };
+        /**
          * @description One live refresh token = one session. `is_current` matches the row against
          *     the jti of THIS browser's HttpOnly refresh cookie (passed via context).
          */
@@ -8093,6 +8833,21 @@ export interface components {
         AssignedCompanyRoles: {
             member_id: number;
             role_ids: number[];
+        };
+        AttachConfirmationRequest: {
+            /**
+             * Format: binary
+             * @description Платёжное поручение: PDF, изображение или документ, до 20 МБ.
+             */
+            file: string;
+            /** @default MANUAL */
+            source: components["schemas"]["SourceEnum"];
+            /** Format: decimal */
+            claimed_amount?: string | null;
+            /** Format: date */
+            claimed_date?: string | null;
+            /** @default  */
+            note: string;
         };
         Attachment: {
             readonly id: number;
@@ -8199,6 +8954,13 @@ export interface components {
          * @enum {string}
          */
         BlockerEnum: "not_started" | "not_in_calculation" | "not_draft" | "no_lines" | "visas_missing";
+        /**
+         * @description * `brigade` - brigade
+         *     * `person` - person
+         *     * `subcontractor` - subcontractor
+         * @enum {string}
+         */
+        BrigadeKindEnum: "brigade" | "person" | "subcontractor";
         BulkCreateQuoteItemsRequestRequest: {
             quote: number;
             items: {
@@ -8929,6 +9691,16 @@ export interface components {
         ChargesReorderRequestRequest: {
             order: number[];
         };
+        /**
+         * @description * `contract_review` - contract_review
+         *     * `contract_signing` - contract_signing
+         *     * `awaiting_payment` - awaiting_payment
+         *     * `fulfilling` - fulfilling
+         *     * `awaiting_acceptance` - awaiting_acceptance
+         *     * `done` - done
+         * @enum {string}
+         */
+        ClientStatusEnum: "contract_review" | "contract_signing" | "awaiting_payment" | "fulfilling" | "awaiting_acceptance" | "done";
         Company: {
             readonly id: number;
             /**
@@ -9555,6 +10327,25 @@ export interface components {
             /** Порядок */
             sort_order?: number;
         };
+        ConfirmPaymentRequest: {
+            /**
+             * Format: decimal
+             * @description Сумма по выписке; не больше остатка.
+             */
+            amount: string;
+            /**
+             * Format: date
+             * @description Дата поступления по выписке; не позже сегодняшней.
+             */
+            paid_at: string;
+            /**
+             * @description Номер операции банка.
+             * @default
+             */
+            reference: string;
+            /** @description Платёжка клиента, которую подтверждает платёж. */
+            confirmation_id?: number | null;
+        };
         Contact: {
             readonly id: number;
             /**
@@ -9683,6 +10474,100 @@ export interface components {
             /** Format: date-time */
             readonly updated_at: string;
         };
+        ContractCard: {
+            id: number;
+            number: string;
+            status: components["schemas"]["ProjectContractStatusEnum"];
+            /** @description Проект ушёл клиенту на согласование и виден ему в портале */
+            sent_to_client: boolean;
+            total: components["schemas"]["ProjectMoney"] | null;
+            /** Format: date-time */
+            created_at: string;
+            /** Format: date-time */
+            client_agreed_at: string | null;
+            /** Format: date-time */
+            signed_at: string | null;
+            has_pdf: boolean;
+            has_scan: boolean;
+            /** @description Что можно сделать СЕЙЧАС этому сотруднику: допустимо из статуса и разрешено правами роли */
+            actions: components["schemas"]["ContractCardActionsEnum"][];
+            history: components["schemas"]["ProjectJournalEntry"][];
+        };
+        /**
+         * @description * `send_to_client` - send_to_client
+         *     * `client_agreed` - client_agreed
+         *     * `reject` - reject
+         *     * `revise` - revise
+         *     * `mark_issued` - mark_issued
+         *     * `attach_scan` - attach_scan
+         * @enum {string}
+         */
+        ContractCardActionsEnum: "send_to_client" | "client_agreed" | "reject" | "revise" | "mark_issued" | "attach_scan";
+        /**
+         * @description Ответ действий по договору (D2-5): тот же договор, но имена подписантов честно могут быть пустыми — подпись
+         *     вне платформы, подписантов ERP может не знать. Отдельный компонент: у прежних операций схема не меняется.
+         */
+        ContractFlow: {
+            readonly id: number;
+            /** Сделка */
+            deal: number;
+            /** КП-источник */
+            quote: number;
+            /** Номер контракта */
+            readonly number: string;
+            readonly status?: string;
+            readonly status_name?: string;
+            readonly invoice_id: number | null;
+            /**
+             * Сумма контракта
+             * Format: decimal
+             */
+            readonly total_amount: string;
+            /** Валюта */
+            currency?: number | null;
+            /**
+             * PDF контракта
+             * Format: uri
+             */
+            readonly pdf_file: string | null;
+            readonly pdf_url: string | null;
+            /**
+             * Подписанный скан/скан-копия
+             * Format: uri
+             */
+            signed_file?: string | null;
+            readonly signed_file_url: string | null;
+            /** Подписал со стороны клиента */
+            readonly client_signer: number | null;
+            readonly client_signer_name: string | null;
+            /** Format: date-time */
+            readonly client_signed_at: string | null;
+            /** Подписал со стороны продавца */
+            readonly manager_signer: number | null;
+            readonly manager_signer_name: string | null;
+            /** Format: date-time */
+            readonly manager_signed_at: string | null;
+            readonly viewer_can_sign_client: boolean;
+            readonly viewer_can_sign_manager: boolean;
+            /** Format: date */
+            valid_from?: string | null;
+            /** Format: date */
+            valid_until?: string | null;
+            notes?: string;
+            /** Формулировки договора */
+            readonly wording_selections: unknown;
+            /** Format: date-time */
+            readonly created_at: string;
+            /** Format: date-time */
+            readonly updated_at: string;
+        };
+        ContractRef: {
+            id: number;
+            number: string;
+            status: components["schemas"]["ProjectContractStatusEnum"];
+            /** @description Проект ушёл клиенту на согласование и виден ему в портале */
+            sent_to_client: boolean;
+        };
         ContractRequest: {
             /** Сделка */
             deal: number;
@@ -9700,6 +10585,20 @@ export interface components {
             /** Format: date */
             valid_until?: string | null;
             notes?: string;
+        };
+        ContractScanInRequest: {
+            /**
+             * Format: binary
+             * @description Скан подписанного договора: PDF, jpg, png или webp до 20 МБ
+             */
+            file: string;
+            note?: string;
+        };
+        ContractTransitionInRequest: {
+            /** @description Обязательна для `reject` */
+            reason?: string;
+            /** @description Заметка в журнал (оператор ЭДО, ссылка) */
+            note?: string;
         };
         Country: {
             readonly id: number;
@@ -9795,6 +10694,12 @@ export interface components {
             due_days: number;
             lines?: components["schemas"]["ManualInvoiceLineRequest"][];
         };
+        /**
+         * @description * `day` - day
+         *     * `hour` - hour
+         * @enum {string}
+         */
+        CrewRateUnitEnum: "day" | "hour";
         CrmPairingStatus: {
             /**
              * @description paired — сопряжено по коду; env — ключи из окружения (запасной путь); none — ключей нет.
@@ -10164,6 +11069,298 @@ export interface components {
              */
             seller_pays_delivery?: boolean;
         };
+        DeliveryLineCard: {
+            line_no: number;
+            title: string;
+            quantity: number | null;
+            unit: string;
+            status: string;
+            /** Format: date */
+            eta: string | null;
+            /** Format: date-time */
+            shipped_at: string | null;
+            tracking: string;
+        };
+        DeskBrigade: {
+            id: number;
+            name: string;
+            kind: components["schemas"]["BrigadeKindEnum"];
+            specialization: string;
+            headcount: number;
+            /** @description Ставка: держатель зоны услуг или cost_margin; иначе null. */
+            rate: components["schemas"]["DeskCrewRate"] | null;
+            rate_visible: boolean;
+            note: string;
+            is_active: boolean;
+        };
+        DeskBrigadeInRequest: {
+            name?: string;
+            kind?: components["schemas"]["BrigadeKindEnum"];
+            specialization?: string;
+            headcount?: number;
+            rate?: components["schemas"]["DeskCrewRateInRequest"] | null;
+            rate_unit?: components["schemas"]["CrewRateUnitEnum"];
+            note?: string;
+            is_active?: boolean;
+        };
+        DeskCrewRate: {
+            amount: string;
+            currency: string | null;
+            unit: components["schemas"]["CrewRateUnitEnum"];
+        };
+        DeskCrewRateInRequest: {
+            amount: string;
+            currency: string;
+        };
+        DeskExchangeRate: {
+            id: number;
+            currency: string;
+            rate_to_uzs: string;
+            /** Format: date */
+            rate_date: string;
+            /** @description CBU (автозагрузка ЦБ РУз) или MANUAL. */
+            source: string;
+        };
+        DeskHsCode: {
+            id: number;
+            code: string;
+            name: string;
+            unit_name: string;
+            extra_unit_name: string;
+            level: number;
+            /** Format: date */
+            valid_from: string | null;
+            /** Format: date */
+            valid_until: string | null;
+            is_active: boolean;
+            source: string;
+        };
+        DeskHsCodeInRequest: {
+            /** @description Только при создании: 2, 4, 6, 8 или 10 цифр. */
+            code?: string;
+            name?: string;
+            unit_name?: string;
+            extra_unit_name?: string;
+            /** Format: date */
+            valid_from?: string | null;
+            /** Format: date */
+            valid_until?: string | null;
+        };
+        DeskItemDetail: {
+            id: number;
+            sku: string;
+            name: string;
+            /**
+             * @description Тип вычисляется: товар со склада или под заказ, услуга фикс / по этапам / по времени.
+             *
+             *     * `stock` - stock
+             *     * `on_order` - on_order
+             *     * `service_fixed` - service_fixed
+             *     * `service_milestones` - service_milestones
+             *     * `service_time` - service_time
+             */
+            kind: components["schemas"]["DeskItemKindEnum"];
+            is_service: boolean;
+            unit: components["schemas"]["DeskUnit"] | null;
+            /** @description НДС позиции, %; null — ставка компании по умолчанию. */
+            vat_rate: string | null;
+            /** @description Действующая ставка: своя или компании по умолчанию. */
+            vat_effective: string | null;
+            category: components["schemas"]["DeskRef"] | null;
+            /** @description Код статуса карточки: DRAFT, PUBLISHED. */
+            status: string | null;
+            offers_count: number;
+            /** Format: date */
+            nearest_valid_until: string | null;
+            docs_count: number;
+            description: string;
+            gost_drawing: string;
+            hs_code: string;
+            manufacturer_part_number: string;
+            brand: string | null;
+            offers: components["schemas"]["DeskOffer"][];
+            /** @description Видит ли сотрудник цены поставщиков (иначе price = null). */
+            prices_visible: boolean;
+            tech_docs: components["schemas"]["DeskTechDocRef"][];
+        };
+        /** @description Создание и правка позиции. При правке приходят только изменяемые поля. */
+        DeskItemInRequest: {
+            name?: string;
+            description?: string;
+            kind?: components["schemas"]["DeskItemKindEnum"];
+            unit_id?: number | null;
+            category_id?: number | null;
+            /** @description Процент 0..100; пусто — по умолчанию компании. */
+            vat_rate?: string | null;
+        };
+        /**
+         * @description * `stock` - stock
+         *     * `on_order` - on_order
+         *     * `service_fixed` - service_fixed
+         *     * `service_milestones` - service_milestones
+         *     * `service_time` - service_time
+         * @enum {string}
+         */
+        DeskItemKindEnum: "stock" | "on_order" | "service_fixed" | "service_milestones" | "service_time";
+        DeskItemRow: {
+            id: number;
+            sku: string;
+            name: string;
+            /**
+             * @description Тип вычисляется: товар со склада или под заказ, услуга фикс / по этапам / по времени.
+             *
+             *     * `stock` - stock
+             *     * `on_order` - on_order
+             *     * `service_fixed` - service_fixed
+             *     * `service_milestones` - service_milestones
+             *     * `service_time` - service_time
+             */
+            kind: components["schemas"]["DeskItemKindEnum"];
+            is_service: boolean;
+            unit: components["schemas"]["DeskUnit"] | null;
+            /** @description НДС позиции, %; null — ставка компании по умолчанию. */
+            vat_rate: string | null;
+            /** @description Действующая ставка: своя или компании по умолчанию. */
+            vat_effective: string | null;
+            category: components["schemas"]["DeskRef"] | null;
+            /** @description Код статуса карточки: DRAFT, PUBLISHED. */
+            status: string | null;
+            offers_count: number;
+            /** Format: date */
+            nearest_valid_until: string | null;
+            docs_count: number;
+        };
+        DeskMoneyInRequest: {
+            amount: string;
+            currency: string;
+        };
+        DeskOffer: {
+            id: number;
+            supplier: components["schemas"]["DeskOfferSupplier"];
+            product: components["schemas"]["DeskOfferProduct"];
+            supplier_sku: string;
+            /** @description Цена закупки: только с правом на цены поставщиков (иначе null). */
+            price: components["schemas"]["Money"] | null;
+            /** @description Квота: сколько единиц поставщик готов отгрузить по этой цене. */
+            quota_qty: number;
+            min_order_qty: number;
+            in_stock_lead_days: number;
+            order_lead_days: number;
+            stock_status: string | null;
+            /** Format: date */
+            valid_from: string | null;
+            /** Format: date */
+            valid_until: string | null;
+            is_active: boolean;
+            validity: components["schemas"]["ValidityEnum"];
+        };
+        DeskOfferProduct: {
+            id: number;
+            name: string;
+            sku: string;
+        };
+        DeskOfferSupplier: {
+            id: number;
+            name: string;
+        };
+        DeskRef: {
+            id: number;
+            name: string;
+        };
+        DeskSupplierDetail: {
+            id: number;
+            name: string;
+            tin: string;
+            country: string | null;
+            offers_count: number;
+            /** @description Действующих предложений с истёкшим сроком цены. */
+            expired_count: number;
+            /** @description Срок цены истекает в ближайшие 14 дней. */
+            expiring_count: number;
+            /** Format: date */
+            nearest_valid_until: string | null;
+            contact_person: string;
+            phone: string;
+            email: string;
+            website: string;
+            legal_address: string;
+            offers: components["schemas"]["DeskOffer"][];
+            prices_visible: boolean;
+        };
+        DeskSupplierRow: {
+            id: number;
+            name: string;
+            tin: string;
+            country: string | null;
+            offers_count: number;
+            /** @description Действующих предложений с истёкшим сроком цены. */
+            expired_count: number;
+            /** @description Срок цены истекает в ближайшие 14 дней. */
+            expiring_count: number;
+            /** Format: date */
+            nearest_valid_until: string | null;
+        };
+        DeskTechDoc: {
+            id: number;
+            kind: components["schemas"]["TechDocKindEnum"];
+            title: string;
+            original_name: string;
+            content_type: string;
+            size_bytes: number;
+            /** @description PDF и изображения открываются для просмотра; остальное скачивается. */
+            previewable: boolean;
+            product: components["schemas"]["DeskTechDocProduct"] | null;
+            deal: components["schemas"]["DeskTechDocDeal"] | null;
+            uploaded_by: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        DeskTechDocDeal: {
+            id: number;
+            /** @description Номер ЗВ/ПР, который выдал ERP (ERP-09); пусто — у сделки номера ещё нет. */
+            number: string;
+            title: string;
+            client: string;
+            /** @description Код стадии сделки. */
+            stage_code: string;
+            /** Format: date-time */
+            created_at: string;
+        };
+        DeskTechDocProduct: {
+            id: number;
+            name: string;
+            sku: string;
+        };
+        DeskTechDocRef: {
+            id: number;
+            title: string;
+            kind: components["schemas"]["TechDocKindEnum"];
+        };
+        /** @description multipart/form-data: файл ≤ 20 МБ (PDF, PNG, JPEG, DOC(X), XLS(X)), хотя бы одна привязка — позиция или заявка. */
+        DeskTechDocUploadRequest: {
+            /** Format: binary */
+            file: string;
+            kind?: components["schemas"]["TechDocKindEnum"];
+            title?: string;
+            product_id?: number;
+            deal_id?: number;
+        };
+        DeskUnit: {
+            id: number;
+            code: string;
+            name: string;
+        };
+        /**
+         * @description * `draft` - draft
+         *     * `issued` - issued
+         *     * `proof_received` - proof_received
+         *     * `partially_paid` - partially_paid
+         *     * `paid` - paid
+         *     * `overdue` - overdue
+         *     * `cancelled` - cancelled
+         * @enum {string}
+         */
+        DisplayStatusEnum: "draft" | "issued" | "proof_received" | "partially_paid" | "paid" | "overdue" | "cancelled";
         /**
          * @description * `ITEM` - Позиция
          *     * `SECTION` - Раздел
@@ -10193,6 +11390,15 @@ export interface components {
             signatory_name: string;
             signatory_position: string;
         };
+        /**
+         * @description * `contract` - contract
+         *     * `act` - act
+         *     * `invoice` - invoice
+         *     * `quote` - quote
+         *     * `project` - project
+         * @enum {string}
+         */
+        DocumentEnum: "contract" | "act" | "invoice" | "quote" | "project";
         DocumentPlaceholder: {
             code: string;
             label: string;
@@ -10544,6 +11750,20 @@ export interface components {
             /** Format: date-time */
             readonly updated_at: string;
         };
+        FulfillmentCard: {
+            status: string | null;
+            status_name: string | null;
+            /** Format: date */
+            expected_delivery_date: string | null;
+            /** Format: date-time */
+            shipped_at: string | null;
+            /** Format: date-time */
+            delivered_at: string | null;
+            /** Format: date-time */
+            accepted_at: string | null;
+            tracking_number: string;
+            carrier: string;
+        };
         /**
          * @description * `fixed` - Фиксированная цена
          *     * `milestones` - По этапам
@@ -10590,6 +11810,11 @@ export interface components {
             quote_id: number;
             /** @default  */
             notes: string;
+            /**
+             * @description false (Платформа, D2-5): проект остаётся в DRAFT, клиенту не виден; на согласование его отправляет `send-to-client`. По умолчанию — прежнее поведение (сразу PENDING_CLIENT).
+             * @default true
+             */
+            send_to_client: boolean;
         };
         GenerateDocumentRequest: {
             template_id: number;
@@ -10749,6 +11974,19 @@ export interface components {
             /** Format: date-time */
             readonly updated_at: string;
         };
+        InvoiceCard: {
+            id: number;
+            number: string;
+            status: components["schemas"]["ProjectInvoiceStatusEnum"];
+            total: components["schemas"]["ProjectMoney"] | null;
+            paid: components["schemas"]["ProjectMoney"] | null;
+            balance_due: components["schemas"]["ProjectMoney"] | null;
+            /** Format: date */
+            issued_at: string | null;
+            /** Format: date */
+            due_date: string | null;
+            has_pdf: boolean;
+        };
         InvoiceItem: {
             readonly id: number;
             description: string;
@@ -10767,6 +12005,14 @@ export interface components {
             /** Format: decimal */
             line_total_excl_vat?: string;
             source_quote_item?: number | null;
+        };
+        InvoiceRef: {
+            /** @description Последний не отменённый счёт проекта */
+            id: number;
+            number: string;
+            status: components["schemas"]["ProjectInvoiceStatusEnum"];
+            /** @description Сколько не отменённых счетов у проекта */
+            count: number;
         };
         /**
          * @description Сторона зрителя по сделке документа — считается СЕРВЕРОМ, один раз на запрос.
@@ -10917,6 +12163,39 @@ export interface components {
              */
             is_active?: boolean;
         };
+        /**
+         * @description OEM brand lookup (catalog.Manufacturer) — the canonical `Product.brand` source.
+         *
+         *     NOT a platform participant (that's the seller/owner). A brand needn't have an
+         *     account; `company` optionally links it to one if the OEM is registered.
+         */
+        ManufacturerRequest: {
+            /**
+             * Название
+             * @description Название бренда/производителя (OEM)
+             */
+            name: string;
+            /**
+             * Страна
+             * @description Страна происхождения производителя
+             */
+            country?: number | null;
+            /**
+             * Сайт
+             * @description Официальный сайт производителя
+             */
+            website?: string;
+            /**
+             * Связанная компания
+             * @description Платформенная компания, если производитель зарегистрирован (местный)
+             */
+            company?: number | null;
+            /**
+             * Активен
+             * @description Неактивные бренды скрыты в формах выбора
+             */
+            is_active?: boolean;
+        };
         /** @description Отклонение маржи сделки: опорное КП, построчно по валютам, итог. Суммы — строки, UZS. */
         MarginDeviation: {
             deal: number;
@@ -10990,6 +12269,12 @@ export interface components {
             code: string;
             /** @description Название блока для человека */
             label: string;
+        };
+        Money: {
+            /** @description Сумма строкой с двумя знаками. */
+            amount: string;
+            /** @description Код валюты ISO 4217. */
+            currency: string | null;
         };
         Notification: {
             readonly id: number;
@@ -11476,6 +12761,96 @@ export interface components {
              */
             previous?: string | null;
             results: components["schemas"]["DealList"][];
+        };
+        PaginatedDeskBrigadeList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["DeskBrigade"][];
+        };
+        PaginatedDeskExchangeRateList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["DeskExchangeRate"][];
+        };
+        PaginatedDeskHsCodeList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["DeskHsCode"][];
+        };
+        PaginatedDeskItemRowList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["DeskItemRow"][];
+        };
+        PaginatedDeskSupplierRowList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["DeskSupplierRow"][];
+        };
+        PaginatedDeskTechDocList: {
+            /** @example 123 */
+            count: number;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=4
+             */
+            next?: string | null;
+            /**
+             * Format: uri
+             * @example http://api.example.org/accounts/?page=2
+             */
+            previous?: string | null;
+            results: components["schemas"]["DeskTechDoc"][];
         };
         PaginatedEmailTemplateList: {
             /** @example 123 */
@@ -12250,6 +13625,51 @@ export interface components {
              */
             seller_pays_delivery?: boolean;
         };
+        PatchedDeskBrigadeInRequest: {
+            name?: string;
+            kind?: components["schemas"]["BrigadeKindEnum"];
+            specialization?: string;
+            headcount?: number;
+            rate?: components["schemas"]["DeskCrewRateInRequest"] | null;
+            rate_unit?: components["schemas"]["CrewRateUnitEnum"];
+            note?: string;
+            is_active?: boolean;
+        };
+        PatchedDeskHsCodeInRequest: {
+            /** @description Только при создании: 2, 4, 6, 8 или 10 цифр. */
+            code?: string;
+            name?: string;
+            unit_name?: string;
+            extra_unit_name?: string;
+            /** Format: date */
+            valid_from?: string | null;
+            /** Format: date */
+            valid_until?: string | null;
+        };
+        /** @description Создание и правка позиции. При правке приходят только изменяемые поля. */
+        PatchedDeskItemInRequest: {
+            name?: string;
+            description?: string;
+            kind?: components["schemas"]["DeskItemKindEnum"];
+            unit_id?: number | null;
+            category_id?: number | null;
+            /** @description Процент 0..100; пусто — по умолчанию компании. */
+            vat_rate?: string | null;
+        };
+        PatchedDeskOfferInRequest: {
+            /** @description Цена закупки; нужно право на цены поставщиков (403 SUPPLIER_PRICES_REQUIRED). */
+            price?: components["schemas"]["DeskMoneyInRequest"];
+            quota_qty?: number;
+            min_order_qty?: number;
+            in_stock_lead_days?: number;
+            order_lead_days?: number;
+            stock_status?: string | null;
+            /** Format: date */
+            valid_from?: string | null;
+            /** Format: date */
+            valid_until?: string | null;
+            is_active?: boolean;
+        };
         /**
          * @description Тело `PUT/PATCH crm/document-templates/{id}/` — ровно то, что читает `DocumentTemplateViewSet.update`.
          *
@@ -12340,6 +13760,39 @@ export interface components {
             total_incl_vat?: string;
             currency?: number | null;
             notes?: string;
+        };
+        /**
+         * @description OEM brand lookup (catalog.Manufacturer) — the canonical `Product.brand` source.
+         *
+         *     NOT a platform participant (that's the seller/owner). A brand needn't have an
+         *     account; `company` optionally links it to one if the OEM is registered.
+         */
+        PatchedManufacturerRequest: {
+            /**
+             * Название
+             * @description Название бренда/производителя (OEM)
+             */
+            name?: string;
+            /**
+             * Страна
+             * @description Страна происхождения производителя
+             */
+            country?: number | null;
+            /**
+             * Сайт
+             * @description Официальный сайт производителя
+             */
+            website?: string;
+            /**
+             * Связанная компания
+             * @description Платформенная компания, если производитель зарегистрирован (местный)
+             */
+            company?: number | null;
+            /**
+             * Активен
+             * @description Неактивные бренды скрыты в формах выбора
+             */
+            is_active?: boolean;
         };
         PatchedNotificationRequest: {
             /**
@@ -12971,6 +14424,10 @@ export interface components {
             received_quantity: number;
             deal: components["schemas"]["StockDealRef"] | null;
         };
+        Person: {
+            id: number;
+            name: string;
+        };
         /**
          * @description Вход формы «Новый пользователь» в операторской панели.
          *
@@ -13098,6 +14555,14 @@ export interface components {
              */
             logo?: string | null;
         };
+        /**
+         * @description * `no_contract` - no_contract
+         *     * `contract_rejected` - contract_rejected
+         *     * `act_returned` - act_returned
+         *     * `invoice_overdue` - invoice_overdue
+         * @enum {string}
+         */
+        ProblemsEnum: "no_contract" | "contract_rejected" | "act_returned" | "invoice_overdue";
         /**
          * @description * `legacy` - legacy
          *     * `v3` - v3
@@ -13572,6 +15037,142 @@ export interface components {
              */
             name: string;
         };
+        /**
+         * @description * `project` - project
+         *     * `returned` - returned
+         *     * `issued` - issued
+         *     * `signed` - signed
+         *     * `cancelled` - cancelled
+         * @enum {string}
+         */
+        ProjectActStatusEnum: "project" | "returned" | "issued" | "signed" | "cancelled";
+        ProjectCard: {
+            /** @description Сделка ERP; номер ПР-ГГГГ-NNN составляет BFF (B-010) */
+            deal_id: number;
+            title: string;
+            company_id: number | null;
+            company_name: string;
+            /** Format: date-time */
+            created_at: string;
+            step: components["schemas"]["StepEnum"];
+            /**
+             * @description Ключ `client-statuses.yaml`
+             *
+             *     * `contract_review` - contract_review
+             *     * `contract_signing` - contract_signing
+             *     * `awaiting_payment` - awaiting_payment
+             *     * `fulfilling` - fulfilling
+             *     * `awaiting_acceptance` - awaiting_acceptance
+             *     * `done` - done
+             */
+            client_status: components["schemas"]["ClientStatusEnum"];
+            /** @description Сумма последнего КП, видимого клиенту, с НДС */
+            total: components["schemas"]["ProjectMoney"] | null;
+            manager: components["schemas"]["Person"] | null;
+            /** @description Кто ведёт: взявший в работу, иначе менеджер */
+            responsible: components["schemas"]["Person"] | null;
+            /** Format: date */
+            due_date: string | null;
+            documents: components["schemas"]["ProjectDocuments"];
+            problems: components["schemas"]["ProblemsEnum"][];
+            quote: components["schemas"]["QuoteCard"] | null;
+            contract: components["schemas"]["ContractCard"] | null;
+            /** @description КП принято, договора нет, и у сотрудника есть право `contract.manage`: можно сформировать проект */
+            can_create_contract: boolean;
+            invoices: components["schemas"]["InvoiceCard"][];
+            act: components["schemas"]["ActCard"] | null;
+            /**
+             * @description Почему акт сейчас выпустить нельзя: нет счёта, акт уже есть, нет права `fulfillment.act`
+             *
+             *     * `no_invoice` - no_invoice
+             *     * `act_exists` - act_exists
+             *     * `forbidden` - forbidden
+             */
+            act_blocker: (components["schemas"]["ActBlockerEnum"] | components["schemas"]["NullEnum"]) | null;
+            fulfillment: components["schemas"]["FulfillmentCard"] | null;
+            delivery_lines: components["schemas"]["DeliveryLineCard"][];
+            journal: components["schemas"]["ProjectJournalEntry"][];
+        };
+        /**
+         * @description * `project` - project
+         *     * `client_agreed` - client_agreed
+         *     * `issued_at_operator` - issued_at_operator
+         *     * `signed` - signed
+         *     * `rejected` - rejected
+         *     * `cancelled` - cancelled
+         * @enum {string}
+         */
+        ProjectContractStatusEnum: "project" | "client_agreed" | "issued_at_operator" | "signed" | "rejected" | "cancelled";
+        ProjectDocuments: {
+            quote: components["schemas"]["QuoteRef"] | null;
+            contract: components["schemas"]["ContractRef"] | null;
+            invoice: components["schemas"]["InvoiceRef"] | null;
+            act: components["schemas"]["ActRef"] | null;
+        };
+        /**
+         * @description * `to_issue` - to_issue
+         *     * `issued` - issued
+         *     * `partial` - partial
+         *     * `paid` - paid
+         *     * `overdue` - overdue
+         *     * `cancelled` - cancelled
+         * @enum {string}
+         */
+        ProjectInvoiceStatusEnum: "to_issue" | "issued" | "partial" | "paid" | "overdue" | "cancelled";
+        ProjectJournalEntry: {
+            /** Format: date-time */
+            at: string;
+            /** @description Код события журнала (`contract.scan_attached`, …); пусто у прежних записей */
+            code: string;
+            /** @description Фраза на русском: запасной текст, если у кода нет перевода */
+            text: string;
+            actor_name: string | null;
+            document: (components["schemas"]["DocumentEnum"] | components["schemas"]["NullEnum"]) | null;
+            number: string | null;
+            /** @description Причина или заметка к действию */
+            reason: string;
+        };
+        ProjectMoney: {
+            /** @description Сумма строкой с двумя знаками, `-?\d+\.\d{2}` */
+            amount: string;
+            /** @description Код валюты, три заглавные буквы */
+            currency: string;
+        };
+        ProjectPage: {
+            /** @description Сколько проектов подошло под фильтры */
+            count: number;
+            results: components["schemas"]["ProjectRow"][];
+        };
+        ProjectRow: {
+            /** @description Сделка ERP; номер ПР-ГГГГ-NNN составляет BFF (B-010) */
+            deal_id: number;
+            title: string;
+            company_id: number | null;
+            company_name: string;
+            /** Format: date-time */
+            created_at: string;
+            step: components["schemas"]["StepEnum"];
+            /**
+             * @description Ключ `client-statuses.yaml`
+             *
+             *     * `contract_review` - contract_review
+             *     * `contract_signing` - contract_signing
+             *     * `awaiting_payment` - awaiting_payment
+             *     * `fulfilling` - fulfilling
+             *     * `awaiting_acceptance` - awaiting_acceptance
+             *     * `done` - done
+             */
+            client_status: components["schemas"]["ClientStatusEnum"];
+            /** @description Сумма последнего КП, видимого клиенту, с НДС */
+            total: components["schemas"]["ProjectMoney"] | null;
+            manager: components["schemas"]["Person"] | null;
+            /** @description Кто ведёт: взявший в работу, иначе менеджер */
+            responsible: components["schemas"]["Person"] | null;
+            /** Format: date */
+            due_date: string | null;
+            documents: components["schemas"]["ProjectDocuments"];
+            problems: components["schemas"]["ProblemsEnum"][];
+        };
         PublicCodeSent: {
             detail: string;
         };
@@ -13830,6 +15431,16 @@ export interface components {
              * Format: date-time
              */
             readonly updated_at: string;
+        };
+        QuoteCard: {
+            id: number;
+            number: string;
+            /** @description Всегда `accepted`: КП проекта принято клиентом */
+            status: string;
+            version: number;
+            outgoing_number: string;
+            /** Format: date */
+            valid_until: string | null;
         };
         /** @description КП-level expense item / discount (UBL document AllowanceCharge). */
         QuoteCharge: {
@@ -14254,6 +15865,13 @@ export interface components {
             discount_percent?: string;
             lead_time_days?: number;
         };
+        QuoteRef: {
+            id: number;
+            number: string;
+            /** @description Всегда `accepted`: КП проекта принято клиентом */
+            status: string;
+            version: number;
+        };
         QuoteRequest: {
             /**
              * Сделка
@@ -14367,6 +15985,152 @@ export interface components {
             pending: components["schemas"]["PendingReceiptLine"][];
             done: components["schemas"]["DoneReceipt"][];
             rights: components["schemas"]["StockRights"];
+        };
+        ReceivableBoard: {
+            tab: components["schemas"]["TabEnum"];
+            /** @description Всего счетов на вкладке. */
+            count: number;
+            /** @description Счета на каждой вкладке (вкладки не пересекаются). */
+            counts: components["schemas"]["ReceivableCounts"];
+            results: components["schemas"]["ReceivableRow"][];
+        };
+        ReceivableCard: {
+            display_status: components["schemas"]["DisplayStatusEnum"];
+            id: number;
+            number: string;
+            deal_id: number;
+            deal_title: string;
+            /** @description Год создания сделки: из него и id BFF составляет номер ЗВ/ПР (ERP-09). */
+            deal_year: number;
+            client_id: number;
+            client_name: string;
+            currency: string | null;
+            /** Format: decimal */
+            total_incl_vat: string;
+            /** Format: decimal */
+            amount_paid: string;
+            /** Format: decimal */
+            balance_due: string;
+            /** Format: date */
+            issued_at: string | null;
+            /** Format: date */
+            due_date: string | null;
+            /** @description Код статуса счёта ERP: DRAFT, ISSUED, PARTIAL, PAID, OVERDUE, CANCELLED. */
+            status: string;
+            /** @description Срок оплаты прошёл, остаток есть (вычисляется по сроку, не хранится). */
+            is_overdue: boolean;
+            days_overdue: number | null;
+            /** @description Есть платёжка клиента, которую бухгалтер ещё не подтвердил. */
+            has_pending_proof: boolean;
+            /** Format: date-time */
+            proof_received_at: string | null;
+            /** Format: decimal */
+            subtotal_excl_vat: string;
+            /** Format: decimal */
+            vat_amount: string;
+            notes: string;
+            has_pdf: boolean;
+            items: components["schemas"]["ReceivableItem"][];
+            payments: components["schemas"]["ReceivablePayment"][];
+            confirmations: components["schemas"]["ReceivableConfirmation"][];
+            history: components["schemas"]["ReceivableHistory"][];
+            /** Format: date-time */
+            payment_doc_requested_at: string | null;
+            /** @description Сотрудник вправе подтвердить оплату, счёт открыт и остаток есть. */
+            can_confirm: boolean;
+            can_attach_proof: boolean;
+            can_request_proof: boolean;
+            /** @description Повтор подтверждения: платёж уже был записан, ничего не добавлено. */
+            replayed: boolean;
+        };
+        ReceivableConfirmation: {
+            id: number;
+            source: components["schemas"]["SourceEnum"];
+            status: components["schemas"]["ReceivableConfirmationStatusEnum"];
+            original_name: string;
+            /** Format: decimal */
+            claimed_amount: string | null;
+            /** Format: date */
+            claimed_date: string | null;
+            note: string;
+            /** Format: date-time */
+            received_at: string;
+            /** @description Кто приложил: сотрудник; пусто — клиент (кабинет, бот). */
+            recorded_by: string | null;
+            payment_id: number | null;
+        };
+        /**
+         * @description * `PENDING` - PENDING
+         *     * `CONFIRMED` - CONFIRMED
+         * @enum {string}
+         */
+        ReceivableConfirmationStatusEnum: "PENDING" | "CONFIRMED";
+        ReceivableCounts: {
+            to_issue: number;
+            awaiting: number;
+            proofs: number;
+            overdue: number;
+        };
+        ReceivableHistory: {
+            /** Format: date-time */
+            at: string;
+            code: string;
+            text: string;
+            by: string | null;
+        };
+        ReceivableItem: {
+            id: number;
+            description: string;
+            quantity: number;
+            /** Format: decimal */
+            unit_price_excl_vat: string;
+            /** Format: decimal */
+            line_total_excl_vat: string;
+        };
+        ReceivablePayment: {
+            id: number;
+            /** Format: decimal */
+            amount: string;
+            /** Format: date */
+            paid_at: string;
+            method: string;
+            reference: string;
+            receipt_number: string;
+            has_proof: boolean;
+            recorded_by: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        ReceivableRow: {
+            display_status: components["schemas"]["DisplayStatusEnum"];
+            id: number;
+            number: string;
+            deal_id: number;
+            deal_title: string;
+            /** @description Год создания сделки: из него и id BFF составляет номер ЗВ/ПР (ERP-09). */
+            deal_year: number;
+            client_id: number;
+            client_name: string;
+            currency: string | null;
+            /** Format: decimal */
+            total_incl_vat: string;
+            /** Format: decimal */
+            amount_paid: string;
+            /** Format: decimal */
+            balance_due: string;
+            /** Format: date */
+            issued_at: string | null;
+            /** Format: date */
+            due_date: string | null;
+            /** @description Код статуса счёта ERP: DRAFT, ISSUED, PARTIAL, PAID, OVERDUE, CANCELLED. */
+            status: string;
+            /** @description Срок оплаты прошёл, остаток есть (вычисляется по сроку, не хранится). */
+            is_overdue: boolean;
+            days_overdue: number | null;
+            /** @description Есть платёжка клиента, которую бухгалтер ещё не подтвердил. */
+            has_pending_proof: boolean;
+            /** Format: date-time */
+            proof_received_at: string | null;
         };
         RecentDocument: {
             type: components["schemas"]["TypeEnum"];
@@ -14503,6 +16267,14 @@ export interface components {
             detail: string;
             fields: string[];
         };
+        /**
+         * @description * `CABINET` - CABINET
+         *     * `BOT` - BOT
+         *     * `EMAIL` - EMAIL
+         *     * `MANUAL` - MANUAL
+         * @enum {string}
+         */
+        SourceEnum: "CABINET" | "BOT" | "EMAIL" | "MANUAL";
         SsoExchangeRequestRequest: {
             token: string;
         };
@@ -14526,6 +16298,13 @@ export interface components {
             permissions: string[];
             platform_access: string[];
         };
+        /**
+         * @description * `CONTRACT` - CONTRACT
+         *     * `PAYMENT` - PAYMENT
+         *     * `DONE` - DONE
+         * @enum {string}
+         */
+        StepEnum: "CONTRACT" | "PAYMENT" | "DONE";
         StockAdjustInRequest: {
             product_id: number;
             /** @description Плюс — оприходовать, минус — списать; не ноль */
@@ -14984,6 +16763,24 @@ export interface components {
             code: string;
             current_password: string;
         };
+        /**
+         * @description * `to_issue` - to_issue
+         *     * `awaiting` - awaiting
+         *     * `proofs` - proofs
+         *     * `overdue` - overdue
+         *     * `all` - all
+         * @enum {string}
+         */
+        TabEnum: "to_issue" | "awaiting" | "proofs" | "overdue" | "all";
+        /**
+         * @description * `tz` - tz
+         *     * `drawing` - drawing
+         *     * `certificate` - certificate
+         *     * `pnr` - pnr
+         *     * `other` - other
+         * @enum {string}
+         */
+        TechDocKindEnum: "tz" | "drawing" | "certificate" | "pnr" | "other";
         TimelineEntry: {
             readonly id: number;
             /**
@@ -15228,6 +17025,13 @@ export interface components {
              */
             is_active?: boolean;
         };
+        /**
+         * @description * `ok` - ok
+         *     * `expiring` - expiring
+         *     * `expired` - expired
+         * @enum {string}
+         */
+        ValidityEnum: "ok" | "expiring" | "expired";
         /** @description Response shape for the WorkspaceRole lookup feed ({code, name, applicable_to_types}). */
         WorkspaceRoleLookup: {
             code: string;
@@ -20274,6 +22078,136 @@ export interface operations {
             };
         };
     };
+    catalog_brigades_list: {
+        parameters: {
+            query?: {
+                /** @description Вместе с теми, кто не работает. */
+                include_inactive?: boolean;
+                kind?: "brigade" | "person" | "subcontractor";
+                /** @description Номер страницы. */
+                page?: number;
+                /** @description Строк на странице, до 200. */
+                page_size?: number;
+                /** @description Поиск по названию и коду. */
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedDeskBrigadeList"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+        };
+    };
+    catalog_brigades_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["DeskBrigadeInRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["DeskBrigadeInRequest"];
+                "multipart/form-data": components["schemas"]["DeskBrigadeInRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeskBrigade"];
+                };
+            };
+            /** @description Отказ проверки: код в `detail` или ошибки полей. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
+    catalog_brigades_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedDeskBrigadeInRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedDeskBrigadeInRequest"];
+                "multipart/form-data": components["schemas"]["PatchedDeskBrigadeInRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeskBrigade"];
+                };
+            };
+            /** @description Отказ проверки: код в `detail` или ошибки полей. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description Объекта нет. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
     catalog_categories_list: {
         parameters: {
             query?: {
@@ -20713,6 +22647,169 @@ export interface operations {
             404: components["responses"]["NotFoundResponse"];
         };
     };
+    catalog_items_list: {
+        parameters: {
+            query?: {
+                /** @description Id категории. */
+                category?: number;
+                /** @description Тип позиции. */
+                kind?: "on_order" | "service_fixed" | "service_milestones" | "service_time" | "stock";
+                /** @description Номер страницы. */
+                page?: number;
+                /** @description Строк на странице, до 200. */
+                page_size?: number;
+                /** @description Поиск по названию и коду. */
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedDeskItemRowList"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+        };
+    };
+    catalog_items_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["DeskItemInRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["DeskItemInRequest"];
+                "multipart/form-data": components["schemas"]["DeskItemInRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeskItemDetail"];
+                };
+            };
+            /** @description Отказ проверки: код в `detail` или ошибки полей. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
+    catalog_items_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeskItemDetail"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            /** @description Объекта нет. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
+    catalog_items_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedDeskItemInRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedDeskItemInRequest"];
+                "multipart/form-data": components["schemas"]["PatchedDeskItemInRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeskItemDetail"];
+                };
+            };
+            /** @description Отказ проверки: код в `detail` или ошибки полей. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description Объекта нет. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
     catalog_manufacturers_list: {
         parameters: {
             query?: {
@@ -20739,6 +22836,42 @@ export interface operations {
             };
         };
     };
+    catalog_manufacturers_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ManufacturerRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ManufacturerRequest"];
+                "multipart/form-data": components["schemas"]["ManufacturerRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Manufacturer"];
+                };
+            };
+            /** @description Field errors or MANUFACTURER_EXISTS */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+        };
+    };
     catalog_manufacturers_retrieve: {
         parameters: {
             query?: never;
@@ -20759,6 +22892,46 @@ export interface operations {
                     "application/json": components["schemas"]["Manufacturer"];
                 };
             };
+            404: components["responses"]["NotFoundResponse"];
+        };
+    };
+    catalog_manufacturers_partial_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Производитель. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedManufacturerRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedManufacturerRequest"];
+                "multipart/form-data": components["schemas"]["PatchedManufacturerRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Manufacturer"];
+                };
+            };
+            /** @description Field errors or MANUFACTURER_EXISTS */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
             404: components["responses"]["NotFoundResponse"];
         };
     };
@@ -21924,6 +24097,271 @@ export interface operations {
             404: components["responses"]["NotFoundResponse"];
         };
     };
+    catalog_suppliers_list: {
+        parameters: {
+            query?: {
+                /** @description Номер страницы. */
+                page?: number;
+                /** @description Строк на странице, до 200. */
+                page_size?: number;
+                /** @description Поиск по названию и коду. */
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedDeskSupplierRowList"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+        };
+    };
+    catalog_suppliers_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeskSupplierDetail"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            /** @description Объекта нет. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
+    catalog_suppliers_offer_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                offer_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedDeskOfferInRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedDeskOfferInRequest"];
+                "multipart/form-data": components["schemas"]["PatchedDeskOfferInRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeskOffer"];
+                };
+            };
+            /** @description Отказ проверки: код в `detail` или ошибки полей. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description Объекта нет. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
+    catalog_tech_docs_list: {
+        parameters: {
+            query?: {
+                /** @description Id заявки или проекта. */
+                deal?: number;
+                kind?: "certificate" | "drawing" | "other" | "pnr" | "tz";
+                /** @description Номер страницы. */
+                page?: number;
+                /** @description Строк на странице, до 200. */
+                page_size?: number;
+                /** @description Id позиции номенклатуры. */
+                product?: number;
+                /** @description Поиск по названию и коду. */
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedDeskTechDocList"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+        };
+    };
+    catalog_tech_docs_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["DeskTechDocUploadRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeskTechDoc"];
+                };
+            };
+            /** @description Отказ проверки: код в `detail` или ошибки полей. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
+    catalog_tech_docs_destroy: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description Объекта нет. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
+    catalog_tech_docs_file: {
+        parameters: {
+            query?: {
+                /** @description Отдать вложением. */
+                download?: boolean;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": string;
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+            /** @description Документа или файла нет. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
     crm_activity_logs_list: {
         parameters: {
             query?: {
@@ -22035,6 +24473,69 @@ export interface operations {
             404: components["responses"]["NotFoundResponse"];
         };
     };
+    crm_acts_attach_scan_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Акт. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["ActScanInRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActFlow"];
+                };
+            };
+            /** @description REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description MEMBER_REQUIRED_FOR_ACTION / ROLE_NOT_PERMITTED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description Не найдено */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
     crm_acts_cancel_create: {
         parameters: {
             query?: never;
@@ -22123,6 +24624,71 @@ export interface operations {
             401: components["responses"]["UnauthorizedResponse"];
             403: components["responses"]["ForbiddenResponse"];
             404: components["responses"]["NotFoundResponse"];
+        };
+    };
+    crm_acts_record_return_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Акт. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ActReturnInRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ActReturnInRequest"];
+                "multipart/form-data": components["schemas"]["ActReturnInRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActFlow"];
+                };
+            };
+            /** @description REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description MEMBER_REQUIRED_FOR_ACTION / ROLE_NOT_PERMITTED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description Не найдено */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
         };
     };
     crm_acts_reissue_create: {
@@ -22675,6 +25241,69 @@ export interface operations {
             404: components["responses"]["NotFoundResponse"];
         };
     };
+    crm_contracts_attach_scan_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Контракт. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["ContractScanInRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContractFlow"];
+                };
+            };
+            /** @description REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description MEMBER_REQUIRED_FOR_ACTION / ROLE_NOT_PERMITTED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description Не найдено */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
     crm_contracts_cancel_create: {
         parameters: {
             query?: never;
@@ -22705,6 +25334,71 @@ export interface operations {
             401: components["responses"]["UnauthorizedResponse"];
             403: components["responses"]["ForbiddenResponse"];
             404: components["responses"]["NotFoundResponse"];
+        };
+    };
+    crm_contracts_client_agreed_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Контракт. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ContractTransitionInRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ContractTransitionInRequest"];
+                "multipart/form-data": components["schemas"]["ContractTransitionInRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContractFlow"];
+                };
+            };
+            /** @description REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description MEMBER_REQUIRED_FOR_ACTION / ROLE_NOT_PERMITTED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description Не найдено */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
         };
     };
     crm_contracts_download_pdf_retrieve: {
@@ -22797,6 +25491,201 @@ export interface operations {
             404: components["responses"]["NotFoundResponse"];
         };
     };
+    crm_contracts_mark_issued_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Контракт. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ContractTransitionInRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ContractTransitionInRequest"];
+                "multipart/form-data": components["schemas"]["ContractTransitionInRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContractFlow"];
+                };
+            };
+            /** @description REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description MEMBER_REQUIRED_FOR_ACTION / ROLE_NOT_PERMITTED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description Не найдено */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
+    crm_contracts_reject_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Контракт. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ContractTransitionInRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ContractTransitionInRequest"];
+                "multipart/form-data": components["schemas"]["ContractTransitionInRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContractFlow"];
+                };
+            };
+            /** @description REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description MEMBER_REQUIRED_FOR_ACTION / ROLE_NOT_PERMITTED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description Не найдено */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
+    crm_contracts_revise_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Контракт. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ContractTransitionInRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ContractTransitionInRequest"];
+                "multipart/form-data": components["schemas"]["ContractTransitionInRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContractFlow"];
+                };
+            };
+            /** @description REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description MEMBER_REQUIRED_FOR_ACTION / ROLE_NOT_PERMITTED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description Не найдено */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
     crm_contracts_select_wording_create: {
         parameters: {
             query?: never;
@@ -22827,6 +25716,71 @@ export interface operations {
             401: components["responses"]["UnauthorizedResponse"];
             403: components["responses"]["ForbiddenResponse"];
             404: components["responses"]["NotFoundResponse"];
+        };
+    };
+    crm_contracts_send_to_client_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A unique integer value identifying this Контракт. */
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["ContractTransitionInRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ContractTransitionInRequest"];
+                "multipart/form-data": components["schemas"]["ContractTransitionInRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContractFlow"];
+                };
+            };
+            /** @description REASON_REQUIRED / SCAN_REQUIRED / SCAN_INVALID / NO_FILE_PROVIDED */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description MEMBER_REQUIRED_FOR_ACTION / ROLE_NOT_PERMITTED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description Не найдено */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description CONTRACT_TRANSITION_NOT_ALLOWED / ACT_SIGN_NOT_ALLOWED: статус не тот */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
         };
     };
     crm_contracts_sign_manager_create: {
@@ -22907,17 +25861,33 @@ export interface operations {
             };
         };
         responses: {
-            200: {
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Contract"];
+                    "application/json": components["schemas"]["ContractFlow"];
                 };
             };
-            400: components["responses"]["BadRequestResponse"];
+            /** @description QUOTE_ID_REQUIRED / CONTRACT_NEEDS_APPROVAL / MEMBER_REQUIRED_FOR_ACTION (код в `detail`) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
             401: components["responses"]["UnauthorizedResponse"];
-            403: components["responses"]["ForbiddenResponse"];
+            /** @description ROLE_NOT_PERMITTED: нет права `contract.manage` */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
         };
     };
     crm_deal_stages_list: {
@@ -24801,6 +27771,91 @@ export interface operations {
             404: components["responses"]["NotFoundResponse"];
         };
     };
+    crm_projects_list: {
+        parameters: {
+            query?: {
+                /** @description Одна сделка (точный поиск по номеру ПР) */
+                deal_id?: number;
+                /** @description Размер страницы, 1–100 (по умолчанию 25) */
+                limit?: number;
+                /** @description Только проекты, где сотрудник — менеджер или взявший в работу */
+                mine?: boolean;
+                /** @description Сдвиг */
+                offset?: number;
+                /** @description Только с проблемами: договор отклонён, акт возвращён, счёт просрочен */
+                problems?: boolean;
+                /** @description Название, клиент, номер КП, договора, счёта или акта */
+                q?: string;
+                /** @description Шаг пути заявки */
+                step?: "CONTRACT" | "DONE" | "PAYMENT";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectPage"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description PROJECT_STAFF_ONLY */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
+    crm_projects_retrieve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Сделка ERP (`deal_id` строки списка) */
+                deal_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectCard"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description PROJECT_STAFF_ONLY */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description NOT_FOUND: сделки нет или она не проект */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
     crm_quote_charges_list: {
         parameters: {
             query?: {
@@ -26604,6 +29659,34 @@ export interface operations {
             404: components["responses"]["NotFoundResponse"];
         };
     };
+    exchange_rates_list: {
+        parameters: {
+            query?: {
+                /** @description Код валюты (USD, EUR, RUB). */
+                currency?: string;
+                /** @description Номер страницы. */
+                page?: number;
+                /** @description Строк на странице, до 200. */
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedDeskExchangeRateList"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+        };
+    };
     exchange_rates_current_retrieve: {
         parameters: {
             query?: {
@@ -26827,6 +29910,308 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFoundResponse"];
+        };
+    };
+    finance_receivables_board: {
+        parameters: {
+            query?: {
+                /** @description Строк на странице, 1–100 (по умолчанию 50). */
+                limit?: number;
+                /** @description Сколько строк пропустить. */
+                offset?: number;
+                /** @description Поиск по номеру счёта и названию клиента. */
+                q?: string;
+                /** @description Вкладка; по умолчанию `awaiting`. */
+                tab?: "all" | "awaiting" | "overdue" | "proofs" | "to_issue";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReceivableBoard"];
+                };
+            };
+            /** @description TAB_INVALID / PAGINATION_INVALID */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description ROLE_NOT_PERMITTED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
+    finance_receivables_card: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invoice_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReceivableCard"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description ROLE_NOT_PERMITTED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
+    finance_receivables_confirm_payment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invoice_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmPaymentRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ConfirmPaymentRequest"];
+                "multipart/form-data": components["schemas"]["ConfirmPaymentRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReceivableCard"];
+                };
+            };
+            /** @description NOT_FOUND / CONFIRMATION_NOT_FOUND (404); ROLE_NOT_PERMITTED / MEMBER_REQUIRED_FOR_ACTION (403); PAYMENT_EXCEEDS_BALANCE_DUE / INVOICE_NOT_ISSUED / INVOICE_NOT_OPEN / INVOICE_CANCELLED / INVOICE_ALREADY_PAID / PAYMENT_REFERENCE_CONFLICT (409); PAYMENT_DATE_IN_FUTURE / PAYMENT_AMOUNT_MUST_BE_POSITIVE (400) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description ROLE_NOT_PERMITTED / MEMBER_REQUIRED_FOR_ACTION */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description NOT_FOUND / CONFIRMATION_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description PAYMENT_EXCEEDS_BALANCE_DUE / INVOICE_ALREADY_PAID / ... */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
+    finance_receivables_attach_confirmation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invoice_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["AttachConfirmationRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReceivableCard"];
+                };
+            };
+            /** @description Файл не принят или поле неверно */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description ROLE_NOT_PERMITTED / MEMBER_REQUIRED_FOR_ACTION */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description INVOICE_NOT_OPEN */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
+    finance_receivables_confirmation_file: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                confirmation_id: number;
+                invoice_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Содержимое файла */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description ROLE_NOT_PERMITTED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description Платёжки нет или она относится к другому счёту */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
+    finance_receivables_request_payment_doc: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invoice_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReceivableCard"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description ROLE_NOT_PERMITTED / MEMBER_REQUIRED_FOR_ACTION */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description INVOICE_NOT_OPEN */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
         };
     };
     busDeliveries: {
@@ -27562,6 +30947,91 @@ export interface operations {
             404: components["responses"]["NotFoundResponse"];
         };
     };
+    master_data_hs_codes_list: {
+        parameters: {
+            query?: {
+                /** @description Только действующие на сегодня. */
+                active?: boolean;
+                /** @description Число знаков кода. */
+                level?: 10 | 2 | 4 | 6 | 8;
+                /** @description Номер страницы. */
+                page?: number;
+                /** @description Строк на странице, до 200. */
+                page_size?: number;
+                /** @description Поиск по названию и коду. */
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaginatedDeskHsCodeList"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            403: components["responses"]["ForbiddenResponse"];
+        };
+    };
+    master_data_hs_codes_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["DeskHsCodeInRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["DeskHsCodeInRequest"];
+                "multipart/form-data": components["schemas"]["DeskHsCodeInRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeskHsCode"];
+                };
+            };
+            /** @description Отказ проверки: код в `detail` или ошибки полей. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description HS_CODE_EXISTS — такой код уже есть. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
     master_data_hs_codes_duties_retrieve: {
         parameters: {
             query?: {
@@ -27586,6 +31056,61 @@ export interface operations {
             401: components["responses"]["UnauthorizedResponse"];
             403: components["responses"]["ForbiddenResponse"];
             404: components["responses"]["NotFoundResponse"];
+        };
+    };
+    master_data_hs_codes_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedDeskHsCodeInRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedDeskHsCodeInRequest"];
+                "multipart/form-data": components["schemas"]["PatchedDeskHsCodeInRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeskHsCode"];
+                };
+            };
+            /** @description Отказ проверки: код в `detail` или ошибки полей. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права роли (`ROLE_NOT_PERMITTED`) или закрытое поле (`SUPPLIER_PRICES_REQUIRED`, `CREW_RATES_REQUIRED`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description Объекта нет. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
         };
     };
     master_data_units_list: {
@@ -28050,7 +31575,24 @@ export interface operations {
                     "application/json": components["schemas"]["BadRequest"];
                 };
             };
-            404: components["responses"]["NotFoundResponse"];
+            /** @description Unknown or not-yet-sent token */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description Public link revoked or expired (QUOTE_LINK_REVOKED / QUOTE_LINK_EXPIRED) */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
         };
     };
     public_quotes_reject_create: {
@@ -28087,7 +31629,24 @@ export interface operations {
                     "application/json": components["schemas"]["BadRequest"];
                 };
             };
-            404: components["responses"]["NotFoundResponse"];
+            /** @description Unknown or not-yet-sent token */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description Public link revoked or expired (QUOTE_LINK_REVOKED / QUOTE_LINK_EXPIRED) */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
         };
     };
     public_quotes_request_code_create: {
@@ -28109,7 +31668,24 @@ export interface operations {
                     "application/json": components["schemas"]["PublicCodeSent"];
                 };
             };
-            404: components["responses"]["NotFoundResponse"];
+            /** @description Unknown or not-yet-sent token */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description Public link revoked or expired (QUOTE_LINK_REVOKED / QUOTE_LINK_EXPIRED) */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
         };
     };
     public_quotes_viewed_create: {
@@ -28130,7 +31706,24 @@ export interface operations {
                 };
                 content?: never;
             };
-            404: components["responses"]["NotFoundResponse"];
+            /** @description Unknown or not-yet-sent token */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description Public link revoked or expired (QUOTE_LINK_REVOKED / QUOTE_LINK_EXPIRED) */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
         };
     };
     settings_email_templates_list: {

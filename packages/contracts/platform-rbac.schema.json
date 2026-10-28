@@ -63,6 +63,7 @@
         "supply.manage",
         "fulfillment.manage",
         "fulfillment.act",
+        "finance.view",
         "finance.invoice",
         "finance.payment",
         "finance.rates",
@@ -112,7 +113,14 @@
         "external_services:read",
         "external_services:write",
         "tickets:read",
-        "tickets:write"
+        "tickets:write",
+        "chats:read",
+        "chats:reply",
+        "chats:note",
+        "chats:assist",
+        "chats:invoiced",
+        "company_articles:read",
+        "company_articles:write"
       ]
     },
     "edsPermission": {

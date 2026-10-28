@@ -272,6 +272,121 @@ components:
       - connected
       title: AiSystemBudget
       type: object
+    ArticleIn:
+      additionalProperties: false
+      description: Новая статья. Значения проверяет домен (`details.reason`), здесь — грубые пределы.
+      properties:
+        body:
+          maxLength: 100000
+          title: Body
+          type: string
+        language:
+          default: ru
+          maxLength: 8
+          title: Language
+          type: string
+        title:
+          maxLength: 1000
+          title: Title
+          type: string
+      required:
+      - title
+      - body
+      title: ArticleIn
+      type: object
+    ArticleListOut:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/ArticleOut'
+          title: Items
+          type: array
+      required:
+      - items
+      title: ArticleListOut
+      type: object
+    ArticleOut:
+      properties:
+        body:
+          title: Body
+          type: string
+        created_at:
+          format: date-time
+          title: Created At
+          type: string
+        created_by_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Created By Name
+        id:
+          title: Id
+          type: integer
+        language:
+          enum:
+          - ru
+          - uz
+          - en
+          title: Language
+          type: string
+        published_at:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          title: Published At
+        status:
+          enum:
+          - draft
+          - published
+          title: Status
+          type: string
+        title:
+          title: Title
+          type: string
+        updated_at:
+          format: date-time
+          title: Updated At
+          type: string
+        updated_by_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Updated By Name
+      required:
+      - id
+      - title
+      - body
+      - language
+      - status
+      - created_at
+      - updated_at
+      title: ArticleOut
+      type: object
+    ArticlePatch:
+      additionalProperties: false
+      description: 'Правка: пришедшие поля меняются, остальные остаются. Статус меняют отдельные действия.'
+      properties:
+        body:
+          anyOf:
+          - maxLength: 100000
+            type: string
+          - type: 'null'
+          title: Body
+        language:
+          anyOf:
+          - maxLength: 8
+            type: string
+          - type: 'null'
+          title: Language
+        title:
+          anyOf:
+          - maxLength: 1000
+            type: string
+          - type: 'null'
+          title: Title
+      title: ArticlePatch
+      type: object
     Assign:
       properties:
         user_id:
@@ -2106,6 +2221,90 @@ components:
       - date_from
       - date_to
       title: DeputyIn
+      type: object
+    DialogAccess:
+      description: Почему сотруднику открыт диалог (поле `access` в `GET /chats`).
+      enum:
+      - registry
+      - participant
+      - invoiced
+      title: DialogAccess
+      type: string
+    DialogOut:
+      description: Диалог лида без данных реестра (оценка, квалификация, стадия — в карточке лида).
+      properties:
+        access:
+          $ref: '#/components/schemas/DialogAccess'
+          description: 'Почему диалог открыт: `registry` — реестр лидов (`leads:read`), `participant` — сотрудник участвует
+            (ответственный за лида, клиента или сделку, автор ответа), `invoiced` — зона «Счета и оплаты» (`chats:invoiced`)'
+        assigned_user_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Assigned User Id
+        client_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Client Id
+        display_name:
+          title: Display Name
+          type: string
+        invoiced:
+          description: По сделке клиента ERP выставила счёт
+          title: Invoiced
+          type: boolean
+        language:
+          title: Language
+          type: string
+        last_lead_msg_at:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          description: Последнее сообщение клиента
+          title: Last Lead Msg At
+        last_message_at:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          description: Последнее сообщение в диалоге (клиента, бота или сотрудника)
+          title: Last Message At
+        lead_id:
+          title: Lead Id
+          type: integer
+        source:
+          description: 'Канал лида: telegram, web, phone, email, referral'
+          title: Source
+          type: string
+      required:
+      - lead_id
+      - display_name
+      - source
+      - language
+      - client_id
+      - assigned_user_id
+      - last_lead_msg_at
+      - last_message_at
+      - invoiced
+      - access
+      title: DialogOut
+      type: object
+    DialogPage:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/DialogOut'
+          title: Items
+          type: array
+        total:
+          title: Total
+          type: integer
+      required:
+      - items
+      - total
+      title: DialogPage
       type: object
     DocumentOut:
       properties:
@@ -5640,6 +5839,12 @@ components:
       - ticket_reply_empty
       - ticket_reply_too_long
       - ticket_rate_limited
+      - article_title_empty
+      - article_title_too_long
+      - article_body_empty
+      - article_body_too_long
+      - article_language_unknown
+      - article_status_unknown
       - contact_channel_required
       - request_not_allowed
       - request_key_reused
@@ -7892,7 +8097,7 @@ components:
       type: http
 info:
   title: RailTech CRM API
-  version: 0.15.0
+  version: 0.16.0
 openapi: 3.1.0
 paths:
   /api/v1/admin/ai-spend:
@@ -8758,6 +8963,67 @@ paths:
       summary: Overview
       tags:
       - bus
+  /api/v1/chats:
+    get:
+      operationId: list_dialogs
+      parameters:
+      - description: Диалоги клиента CRM
+        in: query
+        name: client_id
+        required: false
+        schema:
+          anyOf:
+          - exclusiveMinimum: 0
+            type: integer
+          - type: 'null'
+          description: Диалоги клиента CRM
+          title: Client Id
+      - description: Диалоги клиента сделки ERP (запросить платёжку)
+        in: query
+        name: erp_deal_id
+        required: false
+        schema:
+          anyOf:
+          - exclusiveMinimum: 0
+            type: integer
+          - type: 'null'
+          description: Диалоги клиента сделки ERP (запросить платёжку)
+          title: Erp Deal Id
+      - in: query
+        name: limit
+        required: false
+        schema:
+          default: 50
+          maximum: 200
+          minimum: 1
+          title: Limit
+          type: integer
+      - in: query
+        name: offset
+        required: false
+        schema:
+          default: 0
+          minimum: 0
+          title: Offset
+          type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DialogPage'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: List Dialogs
+      tags:
+      - chats
   /api/v1/clients:
     get:
       operationId: list_clients
@@ -9199,6 +9465,210 @@ paths:
       summary: Unlink Telegram
       tags:
       - clients
+  /api/v1/company-articles:
+    get:
+      operationId: list_articles
+      parameters:
+      - in: query
+        name: status
+        required: false
+        schema:
+          anyOf:
+          - maxLength: 16
+            type: string
+          - type: 'null'
+          title: Status
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleListOut'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: List Articles
+      tags:
+      - company-articles
+    post:
+      description: 'Новая статья всегда черновик: опубликовать — отдельное действие.'
+      operationId: create_article
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ArticleIn'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleOut'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Create Article
+      tags:
+      - company-articles
+  /api/v1/company-articles/{article_id}:
+    delete:
+      operationId: delete_article
+      parameters:
+      - in: path
+        name: article_id
+        required: true
+        schema:
+          exclusiveMinimum: 0
+          title: Article Id
+          type: integer
+      responses:
+        '204':
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Delete Article
+      tags:
+      - company-articles
+    get:
+      operationId: get_article
+      parameters:
+      - in: path
+        name: article_id
+        required: true
+        schema:
+          exclusiveMinimum: 0
+          title: Article Id
+          type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleOut'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Get Article
+      tags:
+      - company-articles
+    patch:
+      operationId: update_article
+      parameters:
+      - in: path
+        name: article_id
+        required: true
+        schema:
+          exclusiveMinimum: 0
+          title: Article Id
+          type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ArticlePatch'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleOut'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Update Article
+      tags:
+      - company-articles
+  /api/v1/company-articles/{article_id}/publish:
+    post:
+      operationId: publish_article
+      parameters:
+      - in: path
+        name: article_id
+        required: true
+        schema:
+          exclusiveMinimum: 0
+          title: Article Id
+          type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleOut'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Publish Article
+      tags:
+      - company-articles
+  /api/v1/company-articles/{article_id}/unpublish:
+    post:
+      description: 'Вернуть опубликованную статью в черновики: из «Помощи» она исчезает.'
+      operationId: unpublish_article
+      parameters:
+      - in: path
+        name: article_id
+        required: true
+        schema:
+          exclusiveMinimum: 0
+          title: Article Id
+          type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleOut'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Unpublish Article
+      tags:
+      - company-articles
   /api/v1/dashboard:
     get:
       operationId: get_dashboard
@@ -11988,6 +12458,28 @@ paths:
       summary: Put Avatar
       tags:
       - me
+  /api/v1/me/company-articles:
+    get:
+      description: Опубликованные статьи компании для «Помощи»; черновиков здесь нет ни у кого.
+      operationId: list_published_articles
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArticleListOut'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: List Published Articles
+      tags:
+      - company-articles
   /api/v1/me/covering:
     get:
       description: 'За кого этот сотрудник сегодня заместитель: BFF добавляет их очередь в «Мою очередь».'
@@ -13368,8 +13860,8 @@ paths:
       operationId: team
       parameters:
       - description: 'Раздел каталога (`erp.calc.goods`, `eds.payments`, …): сотрудники с этим разделом. Нужен `level`. Право
-          — чтение сотрудников (`users:read`, раздел `admin` не ниже чтения); без `section` — `leads:read`. Раздела нет в
-          каталоге — 422.'
+          — чтение сотрудников (`users:read`, раздел `admin` не ниже чтения); без `section` — `leads:read` или `chats:read`.
+          Раздела нет в каталоге — 422.'
         in: query
         name: section
         required: false
@@ -13379,8 +13871,8 @@ paths:
             type: string
           - type: 'null'
           description: 'Раздел каталога (`erp.calc.goods`, `eds.payments`, …): сотрудники с этим разделом. Нужен `level`.
-            Право — чтение сотрудников (`users:read`, раздел `admin` не ниже чтения); без `section` — `leads:read`. Раздела
-            нет в каталоге — 422.'
+            Право — чтение сотрудников (`users:read`, раздел `admin` не ниже чтения); без `section` — `leads:read` или `chats:read`.
+            Раздела нет в каталоге — 422.'
           title: Section
       - description: 'Уровень раздела не ниже: `full` или `read` (`full` ⊇ `read`).'
         in: query

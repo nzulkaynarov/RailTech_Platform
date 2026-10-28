@@ -34,7 +34,7 @@ system_roles:
       eds.inbox: full
       eds.drafts: full
       eds.projects: full
-      eds.payments: full
+      eds.payments: read  # SPEC-v3 §4.2: оплату подтверждает бухгалтер, директор видит (решение архитектора, Q-D2-4-1 п. 1)
       eds.memo.create: full
       eds.memo.approve: full
       erp.calc: full
@@ -176,15 +176,22 @@ resources:
     label: { ru: "Документы · Проекты: договор, счёт, акт, сканы", uz: "Hujjatlar · Loyihalar: shartnoma, hisob, dalolatnoma, skanlar", en: "Documents · Projects: contract, invoice, act, scans" }
     backend:
       erp: { full: [contract.manage, contract.sign, fulfillment.act] }
-      eds: { read: [registry.read], full: [registry.read] }
+      # registry.export — выгрузка реестра «Все документы»: у директора и бухгалтера (раздел «Проекты» у обоих full), не привязана
+      # к «Счетам и оплатам» (решение архитектора, Q-D2-4-1 п. 1: директор их только читает, выгрузку сохраняет).
+      eds: { read: [registry.read], full: [registry.read, registry.export] }
   - key: eds.payments
     module: eds
     label: { ru: "Документы · Счета и оплаты · подтвердить оплату, запросить платёжку", uz: "Hujjatlar · Hisoblar va to‘lovlar · to‘lovni tasdiqlash, to‘lov topshiriqnomasini so‘rash", en: "Documents · Invoices & payments · confirm payment, request a payment order" }
     backend:
-      erp: { full: [finance.invoice, finance.payment, finance.rates, data.export] }
-      # data.export ERP ↔ registry.export EDS: выгрузка реестра — у того, кто выгружает данные «Счетов и оплат».
+      # B-D18-1 (W18A-P3): зона переписки «Счета и оплаты» — диалоги клиентов, по сделкам которых выставлен счёт
+      # («Запросить платёжку»). Право CRM `chats:invoiced` само переписку не открывает: только вместе с `chats:read`
+      # раздела `chats.external` (правило — apps/crm/backend/app/domain/chat_access.py).
+      crm: { full: [chats:invoiced] }
+      erp: { read: [finance.view], full: [finance.view, finance.invoice, finance.payment, finance.rates, data.export] }
+      # finance.view (Q-D2-4-1): чтение доски и карточки счетов без права действовать — директор и менеджер («Ч»).
+      # data.export ERP — выгрузка данных «Счетов и оплат» (у бухгалтера); выгрузка реестра EDS (registry.export) — в «Проектах».
       # payments.confirm — шаг «бухгалтер» маршрута служебной записки с суммой (решение архитектора, волна 12).
-      eds: { read: [registry.read], full: [registry.read, registry.export, payments.confirm] }
+      eds: { read: [registry.read], full: [registry.read, payments.confirm] }
   - key: eds.memo.create
     module: eds
     label: { ru: "Документы · Служебная записка · создать", uz: "Hujjatlar · Xizmat xati · yaratish", en: "Documents · Memo · create" }
@@ -224,19 +231,25 @@ resources:
   - key: chats.external
     module: chats
     label: { ru: "Чаты · С клиентами (Telegram-бот, почта)", uz: "Chatlar · Mijozlar bilan (Telegram-bot, pochta)", en: "Chats · With clients (Telegram bot, email)" }
+    # B-D18-1 (W18A-P3, решение архитектора 2026-10-28): переписка отдельно от реестра лидов. `chats:*` открывает только
+    # переписку, вложения и заметки команды тех диалогов, где сотрудник участвует (ответственный за лида, клиента или
+    # сделку, автор ответа клиенту) или которые назначены его зоне (`chats:invoiced` — «Счета и оплаты»). Реестр лидов
+    # (очередь, список, карточка, воронка) — только `crm.leads` (`leads:*`); у него зона — все диалоги.
     backend:
       crm:
-        read: [leads:read]
-        full: [leads:read, leads:reply, leads:note, leads:assist]
+        read: [chats:read]
+        full: [chats:read, chats:reply, chats:note, chats:assist]
   - key: admin
     module: admin
-    label: { ru: "Настройки · Роли и права, Сотрудники, Подключения, Telegram-бот, Журнал, Обращения сотрудников", uz: "Sozlamalar · Rollar va huquqlar, xodimlar, ulanishlar, Telegram-bot, jurnal, xodimlar murojaatlari", en: "Settings · Roles & permissions, employees, connections, Telegram bot, log, staff requests" }
+    label: { ru: "Настройки · Роли и права, Сотрудники, Подключения, Telegram-бот, Журнал, Обращения сотрудников, Статьи компании", uz: "Sozlamalar · Rollar va huquqlar, xodimlar, ulanishlar, Telegram-bot, jurnal, xodimlar murojaatlari, kompaniya maqolalari", en: "Settings · Roles & permissions, employees, connections, Telegram bot, log, staff requests, company articles" }
     backend:
       crm:
         # W13-A5: директор (admin: read) читает и настройки бота, шаблоны ответов и базу знаний — без правки; правка и
         # песочница — admin: full (settings:write, kb:write, reply_templates:write, sandbox:use, export:read).
         # W15-H7: «Обращения сотрудников» — директор читает (tickets:read), администратор отвечает и меняет статус (tickets:write).
-        read: [users:read, integrations:read, models:read, system:read, external_services:read, backups:read, audit:read, settings:read, reply_templates:read, kb:read, tickets:read]
+        # W18A-P5: «Статьи компании» — директор читает вместе с черновиками (company_articles:read), администратор пишет,
+        # публикует и удаляет (company_articles:write); опубликованные читает любой сотрудник в «Помощи» (без права).
+        read: [users:read, integrations:read, models:read, system:read, external_services:read, backups:read, audit:read, settings:read, reply_templates:read, kb:read, tickets:read, company_articles:read]
         full:
           - users:read
           - users:write
@@ -262,6 +275,8 @@ resources:
           - export:read
           - tickets:read
           - tickets:write
+          - company_articles:read
+          - company_articles:write
       # Журнал шины (W13-A2): ERP — `team.manage` (код раздела `admin` в ERP, нового кода не нужно); EDS — `bus.manage`
       # (у EDS кода раздела `admin` не было). В CRM журнал — `integrations:read`/`integrations:write`.
       erp: { full: [team.manage] }
@@ -315,6 +330,7 @@ menu:
     org: [admin]
     integrations: [admin]
     tickets: [admin]
+    articles: [admin]
     company: [company.settings]
     bot: [admin]
     # «Журнал» (W15-H4): действия людей и обмен между системами — фильтр одного экрана. «Обмен между системами» (шина,

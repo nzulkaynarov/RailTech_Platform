@@ -66,7 +66,7 @@ def test_catalog_codes_are_exactly_the_eds_v1_codes() -> None:
 @pytest.mark.parametrize(
     ("code", "expected"),
     [
-        ("DIRECTOR", EDS_CODES - {BUS}),
+        ("DIRECTOR", EDS_CODES - {BUS, "payments.confirm"}),
         ("MANAGER", {"letters.read", "registry.read", "memos.create", UPLOAD}),
         ("SUPPLY", {"registry.read", "memos.create"}),
         ("ENGINEER", {"registry.read", "memos.create"}),
@@ -97,9 +97,10 @@ def test_rework_row_belongs_to_the_author_of_documents_not_to_the_approver() -> 
     assert {"ADMIN", "DIRECTOR", "MANAGER", "SUPPLY", "ENGINEER", "ACCOUNTANT"} <= holders
 
 
-def test_director_gets_every_eds_code_except_the_bus_journal() -> None:
+def test_director_gets_every_eds_code_except_the_bus_journal_and_the_payment_confirmation() -> None:
+    """D2-4 (Q-D2-4-1 п. 1): «Счета и оплаты» у директора — `read`; оплату подтверждает бухгалтер."""
     assert len(EDS_CODES) == 11
-    assert eds_permissions(role("DIRECTOR")) == EDS_CODES - {BUS}
+    assert eds_permissions(role("DIRECTOR")) == EDS_CODES - {BUS, "payments.confirm"}
 
 
 def test_bus_journal_is_admin_full_only() -> None:
@@ -161,11 +162,12 @@ def test_administrator_sees_no_business_documents() -> None:
     ("access", "expected"),
     [
         # «Менеджер и бухгалтер» гейта R-3 (создана с нуля): лиды и «Счета и оплаты» — полный доступ.
-        ({"crm.leads": "full", "eds.payments": "full"}, {"registry.read", "registry.export", "payments.confirm"}),
+        # Выгрузка реестра (`registry.export`) — в разделе «Проекты», не в «Счетах и оплатах» (Q-D2-4-1 п. 1).
+        ({"crm.leads": "full", "eds.payments": "full"}, {"registry.read", "payments.confirm"}),
         # «Менеджер и бухгалтер (из шаблона)»: матрица «Менеджер» + «Счета и оплаты» full.
         (
             {**CATALOG["templates"]["MANAGER"]["access"], "eds.payments": "full"},
-            {"letters.read", "registry.read", "registry.export", "payments.confirm", "memos.create", UPLOAD},
+            {"letters.read", "registry.read", "payments.confirm", "memos.create", UPLOAD},
         ),
     ],
     ids=["manager-and-accountant", "manager-and-accountant-from-template"],
@@ -220,9 +222,9 @@ def test_eds_api_global_security_is_the_eds_access_token() -> None:
     assert EDS_YAML["security"] == [{"edsAccess": []}]
     scheme = EDS_YAML["components"]["securitySchemes"]["edsAccess"]
     assert (scheme["type"], scheme["scheme"], scheme["bearerFormat"]) == ("http", "bearer", "JWT")
-    # 0.6.0 — код files.upload в перечне ответов EdsPermission (D1-2b); 0.5.0 — зона исполнителя резолюции (D1-8);
-    # 0.4.0 — PATCH /documents/{id} (D1-5); 0.3.0 — журнал шины (W13-A2)
-    assert EDS_YAML["info"]["version"] == "0.6.0"
+    # 0.7.0 — договоры, счета, акты в реестре (D2-5); 0.6.0 — код files.upload в перечне ответов EdsPermission (D1-2b);
+    # 0.5.0 — зона исполнителя резолюции (D1-8); 0.4.0 — PATCH /documents/{id} (D1-5); 0.3.0 — журнал шины (W13-A2)
+    assert EDS_YAML["info"]["version"] == "0.7.0"
 
 
 def test_numbers_are_not_path_parameters() -> None:

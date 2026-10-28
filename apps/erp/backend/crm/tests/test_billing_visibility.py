@@ -273,13 +273,14 @@ def test_staff_signs_contract_from_registry_closes_deal(world, grant):
     assert listed.status_code == 200
     assert contract.id in _ids(listed), "staff cannot see the contract to sign it"
 
+    # D2-5: подпись продавца кликом закрыта — право и видимость проверены, дальше 409 с кодом; подписывает скан.
     signed = seller_client.post(f"/api/v1/crm/contracts/{contract.id}/sign-manager/")
-    assert signed.status_code == 200, signed.content
+    assert signed.status_code == 409 and signed.json() == {"detail": "CONTRACT_SIGN_VIA_SCAN"}, signed.content
 
     contract.refresh_from_db()
     deal.refresh_from_db()
-    assert contract.status_code == "SIGNED"
-    assert deal.stage.code == "CLOSED_WON"
+    assert contract.status_code != "SIGNED"
+    assert deal.stage.code != "CLOSED_WON"
 
 
 # ── 5. Object-level parity: DETAIL retrieve ───────────────────────────────────

@@ -45,10 +45,11 @@ describe("Центр уведомлений", () => {
     expect(tabs).toHaveLength(4);
     const list = await within(center).findByRole("list", { name: "Уведомления" });
     expect(within(list).getAllByRole("listitem")).toHaveLength(7);
-    // непрочитанное помечено словом, не только цветом; договор (раздел без экрана) — кнопка «Где посмотреть», а не ссылка
-    const first = within(list).getAllByRole("button", { name: /Где посмотреть/ })[0] as HTMLElement;
+    // непрочитанное помечено словом, не только цветом; у договора и счёта есть экраны (D2-4, D2-5): ссылки, а не «Где посмотреть»
+    expect(within(list).queryAllByRole("button", { name: /Где посмотреть/ })).toHaveLength(0);
+    const first = within(list).getByRole("link", { name: /ДОГ-2026\/091/ });
     expect(first).toHaveTextContent("Новое: Клиент согласовал проект договора ДОГ-2026/091");
-    expect(first).toHaveAttribute("aria-expanded", "false");
+    expect(first).toHaveAttribute("href", expect.stringContaining("/eds/projects/"));
   });
 
   it("вкладка «Клиенты» оставляет только свои уведомления", async () => {
@@ -149,6 +150,30 @@ describe("Центр уведомлений", () => {
   );
 
   it("уведомление об объекте без экрана: не заглушка, а «Где посмотреть» с мостом; окно остаётся открытым, прочитано", async () => {
+    // раздел без экрана (исходящие КП ещё в старом ERP): у договоров и счетов экраны уже есть, берём КП из «Исходящих»
+    server.use(
+      http.get("*/notifications", () =>
+        HttpResponse.json({
+          items: [
+            {
+              id: "erp:90",
+              tab: "decisions",
+              title: "КП-2026/118 отправлено клиенту",
+              created_at: new Date().toISOString(),
+              read: false,
+              object: {
+                kind: "quote",
+                number: "КП-2026/118",
+                path: "/eds/outbox/%D0%9A%D0%9F-2026%2F118?panel=open&tab=card",
+              },
+            },
+          ],
+          next_cursor: null,
+          unread_count: 1,
+          sources: { crm: "ok", erp: "ok" },
+        }),
+      ),
+    );
     signInAs("director@demo.example");
     const { router } = renderApp("/dashboard/queue");
     const center = await openBell();
@@ -158,7 +183,7 @@ describe("Центр уведомлений", () => {
     });
 
     const item = await within(center).findByRole("button", {
-      name: /Где посмотреть.*ДОГ-2026\/091/,
+      name: /Где посмотреть.*КП-2026\/118/,
     });
     fireEvent.click(item);
 
@@ -167,11 +192,11 @@ describe("Центр уведомлений", () => {
     expect(within(where).getByText(/Сейчас — в старом ERP/)).toBeInTheDocument();
     expect(
       await within(where).findByRole("link", { name: /Открыть в старом ERP/ }),
-    ).toHaveAttribute("href", "http://erp.localhost:8088/#crm-deals");
+    ).toHaveAttribute("href", "http://erp.localhost:8088/#crm-quotes");
     expect(router.state.location.pathname).toBe("/dashboard/queue");
     expect(center).toBeInTheDocument();
     await waitFor(() => {
-      expect(requests).toContain("/api/v1/notifications/erp:2/read");
+      expect(requests).toContain("/api/v1/notifications/erp:90/read");
     });
     fireEvent.click(item);
     expect(item).toHaveAttribute("aria-expanded", "false");

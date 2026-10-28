@@ -4,6 +4,7 @@ from app.models import (  # noqa: F401
     auth,
     bus,
     clients,
+    company_articles,
     deals,
     email,
     external_services,
