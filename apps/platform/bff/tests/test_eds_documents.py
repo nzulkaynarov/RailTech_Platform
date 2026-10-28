@@ -32,6 +32,7 @@ from tests.eds_documents_support import (
     file_ref,
     registry_item,
 )
+from tests.feeds_support import deal_matches
 from tests.roles import custom
 
 BASE = "/api/v1/eds"
@@ -758,36 +759,44 @@ async def test_download_not_found_is_translated(web: Web, eds: EdsFake) -> None:
 # --- связь с проектом -----------------------------------------------------------------------------
 
 
-def _deals(be: Backends) -> None:
-    be.router.get(f"{ERP_URL}/api/v1/crm/deals/").mock(
-        return_value=httpx.Response(
-            200,
-            json={
-                "results": [
-                    {
-                        "id": 904,
-                        "title": "Поставка рельсов Р65",
-                        "company_name": "ООО «Демо-Путь»",
-                        "stage_code": "CALCULATING",
-                        "created_at": "2026-10-01T09:00:00Z",
-                    },
-                    {
-                        "id": 905,
-                        "title": "Монтаж стрелочных переводов",
-                        "company_name": "АО «Пример-Рельс»",
-                        "stage_code": "DRAFT",
-                        "created_at": "2026-10-05T09:00:00Z",
-                    },
-                ]
-            },
-        )
-    )
+DEALS = [
+    {
+        "id": 904,
+        "number": "ЗВ-2026-904",
+        "title": "Поставка рельсов Р65",
+        "company_name": "ООО «Демо-Путь»",
+        "stage_code": "CALCULATING",
+        "created_at": "2026-10-01T09:00:00Z",
+    },
+    {
+        "id": 905,
+        "number": "ЗВ-2026-905",
+        "title": "Монтаж стрелочных переводов",
+        "company_name": "АО «Пример-Рельс»",
+        "stage_code": "DRAFT",
+        "created_at": "2026-10-05T09:00:00Z",
+    },
+]
+
+
+def _deals(be: Backends) -> list[httpx.Request]:
+    """Сделки ERP; с `?search=` ищет «ERP» (ERP-09): номер, название, компания."""
+    seen: list[httpx.Request] = []
+
+    def answer(request: httpx.Request) -> httpx.Response:
+        seen.append(request)
+        term = request.url.params.get("search")
+        found = [d for d in DEALS if term is None or deal_matches(d, term)]
+        return httpx.Response(200, json={"results": found})
+
+    be.router.get(f"{ERP_URL}/api/v1/crm/deals/").mock(side_effect=answer)
+    return seen
 
 
 async def test_deal_options_find_requests_by_number_title_or_company(
     web: Web, be: Backends, eds: EdsFake, check: ContractChecker
 ) -> None:
-    _deals(be)
+    seen = _deals(be)
     await web.login(["MANAGER"])
 
     everything = await web.client.get(f"{BASE}/deal-options")
@@ -804,6 +813,8 @@ async def test_deal_options_find_requests_by_number_title_or_company(
     assert [o["erp_deal_id"] for o in by_title.json()["items"]] == [904]
     assert [o["company"] for o in by_company.json()["items"]] == ["АО «Пример-Рельс»"]
     assert eds.count == 0  # EDS не нужен: сделки — ERP
+    # поиск — на стороне ERP: запрос уходит как набран
+    assert [r.url.params.get("search") for r in seen] == [None, "zv-2026-905", "рельсов", "пример"]
 
 
 async def test_deal_options_when_erp_is_down_are_empty_with_source(

@@ -86,6 +86,7 @@ test.describe("Мои задачи: «Открыть» или «Где сдел�
     await expect(panel).toBeFocused();
     const link = panel.getByRole("link", { name: /Открыть в старом ERP/ });
     await expect(link).toBeVisible(); // адрес старого ERP приходит из BFF — Tab после его появления
+    await expectNoViolations(page, "где сделать: раскрыта с клавиатуры");
     await page.keyboard.press("Tab");
     await expect(link).toBeFocused();
     await page.keyboard.press("Escape");
