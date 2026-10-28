@@ -132,6 +132,7 @@ async def test_registry_cursor_pagination_over_the_union(
     for _ in range(4):
         params: dict[str, Any] = {"limit": 2, **({"cursor": cursor} if cursor else {})}
         page = (await client.get("/api/v1/registry", params=params, headers=staff["manager"].headers)).json()
+        assert page["items"] or page["next_cursor"] is None  # пустая страница при курсоре — «дыра» от пост-фильтра
         seen += [i["number"] for i in page["items"]]
         cursor = page["next_cursor"]
         if cursor is None:
@@ -308,6 +309,7 @@ async def test_registry_draft_filter_applies_before_cursor_and_limit(
         params: dict[str, Any] = {"limit": 1, **({"cursor": cursor} if cursor else {})}
         page = (await client.get("/api/v1/registry", params=params, headers=staff["supplier"].headers)).json()
         assert len(page["items"]) <= 1
+        assert page["items"] or page["next_cursor"] is None  # пустая страница при курсоре — «дыра» от пост-фильтра
         seen += [i["number"] for i in page["items"]]
         cursor = page["next_cursor"]
         if cursor is None:

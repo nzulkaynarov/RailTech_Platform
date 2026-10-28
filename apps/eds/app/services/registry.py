@@ -3,8 +3,9 @@
 Один запрос объединяет письма (`letters`), документы (`documents`) и маршруты КП (`approval_routes`, template = quote)
 в общий вид и фильтрует его: вкладка (тип), статус, период (по `Asia/Tashkent`), ответственный, клиент, номер, поиск
 по номеру и теме. Доступ — `registry.read`, но реестр **не шире прав на сам вид документа** (D1-10): письма
-(`letter_in`, `letter_out`) — только с `letters.read`; черновики (`status = draft`) — только автору; служебки, заявления
-и отчёты — по `access.document_visible`, КП — по `access.route_visible`. Отбор — в SQL до курсора и счётчиков.
+(`letter_in`, `letter_out`) — только с `letters.read`; черновики (`status = draft`) — только автору; документы — по
+`access.document_visible` (он же у `/documents`, карточки и файлов), КП — по `access.route_visible`.
+Отбор — в SQL до курсора и счётчиков.
 """
 
 import datetime as dt
@@ -21,7 +22,6 @@ from sqlalchemy import (
     func,
     literal_column,
     null,
-    or_,
     select,
     union_all,
 )
@@ -99,12 +99,7 @@ def _union(employee: Employee) -> CompoundSelect[Any]:
         Document.deal_number.label("deal_number"),
         _big().label("crm_client_id"),
         _big().label("erp_company_id"),
-    ).where(
-        # Черновик видит только автор; письмо (`letter_out`) — только с `letters.read`; остальное — как `/documents`.
-        or_(Document.status != "draft", Document.author_crm_user_id == employee.crm_user_id),
-        access.document_visible(employee),
-        *([] if access.can_read_letters(employee) else [Document.kind != "letter_out"]),
-    )
+    ).where(access.document_visible(employee))  # письма и чужие черновики отсекает сам предикат видимости
     quotes = select(
         cast(literal_column("'quote'"), String).label("kind"),
         ApprovalRoute.id,

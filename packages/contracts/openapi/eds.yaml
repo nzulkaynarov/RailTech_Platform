@@ -425,6 +425,7 @@ paths:
       summary: Документы (служебные записки, заявления, отчёты, исходящие письма)
       description: |
         Без `registry.read` — только документы, где сотрудник автор или участник маршрута; с `registry.read` — все.
+        В любом случае чужой черновик (`draft`) виден только автору, а исходящее письмо (`letter_out`) — только с `letters.read`.
       x-rt-permissions: [memos.create, memos.approve, approvals.decide, registry.read]
       parameters:
         - name: kind
@@ -506,7 +507,9 @@ paths:
       tags: [documents]
       operationId: getDocument
       summary: Карточка документа
-      description: Автор, участник маршрута или сотрудник с `registry.read`; иначе 404 `NOT_FOUND` (существование не раскрывается).
+      description: |
+        Автор, участник маршрута или сотрудник с `registry.read`; иначе 404 `NOT_FOUND` (существование не раскрывается).
+        Чужой черновик — всегда 404; исходящее письмо — 404 без `letters.read`.
       x-rt-permissions: [memos.create, memos.approve, approvals.decide, registry.read]
       parameters:
         - $ref: '#/components/parameters/DocumentId'
@@ -856,7 +859,7 @@ paths:
       operationId: downloadFile
       summary: Скачать файл (поток)
       description: |
-        Последняя версия, или `version`. Видит тот, кому виден документ, к которому файл привязан, или загрузивший; иначе 404.
+        Последняя версия, или `version`. Видит тот, кому виден документ, к которому файл привязан (чужой черновик и исходящее письмо без `letters.read` не видны), или загрузивший; иначе 404.
       x-rt-permissions: [letters.read, memos.create, memos.approve, approvals.decide, registry.read]
       parameters:
         - $ref: '#/components/parameters/FileId'

@@ -52,16 +52,24 @@ def participates_in(employee: Employee) -> ColumnElement[bool]:
 
 
 def document_visible(employee: Employee) -> ColumnElement[bool]:
-    """Условие видимости для запроса по `Document`."""
+    """Условие видимости для запроса по `Document` — один предикат для реестра, `/documents`, карточки и файлов (D1-10).
+
+    Не шире прав на вид документа, даже у держателя `registry.read`: чужой черновик (`draft`) видит только автор,
+    исходящее письмо (`letter_out`) — только с `letters.read`. Дальше: `registry.read` — остальное видно, иначе — автор
+    или участник маршрута.
+    """
+    not_foreign_draft = or_(Document.status != "draft", Document.author_crm_user_id == employee.crm_user_id)
+    letters_ok = true() if can_read_letters(employee) else Document.kind != "letter_out"
+    base = and_(not_foreign_draft, letters_ok)
     if has(employee, EdsPermission.REGISTRY_READ):
-        return true()
+        return base
     in_route = exists(
         select(1)
         .select_from(ApprovalStep)
         .join(ApprovalRoute, ApprovalRoute.id == ApprovalStep.approval_id)
         .where(ApprovalRoute.document_id == Document.id, participates_in(employee))
     )
-    return or_(Document.author_crm_user_id == employee.crm_user_id, in_route)
+    return and_(base, or_(Document.author_crm_user_id == employee.crm_user_id, in_route))
 
 
 def route_visible(employee: Employee) -> ColumnElement[bool]:
