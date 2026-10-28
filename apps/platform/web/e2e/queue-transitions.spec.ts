@@ -81,7 +81,7 @@ test.describe("Мои задачи: «Открыть» или «Где сдел�
     await expect(button).toHaveAttribute("aria-expanded", "false");
   });
 
-  test("директор: письмо (родной экран) — «Открыть» открывает объект с боковым окном; КП и служебка — «Где сделать»; primary у всех срочных", async ({
+  test("директор: письмо, КП и служебка (родные экраны) — «Открыть» открывает объект с боковым окном; primary у срочных писем", async ({
     page,
   }) => {
     await loginAndWait(page, "director@demo.example");
@@ -91,26 +91,16 @@ test.describe("Мои задачи: «Открыть» или «Где сдел�
     });
     await expect(letter).toHaveClass(/ant-btn-primary/);
     await expect(
-      queue.getByRole("button", { name: /Где сделать: Одобрить КП-2026\/118/ }),
+      queue.getByRole("link", { name: /Открыть: Одобрить КП-2026\/118/ }),
     ).not.toHaveClass(/ant-btn-primary/);
     await expect(
-      queue.getByRole("button", { name: /Где сделать: Согласовать СЗ-2026\/031/ }),
+      queue.getByRole("link", { name: /Открыть: Согласовать СЗ-2026\/031/ }),
     ).toBeVisible();
     await settledScreenshot(page, "queue-director");
 
     await letter.click();
     await expect(page).toHaveURL(/\/eds\/inbox\/%D0%92%D0%A5-104%2F26\?panel=open&tab=resolution$/);
     await expect(page.getByRole("heading", { level: 1, name: "Письмо ВХ-104/26" })).toBeVisible();
-  });
-
-  test("служебка: «Где сделать» — кто делает работу вне интерфейса, кнопки нет", async ({
-    page,
-  }) => {
-    await loginAndWait(page, "director@demo.example");
-    await page.getByRole("button", { name: /Где сделать: Согласовать СЗ-2026\/031/ }).click();
-    const pop = page.getByRole("region", { name: "Где сделать" });
-    await expect(pop.getByText(/Сейчас этой работы в интерфейсе нет/)).toBeVisible();
-    await expect(pop.getByRole("link")).toHaveCount(0);
   });
 });
 
@@ -213,7 +203,7 @@ test.describe("Колокольчик: объект без экрана", () => 
     await spaGoto(page, "/dashboard/queue");
     await page.getByRole("button", { name: "Центр уведомлений, 3 новых" }).click();
     const center = page.getByRole("dialog", { name: "Центр уведомлений" });
-    await center.getByRole("button", { name: /Где посмотреть: .*КП-2026\/118 ждёт/ }).click();
+    await center.getByRole("button", { name: /Где посмотреть: .*ДОГ-2026\/091/ }).click();
     await expect(
       center.getByRole("region", { name: "Где посмотреть" }).getByRole("link", {
         name: /Открыть в старом ERP/,

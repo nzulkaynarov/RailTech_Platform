@@ -12,10 +12,19 @@ import "../../shared/ui/shell.css";
 import { roleCaption } from "./roleCaption";
 
 /**
- * Меню аватара (SPEC-v3 §6.1 зона 6): профиль (страница `/me`, W15-H6), активная роль (если ролей несколько), язык ru/uz/en, смена пароля, выход.
+ * Меню аватара (SPEC-v3 §6.1 зона 6): профиль (страница `/me`, W15-H6), помощь (W15-H7), активная роль (если ролей несколько), язык ru/uz/en, смена пароля, выход.
  * Роль и язык сохраняются в `PATCH /me`; ответ — новый `Me` с пересчитанными модулями и разделами.
  */
-export function AvatarMenu({ me, placement }: { me: Me; placement: "topLeft" | "topRight" }) {
+export function AvatarMenu({
+  me,
+  placement,
+  onHelp,
+}: {
+  me: Me;
+  placement: "topLeft" | "topRight";
+  /** Пункт «Помощь» открывает окно помощи (W15-H7); нет — пункта нет */
+  onHelp?: () => void;
+}) {
   const { t } = useTranslation("shell");
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -79,6 +88,7 @@ export function AvatarMenu({ me, placement }: { me: Me; placement: "topLeft" | "
       ),
       children: [
         { key: "profile", label: t("avatar.profile") },
+        ...(onHelp ? [{ key: "help", label: t("avatar.help") }] : []),
         { key: "password", label: t("avatar.changePassword") },
       ],
     },
@@ -97,6 +107,7 @@ export function AvatarMenu({ me, placement }: { me: Me; placement: "topLeft" | "
 
   const onClick: MenuProps["onClick"] = ({ key }) => {
     if (key === "profile") void navigate("/me");
+    else if (key === "help") onHelp?.();
     else if (key === "password") void navigate("/change-password");
     else if (key === "logout") logout.mutate();
     else if (key.startsWith("role:")) {

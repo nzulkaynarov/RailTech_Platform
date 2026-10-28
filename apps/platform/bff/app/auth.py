@@ -254,6 +254,7 @@ class AuthService:
             name=str(profile["full_name"]),
             position=profile.get("position") or None,
             avatar_version=_avatar_version(profile),
+            onboarding_done=bool(profile.get("onboarding_done", True)),
             language=_language(profile),
             roles=roles,
             platform_access=access,
@@ -747,6 +748,7 @@ def _apply_profile(data: SessionData, profile: dict[str, Any]) -> None:
     data.name = str(profile.get("full_name") or data.name)
     data.position = profile.get("position") or None
     data.avatar_version = _avatar_version(profile)
+    data.onboarding_done = bool(profile.get("onboarding_done", True))
     data.language = _language(profile)
     data.roles = roles
     data.platform_access = access

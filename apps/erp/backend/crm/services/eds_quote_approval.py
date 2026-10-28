@@ -5,7 +5,8 @@
   (откат — события нет). Снимок для маршрута: суммы, маржа, визы по зонам резолюции, порог маржи и срок из задания
   расчёта (`CalcTask`, проекция резолюции EDS — владелец порога EDS). КП остаётся «На утверждении».
 * `apply_director_decision` — `eds.approval.decided` по КП: approve — ИСХ-номер EDS на КП, каналы отправки,
-  «Готово к отправке» (отправка клиенту разблокирована); return — черновик с комментарием директора (правка и повторная
+  «Готово к отправке»; с выбранными каналами ERP сразу отправляет КП клиенту по доступным из них (ERP-11,
+  `sales/services/quote_auto_send.py`), без каналов — отправляет менеджер заявки (`quote.send`, C1-G-4); return — черновик с комментарием директора (правка и повторная
   отправка — новая редакция и новое событие); reject — КП отклонено. Идемпотентно: решение по другой редакции —
   устаревшее (запись в журнал КП, без изменений), повтор применённого решения — без изменений.
 """
@@ -269,14 +270,28 @@ def apply_director_decision(
                 "approved_late": approved_late,
             },
         )
+        sent_via: list[str] = []
+        if quote.send_channels:
+            # ERP-11: директор выбрал каналы — КП уходит клиенту сразу по доступным из них; недоступные и остановка
+            # гейтом — в итоге (`send_report`) и журнале, одобрение остаётся в силе (тогда отправляет менеджер).
+            from sales.services.quote_auto_send import auto_send
+
+            sent_via = auto_send(quote, quote.send_channels, director=actor, outgoing_number=quote.outgoing_number)[
+                "sent_via"
+            ]
+        message = (
+            f"КП #{number} одобрено ({quote.outgoing_number or '—'}) и отправлено клиенту: {', '.join(sent_via)}."
+            if sent_via
+            else f"КП #{number} одобрено ({quote.outgoing_number or '—'}) — можно отправлять клиенту."
+        )
         _notify_user(
             quote.prepared_by_id,
             "КП одобрено директором",
-            f"КП #{number} одобрено ({quote.outgoing_number or '—'}) — можно отправлять клиенту.",
+            message,
             type_code="SUCCESS",
             link=_link(quote),
             event_code="quote.director_approved",
-            event_params={"number": number, "outgoing_number": quote.outgoing_number},
+            event_params={"number": number, "outgoing_number": quote.outgoing_number, "sent_via": sent_via},
         )
     elif decision == "return":
         _log_quote(

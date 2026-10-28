@@ -65,6 +65,16 @@ class StaffNotifier:
                 delivered += 1
         return delivered
 
+    async def direct(self, user_id: int, text: str, key: str) -> bool:
+        """Личное сообщение одному сотруднику (ответ на обращение): без Telegram — `False`."""
+        if self._bot is None:
+            return False
+        async with self._sessions() as session:
+            user = await session.get(User, user_id)
+        if user is None or not user.is_active or user.tg_user_id is None:
+            return False
+        return await self._deliver(user_id, user.tg_user_id, escape(text), key=key)
+
     async def lead_message(
         self, lead_id: int, now: datetime, window: timedelta, links: LinkBase
     ) -> bool:

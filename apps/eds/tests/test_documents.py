@@ -286,9 +286,9 @@ async def test_application_and_report_need_only_director(client: httpx.AsyncClie
 
 async def test_submit_rules(client: httpx.AsyncClient, staff: dict[str, Person]) -> None:
     doc = await create(client, staff["manager"])
-    # не автор: документ виден только автору → для постороннего 404, для участника с registry.read — 403 not_author
+    # не автор: чужой черновик виден только автору (D1-10) → 404 и постороннему, и держателю registry.read
     assert_error(await submit(client, staff["admin"], doc["id"]), 404, "NOT_FOUND")
-    assert_error(await submit(client, staff["accountant"], doc["id"]), 403, "FORBIDDEN", reason="not_author")
+    assert_error(await submit(client, staff["accountant"], doc["id"]), 404, "NOT_FOUND")
     assert (await submit(client, staff["manager"], doc["id"])).status_code == 200
     assert_error(await submit(client, staff["manager"], doc["id"]), 409, "CONFLICT", reason="invalid_state")
     ghost = "00000000-0000-4000-8000-000000000000"
@@ -349,11 +349,10 @@ async def test_document_visibility_author_participant_registry(
         validate("DocumentPage", page.json())
         return [i["subject"] for i in page.json()["items"]]
 
-    # менеджер с registry.read видит все; «Администратор» (только memos.create) — ничего чужого
+    # менеджер с registry.read видит все, кроме чужих черновиков («Чужая», D1-10); «Администратор» — ничего чужого
     assert sorted(subjects(await client.get("/api/v1/documents", headers=staff["manager"].headers))) == [
         "На маршруте",
         "Своя",
-        "Чужая",
     ]
     assert subjects(await client.get("/api/v1/documents", headers=staff["admin"].headers)) == []
     own = await create(client, staff["admin"], subject="Админская")
@@ -441,14 +440,9 @@ async def test_author_edits_draft_without_sending(
 
 async def test_update_rules(client: httpx.AsyncClient, staff: dict[str, Person]) -> None:
     doc = await create(client, staff["manager"])
-    # не автор: посторонний не видит документ (404), участник с registry.read — 403 not_author
+    # не автор: чужой черновик не виден никому (D1-10) → 404, в том числе держателю registry.read
     assert_error(await patch(client, staff["admin"], doc["id"], {"subject": "Чужая правка"}), 404, "NOT_FOUND")
-    assert_error(
-        await patch(client, staff["accountant"], doc["id"], {"subject": "Чужая правка"}),
-        403,
-        "FORBIDDEN",
-        reason="not_author",
-    )
+    assert_error(await patch(client, staff["accountant"], doc["id"], {"subject": "Чужая правка"}), 404, "NOT_FOUND")
     assert_error(
         await patch(client, staff["manager"], doc["id"], {"amount": {"amount": "0.00", "currency": "UZS"}}),
         422,
@@ -489,9 +483,9 @@ async def test_update_is_allowed_for_draft_and_returned_only(
         "CONFLICT",
         reason="invalid_state",
     )
-    # письмо правит только регистратор, а менеджеру тип недоступен
+    # чужой черновик письма менеджеру не виден (D1-10): 404, а не 403
     other = await create(client, staff["registrar"], kind="letter_out", recipient={"name": "Другой"})
-    assert_error(await patch(client, staff["manager"], other["id"], {"subject": "x"}), 403, "FORBIDDEN")
+    assert_error(await patch(client, staff["manager"], other["id"], {"subject": "x"}), 404, "NOT_FOUND")
 
 
 async def test_update_changes_recipient_only_for_outgoing_letter(

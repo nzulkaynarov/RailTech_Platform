@@ -38,11 +38,12 @@ async def test_request_created_registers_letter_with_links_and_event(
     # C1-G-7: отправитель (компания, ИНН, контакт) и менеджер — из payload заявки
     assert letter["sender"] == {"name": "ООО «Пример Логистик»", "inn": "301234567", "contact": "Бахтиёр Каримов"}
     assert letter["manager"] == {"crm_user_id": 5, "full_name": "Алия Каримова"}
-    assert letter["registered_by"] is None and letter["urgent"] is False
+    # W16-D1-2: срочность заявки из «Создать заявку»; файла письма нет (в примере — несуществующий id, не прикреплён)
+    assert letter["registered_by"] is None and letter["urgent"] is True and letter["files"] == []
     assert letter["links"] == {
         "erp_request_id": 77,
         "erp_deal_id": 905,
-        "deal_number": "D-2026-0905",
+        "deal_number": "ЗВ-2026-104",
         "crm_client_id": 42,
         "erp_company_id": 118,
     }
@@ -64,14 +65,25 @@ async def test_old_event_without_sender_and_manager_is_still_accepted(
 ) -> None:
     """L8: поля C1-G-7 необязательные — событие издателя до 2026-10-26 даёт письмо без отправителя и менеджера."""
     envelope = example("erp/request.created.v1")
-    for name in ("company_name", "company_inn", "contact_name", "manager_crm_user_id"):
+    for name in (
+        "company_name",
+        "company_inn",
+        "contact_name",
+        "manager_crm_user_id",
+        # W16-D1-2: и без полей «Создать заявку»
+        "request_number",
+        "urgency",
+        "letter_file_id",
+        "crm_request_id",
+        "process",
+    ):
         del envelope["data"]["payload"][name]
     assert await deliver_erp(client, container, envelope) == "processed"
     [item] = (await client.get("/api/v1/letters", headers=staff["manager"].headers)).json()["items"]
     letter = (await client.get(f"/api/v1/letters/{item['id']}", headers=staff["manager"].headers)).json()
     validate("Letter", letter)
     assert letter["sender"] == {"name": None, "inn": None, "contact": None}
-    assert letter["manager"] is None
+    assert letter["manager"] is None and letter["urgent"] is False and letter["files"] == []
     [event] = await outbox(container, "letter.registered")
     assert event["data"]["letter"]["sender"] == {"name": None, "inn": None}
 
@@ -147,3 +159,52 @@ async def test_two_requests_make_two_letters_and_director_can_resolve_with_links
     [event] = await outbox(container, "letter.resolved")
     assert event["data"]["links"]["erp_request_id"] == 77 and event["data"]["links"]["erp_deal_id"] == 905
     assert event["data"]["letter"]["number"] == "ВХ-001/26"
+
+
+async def _letter(client: httpx.AsyncClient, staff: dict[str, Person]) -> dict[str, Any]:
+    [item] = (await client.get("/api/v1/letters", headers=staff["manager"].headers)).json()["items"]
+    letter: dict[str, Any] = (
+        await client.get(f"/api/v1/letters/{item['id']}", headers=staff["manager"].headers)
+    ).json()
+    return letter
+
+
+async def test_letter_file_uploaded_by_the_request_manager_is_attached(
+    client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
+) -> None:
+    """«Создать заявку» (W16-D1-2): письмо директору, загруженное менеджером до заявки, — файл входящего письма."""
+    from tests.test_files import upload
+
+    ref = (await upload(client, staff["manager"], name="письмо директору.pdf")).json()
+
+    assert await deliver_erp(client, container, request_created(letter_file_id=ref["id"])) == "processed"
+
+    letter = await _letter(client, staff)
+    validate("Letter", letter)
+    assert [f["id"] for f in letter["files"]] == [ref["id"]] and letter["files"][0]["name"] == "письмо директору.pdf"
+    assert letter["urgent"] is True
+    assert "file.attached" in [e["action"] for e in letter["journal"]]
+    # директор открывает файл письма
+    got = await client.get(f"/api/v1/files/{ref['id']}", headers=staff["director"].headers)
+    assert got.status_code == 200
+
+
+async def test_file_of_another_employee_is_not_attached_and_the_letter_is_still_registered(
+    client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
+) -> None:
+    """Файл загрузил не менеджер заявки — письмо регистрируется без него; событие не падает и не повторяется."""
+    from tests.test_files import upload
+
+    ref = (await upload(client, staff["supplier"])).json()
+
+    assert await deliver_erp(client, container, request_created(letter_file_id=ref["id"])) == "processed"
+
+    letter = await _letter(client, staff)
+    assert letter["files"] == [] and letter["number"] == "ВХ-001/26"
+
+
+async def test_normal_urgency_gives_an_ordinary_letter(
+    client: httpx.AsyncClient, container: Container, staff: dict[str, Person]
+) -> None:
+    assert await deliver_erp(client, container, request_created(urgency="normal")) == "processed"
+    assert (await _letter(client, staff))["urgent"] is False

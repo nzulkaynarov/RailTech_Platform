@@ -1,10 +1,11 @@
-import { Card } from "antd";
+import { Button, Card } from "antd";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 
+import { WriteToAdminModal } from "../../features/tickets/WriteToAdminModal";
 import { useDocumentTitle } from "../lib/useDocumentTitle";
 import { EmptyState } from "./EmptyState";
 import { PageHeader } from "./PageHeader";
-import { SoonButton } from "./SoonButton";
 
 export interface ForbiddenProps {
   /** Названия ролей, которым раздел доступен («Раздел доступен ролям …»); без списка — общий текст */
@@ -16,11 +17,13 @@ export interface ForbiddenProps {
 }
 
 /**
- * 403 по прямому URL (SPEC-v3 §11.2 п. 7): раздел не положен ролям сотрудника. Предложение написать
- * администратору — тикет Admin появится вместе с «Тикеты от команды», до тех пор кнопка неактивна с подсказкой.
+ * 403 по прямому URL (SPEC-v3 §11.2 п. 7): раздел не положен ролям сотрудника. «Написать администратору» (W15-H7)
+ * открывает обращение с темой «Нужен доступ к разделу»; страница и роль прикладываются сами, обращение видно в
+ * «Настройки · Обращения сотрудников». Окно монтируется при первом нажатии: блок бывает и во витрине без сессии.
  */
 export function Forbidden({ roles, activeRole = false, embedded = false }: ForbiddenProps) {
   const { t } = useTranslation("shell");
+  const [writing, setWriting] = useState(false);
   useDocumentTitle(embedded ? undefined : t("forbidden.heading"));
   const text = activeRole
     ? t("forbidden.textActiveRole")
@@ -35,9 +38,27 @@ export function Forbidden({ roles, activeRole = false, embedded = false }: Forbi
           title={activeRole ? t("forbidden.titleActiveRole") : t("forbidden.title")}
           text={text}
           level={embedded ? 3 : 2}
-          action={<SoonButton hint={t("forbidden.writeSoon")}>{t("forbidden.write")}</SoonButton>}
+          action={
+            <Button
+              type="primary"
+              onClick={() => {
+                setWriting(true);
+              }}
+            >
+              {t("forbidden.write")}
+            </Button>
+          }
         />
       </Card>
+      {writing ? (
+        <WriteToAdminModal
+          open
+          defaultSubject="access"
+          onClose={() => {
+            setWriting(false);
+          }}
+        />
+      ) : null}
     </>
   );
 }

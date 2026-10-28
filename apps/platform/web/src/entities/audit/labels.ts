@@ -45,6 +45,10 @@ export const AUDIT_ACTIONS = [
   "user.telegram_unlinked",
   "user.deputy_set",
   "user.deputy_cleared",
+  "user.onboarding_done",
+  "staff_ticket.create",
+  "staff_ticket.reply",
+  "staff_ticket.status",
   "user.change_password",
   "user.notify",
   "user.bootstrap_admin",
@@ -102,6 +106,7 @@ export const AUDIT_ACTIONS = [
 export const AUDIT_ENTITIES = [
   "user",
   "platform_role",
+  "staff_ticket",
   "settings",
   "integration",
   "integration_secret",
