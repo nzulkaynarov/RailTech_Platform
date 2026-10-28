@@ -437,3 +437,18 @@ def test_generate_from_quote_locks_the_quote_row(pw):  # noqa: F811
         crm_services.generate_contract_from_quote(pw.quote.id, actor=pw.accountant, send_to_client=False)
     locks = [q["sql"] for q in queries if "FOR UPDATE" in q["sql"] and "quote" in q["sql"].lower()]
     assert locks, "КП не заблокировано"
+
+
+def test_upload_signed_locks_the_contract_row_before_writing_the_file(pw):  # noqa: F811
+    """Гонка с `attach-scan`: статус перечитывается под `FOR UPDATE` внутри транзакции записи файла."""
+    from django.db import connection
+    from django.test.utils import CaptureQueriesContext
+
+    contract = contract_in(pw, S.ISSUED_EXTERNAL)
+    with CaptureQueriesContext(connection) as queries:
+        response = api(pw.accountant).post(UPLOAD.format(id=contract.id), {"file": scan()}, format="multipart")
+    assert response.status_code == 200, response.content
+    sql = [q["sql"] for q in queries]
+    lock = next(i for i, q in enumerate(sql) if "FOR UPDATE" in q and "contract" in q.lower())
+    write = next(i for i, q in enumerate(sql) if q.startswith("UPDATE") and "signed_file" in q)
+    assert lock < write, "строка договора заблокирована до записи файла"

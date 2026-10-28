@@ -227,7 +227,7 @@
       "magic_link": "E-mail havolasi"
     },
     "rights": "Huquqlar",
-    "canAct": "Tasdiqlay oladi: takliflarni qabul qilish, shartnomalarni imzolash, dalolatnomalarni qabul qilish",
+    "canAct": "Tasdiqlay oladi: takliflarni qabul qilish, shartnomalarni kelishish, dalolatnomalarni qabul qilish",
     "viewOnly": "Faqat koʻrish",
     "language": "Kabinet tili",
     "logout": "Kabinetdan chiqish",
@@ -345,7 +345,7 @@
       "acceptConfirm": "Taklifni qabul qilish",
       "acceptedToast": "{{number}} taklifi qabul qilindi",
       "acceptedTitle": "Taklif qabul qilindi",
-      "acceptedPending": "Shartnoma tayyorlanmoqda — u «Shartnomalar» boʻlimida paydo boʻladi, uni oʻsha yerda imzolash mumkin.",
+      "acceptedPending": "Shartnoma tayyorlanmoqda — u «Shartnomalar» boʻlimida paydo boʻladi, uni oʻsha yerda kelishib olish mumkin.",
       "acceptedReadyToSign": "{{number}} shartnomasi tayyor — uni «Shartnomalar» boʻlimida kelishib oling.",
       "acceptedContract": "{{number}} shartnomasi rasmiylashtirilgan.",
       "toContracts": "Shartnomalarga",
@@ -582,7 +582,7 @@
         "channels": "Taklifnomani qayerga yuborish",
         "language": "Taklifnoma tili",
         "canAct": "Tasdiqlay oladi",
-        "canActHint": "Takliflarni qabul qilish, shartnomalarni imzolash, dalolatnomalarni qabul qilish, soʻrov yaratish. Busiz — faqat koʻrish."
+        "canActHint": "Takliflarni qabul qilish, shartnomalarni kelishish, dalolatnomalarni qabul qilish, soʻrov yaratish. Busiz — faqat koʻrish."
       },
       "channels": {
         "email": "E-mail orqali",
@@ -619,7 +619,7 @@
     "MAGIC_LINK_EXPIRED": "Kirish havolasi muddati tugagan yoki allaqachon ishlatilgan.",
     "QUOTE_FINALIZED": "Taklif allaqachon qabul qilingan yoki rad etilgan — sahifani yangilang.",
     "ACT_FINALIZED": "Dalolatnoma allaqachon qabul qilingan yoki qaytarilgan — sahifani yangilang.",
-    "CONTRACT_FINALIZED": "Shartnoma allaqachon imzolangan yoki bekor qilingan — sahifani yangilang.",
+    "CONTRACT_FINALIZED": "Shartnoma allaqachon kelishilgan, imzolangan yoki bekor qilingan — sahifani yangilang.",
     "QUOTE_CODE_INVALID": "Kod notoʻgʻri yoki soʻralmagan. Xabardagi kodni tekshiring yoki yangisini soʻrang.",
     "QUOTE_EXPIRED": "Taklifning amal qilish muddati tugagan — uni endi qabul qilib boʻlmaydi. Menejerdan taklifni yangilashni soʻrang.",
     "REASON_REQUIRED": "Sababini koʻrsating.",

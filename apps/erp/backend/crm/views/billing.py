@@ -266,6 +266,7 @@ class ContractViewSet(RoleGatedViewMixin, OptimisticLockingMixin, ContractFlowMi
             return Response({"detail": "CONTRACT_SCAN_LOCKED"}, status=409)
 
         from django.core.exceptions import ValidationError
+        from django.db import transaction
 
         from core.validators import validate_scan_upload
 
@@ -274,21 +275,31 @@ class ContractViewSet(RoleGatedViewMixin, OptimisticLockingMixin, ContractFlowMi
         except ValidationError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-        contract.signed_file = file_obj
-        contract.save(update_fields=["signed_file", "updated_at"])
+        # Строка договора под блокировкой, статус перечитан внутри транзакции: параллельный `attach-scan` не даст
+        # заменить скан только что подписанного договора (гонка проверки «не подписан» и записи файла).
+        with transaction.atomic():
+            contract = Contract.objects.select_for_update(of=("self",)).select_related("deal").get(pk=contract.pk)
+            if contract.status_code in (ContractStatusCode.SIGNED, ContractStatusCode.CANCELLED):
+                return Response({"detail": "CONTRACT_SCAN_LOCKED"}, status=409)
+            contract.signed_file = file_obj
+            contract.save(update_fields=["signed_file", "updated_at"])
+            self._log_signed_file_uploaded(contract, request.user)
+        return Response(ContractSerializer(contract).data)
+
+    @staticmethod
+    def _log_signed_file_uploaded(contract, user) -> None:
         ActivityLog.objects.create(
             action="Загружен файл подписанного экземпляра договора",
             detail=f"Договор {contract.number} / сделка #{contract.deal_id}",
             event_code="contract.signed_file_uploaded",
             event_params={"number": contract.number, "deal_id": contract.deal_id},
-            user=request.user,
+            user=user,
             level="INFO",
             entity_type="contract",
             entity_id=contract.id,
             deal=contract.deal,
             company_id=contract.deal.company_id,
         )
-        return Response(ContractSerializer(contract).data)
 
     @extend_schema(summary="Cancel contract", tags=["CRM"])
     @action(detail=True, methods=["post"], url_path="cancel", permission_classes=[IsAuthenticated, IsPlatformAdmin])

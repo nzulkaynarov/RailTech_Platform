@@ -227,7 +227,7 @@
       "magic_link": "E-mail link"
     },
     "rights": "Rights",
-    "canAct": "Can approve: accept quotes, sign contracts, accept acts",
+    "canAct": "Can approve: accept quotes, agree contracts, accept acts",
     "viewOnly": "View only",
     "language": "Cabinet language",
     "logout": "Sign out of the cabinet",
@@ -345,7 +345,7 @@
       "acceptConfirm": "Accept quote",
       "acceptedToast": "Quote {{number}} accepted",
       "acceptedTitle": "Quote accepted",
-      "acceptedPending": "The contract is being drawn up — it will appear under “Contracts”, where you can sign it.",
+      "acceptedPending": "The contract is being drawn up — it will appear under “Contracts”, where you can agree it.",
       "acceptedReadyToSign": "Contract {{number}} is ready — agree it under “Contracts”.",
       "acceptedContract": "Contract {{number}} is in place.",
       "toContracts": "Go to contracts",
@@ -582,7 +582,7 @@
         "channels": "Where to send the invitation",
         "language": "Invitation language",
         "canAct": "Can approve",
-        "canActHint": "Accept quotes, sign contracts, accept acts, create requests. Without it — view only."
+        "canActHint": "Accept quotes, agree contracts, accept acts, create requests. Without it — view only."
       },
       "channels": {
         "email": "By e-mail",
@@ -619,7 +619,7 @@
     "MAGIC_LINK_EXPIRED": "The sign-in link has expired or was already used.",
     "QUOTE_FINALIZED": "The quote was already accepted or rejected — refresh the page.",
     "ACT_FINALIZED": "The act was already accepted or returned — refresh the page.",
-    "CONTRACT_FINALIZED": "The contract was already signed or cancelled — refresh the page.",
+    "CONTRACT_FINALIZED": "The contract was already agreed, signed or cancelled — refresh the page.",
     "QUOTE_CODE_INVALID": "The code is wrong or was not requested. Check the code in the message or request a new one.",
     "QUOTE_EXPIRED": "The quote has expired and can no longer be accepted. Ask your manager to update the offer.",
     "REASON_REQUIRED": "Give a reason.",

@@ -53,7 +53,7 @@ describe('Договоры', () => {
     await user.click(await screen.findByRole('button', { name: 'Согласовать договор D-2026-0048' }));
     const dialog = await screen.findByRole('dialog');
     await user.click(within(dialog).getByRole('button', { name: 'Согласовать договор' }));
-    expect(await within(dialog).findByText('Договор уже подписан или отменён — обновите страницу.')).toBeInTheDocument();
+    expect(await within(dialog).findByText('Договор уже согласован, подписан или отменён — обновите страницу.')).toBeInTheDocument();
   });
 
   it('can_act=false — подписать нельзя, скачать можно', async () => {
