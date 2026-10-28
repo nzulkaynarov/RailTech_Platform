@@ -22,8 +22,12 @@ help: ## Список целей
 check: docs-links check-crm check-erp check-cabinet check-platform check-eds check-rt-bus ## Проверки всех приложений, rt-bus (lint + typecheck + unit) и ссылок документации
 
 .PHONY: docs-links
-docs-links: ## Ссылки на документацию целы и ведут в docs/ (scripts/check-doc-links.sh, ORCHESTRATOR §3 п. 17)
+docs-links: ## Ссылки на документацию целы и ведут в docs/, ID строк BACKLOG уникальны (scripts/check-doc-links.sh, ORCHESTRATOR §3 п. 17)
 	scripts/check-doc-links.sh
+
+.PHONY: docs-backlog
+docs-backlog: ## Сводка docs/BACKLOG.md: всего, по приоритету и типу (счётчики в файле руками не ведутся — scripts/backlog.py)
+	python3 scripts/backlog.py
 
 .PHONY: check-crm
 check-crm: ## CRM: ruff, mypy, eslint, tsc, pytest, vitest (apps/crm/Makefile)
