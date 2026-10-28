@@ -102,7 +102,6 @@ export const BRIDGE: Readonly<Record<string, BridgeEntry>> = {
     objectKind: "invoice",
   },
 
-
   "chats.all": { who: "chats", when: "pilot", objectKind: "chat" },
   "chats.internal": { who: "chats", when: "pilot", objectKind: "chat" },
   // B-D18-1: переписка отдельно от реестра лидов — «Входящие» старой CRM открываются только с разделом лидов; бухгалтеру
