@@ -5,11 +5,10 @@ CRM — на respx (`messages_support`), ответы BFF сверяются с�
 директор читает, но не забирает и не отвечает — 403 до CRM), токен сотрудника в CRM, словарь
 (группы, режим, номер лида, `PersonRef`), что не уходит в браузер (ключ хранилища вложения,
 служебная пометка причины, неизвестные коды), перевод отказов CRM в `Error`, и путь события
-`lead.message_added` → подсказка `messages` в открытом потоке с замером времени.
+`lead.message_added` → подсказка `messages` в открытом потоке (факт и порядок; время — на гейте).
 """
 
 import json
-import time
 from datetime import UTC, datetime
 
 import pytest
@@ -23,6 +22,7 @@ from tests.messages_support import CrmMessagesFake, escalation, lead, message
 from tests.test_events_stream import Asgi, until
 
 BASE = "/api/v1/crm/messages"
+GUARD = 15.0  # предохранитель от зависания ожиданий потока, а не требование ко времени
 
 
 @pytest.fixture
@@ -338,36 +338,34 @@ async def test_actions_need_the_csrf_header(web: Web, crm: CrmMessagesFake) -> N
 # --- живые обновления: событие CRM → подсказка `messages` ----------------------------------------
 
 
-async def test_a_client_message_reaches_the_open_stream_as_a_messages_hint_within_2s(
+async def test_a_client_message_reaches_the_open_stream_as_a_messages_hint(
     web: Web, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Замер D1-1: приём события шины BFF → кадр `invalidate` в открытом потоке сотрудника.
-    Окно слияния — боевое (300 мс): путь «бот записал сообщение → outbox → доставка →
-    подсказка» на стороне BFF укладывается в него."""
+    """D1-1: приём события шины BFF → кадр `invalidate` с темой `messages` в открытом потоке
+    сотрудника. Проверяются факт и порядок (до события подсказки нет, после — есть), а не
+    время по часам: «≤ 2 с» замеряется на гейте на стенде. `GUARD` — только предохранитель
+    от зависания."""
     monkeypatch.setenv("RT_BUS_SECRET_CRM_PLATFORM_BFF", CRM_SECRET)
     app: FastAPI = web.app
     assert app.state.settings.events_coalesce_ms == 300
     assert (await web.login(["MANAGER"])).status_code == 200
     conn = Asgi(app, "/api/v1/events/stream", f"rt_pf_session={web.sid}")
-    await until(lambda: conn.status == 200 and b": connected" in conn.body)
-    await until(lambda: bool(web.redis.subscribers))
+    await until(lambda: conn.status == 200 and b": connected" in conn.body, seconds=GUARD)
+    await until(lambda: bool(web.redis.subscribers), seconds=GUARD)
+    assert b"event: invalidate" not in conn.body
 
     headers, raw = delivery(
         envelope("crm", "lead.message_added"), publisher="crm", secret=CRM_SECRET
     )
-    started = time.perf_counter()
     response = await web.client.post("/bus/v1/events", content=raw, headers=headers)
     assert response.status_code == 200
-    await until(lambda: b"event: invalidate" in conn.body, seconds=2.0)
-    elapsed = time.perf_counter() - started
+    await until(lambda: b"event: invalidate" in conn.body, seconds=GUARD)
 
     data = conn.body.decode().split("data: ", 1)[1].split("\n", 1)[0]
     assert json.loads(data) == {
         "topics": ["counters", "queue", "messages"],
         "reason": "uz.railtech.crm.lead.message_added.v1",
     }
-    assert elapsed < 2.0
-    print(f"D1-1 замер: событие шины → подсказка SSE за {elapsed * 1000:.0f} мс")  # noqa: T201
     await conn.disconnect()
 
 
