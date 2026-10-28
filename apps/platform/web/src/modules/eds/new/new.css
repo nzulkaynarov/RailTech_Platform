@@ -12,6 +12,11 @@
   grid-template-columns: 1fr 1fr;
   gap: 16px;
 }
+/* Тип зафиксирован («Продолжить» черновик или возвращённый документ, D1-6b): значение закрытого селекта читается — antd рисует его
+   цветом disabled (≈2:1, axe color-contrast), а это экран, куда ведёт «Доработать» из «Моих задач». */
+.pf-newdoc .ant-select-disabled .ant-select-selection-item {
+  color: #595959;
+}
 .pf-field-error {
   color: #cf1322;
   font-size: 13px;

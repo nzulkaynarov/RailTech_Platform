@@ -24,6 +24,7 @@ from app.feeds.models import (
     QueueOwner,
 )
 from app.feeds.numbers import deal_title, lead_number, lead_ref, quote_number, quote_ref
+from app.feeds.rework import rework_item
 from app.feeds.snapshot import Covered, Snapshot, wants_approvals, wants_inbox, wants_projects
 from app.feeds.text import ago, due_label, join, money, now_utc, parse_deadline, parse_dt, short
 from app.rbac import View
@@ -203,6 +204,12 @@ def quote_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
     return out
 
 
+def rework_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
+    """Мои документы, которые вернули на доработку (EDS по токену автора): «Доработать»."""
+    role_id = _role_id(view, "rework_document")
+    return [Row(*rework_item(entry, now, role_id=role_id)) for entry in snap.rework or []]
+
+
 def build_queue(feed: Feed, view: View, snap: Snapshot) -> list[QueueItem]:
     now = now_utc()
     rows_: list[Row] = []
@@ -214,6 +221,7 @@ def build_queue(feed: Feed, view: View, snap: Snapshot) -> list[QueueItem]:
             rows_ += covered_rows(covered, now, view, taken)
     if wants_approvals(view):
         rows_ += quote_rows(snap, now, view)
+    rows_ += rework_rows(snap, now, view)
     rows_.sort(key=_sort_key)
     return [row.item for row in rows_]
 

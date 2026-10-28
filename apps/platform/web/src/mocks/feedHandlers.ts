@@ -9,6 +9,7 @@ import {
   queueForView,
   searchIndex,
 } from "./fixtures/feeds";
+import { reworkQueueItems } from "./edsRework";
 import { computeAccess, type MockRole } from "./fixtures/roles";
 import { readSession, sessionRoles } from "./mockSession";
 import { coveredQueueItems } from "./profileStore";
@@ -73,6 +74,8 @@ function noQueue(roles: { all: MockRole[] }) {
   );
 }
 
+const DUE_RANK = { overdue: 0, today: 1, tomorrow: 2, memo: 3, later: 4 } as const;
+
 /** Прочитанные уведомления живут в памяти страницы: «Отметить все прочитанными» переживает опрос, но не перезагрузку. */
 const readIds = new Set<string>();
 let readAllAt = 0;
@@ -118,7 +121,11 @@ export const feedHandlers = [
     const userId = session ? sessionRoles(session)?.user.id : undefined;
     const answerRole = own.find((i) => i.kind === "answer_lead")?.role_id;
     const covered = userId && answerRole ? coveredQueueItems(userId, answerRole) : [];
-    return HttpResponse.json({ items: [...own, ...covered], sources: sources() });
+    // «Доработать» (D1-6b): документы автора, возвращённые на доработку; источник — EDS, ни CRM, ни ERP на него не влияют
+    const items = [...own, ...reworkQueueItems(roles.view)].sort(
+      (a, b) => DUE_RANK[a.due_label] - DUE_RANK[b.due_label],
+    );
+    return HttpResponse.json({ items: [...items, ...covered], sources: sources() });
   }),
 
   http.get("*/menu-counters", () => {
@@ -129,7 +136,8 @@ export const feedHandlers = [
     return HttpResponse.json({
       // ERP не отвечает: бейджи разделов ERP (EDS, ERP, «Все проекты») не показываются, остаются очередь и CRM
       items: menuCountersFor(
-        queueForView(roles.view).filter((i) => !erpDown() || i.kind.endsWith("_lead")).length,
+        queueForView(roles.view).filter((i) => !erpDown() || i.kind.endsWith("_lead")).length +
+          reworkQueueItems(roles.view).length,
       ).filter((c) => !erpDown() || c.module === "crm" || c.section === "queue"),
       sources: sources(),
     });

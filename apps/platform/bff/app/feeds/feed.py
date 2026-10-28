@@ -32,6 +32,15 @@ REFUSAL_TTL_SECONDS = 60
 # Поля ответов ERP с ограничением (platform-rbac.yaml `restricted_fields`): вырезаются из сырого
 # ответа до разбора и до кэша, чтобы ни один агрегат не мог вернуть их по ошибке. Поля берутся по
 # объединению ролей (как права операций).
+# Разделы каталога, ради которых BFF обращается в EDS (очередь, счётчики, поиск по реестру).
+EDS_SECTIONS = (
+    "eds.inbox",
+    "eds.drafts",
+    "eds.memo.approve",
+    "eds.memo.create",
+    "eds.payments",
+)
+
 RESTRICTED_KEYS: Mapping[str, Collection[str]] = {
     "cost_margin": (
         "margin_percent",
@@ -84,10 +93,18 @@ class Feed:
         # `not_applicable`, вызовы в неё не уходят (иначе CRM ответила бы 403).
         if not gives_backend(authed.access, "crm"):
             self.states["crm"] = "not_applicable"
+        # EDS читают только роли с его разделами; без них вызовов в EDS нет. Права внутри EDS
+        # решает сам EDS по токену `aud=eds`: отказ (403, «не заведён») — `not_applicable`.
+        self.states["eds"] = (
+            "ok" if any(key in authed.access for key in EDS_SECTIONS) else "not_applicable"
+        )
+        self._eds_consulted = False
 
     @property
     def sources(self) -> Sources:
-        return Sources(crm=self.states["crm"], erp=self.states["erp"])
+        # `eds` — только если ответ собирали и из EDS (обратились к нему): иначе поля нет
+        eds = self.states["eds"] if self._eds_consulted else None
+        return Sources(crm=self.states["crm"], erp=self.states["erp"], eds=eds)
 
     @property
     def fields(self) -> list[str]:
@@ -129,6 +146,8 @@ class Feed:
         """
         if not self.usable(backend):
             return None
+        if backend == "eds":
+            self._eds_consulted = True
         data_key = self._key("data", backend, path, params)
         refusal_key = self._key("refused", backend, path, params)
         if remember_refusal and await self._redis.get(refusal_key):
@@ -163,11 +182,16 @@ class Feed:
             if exc.status_code == 503:
                 log.warning("feed_source_unavailable", backend=backend, path=path)
                 return None, "unavailable"
+            if backend == "eds" and exc.status_code == 403:
+                # EDS не пустил сотрудника (`eds_not_granted`): документов EDS у него нет
+                return None, "not_applicable"
             raise
         if response.status_code >= 400:
             log.warning(
                 "feed_source_refused", backend=backend, path=path, status=response.status_code
             )
+            if backend == "eds" and response.status_code == 403:
+                return None, "not_applicable"
             if remember_refusal and response.status_code == 403:
                 refusal_key = self._key("refused", backend, path, params)
                 await self._redis.set(refusal_key, "1", ex=REFUSAL_TTL_SECONDS)

@@ -61,7 +61,8 @@ describe("Dashboard · Моя очередь", () => {
 
     expect(await within(page).findByText("Взять в работу лида L-2041")).toBeVisible();
     expect(within(page).getByText("Ответить лиду L-2050")).toBeVisible();
-    expect(within(page).getByText(/Менеджер · .* · 2 решения/)).toBeVisible();
+    // третья строка — «Доработать» (D1-6b): служебку менеджера вернул директор, она лежит в его документах
+    expect(within(page).getByText(/Менеджер · .* · 3 решения/)).toBeVisible();
     expect(within(page).queryByRole("status")).toBeNull();
   });
 
@@ -136,8 +137,11 @@ describe("Dashboard · Моя очередь", () => {
       "href",
       "http://crm.localhost:8088/leads/2041",
     );
-    // обе строки менеджера — «срок сегодня»; ссылки на заглушку у них нет
-    expect(within(page).queryAllByRole("link", { name: /^Открыть:/ })).toHaveLength(0);
+    // обе строки лидов — «срок сегодня»; ссылки на заглушку у них нет, «Открыть» остаётся только у «Доработать» (родной экран)
+    const links = within(page).queryAllByRole("link", { name: /^Открыть:/ });
+    expect(links.map((link) => link.getAttribute("aria-label"))).toEqual([
+      "Открыть: Доработать: СЗ-2026/028 · Командировка в Самарканд",
+    ]);
   });
 
   it("строка директора с родным экраном (письмо, КП) — «Открыть»: у писем primary, у КП обычная кнопка", async () => {

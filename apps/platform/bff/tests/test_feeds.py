@@ -65,7 +65,7 @@ async def test_manager_queue_comes_from_crm_inbox(
     assert response.status_code == 200
     check(response, "/queue", "get")
     body = response.json()
-    assert body["sources"] == {"crm": "ok", "erp": "ok"}
+    assert body["sources"] == {"crm": "ok", "erp": "ok", "eds": "ok"}
     assert [(i["object"]["number"], i["kind"]) for i in body["items"]] == [
         ("L-2041", "take_lead"),
         ("L-2050", "answer_lead"),
@@ -228,7 +228,7 @@ async def test_other_roles_have_an_empty_queue(
     response = await web.client.get("/api/v1/queue")
 
     check(response, "/queue", "get")
-    assert response.json() == {"items": [], "sources": {"crm": "ok", "erp": "ok"}}
+    assert response.json() == {"items": [], "sources": {"crm": "ok", "erp": "ok", "eds": "ok"}}
     assert fb.calls(fb.crm["inbox"]) == 0
     assert fb.calls(fb.erp["approvals"]) == 0
 
@@ -296,7 +296,7 @@ async def test_erp_down_keeps_crm_part_and_marks_source(
     assert response.status_code == 200
     check(response, "/queue", "get")
     body = response.json()
-    assert body["sources"] == {"crm": "ok", "erp": "unavailable"}
+    assert body["sources"] == {"crm": "ok", "erp": "unavailable", "eds": "ok"}
     assert [i["object"]["number"] for i in body["items"]] == ["L-2060"]
 
 
@@ -311,7 +311,7 @@ async def test_crm_down_keeps_erp_part_and_marks_source(
 
     check(response, "/queue", "get")
     body = response.json()
-    assert body["sources"] == {"crm": "unavailable", "erp": "ok"}
+    assert body["sources"] == {"crm": "unavailable", "erp": "ok", "eds": "ok"}
     assert [i["role_id"] for i in body["items"]] == [rid("DIRECTOR"), rid("DIRECTOR")]
 
 
@@ -324,7 +324,10 @@ async def test_both_backends_down_is_still_a_200(
     response = await web.client.get("/api/v1/queue")
 
     check(response, "/queue", "get")
-    assert response.json() == {"items": [], "sources": {"crm": "unavailable", "erp": "unavailable"}}
+    assert response.json() == {
+        "items": [],
+        "sources": {"crm": "unavailable", "erp": "unavailable", "eds": "ok"},
+    }
 
 
 async def test_employee_without_erp_access_gets_not_applicable(
@@ -338,7 +341,7 @@ async def test_employee_without_erp_access_gets_not_applicable(
 
     check(response, "/queue", "get")
     body = response.json()
-    assert body["sources"] == {"crm": "ok", "erp": "not_applicable"}
+    assert body["sources"] == {"crm": "ok", "erp": "not_applicable", "eds": "ok"}
     assert [i["object"]["number"] for i in body["items"]] == ["L-2060"]
     assert fb.calls(fb.erp["approvals"]) == 0
 

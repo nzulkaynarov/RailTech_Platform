@@ -133,6 +133,15 @@
  * (директор читает), сброс пароля — `admin: full`; профиль доступен каждому вошедшему. Секреты из записей журнала BFF вырезает
  * (значения полей `password`, `secret`, `token`, `key`, `*_key`, `credentials`, `authorization`, `pin` и им подобных -> `***` целиком, любого типа).
  *
+ * **0.25.0 (D1-6b) — «Доработать» в «Моей очереди» автора.** Добавляющее изменение: `QueueItemKind` += `rework_document` (секция `queue`
+ * каталога: раздел `eds.memo.create`, уровень `full` — автор документа). Строка — документ сотрудника, который согласующий вернул на
+ * доработку (служебная записка, заявление, отчёт в статусе «Возвращён на доработку»): «Доработать: СЗ-… · тема», в подписи — кто вернул и его
+ * комментарий; срок — «нужно до» документа, без него — «сегодня»; `object.path` — `/eds/new?draft=<id документа>` (форма «Продолжить»). Строка
+ * исчезает, когда автор отправил документ снова. Источник — EDS (`GET /documents?mine=true&status=returned`) по токену сотрудника
+ * (`aud=eds`): что вернул EDS, то и строки. `Sources.eds` (необязательное, `SourceState`) — есть, когда ответ собран и из EDS: `unavailable` — EDS
+ * не ответил (остальные строки показаны), `not_applicable` — EDS не пустил сотрудника по его токену; без доступа к разделам EDS и без обращения
+ * к нему поля нет. Подсказка потока (SSE): решение по документу (`approval.decided`, в том числе возврат) -> тема `queue`.
+ *
  * **0.24.0 (D1-4) — EDS · КП на одобрение и документы на согласовании.** Добавляющее изменение, тег `eds-approvals`: `GET /eds/quotes`
  * (КП на одобрение: «на моём шаге» или все), `GET /eds/quotes/{ref}` (карточка КП по id маршрута или номеру `КП-2026/115`: шаги маршрута,
  * чек-лист с датой и автором, состав и итоги из ERP, письмо и заявка, каналы отправки по контакту клиента; **внутренний блок**
@@ -238,7 +247,7 @@
  * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; «Забыли пароль?» — 5 запросов в час на IP и на адрес; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.24.0
+ * OpenAPI spec version: 0.25.0
  */
 import { faker } from "@faker-js/faker";
 
@@ -1079,6 +1088,10 @@ export const getGetMenuCountersResponseMock = (
   sources: {
     crm: faker.helpers.arrayElement(Object.values(SourceState)),
     erp: faker.helpers.arrayElement(Object.values(SourceState)),
+    eds: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(SourceState)),
+      undefined,
+    ]),
   },
   ...overrideResponse,
 });
@@ -1121,6 +1134,10 @@ export const getGetQueueResponseMock = (
   sources: {
     crm: faker.helpers.arrayElement(Object.values(SourceState)),
     erp: faker.helpers.arrayElement(Object.values(SourceState)),
+    eds: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(SourceState)),
+      undefined,
+    ]),
   },
   ...overrideResponse,
 });
@@ -1141,6 +1158,10 @@ export const getGetQueueCardsResponseMock = (
   sources: {
     crm: faker.helpers.arrayElement(Object.values(SourceState)),
     erp: faker.helpers.arrayElement(Object.values(SourceState)),
+    eds: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(SourceState)),
+      undefined,
+    ]),
   },
   ...overrideResponse,
 });
@@ -1179,6 +1200,10 @@ export const getGetActivityTodayResponseMock = (
   sources: {
     crm: faker.helpers.arrayElement(Object.values(SourceState)),
     erp: faker.helpers.arrayElement(Object.values(SourceState)),
+    eds: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(SourceState)),
+      undefined,
+    ]),
   },
   ...overrideResponse,
 });
@@ -1221,6 +1246,10 @@ export const getListNotificationsResponseMock = (
   sources: {
     crm: faker.helpers.arrayElement(Object.values(SourceState)),
     erp: faker.helpers.arrayElement(Object.values(SourceState)),
+    eds: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(SourceState)),
+      undefined,
+    ]),
   },
   ...overrideResponse,
 });
@@ -1260,6 +1289,10 @@ export const getSearchResponseMock = (
   sources: {
     crm: faker.helpers.arrayElement(Object.values(SourceState)),
     erp: faker.helpers.arrayElement(Object.values(SourceState)),
+    eds: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(SourceState)),
+      undefined,
+    ]),
   },
   ...overrideResponse,
 });
@@ -1934,6 +1967,10 @@ export const getGetQuoteApprovalResponseMock = (
   sources: {
     crm: faker.helpers.arrayElement(Object.values(SourceState)),
     erp: faker.helpers.arrayElement(Object.values(SourceState)),
+    eds: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(SourceState)),
+      undefined,
+    ]),
   },
   ...overrideResponse,
 });
@@ -2142,6 +2179,10 @@ export const getDecideQuoteApprovalResponseMock = (
   sources: {
     crm: faker.helpers.arrayElement(Object.values(SourceState)),
     erp: faker.helpers.arrayElement(Object.values(SourceState)),
+    eds: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(SourceState)),
+      undefined,
+    ]),
   },
   ...overrideResponse,
 });
@@ -2444,6 +2485,10 @@ export const getListEdsDealOptionsResponseMock = (
   sources: {
     crm: faker.helpers.arrayElement(Object.values(SourceState)),
     erp: faker.helpers.arrayElement(Object.values(SourceState)),
+    eds: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(SourceState)),
+      undefined,
+    ]),
   },
   ...overrideResponse,
 });
@@ -5775,6 +5820,10 @@ export const getGetLetterResponseMock = (
   sources: {
     crm: faker.helpers.arrayElement(Object.values(SourceState)),
     erp: faker.helpers.arrayElement(Object.values(SourceState)),
+    eds: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(SourceState)),
+      undefined,
+    ]),
   },
   ...overrideResponse,
 });
@@ -5913,6 +5962,10 @@ export const getResolveLetterResponseMock = (
   sources: {
     crm: faker.helpers.arrayElement(Object.values(SourceState)),
     erp: faker.helpers.arrayElement(Object.values(SourceState)),
+    eds: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(SourceState)),
+      undefined,
+    ]),
   },
   ...overrideResponse,
 });
@@ -6051,6 +6104,10 @@ export const getReturnLetterResponseMock = (
   sources: {
     crm: faker.helpers.arrayElement(Object.values(SourceState)),
     erp: faker.helpers.arrayElement(Object.values(SourceState)),
+    eds: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(SourceState)),
+      undefined,
+    ]),
   },
   ...overrideResponse,
 });
@@ -6189,6 +6246,10 @@ export const getRejectLetterResponseMock = (
   sources: {
     crm: faker.helpers.arrayElement(Object.values(SourceState)),
     erp: faker.helpers.arrayElement(Object.values(SourceState)),
+    eds: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(SourceState)),
+      undefined,
+    ]),
   },
   ...overrideResponse,
 });

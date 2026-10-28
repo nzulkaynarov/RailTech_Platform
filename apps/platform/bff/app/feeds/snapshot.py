@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from app.feeds.feed import SNAPSHOT_TTL_SECONDS, Feed, rows
+from app.feeds.rework import Returned, load_rework
 from app.rbac import View, allows
 
 # Сделки ERP постранично (DRF: максимум 200 на страницу); берём новейшие — поиск и счётчики
@@ -38,6 +39,8 @@ class Snapshot:
     approvals: list[dict[str, Any]] = field(default_factory=list)
     approvals_total: int = 0
     deals: list[dict[str, Any]] = field(default_factory=list)
+    # EDS: мои документы, возвращённые на доработку (D1-6b); `None` — не читали или EDS не ответил.
+    rework: list[Returned] | None = None
 
     @property
     def deal_index(self) -> dict[int, dict[str, Any]]:
@@ -90,7 +93,7 @@ async def _covered(feed: Feed) -> list[Covered]:
 
 
 async def load_snapshot(
-    feed: Feed, view: View, *, inbox: bool, approvals: bool, deals: bool
+    feed: Feed, view: View, *, inbox: bool, approvals: bool, deals: bool, eds: bool = False
 ) -> Snapshot:
     """Параллельно прочитать нужные источники. `view` — роли «вида» (активная роль, если задана);
     сделки нужны и для подписей к очереди и уведомлениям, поэтому их читает тот, кто их просит."""
@@ -117,5 +120,9 @@ async def load_snapshot(
             payload = await feed.get("erp", DEALS_PATH, DEALS_PARAMS, ttl=SNAPSHOT_TTL_SECONDS)
             snap.deals = rows(payload)
 
-    await asyncio.gather(load_inbox(), load_approvals(), load_deals())
+    async def load_returned() -> None:
+        if eds:
+            snap.rework = await load_rework(feed, view)
+
+    await asyncio.gather(load_inbox(), load_approvals(), load_deals(), load_returned())
     return snap

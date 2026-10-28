@@ -313,6 +313,10 @@ export const QUEUE = {
     resource: "eds.memo.approve",
     level: "full",
   },
+  rework_document: {
+    resource: "eds.memo.create",
+    level: "full",
+  },
   problem_project: {
     resource: "eds.projects",
     level: "full",

@@ -48,7 +48,8 @@ test.describe("Мои задачи: «Открыть» или «Где сдел�
   }) => {
     await loginAndWait(page, "manager@demo.example");
     const queue = page.getByRole("region", { name: "Что сделать сейчас" });
-    await expect(queue.getByRole("link", { name: /^Открыть:/ })).toHaveCount(0);
+    // у строк лидов экрана в Платформе пока нет; «Открыть» остаётся только у «Доработать» (форма «Продолжить», D1-6b)
+    await expect(queue.getByRole("link", { name: /^Открыть: (Взять|Ответить)/ })).toHaveCount(0);
 
     await queue.getByRole("button", { name: "Где сделать: Взять в работу лида L-2041" }).click();
     const pop = page.getByRole("region", { name: "Где сделать" });

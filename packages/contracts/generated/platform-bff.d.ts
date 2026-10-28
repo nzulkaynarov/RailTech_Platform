@@ -3346,6 +3346,8 @@ export interface components {
     Sources: {
       crm: components["schemas"]["SourceState"];
       erp: components["schemas"]["SourceState"];
+      /** @description Только если ответ собран и из EDS (с 0.25.0): `unavailable` — EDS не ответил, `not_applicable` — EDS не пустил сотрудника. Нет доступа к разделам EDS — поля нет. */
+      eds?: components["schemas"]["SourceState"];
     };
     /**
      * @description Id роли Платформы в CRM (роли — данные, ADR-0012)
@@ -4485,6 +4487,7 @@ export interface components {
       | "resolve_letter"
       | "approve_quote"
       | "approve_memo"
+      | "rework_document"
       | "problem_project"
       | "calc_task"
       | "supplier_overdue"
