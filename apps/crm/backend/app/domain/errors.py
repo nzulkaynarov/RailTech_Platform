@@ -164,6 +164,10 @@ class Reason(StrEnum):
     # ERP: тот же ключ идемпотентности заявки с другим телом (409 `IDEMPOTENCY_CONFLICT`) — заявка
     # не создана, автоповтора нет.
     ERP_REQUEST_CONFLICT = "erp_request_conflict"
+    # «Повторить отправку в ERP» (B-082): заявка не в ошибке или ошибка постоянная (тело заявки
+    # изменилось после первой отправки — ERP ответила `IDEMPOTENCY_CONFLICT`).
+    REQUEST_NOT_FAILED = "request_not_failed"
+    REQUEST_NOT_RETRYABLE = "request_not_retryable"
 
 
 class DomainError(Exception):

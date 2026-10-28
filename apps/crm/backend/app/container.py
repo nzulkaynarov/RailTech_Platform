@@ -66,6 +66,7 @@ if TYPE_CHECKING:
     from app.services.password_reset import PasswordResetService
     from app.services.platform_roles import PlatformRoleService
     from app.services.portal_invites import PortalInviteService
+    from app.services.request_retry import RequestRetryService
     from app.services.sandbox import SandboxService
     from app.services.setup import SetupService
     from app.services.smtp_connector import SmtpConnectorService
@@ -428,6 +429,13 @@ class Container:
             enqueue=_enqueue_erp_request,
             on_chats_changed=_chats_changed,
         )
+
+    @cached_property
+    def request_retry_service(self) -> "RequestRetryService":
+        """«Повторить отправку в ERP» (B-082)."""
+        from app.services.request_retry import RequestRetryService
+
+        return RequestRetryService(self.session_factory, _enqueue_erp_request)
 
     @cached_property
     def erp_request_service(self) -> "ErpRequestService":

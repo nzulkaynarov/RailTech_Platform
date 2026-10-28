@@ -5495,6 +5495,8 @@ components:
       - request_not_allowed
       - request_key_reused
       - erp_request_conflict
+      - request_not_failed
+      - request_not_retryable
       title: Reason
       type: string
     ReasonCount:
@@ -5736,6 +5738,28 @@ components:
       - client_id
       - deal_id
       title: RequestCreated
+      type: object
+    RequestRetried:
+      description: '«Повторить отправку в ERP» (B-082): заявка снова `pending`, задача поставлена.'
+      properties:
+        client_id:
+          title: Client Id
+          type: integer
+        deal_id:
+          title: Deal Id
+          type: integer
+        erp_request_status:
+          default: pending
+          enum:
+          - pending
+          - done
+          - failed
+          title: Erp Request Status
+          type: string
+      required:
+      - deal_id
+      - client_id
+      title: RequestRetried
       type: object
     ResetPasswordRequest:
       properties:
@@ -7706,7 +7730,7 @@ components:
       type: http
 info:
   title: RailTech CRM API
-  version: 0.12.0
+  version: 0.13.0
 openapi: 3.1.0
 paths:
   /api/v1/admin/ai-spend:
@@ -9281,6 +9305,39 @@ paths:
       summary: Update Deal
       tags:
       - deals
+  /api/v1/deals/{deal_id}/actions/retry_request:
+    post:
+      description: '«Повторить отправку в ERP» (B-082): заявка с ошибкой передачи снова уходит в ERP той же
+
+        задачей и с тем же `crm_request_id`. Не в ошибке — 409 `request_not_failed`; постоянная
+
+        ошибка (`erp_request_conflict`) — 409 `request_not_retryable`.'
+      operationId: retry_request
+      parameters:
+      - in: path
+        name: deal_id
+        required: true
+        schema:
+          title: Deal Id
+          type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RequestRetried'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Retry Request
+      tags:
+      - clients
   /api/v1/documents:
     get:
       operationId: list_documents

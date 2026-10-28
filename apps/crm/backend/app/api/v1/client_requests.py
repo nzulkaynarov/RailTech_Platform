@@ -18,7 +18,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Response, status
 
 from app.api.deps import ContainerDep, require
-from app.schemas.client_requests import RequestCreate, RequestCreated
+from app.schemas.client_requests import RequestCreate, RequestCreated, RequestRetried
 from app.security.principal import Principal
 
 router = APIRouter(prefix="/api/v1", tags=["clients"])
@@ -59,6 +59,14 @@ async def create_request_for_client(
     """«Новая заявка для клиента» из карточки клиента."""
     created = await container.client_request_service.create_for_client(who, client_id, body)
     return _answer(created, response)
+
+
+@router.post("/deals/{deal_id}/actions/retry_request", response_model=RequestRetried)
+async def retry_request(deal_id: int, who: ClientWriter, container: ContainerDep) -> RequestRetried:
+    """«Повторить отправку в ERP» (B-082): заявка с ошибкой передачи снова уходит в ERP той же
+    задачей и с тем же `crm_request_id`. Не в ошибке — 409 `request_not_failed`; постоянная
+    ошибка (`erp_request_conflict`) — 409 `request_not_retryable`."""
+    return await container.request_retry_service.retry(who, deal_id)
 
 
 def _answer(created: RequestCreated, response: Response) -> RequestCreated:
