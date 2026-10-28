@@ -23,27 +23,31 @@ from app.session import SessionData, SessionRole
 _SAFE_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 
 
-def get_redis(request: Request) -> Redis:
+# Зависимости, которые только достают объект из состояния приложения или собирают лёгкий объект,
+# — `async def`: синхронная зависимость FastAPI уходит в пул потоков (anyio), и запрос зависит от
+# потока ради чтения атрибута; в тестах с сырым ASGI-соединением это зависание (пробуждение рабочего
+# потока теряется) и лишний переход на каждый запрос.
+async def get_redis(request: Request) -> Redis:
     redis: Redis = request.app.state.redis
     return redis
 
 
-def get_crm(request: Request) -> CrmClient:
+async def get_crm(request: Request) -> CrmClient:
     crm: CrmClient = request.app.state.crm
     return crm
 
 
-def get_erp(request: Request) -> ErpClient:
+async def get_erp(request: Request) -> ErpClient:
     erp: ErpClient = request.app.state.erp
     return erp
 
 
-def get_eds(request: Request) -> EdsClient | None:
+async def get_eds(request: Request) -> EdsClient | None:
     eds: EdsClient | None = getattr(request.app.state, "eds", None)
     return eds
 
 
-def get_settings_dep(request: Request) -> Settings:
+async def get_settings_dep(request: Request) -> Settings:
     settings: Settings = request.app.state.settings
     return settings
 
@@ -55,22 +59,22 @@ EdsDep = Annotated[EdsClient | None, Depends(get_eds)]
 SettingsDep = Annotated[Settings, Depends(get_settings_dep)]
 
 
-def get_auth_service(
+async def get_auth_service(
     redis: RedisDep, crm: CrmDep, erp: ErpDep, settings: SettingsDep, eds: EdsDep
 ) -> AuthService:
     return AuthService(redis, crm, erp, settings, eds)
 
 
-def get_login_limiter(redis: RedisDep, settings: SettingsDep) -> LoginLimiter:
+async def get_login_limiter(redis: RedisDep, settings: SettingsDep) -> LoginLimiter:
     return LoginLimiter(redis, settings.login_rate_per_minute)
 
 
-def get_forgot_limiter(redis: RedisDep) -> HourlyLimiter:
+async def get_forgot_limiter(redis: RedisDep) -> HourlyLimiter:
     """Запрос ссылки сброса: 5 в час на IP и на адрес."""
     return HourlyLimiter(redis, "forgot", 5)
 
 
-def get_reset_limiter(redis: RedisDep) -> HourlyLimiter:
+async def get_reset_limiter(redis: RedisDep) -> HourlyLimiter:
     """Ввод нового пароля по ссылке: 20 в час на IP."""
     return HourlyLimiter(redis, "reset", 20)
 
