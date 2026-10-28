@@ -57,23 +57,6 @@ test.describe("Заглушки и мост", () => {
     await shoot(page, "object-from-queue-lead");
   });
 
-  test("директор: служебка по прямой ссылке — «Служебка СЗ-2026/031», кто делает вне интерфейса, кнопки в старый экран нет", async ({
-    page,
-  }) => {
-    await loginAndWait(page, "director@demo.example");
-    await spaGoto(page, "/eds/approvals/%D0%A1%D0%97-2026%2F031?panel=open&tab=agree");
-    await expect(
-      page.getByRole("heading", { level: 1, name: "Служебка СЗ-2026/031" }),
-    ).toBeVisible();
-    const main = page.getByRole("main");
-    await expect(main.getByText(/от Демо Офисовой/)).toBeVisible();
-    await expect(
-      main.getByText(/Сейчас этой работы в интерфейсе нет; её делает директор и бухгалтер/),
-    ).toBeVisible();
-    await expect(main.getByRole("link", { name: /Открыть в/ })).toHaveCount(0);
-    await shoot(page, "object-from-queue-memo");
-  });
-
   test("менеджер: «Лиды» — мост в старую CRM; бейдж меню только с подсказкой «ещё в старой системе: 2»", async ({
     page,
   }) => {
@@ -105,21 +88,23 @@ test.describe("Заглушки и мост", () => {
     await shoot(page, "stub-with-bridge");
   });
 
-  test("директор: «На согласовании» — раздела нет в старых экранах, честно «её делает директор», «Когда появится»", async ({
+  test("администратор: «Обращения» — раздела нет в старых экранах, честно «её делает администратор», «Когда появится»", async ({
     page,
   }) => {
-    await loginAndWait(page, "director@demo.example");
-    await spaGoto(page, "/eds/approvals");
-    await expect(page.getByRole("heading", { level: 1, name: "На согласовании" })).toBeVisible();
+    await loginAndWait(page, "all@demo.example");
+    await spaGoto(page, "/admin/tickets");
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Обращения сотрудников" }),
+    ).toBeVisible();
     const main = page.getByRole("main");
     await expect(
-      main.getByText(/Сейчас этой работы в интерфейсе нет; её делает директор и бухгалтер/),
+      main.getByText(/Сейчас этой работы в интерфейсе нет; её делает администратор/),
     ).toBeVisible();
-    await expect(main.getByText("Когда появится: в ближайшем обновлении.")).toBeVisible();
+    await expect(main.getByText("Когда появится: к пилоту.")).toBeVisible();
     await expect(main.getByRole("link", { name: /Открыть в/ })).toHaveCount(0);
     const menu = page.getByRole("navigation", { name: "Разделы модуля" });
-    await expect(menu.getByRole("link", { name: /На согласовании/ })).toHaveAccessibleName(
-      "На согласовании",
+    await expect(menu.getByRole("link", { name: /Обращения сотрудников/ })).toHaveAccessibleName(
+      "Обращения сотрудников",
     );
     await shoot(page, "stub-without-bridge");
   });
