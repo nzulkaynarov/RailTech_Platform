@@ -94,7 +94,7 @@ export const RESOURCES = {
   "eds.payments": {
     module: "eds",
     levels: ["read", "full"],
-    backends: ["erp"],
+    backends: ["crm", "erp"],
     label: {
       ru: "Документы · Счета и оплаты · подтвердить оплату, запросить платёжку",
       uz: "Hujjatlar · Hisoblar va to‘lovlar · to‘lovni tasdiqlash, to‘lov topshiriqnomasini so‘rash",

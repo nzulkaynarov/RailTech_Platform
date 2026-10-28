@@ -3173,6 +3173,12 @@
         "title": "Calculation ready: draft quote sent to the director",
         "detail": "{{letter_number}}: all approvals collected, lines — {{lines}}"
       }
+    },
+    "rfq": {
+      "price_requested": {
+        "title": "Price request to supplier",
+        "detail": "{{supplier}}: {{lines}} items"
+      }
     }
   },
   "companyTypes": {
@@ -3574,6 +3580,10 @@
     "calc.all_signed": {
       "title": "All calculation lines approved",
       "message": "Calculation on {{letter_number}}: all approvals collected, you can press “Calculation ready”."
+    },
+    "supplier_order.overdue": {
+      "title": "Supplier order overdue",
+      "message": "Order {{number}}: supplier {{supplier}} has not delivered by {{expected_date}} ({{days}} days late)"
     }
   },
   "approvalParticipation": {

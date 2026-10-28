@@ -35,6 +35,11 @@ class Deal(TimestampMixin, Base):
         # Одна заявка ERP — одно зеркало (FIX-33); NULL (локальные сделки) уникальность не нарушают.
         Index("uq_deals_erp_deal_id", "erp_deal_id", unique=True),
         Index("uq_deals_request_key", "request_key", unique=True),
+        Index(
+            "ix_deals_client_id_invoiced",
+            "client_id",
+            postgresql_where=sql("invoice_issued_at IS NOT NULL"),
+        ),
         CheckConstraint(
             "request_urgency IS NULL OR request_urgency IN ('normal', 'urgent')",
             name="request_urgency",
@@ -74,3 +79,6 @@ class Deal(TimestampMixin, Base):
     erp_request_status: Mapped[str | None] = mapped_column(String(16))
     erp_request_error: Mapped[str | None] = mapped_column(String(500))
     erp_number: Mapped[str | None] = mapped_column(String(32))
+    # Когда ERP выставила по сделке первый счёт (`erp/invoice.issued`, B-D18-1): факт, а не стадия —
+    # стадия зеркала уходит дальше, а зона переписки «Счета и оплаты» держится за счёт.
+    invoice_issued_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

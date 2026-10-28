@@ -1463,6 +1463,50 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/admin/integrations/offsite": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Внешняя копия бэкапов (Google Drive): папка, сервисный аккаунт, ключ — маска
+     * @description CRM `GET /integrations/offsite` (OPS-GDRIVE-2). Ключ сервисного аккаунта не возвращается — только адрес аккаунта и `key_suffix` (последние 4 символа ID ключа); `delivered_at` — когда ключ и папка ушли сервису копирования; `last_check` — итог последней проверки. Состояние самой копии — строка `offsite_backup` в `/admin/integrations/services`.
+     */
+    get: operations["getOffsiteBackup"];
+    /**
+     * Сохранить ключ сервисного аккаунта и папку и сразу проверить у Google
+     * @description CRM `PUT /integrations/offsite`. `key_json` — содержимое JSON-ключа сервисного аккаунта Google (`null` — оставить прежний), `folder_id` — ID папки общего диска или её адрес, `password` — пароль администратора. Ключ хранится зашифрованным и доставляется сервису копирования без захода на сервер. `INTEGRATION_INVALID` (422) — `details.reason`: `offsite_key_invalid` (`details.fields = [key_json]`; `details.problem`: `not_json`, `not_service_account`, `missing_fields`, `foreign_token_uri` — ключ ведёт не на `oauth2.googleapis.com`), `offsite_folder_invalid` (`[folder_id]`); `INTEGRATION_FAILED` (502) — `offsite_delivery_failed` (хранилище недоступно, ничего не сохранено).
+     */
+    put: operations["saveOffsiteBackup"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/integrations/offsite/check": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Проверить ключ и папку у Google
+     * @description CRM `POST /integrations/offsite/check`: токен сервисного аккаунта, папка, общий ли диск, можно ли добавлять файлы. Ничего не пишет на Drive. Итог — 200 с `reason`; `NOT_CONFIGURED` (409) — ключа или папки ещё нет.
+     */
+    post: operations["checkOffsiteBackup"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/admin/integrations/smtp": {
     parameters: {
       query?: never;
@@ -3428,7 +3472,7 @@ export interface paths {
     };
     /**
      * Лента диалога: сообщения клиента, бота и менеджера, вложения, заметки команды
-     * @description CRM `GET /leads/{id}/messages` (страница, старые выше), `GET /leads/{id}/notes` (только первая страница — без `before`) и `GET /team` (имена менеджеров). Раздел `crm.leads` от чтения. Подгрузка истории — `before` = id самого старого показанного сообщения. Вложения — ссылками BFF (`attachments[].url`): адреса и ключи хранилища наружу не уходят.
+     * @description CRM `GET /leads/{id}/messages` (страница, старые выше), `GET /leads/{id}/notes` (только первая страница — без `before`) и `GET /team` (имена менеджеров). Раздел `crm.leads` или `chats.external` от чтения (B-D18-1): держателю только `chats.external` CRM открывает лишь диалоги, где он участвует, и диалоги зоны «Счета и оплаты» (сделки клиента со счётом); чужой диалог — 404 `NOT_FOUND`, BFF проверку CRM не обходит. Подгрузка истории — `before` = id самого старого показанного сообщения. Вложения — ссылками BFF (`attachments[].url`): адреса и ключи хранилища наружу не уходят.
      */
     get: operations["getCrmThread"];
     put?: never;
@@ -3448,7 +3492,7 @@ export interface paths {
     };
     /**
      * Вложение сообщения клиента (файл)
-     * @description CRM `GET /leads/{id}/messages/{message}/attachments/{index}` потоком. Раздел `crm.leads` от чтения. Ответ — `Content-Disposition: attachment` и `X-Content-Type-Options: nosniff`: файл скачивается, браузер его не исполняет. Файл не сохранён (до согласия, больше 20 МБ) — 404; хранилище CRM недоступно — 502 `INTEGRATION_FAILED`.
+     * @description CRM `GET /leads/{id}/messages/{message}/attachments/{index}` потоком. Раздел `crm.leads` или `chats.external` от чтения; диалог проверяет CRM, как у `getCrmThread` (чужой — 404). Ответ — `Content-Disposition: attachment` и `X-Content-Type-Options: nosniff`: файл скачивается, браузер его не исполняет. Файл не сохранён (до согласия, больше 20 МБ) — 404; хранилище CRM недоступно — 502 `INTEGRATION_FAILED`.
      */
     get: operations["downloadCrmAttachment"];
     put?: never;
@@ -3553,6 +3597,26 @@ export interface paths {
      * @description CRM `POST /leads/{id}/actions/return_to_bot`. Раздел `crm.leads` полный. `note` — что знать боту дальше (видна боту).
      */
     post: operations["returnCrmLeadToBot"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/chats/external": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Чаты · С клиентами: диалоги, открытые сотруднику
+     * @description CRM `GET /chats` (B-D18-1). Раздел `chats.external` или `crm.leads` от чтения — иначе 403 до CRM. Какие диалоги открыты, решает CRM: держателю `crm.leads` — все (`access = registry`); держателю только `chats.external` — где он участвует (ответственный за лида, клиента или сделку, автор ответа; `participant`) и, если у него ещё раздел «Счета и оплаты» полный, диалоги клиентов со счётом по сделке (`invoiced`). Данных реестра лидов (оценка, квалификация, стадия) в ответе нет. `erp_deal_id` — диалоги клиента этой заявки ERP (запросить платёжку). Переписка — `getCrmThread`, вложения — `downloadCrmAttachment`.
+     */
+    get: operations["listExternalChats"];
+    put?: never;
+    post?: never;
     delete?: never;
     options?: never;
     head?: never;
@@ -3777,6 +3841,586 @@ export interface paths {
      * @description ERP `POST /calc/{deal_id}/parse/`: задание в очереди ИИ (модель — через шлюз по алиасу), ответ — `job_id`; итог — `GET /erp/calc-jobs/{job_id}`. Ничего не записывается: строки добавляет человек. Без `text` разбирается текст заявки. ИИ выключен — 409 `details.reason = ai_disabled`; текста нет — 409 `request_text_empty`; дневной лимит ИИ — 429. Раздел `erp.calc` — полный.
      */
     post: operations["parseCalcText"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/stock/balances": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Склад · Остатки и резервы по номенклатуре
+     * @description ERP `GET /stock/balances/`: товары с остатком, резервом или ожидаемым приходом (поиск `q` — по всей номенклатуре). Остаток, резерв, свободный остаток (остаток минус резервы), ожидаемый приход и ближайшая дата, ячейки. Раздел `erp.stock` — чтение.
+     */
+    get: operations["listStockBalances"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/stock/balances/{product_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Склад · Товар: ячейки, резервы, приход, движения
+     * @description ERP `GET /stock/balances/{product_id}/`: ячейки с остатками, резервы по проектам, заказы поставщикам с ожидаемым приходом и последние движения. Раздел `erp.stock` — чтение.
+     */
+    get: operations["getStockProduct"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/stock/adjustments": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Склад · Оприходовать или списать вручную
+     * @description ERP `POST /stock/adjustments/`: начальные остатки и итоги инвентаризации — плюс оприходовать, минус списать, в ячейке. Ниже нуля и ниже суммы резервов остаток не уходит (409 `details.reason = not_enough_stock` или `below_reserved`). Раздел `erp.stock` — полный.
+     */
+    post: operations["adjustStock"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/stock/reservations": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Склад · Резервы под проекты
+     * @description ERP `GET /stock/reservations/`: действующие резервы; `request` — только резервы этой заявки или проекта (для отгрузки). Раздел `erp.stock` — чтение.
+     */
+    get: operations["listStockReservations"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/stock/reservations/{reservation_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /**
+     * Склад · Снять резерв
+     * @description ERP `DELETE /stock/reservations/{id}/`: ещё не отгруженное возвращается в свободный остаток. Раздел `erp.stock` — полный.
+     */
+    delete: operations["releaseStockReservation"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/calc/{number}/lines/{line_id}/reserve": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Расчёт · Зарезервировать товар под строку
+     * @description ERP `POST /stock/reservations/` (резерв строки один: повтор меняет количество). Не больше количества строки и свободного остатка (409 `details.reason = not_enough_stock`, `details.free`); строка без карточки каталога — 409 `product_required`. Резерв не снимает визу строки. Ответ — обновлённый расчёт (колонка «Склад»: ячейка и резерв). Раздел `erp.stock` — полный.
+     */
+    put: operations["reserveCalcLine"];
+    post?: never;
+    /**
+     * Расчёт · Снять резерв строки
+     * @description BFF находит резерв строки среди резервов заявки и вызывает ERP `DELETE /stock/reservations/{id}/`. Раздел `erp.stock` — полный.
+     */
+    delete: operations["releaseCalcLineReservation"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/calc/{number}/price-requests": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Расчёт · Журнал запросов цены у поставщиков
+     * @description ERP `GET /stock/price-requests/?deal_id=`: кто, когда, кому и по каким строкам запрашивал цену. Раздел `erp.calc` — чтение.
+     */
+    get: operations["listCalcPriceRequests"];
+    put?: never;
+    /**
+     * Расчёт · Запросить цену у поставщика
+     * @description ERP `POST /stock/price-requests/`: письмо поставщику (почта ERP, шаблон; ответить можно на почту сотрудника) по выбранным строкам-товарам расчёта и запись в журнале. У поставщика нет почты — 409 `details.reason = supplier_email_required` (можно указать адрес в `to_email`). Письмо не ушло (почта выключена или недоступна) — запрос остаётся в журнале со статусом `failed`, ответ 200. Цена из ответа поставщика вносится вручную в строку расчёта (`PATCH …/lines/{line_id}`). Раздел `erp.stock` — полный.
+     */
+    post: operations["createCalcPriceRequest"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/price-requests/{request_id}/answer": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Расчёт · Отметить ответ поставщика
+     * @description ERP `POST /stock/price-requests/{id}/answer/`: поставщик ответил, цена внесена в расчёт. Раздел `erp.stock` — полный.
+     */
+    post: operations["answerPriceRequest"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/stock/suppliers": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Склад · Поставщики для выбора
+     * @description ERP `GET /stock/suppliers/`: внешние поставщики (тип «поставщик», не своя компания) для запроса цены и заказа. Справочник поставщиков ведёт D2-3. Раздел `erp.stock` — чтение.
+     */
+    get: operations["listStockSuppliers"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/stock/orders": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Склад · Заказы поставщикам
+     * @description ERP `GET /stock/orders/`: заказы ЗП-ГГГГ-NNN — статус, поставщик, ожидаемая дата, просрочка, приёмка (нет, частичная, полная), заявки и проекты. Сумма — только тому, кто видит цены поставщиков. Раздел `erp.stock` — чтение.
+     */
+    get: operations["listSupplierOrders"];
+    put?: never;
+    /**
+     * Склад · Создать заказ поставщику (черновик)
+     * @description ERP `POST /stock/orders/`: черновик с номером ЗП-ГГГГ-NNN (без пропусков). Строки — только товары каталога; строка может быть привязана к строке расчёта заявки (тогда принятое резервируется под проект). Цены поставщика задаёт тот, кто их видит (403 `details.reason = prices_forbidden`). Раздел `erp.stock` — полный.
+     */
+    post: operations["createSupplierOrder"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/stock/orders/from-request": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Склад · Черновик заказа на дефицит проекта
+     * @description ERP `POST /stock/orders/from-deal/`: по строкам-товарам КП заявки недостающее количество (количество строки минус резерв минус уже заказанное в живых заказах). Нечего заказывать — 409 `details.reason = no_shortage`. Раздел `erp.stock` — полный.
+     */
+    post: operations["createSupplierOrderFromRequest"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/stock/orders/{order_number}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Склад · Заказ поставщику ЗП-…
+     * @description ERP `GET /stock/orders/{id}/` (заказ по номеру находит BFF: `GET /stock/orders/?number=`). Состав, приёмки, журнал (кто и когда менял статус), права. Раздел `erp.stock` — чтение.
+     */
+    get: operations["getSupplierOrder"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /**
+     * Склад · Изменить заказ
+     * @description ERP `PATCH /stock/orders/{id}/`: состав и поставщик — только в черновике (409 `details.reason = order_not_draft`), ожидаемая дата и примечание — пока заказ не закрыт. Раздел `erp.stock` — полный.
+     */
+    patch: operations["updateSupplierOrder"];
+    trace?: never;
+  };
+  "/erp/stock/orders/{order_number}/send": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Склад · Отправить заказ поставщику (черновик → отправлен)
+     * @description ERP `POST /stock/orders/{id}/send/`: письмо поставщику (почта ERP) и запись в журнале заказа. Нет адреса — 409 `details.reason = supplier_email_required` (можно указать `to_email`); письмо не ушло — 409 `details.reason = email_failed`, статус не меняется. Недопустимый переход — 409 `transition_not_allowed`. Раздел `erp.stock` — полный.
+     */
+    post: operations["sendSupplierOrder"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/stock/orders/{order_number}/confirm": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Склад · Поставщик подтвердил (отправлен → подтверждён)
+     * @description ERP `POST /stock/orders/{id}/confirm/`: нужна ожидаемая дата (409 `details.reason = expected_date_required`). Раздел `erp.stock` — полный.
+     */
+    post: operations["confirmSupplierOrder"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/stock/orders/{order_number}/cancel": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Склад · Отменить заказ
+     * @description ERP `POST /stock/orders/{id}/cancel/`: из черновика, отправленного и подтверждённого, если по нему ещё ничего не принято (409 `details.reason = order_has_receipts`). Раздел `erp.stock` — полный.
+     */
+    post: operations["cancelSupplierOrder"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/stock/orders/{order_number}/receipts": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Склад · Принять товар от поставщика (частично или полностью)
+     * @description ERP `POST /stock/orders/{id}/receipts/`: приёмка по строкам подтверждённого заказа, остаток склада растёт (ячейка — по желанию); строка, привязанная к проекту, резервируется под него. Больше, чем осталось принять, — 400 (`details.max`); строка чужого заказа — 404. Все строки получены — заказ «получен». Раздел `erp.stock` — полный.
+     */
+    post: operations["receiveSupplierOrder"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/stock/receipts": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Склад · Приёмка: ждут товара и последние приёмки
+     * @description ERP `GET /stock/receipts/`. Раздел `erp.stock` — чтение.
+     */
+    get: operations["listStockReceipts"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/stock/shipments": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Склад · Отгрузки по проектам
+     * @description ERP `GET /stock/shipments/`: внутренняя накладная ОТГ-ГГГГ-NNN, проект, строки, трек. Раздел `erp.stock` — чтение.
+     */
+    get: operations["listStockShipments"];
+    put?: never;
+    /**
+     * Склад · Отгрузить по проекту
+     * @description ERP `POST /stock/shipments/`: по резервам одной заявки, после подписания договора (409 `details.reason = fulfillment_not_ready`). Остаток и резерв уменьшаются, выдаётся внутренняя накладная; когда весь товар КП отгружен, исполнение сделки переходит в «Отгружено». Резерв чужой заявки — 404. Раздел `erp.stock` — полный.
+     */
+    post: operations["shipFromStock"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/stock/overdue": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Склад · Просроченные заказы поставщикам
+     * @description ERP `GET /stock/overdue/`: источник вида очереди `supplier_overdue` («Мои задачи»). Раздел `erp.stock` — полный.
+     */
+    get: operations["listOverdueSupplierOrders"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/leads": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Клиенты · Лиды: вкладки по статусу Платформы, «мои / все / просроченные», поиск, канал
+     * @description CRM `GET /leads` (W16-D1-2b). Раздел `crm.leads` от чтения. Вкладки SPEC-v3 §7.2 — статус лида CRM `platform_status` (CRM-02): `new` «Новые», `dialog` «В диалоге», `wants_quote` «Просят КП», `client` «Стали клиентами»; `all` — все, в том числе «Без ответа» и «Отказ». `scope`: `mine` — лиды сотрудника, `overdue` — открытая передача с истёкшим SLA ответа, `all` — все. Поиск — по имени и сути запроса; канал — источник лида. Новые сверху по последнему сообщению.
+     */
+    get: operations["listCrmLeads"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/leads/{lead}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Карточка лида в боковом окне: контакты, каналы, согласие, факты квалификации, последние сообщения
+     * @description CRM `GET /leads/{id}` и последние сообщения `GET /leads/{id}/messages` (W16-D1-2b). Раздел `crm.leads` от чтения. Подтверждение заявки клиенту (`confirmation`), срок первого ответа на запрос с сайта (`first_response`) и приглашение в кабинет (`invitation`) — из D1-9. Номер лида — `L-NNNN`.
+     */
+    get: operations["getCrmLead"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/clients": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Клиенты · Клиенты: список с поиском по названию и ИНН (и автопоиск формы «Создать заявку»)
+     * @description CRM `GET /clients?q=` (W16-D1-2b). Раздел `crm.clients` от чтения. Сначала недавно активные.
+     */
+    get: operations["listCrmClients"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/clients/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Карточка клиента 360°: компания, контакты с каналами, переписка, заявки и проекты, документы, приглашение
+     * @description CRM `GET /clients/{id}`, `/clients/{id}/contacts`, `GET /deals?client_id=`, `GET /documents?client_id=` (W16-D1-2b). Раздел `crm.clients` от чтения. Контакты — только живые (удалённые CRM не отдаёт; архива контактов в CRM нет, B-030). Заявки и проекты — зеркало CRM: номер ЗВ/ПР из ERP, шаг пути из 7 по стадии ERP, «что видит клиент» — ключ `client-statuses.yaml`, состояние передачи в ERP; заявка, ещё не дошедшая до ERP, — без номера, со статусом передачи. Источник не ответил — `sources` и раздел без данных.
+     */
+    get: operations["getCrmClient"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/clients/{id}/invitation": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Отправить приглашение в кабинет повторно другим каналом
+     * @description CRM `POST /clients/{id}/invitation` (D1-9). Раздел `crm.clients` полный. Ответ — итог приглашения; канал недоступен — `status = failed` и `error_text` словами (не ошибка запроса).
+     */
+    post: operations["resendCrmClientInvitation"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/requests": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * «+ Создать заявку» из лида или клиента → в ERP, письмо директору во Входящие
+     * @description CRM `POST /leads/{id}/actions/create_request` (есть `lead`) или `POST /clients/{id}/actions/create_request` (только `client_id`), W16-D1-2b. Раздел `crm.clients` полный. Лид становится клиентом, заявка уходит в ERP задачей CRM; ERP регистрирует письмо ВХ директору в EDS. `request_key` — ключ формы (UUID на открытие формы): повтор с тем же ключом — 200 `created: false` с той же заявкой, без второй; новая — 201. Файл письма загружается заранее `POST /crm/request-files`. Отказы CRM — `details.reason`: `handoff_no_consent` (нет согласия), `consent_via_bot`, `contact_channel_required`, `request_not_allowed` (лид в отказе), `request_key_reused`, `erp_not_configured`, `not_lead_owner`, `telegram_linked_elsewhere`.
+     */
+    post: operations["createCrmRequest"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/requests/{deal}/retry": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * «Повторить отправку в ERP» для заявки с ошибкой передачи
+     * @description CRM `POST /deals/{id}/actions/retry_request` (B-082). Раздел `crm.clients` полный. Заявка снова уходит в ERP той же задачей и с тем же ключом (второй заявки не будет). Не в ошибке — 409 `request_not_failed`; данные заявки изменились после первой отправки — 409 `request_not_retryable` (создать заявку заново).
+     */
+    post: operations["retryCrmRequest"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/request-files": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Письмо на имя директора для заявки — файл в EDS
+     * @description EDS `POST /files` от имени сотрудника (обмен токена `aud=eds`), W16-D1-2b. BFF читает тело до предела 25 МБ и передаёт EDS как есть. id файла уходит в `RequestFormIn.letter_file_id`; EDS прикрепляет файл к письму ВХ, если его загрузил менеджер заявки. Больше 25 МБ — 413, не PDF/изображение/Office — 415. Раздел `crm.clients` полный.
+     */
+    post: operations["uploadCrmRequestFile"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/request-files/from-message": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Взять вложение из переписки как письмо директору
+     * @description Вложение сообщения лида CRM (`GET /leads/{id}/messages/{m}/attachments/{i}`) копируется в EDS `POST /files` от имени сотрудника — тот же ответ, что у загрузки. Разделы `crm.leads` (чтение) и `crm.clients` (полный).
+     */
+    post: operations["copyCrmMessageAttachmentToRequest"];
     delete?: never;
     options?: never;
     head?: never;
@@ -4301,6 +4945,20 @@ export interface components {
        */
       password: string;
     };
+    OffsiteBackupIn: {
+      /**
+       * Format: password
+       * @description Содержимое JSON-ключа сервисного аккаунта Google; `null` — оставить прежний
+       */
+      key_json?: string | null;
+      /** @description ID папки общего диска или её адрес */
+      folder_id: string;
+      /**
+       * Format: password
+       * @description Пароль администратора
+       */
+      password: string;
+    };
     ServiceSwitchIn: {
       /** Format: password */
       password: string;
@@ -4432,6 +5090,39 @@ export interface components {
       id: number | null;
       /** @constant */
       ok: true;
+    };
+    /** @description Внешняя копия бэкапов на Google Drive (OPS-GDRIVE-2). Ключ не возвращается — адрес сервисного аккаунта и последние 4 символа ID ключа. */
+    OffsiteBackup: {
+      configured: boolean;
+      folder_id: string;
+      client_email: string;
+      key_suffix: string | null;
+      /** Format: date-time */
+      key_updated_at: string | null;
+      /**
+       * Format: date-time
+       * @description Когда ключ и папка ушли сервису копирования
+       */
+      delivered_at: string | null;
+      last_check: components["schemas"]["OffsiteCheck"] | null;
+      secrets_enabled: boolean;
+    };
+    /** @description Итог проверки у Google. `reason`: `ok`; исправляет владелец — `key_rejected` (ключ отозван или удалён), `drive_api_disabled` (в проекте не включён Google Drive API), `folder_not_found` (неверный ID или нет доступа), `not_folder`, `not_shared_drive` (папка в «Моём диске»), `read_only` (роль ниже «Менеджера контента»); `network` — Google не ответил (хостинг). */
+    OffsiteCheck: {
+      ok: boolean;
+      /** @enum {string} */
+      reason:
+        | "ok"
+        | "key_rejected"
+        | "drive_api_disabled"
+        | "folder_not_found"
+        | "not_folder"
+        | "not_shared_drive"
+        | "read_only"
+        | "network";
+      folder_name: string | null;
+      /** Format: date-time */
+      checked_at: string;
     };
     /** @description Коннектор «Почта» (один SMTP на ансамбль). Пароль не возвращается — только «задан» и `last4`. */
     SmtpConnector: {
@@ -4833,7 +5524,8 @@ export interface components {
       | "memo"
       | "chat"
       | "ticket"
-      | "integration";
+      | "integration"
+      | "supplier_order";
     ObjectRef: {
       kind: components["schemas"]["ObjectKind"];
       /**
@@ -7238,6 +7930,31 @@ export interface components {
       handoff: components["schemas"]["HandoffInfo"] | null;
       note: components["schemas"]["HandoffNote"];
     };
+    /** @description Диалог с клиентом без данных реестра лидов (B-D18-1) */
+    ExternalChat: {
+      /** @description Номер лида — ключ переписки (`getCrmThread`) */
+      lead: string;
+      name: string;
+      channel: components["schemas"]["MessageChannel"];
+      language: components["schemas"]["Language"];
+      /**
+       * Format: date-time
+       * @description Последнее сообщение в диалоге (клиента, бота или сотрудника)
+       */
+      last_message_at: string | null;
+      assigned: components["schemas"]["PersonRef"] | null;
+      /** @description По сделке клиента выставлен счёт (событие ERP `invoice.issued`) */
+      invoiced: boolean;
+      /**
+       * @description Почему диалог открыт: `registry` — раздел `crm.leads` (все диалоги), `participant` — сотрудник участвует, `invoiced` — зона «Счета и оплаты»
+       * @enum {string}
+       */
+      access: "registry" | "participant" | "invoiced";
+    };
+    ExternalChatList: {
+      items: components["schemas"]["ExternalChat"][];
+      total: number;
+    };
     MessageInbox: {
       items: components["schemas"]["MessageInboxItem"][];
     };
@@ -7423,11 +8140,15 @@ export interface components {
      * @enum {string}
      */
     CalcZone: "goods" | "services";
-    /** @description Склад своей компании; ячейка и резерв — с экрана «Склад» (D2-2), пока пусто */
+    /** @description Склад строки-товара (D2-2) — остаток, свободный остаток, ячейка и резерв за этой строкой */
     CalcStock: {
-      /** @description Остаток; пусто — строка без карточки каталога */
+      /** @description На складе всего; пусто — строка без карточки каталога */
       on_hand: number | null;
+      /** @description Свободно — остаток минус резервы всех проектов */
+      free?: number | null;
+      /** @description Ячейка с наибольшим остатком */
       cell: string | null;
+      /** @description Зарезервировано за этой строкой */
       reserved: number | null;
     };
     CalcSupplier: {
@@ -7534,6 +8255,8 @@ export interface components {
       build: boolean;
       /** @description Видеть себестоимость и наценку по строкам */
       cost: boolean;
+      /** @description Резерв строки и «Запросить цену у поставщика» (D2-2: `erp.stock` полный) */
+      stock?: boolean;
     };
     CalcSheet: {
       /** @example ЗВ-2026-104 */
@@ -7616,6 +8339,745 @@ export interface components {
     };
     CalcCatalogPage: {
       items: components["schemas"]["CalcCatalogItem"][];
+    };
+    /** @description Что сотрудник может на экране «Склад» (права ERP, вычисленные из раздела `erp.stock`) */
+    StockRights: {
+      /** @description Резервы, корректировки, заказы поставщикам, приёмка, запросы цены (`supply.manage`) */
+      manage: boolean;
+      /** @description Отгрузки по проектам (`fulfillment.manage`) */
+      ship: boolean;
+    };
+    StockOrderRights: {
+      manage: boolean;
+      ship: boolean;
+      /** @description Видит цены поставщиков в заказах */
+      prices: boolean;
+    };
+    /** @description Заявка или проект, к которым относится резерв, строка заказа или отгрузка */
+    StockRequestRef: {
+      /** @example ЗВ-2026-104 */
+      number: string;
+      client: string | null;
+      /** @description Заявка ЗВ — расчёт `/erp/calc/ЗВ-…`, проект ПР — `/eds/projects/ПР-…` */
+      path: string;
+    };
+    StockCell: {
+      /** @description Пусто — товар лежит без ячейки */
+      cell: string | null;
+      on_hand: number;
+    };
+    StockRow: {
+      product_id: string;
+      name: string;
+      article: string;
+      unit: string;
+      /** @description На складе */
+      on_hand: number;
+      /** @description Остаток резервов действующих проектов */
+      reserved: number;
+      /** @description Свободный остаток — остаток минус резервы */
+      free: number;
+      /** @description Ожидается по отправленным и подтверждённым заказам поставщикам */
+      incoming: number;
+      /** Format: date */
+      next_expected: string | null;
+      cells: components["schemas"]["StockCell"][];
+    };
+    StockBalanceList: {
+      items: components["schemas"]["StockRow"][];
+      rights: components["schemas"]["StockRights"];
+    };
+    StockReservation: {
+      id: string;
+      product_id: string;
+      product_name: string;
+      request: components["schemas"]["StockRequestRef"];
+      /** @description Строка расчёта */
+      line_id: string | null;
+      quantity: number;
+      shipped_quantity: number;
+      /** @description Ещё удерживается за проектом */
+      remaining: number;
+      /** @enum {string} */
+      status: "active" | "released" | "fulfilled";
+      /** Format: date-time */
+      created_at: string;
+      created_by: string | null;
+    };
+    StockReservationList: {
+      items: components["schemas"]["StockReservation"][];
+    };
+    StockIncomingOrder: {
+      number: string;
+      status: components["schemas"]["SupplierOrderStatus"];
+      supplier: string;
+      /** Format: date */
+      expected_date: string | null;
+      quantity_left: number;
+      path: string;
+    };
+    StockMovement: {
+      /** @enum {string} */
+      kind: "receipt" | "shipment" | "adjustment";
+      /** @description Плюс — приход, минус — расход */
+      quantity: number;
+      cell: string | null;
+      /** Format: date-time */
+      at: string;
+      by: string | null;
+      note: string | null;
+    };
+    /** @description Товар на складе — ячейки, резервы по проектам, ожидаемый приход и последние движения */
+    StockProduct: {
+      product_id: string;
+      name: string;
+      article: string;
+      unit: string;
+      /** @description На складе */
+      on_hand: number;
+      /** @description Остаток резервов действующих проектов */
+      reserved: number;
+      /** @description Свободный остаток — остаток минус резервы */
+      free: number;
+      /** @description Ожидается по отправленным и подтверждённым заказам поставщикам */
+      incoming: number;
+      /** Format: date */
+      next_expected: string | null;
+      cells: components["schemas"]["StockCell"][];
+      reservations: components["schemas"]["StockReservation"][];
+      incoming_orders: components["schemas"]["StockIncomingOrder"][];
+      movements: components["schemas"]["StockMovement"][];
+      rights: components["schemas"]["StockRights"];
+    };
+    StockAdjustIn: {
+      product_id: string;
+      /** @description Плюс — оприходовать, минус — списать; не ноль */
+      quantity: number;
+      cell?: string;
+      note?: string;
+    };
+    StockReserveIn: {
+      /** @description Сколько удерживать за строкой (не больше количества строки и свободного остатка) */
+      quantity: number;
+    };
+    StockSupplierRef: {
+      id: string;
+      name: string;
+      /** @description Адрес для писем; только в карточке заказа и списке поставщиков */
+      email?: string | null;
+    };
+    StockSupplierList: {
+      items: {
+        id: string;
+        name: string;
+        inn: string | null;
+        /** @description Почта компании или основного контакта; пусто — письмо уйдёт только на введённый адрес */
+        email: string | null;
+      }[];
+    };
+    /**
+     * @description Черновик → отправлен → подтверждён → получен (и «отменён»)
+     * @enum {string}
+     */
+    SupplierOrderStatus: "draft" | "sent" | "confirmed" | "received" | "cancelled";
+    /** @description Что можно сделать с заказом сейчас (статус и права сотрудника) */
+    SupplierOrderActions: {
+      edit: boolean;
+      send: boolean;
+      confirm: boolean;
+      receive: boolean;
+      cancel: boolean;
+    };
+    SupplierOrderRow: {
+      /**
+       * @description Номер заказа поставщику ЗП-ГГГГ-NNN
+       * @example ЗП-2026-031
+       */
+      number: string;
+      status: components["schemas"]["SupplierOrderStatus"];
+      supplier: components["schemas"]["StockSupplierRef"];
+      /** Format: date */
+      expected_date: string | null;
+      /** @description Ожидаемая дата прошла, заказ отправлен или подтверждён, но не получен */
+      overdue: boolean;
+      days_overdue: number | null;
+      currency: string | null;
+      lines_count: number;
+      quantity: number;
+      received_quantity: number;
+      /** @enum {string} */
+      receipt_state: "none" | "partial" | "full";
+      /** @description Сумма заказа — цены поставщиков видит группа `supplier_prices`, `cost_margin` или держатель `erp.calc.goods` */
+      total: components["schemas"]["DecimalString"] | null;
+      /** @description Заявки и проекты, под которые заказаны строки */
+      requests: components["schemas"]["StockRequestRef"][];
+      /** Format: date-time */
+      created_at: string;
+      created_by: string | null;
+      actions: components["schemas"]["SupplierOrderActions"];
+      /** @example /erp/stock/ЗП-2026-031 */
+      path: string;
+    };
+    SupplierOrderList: {
+      items: components["schemas"]["SupplierOrderRow"][];
+      rights: components["schemas"]["StockOrderRights"];
+    };
+    SupplierOrderLine: {
+      id: string;
+      position: number;
+      product_id: string | null;
+      name: string;
+      article: string;
+      unit: string;
+      quantity: number;
+      received_quantity: number;
+      /** @description Цена поставщика за единицу — только тому, кто видит цены поставщиков */
+      unit_price: components["schemas"]["DecimalString"] | null;
+      line_total: components["schemas"]["DecimalString"] | null;
+      request: components["schemas"]["StockRequestRef"] | null;
+      /** @description Строка расчёта, под которую заказано */
+      line_id: string | null;
+    };
+    SupplierOrderReceiptLine: {
+      order_line_id: string;
+      name: string;
+      quantity: number;
+      cell: string | null;
+    };
+    SupplierOrderReceipt: {
+      id: string;
+      /** Format: date-time */
+      received_at: string;
+      received_by: string | null;
+      /** @description Накладная поставщика */
+      supplier_doc: string | null;
+      note: string | null;
+      lines: components["schemas"]["SupplierOrderReceiptLine"][];
+    };
+    SupplierOrderLogEntry: {
+      /** @enum {string} */
+      kind:
+        | "created"
+        | "edited"
+        | "sent"
+        | "confirmed"
+        | "receipt"
+        | "received"
+        | "cancelled"
+        | "overdue";
+      /** Format: date-time */
+      at: string;
+      by: string | null;
+      detail: string | null;
+    };
+    /** @description Карточка заказа поставщику */
+    SupplierOrderDetail: {
+      /**
+       * @description Номер заказа поставщику ЗП-ГГГГ-NNN
+       * @example ЗП-2026-031
+       */
+      number: string;
+      status: components["schemas"]["SupplierOrderStatus"];
+      supplier: components["schemas"]["StockSupplierRef"];
+      /** Format: date */
+      expected_date: string | null;
+      /** @description Ожидаемая дата прошла, заказ отправлен или подтверждён, но не получен */
+      overdue: boolean;
+      days_overdue: number | null;
+      currency: string | null;
+      lines_count: number;
+      quantity: number;
+      received_quantity: number;
+      /** @enum {string} */
+      receipt_state: "none" | "partial" | "full";
+      /** @description Сумма заказа — цены поставщиков видит группа `supplier_prices`, `cost_margin` или держатель `erp.calc.goods` */
+      total: components["schemas"]["DecimalString"] | null;
+      /** @description Заявки и проекты, под которые заказаны строки */
+      requests: components["schemas"]["StockRequestRef"][];
+      /** Format: date-time */
+      created_at: string;
+      created_by: string | null;
+      actions: components["schemas"]["SupplierOrderActions"];
+      /** @example /erp/stock/ЗП-2026-031 */
+      path: string;
+      note: string;
+      /** Format: date-time */
+      sent_at: string | null;
+      /** @description Адрес, на который ушло письмо */
+      sent_to: string | null;
+      /** Format: date-time */
+      confirmed_at: string | null;
+      /** Format: date-time */
+      received_at: string | null;
+      /** Format: date-time */
+      cancelled_at: string | null;
+      cancel_reason: string | null;
+      lines: components["schemas"]["SupplierOrderLine"][];
+      receipts: components["schemas"]["SupplierOrderReceipt"][];
+      log: components["schemas"]["SupplierOrderLogEntry"][];
+      rights: components["schemas"]["StockOrderRights"];
+    };
+    SupplierOrderLineIn: {
+      /** @description Строка этого заказа (правка); без поля — новая строка */
+      id?: string;
+      product_id: string;
+      name?: string;
+      article?: string;
+      unit?: string;
+      quantity: number;
+      /** @description Цена поставщика; ставит тот, кто видит цены поставщиков (иначе 403 `prices_forbidden`) */
+      unit_price?: components["schemas"]["DecimalString"] | null;
+      /** @description Номер заявки ЗВ/ПР, под которую заказано; вместе с `line_id` */
+      request?: string | null;
+      /** @description Строка расчёта этой заявки */
+      line_id?: string | null;
+    };
+    SupplierOrderCreate: {
+      supplier_id: string;
+      /** Format: date */
+      expected_date?: string | null;
+      note?: string;
+      currency?: string | null;
+      lines: components["schemas"]["SupplierOrderLineIn"][];
+    };
+    SupplierOrderFromRequest: {
+      /** @description Номер заявки или проекта */
+      request: string;
+      supplier_id: string;
+    };
+    /** @description Состав (`lines`) и поставщик правятся только в черновике; ожидаемая дата и примечание — пока заказ не закрыт */
+    SupplierOrderPatch: {
+      supplier_id?: string;
+      /** Format: date */
+      expected_date?: string | null;
+      note?: string;
+      currency?: string | null;
+      lines?: components["schemas"]["SupplierOrderLineIn"][];
+    };
+    SupplierOrderSendIn: {
+      /**
+       * Format: email
+       * @description Адрес письма, если у поставщика почты нет или нужен другой
+       */
+      to_email?: string;
+    };
+    SupplierOrderConfirmIn: {
+      /**
+       * Format: date
+       * @description Подтверждённая поставщиком дата поставки; обязательна, если её ещё нет
+       */
+      expected_date?: string | null;
+    };
+    SupplierOrderCancelIn: {
+      reason?: string;
+    };
+    SupplierOrderReceiptIn: {
+      lines: {
+        order_line_id: string;
+        quantity: number;
+        cell?: string;
+      }[];
+      supplier_doc?: string;
+      note?: string;
+    };
+    StockPendingReceiptLine: {
+      order_number: string;
+      order_path: string;
+      supplier: string;
+      /** Format: date */
+      expected_date: string | null;
+      overdue: boolean;
+      order_line_id: string;
+      name: string;
+      article: string;
+      unit: string;
+      quantity: number;
+      received_quantity: number;
+      request: components["schemas"]["StockRequestRef"] | null;
+    };
+    StockDoneReceipt: {
+      id: string;
+      order_number: string;
+      order_path: string;
+      supplier: string;
+      /** Format: date-time */
+      received_at: string;
+      received_by: string | null;
+      supplier_doc: string | null;
+      quantity: number;
+      lines: {
+        name: string;
+        quantity: number;
+        cell: string | null;
+      }[];
+    };
+    /** @description Приёмка — строки подтверждённых заказов, ждущие товара, и последние приёмки */
+    StockReceipts: {
+      pending: components["schemas"]["StockPendingReceiptLine"][];
+      done: components["schemas"]["StockDoneReceipt"][];
+      rights: components["schemas"]["StockRights"];
+    };
+    StockShipmentLine: {
+      product_id: string;
+      name: string;
+      quantity: number;
+      cell: string | null;
+    };
+    StockShipment: {
+      id: string;
+      /**
+       * @description Внутренняя накладная
+       * @example ОТГ-2026-014
+       */
+      number: string;
+      request: components["schemas"]["StockRequestRef"];
+      tracking: string | null;
+      carrier: string | null;
+      note: string | null;
+      /** Format: date-time */
+      shipped_at: string;
+      shipped_by: string | null;
+      lines: components["schemas"]["StockShipmentLine"][];
+    };
+    StockShipmentList: {
+      items: components["schemas"]["StockShipment"][];
+      rights: components["schemas"]["StockRights"];
+    };
+    StockShipIn: {
+      /** @description Номер проекта ПР (или заявки ЗВ с тем же NNN) */
+      request: string;
+      lines: {
+        reservation_id: string;
+        quantity: number;
+      }[];
+      tracking?: string;
+      carrier?: string;
+      note?: string;
+    };
+    PriceRequestLine: {
+      line_id: string | null;
+      name: string;
+      article: string;
+      quantity: number;
+      unit: string;
+    };
+    /** @description Запрос цены у поставщика из расчёта — журнал письма */
+    PriceRequest: {
+      id: string;
+      supplier: components["schemas"]["StockSupplierRef"];
+      /** @description Номер заявки */
+      request: string | null;
+      /** Format: date-time */
+      requested_at: string;
+      requested_by: string | null;
+      to_email: string;
+      subject: string;
+      note: string | null;
+      /**
+       * @description failed — письмо не ушло (почта выключена или недоступна), запрос остаётся в журнале
+       * @enum {string}
+       */
+      status: "sent" | "failed";
+      error: string | null;
+      /** Format: date-time */
+      answered_at: string | null;
+      answered_by: string | null;
+      answer_note: string | null;
+      lines: components["schemas"]["PriceRequestLine"][];
+    };
+    PriceRequestList: {
+      items: components["schemas"]["PriceRequest"][];
+    };
+    PriceRequestIn: {
+      supplier_id: string;
+      /** @description Строки-товары расчёта */
+      line_ids: string[];
+      note?: string;
+      /**
+       * Format: email
+       * @description Адрес письма, если у поставщика почты нет или нужен другой
+       */
+      to_email?: string;
+    };
+    PriceRequestAnswerIn: {
+      /** @description Что ответил поставщик (цена и срок вносятся в строку расчёта) */
+      note?: string;
+    };
+    /**
+     * @description Статус лида для Платформы (CRM-02): Новый, В диалоге, Просит КП, Без ответа, Клиент, Отказ; подпись — у экрана
+     * @enum {string}
+     */
+    LeadPlatformStatus: "new" | "dialog" | "wants_quote" | "no_answer" | "client" | "lost";
+    LeadRow: {
+      lead: string;
+      name: string;
+      status: components["schemas"]["LeadPlatformStatus"];
+      channel: components["schemas"]["MessageChannel"];
+      language: components["schemas"]["Language"];
+      assigned: components["schemas"]["PersonRef"] | null;
+      /** @description Суть запроса от бота */
+      need: string | null;
+      /** Format: date-time */
+      last_message_at: string | null;
+      /** @description Лид написал после последнего ответа менеджера */
+      unread: boolean;
+      /** @description Открытая передача от бота ждёт «Забрать» */
+      handoff_open: boolean;
+      /** @description Истёк срок ответа по передаче */
+      overdue: boolean;
+      /** @description Клиент, если лид уже стал клиентом */
+      client_id: number | null;
+    };
+    LeadPage: {
+      items: components["schemas"]["LeadRow"][];
+      total: number;
+    };
+    LeadMessagePreview: {
+      /** @enum {string} */
+      author: "lead" | "bot" | "manager" | "system";
+      text: string;
+      /** Format: date-time */
+      at: string;
+    };
+    /** @description Сообщение клиенту от системы (подтверждение заявки, приглашение) — канал и итог словами */
+    LeadNotice: {
+      channel: string | null;
+      /** @enum {string} */
+      status: "queued" | "sent" | "failed" | "skipped";
+      /** Format: date-time */
+      sent_at: string | null;
+      /** @description Почему не ушло — словами CRM */
+      error_text: string | null;
+    };
+    /** @description Приглашение в кабинет (D1-9) — итог и «Отправить повторно другим каналом» */
+    ClientInvitation: {
+      /** @enum {string} */
+      status: "queued" | "sent" | "failed" | "skipped";
+      channel: string | null;
+      sent_via: string[];
+      /** Format: date-time */
+      sent_at: string | null;
+      contact_name: string | null;
+      error_text: string | null;
+      available_channels: ("email" | "telegram" | "both")[];
+      /** @enum {string|null} */
+      suggested_channel: "email" | "telegram" | "both" | null;
+      can_resend: boolean;
+    };
+    LeadCard: {
+      lead: string;
+      name: string;
+      status: components["schemas"]["LeadPlatformStatus"];
+      channel: components["schemas"]["MessageChannel"];
+      language: components["schemas"]["Language"];
+      assigned: components["schemas"]["PersonRef"] | null;
+      contacts: components["schemas"]["ConversationContacts"];
+      consent: {
+        /** Format: date-time */
+        given_at: string | null;
+        /**
+         * @description Отметка сотрудника (звонок, письмо, бумага); `null` — согласие дано в боте или его нет
+         * @enum {string|null}
+         */
+        method: "phone" | "email" | "paper" | null;
+      };
+      facts: components["schemas"]["HandoffFacts"];
+      need: string | null;
+      /** @description Названия продуктов */
+      interest: string[];
+      handoff: components["schemas"]["HandoffInfo"] | null;
+      last_messages: components["schemas"]["LeadMessagePreview"][];
+      client: components["schemas"]["ClientShort"] | null;
+      confirmation: components["schemas"]["LeadNotice"] | null;
+      /** @description Срок первого ответа на запрос с сайта (D1-9) */
+      first_response: {
+        /** Format: date-time */
+        due_at: string | null;
+        overdue: boolean;
+      };
+      invitation: components["schemas"]["ClientInvitation"] | null;
+    };
+    ClientShort: {
+      id: number;
+      name: string;
+      inn: string | null;
+    };
+    ClientRow: {
+      id: number;
+      name: string;
+      inn: string | null;
+      /** @description Клиент передан в бэк-офис (компания в ERP) */
+      in_erp: boolean;
+      open_requests: number;
+      /** Format: date-time */
+      last_activity_at: string | null;
+      /** @enum {string|null} */
+      handoff_status: "pending" | "done" | "failed" | null;
+    };
+    ClientList: {
+      items: components["schemas"]["ClientRow"][];
+    };
+    /** @enum {string} */
+    ClientContactChannel: "telegram" | "phone" | "email";
+    ClientContactView: {
+      id: number;
+      name: string;
+      position: string | null;
+      phone: string | null;
+      email: string | null;
+      /** @description Имя пользователя Telegram без @; пусто — Telegram не привязан или без имени */
+      telegram: string | null;
+      /** @description Каналы, по которым можно связаться (Telegram привязан, телефон, e-mail) */
+      channels: components["schemas"]["ClientContactChannel"][];
+      /** @enum {string|null} */
+      preferred_channel: "email" | "telegram" | "both" | null;
+      is_primary: boolean;
+    };
+    ClientLeadLink: {
+      lead: string;
+      name: string;
+      status: components["schemas"]["LeadPlatformStatus"];
+      /** Format: date-time */
+      last_message_at: string | null;
+    };
+    /**
+     * @description Ключ статуса для клиента (`packages/contracts/client-statuses.yaml`, SPEC-v3 §2.5); текст — у экрана
+     * @enum {string}
+     */
+    ClientSees:
+      | "in_work"
+      | "awaiting_decision"
+      | "contract_review"
+      | "contract_signing"
+      | "awaiting_payment"
+      | "checking_payment"
+      | "fulfilling"
+      | "awaiting_acceptance"
+      | "done"
+      | "rejected"
+      | "quote_expired";
+    ClientRequestRow: {
+      /** @description Заявка CRM (для «Повторить отправку в ERP») */
+      deal: number;
+      /** @description ЗВ-ГГГГ-NNN / ПР-ГГГГ-NNN из ERP; `null` — заявка ещё не дошла до ERP */
+      number: string | null;
+      title: string;
+      summary: string | null;
+      step: components["schemas"]["StepCode"];
+      /** @description Заявка стала проектом (КП принято) */
+      project: boolean;
+      client_sees: components["schemas"]["ClientSees"];
+      /** @enum {string|null} */
+      urgency: "normal" | "urgent" | null;
+      /**
+       * @description Передача заявки в ERP («Создать заявку»); `null` — заявка заведена иначе
+       * @enum {string|null}
+       */
+      transfer: "pending" | "done" | "failed" | null;
+      /** @description Код причины ошибки передачи; подпись — у экрана */
+      transfer_error: string | null;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: uuid */
+      letter_file_id: string | null;
+    };
+    ClientDocumentRow: {
+      id: number;
+      title: string;
+      /** @enum {string} */
+      type: "contract" | "proposal" | "letter" | "invoice" | "act" | "other";
+      number: string | null;
+      /** Format: date */
+      date: string | null;
+      visible_to_client: boolean;
+    };
+    ClientCard: {
+      id: number;
+      name: string;
+      inn: string | null;
+      segment: string | null;
+      in_erp: boolean;
+      handoff: {
+        /** @enum {string|null} */
+        status: "pending" | "done" | "failed" | null;
+        error: string | null;
+      };
+      contacts: components["schemas"]["ClientContactView"][];
+      /** @description Переписка — лиды клиента (ссылка в «Ждут ответа») */
+      leads: components["schemas"]["ClientLeadLink"][];
+      requests: components["schemas"]["ClientRequestRow"][];
+      documents: components["schemas"]["ClientDocumentRow"][];
+      invitation: components["schemas"]["ClientInvitation"] | null;
+      /** @description Части карточки, которые CRM не отдала (`unavailable`) — экран показывает плашку в разделе */
+      sources: {
+        contacts: components["schemas"]["SourceState"];
+        requests: components["schemas"]["SourceState"];
+        documents: components["schemas"]["SourceState"];
+      };
+    };
+    InvitationResendIn: {
+      /** @enum {string} */
+      channel: "email" | "telegram" | "both";
+      contact_id?: number | null;
+    };
+    /** @description Существующий контакт клиента (`contact_id`) или новый — имя и хотя бы один канал (e-mail не обязателен) */
+    RequestContactFormIn: {
+      contact_id?: number | null;
+      full_name?: string | null;
+      position?: string | null;
+      phone?: string | null;
+      email?: string | null;
+      /**
+       * @description Telegram лида — канал нового контакта
+       * @default false
+       */
+      use_lead_telegram: boolean;
+    };
+    RequestFormIn: {
+      /**
+       * Format: uuid
+       * @description Ключ формы — один на открытие; повтор не создаёт вторую заявку
+       */
+      request_key: string;
+      /** @description Лид, из которого создаётся заявка */
+      lead?: string | null;
+      /** @description Выбранный клиент (автопоиск); без лида — обязателен */
+      client_id?: number | null;
+      company?: {
+        name: string;
+        inn?: string | null;
+      } | null;
+      contact: components["schemas"]["RequestContactFormIn"];
+      summary: string;
+      /** @enum {string} */
+      urgency: "normal" | "urgent";
+      /** Format: uuid */
+      letter_file_id?: string | null;
+      consent?: {
+        /** @enum {string} */
+        method: "phone" | "email" | "paper";
+        comment?: string | null;
+      } | null;
+    };
+    RequestCreatedView: {
+      client_id: number;
+      deal: number;
+      lead: string | null;
+      /** @description `false` — повтор формы с тем же ключом: заявка уже была создана */
+      created: boolean;
+      /** @enum {string} */
+      transfer: "pending" | "done" | "failed";
+    };
+    RequestRetriedView: {
+      deal: number;
+      client_id: number;
+      /** @enum {string} */
+      transfer: "pending" | "done" | "failed";
+    };
+    RequestFileFromMessageIn: {
+      lead: string;
+      message: number;
+      index: number;
     };
   };
   responses: {
@@ -7740,6 +9202,15 @@ export interface components {
         "application/json": components["schemas"]["Error"];
       };
     };
+    /** @description 409 `CONFLICT` — CRM отказала по состоянию; код — в `details.reason` (`request_not_allowed`, `request_key_reused`, `consent_via_bot`, `erp_not_configured`, `telegram_linked_elsewhere`, `request_not_failed`, `request_not_retryable`) */
+    RequestConflict: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["Error"];
+      };
+    };
     /** @description 409 `CONFLICT` — состояние лида не позволяет действие; код CRM — в `details.reason` (`lead_taken` с `details.assigned_user_name`, `take_first`, `no_consent`, `already_with_bot`, `delivery_unconfirmed`, `reply_in_progress` — ответ с этим `client_message_id` ещё отправляется, повтор безопасен, `assist_disabled`, `assist_budget`, `assist_empty`, `assist_no_history`) */
     MessagesConflict: {
       headers: {
@@ -7760,6 +9231,15 @@ export interface components {
     };
     /** @description 409 `CONFLICT` — расчёт не в том состоянии для действия: `details.reason` — код ERP в нижнем регистре (`visas_missing` и `details.missing`, `deal_not_in_calculation`, `quote_not_draft`, `calc_not_started`, `line_incomplete`, `purchase_required`, `no_lines`, `quote_below_cost`, `fx_rate_missing`, `quote_client_required`, `request_text_empty`, `ai_disabled`) */
     CalcConflict: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["Error"];
+      };
+    };
+    /** @description 409 `CONFLICT` — склад или заказ не в том состоянии: `details.reason` — код ERP в нижнем регистре (`not_enough_stock` и `details.free`, `below_reserved`, `below_shipped`, `transition_not_allowed`, `order_not_draft`, `order_not_confirmed`, `order_has_receipts`, `expected_date_required`, `supplier_email_required`, `fulfillment_not_ready`, `product_required`, `no_shortage`, `email_failed`, `deal_closed`, `line_not_actual`, `line_not_goods`, `reservation_not_active`, `already_answered`) */
+    StockConflict: {
       headers: {
         [name: string]: unknown;
       };
@@ -7798,6 +9278,8 @@ export interface components {
   parameters: {
     /** @description Номер обращения `ОБР-0012` (в адресе — закодированный) */
     TicketNumberPath: string;
+    /** @description Клиент CRM (id) */
+    ClientIdPath: number;
     /** @description Номер лида `L-NNNN` */
     LeadNumber: string;
     /** @description `crm_user_id` — число без ведущих нулей (`07` и `007` — не адрес сотрудника) */
@@ -7843,6 +9325,8 @@ export interface components {
     CalcNumberPath: string;
     /** @description Строка расчёта (`CalcLine.id`) */
     CalcLineIdPath: string;
+    /** @description Номер заказа поставщику `ЗП-ГГГГ-NNN` */
+    StockOrderNumberPath: string;
     /** @description UUID маршрута согласования EDS (`id` карточки КП, `approval_id` карточки документа) */
     ApprovalIdPath: string;
     /** @description `mine` — на моём шаге (по умолчанию); `all` — всё, что EDS показывает сотруднику */
@@ -10292,6 +11776,92 @@ export interface operations {
       422: components["responses"]["IntegrationInvalid"];
       429: components["responses"]["TooManyRequests"];
       502: components["responses"]["IntegrationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getOffsiteBackup: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["OffsiteBackup"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  saveOffsiteBackup: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["OffsiteBackupIn"];
+      };
+    };
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["OffsiteBackup"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      409: components["responses"]["IntegrationConflict"];
+      422: components["responses"]["IntegrationInvalid"];
+      423: components["responses"]["AccountLocked"];
+      429: components["responses"]["TooManyRequests"];
+      502: components["responses"]["IntegrationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  checkOffsiteBackup: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["OffsiteCheck"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      409: components["responses"]["IntegrationConflict"];
+      429: components["responses"]["TooManyRequests"];
       503: components["responses"]["BackendUnavailable"];
     };
   };
@@ -14384,6 +15954,35 @@ export interface operations {
       503: components["responses"]["BackendUnavailable"];
     };
   };
+  listExternalChats: {
+    parameters: {
+      query?: {
+        /** @description Только диалоги клиента этой заявки ERP */
+        erp_deal_id?: number;
+        limit?: number;
+        offset?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Диалоги, новые сверху */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ExternalChatList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
   listCrmReplyTemplates: {
     parameters: {
       query?: never;
@@ -14747,6 +16346,1040 @@ export interface operations {
       409: components["responses"]["CalcConflict"];
       422: components["responses"]["ValidationFailed"];
       429: components["responses"]["TooManyRequests"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listStockBalances: {
+    parameters: {
+      query?: {
+        /** @description Слова названия, артикула, SKU */
+        q?: string;
+        /** @description Только с резервом / с ожидаемым приходом */
+        only?: "reserved" | "incoming";
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Склад · Остатки и резервы по номенклатуре */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["StockBalanceList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getStockProduct: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        product_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Склад · Товар: ячейки, резервы, приход, движения */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["StockProduct"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  adjustStock: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["StockAdjustIn"];
+      };
+    };
+    responses: {
+      /** @description Склад · Оприходовать или списать вручную */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["StockProduct"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["StockConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listStockReservations: {
+    parameters: {
+      query?: {
+        /** @description Номер заявки ЗВ или проекта ПР */
+        request?: string;
+        product_id?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Склад · Резервы под проекты */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["StockReservationList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  releaseStockReservation: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        reservation_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Склад · Снять резерв */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["StockReservation"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["StockConflict"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  reserveCalcLine: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер заявки `ЗВ-ГГГГ-NNN` (как в списке «Заявки в расчёте») */
+        number: components["parameters"]["CalcNumberPath"];
+        /** @description Строка расчёта (`CalcLine.id`) */
+        line_id: components["parameters"]["CalcLineIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["StockReserveIn"];
+      };
+    };
+    responses: {
+      /** @description Расчёт · Зарезервировать товар под строку */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CalcSheet"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["StockConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  releaseCalcLineReservation: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер заявки `ЗВ-ГГГГ-NNN` (как в списке «Заявки в расчёте») */
+        number: components["parameters"]["CalcNumberPath"];
+        /** @description Строка расчёта (`CalcLine.id`) */
+        line_id: components["parameters"]["CalcLineIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Расчёт · Снять резерв строки */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CalcSheet"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["StockConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listCalcPriceRequests: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Номер заявки `ЗВ-ГГГГ-NNN` (как в списке «Заявки в расчёте») */
+        number: components["parameters"]["CalcNumberPath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Расчёт · Журнал запросов цены у поставщиков */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PriceRequestList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  createCalcPriceRequest: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер заявки `ЗВ-ГГГГ-NNN` (как в списке «Заявки в расчёте») */
+        number: components["parameters"]["CalcNumberPath"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PriceRequestIn"];
+      };
+    };
+    responses: {
+      /** @description Расчёт · Запросить цену у поставщика */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PriceRequest"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["StockConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  answerPriceRequest: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        request_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["PriceRequestAnswerIn"];
+      };
+    };
+    responses: {
+      /** @description Расчёт · Отметить ответ поставщика */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PriceRequest"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["StockConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listStockSuppliers: {
+    parameters: {
+      query?: {
+        /** @description Название или ИНН */
+        q?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Склад · Поставщики для выбора */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["StockSupplierList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listSupplierOrders: {
+    parameters: {
+      query?: {
+        status?: components["schemas"]["SupplierOrderStatus"];
+        supplier_id?: string;
+        /** @description Номер, поставщик, позиция */
+        q?: string;
+        /** @description Только просроченные */
+        overdue?: boolean;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Склад · Заказы поставщикам */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SupplierOrderList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  createSupplierOrder: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SupplierOrderCreate"];
+      };
+    };
+    responses: {
+      /** @description Склад · Создать заказ поставщику (черновик) */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SupplierOrderDetail"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["StockConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  createSupplierOrderFromRequest: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SupplierOrderFromRequest"];
+      };
+    };
+    responses: {
+      /** @description Склад · Черновик заказа на дефицит проекта */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SupplierOrderDetail"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["StockConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getSupplierOrder: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Номер заказа поставщику `ЗП-ГГГГ-NNN` */
+        order_number: components["parameters"]["StockOrderNumberPath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Склад · Заказ поставщику ЗП-… */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SupplierOrderDetail"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  updateSupplierOrder: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер заказа поставщику `ЗП-ГГГГ-NNN` */
+        order_number: components["parameters"]["StockOrderNumberPath"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SupplierOrderPatch"];
+      };
+    };
+    responses: {
+      /** @description Склад · Изменить заказ */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SupplierOrderDetail"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["StockConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  sendSupplierOrder: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер заказа поставщику `ЗП-ГГГГ-NNN` */
+        order_number: components["parameters"]["StockOrderNumberPath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["SupplierOrderSendIn"];
+      };
+    };
+    responses: {
+      /** @description Склад · Отправить заказ поставщику (черновик → отправлен) */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SupplierOrderDetail"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["StockConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  confirmSupplierOrder: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер заказа поставщику `ЗП-ГГГГ-NNN` */
+        order_number: components["parameters"]["StockOrderNumberPath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["SupplierOrderConfirmIn"];
+      };
+    };
+    responses: {
+      /** @description Склад · Поставщик подтвердил (отправлен → подтверждён) */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SupplierOrderDetail"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["StockConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  cancelSupplierOrder: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер заказа поставщику `ЗП-ГГГГ-NNN` */
+        order_number: components["parameters"]["StockOrderNumberPath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["SupplierOrderCancelIn"];
+      };
+    };
+    responses: {
+      /** @description Склад · Отменить заказ */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SupplierOrderDetail"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["StockConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  receiveSupplierOrder: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер заказа поставщику `ЗП-ГГГГ-NNN` */
+        order_number: components["parameters"]["StockOrderNumberPath"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SupplierOrderReceiptIn"];
+      };
+    };
+    responses: {
+      /** @description Склад · Принять товар от поставщика (частично или полностью) */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SupplierOrderDetail"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["StockConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listStockReceipts: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Склад · Приёмка: ждут товара и последние приёмки */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["StockReceipts"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listStockShipments: {
+    parameters: {
+      query?: {
+        /** @description Номер заявки или проекта */
+        request?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Склад · Отгрузки по проектам */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["StockShipmentList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  shipFromStock: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["StockShipIn"];
+      };
+    };
+    responses: {
+      /** @description Склад · Отгрузить по проекту */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["StockShipment"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["StockConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listOverdueSupplierOrders: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Склад · Просроченные заказы поставщикам */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SupplierOrderList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listCrmLeads: {
+    parameters: {
+      query?: {
+        tab?: "all" | "new" | "dialog" | "wants_quote" | "client";
+        scope?: "all" | "mine" | "overdue";
+        q?: string;
+        channel?: components["schemas"]["MessageChannel"];
+        offset?: number;
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Страница лидов */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LeadPage"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getCrmLead: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Номер лида `L-NNNN` */
+        lead: components["parameters"]["LeadNumber"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Карточка лида */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LeadCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listCrmClients: {
+    parameters: {
+      query?: {
+        q?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Клиенты */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ClientList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getCrmClient: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Клиент CRM (id) */
+        id: components["parameters"]["ClientIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Карточка клиента */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ClientCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  resendCrmClientInvitation: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Клиент CRM (id) */
+        id: components["parameters"]["ClientIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["InvitationResendIn"];
+      };
+    };
+    responses: {
+      /** @description Итог приглашения */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ClientInvitation"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["RequestConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  createCrmRequest: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RequestFormIn"];
+      };
+    };
+    responses: {
+      /** @description Повтор формы — та же заявка */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RequestCreatedView"];
+        };
+      };
+      /** @description Заявка создана, уходит в ERP */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RequestCreatedView"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["RequestConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  retryCrmRequest: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Заявка CRM (id строки зеркала) */
+        deal: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Заявка снова передаётся */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RequestRetriedView"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["RequestConflict"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  uploadCrmRequestFile: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["EdsFileUpload"];
+      };
+    };
+    responses: {
+      /** @description Файл сохранён в EDS */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EdsFile"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      413: components["responses"]["EdsPayloadTooLarge"];
+      415: components["responses"]["EdsUnsupportedMedia"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  copyCrmMessageAttachmentToRequest: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RequestFileFromMessageIn"];
+      };
+    };
+    responses: {
+      /** @description Файл сохранён в EDS */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EdsFile"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      413: components["responses"]["EdsPayloadTooLarge"];
+      415: components["responses"]["EdsUnsupportedMedia"];
       503: components["responses"]["BackendUnavailable"];
     };
   };

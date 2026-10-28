@@ -14,13 +14,17 @@ import enHelp from "./en/help.json";
 import enIntegrations from "./en/integrations.json";
 import enKb from "./en/kb.json";
 import enLetters from "./en/letters.json";
+import enClients from "./en/clients.json";
+import enLeads from "./en/leads.json";
 import enMessages from "./en/messages.json";
+import enRequest from "./en/request.json";
 import enQuotes from "./en/quotes.json";
 import enApprovals from "./en/approvals.json";
 import enPayments from "./en/payments.json";
 import enModules from "./en/modules.json";
 import enProfile from "./en/profile.json";
 import enShell from "./en/shell.json";
+import enStock from "./en/stock.json";
 import enUi from "./en/ui.json";
 import ruAudit from "./ru/audit.json";
 import ruBridge from "./ru/bridge.json";
@@ -35,13 +39,17 @@ import ruHelp from "./ru/help.json";
 import ruIntegrations from "./ru/integrations.json";
 import ruKb from "./ru/kb.json";
 import ruLetters from "./ru/letters.json";
+import ruClients from "./ru/clients.json";
+import ruLeads from "./ru/leads.json";
 import ruMessages from "./ru/messages.json";
+import ruRequest from "./ru/request.json";
 import ruQuotes from "./ru/quotes.json";
 import ruApprovals from "./ru/approvals.json";
 import ruPayments from "./ru/payments.json";
 import ruModules from "./ru/modules.json";
 import ruProfile from "./ru/profile.json";
 import ruShell from "./ru/shell.json";
+import ruStock from "./ru/stock.json";
 import ruUi from "./ru/ui.json";
 import uzAudit from "./uz/audit.json";
 import uzBridge from "./uz/bridge.json";
@@ -56,13 +64,17 @@ import uzHelp from "./uz/help.json";
 import uzIntegrations from "./uz/integrations.json";
 import uzKb from "./uz/kb.json";
 import uzLetters from "./uz/letters.json";
+import uzClients from "./uz/clients.json";
+import uzLeads from "./uz/leads.json";
 import uzMessages from "./uz/messages.json";
+import uzRequest from "./uz/request.json";
 import uzQuotes from "./uz/quotes.json";
 import uzApprovals from "./uz/approvals.json";
 import uzPayments from "./uz/payments.json";
 import uzModules from "./uz/modules.json";
 import uzProfile from "./uz/profile.json";
 import uzShell from "./uz/shell.json";
+import uzStock from "./uz/stock.json";
 import uzUi from "./uz/ui.json";
 
 export const LANGUAGES = ["ru", "uz", "en"] as const;
@@ -75,6 +87,7 @@ export const resources = {
     bridge: ruBridge,
     calc: ruCalc,
     shell: ruShell,
+    stock: ruStock,
     modules: ruModules,
     dictionary: ruDictionary,
     documents: ruDocuments,
@@ -83,6 +96,9 @@ export const resources = {
     kb: ruKb,
     letters: ruLetters,
     messages: ruMessages,
+    leads: ruLeads,
+    clients: ruClients,
+    request: ruRequest,
     profile: ruProfile,
     quotes: ruQuotes,
     approvals: ruApprovals,
@@ -98,6 +114,7 @@ export const resources = {
     bridge: uzBridge,
     calc: uzCalc,
     shell: uzShell,
+    stock: uzStock,
     modules: uzModules,
     dictionary: uzDictionary,
     documents: uzDocuments,
@@ -106,6 +123,9 @@ export const resources = {
     kb: uzKb,
     letters: uzLetters,
     messages: uzMessages,
+    leads: uzLeads,
+    clients: uzClients,
+    request: uzRequest,
     profile: uzProfile,
     quotes: uzQuotes,
     approvals: uzApprovals,
@@ -121,6 +141,7 @@ export const resources = {
     bridge: enBridge,
     calc: enCalc,
     shell: enShell,
+    stock: enStock,
     modules: enModules,
     dictionary: enDictionary,
     documents: enDocuments,
@@ -129,6 +150,9 @@ export const resources = {
     kb: enKb,
     letters: enLetters,
     messages: enMessages,
+    leads: enLeads,
+    clients: enClients,
+    request: enRequest,
     profile: enProfile,
     quotes: enQuotes,
     approvals: enApprovals,
@@ -161,7 +185,7 @@ export function rememberLanguage(language: Language): void {
   }
 }
 
-/** ru — язык по умолчанию (SPEC-v3 §8); uz — латиница. Пространства имён: common, shell (каркас и вход), modules (меню и пустые состояния), bridge (заглушки разделов и мост в старые экраны), dictionary (словарь SPEC-v3 §2: стадии и статусы), ui (тексты общих компонентов), integrations (Admin · Внешние интеграции), company (Admin · Компания), kb (CRM · База знаний), bot (Admin · Настройки бота), bus (Admin · Журнал интеграций), documents (EDS · Создать документ и «Мои документы»), letters (EDS · Входящие письма и резолюция), messages (Клиенты · Ждут ответа, D1-1), calc (Расчёт по заявке, D2-1), profile (страница /me, «Забыли пароль?»), quotes (EDS · КП на одобрение), approvals (EDS · На согласовании), payments (EDS · Счета и оплаты бухгалтера, D2-4), help (помощь, первый вход и обращения к администратору, W15-H7). */
+/** ru — язык по умолчанию (SPEC-v3 §8); uz — латиница. Пространства имён: common, shell (каркас и вход), modules (меню и пустые состояния), bridge (заглушки разделов и мост в старые экраны), dictionary (словарь SPEC-v3 §2: стадии и статусы), ui (тексты общих компонентов), integrations (Admin · Внешние интеграции), company (Admin · Компания), kb (CRM · База знаний), bot (Admin · Настройки бота), bus (Admin · Журнал интеграций), documents (EDS · Создать документ и «Мои документы»), letters (EDS · Входящие письма и резолюция), messages (Клиенты · Ждут ответа, D1-1), leads, clients и request (Клиенты · Лиды, Клиенты и «Создать заявку», D1-2b), calc (Расчёт по заявке, D2-1), profile (страница /me, «Забыли пароль?»), quotes (EDS · КП на одобрение), approvals (EDS · На согласовании), payments (EDS · Счета и оплаты бухгалтера, D2-4), help (помощь, первый вход и обращения к администратору, W15-H7). */
 void i18n.use(initReactI18next).init({
   resources,
   lng: storedLanguage(),
@@ -182,6 +206,9 @@ void i18n.use(initReactI18next).init({
     "bot",
     "letters",
     "messages",
+    "leads",
+    "clients",
+    "request",
     "calc",
     "profile",
     "quotes",

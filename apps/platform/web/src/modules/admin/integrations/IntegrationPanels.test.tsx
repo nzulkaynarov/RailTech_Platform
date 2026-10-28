@@ -489,6 +489,82 @@ describe("карточка «Хранилище и бэкапы»", () => {
   });
 });
 
+describe("«Внешняя копия бэкапов» в «Хранилище» (OPS-GDRIVE-2)", () => {
+  const PRIVATE = "-----BEGIN PRIVATE KEY-----\\nMIIE-demo-SECRET-BODY\\n-----END PRIVATE KEY-----";
+  const keyFile = (content: string) =>
+    new File([content], "rt-backups-1a2b.json", { type: "application/json" });
+  const KEY = JSON.stringify({
+    type: "service_account",
+    client_email: "rt-offsite-backup@rt-backups.iam.gserviceaccount.com",
+    private_key_id: "0123456789abcdef1a2b",
+    private_key: PRIVATE,
+  });
+
+  it("не настроено: кто исправляет, 4 шага со ссылками; ключ и папка — без сервера, ключ не показывается", async () => {
+    const side = await openPanel("storage");
+    const section = (
+      await within(side).findByRole("heading", { name: "Внешняя копия бэкапов (Google Drive)" })
+    ).closest("section") as HTMLElement;
+    expect(await within(section).findByText("Не настроено")).toBeVisible();
+    expect(within(section).getByText(/Владелец компании/)).toBeVisible();
+    const steps = within(section).getByRole("list", { name: /Подготовка в Google/ });
+    expect(within(steps).getAllByRole("listitem")).toHaveLength(4);
+    expect(within(steps).getByRole("link", { name: "Google Drive API" })).toHaveAttribute(
+      "href",
+      "https://console.cloud.google.com/apis/library/drive.googleapis.com",
+    );
+    expect(within(section).getByRole("button", { name: "Проверить" })).toBeDisabled();
+
+    fireEvent.click(within(section).getByRole("button", { name: "Настроить" }));
+    const form = within(section).getByRole("form", { name: "Ключ и папка" });
+    const input = within(form).getByLabelText("Ключ сервисного аккаунта (файл JSON)");
+    fireEvent.change(input, { target: { files: [keyFile('{"type": "authorized_user"}')] } });
+    expect(await within(form).findByRole("alert")).toHaveTextContent(
+      "Это не ключ сервисного аккаунта Google",
+    );
+    const evil = JSON.stringify({ ...JSON.parse(KEY), token_uri: "https://evil.example/token" });
+    fireEvent.change(input, { target: { files: [keyFile(evil)] } });
+    expect(await within(form).findByRole("alert")).toHaveTextContent(
+      "чужой адрес выдачи токенов (token_uri)",
+    );
+    fireEvent.change(input, { target: { files: [keyFile(KEY)] } });
+    expect(
+      await within(form).findByText(
+        "Выбран rt-backups-1a2b.json: сервисный аккаунт rt-offsite-backup@rt-backups.iam.gserviceaccount.com.",
+      ),
+    ).toBeVisible();
+    type(
+      "ID папки общего диска",
+      "https://drive.google.com/drive/folders/0AbCdEfGhIjKlMnOpQrStUvWxYz?usp=sharing",
+      form,
+    );
+    submitPassword(form);
+    press(form, "Сохранить и проверить");
+
+    expect(await within(section).findByText("0AbCdEfGhIjKlMnOpQrStUvWxYz")).toBeVisible();
+    expect(within(section).getByText("•••• 1a2b")).toBeVisible();
+    expect(
+      within(section).getByText(/Доступ есть: папка «rt-platform-offsite» на общем диске/),
+    ).toBeVisible();
+    expect(document.body.textContent).not.toContain("SECRET-BODY");
+
+    press(section, "Проверить");
+    await waitFor(() => {
+      expect(within(section).getAllByRole("status").length).toBeGreaterThan(0);
+    });
+  });
+
+  it("директор видит состояние, но не настраивает и не проверяет", async () => {
+    const side = await openPanel("storage", "director@demo.example");
+    const section = (
+      await within(side).findByRole("heading", { name: "Внешняя копия бэкапов (Google Drive)" })
+    ).closest("section") as HTMLElement;
+    expect(await within(section).findByText("Папка общего диска (ID)")).toBeVisible();
+    expect(within(section).queryByRole("button", { name: "Настроить" })).toBeNull();
+    expect(within(section).queryByRole("button", { name: "Проверить" })).toBeNull();
+  });
+});
+
 describe("карточка «Состояние системы»", () => {
   it("компоненты в порядке «сбой, предупреждение, норма», у каждого слово статуса", async () => {
     const side = await openPanel("system");

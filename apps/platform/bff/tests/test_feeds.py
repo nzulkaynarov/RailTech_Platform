@@ -252,7 +252,9 @@ MIXED = custom(
     "Менеджер и бухгалтер",
     {"dashboard.queue": "full", "crm.leads": "full", "eds.payments": "full"},
 )
-CASHIER = custom(41, "Касса", {"dashboard.queue": "full", "eds.payments": "full"})
+# Раздел без прав в CRM. «Счета и оплаты» сюда не годятся: с B-D18-1 раздел даёт CRM зону переписки
+# (`chats:invoiced`), и CRM для него — источник.
+CASHIER = custom(41, "Архив", {"dashboard.queue": "full", "eds.projects": "read"})
 
 
 async def test_created_role_gets_the_lead_queue_by_its_sections(
@@ -490,6 +492,7 @@ async def test_menu_counters_for_supply_have_no_action_badges(
     check(response, "/menu-counters", "get")
     assert [(c["module"], c["section"], c["attention"]) for c in response.json()["items"]] == [
         ("dashboard", "queue", False),
+        ("erp", "stock", False),
         ("dashboard", "projects", False),
         ("eds", "projects", False),
     ]

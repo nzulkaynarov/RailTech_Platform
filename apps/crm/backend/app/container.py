@@ -63,9 +63,11 @@ if TYPE_CHECKING:
     from app.services.leads import LeadService
     from app.services.llm_usage import DbUsageRecorder
     from app.services.mail import MailService
+    from app.services.offsite_connector import OffsiteConnectorService
     from app.services.password_reset import PasswordResetService
     from app.services.platform_roles import PlatformRoleService
     from app.services.portal_invites import PortalInviteService
+    from app.services.request_retry import RequestRetryService
     from app.services.sandbox import SandboxService
     from app.services.setup import SetupService
     from app.services.smtp_connector import SmtpConnectorService
@@ -432,6 +434,15 @@ class Container:
         )
 
     @cached_property
+    def request_retry_service(self) -> "RequestRetryService":
+        """«Повторить отправку в ERP» (B-082)."""
+        from app.services.request_retry import RequestRetryService
+
+        return RequestRetryService(
+            self.session_factory, _enqueue_erp_request, backoffice_mode=self.backoffice_mode
+        )
+
+    @cached_property
     def erp_request_service(self) -> "ErpRequestService":
         """Заявка CRM → ERP задачей после коммита (шов 0.9.0)."""
         from app.integrations.erp_requests import HttpxErpRequestClient
@@ -585,6 +596,24 @@ class Container:
             self.settings_service,
             self.secrets_store,
             self.mail_service,
+            lockout=LockoutPolicy(
+                self.settings.login_max_failures, self.settings.login_lockout_minutes
+            ),
+        )
+
+    @cached_property
+    def offsite_connector(self) -> "OffsiteConnectorService":
+        from app.integrations.gdrive import probe
+        from app.security.reauth import LockoutPolicy
+        from app.services.offsite_connector import OffsiteConnectorService
+
+        return OffsiteConnectorService(
+            self.session_factory,
+            self.settings_service,
+            self.secrets_store,
+            self.storage,
+            self.settings.s3_bucket_offsite_config,
+            probe,
             lockout=LockoutPolicy(
                 self.settings.login_max_failures, self.settings.login_lockout_minutes
             ),

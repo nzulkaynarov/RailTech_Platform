@@ -1,4 +1,9 @@
-"""REST по лидам (SPEC §10.1): список, карточка, переписка, входящие, действия, решения."""
+"""REST по лидам (SPEC §10.1): список, карточка, переписка, входящие, действия, решения.
+
+Реестр (список, очередь, карточка, решения, действия над лидом) — только `leads:*` (раздел
+`crm.leads`). Переписка (сообщения, заметки, ответ, подсказка, заметка) — `leads:*` или `chats:*`
+с объектной проверкой диалога (B-D18-1, `app/api/dialog_access.py`).
+"""
 
 from datetime import UTC, datetime
 from typing import Annotated
@@ -7,6 +12,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import ContainerDep, require
+from app.api.dialog_access import dialog
 from app.domain.client_requests import platform_status
 from app.domain.errors import NotFoundError
 from app.models.clients import Client
@@ -48,9 +54,11 @@ router = APIRouter(prefix="/api/v1", tags=["leads"])
 Reader = Annotated[Principal, Depends(require("leads", "read"))]
 Taker = Annotated[Principal, Depends(require("leads", "take"))]
 Worker = Annotated[Principal, Depends(require("leads", "work"))]
-Replier = Annotated[Principal, Depends(require("leads", "reply"))]
-Assister = Annotated[Principal, Depends(require("leads", "assist"))]
-Noter = Annotated[Principal, Depends(require("leads", "note"))]
+# Переписка диалога: реестр или участник/зона (B-D18-1).
+DialogReader = Annotated[Principal, Depends(dialog("read"))]
+DialogReplier = Annotated[Principal, Depends(dialog("reply"))]
+DialogAssister = Annotated[Principal, Depends(dialog("assist"))]
+DialogNoter = Annotated[Principal, Depends(dialog("note"))]
 
 
 def escalation_out(e: Escalation | None) -> EscalationOut | None:
@@ -163,9 +171,25 @@ async def list_leads(
     overdue: Annotated[
         bool | None, Query(description="Просроченные: открытая передача с истёкшим SLA ответа")
     ] = None,
+    source: Annotated[
+        str | None,
+        Query(
+            pattern=r"^[a-z][a-z_]{0,15}(,[a-z][a-z_]{0,15})*$",
+            description="Канал лида (источник), через запятую",
+        ),
+    ] = None,
 ) -> LeadPage:
     flt = crm.LeadFilter(
-        stage, owner, min_score, language, q, created_from, created_to, platform_status, overdue
+        stage,
+        owner,
+        min_score,
+        language,
+        q,
+        created_from,
+        created_to,
+        platform_status,
+        overdue,
+        source,
     )
     async with container.session_factory() as session:
         rows, total = await crm.list_leads(session, flt, who.user_id, limit, offset, sort)
@@ -275,7 +299,7 @@ async def get_lead(lead_id: int, _: Reader, container: ContainerDep) -> LeadDeta
 @router.get("/leads/{lead_id}/messages", response_model=list[MessageOut])
 async def lead_messages(
     lead_id: int,
-    _: Reader,
+    _: DialogReader,
     container: ContainerDep,
     limit: Annotated[int, Query(ge=1, le=500)] = 200,
     before_id: int | None = None,
@@ -287,7 +311,9 @@ async def lead_messages(
 
 
 @router.post("/leads/{lead_id}/messages", response_model=ActionResult)
-async def reply(lead_id: int, body: Reply, who: Replier, container: ContainerDep) -> ActionResult:
+async def reply(
+    lead_id: int, body: Reply, who: DialogReplier, container: ContainerDep
+) -> ActionResult:
     message_id = await container.lead_service.reply(
         who, lead_id, body.text, client_message_id=body.client_message_id
     )
@@ -296,7 +322,7 @@ async def reply(lead_id: int, body: Reply, who: Replier, container: ContainerDep
 
 @router.post("/leads/{lead_id}/assist", response_model=AssistOut)
 async def assist(
-    lead_id: int, body: AssistRequest, who: Assister, container: ContainerDep
+    lead_id: int, body: AssistRequest, who: DialogAssister, container: ContainerDep
 ) -> AssistOut:
     """ИИ-помощь менеджеру (Q-019): текст для поля ответа; клиенту ничего не отправляется."""
     result = await container.assist_service.assist(who, lead_id, body.mode, body.text)
@@ -304,7 +330,7 @@ async def assist(
 
 
 @router.get("/leads/{lead_id}/notes", response_model=list[NoteOut])
-async def lead_notes(lead_id: int, _: Reader, container: ContainerDep) -> list[NoteOut]:
+async def lead_notes(lead_id: int, _: DialogReader, container: ContainerDep) -> list[NoteOut]:
     async with container.session_factory() as session:
         await _existing_lead(session, lead_id)
         rows = await crm.notes(session, lead_id)
@@ -389,7 +415,9 @@ async def assign(lead_id: int, body: Assign, who: Worker, container: ContainerDe
 
 
 @router.post("/leads/{lead_id}/actions/note", response_model=ActionResult)
-async def note(lead_id: int, body: NoteCreate, who: Noter, container: ContainerDep) -> ActionResult:
+async def note(
+    lead_id: int, body: NoteCreate, who: DialogNoter, container: ContainerDep
+) -> ActionResult:
     note_id = await container.lead_service.add_note(who, lead_id, body.text, body.visible_to_bot)
     return ActionResult(id=note_id)
 

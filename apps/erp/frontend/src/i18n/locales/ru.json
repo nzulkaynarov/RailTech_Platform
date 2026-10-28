@@ -3184,6 +3184,12 @@
         "title": "Расчёт готов: черновик КП у директора",
         "detail": "{{letter_number}}: все визы собраны, строк — {{lines}}"
       }
+    },
+    "rfq": {
+      "price_requested": {
+        "title": "Запрос цены у поставщика",
+        "detail": "{{supplier}}: {{lines}} поз."
+      }
     }
   },
   "companyTypes": {
@@ -3595,6 +3601,10 @@
     "calc.all_signed": {
       "title": "Все строки расчёта подтверждены",
       "message": "Расчёт по {{letter_number}}: все визы собраны, можно нажать «Расчёт готов»."
+    },
+    "supplier_order.overdue": {
+      "title": "Заказ поставщику просрочен",
+      "message": "Заказ {{number}}: поставщик {{supplier}} не поставил товар к {{expected_date}} (просрочка {{days}} дн.)"
     }
   },
   "approvalParticipation": {

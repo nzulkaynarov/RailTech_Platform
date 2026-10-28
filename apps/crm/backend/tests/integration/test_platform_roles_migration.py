@@ -217,7 +217,10 @@ def test_a_migrated_manager_and_accountant_keeps_the_same_rights(
         for act, allowed in actions.items()
         if allowed and not crm_before[res][act]
     }
-    assert extra == {"spend:read"}  # бухгалтер видит «Сводку по компании» (dashboard.summary)
+    # Бухгалтер видит «Сводку по компании» (dashboard.summary); переписка с клиентами — отдельным
+    # правом `chats:*` и зоной «Счета и оплаты» (B-D18-1), не правами реестра лидов.
+    chats = {"chats:read", "chats:reply", "chats:note", "chats:assist", "chats:invoiced"}
+    assert extra == {"spend:read", *chats}
     erp_after = set(derived.erp_permissions)
     # quote.send — менеджер отправляет одобренное КП клиенту (C1-G-4, архитектор 2026-10-26)
     # finance.view — чтение счетов и оплат без права действовать (Q-D2-4-1 п. 2, D2-4)
@@ -268,7 +271,7 @@ def test_director_reads_payments_and_downgrade_returns_full(
         return str(row[0]), int(row[1])
 
     command.upgrade(alembic_config, "head")
-    command.downgrade(alembic_config, "9362ca08ba13")
+    command.downgrade(alembic_config, "aa1221ec032b")
     level, version = director()
     assert level == "full"
 

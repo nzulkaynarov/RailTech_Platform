@@ -47,11 +47,13 @@ ACCOUNTANT = {
 }
 #: Журнал шины EDS (W13-A2): только раздел `admin` уровня `full`.
 BUS = "bus.manage"
+#: Свой файл в EDS (письмо директору к «Создать заявку», D1-2b): раздел `crm.clients` уровня `full`.
+UPLOAD = "files.upload"
 ROLE_EDS: dict[str, set[str]] = {
     "ADMIN": {"memos.create", BUS},
     # D2-4: «Счета и оплаты» у директора — read: оплату подтверждает бухгалтер
     "DIRECTOR": set(EDS_PERMISSIONS) - {BUS, "payments.confirm"},
-    "MANAGER": {"letters.read", "registry.read", "memos.create"},
+    "MANAGER": {"letters.read", "registry.read", "memos.create", UPLOAD},
     "SUPPLY": {"registry.read", "memos.create"},
     "ENGINEER": {"registry.read", "memos.create"},
     "ACCOUNTANT": ACCOUNTANT,
@@ -92,8 +94,13 @@ def test_every_catalog_element_gives_the_expected_eds_codes(
 
 def test_sections_of_crm_and_erp_give_no_eds_codes_except_the_bus_journal() -> None:
     keys = generated.RESOURCE_KEYS
-    other = {k: "full" for k in keys if not k.startswith("eds.") and k != "admin"}
+    other = {
+        k: "full" for k in keys if not k.startswith("eds.") and k not in ("admin", "crm.clients")
+    }
     assert eds_permissions_for(other) == ()
+    # D1-2b: «Клиенты» полный — только свой файл (письмо директору), ни писем, ни документов
+    assert eds_permissions_for({"crm.clients": "full"}) == (UPLOAD,)
+    assert eds_permissions_for({"crm.clients": "read"}) == ()
     assert eds_permissions_for({"admin": "full"}) == (BUS,)
     assert eds_permissions_for({"admin": "read"}) == ()
 
@@ -117,7 +124,7 @@ def test_director_exports_the_registry_but_does_not_confirm_payments() -> None:
 
 def test_manager_and_accountant_is_the_union_including_payment_confirmation() -> None:
     codes = eds_permissions_of([make_grant("MANAGER"), make_grant("ACCOUNTANT")])
-    assert set(codes) == ACCOUNTANT
+    assert set(codes) == ACCOUNTANT | {UPLOAD}
     assert "payments.confirm" in codes
     assert "payments.confirm" not in eds_permissions_of([make_grant("MANAGER")])
 

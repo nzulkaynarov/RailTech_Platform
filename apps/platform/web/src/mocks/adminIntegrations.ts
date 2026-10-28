@@ -13,6 +13,7 @@ import type {
   IntegrationNote,
   IntegrationStatus,
   IntegrationsOverview,
+  OffsiteBackupIn,
   PasswordConfirm,
   ProviderKeyIn,
   ServiceState,
@@ -26,6 +27,7 @@ import {
   type IntegrationsMock,
   aiSpendReport,
   readIntegrations,
+  seedOffsite,
   spendReport,
   writeIntegrations,
 } from "./fixtures/integrations";
@@ -548,6 +550,82 @@ export const adminIntegrationsHandlers = [
       s.published = { ok: true, at: MOCK_NOW, changed: 3, error: null, retry_after: null };
     });
     return HttpResponse.json({ profile: state.profile, published: state.published });
+  }),
+
+  // --- Внешняя копия бэкапов (OPS-GDRIVE-2): ключ только на запись — в состоянии мока его нет вовсе
+  http.get(
+    "*/admin/integrations/offsite",
+    () => guard("read") ?? HttpResponse.json(readIntegrations().offsite ?? seedOffsite()),
+  ),
+  http.put("*/admin/integrations/offsite", async ({ request }) => {
+    const denied = guard("full");
+    if (denied) return denied;
+    const body = (await request.json()) as OffsiteBackupIn;
+    const wrong = wrongPassword(body.password);
+    if (wrong) return wrong;
+    const match = /\/folders\/([A-Za-z0-9_-]{10,128})/.exec(body.folder_id);
+    const folder = match?.[1] ?? body.folder_id.trim();
+    if (!/^[A-Za-z0-9_-]{10,128}$/.test(folder))
+      return invalid("folder_id", "offsite_folder_invalid");
+    const current = readIntegrations().offsite ?? seedOffsite();
+    let email = current.client_email;
+    let suffix = current.key_suffix;
+    if (body.key_json) {
+      let key: Record<string, unknown> | null;
+      try {
+        key = JSON.parse(body.key_json) as Record<string, unknown>;
+      } catch {
+        key = null;
+      }
+      const keyId = key?.["private_key_id"];
+      if (key?.["type"] !== "service_account" || typeof key["client_email"] !== "string")
+        return invalid("key_json", "offsite_key_invalid");
+      email = key["client_email"];
+      suffix = typeof keyId === "string" ? last4(keyId) : "****";
+    } else if (suffix === null) {
+      return invalid("key_json", "offsite_key_invalid");
+    }
+    const state = update((s) => {
+      s.offsite = {
+        configured: true,
+        folder_id: folder,
+        client_email: email,
+        key_suffix: suffix,
+        key_updated_at: body.key_json ? MOCK_NOW : current.key_updated_at,
+        delivered_at: MOCK_NOW,
+        last_check: {
+          ok: true,
+          reason: "ok",
+          folder_name: "rt-platform-offsite",
+          checked_at: MOCK_NOW,
+        },
+        secrets_enabled: true,
+      };
+      const row = findService(s, "offsite_backup");
+      if (row)
+        settleOk(
+          row,
+          MOCK_NOW,
+          "Копия на Google Drive обновлена 0 ч назад: 1,2 ГБ, базовых копий 1",
+        );
+    });
+    return HttpResponse.json(state.offsite);
+  }),
+  http.post("*/admin/integrations/offsite/check", () => {
+    const denied = guard("full");
+    if (denied) return denied;
+    const offsite = readIntegrations().offsite ?? seedOffsite();
+    if (!offsite.configured) {
+      return failure(409, "NOT_CONFIGURED", "Подключение ещё не настроено.", "crm", {
+        reason: "offsite_not_configured",
+      });
+    }
+    return HttpResponse.json({
+      ok: true,
+      reason: "ok",
+      folder_name: "rt-platform-offsite",
+      checked_at: MOCK_NOW,
+    });
   }),
 
   // --- Почта

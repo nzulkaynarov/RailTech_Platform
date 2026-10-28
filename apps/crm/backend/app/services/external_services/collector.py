@@ -25,6 +25,7 @@ from app.domain import external_erp_handoff as erp_handoff_rules
 from app.domain import external_erp_reported as erp_reported_rules
 from app.domain import external_erp_sync as erp_sync_rules
 from app.domain import external_infra as infra_rules
+from app.domain import external_offsite as offsite_rules
 from app.domain import external_status as rules
 from app.domain import external_vendor as vendor_rules
 from app.domain import system_status
@@ -47,6 +48,7 @@ from app.services import backups as backup_rules
 from app.services import identity_catalog
 from app.services.ai_spend import SpendLogSource
 from app.services.backups import BackupReader
+from app.services.external_services import offsite as offsite_reader
 from app.services.external_services import wal as wal_reader
 from app.services.external_services.providers import providers as alias_providers
 from app.services.mail import MailService
@@ -188,6 +190,7 @@ class _Run:
             "ai_replies": self.ai_replies,
             "erp_events": self.erp_events,
             "wal_archive": self.wal_archive,
+            "offsite_backup": self.offsite_backup,
             "redis_broker": self.redis_broker,
             "redis_cache": self.redis_cache,
             "bus_dlq": self.bus_dlq,
@@ -410,6 +413,11 @@ class _Run:
             refresh_base=self.heavy,
         )
         return _with_metrics(infra_rules.wal_archive(facts, self.now), carry)
+
+    async def offsite_backup(self) -> CheckResult:
+        """Внешняя копия на Google Drive (OPS-GDRIVE): отметка сервиса offsite-backup, без Drive."""
+        facts = await offsite_reader.read(self.d.storage, self.d.config.s3_bucket_offsite)
+        return offsite_rules.offsite_backup(facts, self.now)
 
     async def redis_broker(self) -> CheckResult:
         return await self._redis(infra_rules.REDIS_BROKER, self.d.config.redis_broker_url)

@@ -113,7 +113,12 @@
         "external_services:read",
         "external_services:write",
         "tickets:read",
-        "tickets:write"
+        "tickets:write",
+        "chats:read",
+        "chats:reply",
+        "chats:note",
+        "chats:assist",
+        "chats:invoiced"
       ]
     },
     "edsPermission": {
@@ -127,7 +132,8 @@
         "registry.read",
         "registry.export",
         "payments.confirm",
-        "bus.manage"
+        "bus.manage",
+        "files.upload"
       ],
       "description": "Код права EDS v1 (docs/runbooks/wave12-eds-c1.md §2.2; EdsPermission в openapi/eds.yaml)"
     },

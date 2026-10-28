@@ -1,7 +1,8 @@
 """Сотрудники для выбора (SPEC §10.1; D1-8, B-007): кому передать лида, исполнители раздела.
 
-`GET /team` без параметров — активные менеджеры и админы (базовая роль CRM): кому передать лида;
-право `leads:read`. `GET /team?section=<раздел>&level=full|read` — активные сотрудники, у которых
+`GET /team` без параметров — активные менеджеры и админы (базовая роль CRM): кому передать лида и
+имена авторов в ленте переписки; право `leads:read` или `chats:read` (B-D18-1).
+`GET /team?section=<раздел>&level=full|read` — активные сотрудники, у которых
 объединение матриц ролей даёт раздел каталога на уровне (зона резолюции, визы): право — чтение
 сотрудников по каталогу (`users:read`, раздел `admin` не ниже чтения), как у директора. Список
 раскрывает, у кого какой раздел, поэтому открыт тем, кто и так видит сотрудников; ответ — только id,
@@ -13,7 +14,7 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, Depends, Query
 
 from app.api.deps import ContainerDep, PrincipalDep, get_rbac, require
-from app.domain.errors import ValidationFailedError
+from app.domain.errors import ForbiddenError, ValidationFailedError
 from app.schemas.leads import TeamMember
 from app.security.principal import Principal
 from app.security.rbac import Rbac
@@ -25,10 +26,11 @@ SECTION_DESCRIPTION = (
     "Раздел каталога (`erp.calc.goods`, `eds.payments`, …): сотрудники с этим разделом. "
     "Нужен `level`. "
     "Право — чтение сотрудников (`users:read`, раздел `admin` не ниже чтения); без `section` — "
-    "`leads:read`. Раздела нет в каталоге — 422."
+    "`leads:read` или `chats:read`. Раздела нет в каталоге — 422."
 )
 
 _leads_reader = require("leads", "read")
+_chats_reader = require("chats", "read")
 _directory_reader = require("users", "read")
 
 
@@ -37,9 +39,16 @@ async def team_reader(
     rbac: Annotated[Rbac, Depends(get_rbac)],
     section: Annotated[str | None, Query(max_length=64, description=SECTION_DESCRIPTION)] = None,
 ) -> Principal:
-    """Право зависит от режима: список для передачи — `leads:read`, по разделу — `users:read`."""
-    check = _directory_reader if section is not None else _leads_reader
-    return await check(principal, rbac)
+    """Право зависит от режима: список для передачи и имена ленты — `leads:read` или `chats:read`,
+    по разделу — `users:read`."""
+    if section is not None:
+        return await _directory_reader(principal, rbac)
+    try:
+        return await _leads_reader(principal, rbac)
+    except ForbiddenError:
+        if not rbac.allowed(principal.rbac_roles, "chats", "read", principal.platform_role_ids):
+            raise
+    return await _chats_reader(principal, rbac)
 
 
 @router.get("/team", response_model=list[TeamMember])

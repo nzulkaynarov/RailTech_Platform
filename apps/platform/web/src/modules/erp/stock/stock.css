@@ -1,0 +1,103 @@
+/* Расчёт · Склад (D2-2). Таблицы и карточки — классы расчёта (`pf-calc-*`, calc.css); здесь только то, чего там нет. */
+.pf-stock-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+.pf-stock-search {
+  max-width: 320px;
+}
+.pf-stock-select {
+  min-width: 180px;
+}
+.pf-stock-toolbar-action {
+  margin-left: auto;
+}
+.pf-stock-numbers {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+.pf-stock-numbers dt {
+  font-size: 12px;
+  color: #595959;
+}
+.pf-stock-numbers dd {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+.pf-stock-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pf-stock-list > li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+.pf-stock-list--padded {
+  padding: 8px 16px;
+}
+.pf-stock-receive {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pf-stock-receive > li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 120px 140px;
+  align-items: center;
+  gap: 8px;
+}
+.pf-stock-line-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 110px 130px auto;
+  gap: 8px;
+  align-items: start;
+}
+.pf-stock-line-row > .ant-form-item {
+  margin-bottom: 0;
+}
+.pf-stock-product-select {
+  width: 100%;
+}
+.pf-stock-reserve {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+  margin-top: 4px;
+}
+
+@media (max-width: 767px) {
+  .pf-stock-numbers {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .pf-stock-receive > li,
+  .pf-stock-line-row {
+    grid-template-columns: 1fr;
+  }
+  .pf-stock-search {
+    max-width: none;
+    width: 100%;
+  }
+  .pf-stock-toolbar-action {
+    margin-left: 0;
+  }
+}

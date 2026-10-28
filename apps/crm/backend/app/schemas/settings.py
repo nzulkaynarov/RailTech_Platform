@@ -385,6 +385,29 @@ class SmtpSettings(StrictModel):
     from_name: str = Field(default="", max_length=120)
 
 
+class OffsiteCheckSettings(StrictModel):
+    """Итог последней «Проверить» внешней копии (OPS-GDRIVE-2): причина словом-кодом, имя папки."""
+
+    reason: str = Field(max_length=40)
+    folder_name: str | None = Field(default=None, max_length=255)
+    checked_at: datetime
+
+
+class OffsiteGdriveSettings(StrictModel):
+    """Внешняя копия бэкапов на Google Drive (OPS-GDRIVE-2) без секретов.
+
+    Ключ сервисного аккаунта — `integration_secrets` (`offsite_gdrive_key`, только на запись); здесь —
+    что видно админу: ID папки, адрес аккаунта, последние символы ID ключа, когда ключ доставлен
+    сервису копирования и итог последней проверки.
+    """
+
+    folder_id: str = Field(default="", max_length=128)
+    client_email: str = Field(default="", max_length=320)
+    key_suffix: str = Field(default="", max_length=4)
+    delivered_at: datetime | None = None
+    last_check: OffsiteCheckSettings | None = None
+
+
 class ModelKeyMask(StrictModel):
     """Откуда ключ роли модели и его последние 4 символа (ADR-0020, W13-A1).
 
@@ -409,6 +432,7 @@ class IntegrationsSettings(StrictModel):
     # после чего его снимает сама CRM. Пусто — предыдущий секрет задан вручную и живёт, пока админ не снимет.
     erp_previous_secret_until: datetime | None = None
     smtp: SmtpSettings = Field(default_factory=SmtpSettings)
+    offsite_gdrive: OffsiteGdriveSettings = Field(default_factory=OffsiteGdriveSettings)
     # Маска ключей ролей моделей (алиас → источник и последние 4 символа); пишет «Модели ИИ» при смене и сбросе.
     model_keys: dict[str, ModelKeyMask] = Field(default_factory=dict)
 

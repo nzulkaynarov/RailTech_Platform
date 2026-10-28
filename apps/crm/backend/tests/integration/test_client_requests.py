@@ -643,3 +643,26 @@ async def test_request_key_is_unique_in_the_database(
     with pytest.raises(IntegrityError):
         async with sessions() as session, session.begin():
             session.add(Deal(title="Вторая", stage="open", request_key=key))
+
+
+async def test_leads_are_filtered_by_channel(sessions: async_sessionmaker[AsyncSession]) -> None:
+    """Фильтр «канал» экрана «Лиды» (W16-D1-2b): `source` CRM, несколько через запятую."""
+    tg = await _lead(sessions, stage="new", tg_user_id=88301)
+    async with sessions() as session, session.begin():
+        web = Lead(
+            display_name="С сайта", stage="new", owner_mode="bot", language="ru", source="web"
+        )
+        session.add(web)
+        await session.flush()
+        web_id = web.id
+
+    async def ids(source: str) -> set[int]:
+        async with sessions() as session:
+            rows, _ = await crm.list_leads(
+                session, crm.LeadFilter(source=source), 0, 100, 0, "created"
+            )
+        return {r.id for r in rows}
+
+    assert await ids("web") == {web_id}
+    assert await ids("telegram") == {tg}
+    assert await ids("telegram,web") == {tg, web_id}

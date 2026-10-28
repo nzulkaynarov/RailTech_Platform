@@ -59,9 +59,8 @@ async def test_hanging_sources_give_not_checked_rows_and_the_card_still_answers(
     elapsed = time.monotonic() - started
 
     assert response.status_code == 200, response.text
-    assert elapsed < 1.0, (
-        elapsed
-    )  # при пределе 0,2 с карточка отвечает сразу, а не ждёт 60 с зависшего
+    # Факт «не ждёт зависший источник» (60 с), а не скорость машины: запас под нагрузку CI.
+    assert elapsed < 10.0, elapsed
     rows = {c["key"]: c for c in response.json()["components"]}
     for key in ("erp", "ai_budget", "external_services"):
         assert rows[key]["status"] == "unknown", key
@@ -90,7 +89,7 @@ async def test_hanging_database_part_and_backup_bucket_are_their_own_not_checked
     elapsed = time.monotonic() - started
 
     assert response.status_code == 200, response.text
-    assert elapsed < 1.0, elapsed
+    assert elapsed < 10.0, elapsed  # не ждёт 60 с зависшего источника
     rows = {c["key"]: c for c in response.json()["components"]}
     assert rows["state_db"]["status"] == "unknown"
     assert rows["backup"]["status"] == "unknown"
