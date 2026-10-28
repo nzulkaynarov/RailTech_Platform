@@ -905,9 +905,10 @@ async def test_search_finds_a_deal_by_its_number(
     "query",
     ["ЗВ-2027-104", "зв-2027-104", "ZV-2027-104", "zv 2027 104", "ZV2027104", "ЗВ-2027-104 "],
 )
-async def test_search_normalizes_latin_and_spacing_of_a_request_number(
+async def test_search_leaves_the_request_number_to_erp(
     web: Web, fb: FeedBackends, query: str
 ) -> None:
+    """Номер ЗВ ищет ERP (ERP-09): латиница и пробелы — его забота, BFF шлёт запрос как набран."""
     search_data(fb)
     fb.state["documents"] = {"results": []}
     await web.login(["MANAGER"])
@@ -916,35 +917,73 @@ async def test_search_normalizes_latin_and_spacing_of_a_request_number(
 
     numbers = [h["object"]["number"] for g in response.json()["groups"] for h in g["items"]]
     assert "ЗВ-2027-104" in numbers
+    sent = fb.query(fb.erp["deals"])
+    assert sent["search"] == query.strip()
+    assert sent["page_size"] == "10"
+    assert fb.calls(fb.erp["deals"]) == 1  # не перебор новейших сделок: один запрос с `search`
 
 
-async def test_search_finds_a_number_without_leading_zeros(web: Web, fb: FeedBackends) -> None:
-    search_data(fb)
+async def test_search_shows_the_number_erp_gave_and_d_id_when_it_gave_none(
+    web: Web, fb: FeedBackends, check: ContractChecker
+) -> None:
     fb.state["deals"]["results"] = [
-        deal(1, "SOURCING", title="Стрелочные приводы", created="2026-03-01T00:00:00Z"),
-        deal(104, "SOURCING", title="Рельсовые скрепления", created="2026-03-01T00:00:00Z"),
+        # номер выдал ERP: BFF его не составляет из года и id (год создания другой, id другой)
+        deal(
+            1,
+            "SOURCING",
+            title="Стрелочные приводы",
+            created="2026-03-01T00:00:00Z",
+            number="ЗВ-2030-777",
+        ),
+        deal(
+            104,
+            "SOURCING",
+            title="Стрелочные переводы",
+            created="2026-03-01T00:00:00Z",
+            number=None,
+        ),
         deal(7, "CLOSED_WON", title="Шпалы", created="2026-03-01T00:00:00Z"),
     ]
-    fb.state["documents"] = {"results": []}
-    fb.state["leads"] = {"items": [], "total": 0}
-    fb.state["clients"] = []
     await web.login(["MANAGER", "DIRECTOR"])
 
     async def found(query: str) -> list[str]:
         response = await web.client.get("/api/v1/search", params={"q": query})
+        check(response, "/search", "get")
         return [h["object"]["number"] for g in response.json()["groups"] for h in g["items"]]
 
-    # ЗВ-2026-1 — это ЗВ-2026-001 (номер составляется с тремя знаками), а не любой номер на «1…»
-    assert "ЗВ-2026-001" in await found("ЗВ-2026-1")
-    assert "ЗВ-2026-001" in await found("zv-2026-1")
-    # неполный номер по-прежнему ищется как начало: «зв-2026-10» находит ЗВ-2026-104
-    assert await found("зв-2026-10") == ["ЗВ-2026-104"]
-    # латинский «PR» — проект (с шага «Договор»)
-    assert await found("PR-2026-7") == ["ПР-2026-007"]
-    # кириллический префикс + число как набрано: «ZV-2026-10» находит только ЗВ-2026-104
-    assert await found("ZV-2026-10") == ["ЗВ-2026-104"]
-    # id из номера BFF не разбирает: запись без сделки с таким номером ничего не находит
-    assert await found("ZV-2026-999") == []
+    assert await found("Стрелочные") == ["ЗВ-2030-777", "D-104"]
+    assert await found("PR-2026-007") == ["ПР-2026-007"]  # латинский PR — проект (шаг «Договор»)
+    assert await found("зв-2030-777") == ["ЗВ-2030-777"]
+    assert await found("ZV-2026-999") == []  # id из номера BFF не разбирает
+
+
+async def test_search_gets_the_deal_of_a_document_by_id_when_search_did_not_find_it(
+    web: Web, fb: FeedBackends
+) -> None:
+    """Проект документа (СЧ) не совпал с запросом: его сделку BFF берёт по id, а не из перебора."""
+    search_data(fb)
+    await web.login(["DIRECTOR"])
+
+    response = await web.client.get("/api/v1/search", params={"q": "СЧ-2026/142"})
+
+    hits = {
+        h["object"]["number"]: h["object"] for g in response.json()["groups"] for h in g["items"]
+    }
+    assert hits["СЧ-2026/142"]["path"].startswith("/eds/projects/")  # вкладка «Документы» проекта
+    assert fb.calls(fb.deal_by_id) >= 1
+    assert fb.calls(fb.erp["deals"]) == 1  # и один поиск, без перебора 100 сделок
+    assert fb.query(fb.erp["deals"])["page_size"] == "10"
+
+
+async def test_role_without_deal_sections_does_not_search_deals(web: Web, fb: FeedBackends) -> None:
+    search_data(fb)
+    await web.login(
+        [custom(93, "Только счета", {"dashboard.queue": "full", "eds.payments": "read"})]
+    )
+
+    await web.client.get("/api/v1/search", params={"q": "Демо"})
+
+    assert fb.calls(fb.erp["deals"]) == 0
 
 
 @pytest.mark.parametrize(
