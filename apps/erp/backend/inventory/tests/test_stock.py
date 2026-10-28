@@ -139,6 +139,71 @@ def test_a_lost_deal_does_not_hold_stock(world):
     assert _row(world, world["rail"])["free"] == 5, "проигранная заявка резерв не держит"
 
 
+def _lose(deal):
+    from crm.services.deals import transition_deal_stage
+
+    moved, error = transition_deal_stage(deal, "CLOSED_LOST", validate_fsm=False, lost_reason="цена")
+    assert error is None, error
+    return moved
+
+
+def test_losing_a_deal_releases_its_reservations_and_blocks_shipping(world):
+    """Проигранная заявка резерв не держит НА САМОМ ДЕЛЕ: единицы возвращаются в свободный остаток, другая заявка их
+    резервирует, а отгрузка по проигранной невозможна (иначе товар ушёл бы по резерву, на который уже претендует B)."""
+    _adjust(world, world["rail"], 5)
+    deal_a, _qa, (item_a,) = make_deal(world, [(world["rail"], 5)], approved=True, signed=True)
+    deal_b, _qb, (item_b,) = make_deal(world, [(world["rail"], 5)])
+    reservation = _reserve(world, deal_a, item_a, 5).json()
+    assert _reserve(world, deal_b, item_b, 5).status_code == 409, "пока A жива, B не резервирует"
+
+    _lose(deal_a)
+
+    assert Reservation.objects.get(pk=reservation["id"]).status == ReservationStatus.RELEASED
+    assert _reserve(world, deal_b, item_b, 5).status_code == 201, "единицы вернулись в свободный остаток"
+    refused = api(world["shipper"]).post(
+        f"{STOCK}shipments/",
+        {"deal_id": deal_a.pk, "lines": [{"reservation_id": reservation["id"], "quantity": 5}]},
+        format="json",
+    )
+    assert refused.status_code == 409 and refused.json() == {"detail": "DEAL_LOST"}
+    assert Shipment.objects.count() == 0 and _row(world, world["rail"])["on_hand"] == 5
+
+
+def test_losing_a_deal_keeps_the_shipped_part_as_fact(world):
+    _adjust(world, world["rail"], 10)
+    deal, _q, (item,) = make_deal(world, [(world["rail"], 4)], approved=True, signed=True)
+    reservation = _reserve(world, deal, item, 4).json()
+    shipped = api(world["shipper"]).post(
+        f"{STOCK}shipments/",
+        {"deal_id": deal.pk, "lines": [{"reservation_id": reservation["id"], "quantity": 1}]},
+        format="json",
+    )
+    assert shipped.status_code == 201
+    _lose(deal)
+    kept = Reservation.objects.get(pk=reservation["id"])
+    assert (kept.status, kept.quantity, kept.shipped_quantity) == (ReservationStatus.FULFILLED, 1, 1)
+    assert _row(world, world["rail"])["free"] == 9
+
+
+def test_reopening_a_lost_deal_does_not_bring_the_old_reservation_back(world):
+    """CLOSED_LOST → CALCULATING: снятый резерв сам не воскресает (свободный остаток мог уйти другой заявке), строку
+    можно зарезервировать заново — если хватает свободного."""
+    from crm.services.deals import transition_deal_stage
+
+    _adjust(world, world["rail"], 5)
+    deal_a, _qa, (item_a,) = make_deal(world, [(world["rail"], 5)])
+    deal_b, _qb, (item_b,) = make_deal(world, [(world["rail"], 5)])
+    old = _reserve(world, deal_a, item_a, 5).json()
+    _lose(deal_a)
+    assert _reserve(world, deal_b, item_b, 5).status_code == 201
+    moved, error = transition_deal_stage(deal_a, "CALCULATING", validate_fsm=False)
+    assert error is None and moved is not None
+    assert Reservation.objects.get(pk=old["id"]).status == ReservationStatus.RELEASED
+    assert _row(world, world["rail"])["reserved"] == 5, "считается только резерв B"
+    again = _reserve(world, deal_a, item_a, 5)
+    assert again.status_code == 409 and again.json()["detail"] == "NOT_ENOUGH_STOCK"
+
+
 def test_a_line_without_a_catalog_card_cannot_be_reserved(world):
     from crm.models import CalcLine, QuoteItem
 

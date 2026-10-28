@@ -196,6 +196,9 @@ def _resolve_lines(lines: list[LineInput]) -> list[dict]:
                 raise StockError("LINE_NOT_FOUND", 400)
             if deal_id and item.quote.deal_id != deal_id:
                 raise StockError("LINE_NOT_IN_DEAL", 400)
+            if item.product_id != product.pk:
+                # строка расчёта другого товара: резерв ушёл бы не туда
+                raise StockError("LINE_PRODUCT_MISMATCH", 400)
             deal_id = item.quote.deal_id
         rows.append(
             {
@@ -470,7 +473,7 @@ def _reserve_for_project(line: SupplierOrderLine, quantity: int, user) -> None:
     """Принятое по строке с проектом закрепляется за ним: резерв строки КП растёт на принятое, но не выше количества
     строки КП (лишнее остаётся свободным на складе). Проигранная или закрытая заявка резерв не получает."""
     item = line.quote_item
-    if item is None or line.deal_id is None:
+    if item is None or line.deal_id is None or item.product_id != line.product_id:
         return
     stage = line.deal.stage.code if line.deal.stage_id else ""
     if stage in stock.CLOSED_STAGES:
@@ -511,6 +514,8 @@ def receive(user, order_id: int, lines: list[ReceiptInput], *, supplier_doc: str
         # Объектная проверка: строка приёмки должна принадлежать этому заказу.
         if item.order_line_id not in order_lines:
             raise StockError("LINE_NOT_FOUND", 404)
+        if order_lines[item.order_line_id].product_id is None:
+            raise StockError("PRODUCT_REQUIRED", 409)  # карточку товара удалили — оприходовать некуда
     stock.lock_products(order_lines[i.order_line_id].product_id for i in lines)
     warehouse = stock.default_warehouse()
     receipt = GoodsReceipt.objects.create(

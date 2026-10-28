@@ -108,6 +108,23 @@ def test_line_with_project_link_must_belong_to_the_deal(world):
     assert ok.json()["projects"] == [{"id": deal.pk, "number": deal.number, "client_name": "ООО Пример Логистик"}]
 
 
+def test_line_for_another_product_than_the_calc_line_is_refused(world):
+    """Строка заказа «болт» с привязкой к строке расчёта «стрелочный перевод»: резерв ушёл бы чужому товару."""
+    deal, _q, (item,) = make_deal(world, [(world["rail"], 5)])
+    mismatch = _create(world, [_line(world["bolt"], 5, deal_id=deal.pk, quote_item_id=item.pk)])
+    assert mismatch.status_code == 400 and mismatch.json()["detail"] == "LINE_PRODUCT_MISMATCH"
+    assert SupplierOrder.objects.count() == 0
+
+
+def test_receiving_a_line_whose_product_card_was_deleted_is_refused(world):
+    order_id = _confirmed(world)
+    line = api(world["supply"]).get(f"{STOCK}orders/{order_id}/").json()["lines"][0]["id"]
+    SupplierOrderLine.objects.filter(pk=line).update(product=None)  # карточку удалили (SET_NULL)
+    refused = _act(world, order_id, "receipts", {"lines": [{"order_line_id": line, "quantity": 1}]})
+    assert refused.status_code == 409 and refused.json() == {"detail": "PRODUCT_REQUIRED"}
+    assert not StockBalance.objects.exists()
+
+
 def test_editing_a_line_keeps_its_project_link_unless_it_is_resent(world):
     deal, _q, (item,) = make_deal(world, [(world["rail"], 5)])
     created = _create(world, [_line(world["rail"], 5, deal_id=deal.pk, quote_item_id=item.pk)]).json()

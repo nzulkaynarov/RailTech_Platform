@@ -4,8 +4,9 @@
 
 * Остаток ведётся по ячейкам (`StockBalance`) вместе с журналом движений (`StockMovement`) в одной транзакции. Остаток не
   уходит ниже нуля (`PositiveIntegerField`) и ниже суммы резервов (409 `BELOW_RESERVED`).
-* **Свободный остаток** = остаток − остаток резервов действующих проектов (заявки, проигранные в CLOSED_LOST, резерв не
-  держат — читается при подсчёте, без хуков в стадиях). Резерв строки расчёта один; повторное «Зарезервировать» меняет
+* **Свободный остаток** = остаток − остаток резервов действующих проектов. Заявка ушла в CLOSED_LOST — её резервы
+  снимаются (`release_for_lost_deal`, хук в `transition_deal_stage`), отгрузка по ней — 409 `DEAL_LOST`; подсчёт для
+  верности ещё и не считает резервы проигранных. Резерв строки расчёта один; повторное «Зарезервировать» меняет
   количество (не больше свободного остатка плюс уже удерживаемого этой строкой, 409 `NOT_ENOUGH_STOCK`).
 * Резерв, отгрузка, корректировка и приёмка одного товара идут под блокировкой строки товара (`select_for_update` на
   `catalog.Product`, товары блокируются по возрастанию id): две вкладки не отдадут один остаток двум проектам.
@@ -312,6 +313,29 @@ def release(user, reservation_id: int) -> Reservation:
 
 
 @transaction.atomic
+def release_for_lost_deal(deal) -> int:
+    """Заявка проиграна (CLOSED_LOST): её резервы снимаются, единицы возвращаются в свободный остаток — другая заявка не
+    резервирует те же единицы, а отгрузка по проигранной невозможна. Отгруженная часть остаётся фактом. Вызывает
+    `crm.services.deals.transition_deal_stage` внутри своей транзакции; системное действие, прав не проверяет."""
+    active = Reservation.objects.filter(deal=deal, status=ReservationStatus.ACTIVE)
+    peek = list(active.values_list("product_id", flat=True))
+    if not peek:
+        return 0
+    lock_products(peek)  # порядок «товар → резерв», как у reserve()
+    released = 0
+    for reservation in active.select_for_update():
+        reservation.released_at = timezone.now()
+        if reservation.shipped_quantity:
+            reservation.quantity = reservation.shipped_quantity
+            reservation.status = ReservationStatus.FULFILLED
+        else:
+            reservation.status = ReservationStatus.RELEASED
+        reservation.save(update_fields=["quantity", "status", "released_at"])
+        released += 1
+    return released
+
+
+@transaction.atomic
 def sync_reservation(item) -> None:
     """Строку расчёта поменяли: резерв другого товара снимается, резерв больше нового количества урезается (отгруженное
     остаётся фактом). Вызывает `crm.services.calculation.update_line` внутри своей транзакции."""
@@ -406,18 +430,23 @@ def ship(
         raise StockError("DEAL_NOT_FOUND", 404)
     if not Fulfillment.objects.filter(deal_id=deal_id).exists():
         raise StockError("FULFILLMENT_NOT_READY", 409)
-    reservations = {
-        r.pk: r
-        for r in Reservation.objects.select_for_update(of=("self",))
-        .select_related("product", "quote_item")
-        .filter(pk__in=[line.reservation_id for line in lines])
-    }
+    if deal.stage_id and deal.stage.code == LOST_STAGE:
+        raise StockError("DEAL_LOST", 409)
+    # Порядок блокировок как у reserve()/receive(): «товар → резерв». Сначала резервы читаются без блокировки — только
+    # ради product_id; под блокировкой товаров они перечитываются (состояние могло измениться).
+    wanted = [line.reservation_id for line in lines]
+    peek = {r.pk: r for r in Reservation.objects.filter(pk__in=wanted)}
     for line in lines:
-        reservation = reservations.get(line.reservation_id)
+        reservation = peek.get(line.reservation_id)
         # Объектная проверка: резерв чужой заявки не отгружается через эту.
         if reservation is None or reservation.deal_id != deal_id:
             raise StockError("RESERVATION_NOT_FOUND", 404)
-    lock_products([r.product_id for r in reservations.values()])
+    lock_products([r.product_id for r in peek.values()])
+    locked = Reservation.objects.select_for_update(of=("self",)).select_related("product", "quote_item")
+    reservations = {r.pk: r for r in locked.filter(pk__in=wanted)}
+    for line in lines:
+        if line.reservation_id not in reservations:
+            raise StockError("RESERVATION_NOT_FOUND", 404)
     number, year, seq = next_number("SHP", "ОТГ")
     shipment = Shipment.objects.create(
         number=number,

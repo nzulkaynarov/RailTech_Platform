@@ -12,6 +12,7 @@
 
 from __future__ import annotations
 
+import sys
 import threading
 import time
 from datetime import timedelta
@@ -240,3 +241,49 @@ def test_parallel_order_numbers_are_unique_and_gapless(lab):
     assert all(code == 201 for code, _number in results), results
     year = timezone.localdate().year
     assert sorted(number for _code, number in results) == [f"ЗП-{year}-{n:03d}" for n in range(1, 7)]
+
+
+def test_shipping_and_reserving_the_same_line_do_not_deadlock(lab, monkeypatch):
+    """Порядок блокировок один у всех: «товар → резерв». Раньше ship() брал «резерв → товар», а reserve() — «товар →
+    резерв»: отгрузка и изменение резерва той же строки взаимно блокировались (deadlock Postgres → 500). Окно растянуто
+    паузой отгрузки перед блокировкой товара: без исправления тест краснеет всегда."""
+    from crm.models import Fulfillment
+
+    stock.adjust(lab["supply"], lab["product"].pk, 10, cell="A-01")
+    deal, item = _deal_item(lab, 4)
+    Fulfillment.objects.create(deal=deal)
+    reservation = (
+        api(lab["supply"])
+        .post(f"{STOCK}reservations/", {"deal_id": deal.pk, "quote_item_id": item.pk, "quantity": 4}, format="json")
+        .json()
+    )
+
+    original = stock.lock_products
+
+    def slow_lock(ids):
+        # Отгрузка замешкалась перед блокировкой товара; изменение резерва тем временем берёт товар и ждёт резерв.
+        if sys._getframe(1).f_code.co_name == "ship":  # noqa: SLF001
+            time.sleep(0.7)
+        return original(ids)
+
+    monkeypatch.setattr(stock, "lock_products", slow_lock)
+
+    results = _parallel(
+        [
+            lambda: api(lab["supply"])
+            .post(
+                f"{STOCK}shipments/",
+                {"deal_id": deal.pk, "lines": [{"reservation_id": reservation["id"], "quantity": 2}]},
+                format="json",
+            )
+            .status_code,
+            lambda: api(lab["supply"])
+            .post(
+                f"{STOCK}reservations/",
+                {"deal_id": deal.pk, "quote_item_id": item.pk, "quantity": 3},
+                format="json",
+            )
+            .status_code,
+        ]
+    )
+    assert results == [201, 201], results
