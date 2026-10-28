@@ -3,8 +3,8 @@ import { type Page, expect, test } from "@playwright/test";
 
 import { loginAndWait, settledScreenshot, spaGoto, waitForMotionEnd } from "./support/app";
 
-// «Мои задачи», поиск и колокольчик без тупиков (W15-H2, UX-оценка P0-3, P1-8, P2-9) на MSW: строка без экрана — «Где сделать»
-// с мостом, строка с экраном — «Открыть» (primary у всех срочных), пустые состояния по ролям, частичный результат при отказе
+// «Мои задачи», поиск и колокольчик без тупиков (W15-H2, UX-оценка P0-3, P1-8, P2-9) на MSW: строка с экраном — «Открыть»
+// (primary у всех срочных; строки лидов — экран «Лиды», D1-2b), объект без экрана в поиске и колокольчике — «Где посмотреть», пустые состояния по ролям, частичный результат при отказе
 // CRM или ERP, действия в поиске; axe (WCAG 2.1 AA) на каждом экране; снимки 1440 и 390 для PR (`E2E_SCREENSHOT_DIR=<каталог>`).
 const WIDTHS = [1440, 390] as const;
 
@@ -43,42 +43,31 @@ async function shoot(page: Page, name: string): Promise<void> {
 test.describe("Мои задачи: «Открыть» или «Где сделать»", () => {
   test.skip(({ isMobile }) => isMobile, "ширины задаёт сам сценарий");
 
-  test("менеджер: строки без экрана — «Где сделать» с мостом в старую CRM, ссылки на заглушку нет", async ({
+  // «Лиды» — настоящий экран (D1-2b): строки лидов — «Открыть». «Где сделать» у строк без экрана и его клавиатура —
+  // `src/shared/ui/QueueList.test.tsx`, `src/modules/dashboard/QueuePage.test.tsx` (в моках очереди таких строк больше нет).
+  test("менеджер: строка лида — «Открыть» ведёт в экран «Лиды» с карточкой в боковом окне", async ({
     page,
   }) => {
     await loginAndWait(page, "manager@demo.example");
     const queue = page.getByRole("region", { name: "Что сделать сейчас" });
-    await expect(queue.getByRole("link", { name: /^Открыть:/ })).toHaveCount(0);
-
-    await queue.getByRole("button", { name: "Где сделать: Взять в работу лида L-2041" }).click();
-    const pop = page.getByRole("region", { name: "Где сделать" });
-    await expect(pop.getByText(/Сейчас — в старой CRM: раздел «Лиды»/)).toBeVisible();
-    const open = pop.getByRole("link", { name: /Открыть в старой CRM/ });
-    await expect(open).toHaveAttribute("href", "http://crm.localhost:8088/leads/2041");
-    await expect(open).toHaveAttribute("target", "_blank");
-    expect(await open.getAttribute("rel")).toContain("noopener");
-    await expect(pop.getByText("Когда появится: в ближайшем обновлении.")).toBeVisible();
-    await shoot(page, "queue-where");
+    await expect(queue.getByRole("button", { name: /^Где сделать:/ })).toHaveCount(0);
+    const open = queue.getByRole("link", { name: "Открыть: Взять в работу лида L-2041" });
+    await expect(open).toHaveClass(/ant-btn-primary/);
+    await shoot(page, "queue-open-lead");
+    await open.click();
+    await expect(page).toHaveURL(/\/crm\/leads\?lead=L-2041/);
+    await expect(
+      page.locator("#pf-context-panel").getByRole("heading", { name: "Азиз Демо" }),
+    ).toBeVisible();
   });
 
-  test("с клавиатуры: Enter на «Где сделать» → фокус в секции → Tab доходит до «Открыть в …» → Escape возвращает на кнопку", async ({
-    page,
-  }) => {
+  test("с клавиатуры: Enter на «Открыть» строки лида открывает карточку лида", async ({ page }) => {
     await loginAndWait(page, "manager@demo.example");
-    const button = page.getByRole("button", { name: "Где сделать: Взять в работу лида L-2041" });
-    await button.focus();
+    const open = page.getByRole("link", { name: "Открыть: Взять в работу лида L-2041" });
+    await open.focus();
     await page.keyboard.press("Enter");
-
-    const panel = page.getByRole("region", { name: "Где сделать" });
-    await expect(panel).toBeFocused();
-    const link = panel.getByRole("link", { name: /Открыть в старой CRM/ });
-    await expect(link).toBeVisible(); // адрес старой CRM приходит из BFF — Tab после его появления
-    await page.keyboard.press("Tab");
-    await expect(link).toBeFocused();
-    await page.keyboard.press("Escape");
-    await expect(panel).toHaveCount(0);
-    await expect(button).toBeFocused();
-    await expect(button).toHaveAttribute("aria-expanded", "false");
+    await expect(page).toHaveURL(/\/crm\/leads\?lead=L-2041/);
+    await expect(page.getByRole("heading", { level: 1, name: "Лиды" })).toBeVisible();
   });
 
   test("директор: письмо, КП и служебка (родные экраны) — «Открыть» открывает объект с боковым окном; primary у срочных писем", async ({
@@ -153,17 +142,18 @@ test.describe("Поиск: объект, «Где посмотреть», дей
   }) => {
     await loginAndWait(page, "manager@demo.example");
     const search = page.getByRole("combobox", { name: "Глобальный поиск" });
-    await search.fill("L-2041");
-    await page.getByRole("option", { name: /L-2041/ }).click();
+    // «Лиды» — настоящий экран (D1-2b); без экрана — заявки (раздел «Заявки», старый ERP)
+    await search.fill("ЗВ-2026-104");
+    await page.getByRole("option", { name: /ЗВ-2026-104/ }).click();
     const where = page.getByRole("region", { name: "Где посмотреть" });
-    await expect(where.getByRole("link", { name: /Открыть в старой CRM/ })).toHaveAttribute(
+    await expect(where.getByRole("link", { name: /Открыть в старом ERP/ })).toHaveAttribute(
       "href",
-      "http://crm.localhost:8088/leads/2041",
+      "http://erp.localhost:8088/#crm-deals",
     );
     await expect(page).toHaveURL(/\/dashboard\/queue/);
     await shoot(page, "search-where");
     // Escape внутри подсказки закрывает её и возвращает фокус в поле поиска
-    await where.getByRole("link", { name: /Открыть в старой CRM/ }).focus();
+    await where.getByRole("link", { name: /Открыть в старом ERP/ }).focus();
     await page.keyboard.press("Escape");
     await expect(where).toHaveCount(0);
     await expect(search).toBeFocused();
@@ -179,8 +169,9 @@ test.describe("Поиск: объект, «Где посмотреть», дей
     await expect(action).toContainText("Действие");
     await expect(page.getByRole("group", { name: "Действия" })).toBeVisible();
     await expectNoViolations(page, "search actions");
+    // «Создать заявку» — настоящий экран (D1-2b): действие ведёт к лидам «Просят КП»
     await action.click();
-    await expect(page.getByRole("region", { name: /Где посмотреть/ })).toBeVisible();
+    await expect(page).toHaveURL(/\/crm\/leads\?status=wants_quote$/);
 
     await search.fill("пригласить");
     await expect(page.getByRole("option", { name: /Пригласить сотрудника/ })).toHaveCount(0);
