@@ -11,6 +11,7 @@ from typing import Final, Literal
 from urllib.parse import urlsplit
 
 from app.domain.alerts import QUEUE_LIMIT
+from app.domain.plural import minutes, plural_ru, tasks
 from app.domain.public_urls import is_local_url
 
 Status = Literal["ok", "warn", "fail", "unknown"]
@@ -47,6 +48,12 @@ class Component:
     status: Status
     reason: str
     checked_at: datetime | None
+
+
+def not_checked(key: str, title: str, now: datetime, source: str) -> Component:
+    """Источник не ответил в срок: строка «не проверено», а не пустая карточка (W15b-1)."""
+    reason = f"Не проверено: {source} не ответил в срок — обновите карточку через минуту"
+    return Component(key, title, "unknown", reason, now)
 
 
 @dataclass(frozen=True, slots=True)
@@ -321,11 +328,13 @@ def channel(channel_id: int | None, now: datetime) -> Component:
 def queue(facts: QueueFacts, now: datetime) -> Component:
     problems = []
     if facts.stalled:
-        problems.append(f"{facts.stalled} задач выполняются дольше {STALLED_MINUTES} минут")
+        verb = plural_ru(facts.stalled, "выполняется", "выполняются", "выполняются")
+        problems.append(f"{tasks(facts.stalled)} {verb} дольше {minutes(STALLED_MINUTES)}")
     if facts.waiting > QUEUE_LIMIT:
-        problems.append(f"{facts.waiting} задач в ожидании (порог {QUEUE_LIMIT})")
+        problems.append(f"{tasks(facts.waiting)} в ожидании (порог {QUEUE_LIMIT})")
     if facts.failed_last_hour:
-        problems.append(f"{facts.failed_last_hour} задач упали за последний час")
+        verb = plural_ru(facts.failed_last_hour, "упала", "упали", "упали")
+        problems.append(f"{tasks(facts.failed_last_hour)} {verb} за последний час")
     status: Status = "warn" if problems else "ok"
     reason = "; ".join(problems) if problems else f"в ожидании: {facts.waiting}"
     return Component("queue", "Очередь задач", status, reason, now)

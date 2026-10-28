@@ -236,6 +236,9 @@ def route_of(spec: ServiceSpec, cause: str | None) -> Route:
 
 
 def cause_key_of(spec_key: str, cause: str | None, state: State) -> str:
+    if cause == "checks_stale":
+        # Фоновые проверки не идут (воркер или периодика): одна причина на все устаревшие сервисы.
+        return "worker:checks_stale"
     if state in ("not_checked", "disabled", "ok"):
         return f"{spec_key}:{'disabled' if state == 'disabled' else state}"
     scope = SHARED_SCOPE.get(cause or "", spec_key)
