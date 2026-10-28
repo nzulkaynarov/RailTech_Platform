@@ -1263,6 +1263,50 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/admin/integrations/offsite": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Внешняя копия бэкапов (Google Drive): папка, сервисный аккаунт, ключ — маска
+     * @description CRM `GET /integrations/offsite` (OPS-GDRIVE-2). Ключ сервисного аккаунта не возвращается — только адрес аккаунта и `key_suffix` (последние 4 символа ID ключа); `delivered_at` — когда ключ и папка ушли сервису копирования; `last_check` — итог последней проверки. Состояние самой копии — строка `offsite_backup` в `/admin/integrations/services`.
+     */
+    get: operations["getOffsiteBackup"];
+    /**
+     * Сохранить ключ сервисного аккаунта и папку и сразу проверить у Google
+     * @description CRM `PUT /integrations/offsite`. `key_json` — содержимое JSON-ключа сервисного аккаунта Google (`null` — оставить прежний), `folder_id` — ID папки общего диска или её адрес, `password` — пароль администратора. Ключ хранится зашифрованным и доставляется сервису копирования без захода на сервер. `INTEGRATION_INVALID` (422) — `details.reason`: `offsite_key_invalid` (`details.fields = [key_json]`; `details.problem`: `not_json`, `not_service_account`, `missing_fields`, `foreign_token_uri` — ключ ведёт не на `oauth2.googleapis.com`), `offsite_folder_invalid` (`[folder_id]`); `INTEGRATION_FAILED` (502) — `offsite_delivery_failed` (хранилище недоступно, ничего не сохранено).
+     */
+    put: operations["saveOffsiteBackup"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/integrations/offsite/check": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Проверить ключ и папку у Google
+     * @description CRM `POST /integrations/offsite/check`: токен сервисного аккаунта, папка, общий ли диск, можно ли добавлять файлы. Ничего не пишет на Drive. Итог — 200 с `reason`; `NOT_CONFIGURED` (409) — ключа или папки ещё нет.
+     */
+    post: operations["checkOffsiteBackup"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/admin/integrations/smtp": {
     parameters: {
       query?: never;
@@ -4501,6 +4545,20 @@ export interface components {
        */
       password: string;
     };
+    OffsiteBackupIn: {
+      /**
+       * Format: password
+       * @description Содержимое JSON-ключа сервисного аккаунта Google; `null` — оставить прежний
+       */
+      key_json?: string | null;
+      /** @description ID папки общего диска или её адрес */
+      folder_id: string;
+      /**
+       * Format: password
+       * @description Пароль администратора
+       */
+      password: string;
+    };
     ServiceSwitchIn: {
       /** Format: password */
       password: string;
@@ -4632,6 +4690,39 @@ export interface components {
       id: number | null;
       /** @constant */
       ok: true;
+    };
+    /** @description Внешняя копия бэкапов на Google Drive (OPS-GDRIVE-2). Ключ не возвращается — адрес сервисного аккаунта и последние 4 символа ID ключа. */
+    OffsiteBackup: {
+      configured: boolean;
+      folder_id: string;
+      client_email: string;
+      key_suffix: string | null;
+      /** Format: date-time */
+      key_updated_at: string | null;
+      /**
+       * Format: date-time
+       * @description Когда ключ и папка ушли сервису копирования
+       */
+      delivered_at: string | null;
+      last_check: components["schemas"]["OffsiteCheck"] | null;
+      secrets_enabled: boolean;
+    };
+    /** @description Итог проверки у Google. `reason`: `ok`; исправляет владелец — `key_rejected` (ключ отозван или удалён), `drive_api_disabled` (в проекте не включён Google Drive API), `folder_not_found` (неверный ID или нет доступа), `not_folder`, `not_shared_drive` (папка в «Моём диске»), `read_only` (роль ниже «Менеджера контента»); `network` — Google не ответил (хостинг). */
+    OffsiteCheck: {
+      ok: boolean;
+      /** @enum {string} */
+      reason:
+        | "ok"
+        | "key_rejected"
+        | "drive_api_disabled"
+        | "folder_not_found"
+        | "not_folder"
+        | "not_shared_drive"
+        | "read_only"
+        | "network";
+      folder_name: string | null;
+      /** Format: date-time */
+      checked_at: string;
     };
     /** @description Коннектор «Почта» (один SMTP на ансамбль). Пароль не возвращается — только «задан» и `last4`. */
     SmtpConnector: {
@@ -10374,6 +10465,92 @@ export interface operations {
       422: components["responses"]["IntegrationInvalid"];
       429: components["responses"]["TooManyRequests"];
       502: components["responses"]["IntegrationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getOffsiteBackup: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["OffsiteBackup"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  saveOffsiteBackup: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["OffsiteBackupIn"];
+      };
+    };
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["OffsiteBackup"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      409: components["responses"]["IntegrationConflict"];
+      422: components["responses"]["IntegrationInvalid"];
+      423: components["responses"]["AccountLocked"];
+      429: components["responses"]["TooManyRequests"];
+      502: components["responses"]["IntegrationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  checkOffsiteBackup: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["OffsiteCheck"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      409: components["responses"]["IntegrationConflict"];
+      429: components["responses"]["TooManyRequests"];
       503: components["responses"]["BackendUnavailable"];
     };
   };

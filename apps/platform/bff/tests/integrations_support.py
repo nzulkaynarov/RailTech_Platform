@@ -108,6 +108,26 @@ def bot_profile(**over: Any) -> dict[str, Any]:
     }
 
 
+def offsite_status(**over: Any) -> dict[str, Any]:
+    """CRM `GET /integrations/offsite` (OPS-GDRIVE-2): ключа нет — только адрес и последние 4."""
+    return {
+        "configured": True,
+        "folder_id": "0AbCdEfGhIjKlMnOpQrStUvWxYz",
+        "client_email": "rt-offsite-backup@rt-backups.iam.gserviceaccount.com",
+        "key_suffix": "1a2b",
+        "key_updated_at": EARLIER,
+        "delivered_at": EARLIER,
+        "last_check": {
+            "ok": True,
+            "reason": "ok",
+            "folder_name": "rt-platform-offsite",
+            "checked_at": EARLIER,
+        },
+        "secrets_enabled": True,
+        **over,
+    }
+
+
 def smtp_status(**over: Any) -> dict[str, Any]:
     return {
         "configured": True,
@@ -491,6 +511,14 @@ class CrmIntegrationsFake:
             ("POST", "integrations/telegram/channel/test"): {"ok": True, "id": None},
             ("GET", "integrations/telegram/profile"): bot_profile(),
             ("PUT", "integrations/telegram/profile"): bot_profile(),
+            ("GET", "integrations/offsite"): offsite_status(),
+            ("PUT", "integrations/offsite"): offsite_status(),
+            ("POST", "integrations/offsite/check"): {
+                "ok": False,
+                "reason": "not_shared_drive",
+                "folder_name": "Мой диск",
+                "checked_at": EARLIER,
+            },
             ("GET", "integrations/smtp"): smtp_status(),
             ("PUT", "integrations/smtp"): smtp_status(host="smtp2.demo.example"),
             ("POST", "integrations/smtp/check"): {

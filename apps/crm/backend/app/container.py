@@ -63,6 +63,7 @@ if TYPE_CHECKING:
     from app.services.leads import LeadService
     from app.services.llm_usage import DbUsageRecorder
     from app.services.mail import MailService
+    from app.services.offsite_connector import OffsiteConnectorService
     from app.services.password_reset import PasswordResetService
     from app.services.platform_roles import PlatformRoleService
     from app.services.portal_invites import PortalInviteService
@@ -585,6 +586,24 @@ class Container:
             self.settings_service,
             self.secrets_store,
             self.mail_service,
+            lockout=LockoutPolicy(
+                self.settings.login_max_failures, self.settings.login_lockout_minutes
+            ),
+        )
+
+    @cached_property
+    def offsite_connector(self) -> "OffsiteConnectorService":
+        from app.integrations.gdrive import probe
+        from app.security.reauth import LockoutPolicy
+        from app.services.offsite_connector import OffsiteConnectorService
+
+        return OffsiteConnectorService(
+            self.session_factory,
+            self.settings_service,
+            self.secrets_store,
+            self.storage,
+            self.settings.s3_bucket_offsite_config,
+            probe,
             lockout=LockoutPolicy(
                 self.settings.login_max_failures, self.settings.login_lockout_minutes
             ),
