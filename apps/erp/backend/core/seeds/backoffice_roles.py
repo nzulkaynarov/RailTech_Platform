@@ -228,3 +228,23 @@ def prune_unknown_snapshot_permissions(apps, schema_editor):
         snapshot["permissions"] = _known(permissions)
         mapping.provision_snapshot = snapshot
         mapping.save(update_fields=["provision_snapshot"])
+
+
+# D2-1 (миграция accounts/0011): виза строки расчёта по типу позиции — `quote.visa_goods` и `quote.visa_services`
+# (ADR-0012 п. 6). Системные роли «Расчёт» и «Руководитель» своей компании получают оба кода. Замороженная копия, как
+# таблицы выше: каталог после 0011 = CATALOG_0010 + ADDED_0011, шаблоны = BACKOFFICE_ROLES + ROLE_GRANTS_0004 +
+# ROLE_GRANTS_0011 (сверяет test_backoffice_roles).
+ADDED_0011 = ["quote.visa_goods", "quote.visa_services"]
+ROLE_GRANTS_0011 = {"CALCULATION": ADDED_0011, "HEAD": ADDED_0011}
+CATALOG_0011 = CATALOG_0010 + ADDED_0011
+
+
+def grant_calc_visas(apps, schema_editor):
+    """Догнать системные роли «Расчёт» и «Руководитель» до шаблона с визами расчёта."""
+    CompanyRole = apps.get_model("accounts", "CompanyRole")
+    for code, added in ROLE_GRANTS_0011.items():
+        for role in CompanyRole.objects.filter(code=code, is_system=True):
+            missing = [perm for perm in added if perm not in (role.permissions or [])]
+            if missing:
+                role.permissions = list(role.permissions or []) + missing
+                role.save(update_fields=["permissions"])

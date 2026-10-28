@@ -63,7 +63,7 @@ test.describe("панели", () => {
     await expect(page.getByRole("navigation", { name: "Разделы модуля" })).toBeVisible();
   });
 
-  test("умолчания по приложению А: Клиенты · Лиды — без бокового окна, Расчёт · Мои расчёты — без подменю; у заглушки окно закрыто", async ({
+  test("умолчания по приложению А: Клиенты · Лиды — без бокового окна, Расчёт · Мои расчёты — без подменю, окно открыто; у заглушки окно закрыто", async ({
     page,
   }) => {
     await loginAndWait(page, "all@demo.example");
@@ -76,14 +76,20 @@ test.describe("панели", () => {
     await expect(panel).toHaveCount(0);
     await settledScreenshot(page, "crm-leads");
 
-    await page.goto("/erp/calc");
-    await expect(page.getByRole("heading", { level: 1, name: "Мои расчёты" })).toBeVisible();
+    // «Мои расчёты» — настоящий экран (D2-1): по SPEC-v3 §11 подменю свёрнуто, боковое окно открыто
+    await page.goto("/erp/stock");
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     await expect(menu).toHaveCount(0);
-    // раздел-заглушка: выбирать нечего — боковое окно закрыто (W15-H4); «Панель» открывает его
-    await expect(panel).toHaveCount(0);
-    await page.getByRole("button", { name: "Панель", exact: true }).click();
+    await expect(panel).toBeVisible();
     await expect(page.getByRole("tab", { name: "Задание" })).toBeVisible();
     await settledScreenshot(page, "erp-calc");
+
+    // раздел-заглушка: выбирать нечего — боковое окно закрыто (W15-H4); «Панель» открывает его
+    await page.goto("/erp/stock");
+    await expect(page.getByRole("heading", { level: 1, name: "Склад" })).toBeVisible();
+    await expect(panel).toHaveCount(0);
+    await page.getByRole("button", { name: "Панель", exact: true }).click();
+    await expect(panel).toBeVisible();
 
     await page.goto("/eds/inbox");
     await expect(menu).toBeVisible();
@@ -123,10 +129,10 @@ test.describe("панели", () => {
   test("главное действие без экрана — неактивная кнопка с подсказкой; с экраном — ссылка", async ({
     page,
   }) => {
-    // ERP: «Создать заявку» в расчёте ещё без экрана — неактивна, подсказка «к пилоту»
+    // ERP: главное действие модуля «Создать заявку» ещё без экрана — неактивна, подсказка «к пилоту»
     await loginAndWait(page, "supply@demo.example");
-    await page.goto("/erp/calc");
-    await expect(page.getByRole("heading", { level: 1, name: "Мои расчёты" })).toBeVisible();
+    await page.goto("/erp/stock");
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     // подменю модуля может быть свёрнуто — раскрываем
     const menu = page.getByRole("navigation", { name: "Разделы модуля" });
     if (!(await menu.isVisible())) await page.getByRole("button", { name: "Меню" }).click();

@@ -28,6 +28,22 @@ async function main() {
 }
 
 describe("Dashboard · Моя очередь", () => {
+  it("пока очередь грузится, карточка-заглушка — область status с именем, а не безымянный div (axe, W15-G-4)", async () => {
+    server.use(
+      http.get("*/queue", async () => {
+        await new Promise((resolve) => setTimeout(resolve, 400));
+        return HttpResponse.json({ items: [], sources: { crm: "ok", erp: "ok" } });
+      }),
+    );
+    signInAs("manager@demo.example");
+    renderApp("/dashboard/queue");
+    await main();
+
+    const loading = await screen.findByRole("status", { name: "Загружаем очередь…" });
+    expect(loading).toHaveAttribute("aria-busy", "true");
+    expect(loading.tagName).toBe("DIV");
+  });
+
   it("директор: подзаголовок с числом решений, четыре счётчика и три строки очереди", async () => {
     signInAs("director@demo.example");
     renderApp("/dashboard/queue");

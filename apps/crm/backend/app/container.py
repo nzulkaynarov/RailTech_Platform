@@ -803,7 +803,7 @@ async def _enqueue_extraction(document_id: int) -> object:
     return await extract_document_text.defer_async(document_id=document_id)
 
 
-async def _enqueue_erp_sync(action: str, user_id: int) -> int:
+async def _enqueue_erp_sync(action: str, user_id: int) -> int | None:
     from app.tasks.erp_users import enqueue_erp_sync
 
     return await enqueue_erp_sync(action, user_id)

@@ -80,12 +80,13 @@
 
 | Экран / действие | BFF | ERP | Статус |
 |---|---|---|---|
-| Все запросы | `GET /calc` | `GET /crm/deals/?stage=…` + визы | Δ ERP-02 (визы) |
-| Расчёт по заявке, строки | `GET /calc/{ЗВ}` | `GET /crm/quotes/{id}/`, `GET /crm/quote-items/?quote=`, `GET /catalog/offers/`, `/quote-items/{id}/match-candidates/`, `/quotes/{id}/pricing-assist/` | ✓ (склад — Δ ERP-14) |
-| Изменить строку, добавить, ИИ-разбор | `PUT /calc/{ЗВ}/lines/{id}`, `POST /calc/{ЗВ}/lines`, `POST /calc/{ЗВ}/parse` | `PATCH /crm/quote-items/{id}/`, `/bulk-create/`, `POST /crm/deals/{id}/generate-draft-quote/` | ✓ |
-| **Подтвердить** (виза строки по роли) | `POST /calc/{ЗВ}/lines/{id}/approve` | новое `LineApproval` | Δ ERP-02 |
+| Заявки в расчёте, Мои расчёты | `GET /erp/calc/requests?mine=` | `GET /calc/tasks/?mine=&scope=` (D2-1): заявки с заданием расчёта, три индикатора виз, исполнители резолюции | ✓ (BFF 0.24.0, D2-1) |
+| Расчёт по заявке, строки | `GET /erp/calc/{ЗВ}` (заявку по номеру BFF находит в лёгком справочнике `GET /calc/deals/?number=`, номер — `Deal.number`) | `GET /calc/{deal_id}/`: задание (проекция резолюции), КП расчёта, строки с зоной, складом (своё предложение) и лучшим поставщиком, итоги без НДС, готовность | ✓ (D2-1; ячейка и резерв — Δ ERP-14) |
+| Начать расчёт, добавить, изменить, удалить строку | `POST /erp/calc/{ЗВ}/start`, `POST …/lines`, `PATCH\|DELETE …/lines/{id}` | `POST /calc/{deal_id}/start/`, `/lines/`, `/lines/{item_id}/` — правит держатель права зоны строки (`quote.visa_goods`, `quote.visa_services`), правка снимает визу | ✓ (D2-1) |
+| Сопоставить с каталогом, ИИ-разбор (предложение) | `GET /erp/calc/catalog?q=`, `POST /erp/calc/{ЗВ}/parse` + `GET /erp/calc-jobs/{job}` | `GET /calc/catalog/`, `POST /calc/{deal_id}/parse/` (очередь ИИ, без записи) + `GET /sourcing/ai-status/{task}/` | ✓ (D2-1) |
+| **Подтвердить** (виза строки по зоне) | `POST /erp/calc/{ЗВ}/lines/{id}/visa` | `POST /calc/{deal_id}/lines/{item_id}/visa/`, `CalcLine` (виза: кто, зона, время) | ✓ (D2-1) |
 | Запросить цену у поставщика | `POST /calc/{ЗВ}/lines/{id}/rfq` | служебка/задача снабженцу; заказы поставщикам — бывшая M4 | Δ ERP-14 |
-| **Расчёт готов → черновик КП директору** | `POST /calc/{ЗВ}/complete` | `POST /crm/quotes/{id}/submit-for-review/` при всех визах | ✓ + проверка виз Δ ERP-02 |
+| **Расчёт готов → черновик КП директору** | `POST /erp/calc/{ЗВ}/ready` | `POST /calc/{deal_id}/ready/`: только со всеми визами строк (409 `VISAS_MISSING`), затем гейты отправки и `quote.ready_for_approval` в EDS (визы — подписи строк) | ✓ (D2-1) |
 | Склад | `GET /stock` | остатки, резервы, заказы поставщикам, приёмка — **нет** (`supply`, `inventory` — заглушки) | Δ ERP-14 (бывшая M4) |
 | Справочники | `GET /catalog/*` | `GET /catalog/products/`, `/catalog/offers/`, `/master-data/*`; бригады — новое | ✓ / Δ ERP-15 |
 | Документация (ТЗ, чертежи) | `GET /files?scope=` | `GET /crm/generated-documents/`; файлы номенклатуры — новое | Δ ERP-15 |
@@ -225,7 +226,6 @@ CRM считает статус сама — поле `platform_status` лида
 
 | ID | Что | Фаза |
 |---|---|---|
-| ERP-02 | `LineApproval` (строка, роль, сотрудник, время, заметка); правило «расчёт готов только при всех визах» в `submit_for_review` для процесса v3 | P2 |
 | ERP-03 | статусы и журнал договора (Проект → Согласован клиентом → Выставлен у оператора → Подписан (скан) / Отклонён), скан — файл; «подпись кликом» для процесса v3 выключена; автосчёт на предоплату по подписи договора | P3 |
 | ERP-04 | `PaymentConfirmation` (файл, источник CABINET/BOT/MANUAL, сумма, дата, кто подтвердил); связь с `record-payment`; «запросить платёжку» — событие для бота и письмо | P3 |
 | ERP-06 | задача по расписанию: `OVERDUE` по сроку, событие `invoice.overdue`; включить `crm.send_payment_reminders` в расписание | P3 |
