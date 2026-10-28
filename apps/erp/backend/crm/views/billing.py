@@ -21,8 +21,8 @@ from crm.serializers import (
     InvoiceSerializer,
     PaymentSerializer,
 )
-from crm.views.billing_filters import ActFilter, ContractFilter, FulfillmentFilter, InvoiceFilter, PaymentFilter
 from crm.serializers.projects import ContractFlowSerializer
+from crm.views.billing_filters import ActFilter, ContractFilter, FulfillmentFilter, InvoiceFilter, PaymentFilter
 from crm.views.billing_flow import ActFlowMixin, ContractFlowMixin
 from crm.views.request_body import invalid_body_response, is_object_body
 
