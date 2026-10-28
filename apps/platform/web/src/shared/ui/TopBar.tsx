@@ -36,7 +36,13 @@ export interface TopBarProps {
   bellOpen: boolean;
   onBellOpenChange: (open: boolean) => void;
   /** Кнопка «?» рядом с колокольчиком (W15-H7): открывает окно помощи; нет — кнопки нет */
-  help?: { label: string; open: boolean; onClick: () => void };
+  help?: {
+    label: string;
+    open: boolean;
+    onClick: () => void;
+    /** Отметка «Новое» (W-REL): есть запись «Что нового», которую сотрудник не открывал; слово — в `label` */
+    fresh?: boolean;
+  };
   /** Нет бокового окна у раздела (403, 404) — кнопка «Панель» не показывается */
   hasPanel: boolean;
   panelOpen: boolean;
@@ -157,10 +163,12 @@ export function TopBar({
           aria-haspopup="dialog"
           aria-expanded={help.open}
           data-tour="help"
+          data-fresh={help.fresh ? "true" : undefined}
           onClick={help.onClick}
-          style={{ width: 32, height: 32, flex: "0 0 auto" }}
+          style={{ position: "relative", width: 32, height: 32, flex: "0 0 auto" }}
         >
           <HelpIcon />
+          {help.fresh ? <span className="pf-help-fresh" aria-hidden="true" /> : null}
         </button>
       ) : null}
       <Popover

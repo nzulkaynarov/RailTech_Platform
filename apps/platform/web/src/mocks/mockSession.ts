@@ -1,3 +1,4 @@
+import { LATEST_WHATS_NEW } from "../features/help/changelog";
 import type { Language, Me, Session } from "../shared/api/generated/model";
 import { effectiveRoleIds } from "./fixtures/employees";
 import { ROLE_ID, computeAccess, readRoles, roleRefOf, rolesOf } from "./fixtures/roles";
@@ -18,6 +19,9 @@ interface MockSession {
   mustChangePassword: boolean;
   /** Приветствие и тур первого входа закрыты (W15-H7); без поля — закрыты */
   onboardingDone?: boolean;
+  /** «Что нового» (W-REL): до какой записи показано окно и открыт раздел; `null` — ничего; без поля — последняя запись */
+  whatsNewShown?: string | null;
+  whatsNewRead?: string | null;
 }
 
 /** Сценарий «первый вход»: `localStorage["rt-pf-mock-onboarding"] = "pending"` до входа — приветствие ещё не показано. */
@@ -25,6 +29,20 @@ const ONBOARDING_KEY = "rt-pf-mock-onboarding";
 function onboardingPending(): boolean {
   try {
     return window.localStorage.getItem(ONBOARDING_KEY) === "pending";
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Сценарий «вышло обновление»: `localStorage["rt-pf-mock-whats-new"] = "pending"` до входа — сотрудник ещё не видел последнюю
+ * запись «Что нового» (окно «Платформа обновлена» и отметка «Новое» у «?»). Без ключа — всё видел, чтобы окно не мешало
+ * остальным сценариям.
+ */
+const WHATS_NEW_KEY = "rt-pf-mock-whats-new";
+function whatsNewPending(): boolean {
+  try {
+    return window.localStorage.getItem(WHATS_NEW_KEY) === "pending";
   } catch {
     return false;
   }
@@ -58,6 +76,7 @@ export function startSession(user: DemoUser): MockSession {
     language: user.language,
     mustChangePassword: user.mustChangePassword ?? false,
     onboardingDone: !onboardingPending(),
+    ...(whatsNewPending() ? { whatsNewShown: null, whatsNewRead: null } : {}),
   };
   writeSession(session);
   setCookie("rt_pf_csrf", "mock-csrf-token-0123456789abcdef");
@@ -116,6 +135,10 @@ export function buildMe(session: MockSession): Me | undefined {
     // R-1: роли Платформы дают доступ к CRM и ERP.
     access: { crm: true, erp: all.length > 0 },
     onboarding_done: session.onboardingDone ?? true,
+    whats_new_shown:
+      session.whatsNewShown === undefined ? (LATEST_WHATS_NEW ?? null) : session.whatsNewShown,
+    whats_new_read:
+      session.whatsNewRead === undefined ? (LATEST_WHATS_NEW ?? null) : session.whatsNewRead,
   };
 }
 

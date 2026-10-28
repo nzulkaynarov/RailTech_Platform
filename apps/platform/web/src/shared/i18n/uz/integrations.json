@@ -493,7 +493,8 @@
   },
   "system": {
     "overall": "Natija:",
-    "checkedAt": "Tekshirildi: {{date}}"
+    "checkedAt": "Tekshirildi: {{date}}",
+    "versions": "Versiya va xizmatlar"
   },
   "errors": {
     "DEFAULT": "Amalni bajarib bo‘lmadi. Keyinroq urinib ko‘ring.",

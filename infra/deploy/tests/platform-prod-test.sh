@@ -28,6 +28,19 @@ RT_IMAGE_TAG=platform-test docker compose -f "$root/infra/compose/base.yml" -f "
   --env-file "$tmp/env.prod" config --format json > "$tmp/prod.json"
 q() { jq -r "$@" "$tmp/prod.json"; }
 [[ "$(q '.services["platform-bff"].image')" == ghcr.io/nzulkaynarov/rt-platform-bff:platform-test ]] || fail "platform-bff: образ не rt-platform-bff по RT_IMAGE_TAG"
+# W-REL: версия «О системе» — тег выкладки и её дата (RT_RELEASE_DATE не задана — пусто, BFF берёт дату сборки).
+[[ "$(q '.services["platform-bff"].environment.PLATFORM_RELEASE')" == platform-test ]] || fail "platform-bff: PLATFORM_RELEASE не равен RT_IMAGE_TAG"
+[[ "$(q '.services["platform-bff"].environment.PLATFORM_RELEASE_DATE')" == "" ]] || fail "platform-bff: PLATFORM_RELEASE_DATE без RT_RELEASE_DATE не пустая"
+# release_date (lib.sh): дата пишется в каталог релиза один раз, повтор деплоя и откат её не меняют.
+(
+  # shellcheck source=infra/deploy/lib.sh
+  source "$root/infra/deploy/lib.sh"
+  mkdir -p "$tmp/rel"
+  first="$(release_date "$tmp/rel")"
+  [[ "$first" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]] || fail "release_date: не дата ($first)"
+  echo 2026-01-02 > "$tmp/rel/.released_at"
+  [[ "$(release_date "$tmp/rel")" == 2026-01-02 ]] || fail "release_date: дата релиза перезаписана"
+)
 [[ "$(q '.services["platform-web"].image')" == ghcr.io/nzulkaynarov/rt-platform-web:platform-test ]] || fail "platform-web: образ не rt-platform-web по RT_IMAGE_TAG"
 for svc in platform-bff platform-web; do
   [[ "$(q --arg s "$svc" '.services[$s].build // "none"')" == none ]] || fail "$svc: в проде не должно быть сборки"
