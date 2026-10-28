@@ -89,7 +89,7 @@ describe("мост в старые экраны: карта разделов-з�
 
 describe("адрес кнопки", () => {
   const leads = bridgeEntry("crm", "leads")?.legacy;
-  const deals = bridgeEntry("erp", "requests")?.legacy;
+  const deals = bridgeEntry("crm", "requests")?.legacy;
 
   it("старая CRM — путь к адресу, ERP — хэш-маршрут после слэша", () => {
     expect(leads && legacyHref(leads, "http://crm.localhost:8088")).toBe(
@@ -152,7 +152,8 @@ describe("исполнимость адреса: есть ли экран в П�
     ["/eds/documents?doc=5f0c7a52-3b1e-4c53-9d0a-1c6a1f0e2b77", true],
     ["/eds/new?type=memo", true],
     ["/eds/payments/%D0%A1%D0%A7-2026%2F142", false],
-    ["/erp/calc", false],
+    ["/erp/calc", true],
+    ["/erp/stock", false],
     ["/nowhere/at-all", true],
   ])("%s → %s", (path, expected) => {
     expect(isActionable(path)).toBe(expected);

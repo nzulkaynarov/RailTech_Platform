@@ -18,6 +18,7 @@ from app.api.v1 import (
     auth,
     bus,
     client_contacts,
+    client_requests,
     clients,
     deals,
     export,
@@ -40,6 +41,7 @@ from app.api.v1 import (
     stream,
     system,
     system_status,
+    team,
     users,
 )
 from app.api.v1 import settings as settings_api
@@ -97,13 +99,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app = FastAPI(
         title="RailTech CRM API",
-        # 0.10.0 (D1-9): приглашение в кабинет и подтверждение запроса в карточках лида и клиента;
-        # 0.8.0 (W15-H6): профиль, фото, Telegram сам, замещение, «Забыли пароль?»; 0.6.0 — W15-H3.
-        # 0.9.0 (D1-1): записка передачи в /inbox, client_message_id ответа, reply_in_progress,
-        # delivery_unknown/unconfirmed, вложение сообщения.
-        # 0.11.0 (W15-H7): обращения сотрудников /me/tickets и /staff-tickets, колокольчик
-        # /me/notifications, флаг тура users.onboarding_done.
-        version="0.11.0",
+        # D1-8: GET /team?section=&level=, MessageOut без storage_key — добавляющие, версия прежняя.
+        # 0.13.0 (W15-H8b): WAL, Redis и шина в «Состоянии»; смена пароля выдаёт сессии
+        # новую пару (POST /auth/change-password — 200 с токенами, было 204).
+        # 0.12.0 (W16-D1-2): «Создать заявку» из лида и клиента, `platform_status` и фильтры
+        # лидов (CRM-02, CRM-03); 0.11.0 (W15-H7): обращения /me/tickets и /staff-tickets,
+        # колокольчик /me/notifications, флаг тура users.onboarding_done; 0.10.0 (D1-9):
+        # приглашение в кабинет и подтверждение запроса; 0.9.0 (D1-1): записка передачи,
+        # ответы; 0.8.0 (W15-H6): профиль; 0.6.0 — W15-H3.
+        version="0.13.0",
         lifespan=lifespan,
         # operationId = имя функции роута → читаемые имена в клиенте orval.
         generate_unique_id_function=lambda route: route.name,
@@ -135,12 +139,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         lead_intake,
         leads,
         lead_attachments,
+        team,
         stream,
         kb,
         settings_api,
         admin,
         clients,
         client_contacts,
+        client_requests,
         deals,
         setup,
         system,

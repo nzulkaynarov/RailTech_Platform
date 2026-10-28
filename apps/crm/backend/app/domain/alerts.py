@@ -10,6 +10,8 @@ from datetime import datetime, timedelta
 from enum import StrEnum
 from typing import Final
 
+from app.domain.plural import tasks
+
 # Прежние алерты ушли в центр внешних сервисов (W15-H3b): монитор их больше не шлёт, а живые строки
 # `system_alerts` закрывает молча. «Шлюз моделей недоступен» (`litellm`) и сбои ответов ИИ
 # (`vendor.*`, `litellm`) идут по общей политике причин: 15 минут подряд, 5 минут `ok`, раз в сутки.
@@ -94,7 +96,7 @@ def checks(
             "queue_size",
             snapshot.queue_size > QUEUE_LIMIT,
             "Очередь задач",
-            f"{snapshot.queue_size} задач в ожидании (порог {QUEUE_LIMIT})",
+            f"{tasks(snapshot.queue_size)} в ожидании (порог {QUEUE_LIMIT})",
         )
     ]
     budget = snapshot.daily_budget_usd

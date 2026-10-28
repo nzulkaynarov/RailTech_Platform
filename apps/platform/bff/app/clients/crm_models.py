@@ -22,6 +22,7 @@ class Action(StrEnum):
     write_owner = "write_owner"
     write_hosting = "write_hosting"
     disable_provider = "disable_provider"
+    open_bus = "open_bus"
 
 
 class Action1(StrEnum):
@@ -33,6 +34,7 @@ class Action1(StrEnum):
     write_owner = "write_owner"
     write_hosting = "write_hosting"
     disable_provider = "disable_provider"
+    open_bus = "open_bus"
 
 
 class ActionResult(BaseModel):
@@ -735,6 +737,9 @@ class LeadDetail(BaseModel):
     ] = None
     owner_mode: Annotated[str, Field(title="Owner Mode")]
     phone_e164: Annotated[str | None, Field(title="Phone E164")] = None
+    platform_status: Annotated[
+        PlatformStatus | None, Field(title="Platform Status")
+    ] = None
     product_interest: Annotated[list[str], Field(title="Product Interest")]
     qualification: Annotated[dict[str, Any], Field(title="Qualification")]
     score: Annotated[int, Field(title="Score")]
@@ -758,6 +763,9 @@ class LeadOut(BaseModel):
     last_lead_msg_at: Annotated[AwareDatetime | None, Field(title="Last Lead Msg At")]
     need_summary: Annotated[str | None, Field(title="Need Summary")]
     owner_mode: Annotated[str, Field(title="Owner Mode")]
+    platform_status: Annotated[
+        PlatformStatus | None, Field(title="Platform Status")
+    ] = None
     product_interest: Annotated[list[str], Field(title="Product Interest")]
     score: Annotated[int, Field(title="Score")]
     source: Annotated[str | None, Field(title="Source")] = "telegram"
@@ -834,6 +842,7 @@ class MoreAction(StrEnum):
     write_owner = "write_owner"
     write_hosting = "write_hosting"
     disable_provider = "disable_provider"
+    open_bus = "open_bus"
 
 
 class NoteOut(BaseModel):
@@ -885,6 +894,15 @@ class PasswordSource(StrEnum):
     db = "db"
     env = "env"
     none = "none"
+
+
+class PlatformStatus(StrEnum):
+    new = "new"
+    dialog = "dialog"
+    wants_quote = "wants_quote"
+    no_answer = "no_answer"
+    client = "client"
+    lost = "lost"
 
 
 class ProductOut(BaseModel):
@@ -1262,8 +1280,14 @@ class SystemStatusOut(BaseModel):
 
 
 class TeamMember(BaseModel):
+    """
+    Сотрудник в выборе («кому передать лида», «исполнитель зоны»): без почты, телефона, ролей.
+    """
+
     full_name: Annotated[str, Field(title="Full Name")]
     id: Annotated[int, Field(title="Id")]
+    initials: Annotated[str, Field(max_length=3, title="Initials")]
+    position: Annotated[str | None, Field(title="Position")] = None
 
 
 class TelegramStatusOut(BaseModel):

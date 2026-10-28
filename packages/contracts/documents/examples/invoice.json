@@ -1,0 +1,516 @@
+{
+  "version": 1,
+  "lang": "ru",
+  "doc": {
+    "type": "doc",
+    "content": [
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "Покупатель: "
+          },
+          {
+            "type": "variable",
+            "attrs": {
+              "code": "counterparty.name"
+            }
+          },
+          {
+            "type": "text",
+            "text": ". Основание: договор № "
+          },
+          {
+            "type": "variable",
+            "attrs": {
+              "code": "contract.number"
+            }
+          },
+          {
+            "type": "text",
+            "text": " от "
+          },
+          {
+            "type": "variable",
+            "attrs": {
+              "code": "contract.date"
+            }
+          }
+        ]
+      },
+      {
+        "type": "block",
+        "attrs": {
+          "code": "doc.items_table",
+          "locked": true,
+          "required": true
+        },
+        "content": [
+          {
+            "type": "table",
+            "attrs": {
+              "columnWidths": [
+                5,
+                49,
+                7,
+                9,
+                14,
+                16
+              ],
+              "variant": "grid"
+            },
+            "content": [
+              {
+                "type": "tableRow",
+                "content": [
+                  {
+                    "type": "tableHeader",
+                    "content": [
+                      {
+                        "type": "paragraph",
+                        "content": [
+                          {
+                            "type": "text",
+                            "text": "№"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "tableHeader",
+                    "content": [
+                      {
+                        "type": "paragraph",
+                        "content": [
+                          {
+                            "type": "text",
+                            "text": "Наименование"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "tableHeader",
+                    "content": [
+                      {
+                        "type": "paragraph",
+                        "content": [
+                          {
+                            "type": "text",
+                            "text": "Ед."
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "tableHeader",
+                    "content": [
+                      {
+                        "type": "paragraph",
+                        "content": [
+                          {
+                            "type": "text",
+                            "text": "Кол-во"
+                          }
+                        ]
+                      }
+                    ],
+                    "attrs": {
+                      "numeric": true
+                    }
+                  },
+                  {
+                    "type": "tableHeader",
+                    "content": [
+                      {
+                        "type": "paragraph",
+                        "content": [
+                          {
+                            "type": "text",
+                            "text": "Цена"
+                          }
+                        ]
+                      }
+                    ],
+                    "attrs": {
+                      "numeric": true
+                    }
+                  },
+                  {
+                    "type": "tableHeader",
+                    "content": [
+                      {
+                        "type": "paragraph",
+                        "content": [
+                          {
+                            "type": "text",
+                            "text": "Сумма"
+                          }
+                        ]
+                      }
+                    ],
+                    "attrs": {
+                      "numeric": true
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "tableRow",
+                "content": [
+                  {
+                    "type": "tableCell",
+                    "content": [
+                      {
+                        "type": "paragraph",
+                        "content": [
+                          {
+                            "type": "text",
+                            "text": "1"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "tableCell",
+                    "content": [
+                      {
+                        "type": "paragraph",
+                        "content": [
+                          {
+                            "type": "text",
+                            "text": "Позиция 1: комплект крепежа рельсового скрепления КБ-66, оцинкованный"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "tableCell",
+                    "content": [
+                      {
+                        "type": "paragraph",
+                        "content": [
+                          {
+                            "type": "text",
+                            "text": "шт"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "tableCell",
+                    "content": [
+                      {
+                        "type": "paragraph",
+                        "content": [
+                          {
+                            "type": "text",
+                            "text": "2"
+                          }
+                        ]
+                      }
+                    ],
+                    "attrs": {
+                      "numeric": true
+                    }
+                  },
+                  {
+                    "type": "tableCell",
+                    "content": [
+                      {
+                        "type": "paragraph",
+                        "content": [
+                          {
+                            "type": "text",
+                            "text": "128 150.00"
+                          }
+                        ]
+                      }
+                    ],
+                    "attrs": {
+                      "numeric": true
+                    }
+                  },
+                  {
+                    "type": "tableCell",
+                    "content": [
+                      {
+                        "type": "paragraph",
+                        "content": [
+                          {
+                            "type": "text",
+                            "text": "256 300.00"
+                          }
+                        ]
+                      }
+                    ],
+                    "attrs": {
+                      "numeric": true
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "tableRow",
+                "content": [
+                  {
+                    "type": "tableCell",
+                    "content": [
+                      {
+                        "type": "paragraph",
+                        "content": [
+                          {
+                            "type": "text",
+                            "text": "2"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "tableCell",
+                    "content": [
+                      {
+                        "type": "paragraph",
+                        "content": [
+                          {
+                            "type": "text",
+                            "text": "Позиция 2: комплект крепежа рельсового скрепления КБ-67, оцинкованный"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "tableCell",
+                    "content": [
+                      {
+                        "type": "paragraph",
+                        "content": [
+                          {
+                            "type": "text",
+                            "text": "шт"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "tableCell",
+                    "content": [
+                      {
+                        "type": "paragraph",
+                        "content": [
+                          {
+                            "type": "text",
+                            "text": "3"
+                          }
+                        ]
+                      }
+                    ],
+                    "attrs": {
+                      "numeric": true
+                    }
+                  },
+                  {
+                    "type": "tableCell",
+                    "content": [
+                      {
+                        "type": "paragraph",
+                        "content": [
+                          {
+                            "type": "text",
+                            "text": "131 300.00"
+                          }
+                        ]
+                      }
+                    ],
+                    "attrs": {
+                      "numeric": true
+                    }
+                  },
+                  {
+                    "type": "tableCell",
+                    "content": [
+                      {
+                        "type": "paragraph",
+                        "content": [
+                          {
+                            "type": "text",
+                            "text": "393 900.00"
+                          }
+                        ]
+                      }
+                    ],
+                    "attrs": {
+                      "numeric": true
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "tableRow",
+                "content": [
+                  {
+                    "type": "tableCell",
+                    "content": [
+                      {
+                        "type": "paragraph",
+                        "content": [
+                          {
+                            "type": "text",
+                            "text": "3"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "tableCell",
+                    "content": [
+                      {
+                        "type": "paragraph",
+                        "content": [
+                          {
+                            "type": "text",
+                            "text": "Позиция 3: комплект крепежа рельсового скрепления КБ-68, оцинкованный"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "tableCell",
+                    "content": [
+                      {
+                        "type": "paragraph",
+                        "content": [
+                          {
+                            "type": "text",
+                            "text": "шт"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "tableCell",
+                    "content": [
+                      {
+                        "type": "paragraph",
+                        "content": [
+                          {
+                            "type": "text",
+                            "text": "4"
+                          }
+                        ]
+                      }
+                    ],
+                    "attrs": {
+                      "numeric": true
+                    }
+                  },
+                  {
+                    "type": "tableCell",
+                    "content": [
+                      {
+                        "type": "paragraph",
+                        "content": [
+                          {
+                            "type": "text",
+                            "text": "134 450.00"
+                          }
+                        ]
+                      }
+                    ],
+                    "attrs": {
+                      "numeric": true
+                    }
+                  },
+                  {
+                    "type": "tableCell",
+                    "content": [
+                      {
+                        "type": "paragraph",
+                        "content": [
+                          {
+                            "type": "text",
+                            "text": "537 800.00"
+                          }
+                        ]
+                      }
+                    ],
+                    "attrs": {
+                      "numeric": true
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "type": "block",
+        "attrs": {
+          "code": "doc.totals",
+          "locked": true,
+          "required": true
+        }
+      },
+      {
+        "type": "block",
+        "attrs": {
+          "code": "doc.payment_requisites",
+          "locked": true,
+          "required": true
+        }
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "Оплатить до "
+          },
+          {
+            "type": "variable",
+            "attrs": {
+              "code": "invoice.due_date"
+            }
+          }
+        ]
+      },
+      {
+        "type": "signature",
+        "attrs": {
+          "parties": [
+            {
+              "role": "Поставщик",
+              "position": {
+                "var": "company.director_position"
+              },
+              "name": {
+                "var": "company.director"
+              }
+            }
+          ],
+          "stamp": true
+        }
+      }
+    ]
+  },
+  "page": {
+    "density": "compact",
+    "tuning": {
+      "lineHeight": 1.3
+    }
+  }
+}

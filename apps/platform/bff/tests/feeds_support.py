@@ -127,6 +127,14 @@ class FeedBackends:
             url__regex=re.compile(rf"^{EDS_URL}/api/v1/documents/[0-9a-f-]+$")
         ).mock(side_effect=self._card)
 
+    def _card(self, request: httpx.Request) -> httpx.Response:
+        if self.eds_down is not None:
+            return self._respond("returned", self.eds_down)
+        found = self.cards.get(request.url.path.rsplit("/", 1)[-1])
+        if found is None:
+            return httpx.Response(404, json={"code": "NOT_FOUND", "message": "x", "source": "eds"})
+        return httpx.Response(200, json=found)
+
     def _eds(self, key: str, route: respx.Route) -> respx.Route:
         return route.mock(side_effect=lambda _r: self._respond(key, self.eds_down))
 
@@ -139,14 +147,6 @@ class FeedBackends:
         return httpx.Response(
             200, json={"access_token": "eds-access-1", "token_type": "bearer", "expires_in": 900}
         )
-
-    def _card(self, request: httpx.Request) -> httpx.Response:
-        if self.eds_down is not None:
-            return self._respond("returned", self.eds_down)
-        found = self.cards.get(request.url.path.rsplit("/", 1)[-1])
-        if found is None:
-            return httpx.Response(404, json={"code": "NOT_FOUND", "message": "x", "source": "eds"})
-        return httpx.Response(200, json=found)
 
     def _respond(self, key: str, down: Exception | int | None) -> httpx.Response:
         if isinstance(down, Exception):

@@ -97,6 +97,12 @@ SELECT event_id, created_at, notified_at FROM erp_event_notices WHERE notified_a
    сотрудников не меняются: у события новый `id`, снимок и его `updated_at` прежние, поэтому повтор безопасен — проекция применяет
    «не старее» (`updated_at <=`) и не затирает более новую правку. Результат: `eds`-проекция — по строке на сотрудника
    (`bus status` у CRM: `outbox_pending` падает до 0; в EDS — `bus status`, `inbox_failed = 0`).
+   **Разделы каталога в снимке (D1-8):** `permissions.sections` — разделы модулей EDS и ERP (`erp.calc.goods`, `eds.payments`, …) и уровень
+   (`full`/`read`) из объединения матриц ролей; EDS по ним проверяет зону исполнителя резолюции. Отпечаток каталога считается по
+   содержимому — коды EDS и опубликованные разделы `eds.*`/`erp.*` всех ролей каталога (системных и `tpl:*`); при выкладке D1-8 он
+   изменился, и воркер переопубликует всех один раз сам. Правка роли в `PATCH /platform-roles` сравнивает опубликованное целиком
+   (`eds` и `sections`): правка только разделов `eds.*`/`erp.*` (без смены кодов EDS) тоже даёт событие держателям роли, правка
+   разделов CRM, чатов и настроек — нет.
    **Смена набора кодов EDS в каталоге (`platform-rbac.yaml`, `backend.eds`; например, W13-A2 добавил `bus.manage` разделу `admin`
    full) ручного шага больше не требует — обычно он не нужен, CRM делает его сама при старте (W13C-F4, Q-W13-A2-3).** EDS знает
    права только из проекции `identity.user.*`; новый код сам событий не порождает, поэтому воркер CRM (`python -m app worker`) при
@@ -129,6 +135,19 @@ DLQ растёт после исправления причины, `company mism
 `oldest_undelivered_age_seconds` растёт, а задачи `notify`/`timers` запаздывают при живой ERP: поднимите `WORKER_CONCURRENCY` (до 8) в
 `.env` и перезапустите `crm-worker`. Предохранитель шины (5 ошибок подряд — пауза 5 мин) сам снимает нагрузку: подписчик на паузе
 не опрашивается. Выделять отдельный воркер под очередь `rt_bus` — отдельная задача инфраструктуры, не строка конфигурации.
+
+## Поля журнала шины (W15-H8b, B-006)
+Записи `rt_bus*` в JSON-журнале CRM и EDS несут поля `extra` отдельными ключами, а не только имя события: `subscriber`, `event_id`,
+`event_type`, `attempt`, `status_code` (код ответа подписчика или отказа приёма), `reason` (причина отказа приёма, `rt_bus_receive_rejected`),
+`error`, `next_attempt_at`, `delivery_id`, `publisher`, `actor`. Текстовые поля `error` и `reason` усекаются до 200 символов; при отказе приёма по схеме (`invalid_data`, `invalid_envelope`) в `reason` пишется только код: сообщения схемы цитируют значения из тела события (персональные данные в логах недопустимы). Причину повтора и отказа доставки видно в одной строке:
+
+```bash
+$C logs --no-log-prefix crm-worker | grep rt_bus_delivery_retry | jq '{event, subscriber, event_id, attempt, status_code, error}'
+```
+
+Поля переносит `rt_bus.structlog_extra_processor` (явный перечень `LOG_EXTRA_FIELDS`, только записи логгеров `rt_bus*`), он подключён в
+`apps/crm/backend/app/log.py` и `apps/eds/app/log.py`. ERP (Django) и BFF настраивают журнал сами: ERP и приёмник BFF по-прежнему печатают
+имя события без полей — отдельная задача этих систем (подключить тот же процессор или форматтер), `request_id` у приёмника BFF тоже там.
 
 ## Метрики и уборка
 `rt_bus.log_metrics` пишет строку `rt_bus_metrics` раз в 5 минут (`outbox_pending`, `dlq_size`, `inbox_failed`, по подписчикам).

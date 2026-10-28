@@ -195,7 +195,7 @@ class PlatformRoleService:
                 )
             before = role_snapshot(role)
             holders = await repo.user_ids_of_role(session, role_id)
-            eds_before = await _eds_of(session, holders)
+            published_before = await _published_of(session, holders)
             await self._apply(session, role, patch, actor)
             after = role_snapshot(role)
             access_changed = (before["access"], before["restricted_fields"]) != (
@@ -205,7 +205,7 @@ class PlatformRoleService:
             if access_changed:
                 await write_role_policies(session, role_id, role.access)
                 await _recompute_holders(session, actor, holders)
-                await _publish_eds_changes(session, actor, holders, eds_before)
+                await _publish_changes(session, actor, holders, published_before)
             if before != after:
                 role.version += 1
                 await session.flush()
@@ -311,27 +311,35 @@ async def _recompute_holders(session: AsyncSession, actor: Actor, holders: Seque
         raise LastAdminError("the change would leave the company without an active admin")
 
 
-async def _eds_of(session: AsyncSession, user_ids: Sequence[int]) -> dict[int, list[str]]:
-    """Права EDS держателей роли сейчас (по матрицам ролей в базе и сессии)."""
-    result: dict[int, list[str]] = {}
+async def _published_of(
+    session: AsyncSession, user_ids: Sequence[int]
+) -> dict[int, dict[str, object]]:
+    """То, что CRM публикует в `user.permissions` держателей роли сейчас: права EDS и разделы
+    каталога (по матрицам ролей в базе и сессии)."""
+    result: dict[int, dict[str, object]] = {}
     for user_id in user_ids:
         user = await users_repo.get(session, user_id)
         if user is None:
             continue
         roles = await repo.roles_of_user(session, user_id)
-        result[user_id] = snapshots.eds_permissions(roles, is_active=bool(user.is_active))
+        active = bool(user.is_active)
+        result[user_id] = {
+            "eds": snapshots.eds_permissions(roles, is_active=active),
+            "sections": snapshots.catalog_sections(roles, is_active=active),
+        }
     return result
 
 
-async def _publish_eds_changes(
+async def _publish_changes(
     session: AsyncSession,
     actor: Actor,
     holders: Sequence[int],
-    before: Mapping[int, list[str]],
+    before: Mapping[int, dict[str, object]],
 ) -> None:
-    """`identity.user.updated` (`changed_fields = ["permissions"]`) каждому держателю роли,
-    у кого права EDS изменились; у кого не изменились — события нет. Та же транзакция (outbox)."""
-    after = await _eds_of(session, holders)
+    """`identity.user.updated` (`changed_fields = ["permissions"]`) каждому держателю роли, у кого
+    изменились опубликованные права: коды EDS или разделы модулей EDS/ERP (D1-8: зона исполнителя
+    резолюции); у кого не изменились — события нет. Та же транзакция (outbox)."""
+    after = await _published_of(session, holders)
     for user_id in holders:
         if user_id not in after or after[user_id] == before.get(user_id):
             continue

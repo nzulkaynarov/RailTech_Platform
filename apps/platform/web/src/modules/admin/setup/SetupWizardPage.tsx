@@ -1,6 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { Alert, App, Button, Card, Skeleton } from "antd";
-import { type ReactNode, useEffect, useRef } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router";
 
@@ -9,7 +9,14 @@ import { useAuth } from "../../../app/auth/useAuth";
 import { resetBannerHidden, useBannerHidden } from "../../../features/first-run/hidden";
 import { useSetupChecklist } from "../../../features/first-run/useSetupChecklist";
 import { PanelPortal } from "../../../app/shell/PanelSlot";
-import { STEP_TARGET, WIZARD_PATH, isStepKey, stepAfter } from "../../../entities/setup/steps";
+import { ERP_RECHECK } from "../../../entities/setup/recheck";
+import {
+  STEP_TARGET,
+  WIZARD_PATH,
+  isStepKey,
+  staysOnCompany,
+  stepAfter,
+} from "../../../entities/setup/steps";
 import type { SetupChecklist, SetupStepKey } from "../../../shared/api/generated/model";
 import { useDocumentTitle } from "../../../shared/lib/useDocumentTitle";
 import { EmptyState } from "../../../shared/ui/EmptyState";
@@ -75,8 +82,9 @@ export function SetupWizardPage() {
   }, [queryClient, step, refetch]);
 
   const goNext = (data: SetupChecklist, current: SetupStepKey) => {
-    // ERP готова, а своей компании ещё нет: следующий шаг — форма компании прямо в мастере.
-    if (current === "erp" && data.company?.required) {
+    // ERP готова, а своей компании ещё нет (или ERP ещё не выдала доступ и данных о компании нет — W15-G-10):
+    // следующий шаг — компания прямо в мастере, а не «Telegram-бот».
+    if (current === "erp" && staysOnCompany(data)) {
       void navigate(`${WIZARD_PATH}?panel=closed`, { replace: true });
       return;
     }
@@ -109,6 +117,22 @@ export function SetupWizardPage() {
     // goNext и message стабильны по смыслу; перезапуск — только при смене шага или состояния
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step, data]);
+
+  // ERP сопряжена, но доступа к данным компании ещё нет: мастер сам перепроверяет несколько раз (W15-G-10).
+  const waitingErp =
+    editable && data?.company === null && data.company_blocker === "erp_unavailable";
+  const [rechecks, setRechecks] = useState(0);
+  useEffect(() => {
+    if (!waitingErp || rechecks >= ERP_RECHECK.attempts) return;
+    const timer = window.setTimeout(() => {
+      setRechecks((n) => n + 1);
+      void refetch();
+    }, ERP_RECHECK.everyMs);
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [waitingErp, rechecks, refetch]);
+  const rechecking = waitingErp && rechecks < ERP_RECHECK.attempts;
 
   let body: ReactNode;
   if (!editable) {
@@ -185,6 +209,7 @@ export function SetupWizardPage() {
             company={data.company}
             blocker={data.company_blocker}
             retrying={checklist.isFetching}
+            waiting={rechecking}
             onRetry={() => {
               void checklist.refetch();
             }}

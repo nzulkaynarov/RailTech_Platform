@@ -40,40 +40,52 @@ async function shoot(page: Page, name: string): Promise<void> {
   await page.setViewportSize({ width: 1440, height: 900 });
 }
 
+const STUB = "rt-pf-mock-queue-stub";
+const ROW_STUB = "Где сделать: Разобраться с проектом ПР-2026-099";
+
+/** Директору — строка очереди без родного экрана (проект): у лидов, писем, КП и служебок экраны уже есть (D1-6). */
+async function showStubRow(page: Page): Promise<void> {
+  await loginAndWait(page, "director@demo.example");
+  await setMock(page, STUB, "1");
+  await page.reload();
+}
+
+const SIDE = { name: "Боковое окно" } as const;
+
 test.describe("Мои задачи: «Открыть» или «Где сделать»", () => {
   test.skip(({ isMobile }) => isMobile, "ширины задаёт сам сценарий");
 
-  test("менеджер: строки без экрана — «Где сделать» с мостом в старую CRM, ссылки на заглушку нет", async ({
+  test("директор: строка без экрана — «Где сделать» с мостом в старый ERP, ссылки на заглушку нет", async ({
     page,
   }) => {
-    await loginAndWait(page, "manager@demo.example");
+    await showStubRow(page);
     const queue = page.getByRole("region", { name: "Что сделать сейчас" });
-    // у строк лидов экрана в Платформе пока нет; «Открыть» остаётся только у «Доработать» (форма «Продолжить», D1-6b)
-    await expect(queue.getByRole("link", { name: /^Открыть: (Взять|Ответить)/ })).toHaveCount(0);
-
-    await queue.getByRole("button", { name: "Где сделать: Взять в работу лида L-2041" }).click();
+    await queue.getByRole("button", { name: ROW_STUB }).click();
     const pop = page.getByRole("region", { name: "Где сделать" });
-    await expect(pop.getByText(/Сейчас — в старой CRM: раздел «Лиды»/)).toBeVisible();
-    const open = pop.getByRole("link", { name: /Открыть в старой CRM/ });
-    await expect(open).toHaveAttribute("href", "http://crm.localhost:8088/leads/2041");
+    await expect(pop.getByText(/Сейчас — в старом ERP: раздел «Сделки»/)).toBeVisible();
+    const open = pop.getByRole("link", { name: /Открыть в старом ERP/ });
+    await expect(open).toHaveAttribute("href", "http://erp.localhost:8088/#crm-deals");
     await expect(open).toHaveAttribute("target", "_blank");
     expect(await open.getAttribute("rel")).toContain("noopener");
-    await expect(pop.getByText("Когда появится: в ближайшем обновлении.")).toBeVisible();
+    await expect(pop.getByText("Когда появится: к пилоту.")).toBeVisible();
+    // у письма, КП и служебки рядом — «Открыть», «Где сделать» нет
+    await expect(queue.getByRole("link", { name: /^Открыть:/ })).toHaveCount(3);
+    await expect(queue.getByRole("button", { name: /^Где сделать/ })).toHaveCount(1);
     await shoot(page, "queue-where");
   });
 
   test("с клавиатуры: Enter на «Где сделать» → фокус в секции → Tab доходит до «Открыть в …» → Escape возвращает на кнопку", async ({
     page,
   }) => {
-    await loginAndWait(page, "manager@demo.example");
-    const button = page.getByRole("button", { name: "Где сделать: Взять в работу лида L-2041" });
+    await showStubRow(page);
+    const button = page.getByRole("button", { name: ROW_STUB });
     await button.focus();
     await page.keyboard.press("Enter");
 
     const panel = page.getByRole("region", { name: "Где сделать" });
     await expect(panel).toBeFocused();
-    const link = panel.getByRole("link", { name: /Открыть в старой CRM/ });
-    await expect(link).toBeVisible(); // адрес старой CRM приходит из BFF — Tab после его появления
+    const link = panel.getByRole("link", { name: /Открыть в старом ERP/ });
+    await expect(link).toBeVisible(); // адрес старого ERP приходит из BFF — Tab после его появления
     await page.keyboard.press("Tab");
     await expect(link).toBeFocused();
     await page.keyboard.press("Escape");
@@ -82,7 +94,7 @@ test.describe("Мои задачи: «Открыть» или «Где сдел�
     await expect(button).toHaveAttribute("aria-expanded", "false");
   });
 
-  test("директор: письмо, КП и служебка (родные экраны) — «Открыть» открывает объект с боковым окном; primary у срочных писем", async ({
+  test("директор: письмо, КП и служебка (родные экраны) — «Открыть» открывает объект в боковом окне на вкладке решения; primary у срочных писем", async ({
     page,
   }) => {
     await loginAndWait(page, "director@demo.example");
@@ -97,11 +109,59 @@ test.describe("Мои задачи: «Открыть» или «Где сдел�
     await expect(
       queue.getByRole("link", { name: /Открыть: Согласовать СЗ-2026\/031/ }),
     ).toBeVisible();
+    await expect(queue.getByRole("button", { name: /^Где сделать/ })).toHaveCount(0);
     await settledScreenshot(page, "queue-director");
 
-    await letter.click();
-    await expect(page).toHaveURL(/\/eds\/inbox\/%D0%92%D0%A5-104%2F26\?panel=open&tab=resolution$/);
-    await expect(page.getByRole("heading", { level: 1, name: "Письмо ВХ-104/26" })).toBeVisible();
+    const cases = [
+      {
+        row: /Открыть: Наложить резолюцию на письмо ВХ-104/,
+        url: /\/eds\/inbox\/%D0%92%D0%A5-104%2F26\?panel=open&tab=resolution$/,
+        heading: "Письмо ВХ-104/26",
+        tab: "Резолюция",
+      },
+      {
+        row: /Открыть: Одобрить КП-2026\/118/,
+        url: /\/eds\/drafts\/%D0%9A%D0%9F-2026%2F118\?panel=open&tab=approve$/,
+        heading: "КП-2026/118",
+        tab: "Одобрение",
+      },
+      {
+        row: /Открыть: Согласовать СЗ-2026\/031/,
+        url: /\/eds\/approvals\/%D0%A1%D0%97-2026%2F031\?panel=open&tab=agree$/,
+        heading: "СЗ-2026/031",
+        tab: "Согласование",
+      },
+    ];
+    for (const item of cases) {
+      await spaGoto(page, "/dashboard/queue");
+      await page
+        .getByRole("region", { name: "Что сделать сейчас" })
+        .getByRole("link", { name: item.row })
+        .click();
+      await expect(page).toHaveURL(item.url);
+      await expect(page.getByRole("heading", { level: 1, name: item.heading })).toBeVisible();
+      await expect(
+        page.getByRole("complementary", SIDE).getByRole("tab", { name: item.tab, selected: true }),
+      ).toBeVisible();
+    }
+  });
+
+  test("менеджер: передача и сообщение клиента открывают диалог в «Ждут ответа» — «Открыть», без «Где сделать»", async ({
+    page,
+  }) => {
+    await loginAndWait(page, "manager@demo.example");
+    const queue = page.getByRole("region", { name: "Что сделать сейчас" });
+    const take = queue.getByRole("link", { name: "Открыть: Взять в работу лида L-2041" });
+    await expect(take).toHaveClass(/ant-btn-primary/);
+    await expect(queue.getByRole("button", { name: /^Где сделать/ })).toHaveCount(0);
+    await settledScreenshot(page, "queue-manager");
+
+    await take.click();
+    await expect(page).toHaveURL(/\/crm\/messages\?lead=L-2041$/);
+    await expect(page.getByRole("heading", { level: 1, name: "Ждут ответа" })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 2, name: "Азиз Демо" })).toBeVisible();
+    await expect(page.getByRole("button", { name: /Забрать/ }).first()).toBeVisible();
+    await expectNoViolations(page, "диалог из очереди");
   });
 });
 
@@ -143,6 +203,25 @@ test.describe("Мои задачи: пустые состояния и част�
       "Не загрузились лиды и ответы клиентам: раздел «Клиенты» не ответил. Остальное показано.",
     );
     await expectNoViolations(page, "crm down");
+  });
+});
+
+test.describe("Мои задачи: EDS не отвечает", () => {
+  test.skip(({ isMobile }) => isMobile, "ширины задаёт сам сценарий");
+
+  test("директор: КП и остальное показаны, плашка называет «Документы», писем и служебок нет", async ({
+    page,
+  }) => {
+    await loginAndWait(page, "director@demo.example");
+    await setMock(page, "rt-pf-mock-eds-down", "1");
+    await page.reload();
+    const main = page.getByRole("main");
+    await expect(main.getByText("Одобрить КП-2026/118 (черновик)")).toBeVisible();
+    await expect(main.getByRole("status").first()).toContainText(
+      "Не загрузились письма и документы: раздел «Документы» не ответил. Остальное показано.",
+    );
+    await expect(main.getByText(/Наложить резолюцию на письмо/)).toHaveCount(0);
+    await shoot(page, "queue-partial-eds");
   });
 });
 
@@ -211,5 +290,153 @@ test.describe("Колокольчик: объект без экрана", () => 
       }),
     ).toBeVisible();
     await shoot(page, "bell-where");
+  });
+});
+
+/** Объекты D1: адрес, заголовок экрана и выбранная вкладка бокового окна (SPEC-v3 §6.3, §6.4). */
+const OBJECTS = {
+  letter: {
+    path: /\/eds\/inbox\/%D0%92%D0%A5-104%2F26\?/,
+    url: /\/eds\/inbox\/%D0%92%D0%A5-104%2F26\?panel=open&tab=resolution$/,
+    heading: "Письмо ВХ-104/26",
+    tab: "Резолюция",
+    sheet: /^Резолюция/,
+  },
+  quote: {
+    path: /\/eds\/drafts\/%D0%9A%D0%9F-2026%2F118\?/,
+    url: /\/eds\/drafts\/%D0%9A%D0%9F-2026%2F118\?panel=open&tab=approve$/,
+    heading: "КП-2026/118",
+    tab: "Одобрение",
+    sheet: /^Одобрение/,
+  },
+  memo: {
+    path: /\/eds\/approvals\/%D0%A1%D0%97-2026%2F031\?/,
+    url: /\/eds\/approvals\/%D0%A1%D0%97-2026%2F031\?panel=open&tab=agree$/,
+    heading: "СЗ-2026/031",
+    tab: "Согласование",
+    sheet: /^Согласование/,
+  },
+} as const;
+
+async function expectOpened(page: Page, key: keyof typeof OBJECTS): Promise<void> {
+  const object = OBJECTS[key];
+  await expect(page).toHaveURL(object.url);
+  await expect(page.getByRole("heading", { level: 1, name: object.heading })).toBeVisible();
+  await expect(
+    page.getByRole("complementary", SIDE).getByRole("tab", { name: object.tab, selected: true }),
+  ).toBeVisible();
+}
+
+test.describe("Поиск ⌘K: письмо, КП и служебка открываются в боковом окне", () => {
+  test.skip(({ isMobile }) => isMobile, "ширины задаёт сам сценарий");
+
+  for (const [query, option, key] of [
+    ["ВХ-104/26", /Письмо ВХ-104\/26/, "letter"],
+    ["КП-2026/118", /КП-2026\/118/, "quote"],
+    ["СЗ-2026/031", /СЗ-2026\/031/, "memo"],
+  ] as const) {
+    test(`директор: «${query}» → вкладка «${OBJECTS[key].tab}», «Где посмотреть» нет`, async ({
+      page,
+    }) => {
+      await loginAndWait(page, "director@demo.example");
+      const search = page.getByRole("combobox", { name: "Глобальный поиск" });
+      await search.fill(query);
+      await expectNoViolations(page, `поиск ${query}`);
+      await page.getByRole("option", { name: option }).click();
+      await expectOpened(page, key);
+      await expect(page.getByRole("region", { name: "Где посмотреть" })).toHaveCount(0);
+    });
+  }
+});
+
+test.describe("Колокольчик: объект с экраном открывается на нужной вкладке", () => {
+  test.skip(({ isMobile }) => isMobile, "ширины задаёт сам сценарий");
+
+  for (const [title, key] of [
+    [/Письмо ВХ-104\/26 ждёт резолюции/, "letter"],
+    [/КП-2026\/118 ждёт вашего согласования/, "quote"],
+    [/СЗ-2026\/031 на согласовании/, "memo"],
+  ] as const) {
+    test(`директор: ${String(title)} → «${OBJECTS[key].tab}»`, async ({ page }) => {
+      await loginAndWait(page, "director@demo.example");
+      await page.getByRole("button", { name: /^Центр уведомлений/ }).click();
+      const center = page.getByRole("dialog", { name: "Центр уведомлений" });
+      await center.getByRole("link", { name: title }).click();
+      await expectOpened(page, key);
+      if (key === "letter") await settledScreenshot(page, "bell-opened-letter");
+    });
+  }
+
+  test("менеджер: передача бота из колокольчика открывает диалог в «Ждут ответа»", async ({
+    page,
+  }) => {
+    await loginAndWait(page, "manager@demo.example");
+    await page.getByRole("button", { name: /^Центр уведомлений/ }).click();
+    const center = page.getByRole("dialog", { name: "Центр уведомлений" });
+    await center.getByRole("link", { name: /Лид L-2041 просит КП/ }).click();
+    await expect(page).toHaveURL(/\/crm\/messages\?lead=L-2041$/);
+    await expect(page.getByRole("heading", { level: 2, name: "Азиз Демо" })).toBeVisible();
+    await expect(page.getByRole("region", { name: "Где посмотреть" })).toHaveCount(0);
+  });
+});
+
+test.describe("Переходы на телефоне @mobile", () => {
+  test("@mobile директор: из очереди письмо, КП и служебка открываются листом на весь экран; менеджер — диалогом", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await loginAndWait(page, "director@demo.example");
+    await settledScreenshot(page, "queue-director-mobile");
+    for (const [row, key] of [
+      [/Открыть: Наложить резолюцию на письмо ВХ-104/, "letter"],
+      [/Открыть: Одобрить КП-2026\/118/, "quote"],
+      [/Открыть: Согласовать СЗ-2026\/031/, "memo"],
+    ] as const) {
+      await spaGoto(page, "/dashboard/queue");
+      await page
+        .getByRole("region", { name: "Что сделать сейчас" })
+        .getByRole("link", { name: row })
+        .click();
+      // на телефоне `panel=open` становится листом (`sheet=`): адрес проверяем по объекту, а не по окну
+      await expect(page).toHaveURL(OBJECTS[key].path);
+      const sheet = page.getByRole("dialog", { name: OBJECTS[key].sheet });
+      await expect(sheet).toBeVisible();
+      const box = await sheet.boundingBox();
+      expect(box?.width).toBeGreaterThanOrEqual(389);
+      expect(box?.height).toBeGreaterThanOrEqual(843);
+      await expectNoViolations(page, `лист ${key}`);
+    }
+  });
+
+  test("@mobile колокольчик и поиск открывают письмо листом «Резолюция»", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await loginAndWait(page, "director@demo.example");
+    await page.getByRole("button", { name: /^Центр уведомлений/ }).click();
+    await page
+      .getByRole("dialog", { name: "Центр уведомлений" })
+      .getByRole("link", { name: /Письмо ВХ-104\/26 ждёт резолюции/ })
+      .click();
+    await expect(page).toHaveURL(OBJECTS.letter.path);
+    await expect(page.getByRole("dialog", { name: /^Резолюция/ })).toBeVisible();
+    await settledScreenshot(page, "bell-opened-letter-mobile");
+
+    await spaGoto(page, "/dashboard/queue");
+    await page.getByRole("combobox", { name: "Глобальный поиск" }).fill("КП-2026/118");
+    await page.getByRole("option", { name: /КП-2026\/118/ }).click();
+    await expect(page).toHaveURL(OBJECTS.quote.path);
+    await expect(page.getByRole("dialog", { name: /^Одобрение/ })).toBeVisible();
+  });
+
+  test("@mobile менеджер: передача из очереди — диалог на весь экран", async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await loginAndWait(page, "manager@demo.example");
+    await page
+      .getByRole("region", { name: "Что сделать сейчас" })
+      .getByRole("link", { name: "Открыть: Взять в работу лида L-2041" })
+      .click();
+    await expect(page).toHaveURL(/\/crm\/messages\?lead=L-2041$/);
+    await expect(page.getByRole("heading", { level: 2, name: "Азиз Демо" })).toBeVisible();
+    await settledScreenshot(page, "queue-manager-dialog-mobile");
+    await expectNoViolations(page, "диалог на телефоне");
   });
 });

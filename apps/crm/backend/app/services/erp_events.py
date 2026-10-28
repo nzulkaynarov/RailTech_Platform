@@ -155,6 +155,7 @@ class ErpEventsService:
                 deal.external_stage = str(plain(env_deal.stage))
                 deal.external_stage_at = aware(env.occurred_at)
                 deal.title = env_deal.title
+                deal.erp_number = env_deal.number[:32]  # ЗВ/ПР-ГГГГ-NNN из ERP (ERP-09)
                 if env_deal.amount is not None:
                     deal.amount = Decimal(str(plain(env_deal.amount)))
                 deal.currency = str(plain(env_deal.currency))
@@ -264,14 +265,13 @@ class ErpEventsService:
         if found is not None:
             return found, False
 
-        # Заявка передачи (`source=crm`) — уже существующая сделка лида: второй не заводим.
+        # Заявка передачи (`source=crm`) — уже существующая сделка лида: второй не заводим. «Создать
+        # заявку» (W16-D1-2) называет свою заявку CRM прямо (`crm_request_id`) — её и связываем.
         adopt: Deal | None = None
-        if (
-            lead is not None
-            and isinstance(env.data, RequestCreatedV1)
-            and plain(env.data.payload.source) == "crm"
-        ):
-            adopt = await deals_service.open_deal(session, lead.id)
+        if isinstance(env.data, RequestCreatedV1) and plain(env.data.payload.source) == "crm":
+            adopt = await _request_of(session, client, env.data.payload.crm_request_id)
+            if adopt is None and lead is not None:
+                adopt = await deals_service.open_deal(session, lead.id)
             if adopt is not None and adopt.erp_deal_id is not None:
                 adopt = None
         try:
@@ -307,3 +307,14 @@ class ErpEventsService:
         return await session.scalar(
             select(Deal).where(Deal.erp_deal_id == erp_deal_id).limit(1).with_for_update()
         )
+
+
+async def _request_of(
+    session: AsyncSession, client: Client, crm_request_id: int | None
+) -> Deal | None:
+    """Заявка CRM из `request.created.crm_request_id` — только этого же клиента (чужой id события не
+    связываем)."""
+    if not crm_request_id:
+        return None
+    deal = await session.get(Deal, crm_request_id, with_for_update=True)
+    return deal if deal is not None and deal.client_id == client.id else None

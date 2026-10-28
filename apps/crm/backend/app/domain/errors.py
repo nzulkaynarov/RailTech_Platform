@@ -155,6 +155,15 @@ class Reason(StrEnum):
     TICKET_REPLY_EMPTY = "ticket_reply_empty"
     TICKET_REPLY_TOO_LONG = "ticket_reply_too_long"
     TICKET_RATE_LIMITED = "ticket_rate_limited"
+    # «Создать заявку» (W16-D1-2, CRM-03): у контакта нет ни одного канала связи; лид в отказе или
+    # обезличен.
+    CONTACT_CHANNEL_REQUIRED = "contact_channel_required"
+    REQUEST_NOT_ALLOWED = "request_not_allowed"
+    # Ключ формы `request_key` уже занят заявкой другого лида или клиента.
+    REQUEST_KEY_REUSED = "request_key_reused"
+    # ERP: тот же ключ идемпотентности заявки с другим телом (409 `IDEMPOTENCY_CONFLICT`) — заявка
+    # не создана, автоповтора нет.
+    ERP_REQUEST_CONFLICT = "erp_request_conflict"
 
 
 class DomainError(Exception):

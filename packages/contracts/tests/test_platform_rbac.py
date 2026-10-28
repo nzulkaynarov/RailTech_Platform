@@ -193,7 +193,9 @@ def test_eds_api_global_security_is_the_eds_access_token() -> None:
     assert EDS_YAML["security"] == [{"edsAccess": []}]
     scheme = EDS_YAML["components"]["securitySchemes"]["edsAccess"]
     assert (scheme["type"], scheme["scheme"], scheme["bearerFormat"]) == ("http", "bearer", "JWT")
-    assert EDS_YAML["info"]["version"] == "0.4.0"  # 0.4.0 — PATCH /documents/{id} (D1-5); 0.3.0 — журнал шины (W13-A2)
+    # 0.5.0 — зона исполнителя резолюции, 422 `assignee_zone_mismatch` (D1-8); 0.4.0 — PATCH /documents/{id} (D1-5);
+    # 0.3.0 — журнал шины (W13-A2)
+    assert EDS_YAML["info"]["version"] == "0.5.0"
 
 
 def test_numbers_are_not_path_parameters() -> None:

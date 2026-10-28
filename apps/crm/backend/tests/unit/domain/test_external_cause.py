@@ -86,6 +86,46 @@ def test_different_vendors_do_not_merge() -> None:
     ]
 
 
+def test_four_stale_services_are_one_row_with_the_services_listed() -> None:
+    """W15-G-2: «фоновые проверки не идут» — одна причина, одна строка, сервисы списком."""
+    keys = ("telegram", "litellm", "s3", "docling")
+    items = [
+        _diagnose(
+            key,
+            CheckResult(
+                key, "unknown", f"Последняя проверка {27 + i} мин назад — фоновые проверки не идут"
+            ),
+            stale=True,
+        )
+        for i, key in enumerate(keys)
+    ]
+
+    groups = cause.build_groups(items)
+
+    assert len(groups) == 1
+    group = groups[0]
+    assert group.id == "worker:checks_stale"
+    assert group.state == "not_checked"
+    assert group.owner == "hosting"
+    assert group.service_keys == keys
+    assert len(group.titles) == 4
+    assert "фоновые проверки не идут" in group.headline
+
+
+def test_stale_and_never_checked_are_different_rows() -> None:
+    stale = _diagnose(
+        "s3", CheckResult("s3", "unknown", "Последняя проверка 30 мин назад"), stale=True
+    )
+    fresh = _diagnose(
+        "docling", CheckResult("docling", "unknown", "Не проверено"), never_checked=True
+    )
+
+    assert {g.id for g in cause.build_groups([stale, fresh])} == {
+        "worker:checks_stale",
+        "docling:not_checked",
+    }
+
+
 def test_groups_are_sorted_broken_first_and_ok_is_left_out() -> None:
     ok = _diagnose("s3", rules.s3(HttpFacts(None, None, 5)))
     docling = _diagnose("docling", rules.docling(HttpFacts("unavailable", "refused")))
@@ -618,3 +658,70 @@ def test_causes_that_do_not_heal_themselves_are_rechecked_every_fifteen_minutes(
     last = NOW
     assert not cause.recheck_due(1, last, last + timedelta(minutes=14), "smtp_auth_failed")
     assert cause.recheck_due(1, last, last + timedelta(minutes=15), "smtp_auth_failed")
+
+
+# --- архив WAL, Redis и шина на общей политике (W15-H8b, B-004) ---------------------------------
+
+
+def test_bus_dlq_is_broken_only_after_fifteen_minutes_and_sends_the_admin_to_the_bus_journal() -> (
+    None
+):
+    from app.domain import external_infra as infra
+
+    dlq = infra.bus_dlq(infra.BusDlqFacts(dead=3, failed=0, last_error="eds/letter.created: 500"))
+    short = _diagnose("bus_dlq", dlq, NOW - timedelta(minutes=5), fail_for=timedelta(minutes=5))
+    assert short.state == "unstable"  # меньше 15 минут — ещё «Нестабильно», без оповещения
+    long = _diagnose("bus_dlq", dlq, NOW - timedelta(minutes=20), fail_for=timedelta(minutes=20))
+    assert long.state == "broken"
+    assert (long.owner, long.action, long.more) == ("admin", "open_bus", ("recheck",))
+    assert long.headline == "Шина: не доставлено: 3"
+    group = cause.build_groups([long])[0]
+    assert cause.plan_alerts([group], {}, {"bus_dlq": "broken"}, NOW)  # одно «Сломано»
+
+
+def test_bus_dlq_ok_has_no_cause() -> None:
+    from app.domain import external_infra as infra
+
+    ok = infra.bus_dlq(infra.BusDlqFacts(0, 0))
+    assert _diagnose("bus_dlq", ok).state == "ok"
+
+
+@pytest.mark.parametrize("key", ["wal_archive", "redis_broker", "redis_cache"])
+def test_infrastructure_rows_are_fixed_by_hosting(key: str) -> None:
+    from app.domain import external_infra as infra
+
+    result = (
+        infra.wal_archive(infra.WalFacts(None, NOW - timedelta(hours=2), NOW), NOW)
+        if key == "wal_archive"
+        else infra.redis(infra.RedisFacts(key, error="ConnectionRefusedError"), NOW)
+    )
+    d = _diagnose(key, result, NOW - timedelta(minutes=30), fail_for=timedelta(minutes=30))
+    assert d.state == "broken"
+    assert d.owner == "hosting"
+    assert d.action == "write_hosting"
+    assert hosting_ask(d.detail)  # готовый текст «что передать хостингу»
+
+
+def test_unreadable_wal_is_not_checked_not_broken() -> None:
+    from app.domain import external_infra as infra
+
+    d = _diagnose("wal_archive", infra.wal_archive(infra.WalFacts(error="AccessDenied"), NOW))
+    assert d.state == "not_checked"
+    assert d.owner is None
+
+
+def test_eds_rights_failure_is_one_broken_alert_after_fifteen_minutes_then_recovered() -> None:
+    """B-005: сбой автопереопубликации прав EDS — причина в центре, а не строка лога."""
+    from app.domain import external_infra as infra
+
+    failed = infra.eds_rights(infra.EdsRightsFacts("a" * 64, "b" * 64, error="ConnectionError"))
+    five, twenty = timedelta(minutes=5), timedelta(minutes=20)
+    short = _diagnose("eds_rights", failed, NOW - five, fail_for=five)
+    assert short.state == "unstable"
+    long = _diagnose("eds_rights", failed, NOW - twenty, fail_for=twenty)
+    assert long.state == "broken"
+    assert (long.owner, long.action) == ("hosting", "write_hosting")
+    group = cause.build_groups([long])[0]
+    assert cause.plan_alerts([group], {}, {"eds_rights": "broken"}, NOW)  # одно «Сломано»
+    healed = _diagnose("eds_rights", infra.eds_rights(infra.EdsRightsFacts("b" * 64, "b" * 64)))
+    assert healed.state == "ok"

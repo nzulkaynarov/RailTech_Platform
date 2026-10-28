@@ -95,6 +95,36 @@ class Deal(models.Model):
         help_text=_("Внутренние заметки, видны только сотрудникам"),
     )
 
+    # Номер заявки ЗВ-ГГГГ-NNN, после принятия КП — ПР-ГГГГ-NNN с тем же NNN (SPEC-v3 §2.2, ERP-09). Выдаётся при
+    # создании сделки из счётчика года под блокировкой (`sales/services/deal_numbers.py`), без пропусков.
+    number = models.CharField(
+        max_length=32,
+        blank=True,
+        default="",
+        db_index=True,
+        verbose_name=_("Номер заявки"),
+        help_text=_("ЗВ-ГГГГ-NNN; после принятия КП клиентом — ПР-ГГГГ-NNN (тот же NNN)"),
+    )
+    number_year = models.PositiveIntegerField(null=True, blank=True, editable=False, verbose_name=_("Год номера"))
+    number_seq = models.PositiveIntegerField(null=True, blank=True, editable=False, verbose_name=_("NNN номера"))
+    # Процесс заявки (ERP-07): v3 — заявка Платформы (резолюция и одобрение КП в EDS); legacy — начатая до Платформы.
+    process = models.CharField(
+        max_length=8,
+        choices=[("legacy", "legacy"), ("v3", "v3")],
+        default="legacy",
+        verbose_name=_("Процесс заявки"),
+    )
+    urgency = models.CharField(
+        max_length=8,
+        choices=[("normal", _("Обычная")), ("urgent", _("Срочная"))],
+        default="normal",
+        verbose_name=_("Срочность"),
+    )
+    # Заявка CRM («Создать заявку», CRM-03), по которой создана сделка: ключ идемпотентности шва.
+    crm_request_id = models.BigIntegerField(
+        null=True, blank=True, unique=True, editable=False, verbose_name=_("Заявка CRM")
+    )
+
     created_at = models.DateTimeField(
         auto_now_add=True,
         db_index=True,
@@ -113,9 +143,24 @@ class Deal(models.Model):
             models.Index(fields=["company", "-created_at"], name="deal_company_created_idx"),
             models.Index(fields=["company", "stage"], name="deal_company_stage_idx"),
         ]
+        constraints = [
+            # Один NNN в году — одна заявка (ERP-09): последний рубеж под блокировкой счётчика.
+            models.UniqueConstraint(fields=["number_year", "number_seq"], name="uniq_deal_number_year_seq"),
+        ]
 
     def __str__(self):
-        return self.title or f"Сделка #{self.pk}"
+        return self.title or self.number or f"Сделка #{self.pk}"
+
+    def save(self, *args, **kwargs):
+        """Новая сделка получает номер ЗВ из счётчика года в той же транзакции, что и вставка (ERP-09)."""
+        if self._state.adding and not self.number_seq:
+            from django.db import transaction
+            from sales.services import deal_numbers
+
+            with transaction.atomic():
+                deal_numbers.assign(self)
+                return super().save(*args, **kwargs)
+        return super().save(*args, **kwargs)
 
     @cached_property
     def active_quote(self):
@@ -130,6 +175,20 @@ class Deal(models.Model):
     def total_value(self) -> Decimal:
         quote = self.active_quote
         return quote.total_incl_vat if quote else Decimal("0")
+
+
+class DealNumberCounter(models.Model):
+    """Счётчик NNN номеров заявок по году (ERP-09): строка года берётся под блокировкой, номер — без пропусков."""
+
+    year = models.PositiveIntegerField(primary_key=True, verbose_name=_("Год"))
+    last_value = models.PositiveIntegerField(default=0, verbose_name=_("Последний NNN"))
+
+    class Meta:
+        verbose_name = _("Счётчик номеров заявок")
+        verbose_name_plural = _("Счётчики номеров заявок")
+
+    def __str__(self):
+        return f"ЗВ {self.year}: {self.last_value}"
 
 
 class ActivityLog(models.Model):

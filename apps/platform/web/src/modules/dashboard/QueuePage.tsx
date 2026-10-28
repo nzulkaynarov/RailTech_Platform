@@ -14,10 +14,11 @@ import { EmptyState } from "../../shared/ui/EmptyState";
 import { LinkButton } from "../../shared/ui/LinkButton";
 import { PageHeader } from "../../shared/ui/PageHeader";
 import { QueueList, type QueueItem as RowItem } from "../../shared/ui/QueueList";
-import { SourceBanner } from "../../shared/ui/SourceBanner";
+import { SourceBanner, bannerKind } from "../../shared/ui/SourceBanner";
 import { matchSection } from "../registry";
 import { viewRoleNames } from "../../entities/role/roles";
 import { isActionable } from "../bridge";
+import { objectLink } from "../objectLinks";
 import { WhereToDo } from "../stub/WhereToDo";
 import { dueBadge, isUrgent, pluralForm, queueEmptyKind } from "./queue";
 import "./dashboard.css";
@@ -32,7 +33,13 @@ function mergeSources(...all: (Sources | undefined)[]): Sources | undefined {
       : known.every((s) => pick(s) === "not_applicable")
         ? "not_applicable"
         : "ok";
-  return { crm: worst((s) => s.crm), erp: worst((s) => s.erp) };
+  // EDS в ответе есть не всегда (только если его читали): пока ни один ответ о нём не сказал, поля нет
+  const eds = known.some((s) => s.eds === "unavailable")
+    ? "unavailable"
+    : known.some((s) => s.eds === "ok")
+      ? "ok"
+      : undefined;
+  return { crm: worst((s) => s.crm), erp: worst((s) => s.erp), ...(eds ? { eds } : {}) };
 }
 
 /**
@@ -64,41 +71,48 @@ export function QueuePage() {
     .filter(Boolean)
     .join(" · ");
 
-  const rows: RowItem[] = (queue.data?.items ?? []).map((item) => ({
-    id: item.id,
-    badge: dueBadge(
-      item,
-      (key, options) => t(key, options),
-      (value) => format.date(value, "short"),
-    ),
-    title: item.title,
-    // Строка замещаемого коллеги (W15-H6): «за Имя · …» — чья это работа.
-    caption: item.on_behalf_of
-      ? `${t("modules:dashboard.queue.onBehalf", { name: item.on_behalf_of.name })} · ${item.subtitle}`
-      : item.subtitle,
-    to: item.object.path,
-    urgent: isUrgent(item),
-    // У цели нет экрана в Платформе — «Где сделать» вместо ссылки на заглушку (W15-H2).
-    ...(isActionable(item.object.path) ? {} : { where: <WhereToDo path={item.object.path} /> }),
-  }));
+  const rows: RowItem[] = (queue.data?.items ?? []).map((item) => {
+    // Письмо, КП, служебка и диалог клиента открываются в своём экране на нужной вкладке (D1-6), без «моста» в старую систему.
+    const to = objectLink(item.object);
+    return {
+      id: item.id,
+      badge: dueBadge(
+        item,
+        (key, options) => t(key, options),
+        (value) => format.date(value, "short"),
+      ),
+      title: item.title,
+      // Строка замещаемого коллеги (W15-H6): «за Имя · …» — чья это работа.
+      caption: item.on_behalf_of
+        ? `${t("modules:dashboard.queue.onBehalf", { name: item.on_behalf_of.name })} · ${item.subtitle}`
+        : item.subtitle,
+      to,
+      urgent: isUrgent(item),
+      // У цели нет экрана в Платформе (договор, счёт, акт, расчёт) — «Где сделать» вместо ссылки на заглушку (W15-H2).
+      ...(isActionable(to) ? {} : { where: <WhereToDo path={to} /> }),
+    };
+  });
 
   const sources = mergeSources(queue.data?.sources, cards.data?.sources);
-  const partial =
-    sources?.crm === "unavailable" && sources.erp === "unavailable"
-      ? "both"
-      : sources?.crm === "unavailable"
-        ? "crm"
-        : sources?.erp === "unavailable"
-          ? "erp"
-          : null;
+  const crmDown = sources?.crm === "unavailable";
+  const erpDown = sources?.erp === "unavailable";
+  const edsDown = sources?.eds === "unavailable";
+  const partial = crmDown || erpDown || edsDown ? bannerKind(crmDown, erpDown, edsDown) : null;
   const names = {
     crm: t("modules:crm.name"),
     erp: t("modules:erp.name"),
+    eds: t("modules:eds.name"),
   };
+  const downNames = [crmDown && names.crm, erpDown && names.erp, edsDown && names.eds]
+    .filter(Boolean)
+    .map((name) => `«${String(name)}»`)
+    .join(", ");
   const partialMessages = {
     crm: t("modules:dashboard.queue.partial.crm", names),
     erp: t("modules:dashboard.queue.partial.erp", names),
+    eds: t("modules:dashboard.queue.partial.eds", names),
     both: t("modules:dashboard.queue.partial.both", names),
+    multi: t("modules:dashboard.queue.partial.multi", { names: downNames }),
   };
   const emptyKind = queueEmptyKind(me);
 
@@ -112,7 +126,7 @@ export function QueuePage() {
   let list;
   if (queue.isPending) {
     list = (
-      <Card aria-busy="true" aria-label={t("modules:dashboard.queue.loading")}>
+      <Card role="status" aria-busy="true" aria-label={t("modules:dashboard.queue.loading")}>
         <Skeleton active paragraph={{ rows: 3 }} />
       </Card>
     );

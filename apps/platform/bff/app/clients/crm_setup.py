@@ -17,7 +17,7 @@ import httpx
 from pydantic import BaseModel, ValidationError
 
 from app.clients import crm_models as crm
-from app.clients.base import BackendUnavailableError, cookie_value
+from app.clients.base import SETUP_TIMEOUT_SECONDS, BackendUnavailableError, cookie_value
 from app.clients.crm import REFRESH_COOKIE, CrmClient
 from app.errors import (
     PlatformError,
@@ -44,6 +44,9 @@ CODE_EXPIRED_MESSAGE = (
 )
 LOCKED_MESSAGE = "Слишком много неверных кодов. Повторите через 15 минут."
 SETUP_DONE_MESSAGE = "Администратор уже создан. Войдите в Платформу."
+# CRM создала администратора, но не ответила в срок: первый запуск выполнен.
+SETUP_DONE_LATE_REASON = "created_before_timeout"
+SETUP_DONE_LATE_MESSAGE = "Первый запуск выполнен, CRM ответила с задержкой. Войдите в Платформу."
 COMPANY_EXISTS_MESSAGE = "Своя компания уже создана."
 COMPANY_FORBIDDEN_MESSAGE = "Создать свою компанию может только администратор ERP."
 # Куда ведёт шаг «ERP» мастера (как STEP_TARGET.erp в SPA).
@@ -151,12 +154,30 @@ async def create_admin(
             f"{SETUP}/admin",
             json=payload,
             headers={"X-Forwarded-For": client_ip} if client_ip else None,
+            wait_seconds=SETUP_TIMEOUT_SECONDS,
         )
     except BackendUnavailableError as exc:
+        if await _admin_exists(client):
+            # Ответ не дошёл, а администратор уже создан: «не удалось связаться» было бы неправдой.
+            raise PlatformError(
+                "SETUP_DONE",
+                SETUP_DONE_LATE_MESSAGE,
+                status_code=409,
+                source="crm",
+                details={"reason": SETUP_DONE_LATE_REASON},
+            ) from exc
         raise backend_unavailable("crm", exc.reason) from exc
     if response.status_code != 200:
         raise setup_error(response)
     return cookie_value(response, REFRESH_COOKIE)
+
+
+async def _admin_exists(client: CrmClient) -> bool:
+    """После таймаута `/setup/admin`: CRM отвечает на `/setup/state` и администратор уже есть."""
+    try:
+        return not await fetch_state(client)
+    except PlatformError:
+        return False
 
 
 # --- чек-лист -----------------------------------------------------------------------------------

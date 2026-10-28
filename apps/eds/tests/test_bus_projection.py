@@ -121,6 +121,43 @@ async def test_permissions_are_replaced_as_a_whole(client: httpx.AsyncClient, co
     assert row["permissions_eds"] == ["memos.create"]
 
 
+async def test_catalog_sections_are_projected_and_replaced_as_a_whole(
+    client: httpx.AsyncClient, container: Container
+) -> None:
+    """D1-8: `permissions.sections` попадает в проекцию и заменяется целиком; нет поля — разделов нет."""
+    first = user_event(
+        "created",
+        when=T0,
+        updated_at=iso(T0, 0),
+        permissions={"eds": ["letters.read"], "sections": {"erp.calc.goods": "full", "erp.calc": "full"}},
+    )
+    await receive_and_process(client, container, first)
+    assert (await employee(container))["sections"] == {"erp.calc.goods": "full", "erp.calc": "full"}
+
+    changed = user_event(
+        "updated",
+        when=T0,
+        updated_at=iso(T0, 1),
+        permissions={"eds": ["letters.read"], "sections": {"eds.payments": "read"}},
+    )
+    await receive_and_process(client, container, changed)
+    assert (await employee(container))["sections"] == {"eds.payments": "read"}
+
+    old_crm = user_event("updated", when=T0, updated_at=iso(T0, 2))  # CRM без поля `sections`
+    await receive_and_process(client, container, old_crm)
+    assert (await employee(container))["sections"] == {}
+
+
+async def test_deactivation_clears_catalog_sections(client: httpx.AsyncClient, container: Container) -> None:
+    created = user_event(
+        "created", when=T0, updated_at=iso(T0, 0), permissions={"eds": [], "sections": {"erp.calc.goods": "full"}}
+    )
+    await receive_and_process(client, container, created)
+    await receive_and_process(client, container, deactivated_event(when=T0 + timedelta(hours=1)))
+    row = await employee(container)
+    assert (row["is_active"], row["sections"]) == (False, {})
+
+
 async def test_snapshot_without_permissions_field_means_no_access(
     client: httpx.AsyncClient, container: Container
 ) -> None:

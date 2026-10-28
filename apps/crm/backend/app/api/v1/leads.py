@@ -7,14 +7,14 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import ContainerDep, require
+from app.domain.client_requests import platform_status
 from app.domain.errors import NotFoundError
 from app.models.clients import Client
 from app.models.leads import Lead, Message
 from app.models.qualification import Escalation
-from app.repositories import crm, service_requests
+from app.repositories import crm, lead_status, service_requests
 from app.repositories import decisions as repo
 from app.repositories import leads as leads_repo
-from app.repositories import users as users_repo
 from app.schemas.decisions import (
     DecisionsResponse,
     QualifierRunItem,
@@ -38,7 +38,6 @@ from app.schemas.leads import (
     Reply,
     ReturnToBot,
     Snooze,
-    TeamMember,
 )
 from app.schemas.notices import NoticeOut
 from app.security.principal import Principal
@@ -72,6 +71,11 @@ def escalation_out(e: Escalation | None) -> EscalationOut | None:
     )
 
 
+def _platform_status(lead: Lead, escalation: Escalation | None) -> str:
+    asks_price, sla_overdue = lead_status.escalation_flags(escalation)
+    return platform_status(lead.stage, asks_price=asks_price, sla_overdue=sla_overdue).value
+
+
 def lead_out(
     lead: Lead, escalation: Escalation | None, names: dict[int, str] | None = None
 ) -> LeadOut:
@@ -93,6 +97,7 @@ def lead_out(
         created_at=lead.created_at,
         escalation=escalation_out(escalation),
         source=lead.source,
+        platform_status=_platform_status(lead, escalation),
     )
 
 
@@ -110,12 +115,24 @@ def _unread(lead: Lead) -> bool:
     return lead.last_human_msg_at is None or lead.last_lead_msg_at > lead.last_human_msg_at
 
 
+# Ключи вложения, которые уходят клиентам API (D1-8, B-014): ключ хранилища (`storage_key`) не
+# входит — файл отдаёт только маршрут вложения с проверкой доступа к лиду.
+_ATTACHMENT_FIELDS = ("kind", "name", "mime", "size", "stored", "too_large", "note")
+
+
+def attachment_out(item: object) -> dict[str, object]:
+    """Вложение без адреса в хранилище: имя, тип, размер и признак «файл сохранён»."""
+    if not isinstance(item, dict):
+        return {}
+    return {key: item[key] for key in _ATTACHMENT_FIELDS if key in item}
+
+
 def message_out(m: Message) -> MessageOut:
     return MessageOut(
         id=m.id,
         role=m.role,
         text=m.text,
-        attachments=list(m.attachments or []),
+        attachments=[attachment_out(a) for a in m.attachments or []],
         sent_by_user_id=m.sent_by_user_id,
         created_at=m.created_at,
         meta=dict(m.meta or {}),
@@ -136,8 +153,20 @@ async def list_leads(
     sort: str = Query(default="last_message", pattern="^(last_message|score|created)$"),
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
+    platform_status: Annotated[
+        str | None,
+        Query(
+            pattern=r"^(new|dialog|wants_quote|no_answer|client|lost)(,(new|dialog|wants_quote|no_answer|client|lost))*$",
+            description="Статус лида для Платформы (CRM-02), через запятую",
+        ),
+    ] = None,
+    overdue: Annotated[
+        bool | None, Query(description="Просроченные: открытая передача с истёкшим SLA ответа")
+    ] = None,
 ) -> LeadPage:
-    flt = crm.LeadFilter(stage, owner, min_score, language, q, created_from, created_to)
+    flt = crm.LeadFilter(
+        stage, owner, min_score, language, q, created_from, created_to, platform_status, overdue
+    )
     async with container.session_factory() as session:
         rows, total = await crm.list_leads(session, flt, who.user_id, limit, offset, sort)
         escalations = await crm.active_escalations(session, [r.id for r in rows])
@@ -357,19 +386,6 @@ async def new_deal(lead_id: int, who: Worker, container: ContainerDep) -> Action
 async def assign(lead_id: int, body: Assign, who: Worker, container: ContainerDep) -> ActionResult:
     await container.lead_service.assign(who, lead_id, body.user_id)
     return ActionResult()
-
-
-@router.get("/team", response_model=list[TeamMember])
-async def team(_: Reader, container: ContainerDep) -> list[TeamMember]:
-    """Активные менеджеры и админы: кому передать лида, чьё имя показать (без email и ролей)."""
-    async with container.session_factory() as session:
-        users = await users_repo.list_users(session)
-        roles = await users_repo.roles_by_user(session)
-    return [
-        TeamMember(id=u.id, full_name=u.full_name)
-        for u in users
-        if u.is_active and {"manager", "admin"} & set(roles.get(u.id, []))
-    ]
 
 
 @router.post("/leads/{lead_id}/actions/note", response_model=ActionResult)

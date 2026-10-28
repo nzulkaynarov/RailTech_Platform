@@ -74,12 +74,16 @@ async def fail_job(sessions: async_sessionmaker[AsyncSession], task: str) -> Non
 
 
 def monitor(
-    sessions: async_sessionmaker[AsyncSession], bot: FakeSender, ok: list[bool]
+    sessions: async_sessionmaker[AsyncSession],
+    bot: FakeSender,
+    ok: list[bool],
+    platform_url: str | None = None,
 ) -> MonitorService:
     async def probe() -> bool:
         return ok[0]
 
-    return MonitorService(sessions, SettingsService(sessions, ttl_s=0), cast(Bot, bot), probe)
+    settings = SettingsService(sessions, ttl_s=0, platform_url=platform_url)
+    return MonitorService(sessions, settings, cast(Bot, bot), probe)
 
 
 async def test_alerts_fire_once_repeat_and_resolve(
@@ -124,6 +128,23 @@ async def test_daily_report_and_budget_guard(sessions: async_sessionmaker[AsyncS
     assert (
         await BudgetGuard(sessions, SettingsService(sessions, ttl_s=0)).fallback_required() is False
     )
+
+
+async def test_daily_report_dashboard_link_follows_the_platform_address(
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    await configure(sessions, daily_usd=0.5)
+    await spend(sessions, 0.01)
+    on_platform = await monitor(
+        sessions, FakeSender(), [True], "https://platform.example.com"
+    ).daily_report(datetime.now(UTC))
+    assert on_platform is not None
+    assert 'href="https://platform.example.com/dashboard/summary"' in on_platform
+    # адреса Платформы нет — прежняя ссылка в старую CRM
+    old = await monitor(sessions, FakeSender(), [True]).daily_report(datetime.now(UTC))
+    assert old is not None
+    assert '/dashboard"' in old
+    assert "platform.example.com" not in old
 
 
 async def test_sample_dialogs_masks_pii(sessions: async_sessionmaker[AsyncSession]) -> None:

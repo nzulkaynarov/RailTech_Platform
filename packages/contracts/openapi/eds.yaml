@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — EDS API (электронный документооборот)
-  version: 0.4.0
+  version: 0.5.0
   summary: Пространство `/api/v1/` сервиса EDS — вызывает BFF Платформы от имени сотрудника.
   description: |
     Контракт сервиса EDS (`apps/eds`, ADR-0015; `docs/runbooks/wave12-eds-c1.md` §2). EDS — владелец реестра документов и
@@ -283,7 +283,10 @@ paths:
       description: |
         Только письмо в статусе `awaiting_resolution` (иначе 409 `CONFLICT`, `details.reason = invalid_state`). Статус →
         `resolved`; публикуется `letter.resolved` (исполнители, срок, мин. маржа, ссылки на заявку и сделку ERP) — ERP создаёт
-        задание расчёта (EDS-01). Исполнители — активные сотрудники проекции (иначе 422, `details.fields.assignees`). Срок
+        задание расчёта (EDS-01). Исполнители — активные сотрудники проекции (иначе 422, `details.fields.assignees =
+        not_active_employee`), у каждого — раздел каталога его зоны на уровне `full`: товары — `erp.calc.goods`, услуги —
+        `erp.calc.services`, условия оплаты — `eds.payments` (проекция берёт разделы из `identity.user.*`,
+        `user.permissions.sections`; иначе 422, `details.fields.assignees = assignee_zone_mismatch`; D1-8, B-007). Срок
         `due` — не раньше сегодняшней даты по `Asia/Tashkent` (иначе 422, `details.fields.due`; решение архитектора
         2026-10-26, C1-G-1).
       x-rt-permissions: [letters.resolve]
@@ -425,6 +428,7 @@ paths:
       summary: Документы (служебные записки, заявления, отчёты, исходящие письма)
       description: |
         Без `registry.read` — только документы, где сотрудник автор или участник маршрута; с `registry.read` — все.
+        В любом случае чужой черновик (`draft`) виден только автору, а исходящее письмо (`letter_out`) — только с `letters.read`.
       x-rt-permissions: [memos.create, memos.approve, approvals.decide, registry.read]
       parameters:
         - name: kind
@@ -506,7 +510,9 @@ paths:
       tags: [documents]
       operationId: getDocument
       summary: Карточка документа
-      description: Автор, участник маршрута или сотрудник с `registry.read`; иначе 404 `NOT_FOUND` (существование не раскрывается).
+      description: |
+        Автор, участник маршрута или сотрудник с `registry.read`; иначе 404 `NOT_FOUND` (существование не раскрывается).
+        Чужой черновик — всегда 404; исходящее письмо — 404 без `letters.read`.
       x-rt-permissions: [memos.create, memos.approve, approvals.decide, registry.read]
       parameters:
         - $ref: '#/components/parameters/DocumentId'
@@ -529,7 +535,7 @@ paths:
       summary: Править черновик или возвращённый документ (без отправки)
       description: |
         Только автор; `memo`, `application`, `report` — из `draft` и `returned`, `letter_out` — из `draft`; другой статус —
-        409 `CONFLICT` (`details.reason = invalid_state`), не автор — 403 (`details.reason = not_author`). Меняются только
+        409 `CONFLICT` (`details.reason = invalid_state`), не автор — 403 (`details.reason = not_author`; чужой черновик не виден вовсе — 404). Меняются только
         переданные поля (`amount: null` и `due_date: null` очищают значение); `file_ids` привязывает файлы (уже привязанные
         к этому документу пропускаются, снять вложение нельзя); `erp_deal_id` — связь с проектом (заявкой) ERP. Версия
         не растёт (растёт при повторной отправке после возврата), номер и маршрут не меняются; в журнал — `document.updated`.
@@ -607,6 +613,8 @@ paths:
       description: |
         `mine=1` (по умолчанию) — маршруты, текущий шаг которых ждёт этого сотрудника (назначен по `crm_user_id` или он
         держит право шага). `mine=0` — без `registry.read` маршруты, где сотрудник автор или участник; с `registry.read` — все.
+        Участник маршрута видит его всегда; остальные — маршрут документа, только если виден сам документ (исходящее письмо
+        без `letters.read` и чужой черновик скрыты и при `registry.read`); КП — с `registry.read`.
       x-rt-permissions: [memos.create, memos.approve, approvals.decide, payments.confirm, registry.read]
       parameters:
         - name: mine
@@ -656,6 +664,7 @@ paths:
       summary: Карточка маршрута (шаги, чек-лист КП, снимок КП)
       description: |
         Автор объекта, участник маршрута (в том числе держатель права шага) или сотрудник с `registry.read`; иначе 404.
+        Маршрут документа виден неучастнику, только если ему виден сам документ (D1-10); участнику — всегда.
         Снимок КП (`quote`) с себестоимостью и маржой — только тем, кто решает шаг маршрута КП (`approvals.decide`).
       x-rt-permissions: [memos.create, memos.approve, approvals.decide, payments.confirm, registry.read]
       parameters:
@@ -724,6 +733,12 @@ paths:
       description: |
         Единый реестр с вкладками по типу и фильтрами статус · период · ответственный · клиент. КП — маршруты одобрения
         (номер КП ERP); договоры, счета и акты ERP появятся, когда EDS начнёт вести их проекции (вне C1).
+
+        `registry.read` открывает сам реестр, но он **не шире прав на вид документа**: входящие и исходящие письма
+        (`letter_in`, `letter_out`) попадают в выдачу только у сотрудника с `letters.read`; черновики (`status = draft`) —
+        только у автора; служебные записки, заявления и отчёты — по видимости документа, КП — по видимости маршрута.
+        Отбор идёт до курсора и ограничения страницы: скрытые строки не занимают место на странице. Вкладка, на которую
+        у сотрудника нет прав, — `200` с пустой страницей, не `403`.
       x-rt-permissions: [registry.read]
       parameters:
         - $ref: '#/components/parameters/RegistryKind'
@@ -755,7 +770,9 @@ paths:
       tags: [registry]
       operationId: exportRegistry
       summary: Экспорт реестра с теми же фильтрами
-      description: Не больше 10 000 строк (иначе 422 `VALIDATION_FAILED`, `details.reason = export_too_large`); в журнал — `registry.export`.
+      description: |
+        Не больше 10 000 строк (иначе 422 `VALIDATION_FAILED`, `details.reason = export_too_large`); в журнал — `registry.export`.
+        Видимость строк — как у `GET /registry`: письма только с `letters.read`, чужие черновики не выгружаются.
       x-rt-permissions: [registry.export]
       parameters:
         - $ref: '#/components/parameters/RegistryKind'
@@ -848,7 +865,7 @@ paths:
       operationId: downloadFile
       summary: Скачать файл (поток)
       description: |
-        Последняя версия, или `version`. Видит тот, кому виден документ, к которому файл привязан, или загрузивший; иначе 404.
+        Последняя версия, или `version`. Видит тот, кому виден документ, к которому файл привязан (чужой черновик и исходящее письмо без `letters.read` не видны), или загрузивший; иначе 404.
       x-rt-permissions: [letters.read, memos.create, memos.approve, approvals.decide, registry.read]
       parameters:
         - $ref: '#/components/parameters/FileId'

@@ -1,4 +1,5 @@
-"""Сырые данные на один запрос: входящие CRM, очередь одобрения ERP, сделки ERP.
+"""Сырые данные на один запрос: входящие CRM, очередь одобрения ERP, сделки ERP, письма и документы
+на согласовании EDS.
 
 Источники — docs/architecture/integration-map.md §1.2.
 """
@@ -15,6 +16,16 @@ from app.rbac import View, allows
 # работают по ним.
 DEALS_PAGE_SIZE = 100
 APPROVALS_PAGE_SIZE = 50
+LETTERS_PATH = "/api/v1/letters"
+LETTERS_PARAMS: dict[str, Any] = {"status": "awaiting_resolution", "limit": APPROVALS_PAGE_SIZE}
+APPROVALS_PATH = "/api/v1/approvals"
+# Служебные записки, заявления и отчёты на моём шаге маршрута (`mine` — по умолчанию); КП ведёт ERP.
+MEMO_PARAMS: dict[str, Any] = {
+    "mine": "true",
+    "status": "open",
+    "template": ["memo", "application", "report"],
+    "limit": APPROVALS_PAGE_SIZE,
+}
 DEALS_PATH = "/api/v1/crm/deals/"
 DEALS_PARAMS = {"page_size": DEALS_PAGE_SIZE}
 
@@ -41,6 +52,13 @@ class Snapshot:
     deals: list[dict[str, Any]] = field(default_factory=list)
     # EDS: мои документы, возвращённые на доработку (D1-6b); `None` — не читали или EDS не ответил.
     rework: list[Returned] | None = None
+    # EDS: `None` — источник не читали или он не ответил (карточка и бейдж без числа: ноль был бы
+    # ложью), список — ответ EDS как есть (что EDS вернул по токену сотрудника, то и строки).
+    letters: list[dict[str, Any]] | None = None
+    memos: list[dict[str, Any]] | None = None
+    # Есть следующая страница EDS: число в карточке — «не меньше», а не точное
+    letters_more: bool = False
+    memos_more: bool = False
     # Новые обращения сотрудников (CRM `staff-tickets?status=new`): админу — «Мои задачи» (W15-H7).
     tickets: list[dict[str, Any]] = field(default_factory=list)
     tickets_total: int = 0
@@ -63,12 +81,24 @@ def wants_approvals(view: View) -> bool:
     return view.wants("approve_quote")
 
 
+def wants_letters(view: View) -> bool:
+    return view.wants("resolve_letter")
+
+
+def wants_memos(view: View) -> bool:
+    return view.wants("approve_memo") or view.wants("pay_memo")
+
+
 def wants_tickets(view: View) -> bool:
     return view.wants("ticket")
 
 
 def wants_projects(view: View) -> bool:
     return allows(view.access, "eds.projects", "read")
+
+
+def _has_more(payload: Any) -> bool:
+    return isinstance(payload, dict) and bool(payload.get("next_cursor"))
 
 
 async def _inbox(
@@ -110,8 +140,8 @@ async def load_snapshot(
     inbox: bool,
     approvals: bool,
     deals: bool,
-    eds: bool = False,
     tickets: bool = False,
+    eds: bool = False,
 ) -> Snapshot:
     """Параллельно прочитать нужные источники. `view` — роли «вида» (активная роль, если задана);
     сделки нужны и для подписей к очереди и уведомлениям, поэтому их читает тот, кто их просит."""
@@ -133,6 +163,20 @@ async def load_snapshot(
             total = payload.get("count") if isinstance(payload, dict) else None
             snap.approvals_total = total if isinstance(total, int) else len(snap.approvals)
 
+    async def load_letters() -> None:
+        if eds and wants_letters(view):
+            payload = await feed.get("eds", LETTERS_PATH, LETTERS_PARAMS, ttl=SNAPSHOT_TTL_SECONDS)
+            if payload is not None:
+                snap.letters = rows(payload)
+                snap.letters_more = _has_more(payload)
+
+    async def load_memos() -> None:
+        if eds and wants_memos(view):
+            payload = await feed.get("eds", APPROVALS_PATH, MEMO_PARAMS, ttl=SNAPSHOT_TTL_SECONDS)
+            if payload is not None:
+                snap.memos = rows(payload)
+                snap.memos_more = _has_more(payload)
+
     async def load_deals() -> None:
         if deals:
             payload = await feed.get("erp", DEALS_PATH, DEALS_PARAMS, ttl=SNAPSHOT_TTL_SECONDS)
@@ -150,6 +194,12 @@ async def load_snapshot(
             snap.tickets_total = total if isinstance(total, int) else len(snap.tickets)
 
     await asyncio.gather(
-        load_inbox(), load_approvals(), load_deals(), load_tickets(), load_returned()
+        load_inbox(),
+        load_approvals(),
+        load_deals(),
+        load_tickets(),
+        load_letters(),
+        load_memos(),
+        load_returned(),
     )
     return snap

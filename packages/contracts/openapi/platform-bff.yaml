@@ -6,7 +6,11 @@ info:
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
     сессия, профиль, счётчики меню, «Моя очередь», лента «Сегодня», уведомления, поиск. Экраны фаз P2–P4 добавляются
-    минорными версиями этого файла до кода (`docs/architecture/integration-map.md` §1).
+    в этот файл до кода (`docs/architecture/integration-map.md` §1).
+
+    **Версия и журнал (DECISIONS 2026-10-28).** Добавляющее изменение `info.version` не поднимает и строку журнала ниже не
+    добавляет — что изменилось, пишется в описании PR. Минор растёт только с ломающим изменением (до 1.0, oasdiff ERR).
+    Журнал версий ниже — история до 2026-10-28, новые строки в него не добавляются.
 
     Словарь — SPEC-v3 §2 (`docs/product/SPEC-v3.md`): старых кодов стадий и статусов CRM и ERP в ответах нет.
     BFF не имеет своей базы: данные приходят из CRM и ERP, каждый вызов бэкенда — с токеном сотрудника.
@@ -135,12 +139,12 @@ info:
     (директор читает), сброс пароля — `admin: full`; профиль доступен каждому вошедшему. Секреты из записей журнала BFF вырезает
     (значения полей `password`, `secret`, `token`, `key`, `*_key`, `credentials`, `authorization`, `pin` и им подобных -> `***` целиком, любого типа).
 
-    **0.26.0 (D1-6b) — «Доработать» в «Моей очереди» автора.** Добавляющее изменение: `QueueItemKind` += `rework_document` (секция `queue`
+    **D1-6b — «Доработать» в «Моей очереди» автора.** Добавляющее изменение без смены версии (CONTRACTS §7.1): `QueueItemKind` += `rework_document` (секция `queue`
     каталога: раздел `eds.memo.create`, уровень `full` — автор документа). Строка — документ сотрудника, который согласующий вернул на
     доработку (служебная записка, заявление, отчёт в статусе «Возвращён на доработку»): «Доработать: СЗ-… · тема», в подписи — кто вернул и его
     комментарий; срок — «нужно до» документа, без него — «сегодня»; `object.path` — `/eds/new?draft=<id документа>` (форма «Продолжить»). Строка
     исчезает, когда автор отправил документ снова. Источник — EDS (`GET /documents?mine=true&status=returned`) по токену сотрудника
-    (`aud=eds`): что вернул EDS, то и строки. `Sources.eds` (необязательное, `SourceState`) — есть, когда ответ собран и из EDS: `unavailable` — EDS
+    (`aud=eds`): что вернул EDS, то и строки. `Sources.eds` (необязательное, `SourceState`, с D1-6) — есть, когда ответ собран и из EDS: `unavailable` — EDS
     не ответил (остальные строки показаны), `not_applicable` — EDS не пустил сотрудника по его токену; без доступа к разделам EDS и без обращения
     к нему поля нет. Подсказка потока (SSE): решение по документу (`approval.decided`, в том числе возврат) -> тема `queue`.
 
@@ -158,6 +162,14 @@ info:
     ответ и решение уходят автору, новое обращение — администраторам; `POST /notifications/{id}/read` и `read-all` отмечают
     обе ленты. **Первый вход:** `Me.onboarding_done` и `PUT /me/onboarding` («Пропустить» / «Больше не показывать» —
     флаг хранит CRM, не браузер).
+
+    **D1-6 — EDS в «Моей очереди», счётчиках и поиске (версия не поднята: добавляющее изменение к 0.26.0).** Добавляющее изменение: `Sources.eds` (необязательное, `SourceState`) — есть, когда
+    ответ собран и из EDS (письма без резолюции, служебки, заявления и отчёты на моём шаге маршрута, записи реестра в поиске); `unavailable` — EDS не
+    ответил (остальное показано, плашка «раздел «Документы» не ответил»), `not_applicable` — EDS не пустил сотрудника по его токену (`aud=eds`).
+    Без доступа к разделам EDS и без обращения к нему поля нет. Строки `QueueItem` видов `resolve_letter`, `approve_memo`, `pay_memo`, карточки
+    `letters_without_resolution` и `memos_to_approve`, бейджи `eds.inbox` и `eds.approvals`, результаты поиска по номерам ВХ, ИСХ, КП, СЗ, ЗЯ, ОТ
+    (реестр EDS с проверкой раздела каталога) — те же схемы `QueueItem`, `QueueCard`, `MenuCounter`, `SearchHit`. Строка очереди «ждут ответа клиенту»
+    (`answer_lead`, `take_lead`) ведёт в `/crm/messages?lead=L-NNNN`, а не в карточку лида.
 
     **0.24.0 (D1-4) — EDS · КП на одобрение и документы на согласовании.** Добавляющее изменение, тег `eds-approvals`: `GET /eds/quotes`
     (КП на одобрение: «на моём шаге» или все), `GET /eds/quotes/{ref}` (карточка КП по id маршрута или номеру `КП-2026/115`: шаги маршрута,
@@ -246,6 +258,14 @@ info:
     ссылке; неверная или просроченная — 422 `VALIDATION_FAILED`, `details.reason = reset_token_invalid`). `Me.access` остаётся для
     совместимости, но экран «Доступ: CRM · ERP» убран: вместо него роли словами.
 
+    **0.26.0 (W15-H8b) — «Состояние»: архив WAL, Redis, шина.** Добавляющее изменение: в реестре внешних сервисов (`GET
+    /admin/external-services`) новые строки `wal_archive` (возраст последнего сегмента и базовой копии), `redis_broker` и
+    `redis_cache` (PING, память, AOF/RDB), `bus_dlq` (недоставленные события шины, кроме ERP) и `eds_rights` (права EDS
+    сотрудников опубликованы под действующим каталогом ролей; проверка сама повторяет публикацию); действие группы
+    `open_bus` — «Открыть журнал обмена» (`/admin/bus`). Строки идут по общей политике H3 (одно «Сломано»/«Восстановлено»,
+    «кто исправляет»). Карточка «Хранилище» учитывает `wal_archive`. Смена пароля самим сотрудником (CRM): прочие сессии
+    закрываются сразу, текущая продолжается на новой паре токенов (`POST /auth/change-password` BFF по-прежнему 204).
+
     0.2.4: `423 ACCOUNT_LOCKED` объявлен и на `POST /auth/change-password` (CRM блокирует учётную запись после неверных
     текущих паролей).
 
@@ -302,6 +322,8 @@ tags:
     description: EDS · КП на одобрение и документы на согласовании — списки, карточки, решения директора (сервис EDS, ERP для состава КП; разделы `eds.drafts`, `eds.memo.approve`)
   - name: letters
     description: EDS · Входящие письма — список, карточка, резолюция директора, возврат менеджеру, отказ, вложения (сервис EDS; раздел `eds.inbox`)
+  - name: calc
+    description: Расчёт · Заявки в расчёте и расчёт по заявке — строки, визы по зонам, «Расчёт готов», ИИ-разбор, каталог (ERP; разделы `erp.calc`, `erp.calc.goods`, `erp.calc.services`)
   - name: tickets
     description: Обращения сотрудников к администратору — «Написать администратору» и Настройки · Обращения сотрудников (CRM, ADR-0015)
 
@@ -5915,7 +5937,8 @@ paths:
         Срок расчёта в прошлом (по `Asia/Tashkent`) — 422 `VALIDATION_FAILED`, `details.fields = [due]`, `details.reason =
         due_in_past`; исполнитель не найден или отключён — `details.fields = [assignees]`, `details.reason =
         not_active_employee`; исполнитель дважды в одной зоне — `duplicate`; `min_margin_pct` у роли без группы `cost_margin` — 422 BFF, `details.reason = margin_forbidden`, в EDS запрос не уходит. Текст ошибки — `message` EDS на языке
-        сотрудника. Ответ — обновлённая карточка. Решение, кого можно назначить, остаётся за EDS и ERP: BFF только передаёт
+        сотрудника. Исполнитель без раздела своей зоны — 422, `details.fields = [assignees]`, `details.reason =
+        assignee_zone_mismatch` (проверяет EDS, D1-8). Ответ — обновлённая карточка. Решение, кого можно назначить, остаётся за EDS и ERP: BFF только передаёт
         сотрудников и зоны (`GET /eds/resolution/assignees` подсказывает, кого выбрать).
       parameters:
         - $ref: '#/components/parameters/CsrfToken'
@@ -6030,10 +6053,10 @@ paths:
       description: >-
         Кандидаты по зонам резолюции: товары (склад и цены поставщиков), услуги (ТЗ, бригада), условия оплаты. Зона даёт
         сотрудникам **раздел каталога**, а не код роли: товары — `erp.calc.goods`, услуги — `erp.calc.services`, условия оплаты —
-        `eds.payments` (все — уровень «полный»). BFF читает из CRM активных сотрудников и роли с их матрицами
-        (`GET /users`, `GET /platform-roles`; нужен раздел `admin` не ниже чтения) и сводит матрицы ролей каждого. Если роли
-        сотрудника не дают чтения справочника CRM — 200 с пустыми списками и `directory = forbidden`: выбор исполнителей
-        недоступен до появления операции «сотрудники по разделу» в CRM (docs/QUESTIONS.md). Раздел `eds.inbox` — полный.
+        `eds.payments` (все — уровень «полный»). Выбор делает CRM — `GET /team?section=&level=full` по вызову на зону (D1-8,
+        B-007); BFF матрицы ролей не сводит. Операция CRM требует чтения сотрудников (раздел `admin` не ниже чтения): если роли
+        сотрудника его не дают — 200 с пустыми списками и `directory = forbidden`. EDS при резолюции сверяет зону исполнителя
+        сам (422 `assignee_zone_mismatch`). Автор резолюции в списках исключён. Раздел `eds.inbox` — полный.
       responses:
         '200':
           description: Кандидаты по трём зонам
@@ -6410,6 +6433,303 @@ paths:
         '503':
           $ref: '#/components/responses/BackendUnavailable'
 
+  /erp/calc/requests:
+    get:
+      tags: [calc]
+      operationId: listCalcRequests
+      summary: 'Расчёт · Заявки в расчёте (и «Мои расчёты»)'
+      description: >-
+        ERP `GET /calc/tasks/`: заявки с заданием расчёта по резолюции директора на стадиях расчёта, по сроку расчёта.
+        Строка — номер ЗВ, клиент, шаг пути, срок, состояние расчёта, три индикатора виз (склад — товары со склада,
+        снабжение — товары под заказ, гл. инженер — услуги; `none` — таких строк нет), ответственный (менеджер заявки) и
+        исполнители резолюции. `mine=true` — только где сотрудник исполнитель резолюции («Мои расчёты»). Раздел `erp.calc` —
+        чтение. Номер ЗВ/ПР выдаёт ERP (`Deal.number`, ERP-09); из номера `id` не разбирается.
+      parameters:
+        - name: mine
+          in: query
+          required: false
+          schema: {type: boolean, default: false}
+      responses:
+        '200':
+          description: Заявки в расчёте
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CalcRequestList'}
+        '401': {$ref: '#/components/responses/SessionExpired'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '503': {$ref: '#/components/responses/BackendUnavailable'}
+
+  /erp/calc/catalog:
+    get:
+      tags: [calc]
+      operationId: searchCalcCatalog
+      summary: 'Расчёт · Каталог для сопоставления строки'
+      description: >-
+        ERP `GET /calc/catalog/?q=`: карточки, в названии, артикуле, коде производителя или ГОСТ которых есть каждое слово
+        запроса (до 20, без ИИ). Человек выбирает карточку сам (`PATCH …/lines/{line_id}` с `product_id`). Раздел `erp.calc` —
+        чтение.
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema: {type: string, minLength: 1, maxLength: 200}
+      responses:
+        '200':
+          description: Карточки каталога
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CalcCatalogPage'}
+        '401': {$ref: '#/components/responses/SessionExpired'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+        '503': {$ref: '#/components/responses/BackendUnavailable'}
+
+  /erp/calc-jobs/{job_id}:
+    get:
+      tags: [calc]
+      operationId: getCalcParse
+      summary: 'Расчёт · Итог ИИ-разбора текста заявки (предложение строк)'
+      description: >-
+        ERP `GET /sourcing/ai-status/{task_id}/`. `pending` — разбор идёт (опрашивать раз в 2 с); `done` — предложение строк
+        (ничего не записано: человек отмечает строки и добавляет их `POST …/lines`); `failed` — `reason` (`ai_extract_failed`,
+        `ai_disabled`, `ai_budget_exceeded`, …). Чужое задание — 404. Раздел `erp.calc` — полный.
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema: {type: string, minLength: 1, maxLength: 64, pattern: '^[A-Za-z0-9-]+$'}
+      responses:
+        '200':
+          description: Состояние разбора
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CalcParseResult'}
+        '401': {$ref: '#/components/responses/SessionExpired'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '503': {$ref: '#/components/responses/BackendUnavailable'}
+
+  /erp/calc/{number}:
+    get:
+      tags: [calc]
+      operationId: getCalcSheet
+      summary: 'Расчёт · Расчёт по заявке ЗВ-…'
+      description: >-
+        ERP `GET /calc/{deal_id}/` (заявку по номеру BFF находит среди заявок с заданием расчёта). Заявка, задание
+        (резолюция директора — проекция события EDS в ERP: текст, дата, кто; исполнители по зонам), КП расчёта, строки
+        (позиция и тип, кол-во, склад, поставщик и срок, закупка и цена клиенту без НДС, наценка, виза), итоги без НДС,
+        визы по трём индикаторам, готовность «Расчёт готов» с причиной и права сотрудника по зонам. Поля с ограничением BFF
+        вырезает (и ERP режет сам): закупку и себестоимость строки (в том числе ставку и дни бригады услуги) видит группа
+        `cost_margin` или держатель зоны этой строки (`erp.calc.goods` — товары, `erp.calc.services` — услуги); наценку,
+        итоги себестоимости и наценки и порог маржи резолюции — только `cost_margin`; цены предложений поставщиков —
+        `supplier_prices` или держатель зоны товаров. Бухгалтер (`totals_only`) — цены клиенту, итоги и НДС.
+        Номера нет среди заявок с заданием — 404. Раздел `erp.calc` — чтение.
+      parameters:
+        - $ref: '#/components/parameters/CalcNumberPath'
+      responses:
+        '200':
+          description: Расчёт по заявке
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CalcSheet'}
+        '401': {$ref: '#/components/responses/SessionExpired'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '503': {$ref: '#/components/responses/BackendUnavailable'}
+
+  /erp/calc/{number}/start:
+    post:
+      tags: [calc]
+      operationId: startCalc
+      summary: 'Расчёт · Начать расчёт: черновик КП из строк заявки'
+      description: >-
+        ERP `POST /calc/{deal_id}/start/`: черновик КП расчёта — строки заявки (точные совпадения ГОСТ/артикула с каталогом,
+        закупка из своего предложения), без ИИ; у заявки без строк — пустой черновик. Уже начат — без изменений. Раздел
+        `erp.calc` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/CalcNumberPath'
+      responses:
+        '200':
+          description: Расчёт по заявке
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CalcSheet'}
+        '401': {$ref: '#/components/responses/SessionExpired'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/CalcConflict'}
+        '503': {$ref: '#/components/responses/BackendUnavailable'}
+
+  /erp/calc/{number}/lines:
+    post:
+      tags: [calc]
+      operationId: addCalcLines
+      summary: 'Расчёт · Добавить строки (вручную или подтверждённое предложение ИИ-разбора)'
+      description: >-
+        ERP `POST /calc/{deal_id}/lines/`. Строка-услуга (`kind = service` или карточка каталога «услуга») — раздел
+        `erp.calc.services`, товар — `erp.calc.goods` (полный); иначе 403 до ERP. Решает ERP (`quote.visa_goods`,
+        `quote.visa_services`). До 50 строк за раз. Ответ — обновлённый расчёт.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/CalcNumberPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CalcLinesIn'}
+      responses:
+        '200':
+          description: Расчёт по заявке
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CalcSheet'}
+        '401': {$ref: '#/components/responses/SessionExpired'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/CalcConflict'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+        '503': {$ref: '#/components/responses/BackendUnavailable'}
+
+  /erp/calc/{number}/lines/{line_id}:
+    patch:
+      tags: [calc]
+      operationId: updateCalcLine
+      summary: 'Расчёт · Изменить строку (виза строки снимается)'
+      description: >-
+        ERP `PATCH /calc/{deal_id}/lines/{item_id}/`. Правит держатель права зоны строки: товар — снабженец (закупка, валюта,
+        срок, цена клиенту, карточка каталога), услуга — гл. инженер (ставка бригады и дни; закупка услуги = ставка × дни).
+        Цена клиенту без НДС пересчитывает наценку строки; ниже закупки — 422 `details.reason = client_price_below_cost`.
+        Закупку (`purchase_price`, `purchase_currency`) без группы `cost_margin` BFF не принимает: 422 `details.reason =
+        cost_forbidden`, в ERP запрос не уходит. Любая правка снимает визу строки. Нужен раздел `erp.calc.goods` или
+        `erp.calc.services` (полный); зону решает ERP (403 `details.reason = zone_not_permitted`).
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/CalcNumberPath'
+        - $ref: '#/components/parameters/CalcLineIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CalcLinePatch'}
+      responses:
+        '200':
+          description: Расчёт по заявке
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CalcSheet'}
+        '401': {$ref: '#/components/responses/SessionExpired'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/CalcConflict'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+        '503': {$ref: '#/components/responses/BackendUnavailable'}
+    delete:
+      tags: [calc]
+      operationId: deleteCalcLine
+      summary: 'Расчёт · Удалить строку'
+      description: >-
+        ERP `DELETE /calc/{deal_id}/lines/{item_id}/`; держатель права зоны строки (разделы — как у правки).
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/CalcNumberPath'
+        - $ref: '#/components/parameters/CalcLineIdPath'
+      responses:
+        '200':
+          description: Расчёт по заявке
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CalcSheet'}
+        '401': {$ref: '#/components/responses/SessionExpired'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/CalcConflict'}
+        '503': {$ref: '#/components/responses/BackendUnavailable'}
+
+  /erp/calc/{number}/lines/{line_id}/visa:
+    post:
+      tags: [calc]
+      operationId: signCalcLine
+      summary: 'Расчёт · «Подтвердить» строку (виза по зоне)'
+      description: >-
+        ERP `POST /calc/{deal_id}/lines/{item_id}/visa/`. Товар визирует держатель `erp.calc.goods`, услугу —
+        `erp.calc.services` (решает ERP: 403 `details.reason = zone_not_permitted`). Кто визирует — факт визы (имя в
+        `visa.by`): список «сотрудников зоны» в CRM ещё не появился (B-007), поэтому визирует любой держатель права зоны.
+        Строка без закупки или цены клиенту — 409 `details.reason = line_incomplete`. Повтор — без изменений.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/CalcNumberPath'
+        - $ref: '#/components/parameters/CalcLineIdPath'
+      responses:
+        '200':
+          description: Расчёт по заявке
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CalcSheet'}
+        '401': {$ref: '#/components/responses/SessionExpired'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/CalcConflict'}
+        '503': {$ref: '#/components/responses/BackendUnavailable'}
+
+  /erp/calc/{number}/ready:
+    post:
+      tags: [calc]
+      operationId: markCalcReady
+      summary: 'Расчёт · «Расчёт готов → черновик КП директору»'
+      description: >-
+        ERP `POST /calc/{deal_id}/ready/`. Только когда завизированы все строки — иначе 409 `details.reason = visas_missing`
+        (`details.missing` — сколько строк без визы); проверка на сервере, не только кнопкой. Дальше — как отправка КП на
+        одобрение: клиент заявки, ненулевая сумма, курсы строк, не в убыток (409 с причиной ERP). КП получает номер и уходит
+        директору в EDS событием `quote.ready_for_approval` (визы — подписи строк по зонам): у директора — «КП на одобрение»
+        в Документах · Черновик КП и в «Моей очереди». Раздел `erp.calc` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/CalcNumberPath'
+      responses:
+        '200':
+          description: Расчёт у директора
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CalcSheet'}
+        '401': {$ref: '#/components/responses/SessionExpired'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/CalcConflict'}
+        '503': {$ref: '#/components/responses/BackendUnavailable'}
+
+  /erp/calc/{number}/parse:
+    post:
+      tags: [calc]
+      operationId: parseCalcText
+      summary: 'Расчёт · ИИ-разбор текста заявки в строки (предложение)'
+      description: >-
+        ERP `POST /calc/{deal_id}/parse/`: задание в очереди ИИ (модель — через шлюз по алиасу), ответ — `job_id`; итог —
+        `GET /erp/calc-jobs/{job_id}`. Ничего не записывается: строки добавляет человек. Без `text` разбирается текст
+        заявки. ИИ выключен — 409 `details.reason = ai_disabled`; текста нет — 409 `request_text_empty`; дневной лимит ИИ —
+        429. Раздел `erp.calc` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - $ref: '#/components/parameters/CalcNumberPath'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/CalcParseIn'}
+      responses:
+        '202':
+          description: Разбор поставлен в очередь
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CalcParseJob'}
+        '401': {$ref: '#/components/responses/SessionExpired'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/CalcConflict'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+        '429': {$ref: '#/components/responses/TooManyRequests'}
+        '503': {$ref: '#/components/responses/BackendUnavailable'}
+
 components:
   securitySchemes:
     platformSession:
@@ -6580,6 +6900,20 @@ components:
         type: string
         format: uuid
 
+    CalcNumberPath:
+      name: number
+      in: path
+      required: true
+      description: Номер заявки `ЗВ-ГГГГ-NNN` (как в списке «Заявки в расчёте»)
+      schema: {type: string, minLength: 1, maxLength: 40}
+
+    CalcLineIdPath:
+      name: line_id
+      in: path
+      required: true
+      description: Строка расчёта (`CalcLine.id`)
+      schema: {type: string, pattern: '^[0-9]+$', maxLength: 12}
+
     ApprovalIdPath:
       name: id
       in: path
@@ -6719,6 +7053,16 @@ components:
             $ref: '#/components/schemas/Error'
     BackendUnavailable:
       description: '`BACKEND_UNAVAILABLE` — CRM не ответила за таймаут'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    CalcConflict:
+      description: >-
+        409 `CONFLICT` — расчёт не в том состоянии для действия: `details.reason` — код ERP в нижнем регистре
+        (`visas_missing` и `details.missing`, `deal_not_in_calculation`, `quote_not_draft`, `calc_not_started`, `line_incomplete`, `purchase_required`,
+        `no_lines`, `quote_below_cost`, `fx_rate_missing`, `quote_client_required`, `request_text_empty`, `ai_disabled`)
       content:
         application/json:
           schema:
@@ -6935,7 +7279,7 @@ components:
         eds:
           $ref: '#/components/schemas/SourceState'
           description: >-
-            Только если ответ собран и из EDS (с 0.26.0): `unavailable` — EDS не ответил, `not_applicable` — EDS не пустил
+            Только если ответ собран и из EDS (с 0.25.0): `unavailable` — EDS не ответил, `not_applicable` — EDS не пустил
             сотрудника. Нет доступа к разделам EDS — поля нет.
 
     RoleId:
@@ -7356,12 +7700,13 @@ components:
 
     ServiceAction:
       type: string
-      enum: [enter_key, enter_token, recheck, reconnect, open_settings, write_owner, write_hosting, disable_provider]
+      enum: [enter_key, enter_token, recheck, reconnect, open_settings, write_owner, write_hosting, disable_provider, open_bus]
       description: >-
         Действие по смыслу: `enter_key` Ввести новый ключ (форма в карточке «Модели ИИ»), `enter_token` Ввести новый токен
         (карточка Telegram), `recheck` Проверить снова, `reconnect` Переподключить, `open_settings` Открыть настройки,
         `write_owner` Написать владельцу и `write_hosting` Передать хостингу (готовый текст `message` — копируется, ничего
-        не отправляется), `disable_provider` Выключить провайдера (пароль администратора).
+        не отправляется), `disable_provider` Выключить провайдера (пароль администратора), `open_bus` Открыть журнал обмена
+        (`/admin/bus`, раздел `admin` — полный; строка «Шина: недоставленные события», W15-H8b).
 
     ServiceGroup:
       type: object
@@ -11774,7 +12119,7 @@ components:
           type: string
           enum: [ok, forbidden, unavailable]
           description: >-
-            `ok` — справочник сотрудников прочитан; `forbidden` — роли сотрудника не дают чтения справочника CRM (кандидатов
+            `ok` — сотрудники зон получены от CRM; `forbidden` — роли сотрудника не дают чтения сотрудников в CRM (кандидатов
             нет); `unavailable` — CRM не ответила
 
     # --- Клиенты · Ждут ответа (D1-1, 0.22.0) -----------------------------------------------------------------------
@@ -12068,3 +12413,422 @@ components:
       additionalProperties: false
       properties:
         note: {type: [string, 'null'], maxLength: 4000}
+
+    CalcState:
+      type: string
+      enum: [not_started, in_progress, returned, at_director, rejected, approved]
+      description: >-
+        Где расчёт: не начат; в работе; возвращён директором на доработку; черновик КП у директора; КП отклонено; КП одобрено
+        (и дальше)
+
+    CalcVisaState:
+      type: string
+      enum: [none, waiting, done]
+      description: '`none` — строк этого вида нет; `waiting` — есть строки без визы; `done` — все строки вида завизированы'
+
+    CalcVisaIndicators:
+      type: object
+      additionalProperties: false
+      required: [stock, supply, engineer]
+      description: Три индикатора виз заявки (SPEC-v3 §7.4) — склад (товары со склада), снабжение (под заказ), гл. инженер (услуги)
+      properties:
+        stock: {$ref: '#/components/schemas/CalcVisaState'}
+        supply: {$ref: '#/components/schemas/CalcVisaState'}
+        engineer: {$ref: '#/components/schemas/CalcVisaState'}
+
+    CalcAssignee:
+      type: object
+      additionalProperties: false
+      required: [zone, name]
+      description: Исполнитель из резолюции директора; `name` пуст, если сотрудник ещё не заведён в ERP
+      properties:
+        zone: {$ref: '#/components/schemas/LetterZone'}
+        name: {type: [string, 'null']}
+
+    CalcRequestRow:
+      type: object
+      additionalProperties: false
+      required: [number, title, client, step, state, due, letter_number, lines, visas, responsible, assignees, path]
+      properties:
+        number: {type: string, examples: [ЗВ-2026-104]}
+        title: {type: string}
+        client: {type: [string, 'null']}
+        step: {$ref: '#/components/schemas/StepCode'}
+        state: {$ref: '#/components/schemas/CalcState'}
+        due: {type: string, format: date, description: Срок расчёта из резолюции}
+        letter_number: {type: string, examples: [ВХ-104/26]}
+        lines: {type: integer, minimum: 0}
+        visas: {$ref: '#/components/schemas/CalcVisaIndicators'}
+        responsible: {type: [string, 'null'], description: Менеджер заявки}
+        assignees:
+          type: array
+          items: {$ref: '#/components/schemas/CalcAssignee'}
+        path: {type: string, examples: ['/erp/calc/ЗВ-2026-104']}
+
+    CalcRequestList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/CalcRequestRow'}
+
+    CalcTask:
+      type: object
+      additionalProperties: false
+      required: [letter_number, letter_subject, resolution_text, decided_at, decided_by, due, assignees]
+      description: Задание расчёта — резолюция директора (проекция события EDS в ERP)
+      properties:
+        letter_number: {type: string}
+        letter_subject: {type: string}
+        resolution_text: {type: string}
+        decided_at: {type: string, format: date-time}
+        decided_by: {type: [string, 'null']}
+        due: {type: string, format: date}
+        min_margin_pct:
+          description: Маржа не ниже, % — только группе `cost_margin`
+          oneOf:
+            - {$ref: '#/components/schemas/DecimalString'}
+            - {type: 'null'}
+        assignees:
+          type: array
+          items: {$ref: '#/components/schemas/CalcAssignee'}
+
+    CalcRequestText:
+      type: object
+      additionalProperties: false
+      required: [text, lines]
+      properties:
+        text: {type: string, description: Заявка словами (текст клиента или суть из «Создать заявку»)}
+        lines: {type: integer, minimum: 0, description: Строк в заявке клиента}
+
+    CalcQuote:
+      type: object
+      additionalProperties: false
+      required: [number, version, state, director_comment, vat_rate]
+      properties:
+        number: {type: [string, 'null'], description: Номер КП появляется при «Расчёт готов»}
+        version: {type: integer, minimum: 1}
+        state: {$ref: '#/components/schemas/CalcState'}
+        director_comment: {type: [string, 'null'], description: Комментарий директора при возврате на доработку}
+        vat_rate: {$ref: '#/components/schemas/DecimalString'}
+
+    CalcLineKind:
+      type: string
+      enum: [goods, goods_to_order, service]
+      description: Товар со склада (остаток покрывает количество), товар под заказ, услуга
+
+    CalcZone:
+      type: string
+      enum: [goods, services]
+      description: Зона визы строки — товары (`erp.calc.goods`) или услуги (`erp.calc.services`)
+
+    CalcStock:
+      type: object
+      additionalProperties: false
+      required: [on_hand, cell, reserved]
+      description: Склад своей компании; ячейка и резерв — с экрана «Склад» (D2-2), пока пусто
+      properties:
+        on_hand: {type: [integer, 'null'], description: Остаток; пусто — строка без карточки каталога}
+        cell: {type: [string, 'null']}
+        reserved: {type: [integer, 'null']}
+
+    CalcSupplier:
+      type: object
+      additionalProperties: false
+      required: [name, lead_days, min_order_qty, price_valid_until]
+      properties:
+        name: {type: string}
+        lead_days: {type: [integer, 'null']}
+        min_order_qty: {type: integer, description: Квота — минимальный заказ у поставщика}
+        price_valid_until: {type: [string, 'null'], format: date}
+        offer_price:
+          description: Цена предложения поставщика — группе `supplier_prices` или держателю `erp.calc.goods`
+          oneOf:
+            - {$ref: '#/components/schemas/DecimalString'}
+            - {type: 'null'}
+        offer_currency:
+          description: Валюта предложения — группе `supplier_prices` или держателю `erp.calc.goods`
+          type: [string, 'null']
+
+    CalcLineVisa:
+      type: object
+      additionalProperties: false
+      required: [by, at]
+      properties:
+        by: {type: string, description: Кто подтвердил строку (факт визы)}
+        at: {type: string, format: date-time}
+
+    CalcLine:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - name
+        - article
+        - product_id
+        - product_name
+        - kind
+        - zone
+        - group
+        - quantity
+        - unit
+        - stock
+        - supplier
+        - lead_days
+        - crew_rate
+        - crew_days
+        - client_price
+        - visa
+        - can_edit
+      properties:
+        id: {type: string, pattern: '^[0-9]+$'}
+        name: {type: string}
+        article: {type: string}
+        product_id: {type: [string, 'null'], pattern: '^[0-9]+$', description: Карточка каталога (сопоставление)}
+        product_name: {type: [string, 'null']}
+        kind: {$ref: '#/components/schemas/CalcLineKind'}
+        zone: {$ref: '#/components/schemas/CalcZone'}
+        group:
+          type: string
+          enum: [stock, supply, engineer]
+          description: Индикатор виз, к которому относится строка
+        quantity: {type: integer, minimum: 1}
+        unit: {type: string}
+        stock: {$ref: '#/components/schemas/CalcStock'}
+        supplier:
+          oneOf:
+            - {$ref: '#/components/schemas/CalcSupplier'}
+            - {type: 'null'}
+        lead_days: {type: [integer, 'null'], description: 'Срок поставки строки, дней'}
+        purchase_price:
+          description: Закупка товара за единицу в валюте строки — `cost_margin` или держателю `erp.calc.goods`
+          oneOf:
+            - {$ref: '#/components/schemas/DecimalString'}
+            - {type: 'null'}
+        purchase_currency:
+          description: Валюта закупки — `cost_margin` или держателю зоны строки
+          type: string
+        crew_rate:
+          description: Услуга — ставка бригады, сум/день (вводит гл. инженер); `cost_margin` или держателю `erp.calc.services`, иначе null
+          oneOf:
+            - {$ref: '#/components/schemas/DecimalString'}
+            - {type: 'null'}
+        crew_days:
+          description: Услуга — дней работы бригады; `cost_margin` или держателю `erp.calc.services`, иначе null
+          oneOf:
+            - {$ref: '#/components/schemas/DecimalString'}
+            - {type: 'null'}
+        cost:
+          description: Себестоимость за единицу, сум (закупка с пошлиной по курсу) — `cost_margin` или держателю зоны строки
+          oneOf:
+            - {$ref: '#/components/schemas/DecimalString'}
+            - {type: 'null'}
+        client_price:
+          $ref: '#/components/schemas/DecimalString'
+          description: Клиенту за единицу, сум, без НДС
+        markup_pct:
+          description: Наценка строки, % — только группе `cost_margin`
+          oneOf:
+            - {$ref: '#/components/schemas/DecimalString'}
+            - {type: 'null'}
+        visa:
+          oneOf:
+            - {$ref: '#/components/schemas/CalcLineVisa'}
+            - {type: 'null'}
+        can_edit: {type: boolean, description: 'Сотрудник может править и визировать строку (зона, черновик)'}
+
+    CalcTotals:
+      type: object
+      additionalProperties: false
+      required: [client, vat_included]
+      description: Итоги без НДС
+      properties:
+        client: {$ref: '#/components/schemas/DecimalString'}
+        purchase:
+          description: Закупка итого — только группе `cost_margin`
+          $ref: '#/components/schemas/DecimalString'
+        markup_pct:
+          description: Наценка итого — только группе `cost_margin`
+          oneOf:
+            - {$ref: '#/components/schemas/DecimalString'}
+            - {type: 'null'}
+        vat_included: {type: boolean, const: false}
+
+    CalcVisaGroup:
+      type: object
+      additionalProperties: false
+      required: [state, total, signed, by]
+      properties:
+        state: {$ref: '#/components/schemas/CalcVisaState'}
+        total: {type: integer, minimum: 0}
+        signed: {type: integer, minimum: 0}
+        by:
+          type: array
+          description: Кто визировал строки этого вида (факт визы)
+          items: {type: string}
+
+    CalcVisaGroups:
+      type: object
+      additionalProperties: false
+      required: [stock, supply, engineer]
+      properties:
+        stock: {$ref: '#/components/schemas/CalcVisaGroup'}
+        supply: {$ref: '#/components/schemas/CalcVisaGroup'}
+        engineer: {$ref: '#/components/schemas/CalcVisaGroup'}
+
+    CalcReady:
+      type: object
+      additionalProperties: false
+      required: [allowed, blocker, missing]
+      properties:
+        allowed: {type: boolean}
+        blocker:
+          type: [string, 'null']
+          enum: [not_started, not_in_calculation, not_draft, no_lines, visas_missing, null]
+          description: Почему «Расчёт готов» неактивна
+        missing: {type: integer, minimum: 0, description: Строк без визы}
+
+    CalcRights:
+      type: object
+      additionalProperties: false
+      required: [goods, services, build, cost]
+      description: Что сотрудник может в этом расчёте (права ERP, вычисленные из разделов каталога)
+      properties:
+        goods: {type: boolean, description: Править и визировать товары}
+        services: {type: boolean, description: Править и визировать услуги}
+        build: {type: boolean, description: 'Начать расчёт, «Расчёт готов», ИИ-разбор'}
+        cost: {type: boolean, description: Видеть себестоимость и наценку по строкам}
+
+    CalcSheet:
+      type: object
+      additionalProperties: false
+      required: [number, title, client, step, path, task, request, quote, lines, totals, visas, ready, rights]
+      properties:
+        number: {type: string, examples: [ЗВ-2026-104]}
+        title: {type: string}
+        client: {type: [string, 'null']}
+        step: {$ref: '#/components/schemas/StepCode'}
+        path: {type: string}
+        task: {$ref: '#/components/schemas/CalcTask'}
+        request: {$ref: '#/components/schemas/CalcRequestText'}
+        quote:
+          oneOf:
+            - {$ref: '#/components/schemas/CalcQuote'}
+            - {type: 'null'}
+        lines:
+          type: array
+          items: {$ref: '#/components/schemas/CalcLine'}
+        totals: {$ref: '#/components/schemas/CalcTotals'}
+        visas: {$ref: '#/components/schemas/CalcVisaGroups'}
+        ready: {$ref: '#/components/schemas/CalcReady'}
+        rights: {$ref: '#/components/schemas/CalcRights'}
+
+    CalcLineIn:
+      type: object
+      additionalProperties: false
+      properties:
+        name: {type: string, maxLength: 500}
+        quantity: {type: integer, minimum: 1, maximum: 1000000}
+        unit: {type: string, maxLength: 32}
+        kind:
+          type: string
+          enum: [goods, service]
+          description: Тип строки без карточки каталога (у карточки тип задаёт каталог)
+        product_id: {type: [string, 'null'], pattern: '^[0-9]+$'}
+        article: {type: string, maxLength: 120}
+        note: {type: string, maxLength: 1000}
+
+    CalcLinesIn:
+      type: object
+      additionalProperties: false
+      required: [lines]
+      properties:
+        lines:
+          type: array
+          minItems: 1
+          maxItems: 50
+          items: {$ref: '#/components/schemas/CalcLineIn'}
+
+    CalcLinePatch:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        name: {type: string, minLength: 1, maxLength: 500}
+        quantity: {type: integer, minimum: 1, maximum: 1000000}
+        unit: {type: string, maxLength: 32}
+        lead_days: {type: [integer, 'null'], minimum: 0, maximum: 3650}
+        purchase_price: {$ref: '#/components/schemas/DecimalString'}
+        purchase_currency: {type: string, pattern: '^[A-Z]{3}$'}
+        crew_rate:
+          oneOf:
+            - {$ref: '#/components/schemas/DecimalString'}
+            - {type: 'null'}
+        crew_days:
+          oneOf:
+            - {$ref: '#/components/schemas/DecimalString'}
+            - {type: 'null'}
+        client_price: {$ref: '#/components/schemas/DecimalString'}
+        product_id: {type: [string, 'null'], pattern: '^[0-9]+$'}
+        kind: {type: string, enum: [goods, service]}
+
+    CalcParseIn:
+      type: object
+      additionalProperties: false
+      properties:
+        text: {type: string, maxLength: 20000, description: Свой текст; без поля — текст заявки}
+
+    CalcParseJob:
+      type: object
+      additionalProperties: false
+      required: [job_id]
+      properties:
+        job_id: {type: string}
+
+    CalcProposalLine:
+      type: object
+      additionalProperties: false
+      required: [name, quantity, unit, article, note]
+      properties:
+        name: {type: string}
+        quantity: {type: integer, minimum: 1}
+        unit: {type: string}
+        article: {type: string}
+        note: {type: string}
+
+    CalcParseResult:
+      type: object
+      additionalProperties: false
+      required: [status, lines]
+      properties:
+        status: {type: string, enum: [pending, done, failed]}
+        lines:
+          type: array
+          items: {$ref: '#/components/schemas/CalcProposalLine'}
+        recognized: {type: integer, minimum: 0}
+        truncated: {type: boolean}
+        reason: {type: string, description: 'Причина `failed`: код ERP в нижнем регистре'}
+
+    CalcCatalogItem:
+      type: object
+      additionalProperties: false
+      required: [id, name, article, kind, on_hand, supplier_name, lead_days]
+      properties:
+        id: {type: string, pattern: '^[0-9]+$'}
+        name: {type: string}
+        article: {type: string}
+        kind: {type: string, enum: [goods, service]}
+        on_hand: {type: integer, minimum: 0}
+        supplier_name: {type: [string, 'null']}
+        lead_days: {type: [integer, 'null']}
+
+    CalcCatalogPage:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/CalcCatalogItem'}

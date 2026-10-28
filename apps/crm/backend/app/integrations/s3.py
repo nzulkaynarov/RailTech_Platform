@@ -89,12 +89,20 @@ class ObjectStorage:
                     size += int(item.get("Size", 0))
         return objects, size
 
-    async def list_objects(self, bucket: str, prefix: str = "") -> list[StoredObject]:
-        """Ключи, размеры и время изменения; ошибки (нет бакета, доступа) — исключением клиента."""
+    async def list_objects(
+        self, bucket: str, prefix: str = "", start_after: str = ""
+    ) -> list[StoredObject]:
+        """Ключи, размеры и время изменения; ошибки (нет бакета, доступа) — исключением клиента.
+
+        `start_after` — только ключи позже этого (лексикографически): для «что нового с прошлой
+        проверки» в архиве, где ключи растут (сегменты WAL)."""
         async with self._client() as client:
             found: list[StoredObject] = []
             paginator = client.get_paginator("list_objects_v2")
-            async for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
+            args: dict[str, str] = {"Bucket": bucket, "Prefix": prefix}
+            if start_after:
+                args["StartAfter"] = start_after
+            async for page in paginator.paginate(**args):
                 found += [
                     StoredObject(i["Key"], int(i.get("Size", 0)), i.get("LastModified"))
                     for i in page.get("Contents", [])

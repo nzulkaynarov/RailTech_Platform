@@ -20,6 +20,8 @@ from app.feeds.numbers import (
     lead_id_of,
     lead_number,
     lead_ref,
+    letter_ref,
+    memo_ref,
     number_query,
     quote_ref,
 )
@@ -36,6 +38,17 @@ _DOC_RESOURCE = {
     "contract": "eds.projects",
     "invoice": "eds.payments",
     "act": "eds.projects",
+}
+# Реестр EDS (`GET /registry`): вид записи -> разделы каталога, любой из которых открывает его.
+# Права внутри EDS решает сам EDS по токену `aud=eds` (нет `registry.read` — 403, записей нет);
+# раздел каталога — второй замок: запись вида, который роли не открывается, не показывается.
+_REGISTRY_SECTIONS: dict[str, tuple[str, ...]] = {
+    "letter_in": ("eds.inbox",),
+    "letter_out": ("eds.inbox", "eds.drafts", "eds.memo.create"),
+    "quote": ("eds.drafts",),
+    "memo": ("eds.memo.approve", "eds.memo.create"),
+    "application": ("eds.memo.approve", "eds.memo.create"),
+    "report": ("eds.memo.approve", "eds.memo.create"),
 }
 _DRAFT_STATUSES = frozenset({"DRAFT", "PENDING_TRADE_REVIEW", "PENDING_APPROVAL", "READY_TO_SEND"})
 
@@ -110,6 +123,42 @@ def _doc_hit(doc: dict[str, Any], deals: dict[int, dict[str, Any]]) -> SearchHit
     return SearchHit(object=ref, title=label, subtitle=context)
 
 
+def _registry_hit(item: dict[str, Any]) -> SearchHit | None:
+    """Запись реестра EDS: ВХ — «Входящие» (резолюция), СЗ/ЗЯ/ОТ — «На согласовании», КП — маршрут
+    одобрения, ИСХ и документы вне согласования — карточка в «Все документы»."""
+    kind = item.get("kind")
+    number = item.get("number")
+    title = item.get("title")
+    if kind not in _REGISTRY_SECTIONS or not isinstance(number, str) or not number:
+        return None
+    subject = short(title, 80) if isinstance(title, str) else None
+    client = item.get("client")
+    company = client.get("name") if isinstance(client, dict) else None
+    context = join(str(company) if company else None, subject) or None
+    if kind == "letter_in":
+        ref = letter_ref(number, subject)
+        return SearchHit(object=ref, title=number, subtitle=context)
+    if kind == "quote":
+        # «Исходящие» — отправленные (одобренные); открытое, возвращённое и отклонённое — «Черновик»
+        drafting = item.get("status") in ("open", "returned", "rejected")
+        ref = quote_ref({"number": number}, title=subject, drafting=drafting)
+        return SearchHit(object=ref, title=number, subtitle=context)
+    document_id = item.get("id")
+    if kind in ("memo", "application", "report") and item.get("status") != "draft":
+        ref = memo_ref(number, subject)
+        return SearchHit(object=ref, title=number, subtitle=context)
+    if not isinstance(document_id, str):
+        return None
+    path = f"/eds/documents?doc={segment(document_id)}"
+    ref = ObjectRef(
+        kind="memo" if kind in ("memo", "application", "report") else "letter",
+        number=number,
+        title=subject,
+        path=path,
+    )
+    return SearchHit(object=ref, title=number, subtitle=context)
+
+
 async def search(feed: Feed, access: Access, query: str) -> SearchResult:
     needle = query.strip().casefold()
     # Латинский префикс номера (`ZV-…`, `kp-…`) -> кириллический; запрос как набран ищется в сделках
@@ -124,6 +173,9 @@ async def search(feed: Feed, access: Access, query: str) -> SearchResult:
     can_docs = any(allows(access, res, "read") for res in set(_DOC_RESOURCE.values()))
     can_deals = allows(access, "eds.projects", "read") or can_clients
     lead_id = lead_id_of(query)
+    can_registry = any(
+        allows(access, res, "read") for sections in _REGISTRY_SECTIONS.values() for res in sections
+    )
 
     async def leads() -> list[SearchHit]:
         if not can_leads:
@@ -163,8 +215,14 @@ async def search(feed: Feed, access: Access, query: str) -> SearchResult:
         )
         return rows(deal_rows), rows(doc_rows)
 
-    lead_hits, client_hits, (all_deals, all_docs) = await asyncio.gather(
-        leads(), clients(), deals_and_docs()
+    async def registry() -> list[dict[str, Any]]:
+        if not can_registry:
+            return []
+        payload = await feed.get("eds", "/api/v1/registry", {"q": typed, "limit": HITS_LIMIT})
+        return rows(payload)
+
+    lead_hits, client_hits, (all_deals, all_docs), registry_rows = await asyncio.gather(
+        leads(), clients(), deals_and_docs(), registry()
     )
     index = {int(d["id"]): d for d in all_deals if isinstance(d.get("id"), int)}
     matching = [d for d in all_deals if isinstance(d.get("id"), int) and _deal_matches(d, needles)]
@@ -180,9 +238,24 @@ async def search(feed: Feed, access: Access, query: str) -> SearchResult:
         if allows(access, _DOC_RESOURCE.get(str(doc.get("type")), "admin"), "read")
         and (h := _doc_hit(doc, index)) is not None
     ]
+    known = {h.object.number for h in documents}
+    # У каждой версии КП свой маршрут EDS и общий номер; реестр отдаёт новые первыми, поэтому
+    # первая запись пары (вид, номер) — последняя версия.
+    unique: dict[tuple[str, str], dict[str, Any]] = {}
+    for r in registry_rows:
+        unique.setdefault((str(r.get("kind")), str(r.get("number"))), r)
+    from_registry = [
+        h
+        for r in unique.values()
+        if any(
+            allows(access, res, "read") for res in _REGISTRY_SECTIONS.get(str(r.get("kind")), ())
+        )
+        and (h := _registry_hit(r)) is not None
+        and h.object.number not in known  # КП уже нашёл поиск документов ERP
+    ]
     by_module: dict[ModuleCode, list[SearchHit]] = {
         "crm": [*lead_hits, *client_hits, *requests],
-        "eds": [*projects, *documents],
+        "eds": [*projects, *documents, *from_registry],
     }
     groups = [
         SearchGroup(module=module, items=hits[:GROUP_LIMIT])

@@ -20,7 +20,7 @@
 - **База** — на VPS 2: PostgreSQL 17 + pgvector, 5 баз, по роли на базу (`crm_app`, `erp_app`, `eds_app`, `litellm_app`, `langfuse_app`),
   `pg_hba` — только TLS и только внутренний IP VPS 1.
 - **Порядок деплоя** (`infra/deploy/deploy.sh <sha>`): проверка env → `pull` → **проверка базы CPU образов** (`cpu-baseline-check.sh`: в каждом образе запускается import numpy / litellm.proxy / версия бинаря; образ, которому нужен x86-64-v2, останавливает деплой до дампа и миграций, см. servers.md «CPU прод-VPS»); ту же таблицу команд раньше, в PR, прогоняет CI под эмуляцией CPU `qemu64` (задание `cpu-image`, `make deploy-check`, `scripts/qemu_cpu_check.sh`; servers.md, «Проверка под эмуляцией qemu64») → **pg_dump-гейт** `crm`, `erp` и `eds`
-  (`predeploy-dump.sh`; нет читаемого дампа — миграций нет) → миграции CRM, ERP и EDS явно (`AUTO_MIGRATE=false` у ERP, `eds-migrate` = `alembic upgrade head`) → `up -d` → smoke → здоровье `eds-api` (у EDS нет домена, smoke его не видит).
+  (`predeploy-dump.sh`; нет читаемого дампа — миграций нет) → миграции CRM, ERP и EDS явно (`AUTO_MIGRATE=false` у ERP, `eds-migrate` = `alembic upgrade head`) → автоматические секреты (`make-env-prod.sh ensure-secrets` до проверки env: сейчас `REDIS_PROBE_PASSWORD` — пароль пользователя Redis `crm-probe` для «Состояния системы» (права `PING`/`INFO`, ключей не видит), создаётся случайным и не меняется; руками не вписывается) → **`s3-init`** (ключи RustFS, которых нет в списке `S3_*_ACCESS_KEY` файла env, удаляются на каждом деплое — `prune_users` в `init.sh`, ручной ключ деплой не переживёт; `run --rm`: бакеты, ключи и политики доступа RustFS приводятся к `infra/s3/init.sh` на каждом деплое, а не только при первой инициализации; W15-H8b) → `up -d` → smoke → здоровье `eds-api` (у EDS нет домена, smoke его не видит).
 - Правило FIX-03: `/mcp` снаружи — 404 на всех доменах, включая Платформу (Caddy); smoke это проверяет.
 
 ## 1. Первая установка
@@ -222,6 +222,28 @@ mcp-tools.json` монтируется в контейнер по пути `../.
 (22 схемы), `docker compose exec erp-backend python manage.py bus_retry --metrics`; порядок эксплуатации — `rt-bus-erp.md`.
 
 Вручную с сервера (без Actions): `/opt/rt/releases/<sha>/infra/deploy/deploy.sh <sha>`; без миграций и дампа — `make up-prod RT_IMAGE_TAG=<sha>`.
+
+### Номера заявок ЗВ/ПР после выкладки (ERP-09, W16-D1-2)
+
+Миграция `sales/0008_backfill_deal_numbers` выдаёт номера сделкам, которые уже есть в базе, а новым сделкам номер
+выдаёт код (`Deal.save`). Сделка, созданная **старым кодом** между миграцией и стартом новых контейнеров (портал,
+передача из CRM в эти секунды), остаётся без номера: в API и событиях у неё запасной `D-<id>`. После выкладки проверить:
+
+```bash
+docker compose exec erp-backend python manage.py shell -c \
+  "from crm.models import Deal; print(Deal.objects.filter(number_seq__isnull=True).count())"
+```
+
+Не ноль — догнать той же функцией миграции (идемпотентно: сделки с номером не трогает; запускать, когда новые заявки
+не создаются, — функция ставит счётчик года на последний выданный NNN):
+
+```bash
+docker compose exec erp-backend python manage.py shell -c \
+  "import importlib; from django.apps import apps; \
+   importlib.import_module('sales.migrations.0008_backfill_deal_numbers').backfill(apps, None)"
+```
+
+Повторная проверка — `0`. Номер приходит в CRM с ближайшим событием по сделке (`deals.erp_number`).
 
 ### Django admin ERP и машинный API ERP — без внешнего маршрута (S0-5)
 
@@ -502,6 +524,27 @@ Smoke с раннера в задании `rollback` устроен так же:
 администратором Admin · Журнал интеграций (`/admin/bus`) показывает подписчиков EDS без плашки «EDS не дал доступ к журналу». Резерв
 (воркер не стартовал, в логе сбой шины, нужно немедленно): на VPS 1 `docker compose … exec crm-api python -m app republish-identity
 --dry-run` (счёт), затем `… republish-identity`; повтор безопасен (Q-W13-A2-3, решено в W13C-F4).
+
+**Права CRM только из каталога, разделы в проекции EDS (D1-8, B-007/B-014).** Что меняется при выкладке: (1) миграция CRM
+`base_role_by_matrix` пересчитывает базовую роль сотрудников с ролями Платформы по матрице (шаблон «Бухгалтер» без `crm.leads` из
+`manager` становится `viewer`; права ERP и CRM не меняются, провижининг ERP не нужен); (2) миграция EDS `employee_sections` добавляет
+`employees.sections` (пусто), а CRM начинает публиковать в `identity.user.*` поле `permissions.sections` (разделы модулей EDS и ERP) —
+EDS по нему проверяет зону исполнителя резолюции (422 `assignee_zone_mismatch`). Порядок: **EDS (с миграцией) — раньше или вместе с
+CRM** (один `deploy.sh` поднимает оба); старый EDS поле игнорирует, но тогда проекция останется без разделов. Переопубликация прав
+**автоматическая**: отпечаток каталога в CRM теперь считается и по опубликованным разделам ролей (изменился), поэтому `crm-worker` при первом старте после выкладки сам публикует
+`identity.user.updated.v1` всем сотрудникам (`eds_rights_republished` в логе). Проверка: в базе EDS
+`SELECT count(*) FROM employees WHERE is_active AND sections = '{}'::jsonb` — после автопереопубликации у каждого активного сотрудника
+с ролями есть хотя бы один раздел; `> 0` у тех, у кого роли есть, — выполнить `republish-identity`. Резолюция директора на тестовом
+письме не даёт 422 `assignee_zone_mismatch`. Если даёт для всех (воркер не стартовал или в логе `eds_rights_republish_failed`, либо CRM выкатили раньше
+EDS) — резерв: `docker compose … exec crm-api python -m app republish-identity` (повтор безопасен). До переопубликации проекция без
+разделов зону не подтверждает — резолюция с исполнителями отклоняется, возврат и отказ работают.
+
+**Права ERP при смене каталога (D2-1, B-073).** Так же сам: при старте `crm-worker` сравнивает отпечаток ERP-части каталога
+(`identity_catalog_state`, ключ `erp_permissions`) и при изменении ставит провижининг всем активным сотрудникам с доступом к ERP
+(лог `erp_rights_reprovisioned`, сбой — `erp_rights_reprovision_failed`; ждущая задача на сотрудника одна — дублей нет).
+Резерв `docker compose … exec crm-api python -m app reprovision-erp` — когда после деплоя ERP была недоступна дольше
+повторов задачи (≈10 мин, задачи провижининга ушли в сбой) или в карточках сотрудников остались ошибки синхронизации ERP
+(`erp_sync`); повтор безопасен.
 
 **Откат.** `rollback.sh` на тег до EDS убирает его контейнеры (`--remove-orphans`) и не проверяет здоровье; на тег с EDS тянет `eds-api` и ждёт `healthy`.
 Миграции Alembic EDS не откатываются (как у CRM и ERP). Сброс `reset-prod.sh` (S0-8) включает базу `eds` и бакет `eds-private`: список — `crm,erp,eds`, дамп `eds` обязателен, подтверждение на VPS 2 — ввод `crm,erp,eds`.

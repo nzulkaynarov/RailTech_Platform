@@ -3,9 +3,10 @@
     uv run python scripts/openapi_compat.py [--base REF]
 
 Каждый файл openapi/*.yaml сравнивается с тем же файлом в REF (`git show REF:packages/contracts/openapi/<файл>`;
-по умолчанию переменная CONTRACTS_BASE_REF или origin/main) командой `oasdiff breaking`. Файла в базе нет — новый,
-не ломающее. Ломающее изменение уровня ERR (удалён путь или операция, удалено обязательное поле ответа, новое
-обязательное поле или параметр запроса, сужен enum, сменён тип…) — код выхода 1; уровень WARN печатается и не валит.
+по умолчанию переменная CONTRACTS_BASE_REF, иначе точка ответвления HEAD от origin/main) командой `oasdiff breaking`.
+Файла в базе нет — новый, не ломающее. Ломающее изменение уровня ERR (удалён путь или операция, удалено обязательное
+поле ответа, новое обязательное поле или параметр запроса, сужен enum, сменён тип…) — код выхода 1; уровень WARN
+печатается и не валит.
 
 Мажор. Контракт версионируется мажором в пути (`/api/v1/…` → `/api/v2/…`, ADR-0016) с двойной публикацией: старый
 мажор живёт рядом, пока не пройдёт срок отказа (oasdiff проверяет `deprecated` и `x-sunset`, 180 дней для stable).
@@ -347,6 +348,23 @@ def _git(*args: str) -> str:
     return subprocess.run(["git", *args], cwd=CONTRACTS, check=True, capture_output=True, text=True).stdout
 
 
+def default_base() -> str:
+    """База по умолчанию: CONTRACTS_BASE_REF (CI задаёт явно), иначе точка ответвления от origin/main.
+
+    Локально ветка часто отстаёт от main: сравнение с вершиной origin/main видело бы чужие слитые изменения как
+    «удалённые» (ложный красный) и заставляло бы делать merge main ради зелёного. Точка ответвления сравнивает только
+    свои изменения; итог слияния с main проверяет CI на PR (база — вершина main). Нет общей истории (мелкий клон) —
+    вершина origin/main (DECISIONS 2026-10-28).
+    """
+    env = os.environ.get("CONTRACTS_BASE_REF")
+    if env:
+        return env
+    try:
+        return _git("merge-base", "HEAD", DEFAULT_BASE).strip() or DEFAULT_BASE
+    except subprocess.CalledProcessError:
+        return DEFAULT_BASE
+
+
 def base_text(ref: str, name: str) -> str | None:
     """Файл в базе или None, если его там нет. Нет самой ссылки — CompatError."""
     try:
@@ -398,8 +416,9 @@ def check_all(
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n", 1)[0])
-    ap.add_argument("--base", default=os.environ.get("CONTRACTS_BASE_REF") or DEFAULT_BASE)
+    ap.add_argument("--base", default=None)
     args = ap.parse_args(argv)
+    args.base = args.base or default_base()
     try:
         exemptions = load_exemptions()
         report = check_all(args.base, exemptions=exemptions)

@@ -1,5 +1,6 @@
 """Экран «Состояние системы»: правила статуса по фактам."""
 
+import re
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -45,6 +46,32 @@ def test_models_from_monitor_rows() -> None:
         ("model:fallback-model", "ok"),
     ]
     assert result[0].reason.startswith("закончились кредиты")
+
+
+@pytest.mark.parametrize(
+    ("facts", "text"),
+    [
+        (
+            QueueFacts(0, 1, 1),
+            "1 задача выполняется дольше 15 минут; 1 задача упала за последний час",
+        ),
+        (
+            QueueFacts(0, 2, 3),
+            "2 задачи выполняются дольше 15 минут; 3 задачи упали за последний час",
+        ),
+        (
+            QueueFacts(0, 5, 11),
+            "5 задач выполняются дольше 15 минут; 11 задач упали за последний час",
+        ),
+        (QueueFacts(101, 21, 0), "21 задача выполняется дольше 15 минут"),
+    ],
+    ids=["one", "few", "many", "twenty-one"],
+)
+def test_queue_text_agrees_in_number(facts: QueueFacts, text: str) -> None:
+    """W15-G-7: «1 задач выполняются» — нет; число согласовано со словом."""
+    reason = rules.queue(facts, NOW).reason
+    assert text in reason
+    assert not re.search(r"(?<![\d])1 задач ", reason)
 
 
 @pytest.mark.parametrize(
@@ -120,19 +147,27 @@ CRM_OK = "https://crm.example.com"
             ["Платформы", "localhost", "PLATFORM_DOMAIN"],
         ),
         (CRM_OK, PlatformUrlFacts("http://127.0.0.1:8088", True), "warn", ["localhost", "хостинг"]),
-        ("http://localhost", PROD_OK, "warn", ["Адрес CRM", "«Настройки» → «Компания»"]),
+        # ссылки Telegram идут в Платформу: адрес CRM — только запасной (B-009)
+        ("http://localhost", PROD_OK, "ok", []),
+        ("http://localhost", None, "warn", ["Адрес CRM", "«Настройки» → «Компания»"]),
         # на стенде localhost для Платформы — норма
         (CRM_OK, PlatformUrlFacts("http://platform.localhost:8088", False), "ok", []),
         # адреса нет совсем — честная строка в любом режиме, а не localhost в письме
         (CRM_OK, PlatformUrlFacts(None, True), "warn", ["Платформы не задан", "PLATFORM_DOMAIN"]),
-        (CRM_OK, PlatformUrlFacts(None, False), "warn", ["Платформы не задан"]),
+        (
+            CRM_OK,
+            PlatformUrlFacts(None, False),
+            "warn",
+            ["Платформы не задан", "ссылки из Telegram"],
+        ),
     ],
     ids=[
         "ok",
         "no-platform-check",
         "platform-localhost",
         "platform-127",
-        "crm-localhost",
+        "crm-localhost-platform-ok",
+        "crm-localhost-no-platform-check",
         "dev-ok",
         "missing-prod",
         "missing-dev",

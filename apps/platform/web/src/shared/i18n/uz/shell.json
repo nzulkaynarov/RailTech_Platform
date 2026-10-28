@@ -74,7 +74,8 @@
   "panel": {
     "label": "Yon oyna",
     "hide": "Yon oynani yashirish",
-    "show": "Yon oynani ko‘rsatish"
+    "show": "Yon oynani ko‘rsatish",
+    "close": "Yopish"
   },
   "avatar": {
     "open": "{{initials}} {{role}}: profil va sozlamalar, {{name}}",
