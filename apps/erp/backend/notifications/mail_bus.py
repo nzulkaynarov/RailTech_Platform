@@ -210,7 +210,15 @@ EMAIL_LOG_KEY = re.compile(r"^erp:email_log:(\d+)$")
 
 def apply_mail_result(event_type: str, data: dict[str, Any]) -> None:
     """`crm.mail.sent|failed.v1` → журнал писем ERP (и журнал/итог КП). Чужие итоги (requester ≠ erp) пропускаются;
-    повтор идемпотентен; «ошибка» после «отправлено» не применяется."""
+    повтор идемпотентен; «ошибка» после «отправлено» не применяется. Блокировки строк — в своей транзакции
+    (обработчик шины и так идёт в транзакции inbox, тогда это точка сохранения)."""
+    from django.db import transaction
+
+    with transaction.atomic():
+        _apply_mail_result(event_type, data)
+
+
+def _apply_mail_result(event_type: str, data: dict[str, Any]) -> None:
     import logging
 
     from core.models import EmailLog
