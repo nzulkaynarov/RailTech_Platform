@@ -46,14 +46,12 @@
     "erpDeals": "«Сделки» bo‘limi",
     "erpCalc": "«Сделки» → ariza kartochkasi → TT hisob-kitobi",
     "erpQuotes": "«Документы» → «Коммерческие предложения»",
-    "erpDocuments": "«Документы» (TT, shartnomalar, hisoblar, dalolatnomalar)",
     "erpPayments": "«Документы» → «Платежи»",
     "erpCatalog": "«Товары» → «Справочники»",
     "erpFiles": "«Документы» → «Файлы»"
   },
   "who": {
     "memos": "direktor va buxgalter — xizmat yozuvlarini hozircha og‘zaki yoki qog‘ozda kelishadi",
-    "newDocument": "xodimning o‘zi — xizmat yozuvi, ariza va hisobotlarni hozircha qog‘ozda rasmiylashtiradi",
     "chats": "jamoa — ish yozishmalari hozircha tizimdan tashqari messenjerlarda yuritiladi",
     "tickets": "administrator — unga so‘rovlar hozircha Telegramda yoki shaxsan keladi",
     "unknown": "interfeysdan tashqaridagi mas’ul xodim"

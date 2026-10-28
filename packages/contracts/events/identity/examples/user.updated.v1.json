@@ -32,7 +32,13 @@
           "letters.read",
           "memos.create",
           "registry.read"
-        ]
+        ],
+        "sections": {
+          "eds.memo.create": "full",
+          "eds.projects": "read",
+          "erp.calc": "full",
+          "erp.calc.goods": "full"
+        }
       },
       "updated_at": "2026-10-22T07:00:00Z"
     },

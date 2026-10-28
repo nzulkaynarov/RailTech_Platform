@@ -20,7 +20,12 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.domain.bot_menu import normalize_phone
-from app.domain.platform_roles import RoleGrant, eds_permissions_of
+from app.domain.platform_roles import (
+    PUBLISHED_SECTION_PREFIXES,
+    RoleGrant,
+    eds_permissions_of,
+    merge_access,
+)
 from app.domain.platform_roles_generated import ROLE_ACCESS, SYSTEM_ROLE_CODES
 from app.models.auth import User
 from app.models.clients import Client, ClientContact
@@ -189,17 +194,31 @@ def role_code(role: PlatformRole) -> str | None:
     return code if _ROLE_CODE.fullmatch(code) else None
 
 
-def eds_permissions(roles: Sequence[PlatformRole], *, is_active: bool) -> list[str]:
-    """Права EDS сотрудника из его ролей по каталогу (сортированный список); неактивный — пусто.
-
-    Матрица системной роли — из каталога (она неизменна, ADR-0012 п. 2), прочих — данные роли."""
-    grants = [
+def _grants(roles: Sequence[PlatformRole]) -> list[RoleGrant]:
+    """Матрица системной роли — из каталога (она неизменна, ADR-0012 п. 2), прочих — данные роли."""
+    return [
         RoleGrant(dict(ROLE_ACCESS[r.code]), (), r.code)
         if r.is_system and r.code in SYSTEM_ROLE_CODES
         else RoleGrant(dict(r.access), tuple(r.restricted_fields), r.code)
         for r in roles
     ]
-    return list(eds_permissions_of(grants, is_active=is_active))
+
+
+def eds_permissions(roles: Sequence[PlatformRole], *, is_active: bool) -> list[str]:
+    """Права EDS сотрудника из его ролей по каталогу (сортированный список); неактивный — пусто."""
+    return list(eds_permissions_of(_grants(roles), is_active=is_active))
+
+
+def catalog_sections(roles: Sequence[PlatformRole], *, is_active: bool) -> dict[str, str]:
+    """Разделы каталога модулей EDS и ERP, которые дают сотруднику его роли: объединение матриц
+    (максимум по разделу, порядок каталога); неактивный — пусто. Нужны EDS для зоны исполнителя
+    резолюции (D1-8, B-007)."""
+    if not is_active:
+        return {}
+    merged = merge_access(_grants(roles))
+    return {
+        key: level for key, level in merged.items() if key.startswith(PUBLISHED_SECTION_PREFIXES)
+    }
 
 
 def user_fields(user: User, roles: Sequence[PlatformRole]) -> dict[str, Any]:
@@ -218,7 +237,10 @@ def user_fields(user: User, roles: Sequence[PlatformRole]) -> dict[str, Any]:
         "platform_roles": codes,
         "systems": access,
         "erp_role_codes": sorted(set(user.erp_role_codes or [])),
-        "permissions": {"eds": eds_permissions(roles, is_active=is_active)},
+        "permissions": {
+            "eds": eds_permissions(roles, is_active=is_active),
+            "sections": catalog_sections(roles, is_active=is_active),
+        },
     }
 
 

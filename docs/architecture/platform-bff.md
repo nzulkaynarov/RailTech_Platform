@@ -109,6 +109,9 @@ SPA  POST /api/v1/setup/admin {code, name, email, password}
 - Код первого запуска знает только CRM: она выдаёт его, пока администратора нет, и один раз пишет в журнал `crm-api`
   (`setup_code_issued`); BFF его не хранит и не возвращает. Блокировку перебора (10 неверных кодов — 15 минут) держит CRM,
   BFF добавляет лимит входа.
+- `POST /setup/admin` ждёт CRM до 30 с (хеш пароля под нагрузкой). Не дождался — BFF спрашивает `/setup/state`: администратор уже
+  создан — входит теми же данными (сессия открывается как после обычного ответа), не подошли — 409 `SETUP_DONE` с
+  `details.reason = created_before_timeout`; CRM не отвечает или администратора нет — 503 как раньше (W15b-1).
 - Дальше — мастер в Admin (`/admin/setup`, раздел `admin` полный): шаг «своя компания» — ERP `setup/status/` и `setup/company/`
   токеном администратора (ERP выдаёт доступ новому администратору с задержкой провижининга: до тех пор BFF отвечает
   503 `BACKEND_UNAVAILABLE` с `source = erp`, а экран предлагает «Проверить снова»); чек-лист из пяти шагов
@@ -235,7 +238,7 @@ SPA  PUT  /api/v1/me/onboarding            → CRM PATCH /me {onboarding_done: t
 - **ИИ-разбор** — задание в очереди ИИ ERP (модель через шлюз по алиасу), итог — предложение строк; пишет строки только
   `POST …/lines` после выбора сотрудника. Выключенный ИИ — 409 `ai_disabled`.
 
-### 3.6. Склад и закупки (D2-2, BFF 0.27.0)
+### 3.6. Склад и закупки (D2-2, BFF 0.28.0)
 
 Экран «Расчёт · Склад» (SPEC-v3 §7.4) — теги `stock` и `calc`, `/erp/stock*`, `/erp/calc/{ЗВ}/…reserve|price-requests`,
 `/erp/price-requests/{id}/answer`, поверх ERP `/api/v1/stock/*` (`inventory.services.stock`, `supply.services.orders|price_requests`).
@@ -267,7 +270,7 @@ BFF не решает: остаток, резерв, переходы стату
   месте); объект — новый `ObjectKind = supplier_order`, путь `/erp/stock/ЗП-…`. Пункт «Склад» получает бейдж. Ежедневная задача ERP
   (06:00 Ташкент) шлёт уведомление `supplier_order.overdue` один раз на заказ (создателю и держателям `supply.manage`); BFF ведёт его
   в карточку заказа. Вид привязан каталогом к `erp.stock: full` (Q-D22-2).
-- **Контракт 0.27.0** — ломающее по oasdiff (`response-property-enum-value-added`: `supplier_order` в `ObjectKind`), поэтому минор
+- **Контракт 0.28.0** — ломающее по oasdiff (`response-property-enum-value-added`: `supplier_order` в `ObjectKind`), поэтому минор
   поднят; остальное — добавления (`CalcStock.free`, `CalcRights.stock`, новые операции).
 
 ## 4. Кто владеет новыми сущностями (SPEC-v3 §10.4)
@@ -302,8 +305,8 @@ BFF не решает: остаток, резерв, переходы стату
 - **Поток подсказок (B5, волна 11, ADR-0014).** BFF — подписчик шины `rt_bus` (строка `platform-bff` в
   `packages/contracts/bus/subscriptions.yaml`: события ERP, лидов CRM, сотрудников; приёмник `POST /bus/v1/events` на
   `rt_bus.fastapi.bus_router` + `MemoryReceiver`, без базы; секреты пар `RT_BUS_SECRET_ERP_PLATFORM_BFF`,
-  `RT_BUS_SECRET_CRM_PLATFORM_BFF`, с волны 12 `RT_BUS_SECRET_EDS_PLATFORM_BFF` — события EDS подписаны, но до этапа D
-  подсказок не дают, приёмник отвечает `skipped`; Caddy `/bus/*` на домене Платформы не отдаёт). Событие превращается в подсказку
+  `RT_BUS_SECRET_CRM_PLATFORM_BFF`, с волны 12 `RT_BUS_SECRET_EDS_PLATFORM_BFF` — события EDS (D1-6) дают подсказки
+  `queue`, `counters`, `notifications`; Caddy `/bus/*` на домене Платформы не отдаёт). Событие превращается в подсказку
   `{"topics": ["notifications"|"counters"|"queue"|"activity"|"messages"], "reason": "<тип события>"}` и уходит в браузер по
   `GET /api/v1/events/stream` (SSE, только вошедшему сотруднику с разделом «Моя очередь»). **В потоке нет данных**:
   браузер перезапрашивает обычные API (с RBAC), поэтому чужое в поток не попадает. Устройство:
@@ -378,6 +381,21 @@ BFF не решает: остаток, резерв, переходы стату
 (раздел `admin` и др.), а не `admin` CRM (`*:*`): лиды, клиенты, сделки и их выгрузка — 403, администрирование — 200;
 бизнес-данные — второй ролью. У сотрудника хотя бы одна роль: пустой `role_ids` — 422 `ROLES_REQUIRED` (CRM — 422
 `roles_required`), закрыть доступ — `is_active = false`.
+
+**D1-8 (EDS API 0.5.0; BFF без смены контракта): права CRM только из каталога (B-014), сотрудники по разделу (B-007).**
+(1) Права прямого API CRM сотрудника с ролями Платформы — только политики его ролей `pr:<id>` по `platform-rbac.yaml` (`backend.crm`):
+предустановки и роли без `crm.leads` не получают `/inbox`, лиды, переписку и вложения сообщений только потому, что их базовая роль CRM
+`viewer`/`manager`. Сама базовая роль — **признак, не право**: она нужна «последнему администратору», выбору «кому передать лида» и
+замещающему, и вычисляется по матрице (`admin: full` — `admin`, `crm.leads: full` — `manager`, иначе `viewer`), а не по коду роли
+(шаблон «Бухгалтер» — теперь `viewer`; миграция CRM пересчитала сохранённое). Матрицу прямого API проверяет тест
+`tests/integration/test_catalog_rights_api.py`: ожидания строятся из `platform-rbac.yaml`, а не руками. Роли с `chats.external` дают
+`leads:read` (и ответ/заметку на `full`) по каталогу — это переписка с клиентами (см. Q-D1-8-1). (2) `MessageOut.attachments` не несёт
+`storage_key`: файл отдаёт только `GET /leads/{id}/messages/{m}/attachments/{i}` с проверкой доступа к лиду; BFF ходит потоком.
+(3) `GET /team?section=<раздел>&level=full|read` (CRM; право `users:read`, т. е. `admin` не ниже чтения): активные сотрудники, у которых
+объединение матриц ролей даёт раздел на уровне; только id, имя, инициалы, должность. `GET /eds/resolution/assignees` берёт зоны оттуда
+(по вызову на зону) и не сводит `/users` и `/platform-roles`; автор резолюции исключается в BFF по id. EDS при резолюции сверяет зону
+по проекции сотрудников (`identity.user.*` → `permissions.sections`) и отвечает 422 `assignee_zone_mismatch` (BFF сохраняет
+`details.reason`).
 
 **W13-A6 (BFF 0.12.0): сброс пароля, журнал аудита и профиль.** Чисто добавляющее изменение; новых бизнес-решений в BFF нет.
 (1) `POST /admin/users/{id}/reset-password/email` → CRM `/users/{id}/reset-password/email` (`admin: full`): новый временный пароль,
@@ -476,6 +494,10 @@ BFF отдаёт сам (`/admin/company/logo/image`, `/admin/company/brand/logo
   Создание с `submit` — два вызова EDS (`POST /documents`, `POST …/submit`): если отправка отклонена, ошибка называет сохранённый черновик
   (`details.document_id`, `saved`). Ошибки EDS переводятся в `Error` с `source = eds` (текст EDS сохраняется; 422 — `details.fields`, `messages`).
   Загрузка файла — как W13-A5 (поток до 25 МБ и поля формы, multipart не разбирается; сверх предела — 413), скачивание — потоком как `attachment`.
+- **EDS в «Моей очереди», счётчиках и поиске (D1-6, 0.25.0).** `Feed` читает EDS (`GET /letters?status=awaiting_resolution`, `GET /approvals?mine=true&status=open&template=…`,
+  `GET /registry?q=`) тем же токеном `aud=eds`; только роли с разделами EDS (`EDS_SECTIONS`), строки — по секции `queue` каталога (`resolve_letter`, `approve_memo`,
+  `pay_memo`). Права внутри EDS решает EDS (403 — `Sources.eds = not_applicable`), BFF их не вычисляет; недоступность — `Sources.eds = unavailable` (необязательное поле,
+  есть только когда EDS читали). Строки «ждут ответа клиенту» ведут в `/crm/messages?lead=`. Подробно — [integration-map](integration-map.md) §1.2.
 - **EDS · КП на одобрение и «На согласовании» (D1-4, 0.24.0).** `/eds/quotes*` (раздел `eds.drafts`: чтение — менеджер, решение — директор) и
   `/eds/memo-approvals*` (раздел `eds.memo.approve` для решений, чтение также у `eds.memo.create`: автор видит свой документ) — тем же токеном доступа EDS.
   Маршрут, шаги, чек-лист КП и `allowed_decisions` отдаёт EDS, **BFF чек-лист не проверяет** (409 `checklist_not_green` с `details.failed`; 409

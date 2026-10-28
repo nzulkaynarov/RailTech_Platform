@@ -176,10 +176,12 @@ def card(lead: crm.LeadDetail, names: Names, products: Mapping[str, str]) -> Con
 
 
 def attachments(number: str, message_id: int, raw: list[dict[str, Any]]) -> list[ThreadAttachment]:
-    """Вложения без ключа хранилища: имя, тип, размер и ссылка BFF на сохранённый файл."""
+    """Вложения без ключа хранилища: имя, тип, размер и ссылка BFF на сохранённый файл.
+
+    «Файл сохранён» — признак `stored`: с D1-8 CRM ключ хранилища в сообщении не отдаёт (B-014)."""
     out: list[ThreadAttachment] = []
     for index, item in enumerate(raw[:20]):
-        stored = bool(item.get("stored")) and bool(item.get("storage_key"))
+        stored = bool(item.get("stored"))
         size = item.get("size")
         out.append(
             ThreadAttachment(

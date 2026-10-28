@@ -30,6 +30,7 @@ async def get_menu_counters(authed: QueueAuthed) -> MenuCounters:
         inbox=True,
         approvals=True,
         deals=wants_projects(view),
+        eds=True,
         tickets=True,
         stock=True,
     )
@@ -49,6 +50,7 @@ async def get_queue(authed: QueueAuthed, role: RoleParam = None) -> Queue:
         inbox=True,
         approvals=True,
         deals=wants_approvals(view),
+        eds=True,
         tickets=True,
         stock=True,
     )
@@ -70,6 +72,7 @@ async def get_queue_cards(authed: QueueAuthed, role: RoleParam = None) -> QueueC
         inbox=True,
         approvals=True,
         deals=wants_projects(view) or wants_approvals(view),
+        eds=True,
         tickets=True,
         stock=True,
     )

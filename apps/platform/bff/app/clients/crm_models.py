@@ -1280,8 +1280,14 @@ class SystemStatusOut(BaseModel):
 
 
 class TeamMember(BaseModel):
+    """
+    Сотрудник в выборе («кому передать лида», «исполнитель зоны»): без почты, телефона, ролей.
+    """
+
     full_name: Annotated[str, Field(title="Full Name")]
     id: Annotated[int, Field(title="Id")]
+    initials: Annotated[str, Field(max_length=3, title="Initials")]
+    position: Annotated[str | None, Field(title="Position")] = None
 
 
 class TelegramStatusOut(BaseModel):

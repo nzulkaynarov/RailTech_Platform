@@ -1,6 +1,6 @@
 import { HttpResponse, http } from "msw";
 
-import type { Notification, Sources } from "../shared/api/generated/model";
+import type { Notification, QueueItem, Sources } from "../shared/api/generated/model";
 import {
   activityToday,
   cardsForView,
@@ -9,6 +9,7 @@ import {
   queueForView,
   searchIndex,
 } from "./fixtures/feeds";
+import { reworkQueueItems } from "./edsRework";
 import { computeAccess, type MockRole } from "./fixtures/roles";
 import { readSession, sessionRoles } from "./mockSession";
 import { crmNotificationsOf, markCrmNoteRead, ticketQueueItems } from "./ticketsHandlers";
@@ -40,9 +41,55 @@ function crmDown(): boolean {
   }
 }
 
+/**
+ * Строка очереди без родного экрана (проект на стадии «Оплата») для e2e и снимков «Где сделать»:
+ * `localStorage["rt-pf-mock-queue-stub"] = "1"` добавляет её к очереди директора (D1-6: у лидов, писем, КП и служебок
+ * экраны уже есть, а проверять мост H1 надо на строке, у которой экрана нет).
+ */
+export const MOCK_QUEUE_STUB_KEY = "rt-pf-mock-queue-stub";
+
+function queueStub(): boolean {
+  try {
+    return window.localStorage.getItem(MOCK_QUEUE_STUB_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+const STUB_ROW: QueueItem = {
+  id: "project:99:problem",
+  role_id: "",
+  kind: "problem_project",
+  title: "Разобраться с проектом ПР-2026-099",
+  subtitle: "АО «Демо-Рейл» · 9 дней на стадии «Оплата»",
+  due_label: "later",
+  object: {
+    kind: "project",
+    number: "ПР-2026-099",
+    title: "Рельсовые скрепления",
+    path: "/eds/projects/%D0%9F%D0%A0-2026-099?panel=open&tab=documents",
+    step: "PAYMENT",
+  },
+};
+
+/** То же для EDS (D1-6): `localStorage["rt-pf-mock-eds-down"] = "1"` — без писем и служебок, `sources.eds = "unavailable"`. */
+export const MOCK_EDS_DOWN_KEY = "rt-pf-mock-eds-down";
+
+function edsDown(): boolean {
+  try {
+    return window.localStorage.getItem(MOCK_EDS_DOWN_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+/** Работа, которую даёт только EDS (письма, служебки): КП в очереди ведёт ERP. */
+const EDS_KINDS: readonly QueueItem["kind"][] = ["resolve_letter", "approve_memo", "pay_memo"];
+
 const sources = (): Sources => ({
   crm: crmDown() ? "unavailable" : "ok",
   erp: erpDown() ? "unavailable" : "ok",
+  ...(edsDown() ? { eds: "unavailable" as const } : {}),
 });
 
 function expired() {
@@ -75,6 +122,8 @@ function noQueue(roles: { all: MockRole[] }) {
   );
 }
 
+const DUE_RANK = { overdue: 0, today: 1, tomorrow: 2, memo: 3, later: 4 } as const;
+
 /** Прочитанные уведомления живут в памяти страницы: «Отметить все прочитанными» переживает опрос, но не перезагрузку. */
 const readIds = new Set<string>();
 let readAllAt = 0;
@@ -103,7 +152,9 @@ export const feedHandlers = [
     if (!roles) return expired();
     const denied = noQueue(roles);
     if (denied) return denied;
-    const cards = cardsForView(roles.view).filter((c) => !erpDown() || c.path.startsWith("/crm"));
+    const cards = cardsForView(roles.view)
+      .filter((c) => !erpDown() || c.path.startsWith("/crm"))
+      .filter((c) => !edsDown() || !["/eds/inbox", "/eds/approvals"].includes(c.path));
     return HttpResponse.json({ cards, sources: sources() });
   }),
 
@@ -112,20 +163,29 @@ export const feedHandlers = [
     if (!roles) return expired();
     const denied = noQueue(roles);
     if (denied) return denied;
-    const rank = { overdue: 0, today: 1, tomorrow: 2, memo: 3, later: 4 } as const;
     const own = [
       ...queueForView(roles.view),
       ...ticketQueueItems(roles.view), // обращения живут в CRM, как и лиды
       ...stockQueueItems(roles.view), // просроченные заказы поставщикам (ERP, D2-2)
-    ]
-      .filter((i) => (i.kind.endsWith("_lead") || i.kind === "ticket" ? !crmDown() : !erpDown()))
-      .sort((a, b) => rank[a.due_label] - rank[b.due_label]);
+    ].filter((i) =>
+      i.kind.endsWith("_lead") || i.kind === "ticket"
+        ? !crmDown()
+        : EDS_KINDS.includes(i.kind)
+          ? !edsDown()
+          : !erpDown(),
+    );
+    const director = own.find((i) => i.kind === "resolve_letter");
+    if (queueStub() && director) own.push({ ...STUB_ROW, role_id: director.role_id });
     // Замещение (W15-H6): заместитель видит строки замещаемого с пометкой «за {имя}».
     const session = readSession();
     const userId = session ? sessionRoles(session)?.user.id : undefined;
     const answerRole = own.find((i) => i.kind === "answer_lead")?.role_id;
     const covered = userId && answerRole ? coveredQueueItems(userId, answerRole) : [];
-    return HttpResponse.json({ items: [...own, ...covered], sources: sources() });
+    // «Доработать» (D1-6b): документы автора, возвращённые на доработку; источник — EDS, ни CRM, ни ERP на него не влияют
+    const items = [...own, ...(edsDown() ? [] : reworkQueueItems(roles.view))].sort(
+      (a, b) => DUE_RANK[a.due_label] - DUE_RANK[b.due_label],
+    );
+    return HttpResponse.json({ items: [...items, ...covered], sources: sources() });
   }),
 
   http.get("*/menu-counters", () => {
@@ -139,8 +199,14 @@ export const feedHandlers = [
       // ERP не отвечает: бейджи разделов ERP (EDS, ERP, «Все проекты») не показываются, остаются очередь и CRM
       items: [
         ...menuCountersFor(
-          queueForView(roles.view).filter((i) => !erpDown() || i.kind.endsWith("_lead")).length,
-        ).filter((c) => !erpDown() || c.module === "crm" || c.section === "queue"),
+          queueForView(roles.view).filter((i) => !erpDown() || i.kind.endsWith("_lead")).length +
+            (edsDown() ? 0 : reworkQueueItems(roles.view).length),
+        )
+          .filter((c) => !erpDown() || c.module === "crm" || c.section === "queue")
+          .filter(
+            (c) =>
+              !edsDown() || !(c.module === "eds" && ["inbox", "approvals"].includes(c.section)),
+          ),
         // «Расчёт · Склад»: просроченные заказы поставщикам (D2-2)
         ...(stockOverdue > 0 && !erpDown()
           ? [{ module: "erp" as const, section: "stock", count: stockOverdue, attention: true }]
@@ -221,7 +287,9 @@ export const feedHandlers = [
       );
     }
     const resources = new Set(Object.keys(computeAccess(roles.view).resources));
-    const groups = searchIndex(q, resources).filter((g) => !erpDown() || g.module === "crm");
+    const groups = searchIndex(q, resources, edsDown()).filter(
+      (g) => !erpDown() || g.module === "crm",
+    );
     return HttpResponse.json({ groups, sources: sources() });
   }),
 ];

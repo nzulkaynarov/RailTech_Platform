@@ -125,7 +125,9 @@ test.describe("Мои задачи", () => {
     await expect(page.getByRole("main").getByRole("status")).toContainText(
       "Не загрузились КП на одобрение и расчёты: раздел «Расчёт» не ответил. Остальное показано.",
     );
-    await expect(page.getByText("Наложить резолюцию на письмо ВХ-104/26")).toHaveCount(0);
+    // КП ведёт ERP — строки нет; письмо читает EDS (D1-6) — строка на месте
+    await expect(page.getByText("Одобрить КП-2026/118 (черновик)")).toHaveCount(0);
+    await expect(page.getByText("Наложить резолюцию на письмо ВХ-104/26")).toBeVisible();
     await settledScreenshot(page, "dashboard-erp-down");
     await expectNoViolations(page, "erp down");
   });
