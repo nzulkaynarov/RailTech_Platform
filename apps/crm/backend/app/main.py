@@ -20,6 +20,7 @@ from app.api.v1 import (
     client_contacts,
     client_requests,
     clients,
+    company_articles,
     deals,
     export,
     external_services,
@@ -100,6 +101,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app = FastAPI(
         title="RailTech CRM API",
         # D1-8: GET /team?section=&level=, MessageOut без storage_key — добавляющие, версия прежняя.
+        # 0.14.0 (W18A-P5): статьи компании /company-articles и /me/company-articles; новые
+        # подкоды `article_*` в `Reason` (oasdiff считает новое значение enum ответа ломающим).
         # 0.13.0 (W15-H8b): WAL, Redis и шина в «Состоянии»; смена пароля выдаёт сессии
         # новую пару (POST /auth/change-password — 200 с токенами, было 204).
         # 0.12.0 (W16-D1-2): «Создать заявку» из лида и клиента, `platform_status` и фильтры
@@ -107,7 +110,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         # колокольчик /me/notifications, флаг тура users.onboarding_done; 0.10.0 (D1-9):
         # приглашение в кабинет и подтверждение запроса; 0.9.0 (D1-1): записка передачи,
         # ответы; 0.8.0 (W15-H6): профиль; 0.6.0 — W15-H3.
-        version="0.13.0",
+        version="0.14.0",
         lifespan=lifespan,
         # operationId = имя функции роута → читаемые имена в клиенте orval.
         generate_unique_id_function=lambda route: route.name,
@@ -133,6 +136,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         staff,
         staff_notifications,
         staff_tickets,
+        company_articles,
         users,
         platform_roles,
         # Раньше `leads`: `/leads/web*` не должен перехватываться `/leads/{lead_id}`.
@@ -165,4 +169,5 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         router = module.router
         app.include_router(router)
     app.include_router(staff_tickets.mine_router)
+    app.include_router(company_articles.mine_router)
     return app

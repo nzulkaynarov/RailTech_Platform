@@ -112,7 +112,9 @@
         "external_services:read",
         "external_services:write",
         "tickets:read",
-        "tickets:write"
+        "tickets:write",
+        "company_articles:read",
+        "company_articles:write"
       ]
     },
     "edsPermission": {

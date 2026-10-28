@@ -44,6 +44,7 @@ CATALOG: Final[dict[str, tuple[str, ...]]] = {
     "export": ("read",),
     "external_services": ("read", "write"),
     "tickets": ("read", "write"),
+    "company_articles": ("read", "write"),
 }
 
 

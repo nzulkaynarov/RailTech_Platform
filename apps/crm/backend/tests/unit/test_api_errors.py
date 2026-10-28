@@ -261,6 +261,12 @@ def test_reason_values_are_a_stable_contract() -> None:
         "ticket_reply_empty",
         "ticket_reply_too_long",
         "ticket_rate_limited",
+        "article_title_empty",
+        "article_title_too_long",
+        "article_body_empty",
+        "article_body_too_long",
+        "article_language_unknown",
+        "article_status_unknown",
         # «Создать заявку» (W16-D1-2, CRM-03)
         "contact_channel_required",
         "request_not_allowed",

@@ -155,6 +155,13 @@ class Reason(StrEnum):
     TICKET_REPLY_EMPTY = "ticket_reply_empty"
     TICKET_REPLY_TOO_LONG = "ticket_reply_too_long"
     TICKET_RATE_LIMITED = "ticket_rate_limited"
+    # Статьи компании (W18A-P5, B-079)
+    ARTICLE_TITLE_EMPTY = "article_title_empty"
+    ARTICLE_TITLE_TOO_LONG = "article_title_too_long"
+    ARTICLE_BODY_EMPTY = "article_body_empty"
+    ARTICLE_BODY_TOO_LONG = "article_body_too_long"
+    ARTICLE_LANGUAGE_UNKNOWN = "article_language_unknown"
+    ARTICLE_STATUS_UNKNOWN = "article_status_unknown"
     # «Создать заявку» (W16-D1-2, CRM-03): у контакта нет ни одного канала связи; лид в отказе или
     # обезличен.
     CONTACT_CHANNEL_REQUIRED = "contact_channel_required"

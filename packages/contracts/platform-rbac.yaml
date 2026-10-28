@@ -227,13 +227,15 @@ resources:
         full: [leads:read, leads:reply, leads:note, leads:assist]
   - key: admin
     module: admin
-    label: { ru: "Настройки · Роли и права, Сотрудники, Подключения, Telegram-бот, Журнал, Обращения сотрудников", uz: "Sozlamalar · Rollar va huquqlar, xodimlar, ulanishlar, Telegram-bot, jurnal, xodimlar murojaatlari", en: "Settings · Roles & permissions, employees, connections, Telegram bot, log, staff requests" }
+    label: { ru: "Настройки · Роли и права, Сотрудники, Подключения, Telegram-бот, Журнал, Обращения сотрудников, Статьи компании", uz: "Sozlamalar · Rollar va huquqlar, xodimlar, ulanishlar, Telegram-bot, jurnal, xodimlar murojaatlari, kompaniya maqolalari", en: "Settings · Roles & permissions, employees, connections, Telegram bot, log, staff requests, company articles" }
     backend:
       crm:
         # W13-A5: директор (admin: read) читает и настройки бота, шаблоны ответов и базу знаний — без правки; правка и
         # песочница — admin: full (settings:write, kb:write, reply_templates:write, sandbox:use, export:read).
         # W15-H7: «Обращения сотрудников» — директор читает (tickets:read), администратор отвечает и меняет статус (tickets:write).
-        read: [users:read, integrations:read, models:read, system:read, external_services:read, backups:read, audit:read, settings:read, reply_templates:read, kb:read, tickets:read]
+        # W18A-P5: «Статьи компании» — директор читает вместе с черновиками (company_articles:read), администратор пишет,
+        # публикует и удаляет (company_articles:write); опубликованные читает любой сотрудник в «Помощи» (без права).
+        read: [users:read, integrations:read, models:read, system:read, external_services:read, backups:read, audit:read, settings:read, reply_templates:read, kb:read, tickets:read, company_articles:read]
         full:
           - users:read
           - users:write
@@ -259,6 +261,8 @@ resources:
           - export:read
           - tickets:read
           - tickets:write
+          - company_articles:read
+          - company_articles:write
       # Журнал шины (W13-A2): ERP — `team.manage` (код раздела `admin` в ERP, нового кода не нужно); EDS — `bus.manage`
       # (у EDS кода раздела `admin` не было). В CRM журнал — `integrations:read`/`integrations:write`.
       erp: { full: [team.manage] }
@@ -312,6 +316,7 @@ menu:
     org: [admin]
     integrations: [admin]
     tickets: [admin]
+    articles: [admin]
     company: [company.settings]
     bot: [admin]
     # «Журнал» (W15-H4): действия людей и обмен между системами — фильтр одного экрана. «Обмен между системами» (шина,

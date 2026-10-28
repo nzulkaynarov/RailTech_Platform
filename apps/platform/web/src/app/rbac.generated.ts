@@ -186,9 +186,9 @@ export const RESOURCES = {
     levels: ["read", "full"],
     backends: ["crm", "erp"],
     label: {
-      ru: "Настройки · Роли и права, Сотрудники, Подключения, Telegram-бот, Журнал, Обращения сотрудников",
-      uz: "Sozlamalar · Rollar va huquqlar, xodimlar, ulanishlar, Telegram-bot, jurnal, xodimlar murojaatlari",
-      en: "Settings · Roles & permissions, employees, connections, Telegram bot, log, staff requests",
+      ru: "Настройки · Роли и права, Сотрудники, Подключения, Telegram-бот, Журнал, Обращения сотрудников, Статьи компании",
+      uz: "Sozlamalar · Rollar va huquqlar, xodimlar, ulanishlar, Telegram-bot, jurnal, xodimlar murojaatlari, kompaniya maqolalari",
+      en: "Settings · Roles & permissions, employees, connections, Telegram bot, log, staff requests, company articles",
     },
   },
   "company.settings": {
@@ -255,6 +255,7 @@ export const MENU = {
     org: ["admin"],
     integrations: ["admin"],
     tickets: ["admin"],
+    articles: ["admin"],
     company: ["company.settings"],
     bot: ["admin"],
     audit: ["admin"],
