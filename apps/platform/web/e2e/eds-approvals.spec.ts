@@ -270,7 +270,9 @@ test.describe("На согласовании: служебные записки"
     await expect(first.getByText("Оплата аренды склада за ноябрь")).toBeVisible();
     await expect(first.getByText("Демо Менеджеров")).toBeVisible();
     await expect(first.getByText("На согласовании · Директор")).toBeVisible();
-    await expect(page.getByRole("row")).toHaveCount(1 + 5);
+    // шаг бухгалтера (СЗ-2026/015) директору не принадлежит: «Счета и оплаты» он только читает (D2-4)
+    await expect(page.getByRole("row")).toHaveCount(1 + 4);
+    await expect(row(page, "СЗ-2026/015")).toHaveCount(0);
     await settledScreenshot(page, "memos-list");
     await expectNoViolations(page, "список согласований");
 
@@ -300,8 +302,13 @@ test.describe("На согласовании: служебные записки"
     await expect(page.getByText("Передана бухгалтеру").first()).toBeVisible();
     await settledScreenshot(page, "memo-agreed");
 
-    // шаг теперь у бухгалтера: в списке документ с этим словом (директор держит и право бухгалтера, «Принять к оплате»)
+    // шаг теперь у бухгалтера: на шаге директора документа уже нет, в «Все мои согласования» он со словом «Бухгалтер»
     await openApprovals(page);
+    await expect(row(page, "СЗ-2026/014")).toHaveCount(0);
+    await page
+      .getByRole("radiogroup", { name: "Какие документы показать" })
+      .getByText("Все мои согласования")
+      .click();
     await expect(row(page, "СЗ-2026/014").getByText("На согласовании · Бухгалтер")).toBeVisible();
   });
 
