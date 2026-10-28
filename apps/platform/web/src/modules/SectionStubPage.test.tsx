@@ -221,24 +221,28 @@ describe("SectionStubPage · адрес старой системы не опр�
 });
 
 describe("SectionStubPage · карточка объекта по прямой ссылке", () => {
-  it("счёт по прямой ссылке: «Счёт СЧ-2026/142», кнопка ведёт в раздел старого ERP", async () => {
+  it("проект по прямой ссылке: «Проект ПР-2026-099», кнопка ведёт в раздел старого ERP", async () => {
     signInAs("all@demo.example");
-    renderApp("/eds/payments/%D0%A1%D0%A7-2026%2F142");
+    renderApp("/eds/projects/%D0%9F%D0%A0-2026-099");
     const page = await main();
 
-    expect(within(page).getByRole("heading", { level: 1, name: "Счёт СЧ-2026/142" })).toBeVisible();
+    expect(
+      within(page).getByRole("heading", { level: 1, name: "Проект ПР-2026-099" }),
+    ).toBeVisible();
     expect(await within(page).findByRole("link", { name: /Открыть в старом ERP/ })).toHaveAttribute(
       "href",
-      "http://erp.localhost:8088/#payments",
+      "http://erp.localhost:8088/#crm-deals",
     );
   });
 
   it("очередь о нём ничего не знает — только номер и кнопка", async () => {
     signInAs("all@demo.example");
-    renderApp("/eds/payments/%D0%A1%D0%A7-2026%2F999");
+    renderApp("/eds/projects/%D0%9F%D0%A0-2026-998");
     const page = await main();
 
-    expect(within(page).getByRole("heading", { level: 1, name: "Счёт СЧ-2026/999" })).toBeVisible();
+    expect(
+      within(page).getByRole("heading", { level: 1, name: "Проект ПР-2026-998" }),
+    ).toBeVisible();
     expect(await within(page).findByRole("link", { name: /Открыть в старом ERP/ })).toBeVisible();
     expect(within(page).queryByRole("region", { name: /Моей очереди/ })).not.toBeInTheDocument();
   });
