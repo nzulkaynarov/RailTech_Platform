@@ -296,10 +296,13 @@ async def test_search_finds_letters_memos_and_documents_in_the_eds_registry(
     assert request.headers["authorization"] == "Bearer eds-access-1"
 
 
-async def test_employee_without_the_right_for_a_document_does_not_find_it(
+async def test_record_kind_not_opened_by_a_section_of_the_role_is_not_found(
     web: Web, fb: FeedBackends
 ) -> None:
-    """EDS вернул записи, но разделы каталога роли их вид не открывают — их нет в результатах."""
+    """EDS вернул записи, но разделы каталога роли их вид не открывают — их нет в результатах.
+
+    Второй замок: сам доступ к реестру EDS проверяет по `registry.read` (тест EDS
+    `test_registry_requires_registry_read`), BFF только не показывает вид, не открытый роли."""
     fb.state["registry"] = page(
         registry_item("letter_in", "ВХ-104/26"),
         registry_item("quote", "КП-2026/118"),
@@ -346,3 +349,62 @@ async def test_eds_down_in_search_marks_the_source(web: Web, fb: FeedBackends) -
 
     assert response.status_code == 200
     assert response.json()["sources"]["eds"] == "unavailable"
+
+
+async def test_two_versions_of_one_quote_give_one_hit_and_returned_opens_the_draft(
+    web: Web, fb: FeedBackends
+) -> None:
+    """У каждой версии КП свой маршрут EDS и общий номер; реестр отдаёт новые первыми."""
+    fb.state["registry"] = page(
+        registry_item(
+            "quote", "КП-2026/118", id="70000000-0000-4000-8000-0000000000b2", status="returned"
+        ),
+        registry_item(
+            "quote", "КП-2026/118", id="70000000-0000-4000-8000-0000000000b1", status="rejected"
+        ),
+        registry_item("quote", "КП-2026/119", status="approved"),
+    )
+    await web.login(["DIRECTOR"])
+
+    response = await web.client.get("/api/v1/search", params={"q": "КП-2026"})
+
+    hits = [h["object"] for g in response.json()["groups"] for h in g["items"]]
+    assert [h["number"] for h in hits] == ["КП-2026/118", "КП-2026/119"]
+    # возвращённое КП — в «Черновик» на «Одобрение»; одобренное (отправленное) — в «Исходящие»
+    assert hits[0]["path"] == "/eds/drafts/%D0%9A%D0%9F-2026%2F118?panel=open&tab=approve"
+    assert hits[1]["path"].startswith("/eds/outbox/")
+
+
+async def test_memo_row_kind_follows_the_permission_of_the_current_step(
+    web: Web, fb: FeedBackends
+) -> None:
+    """Директор с правом бухгалтера на шаге бухгалтера: «Принять к оплате», а не «Согласовать»."""
+    director_step = route("СЗ-2026/031")
+    director_step["current_step"]["assignee"] = {"crm_user_id": None, "permission": "memos.approve"}
+    pay_step = route("СЗ-2026/015", step="Бухгалтер")
+    pay_step["current_step"]["assignee"] = {"crm_user_id": None, "permission": "payments.confirm"}
+    named = route("СЗ-2026/016")
+    named["current_step"]["assignee"] = {"crm_user_id": 7, "permission": None}
+    fb.state["memos"] = page(director_step, pay_step, named)
+    await web.login(["DIRECTOR"])
+
+    items = (await web.client.get("/api/v1/queue")).json()["items"]
+
+    assert {i["object"]["number"]: i["kind"] for i in items} == {
+        "СЗ-2026/031": "approve_memo",
+        "СЗ-2026/015": "pay_memo",
+        "СЗ-2026/016": "approve_memo",  # шаг конкретного сотрудника — вид по разделу роли
+    }
+    pay = next(i for i in items if i["kind"] == "pay_memo")
+    assert pay["title"].startswith("Принять к оплате СЗ-2026/015")
+
+
+async def test_card_says_not_fewer_when_eds_has_another_page(web: Web, fb: FeedBackends) -> None:
+    fb.state["letters"] = {"items": [letter_row()], "next_cursor": "c2"}
+    fb.state["memos"] = page(route())
+    await web.login(["DIRECTOR"])
+
+    cards = {c["key"]: c for c in (await web.client.get("/api/v1/queue/cards")).json()["cards"]}
+
+    assert cards["letters_without_resolution"]["hint"] == "Документы · Входящие письма · не меньше"
+    assert cards["memos_to_approve"]["hint"] == "Документы · На согласовании"

@@ -265,11 +265,28 @@ def letter_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
 _MEMO_TITLES = {"approve_memo": "Согласовать", "pay_memo": "Принять к оплате"}
 
 
+_MEMO_KIND_BY_PERMISSION: dict[str, QueueItemKind] = {
+    "memos.approve": "approve_memo",
+    "approvals.decide": "approve_memo",
+    "payments.confirm": "pay_memo",
+}
+
+
+def _memo_kind(step: dict[str, Any], view: View) -> QueueItemKind:
+    """Вид строки — по праву, которое держит текущий шаг маршрута (EDS): директор, у которого есть и
+    право бухгалтера, на шаге бухгалтера видит «Принять к оплате», а не «Согласовать». Шаг
+    конкретного сотрудника (права нет) или вид, не положенный роли, — тот, что даёт раздел роли."""
+    permission = _text(_dict(step.get("assignee")).get("permission"))
+    preferred = _MEMO_KIND_BY_PERMISSION.get(permission or "")
+    for kind in (preferred, "approve_memo", "pay_memo"):
+        if kind is not None and view.wants(kind):
+            return kind
+    return "approve_memo"
+
+
 def memo_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
     """Служебки, заявления и отчёты на моём шаге маршрута (EDS): директору — согласовать,
     бухгалтеру на его шаге — принять к оплате."""
-    kind: QueueItemKind = "approve_memo" if view.wants("approve_memo") else "pay_memo"
-    role_id = _role_id(view, kind)
     out: list[Row] = []
     for route in snap.memos or []:
         obj = _dict(route.get("object"))
@@ -279,6 +296,8 @@ def memo_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
             continue
         created = parse_dt(route.get("created_at"))
         step = _dict(route.get("current_step"))
+        kind = _memo_kind(step, view)
+        role_id = _role_id(view, kind)
         subject = short(route.get("title"), 90)
         item = QueueItem(
             id=f"memo:{route_id}",
@@ -350,7 +369,7 @@ def build_cards(view: View, snap: Snapshot, queue: list[QueueItem]) -> list[Queu
             key="letters_without_resolution",
             label="Входящие без резолюции",
             count=len(snap.letters),
-            hint="Документы · Входящие письма",
+            hint="Документы · Входящие письма" + (" · не меньше" if snap.letters_more else ""),
             path="/eds/inbox",
         )
     if wants_approvals(view):
@@ -366,7 +385,7 @@ def build_cards(view: View, snap: Snapshot, queue: list[QueueItem]) -> list[Queu
             key="memos_to_approve",
             label="Служебные записки",
             count=len(snap.memos),
-            hint="Документы · На согласовании",
+            hint="Документы · На согласовании" + (" · не меньше" if snap.memos_more else ""),
             path="/eds/approvals",
         )
     if wants_projects(view):

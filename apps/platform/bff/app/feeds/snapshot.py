@@ -53,6 +53,9 @@ class Snapshot:
     # ложью), список — ответ EDS как есть (что EDS вернул по токену сотрудника, то и строки).
     letters: list[dict[str, Any]] | None = None
     memos: list[dict[str, Any]] | None = None
+    # Есть следующая страница EDS: число в карточке — «не меньше», а не точное
+    letters_more: bool = False
+    memos_more: bool = False
 
     @property
     def deal_index(self) -> dict[int, dict[str, Any]]:
@@ -82,6 +85,10 @@ def wants_memos(view: View) -> bool:
 
 def wants_projects(view: View) -> bool:
     return allows(view.access, "eds.projects", "read")
+
+
+def _has_more(payload: Any) -> bool:
+    return isinstance(payload, dict) and bool(payload.get("next_cursor"))
 
 
 async def _inbox(
@@ -140,12 +147,14 @@ async def load_snapshot(
             payload = await feed.get("eds", LETTERS_PATH, LETTERS_PARAMS, ttl=SNAPSHOT_TTL_SECONDS)
             if payload is not None:
                 snap.letters = rows(payload)
+                snap.letters_more = _has_more(payload)
 
     async def load_memos() -> None:
         if eds and wants_memos(view):
             payload = await feed.get("eds", APPROVALS_PATH, MEMO_PARAMS, ttl=SNAPSHOT_TTL_SECONDS)
             if payload is not None:
                 snap.memos = rows(payload)
+                snap.memos_more = _has_more(payload)
 
     async def load_deals() -> None:
         if deals:

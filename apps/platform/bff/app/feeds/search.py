@@ -139,7 +139,8 @@ def _registry_hit(item: dict[str, Any]) -> SearchHit | None:
         ref = letter_ref(number, subject)
         return SearchHit(object=ref, title=number, subtitle=context)
     if kind == "quote":
-        drafting = item.get("status") == "open"
+        # «Исходящие» — отправленные (одобренные); открытое, возвращённое и отклонённое — «Черновик»
+        drafting = item.get("status") in ("open", "returned", "rejected")
         ref = quote_ref({"number": number}, title=subject, drafting=drafting)
         return SearchHit(object=ref, title=number, subtitle=context)
     document_id = item.get("id")
@@ -238,9 +239,14 @@ async def search(feed: Feed, access: Access, query: str) -> SearchResult:
         and (h := _doc_hit(doc, index)) is not None
     ]
     known = {h.object.number for h in documents}
+    # У каждой версии КП свой маршрут EDS и общий номер; реестр отдаёт новые первыми, поэтому
+    # первая запись пары (вид, номер) — последняя версия.
+    unique: dict[tuple[str, str], dict[str, Any]] = {}
+    for r in registry_rows:
+        unique.setdefault((str(r.get("kind")), str(r.get("number"))), r)
     from_registry = [
         h
-        for r in registry_rows
+        for r in unique.values()
         if any(
             allows(access, res, "read") for res in _REGISTRY_SECTIONS.get(str(r.get("kind")), ())
         )

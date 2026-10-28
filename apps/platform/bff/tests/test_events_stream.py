@@ -14,6 +14,7 @@ from app.hub import CHANNEL, TOPICS, EventHub, Hint
 from tests.bus_support import SECRET, delivery, envelope
 from tests.conftest import Web
 from tests.fakes import Clock, FakeRedis
+from tests.feeds_support import FeedBackends, Moments
 from tests.roles import custom
 
 FAST = {"PLATFORM_EVENTS_COALESCE_MS": 30, "PLATFORM_EVENTS_HEARTBEAT_SECONDS": 0.2}
@@ -352,3 +353,36 @@ async def test_stream_closes_after_logout(web: Web, fast_app: FastAPI) -> None:
     async with asyncio.timeout(2):
         await conn.task  # BFF сам завершает поток при ближайшем heartbeat
     assert fast_app.state.hub.streams == 0
+
+
+async def test_eds_event_drops_the_cached_eds_parts_of_the_queue_before_the_hint(
+    web: Web, fast_app: FastAPI, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """D1-6: письмо, поступившее в EDS, видно в «Моей очереди» сразу: кэш ответов EDS (письма,
+    маршруты) сбрасывается перед кадром, а не живёт свои 8 секунд."""
+    monkeypatch.setenv("RT_BUS_SECRET_EDS_PLATFORM_BFF", "test-pair-secret-eds-platform-bff")
+    fb = FeedBackends(web.be.router, Moments(web.clock))
+    assert (await web.login(["DIRECTOR"])).status_code == 200
+    assert (await web.client.get("/api/v1/queue")).status_code == 200
+    cached = [k for k in web.redis.values if k.startswith(f"feed:{web.sid}:data:eds:")]
+    assert len(cached) == 2  # письма и служебки директора лежат в кэше сессии
+    conn = Asgi(fast_app, "/api/v1/events/stream", f"rt_pf_session={web.sid}")
+    await until(lambda: conn.status == 200 and b": connected" in conn.body)
+    await until(lambda: bool(web.redis.subscribers))
+
+    headers, raw = delivery(
+        envelope("eds", "letter.registered"),
+        publisher="eds",
+        secret="test-pair-secret-eds-platform-bff",
+    )
+    assert (
+        await web.client.post("/bus/v1/events", content=raw, headers=headers)
+    ).status_code == 200
+    await until(lambda: b"event: invalidate" in conn.body)
+
+    assert not any(k in web.redis.values for k in cached)
+    # следующий запрос идёт в EDS заново
+    before = fb.calls(fb.eds["letters"])
+    await web.client.get("/api/v1/queue")
+    assert fb.calls(fb.eds["letters"]) == before + 1
+    await conn.disconnect()
