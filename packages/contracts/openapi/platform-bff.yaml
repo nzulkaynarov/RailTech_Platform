@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.27.0
+  version: 0.28.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -263,7 +263,7 @@ info:
     `redis_cache` (PING, память, AOF/RDB), `bus_dlq` (недоставленные события шины, кроме ERP) и `eds_rights` (права EDS
     сотрудников опубликованы под действующим каталогом ролей; проверка сама повторяет публикацию); действие группы
     `open_bus` — «Открыть журнал обмена» (`/admin/bus`). Строки идут по общей политике H3 (одно «Сломано»/«Восстановлено»,
-    «кто исправляет»). Карточка «Хранилище» учитывает `wal_archive`. Смена пароля самим сотрудником (CRM): прочие сессии
+    «кто исправляет»). Карточка «Хранилище» учитывает `wal_archive` (с OPS-GDRIVE — и `offsite_backup`, внешнюю копию на Google Drive; добавляющее, без смены версии). Смена пароля самим сотрудником (CRM): прочие сессии
     закрываются сразу, текущая продолжается на новой паре токенов (`POST /auth/change-password` BFF по-прежнему 204).
 
     0.2.4: `423 ACCOUNT_LOCKED` объявлен и на `POST /auth/change-password` (CRM блокирует учётную запись после неверных
@@ -325,6 +325,8 @@ tags:
     description: EDS · Входящие письма — список, карточка, резолюция директора, возврат менеджеру, отказ, вложения (сервис EDS; раздел `eds.inbox`)
   - name: calc
     description: Расчёт · Заявки в расчёте и расчёт по заявке — строки, визы по зонам, «Расчёт готов», ИИ-разбор, каталог (ERP; разделы `erp.calc`, `erp.calc.goods`, `erp.calc.services`)
+  - name: stock
+    description: Расчёт · Склад — остатки и резервы, заказы поставщикам ЗП, приёмка, отгрузки по проектам (ERP; раздел `erp.stock`); запрос цены у поставщика и резерв строки — в теге `calc`
   - name: leads
     description: Клиенты · Лиды — список по статусу Платформы и карточка лида (прокси к CRM; раздел `crm.leads`)
   - name: clients
@@ -6792,6 +6794,571 @@ paths:
         '429': {$ref: '#/components/responses/TooManyRequests'}
         '503': {$ref: '#/components/responses/BackendUnavailable'}
 
+  /erp/stock/balances:
+    get:
+      tags: [stock]
+      operationId: listStockBalances
+      summary: 'Склад · Остатки и резервы по номенклатуре'
+      description: >-
+        ERP `GET /stock/balances/`: товары с остатком, резервом или ожидаемым приходом (поиск `q` — по всей номенклатуре). Остаток, резерв, свободный остаток (остаток минус резервы), ожидаемый приход и ближайшая дата, ячейки. Раздел `erp.stock` — чтение.
+      parameters:
+        - {name: q, in: query, required: false, schema: {type: string, maxLength: 200}, description: 'Слова названия, артикула, SKU'}
+        - {name: only, in: query, required: false, schema: {type: string, enum: [reserved, incoming]}, description: 'Только с резервом / с ожидаемым приходом'}
+      responses:
+        '200':
+          description: 'Склад · Остатки и резервы по номенклатуре'
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/StockBalanceList'}
+        '401': {$ref: '#/components/responses/SessionExpired'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '503': {$ref: '#/components/responses/BackendUnavailable'}
+
+  /erp/stock/balances/{product_id}:
+    get:
+      tags: [stock]
+      operationId: getStockProduct
+      summary: 'Склад · Товар: ячейки, резервы, приход, движения'
+      description: >-
+        ERP `GET /stock/balances/{product_id}/`: ячейки с остатками, резервы по проектам, заказы поставщикам с ожидаемым приходом и последние движения. Раздел `erp.stock` — чтение.
+      parameters:
+        - {name: product_id, in: path, required: true, schema: {type: string, pattern: '^[0-9]+$', maxLength: 12}}
+      responses:
+        '200':
+          description: 'Склад · Товар: ячейки, резервы, приход, движения'
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/StockProduct'}
+        '401': {$ref: '#/components/responses/SessionExpired'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '503': {$ref: '#/components/responses/BackendUnavailable'}
+
+  /erp/stock/adjustments:
+    post:
+      tags: [stock]
+      operationId: adjustStock
+      summary: 'Склад · Оприходовать или списать вручную'
+      description: >-
+        ERP `POST /stock/adjustments/`: начальные остатки и итоги инвентаризации — плюс оприходовать, минус списать, в ячейке. Ниже нуля и ниже суммы резервов остаток не уходит (409 `details.reason = not_enough_stock` или `below_reserved`). Раздел `erp.stock` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/StockAdjustIn'}
+      responses:
+        '200':
+          description: 'Склад · Оприходовать или списать вручную'
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/StockProduct'}
+        '401': {$ref: '#/components/responses/SessionExpired'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/StockConflict'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+        '503': {$ref: '#/components/responses/BackendUnavailable'}
+
+  /erp/stock/reservations:
+    get:
+      tags: [stock]
+      operationId: listStockReservations
+      summary: 'Склад · Резервы под проекты'
+      description: >-
+        ERP `GET /stock/reservations/`: действующие резервы; `request` — только резервы этой заявки или проекта (для отгрузки). Раздел `erp.stock` — чтение.
+      parameters:
+        - {name: request, in: query, required: false, schema: {type: string, maxLength: 40}, description: 'Номер заявки ЗВ или проекта ПР'}
+        - {name: product_id, in: query, required: false, schema: {type: string, pattern: '^[0-9]+$', maxLength: 12}}
+      responses:
+        '200':
+          description: 'Склад · Резервы под проекты'
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/StockReservationList'}
+        '401': {$ref: '#/components/responses/SessionExpired'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '503': {$ref: '#/components/responses/BackendUnavailable'}
+
+  /erp/stock/reservations/{reservation_id}:
+    delete:
+      tags: [stock]
+      operationId: releaseStockReservation
+      summary: 'Склад · Снять резерв'
+      description: >-
+        ERP `DELETE /stock/reservations/{id}/`: ещё не отгруженное возвращается в свободный остаток. Раздел `erp.stock` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {name: reservation_id, in: path, required: true, schema: {type: string, pattern: '^[0-9]+$', maxLength: 12}}
+      responses:
+        '200':
+          description: 'Склад · Снять резерв'
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/StockReservation'}
+        '401': {$ref: '#/components/responses/SessionExpired'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/StockConflict'}
+        '503': {$ref: '#/components/responses/BackendUnavailable'}
+
+  /erp/calc/{number}/lines/{line_id}/reserve:
+    put:
+      tags: [calc]
+      operationId: reserveCalcLine
+      summary: 'Расчёт · Зарезервировать товар под строку'
+      description: >-
+        ERP `POST /stock/reservations/` (резерв строки один: повтор меняет количество). Не больше количества строки и свободного остатка (409 `details.reason = not_enough_stock`, `details.free`); строка без карточки каталога — 409 `product_required`. Резерв не снимает визу строки. Ответ — обновлённый расчёт (колонка «Склад»: ячейка и резерв). Раздел `erp.stock` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {$ref: '#/components/parameters/CalcNumberPath'}
+        - {$ref: '#/components/parameters/CalcLineIdPath'}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/StockReserveIn'}
+      responses:
+        '200':
+          description: 'Расчёт · Зарезервировать товар под строку'
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CalcSheet'}
+        '401': {$ref: '#/components/responses/SessionExpired'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/StockConflict'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+        '503': {$ref: '#/components/responses/BackendUnavailable'}
+    delete:
+      tags: [calc]
+      operationId: releaseCalcLineReservation
+      summary: 'Расчёт · Снять резерв строки'
+      description: >-
+        BFF находит резерв строки среди резервов заявки и вызывает ERP `DELETE /stock/reservations/{id}/`. Раздел `erp.stock` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {$ref: '#/components/parameters/CalcNumberPath'}
+        - {$ref: '#/components/parameters/CalcLineIdPath'}
+      responses:
+        '200':
+          description: 'Расчёт · Снять резерв строки'
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CalcSheet'}
+        '401': {$ref: '#/components/responses/SessionExpired'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/StockConflict'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+        '503': {$ref: '#/components/responses/BackendUnavailable'}
+
+  /erp/calc/{number}/price-requests:
+    get:
+      tags: [calc]
+      operationId: listCalcPriceRequests
+      summary: 'Расчёт · Журнал запросов цены у поставщиков'
+      description: >-
+        ERP `GET /stock/price-requests/?deal_id=`: кто, когда, кому и по каким строкам запрашивал цену. Раздел `erp.calc` — чтение.
+      parameters:
+        - {$ref: '#/components/parameters/CalcNumberPath'}
+      responses:
+        '200':
+          description: 'Расчёт · Журнал запросов цены у поставщиков'
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/PriceRequestList'}
+        '401': {$ref: '#/components/responses/SessionExpired'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '503': {$ref: '#/components/responses/BackendUnavailable'}
+    post:
+      tags: [calc]
+      operationId: createCalcPriceRequest
+      summary: 'Расчёт · Запросить цену у поставщика'
+      description: >-
+        ERP `POST /stock/price-requests/`: письмо поставщику (почта ERP, шаблон; ответить можно на почту сотрудника) по выбранным строкам-товарам расчёта и запись в журнале. У поставщика нет почты — 409 `details.reason = supplier_email_required` (можно указать адрес в `to_email`). Письмо не ушло (почта выключена или недоступна) — запрос остаётся в журнале со статусом `failed`, ответ 200. Цена из ответа поставщика вносится вручную в строку расчёта (`PATCH …/lines/{line_id}`). Раздел `erp.stock` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {$ref: '#/components/parameters/CalcNumberPath'}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/PriceRequestIn'}
+      responses:
+        '200':
+          description: 'Расчёт · Запросить цену у поставщика'
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/PriceRequest'}
+        '401': {$ref: '#/components/responses/SessionExpired'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/StockConflict'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+        '503': {$ref: '#/components/responses/BackendUnavailable'}
+
+  /erp/price-requests/{request_id}/answer:
+    post:
+      tags: [calc]
+      operationId: answerPriceRequest
+      summary: 'Расчёт · Отметить ответ поставщика'
+      description: >-
+        ERP `POST /stock/price-requests/{id}/answer/`: поставщик ответил, цена внесена в расчёт. Раздел `erp.stock` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {name: request_id, in: path, required: true, schema: {type: string, pattern: '^[0-9]+$', maxLength: 12}}
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/PriceRequestAnswerIn'}
+      responses:
+        '200':
+          description: 'Расчёт · Отметить ответ поставщика'
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/PriceRequest'}
+        '401': {$ref: '#/components/responses/SessionExpired'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/StockConflict'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+        '503': {$ref: '#/components/responses/BackendUnavailable'}
+
+  /erp/stock/suppliers:
+    get:
+      tags: [stock]
+      operationId: listStockSuppliers
+      summary: 'Склад · Поставщики для выбора'
+      description: >-
+        ERP `GET /stock/suppliers/`: внешние поставщики (тип «поставщик», не своя компания) для запроса цены и заказа. Справочник поставщиков ведёт D2-3. Раздел `erp.stock` — чтение.
+      parameters:
+        - {name: q, in: query, required: false, schema: {type: string, maxLength: 100}, description: 'Название или ИНН'}
+      responses:
+        '200':
+          description: 'Склад · Поставщики для выбора'
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/StockSupplierList'}
+        '401': {$ref: '#/components/responses/SessionExpired'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '503': {$ref: '#/components/responses/BackendUnavailable'}
+
+  /erp/stock/orders:
+    get:
+      tags: [stock]
+      operationId: listSupplierOrders
+      summary: 'Склад · Заказы поставщикам'
+      description: >-
+        ERP `GET /stock/orders/`: заказы ЗП-ГГГГ-NNN — статус, поставщик, ожидаемая дата, просрочка, приёмка (нет, частичная, полная), заявки и проекты. Сумма — только тому, кто видит цены поставщиков. Раздел `erp.stock` — чтение.
+      parameters:
+        - {name: status, in: query, required: false, schema: {$ref: '#/components/schemas/SupplierOrderStatus'}}
+        - {name: supplier_id, in: query, required: false, schema: {type: string, pattern: '^[0-9]+$', maxLength: 12}}
+        - {name: q, in: query, required: false, schema: {type: string, maxLength: 200}, description: 'Номер, поставщик, позиция'}
+        - {name: overdue, in: query, required: false, schema: {type: boolean, default: false}, description: 'Только просроченные'}
+      responses:
+        '200':
+          description: 'Склад · Заказы поставщикам'
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/SupplierOrderList'}
+        '401': {$ref: '#/components/responses/SessionExpired'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '503': {$ref: '#/components/responses/BackendUnavailable'}
+    post:
+      tags: [stock]
+      operationId: createSupplierOrder
+      summary: 'Склад · Создать заказ поставщику (черновик)'
+      description: >-
+        ERP `POST /stock/orders/`: черновик с номером ЗП-ГГГГ-NNN (без пропусков). Строки — только товары каталога; строка может быть привязана к строке расчёта заявки (тогда принятое резервируется под проект). Цены поставщика задаёт тот, кто их видит (403 `details.reason = prices_forbidden`). Раздел `erp.stock` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/SupplierOrderCreate'}
+      responses:
+        '201':
+          description: 'Склад · Создать заказ поставщику (черновик)'
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/SupplierOrderDetail'}
+        '401': {$ref: '#/components/responses/SessionExpired'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/StockConflict'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+        '503': {$ref: '#/components/responses/BackendUnavailable'}
+
+  /erp/stock/orders/from-request:
+    post:
+      tags: [stock]
+      operationId: createSupplierOrderFromRequest
+      summary: 'Склад · Черновик заказа на дефицит проекта'
+      description: >-
+        ERP `POST /stock/orders/from-deal/`: по строкам-товарам КП заявки недостающее количество (количество строки минус резерв минус уже заказанное в живых заказах). Нечего заказывать — 409 `details.reason = no_shortage`. Раздел `erp.stock` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/SupplierOrderFromRequest'}
+      responses:
+        '201':
+          description: 'Склад · Черновик заказа на дефицит проекта'
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/SupplierOrderDetail'}
+        '401': {$ref: '#/components/responses/SessionExpired'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/StockConflict'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+        '503': {$ref: '#/components/responses/BackendUnavailable'}
+
+  /erp/stock/orders/{order_number}:
+    get:
+      tags: [stock]
+      operationId: getSupplierOrder
+      summary: 'Склад · Заказ поставщику ЗП-…'
+      description: >-
+        ERP `GET /stock/orders/{id}/` (заказ по номеру находит BFF: `GET /stock/orders/?number=`). Состав, приёмки, журнал (кто и когда менял статус), права. Раздел `erp.stock` — чтение.
+      parameters:
+        - {$ref: '#/components/parameters/StockOrderNumberPath'}
+      responses:
+        '200':
+          description: 'Склад · Заказ поставщику ЗП-…'
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/SupplierOrderDetail'}
+        '401': {$ref: '#/components/responses/SessionExpired'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '503': {$ref: '#/components/responses/BackendUnavailable'}
+    patch:
+      tags: [stock]
+      operationId: updateSupplierOrder
+      summary: 'Склад · Изменить заказ'
+      description: >-
+        ERP `PATCH /stock/orders/{id}/`: состав и поставщик — только в черновике (409 `details.reason = order_not_draft`), ожидаемая дата и примечание — пока заказ не закрыт. Раздел `erp.stock` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {$ref: '#/components/parameters/StockOrderNumberPath'}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/SupplierOrderPatch'}
+      responses:
+        '200':
+          description: 'Склад · Изменить заказ'
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/SupplierOrderDetail'}
+        '401': {$ref: '#/components/responses/SessionExpired'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/StockConflict'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+        '503': {$ref: '#/components/responses/BackendUnavailable'}
+
+  /erp/stock/orders/{order_number}/send:
+    post:
+      tags: [stock]
+      operationId: sendSupplierOrder
+      summary: 'Склад · Отправить заказ поставщику (черновик → отправлен)'
+      description: >-
+        ERP `POST /stock/orders/{id}/send/`: письмо поставщику (почта ERP) и запись в журнале заказа. Нет адреса — 409 `details.reason = supplier_email_required` (можно указать `to_email`); письмо не ушло — 409 `details.reason = email_failed`, статус не меняется. Недопустимый переход — 409 `transition_not_allowed`. Раздел `erp.stock` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {$ref: '#/components/parameters/StockOrderNumberPath'}
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/SupplierOrderSendIn'}
+      responses:
+        '200':
+          description: 'Склад · Отправить заказ поставщику (черновик → отправлен)'
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/SupplierOrderDetail'}
+        '401': {$ref: '#/components/responses/SessionExpired'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/StockConflict'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+        '503': {$ref: '#/components/responses/BackendUnavailable'}
+
+  /erp/stock/orders/{order_number}/confirm:
+    post:
+      tags: [stock]
+      operationId: confirmSupplierOrder
+      summary: 'Склад · Поставщик подтвердил (отправлен → подтверждён)'
+      description: >-
+        ERP `POST /stock/orders/{id}/confirm/`: нужна ожидаемая дата (409 `details.reason = expected_date_required`). Раздел `erp.stock` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {$ref: '#/components/parameters/StockOrderNumberPath'}
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/SupplierOrderConfirmIn'}
+      responses:
+        '200':
+          description: 'Склад · Поставщик подтвердил (отправлен → подтверждён)'
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/SupplierOrderDetail'}
+        '401': {$ref: '#/components/responses/SessionExpired'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/StockConflict'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+        '503': {$ref: '#/components/responses/BackendUnavailable'}
+
+  /erp/stock/orders/{order_number}/cancel:
+    post:
+      tags: [stock]
+      operationId: cancelSupplierOrder
+      summary: 'Склад · Отменить заказ'
+      description: >-
+        ERP `POST /stock/orders/{id}/cancel/`: из черновика, отправленного и подтверждённого, если по нему ещё ничего не принято (409 `details.reason = order_has_receipts`). Раздел `erp.stock` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {$ref: '#/components/parameters/StockOrderNumberPath'}
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/SupplierOrderCancelIn'}
+      responses:
+        '200':
+          description: 'Склад · Отменить заказ'
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/SupplierOrderDetail'}
+        '401': {$ref: '#/components/responses/SessionExpired'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/StockConflict'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+        '503': {$ref: '#/components/responses/BackendUnavailable'}
+
+  /erp/stock/orders/{order_number}/receipts:
+    post:
+      tags: [stock]
+      operationId: receiveSupplierOrder
+      summary: 'Склад · Принять товар от поставщика (частично или полностью)'
+      description: >-
+        ERP `POST /stock/orders/{id}/receipts/`: приёмка по строкам подтверждённого заказа, остаток склада растёт (ячейка — по желанию); строка, привязанная к проекту, резервируется под него. Больше, чем осталось принять, — 400 (`details.max`); строка чужого заказа — 404. Все строки получены — заказ «получен». Раздел `erp.stock` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+        - {$ref: '#/components/parameters/StockOrderNumberPath'}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/SupplierOrderReceiptIn'}
+      responses:
+        '200':
+          description: 'Склад · Принять товар от поставщика (частично или полностью)'
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/SupplierOrderDetail'}
+        '401': {$ref: '#/components/responses/SessionExpired'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/StockConflict'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+        '503': {$ref: '#/components/responses/BackendUnavailable'}
+
+  /erp/stock/receipts:
+    get:
+      tags: [stock]
+      operationId: listStockReceipts
+      summary: 'Склад · Приёмка: ждут товара и последние приёмки'
+      description: >-
+        ERP `GET /stock/receipts/`. Раздел `erp.stock` — чтение.
+      responses:
+        '200':
+          description: 'Склад · Приёмка: ждут товара и последние приёмки'
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/StockReceipts'}
+        '401': {$ref: '#/components/responses/SessionExpired'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '503': {$ref: '#/components/responses/BackendUnavailable'}
+
+  /erp/stock/shipments:
+    get:
+      tags: [stock]
+      operationId: listStockShipments
+      summary: 'Склад · Отгрузки по проектам'
+      description: >-
+        ERP `GET /stock/shipments/`: внутренняя накладная ОТГ-ГГГГ-NNN, проект, строки, трек. Раздел `erp.stock` — чтение.
+      parameters:
+        - {name: request, in: query, required: false, schema: {type: string, maxLength: 40}, description: 'Номер заявки или проекта'}
+      responses:
+        '200':
+          description: 'Склад · Отгрузки по проектам'
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/StockShipmentList'}
+        '401': {$ref: '#/components/responses/SessionExpired'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '503': {$ref: '#/components/responses/BackendUnavailable'}
+    post:
+      tags: [stock]
+      operationId: shipFromStock
+      summary: 'Склад · Отгрузить по проекту'
+      description: >-
+        ERP `POST /stock/shipments/`: по резервам одной заявки, после подписания договора (409 `details.reason = fulfillment_not_ready`). Остаток и резерв уменьшаются, выдаётся внутренняя накладная; когда весь товар КП отгружен, исполнение сделки переходит в «Отгружено». Резерв чужой заявки — 404. Раздел `erp.stock` — полный.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/StockShipIn'}
+      responses:
+        '201':
+          description: 'Склад · Отгрузить по проекту'
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/StockShipment'}
+        '401': {$ref: '#/components/responses/SessionExpired'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/StockConflict'}
+        '422': {$ref: '#/components/responses/ValidationFailed'}
+        '503': {$ref: '#/components/responses/BackendUnavailable'}
+
+  /erp/stock/overdue:
+    get:
+      tags: [stock]
+      operationId: listOverdueSupplierOrders
+      summary: 'Склад · Просроченные заказы поставщикам'
+      description: >-
+        ERP `GET /stock/overdue/`: источник вида очереди `supplier_overdue` («Мои задачи»). Раздел `erp.stock` — полный.
+      responses:
+        '200':
+          description: 'Склад · Просроченные заказы поставщикам'
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/SupplierOrderList'}
+        '401': {$ref: '#/components/responses/SessionExpired'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '503': {$ref: '#/components/responses/BackendUnavailable'}
+
   /crm/leads:
     get:
       tags: [leads]
@@ -7299,6 +7866,13 @@ components:
       description: Строка расчёта (`CalcLine.id`)
       schema: {type: string, pattern: '^[0-9]+$', maxLength: 12}
 
+    StockOrderNumberPath:
+      name: order_number
+      in: path
+      required: true
+      description: Номер заказа поставщику `ЗП-ГГГГ-NNN`
+      schema: {type: string, minLength: 1, maxLength: 40}
+
     ApprovalIdPath:
       name: id
       in: path
@@ -7456,6 +8030,17 @@ components:
         409 `CONFLICT` — расчёт не в том состоянии для действия: `details.reason` — код ERP в нижнем регистре
         (`visas_missing` и `details.missing`, `deal_not_in_calculation`, `quote_not_draft`, `calc_not_started`, `line_incomplete`, `purchase_required`,
         `no_lines`, `quote_below_cost`, `fx_rate_missing`, `quote_client_required`, `request_text_empty`, `ai_disabled`)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    StockConflict:
+      description: >-
+        409 `CONFLICT` — склад или заказ не в том состоянии: `details.reason` — код ERP в нижнем регистре (`not_enough_stock` и
+        `details.free`, `below_reserved`, `below_shipped`, `transition_not_allowed`, `order_not_draft`, `order_not_confirmed`,
+        `order_has_receipts`, `expected_date_required`, `supplier_email_required`, `fulfillment_not_ready`, `product_required`,
+        `no_shortage`, `email_failed`, `deal_closed`, `line_not_actual`, `line_not_goods`, `reservation_not_active`, `already_answered`)
       content:
         application/json:
           schema:
@@ -8846,7 +9431,7 @@ components:
 
     ObjectKind:
       type: string
-      enum: [lead, client, request, project, letter, quote, contract, invoice, act, memo, chat, ticket, integration]
+      enum: [lead, client, request, project, letter, quote, contract, invoice, act, memo, chat, ticket, integration, supplier_order]
 
     ObjectRef:
       type: object
@@ -13007,11 +13592,12 @@ components:
       type: object
       additionalProperties: false
       required: [on_hand, cell, reserved]
-      description: Склад своей компании; ячейка и резерв — с экрана «Склад» (D2-2), пока пусто
+      description: Склад строки-товара (D2-2) — остаток, свободный остаток, ячейка и резерв за этой строкой
       properties:
-        on_hand: {type: [integer, 'null'], description: Остаток; пусто — строка без карточки каталога}
-        cell: {type: [string, 'null']}
-        reserved: {type: [integer, 'null']}
+        on_hand: {type: [integer, 'null'], description: На складе всего; пусто — строка без карточки каталога}
+        free: {type: [integer, 'null'], description: Свободно — остаток минус резервы всех проектов}
+        cell: {type: [string, 'null'], description: Ячейка с наибольшим остатком}
+        reserved: {type: [integer, 'null'], description: Зарезервировано за этой строкой}
 
     CalcSupplier:
       type: object
@@ -13179,6 +13765,7 @@ components:
         services: {type: boolean, description: Править и визировать услуги}
         build: {type: boolean, description: 'Начать расчёт, «Расчёт готов», ИИ-разбор'}
         cost: {type: boolean, description: Видеть себестоимость и наценку по строкам}
+        stock: {type: boolean, description: 'Резерв строки и «Запросить цену у поставщика» (D2-2: `erp.stock` полный)'}
 
     CalcSheet:
       type: object
@@ -13311,6 +13898,638 @@ components:
         items:
           type: array
           items: {$ref: '#/components/schemas/CalcCatalogItem'}
+
+    # ── Склад и закупки (D2-2) ─────────────────────────────────────────────────────────────────────────────────────────
+
+    StockRights:
+      type: object
+      additionalProperties: false
+      required: [manage, ship]
+      description: Что сотрудник может на экране «Склад» (права ERP, вычисленные из раздела `erp.stock`)
+      properties:
+        manage: {type: boolean, description: 'Резервы, корректировки, заказы поставщикам, приёмка, запросы цены (`supply.manage`)'}
+        ship: {type: boolean, description: 'Отгрузки по проектам (`fulfillment.manage`)'}
+
+    StockOrderRights:
+      type: object
+      additionalProperties: false
+      required: [manage, ship, prices]
+      properties:
+        manage: {type: boolean}
+        ship: {type: boolean}
+        prices: {type: boolean, description: 'Видит цены поставщиков в заказах'}
+
+    StockRequestRef:
+      type: object
+      additionalProperties: false
+      required: [number, client, path]
+      description: Заявка или проект, к которым относится резерв, строка заказа или отгрузка
+      properties:
+        number: {type: string, examples: [ЗВ-2026-104]}
+        client: {type: [string, 'null']}
+        path: {type: string, description: 'Заявка ЗВ — расчёт `/erp/calc/ЗВ-…`, проект ПР — `/eds/projects/ПР-…`'}
+
+    StockCell:
+      type: object
+      additionalProperties: false
+      required: [cell, on_hand]
+      properties:
+        cell: {type: [string, 'null'], description: 'Пусто — товар лежит без ячейки'}
+        on_hand: {type: integer, minimum: 0}
+
+    StockRow:
+      type: object
+      additionalProperties: false
+      required: [product_id, name, article, unit, on_hand, reserved, free, incoming, next_expected, cells]
+      properties:
+        product_id: {type: string, pattern: '^[0-9]+$'}
+        name: {type: string}
+        article: {type: string}
+        unit: {type: string}
+        on_hand: {type: integer, minimum: 0, description: 'На складе'}
+        reserved: {type: integer, minimum: 0, description: 'Остаток резервов действующих проектов'}
+        free: {type: integer, minimum: 0, description: 'Свободный остаток — остаток минус резервы'}
+        incoming: {type: integer, minimum: 0, description: 'Ожидается по отправленным и подтверждённым заказам поставщикам'}
+        next_expected: {type: [string, 'null'], format: date}
+        cells:
+          type: array
+          items: {$ref: '#/components/schemas/StockCell'}
+
+    StockBalanceList:
+      type: object
+      additionalProperties: false
+      required: [items, rights]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/StockRow'}
+        rights: {$ref: '#/components/schemas/StockRights'}
+
+    StockReservation:
+      type: object
+      additionalProperties: false
+      required: [id, product_id, product_name, request, line_id, quantity, shipped_quantity, remaining, status, created_at, created_by]
+      properties:
+        id: {type: string, pattern: '^[0-9]+$'}
+        product_id: {type: string, pattern: '^[0-9]+$'}
+        product_name: {type: string}
+        request: {$ref: '#/components/schemas/StockRequestRef'}
+        line_id: {type: [string, 'null'], pattern: '^[0-9]+$', description: 'Строка расчёта'}
+        quantity: {type: integer, minimum: 1}
+        shipped_quantity: {type: integer, minimum: 0}
+        remaining: {type: integer, minimum: 0, description: 'Ещё удерживается за проектом'}
+        status: {type: string, enum: [active, released, fulfilled]}
+        created_at: {type: string, format: date-time}
+        created_by: {type: [string, 'null']}
+
+    StockReservationList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/StockReservation'}
+
+    StockIncomingOrder:
+      type: object
+      additionalProperties: false
+      required: [number, status, supplier, expected_date, quantity_left, path]
+      properties:
+        number: {type: string}
+        status: {$ref: '#/components/schemas/SupplierOrderStatus'}
+        supplier: {type: string}
+        expected_date: {type: [string, 'null'], format: date}
+        quantity_left: {type: integer, minimum: 1}
+        path: {type: string}
+
+    StockMovement:
+      type: object
+      additionalProperties: false
+      required: [kind, quantity, cell, at, by, note]
+      properties:
+        kind: {type: string, enum: [receipt, shipment, adjustment]}
+        quantity: {type: integer, description: 'Плюс — приход, минус — расход'}
+        cell: {type: [string, 'null']}
+        at: {type: string, format: date-time}
+        by: {type: [string, 'null']}
+        note: {type: [string, 'null']}
+
+    StockProduct:
+      type: object
+      additionalProperties: false
+      required: [product_id, name, article, unit, on_hand, reserved, free, incoming, next_expected, cells, reservations, incoming_orders, movements, rights]
+      description: Товар на складе — ячейки, резервы по проектам, ожидаемый приход и последние движения
+      properties:
+        product_id: {type: string, pattern: '^[0-9]+$'}
+        name: {type: string}
+        article: {type: string}
+        unit: {type: string}
+        on_hand: {type: integer, minimum: 0, description: 'На складе'}
+        reserved: {type: integer, minimum: 0, description: 'Остаток резервов действующих проектов'}
+        free: {type: integer, minimum: 0, description: 'Свободный остаток — остаток минус резервы'}
+        incoming: {type: integer, minimum: 0, description: 'Ожидается по отправленным и подтверждённым заказам поставщикам'}
+        next_expected: {type: [string, 'null'], format: date}
+        cells:
+          type: array
+          items: {$ref: '#/components/schemas/StockCell'}
+        reservations:
+          type: array
+          items: {$ref: '#/components/schemas/StockReservation'}
+        incoming_orders:
+          type: array
+          items: {$ref: '#/components/schemas/StockIncomingOrder'}
+        movements:
+          type: array
+          items: {$ref: '#/components/schemas/StockMovement'}
+        rights: {$ref: '#/components/schemas/StockRights'}
+
+    StockAdjustIn:
+      type: object
+      additionalProperties: false
+      required: [product_id, quantity]
+      properties:
+        product_id: {type: string, pattern: '^[0-9]+$'}
+        quantity: {type: integer, description: 'Плюс — оприходовать, минус — списать; не ноль'}
+        cell: {type: string, maxLength: 32}
+        note: {type: string, maxLength: 500}
+
+    StockReserveIn:
+      type: object
+      additionalProperties: false
+      required: [quantity]
+      properties:
+        quantity: {type: integer, minimum: 1, maximum: 10000000, description: 'Сколько удерживать за строкой (не больше количества строки и свободного остатка)'}
+
+    StockSupplierRef:
+      type: object
+      additionalProperties: false
+      required: [id, name]
+      properties:
+        id: {type: string, pattern: '^[0-9]+$'}
+        name: {type: string}
+        email: {type: [string, 'null'], description: 'Адрес для писем; только в карточке заказа и списке поставщиков'}
+
+    StockSupplierList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [id, name, inn, email]
+            properties:
+              id: {type: string, pattern: '^[0-9]+$'}
+              name: {type: string}
+              inn: {type: [string, 'null']}
+              email: {type: [string, 'null'], description: 'Почта компании или основного контакта; пусто — письмо уйдёт только на введённый адрес'}
+
+    SupplierOrderStatus:
+      type: string
+      enum: [draft, sent, confirmed, received, cancelled]
+      description: Черновик → отправлен → подтверждён → получен (и «отменён»)
+
+    SupplierOrderActions:
+      type: object
+      additionalProperties: false
+      required: [edit, send, confirm, receive, cancel]
+      description: Что можно сделать с заказом сейчас (статус и права сотрудника)
+      properties:
+        edit: {type: boolean}
+        send: {type: boolean}
+        confirm: {type: boolean}
+        receive: {type: boolean}
+        cancel: {type: boolean}
+
+    SupplierOrderRow:
+      type: object
+      additionalProperties: false
+      required: [number, status, supplier, expected_date, overdue, days_overdue, currency, lines_count, quantity, received_quantity, receipt_state, total, requests, created_at, created_by, actions, path]
+      properties:
+        number: {type: string, examples: [ЗП-2026-031], description: 'Номер заказа поставщику ЗП-ГГГГ-NNN'}
+        status: {$ref: '#/components/schemas/SupplierOrderStatus'}
+        supplier: {$ref: '#/components/schemas/StockSupplierRef'}
+        expected_date: {type: [string, 'null'], format: date}
+        overdue: {type: boolean, description: 'Ожидаемая дата прошла, заказ отправлен или подтверждён, но не получен'}
+        days_overdue: {type: [integer, 'null'], minimum: 1}
+        currency: {type: [string, 'null'], pattern: '^[A-Z]{3}$'}
+        lines_count: {type: integer, minimum: 0}
+        quantity: {type: integer, minimum: 0}
+        received_quantity: {type: integer, minimum: 0}
+        receipt_state: {type: string, enum: [none, partial, full]}
+        total:
+          description: Сумма заказа — цены поставщиков видит группа `supplier_prices`, `cost_margin` или держатель `erp.calc.goods`
+          oneOf:
+            - {$ref: '#/components/schemas/DecimalString'}
+            - {type: 'null'}
+        requests:
+          type: array
+          description: Заявки и проекты, под которые заказаны строки
+          items: {$ref: '#/components/schemas/StockRequestRef'}
+        created_at: {type: string, format: date-time}
+        created_by: {type: [string, 'null']}
+        actions: {$ref: '#/components/schemas/SupplierOrderActions'}
+        path: {type: string, examples: ['/erp/stock/ЗП-2026-031']}
+
+    SupplierOrderList:
+      type: object
+      additionalProperties: false
+      required: [items, rights]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/SupplierOrderRow'}
+        rights: {$ref: '#/components/schemas/StockOrderRights'}
+
+    SupplierOrderLine:
+      type: object
+      additionalProperties: false
+      required: [id, position, product_id, name, article, unit, quantity, received_quantity, unit_price, line_total, request, line_id]
+      properties:
+        id: {type: string, pattern: '^[0-9]+$'}
+        position: {type: integer, minimum: 1}
+        product_id: {type: [string, 'null'], pattern: '^[0-9]+$'}
+        name: {type: string}
+        article: {type: string}
+        unit: {type: string}
+        quantity: {type: integer, minimum: 1}
+        received_quantity: {type: integer, minimum: 0}
+        unit_price:
+          description: Цена поставщика за единицу — только тому, кто видит цены поставщиков
+          oneOf:
+            - {$ref: '#/components/schemas/DecimalString'}
+            - {type: 'null'}
+        line_total:
+          oneOf:
+            - {$ref: '#/components/schemas/DecimalString'}
+            - {type: 'null'}
+        request:
+          oneOf:
+            - {$ref: '#/components/schemas/StockRequestRef'}
+            - {type: 'null'}
+        line_id: {type: [string, 'null'], pattern: '^[0-9]+$', description: 'Строка расчёта, под которую заказано'}
+
+    SupplierOrderReceiptLine:
+      type: object
+      additionalProperties: false
+      required: [order_line_id, name, quantity, cell]
+      properties:
+        order_line_id: {type: string, pattern: '^[0-9]+$'}
+        name: {type: string}
+        quantity: {type: integer, minimum: 1}
+        cell: {type: [string, 'null']}
+
+    SupplierOrderReceipt:
+      type: object
+      additionalProperties: false
+      required: [id, received_at, received_by, supplier_doc, note, lines]
+      properties:
+        id: {type: string, pattern: '^[0-9]+$'}
+        received_at: {type: string, format: date-time}
+        received_by: {type: [string, 'null']}
+        supplier_doc: {type: [string, 'null'], description: 'Накладная поставщика'}
+        note: {type: [string, 'null']}
+        lines:
+          type: array
+          items: {$ref: '#/components/schemas/SupplierOrderReceiptLine'}
+
+    SupplierOrderLogEntry:
+      type: object
+      additionalProperties: false
+      required: [kind, at, by, detail]
+      properties:
+        kind: {type: string, enum: [created, edited, sent, confirmed, receipt, received, cancelled, overdue]}
+        at: {type: string, format: date-time}
+        by: {type: [string, 'null']}
+        detail: {type: [string, 'null']}
+
+    SupplierOrderDetail:
+      type: object
+      additionalProperties: false
+      required: [number, status, supplier, expected_date, overdue, days_overdue, currency, lines_count, quantity, received_quantity, receipt_state, total, requests, created_at, created_by, actions, path, note, sent_at, sent_to, confirmed_at, received_at, cancelled_at, cancel_reason, lines, receipts, log, rights]
+      description: Карточка заказа поставщику
+      properties:
+        number: {type: string, examples: [ЗП-2026-031], description: 'Номер заказа поставщику ЗП-ГГГГ-NNN'}
+        status: {$ref: '#/components/schemas/SupplierOrderStatus'}
+        supplier: {$ref: '#/components/schemas/StockSupplierRef'}
+        expected_date: {type: [string, 'null'], format: date}
+        overdue: {type: boolean, description: 'Ожидаемая дата прошла, заказ отправлен или подтверждён, но не получен'}
+        days_overdue: {type: [integer, 'null'], minimum: 1}
+        currency: {type: [string, 'null'], pattern: '^[A-Z]{3}$'}
+        lines_count: {type: integer, minimum: 0}
+        quantity: {type: integer, minimum: 0}
+        received_quantity: {type: integer, minimum: 0}
+        receipt_state: {type: string, enum: [none, partial, full]}
+        total:
+          description: Сумма заказа — цены поставщиков видит группа `supplier_prices`, `cost_margin` или держатель `erp.calc.goods`
+          oneOf:
+            - {$ref: '#/components/schemas/DecimalString'}
+            - {type: 'null'}
+        requests:
+          type: array
+          description: Заявки и проекты, под которые заказаны строки
+          items: {$ref: '#/components/schemas/StockRequestRef'}
+        created_at: {type: string, format: date-time}
+        created_by: {type: [string, 'null']}
+        actions: {$ref: '#/components/schemas/SupplierOrderActions'}
+        path: {type: string, examples: ['/erp/stock/ЗП-2026-031']}
+        note: {type: string}
+        sent_at: {type: [string, 'null'], format: date-time}
+        sent_to: {type: [string, 'null'], description: 'Адрес, на который ушло письмо'}
+        confirmed_at: {type: [string, 'null'], format: date-time}
+        received_at: {type: [string, 'null'], format: date-time}
+        cancelled_at: {type: [string, 'null'], format: date-time}
+        cancel_reason: {type: [string, 'null']}
+        lines:
+          type: array
+          items: {$ref: '#/components/schemas/SupplierOrderLine'}
+        receipts:
+          type: array
+          items: {$ref: '#/components/schemas/SupplierOrderReceipt'}
+        log:
+          type: array
+          items: {$ref: '#/components/schemas/SupplierOrderLogEntry'}
+        rights: {$ref: '#/components/schemas/StockOrderRights'}
+
+    SupplierOrderLineIn:
+      type: object
+      additionalProperties: false
+      required: [product_id, quantity]
+      properties:
+        id: {type: string, pattern: '^[0-9]+$', description: 'Строка этого заказа (правка); без поля — новая строка'}
+        product_id: {type: string, pattern: '^[0-9]+$'}
+        name: {type: string, maxLength: 500}
+        article: {type: string, maxLength: 120}
+        unit: {type: string, maxLength: 32}
+        quantity: {type: integer, minimum: 1, maximum: 10000000}
+        unit_price:
+          description: Цена поставщика; ставит тот, кто видит цены поставщиков (иначе 403 `prices_forbidden`)
+          oneOf:
+            - {$ref: '#/components/schemas/DecimalString'}
+            - {type: 'null'}
+        request: {type: [string, 'null'], description: 'Номер заявки ЗВ/ПР, под которую заказано; вместе с `line_id`'}
+        line_id: {type: [string, 'null'], pattern: '^[0-9]+$', description: 'Строка расчёта этой заявки'}
+
+    SupplierOrderCreate:
+      type: object
+      additionalProperties: false
+      required: [supplier_id, lines]
+      properties:
+        supplier_id: {type: string, pattern: '^[0-9]+$'}
+        expected_date: {type: [string, 'null'], format: date}
+        note: {type: string, maxLength: 5000}
+        currency: {type: [string, 'null'], pattern: '^[A-Z]{3}$'}
+        lines:
+          type: array
+          minItems: 1
+          maxItems: 200
+          items: {$ref: '#/components/schemas/SupplierOrderLineIn'}
+
+    SupplierOrderFromRequest:
+      type: object
+      additionalProperties: false
+      required: [request, supplier_id]
+      properties:
+        request: {type: string, minLength: 1, maxLength: 40, description: 'Номер заявки или проекта'}
+        supplier_id: {type: string, pattern: '^[0-9]+$'}
+
+    SupplierOrderPatch:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      description: Состав (`lines`) и поставщик правятся только в черновике; ожидаемая дата и примечание — пока заказ не закрыт
+      properties:
+        supplier_id: {type: string, pattern: '^[0-9]+$'}
+        expected_date: {type: [string, 'null'], format: date}
+        note: {type: string, maxLength: 5000}
+        currency: {type: [string, 'null'], pattern: '^[A-Z]{3}$'}
+        lines:
+          type: array
+          minItems: 1
+          maxItems: 200
+          items: {$ref: '#/components/schemas/SupplierOrderLineIn'}
+
+    SupplierOrderSendIn:
+      type: object
+      additionalProperties: false
+      properties:
+        to_email: {type: string, format: email, description: 'Адрес письма, если у поставщика почты нет или нужен другой'}
+
+    SupplierOrderConfirmIn:
+      type: object
+      additionalProperties: false
+      properties:
+        expected_date: {type: [string, 'null'], format: date, description: 'Подтверждённая поставщиком дата поставки; обязательна, если её ещё нет'}
+
+    SupplierOrderCancelIn:
+      type: object
+      additionalProperties: false
+      properties:
+        reason: {type: string, maxLength: 500}
+
+    SupplierOrderReceiptIn:
+      type: object
+      additionalProperties: false
+      required: [lines]
+      properties:
+        lines:
+          type: array
+          minItems: 1
+          maxItems: 200
+          items:
+            type: object
+            additionalProperties: false
+            required: [order_line_id, quantity]
+            properties:
+              order_line_id: {type: string, pattern: '^[0-9]+$'}
+              quantity: {type: integer, minimum: 1}
+              cell: {type: string, maxLength: 32}
+        supplier_doc: {type: string, maxLength: 100}
+        note: {type: string, maxLength: 500}
+
+    StockPendingReceiptLine:
+      type: object
+      additionalProperties: false
+      required: [order_number, order_path, supplier, expected_date, overdue, order_line_id, name, article, unit, quantity, received_quantity, request]
+      properties:
+        order_number: {type: string}
+        order_path: {type: string}
+        supplier: {type: string}
+        expected_date: {type: [string, 'null'], format: date}
+        overdue: {type: boolean}
+        order_line_id: {type: string, pattern: '^[0-9]+$'}
+        name: {type: string}
+        article: {type: string}
+        unit: {type: string}
+        quantity: {type: integer, minimum: 1}
+        received_quantity: {type: integer, minimum: 0}
+        request:
+          oneOf:
+            - {$ref: '#/components/schemas/StockRequestRef'}
+            - {type: 'null'}
+
+    StockDoneReceipt:
+      type: object
+      additionalProperties: false
+      required: [id, order_number, order_path, supplier, received_at, received_by, supplier_doc, quantity, lines]
+      properties:
+        id: {type: string, pattern: '^[0-9]+$'}
+        order_number: {type: string}
+        order_path: {type: string}
+        supplier: {type: string}
+        received_at: {type: string, format: date-time}
+        received_by: {type: [string, 'null']}
+        supplier_doc: {type: [string, 'null']}
+        quantity: {type: integer, minimum: 1}
+        lines:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [name, quantity, cell]
+            properties:
+              name: {type: string}
+              quantity: {type: integer, minimum: 1}
+              cell: {type: [string, 'null']}
+
+    StockReceipts:
+      type: object
+      additionalProperties: false
+      required: [pending, done, rights]
+      description: Приёмка — строки подтверждённых заказов, ждущие товара, и последние приёмки
+      properties:
+        pending:
+          type: array
+          items: {$ref: '#/components/schemas/StockPendingReceiptLine'}
+        done:
+          type: array
+          items: {$ref: '#/components/schemas/StockDoneReceipt'}
+        rights: {$ref: '#/components/schemas/StockRights'}
+
+    StockShipmentLine:
+      type: object
+      additionalProperties: false
+      required: [product_id, name, quantity, cell]
+      properties:
+        product_id: {type: string, pattern: '^[0-9]+$'}
+        name: {type: string}
+        quantity: {type: integer, minimum: 1}
+        cell: {type: [string, 'null']}
+
+    StockShipment:
+      type: object
+      additionalProperties: false
+      required: [id, number, request, tracking, carrier, note, shipped_at, shipped_by, lines]
+      properties:
+        id: {type: string, pattern: '^[0-9]+$'}
+        number: {type: string, examples: [ОТГ-2026-014], description: 'Внутренняя накладная'}
+        request: {$ref: '#/components/schemas/StockRequestRef'}
+        tracking: {type: [string, 'null']}
+        carrier: {type: [string, 'null']}
+        note: {type: [string, 'null']}
+        shipped_at: {type: string, format: date-time}
+        shipped_by: {type: [string, 'null']}
+        lines:
+          type: array
+          items: {$ref: '#/components/schemas/StockShipmentLine'}
+
+    StockShipmentList:
+      type: object
+      additionalProperties: false
+      required: [items, rights]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/StockShipment'}
+        rights: {$ref: '#/components/schemas/StockRights'}
+
+    StockShipIn:
+      type: object
+      additionalProperties: false
+      required: [request, lines]
+      properties:
+        request: {type: string, minLength: 1, maxLength: 40, description: 'Номер проекта ПР (или заявки ЗВ с тем же NNN)'}
+        lines:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items:
+            type: object
+            additionalProperties: false
+            required: [reservation_id, quantity]
+            properties:
+              reservation_id: {type: string, pattern: '^[0-9]+$'}
+              quantity: {type: integer, minimum: 1}
+        tracking: {type: string, maxLength: 128}
+        carrier: {type: string, maxLength: 128}
+        note: {type: string, maxLength: 500}
+
+    PriceRequestLine:
+      type: object
+      additionalProperties: false
+      required: [line_id, name, article, quantity, unit]
+      properties:
+        line_id: {type: [string, 'null'], pattern: '^[0-9]+$'}
+        name: {type: string}
+        article: {type: string}
+        quantity: {type: integer, minimum: 1}
+        unit: {type: string}
+
+    PriceRequest:
+      type: object
+      additionalProperties: false
+      required: [id, supplier, request, requested_at, requested_by, to_email, subject, note, status, error, answered_at, answered_by, answer_note, lines]
+      description: Запрос цены у поставщика из расчёта — журнал письма
+      properties:
+        id: {type: string, pattern: '^[0-9]+$'}
+        supplier: {$ref: '#/components/schemas/StockSupplierRef'}
+        request: {type: [string, 'null'], description: 'Номер заявки'}
+        requested_at: {type: string, format: date-time}
+        requested_by: {type: [string, 'null']}
+        to_email: {type: string}
+        subject: {type: string}
+        note: {type: [string, 'null']}
+        status: {type: string, enum: [sent, failed], description: 'failed — письмо не ушло (почта выключена или недоступна), запрос остаётся в журнале'}
+        error: {type: [string, 'null']}
+        answered_at: {type: [string, 'null'], format: date-time}
+        answered_by: {type: [string, 'null']}
+        answer_note: {type: [string, 'null']}
+        lines:
+          type: array
+          items: {$ref: '#/components/schemas/PriceRequestLine'}
+
+    PriceRequestList:
+      type: object
+      additionalProperties: false
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/PriceRequest'}
+
+    PriceRequestIn:
+      type: object
+      additionalProperties: false
+      required: [supplier_id, line_ids]
+      properties:
+        supplier_id: {type: string, pattern: '^[0-9]+$'}
+        line_ids:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items: {type: string, pattern: '^[0-9]+$'}
+          description: Строки-товары расчёта
+        note: {type: string, maxLength: 1000}
+        to_email: {type: string, format: email, description: 'Адрес письма, если у поставщика почты нет или нужен другой'}
+
+    PriceRequestAnswerIn:
+      type: object
+      additionalProperties: false
+      properties:
+        note: {type: string, maxLength: 1000, description: 'Что ответил поставщик (цена и срок вносятся в строку расчёта)'}
 
     LeadPlatformStatus:
       type: string

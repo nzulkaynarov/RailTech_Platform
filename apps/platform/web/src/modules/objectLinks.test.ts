@@ -110,16 +110,16 @@ describe("переходы: адрес и вкладка бокового окн
       { kind: "lead", number: "L-2041", path: "/crm/messages?lead=L-2041" },
       { kind: "memo", number: "СЗ-2026/040", path: `/eds/documents?doc=${UUID}` },
       { kind: "memo", number: "СЗ-2026/040", path: "/eds/new?type=memo" },
+      { kind: "supplier_order", number: "ЗП-2026-029", path: "/erp/stock/ЗП-2026-029" },
     ] as const) {
       expect(isActionable(objectLink(object)), object.path).toBe(true);
     }
   });
 
-  it("договор, счёт, акт и склад остаются без экрана — остаётся «Где сделать»", () => {
+  it("договор, счёт и акт остаются без экрана — остаётся «Где сделать»", () => {
     for (const path of [
       "/eds/projects/%D0%9F%D0%A0-2026-099?panel=open&tab=documents",
       `/eds/payments/${seg("СЧ-2026/142")}`,
-      "/erp/stock",
     ]) {
       expect(isActionable(path), path).toBe(false);
     }

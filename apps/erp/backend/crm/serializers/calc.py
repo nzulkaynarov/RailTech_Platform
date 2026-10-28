@@ -90,9 +90,12 @@ class CalcQuoteSerializer(serializers.Serializer):
 
 
 class CalcStockSerializer(serializers.Serializer):
-    on_hand = serializers.IntegerField(allow_null=True)
-    cell = serializers.CharField(allow_null=True)
-    reserved = serializers.IntegerField(allow_null=True)
+    on_hand = serializers.IntegerField(
+        allow_null=True, help_text="На складе всего; null — у строки нет карточки каталога"
+    )
+    free = serializers.IntegerField(allow_null=True, help_text="Свободно: остаток минус резервы всех проектов (D2-2)")
+    cell = serializers.CharField(allow_null=True, help_text="Ячейка с наибольшим остатком (D2-2)")
+    reserved = serializers.IntegerField(allow_null=True, help_text="Зарезервировано за этой строкой (D2-2)")
 
 
 class CalcSupplierSerializer(serializers.Serializer):
@@ -166,6 +169,7 @@ class CalcRightsSerializer(serializers.Serializer):
     services = serializers.BooleanField()
     build = serializers.BooleanField()
     cost = serializers.BooleanField()
+    stock = serializers.BooleanField(help_text="Резервы и запросы цены у поставщиков (`supply.manage`, D2-2)")
 
 
 class CalcSheetSerializer(serializers.Serializer):

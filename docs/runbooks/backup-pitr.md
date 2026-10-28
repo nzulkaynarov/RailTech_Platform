@@ -24,6 +24,7 @@ VPS 2 (db)                                                  VPS 1 (app)         
 | Базовая копия | ежедневно в 21:00 UTC (`WAL_BASEBACKUP_AT_UTC`) сервисом `walg`; первая — сразу при первом запуске. Полная, сжатая zstd, зашифрована |
 | Срок хранения | 14 дней (`WAL_KEEP_DAYS`): после каждой копии удаляется всё старше копии, покрывающей границу срока. Восстановление возможно на любой момент последних 14 суток |
 | Хранилище | по умолчанию бакет `wal` RustFS на VPS 1 (`WAL_S3_ENDPOINT`, ключи `WAL_S3_ACCESS_KEY/SECRET_KEY`, каталог `WAL_S3_PREFIX`, по умолчанию `pg17`). Ключ — **отдельный** пользователь RustFS `wal` с доступом только к бакету `wal` (S0-9; не корневой и не ключ ERP/CRM). Копия уже вне VPS 2, но на площадке VPS 1; «вне площадки» наступает, когда владелец даёт внешнее S3 |
+| Google Drive | ежедневная копия архива (базовые копии и WAL за 14 суток) в папку общего диска компании — сервис `offsite-backup` на VPS 1 (OPS-GDRIVE, решение владельца 2026-10-28). Включение, строка «Внешняя копия бэкапов», восстановление и учения — [`offsite-gdrive.md`](offsite-gdrive.md) |
 | Внешнее S3 | если заданы `BACKUP_EXT_ENDPOINT` и `BACKUP_EXT_BUCKET` (те же переменные, что у недельного pg_dump), `walg` каждые 5 минут копирует архив в `<BACKUP_EXT_BUCKET>/wal/<WAL_S3_PREFIX>/` и применяет там свой срок хранения. Пусто — выключено. Хранилище вне площадки — в Узбекистане (ADR-0017) |
 | Шифрование | libsodium, ключ `WAL_ENC_KEY` (64 hex-символа), общий для основного и внешнего хранилища. Генерирует `make-env-prod.sh init` |
 | Проверки | `wal-verify` раз в 6 ч (нет дыр в цепочке сегментов); проверка восстановления — через час после первой копии и затем 1-го числа каждого месяца в 02:00 UTC |
@@ -85,6 +86,7 @@ docker exec -u postgres rt-db-walg-1 walg-daemon --check-now   # проверк�
 |---|---|
 | Основное хранилище | RustFS VPS 1, бакет `wal`, каталог `WAL_S3_PREFIX` (`pg17`): `basebackups_005/` — базовые копии, `wal_005/` — сегменты WAL. Данные RustFS — том `s3_data` на VPS 1 |
 | Внешнее | `<BACKUP_EXT_BUCKET>/wal/<WAL_S3_PREFIX>/`, если задано |
+| Google Drive | папка общего диска (ID — `OFFSITE_GDRIVE_FOLDER_ID` на VPS 1), каталог `<WAL_S3_PREFIX>/`; восстановление — `infra/db/restore-from-gdrive.sh` ([`offsite-gdrive.md`](offsite-gdrive.md) раздел 4) |
 | Дампы `pg_dump` (второй рубеж) | `/var/backups/rt/<штамп>/` на VPS 2 и бакет `backups` RustFS |
 | Отметки состояния | том `walg_state` (внутри `walg`: `/walg-state/*`, секунды Unix) |
 | Журнал | `docker logs rt-db-walg-1` — JSON-строки `walg_*`, `pitr_*`; сообщения PostgreSQL об архиве — `docker logs rt-db-postgres-1` |
@@ -250,7 +252,9 @@ docker exec -u postgres rt-db-walg-1 walg-daemon --backup-now               # с
 4. Сразу `docker exec -u postgres rt-db-walg-1 walg-daemon --backup-now`: до этой копии восстановление из нового каталога невозможно; в эти минуты
    доступны моменты из старого каталога.
 5. Проверка: `rt-pitr status`, `walg-daemon --check-now` → `pitr_check_ok`.
-6. Через 14+ суток удалить старый каталог из бакета (в RustFS на VPS 1 и во внешнем хранилище) и стереть старый ключ.
+6. Через 14+ суток удалить старый каталог из бакета (в RustFS на VPS 1 и во внешнем хранилище) и стереть старый ключ. Копия на Google Drive:
+   поменять `WAL_S3_PREFIX` и на VPS 1 (`/opt/rt/.env.prod`, затем `infra/deploy/offsite-check.sh`), старый каталог в папке на Drive удалить руками
+   тогда же — `offsite-gdrive.md` раздел 6.
 
 Восстановление из старого каталога в переходный период: `restore-pitr.sh --env-file <файл со старыми WAL_ENC_KEY и WAL_S3_PREFIX> ...`.
 Новый `WAL_S3_PREFIX` нужен при **новом кластере** (пересоздан том `postgres_data`, `initdb`): имена сегментов совпали бы с архивом прежнего кластера, и `wal-push` остановился бы

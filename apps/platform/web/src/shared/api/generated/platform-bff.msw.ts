@@ -57,6 +57,7 @@ import {
   SetupStepState,
   SourceState,
   StepCode,
+  SupplierOrderStatus,
   TicketStatus,
   TicketSubject,
 } from "./model";
@@ -162,6 +163,8 @@ import type {
   NumberingScheme,
   PersonRef,
   PlatformSettings,
+  PriceRequest,
+  PriceRequestList,
   Profile,
   ProviderKeyResult,
   Queue,
@@ -193,6 +196,17 @@ import type {
   SmtpCheck,
   SmtpConnector,
   SpendReport,
+  StockBalanceList,
+  StockProduct,
+  StockReceipts,
+  StockRequestRef,
+  StockReservation,
+  StockReservationList,
+  StockShipment,
+  StockShipmentList,
+  StockSupplierList,
+  SupplierOrderDetail,
+  SupplierOrderList,
   SystemStatus,
   TelegramChannelList,
   TelegramConnector,
@@ -6995,6 +7009,7 @@ export const getGetCalcSheetResponseMock = (
     unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
     stock: {
       on_hand: faker.helpers.arrayElement([faker.number.int(), null]),
+      free: faker.helpers.arrayElement([faker.number.int(), null]),
       cell: faker.helpers.arrayElement([
         faker.string.alpha({ length: { min: 10, max: 20 } }),
         null,
@@ -7085,6 +7100,7 @@ export const getGetCalcSheetResponseMock = (
     services: faker.datatype.boolean(),
     build: faker.datatype.boolean(),
     cost: faker.datatype.boolean(),
+    stock: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   },
   ...overrideResponse,
 });
@@ -7194,6 +7210,7 @@ export const getStartCalcResponseMock = (
     unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
     stock: {
       on_hand: faker.helpers.arrayElement([faker.number.int(), null]),
+      free: faker.helpers.arrayElement([faker.number.int(), null]),
       cell: faker.helpers.arrayElement([
         faker.string.alpha({ length: { min: 10, max: 20 } }),
         null,
@@ -7284,6 +7301,7 @@ export const getStartCalcResponseMock = (
     services: faker.datatype.boolean(),
     build: faker.datatype.boolean(),
     cost: faker.datatype.boolean(),
+    stock: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   },
   ...overrideResponse,
 });
@@ -7393,6 +7411,7 @@ export const getAddCalcLinesResponseMock = (
     unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
     stock: {
       on_hand: faker.helpers.arrayElement([faker.number.int(), null]),
+      free: faker.helpers.arrayElement([faker.number.int(), null]),
       cell: faker.helpers.arrayElement([
         faker.string.alpha({ length: { min: 10, max: 20 } }),
         null,
@@ -7483,6 +7502,7 @@ export const getAddCalcLinesResponseMock = (
     services: faker.datatype.boolean(),
     build: faker.datatype.boolean(),
     cost: faker.datatype.boolean(),
+    stock: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   },
   ...overrideResponse,
 });
@@ -7592,6 +7612,7 @@ export const getUpdateCalcLineResponseMock = (
     unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
     stock: {
       on_hand: faker.helpers.arrayElement([faker.number.int(), null]),
+      free: faker.helpers.arrayElement([faker.number.int(), null]),
       cell: faker.helpers.arrayElement([
         faker.string.alpha({ length: { min: 10, max: 20 } }),
         null,
@@ -7685,6 +7706,7 @@ export const getUpdateCalcLineResponseMock = (
     services: faker.datatype.boolean(),
     build: faker.datatype.boolean(),
     cost: faker.datatype.boolean(),
+    stock: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   },
   ...overrideResponse,
 });
@@ -7794,6 +7816,7 @@ export const getDeleteCalcLineResponseMock = (
     unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
     stock: {
       on_hand: faker.helpers.arrayElement([faker.number.int(), null]),
+      free: faker.helpers.arrayElement([faker.number.int(), null]),
       cell: faker.helpers.arrayElement([
         faker.string.alpha({ length: { min: 10, max: 20 } }),
         null,
@@ -7887,6 +7910,7 @@ export const getDeleteCalcLineResponseMock = (
     services: faker.datatype.boolean(),
     build: faker.datatype.boolean(),
     cost: faker.datatype.boolean(),
+    stock: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   },
   ...overrideResponse,
 });
@@ -7996,6 +8020,7 @@ export const getSignCalcLineResponseMock = (
     unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
     stock: {
       on_hand: faker.helpers.arrayElement([faker.number.int(), null]),
+      free: faker.helpers.arrayElement([faker.number.int(), null]),
       cell: faker.helpers.arrayElement([
         faker.string.alpha({ length: { min: 10, max: 20 } }),
         null,
@@ -8086,6 +8111,7 @@ export const getSignCalcLineResponseMock = (
     services: faker.datatype.boolean(),
     build: faker.datatype.boolean(),
     cost: faker.datatype.boolean(),
+    stock: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   },
   ...overrideResponse,
 });
@@ -8195,6 +8221,7 @@ export const getMarkCalcReadyResponseMock = (
     unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
     stock: {
       on_hand: faker.helpers.arrayElement([faker.number.int(), null]),
+      free: faker.helpers.arrayElement([faker.number.int(), null]),
       cell: faker.helpers.arrayElement([
         faker.string.alpha({ length: { min: 10, max: 20 } }),
         null,
@@ -8285,6 +8312,7 @@ export const getMarkCalcReadyResponseMock = (
     services: faker.datatype.boolean(),
     build: faker.datatype.boolean(),
     cost: faker.datatype.boolean(),
+    stock: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
   },
   ...overrideResponse,
 });
@@ -8293,6 +8321,2275 @@ export const getParseCalcTextResponseMock = (
   overrideResponse: Partial<Extract<CalcParseJob, object>> = {},
 ): CalcParseJob => ({
   job_id: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ...overrideResponse,
+});
+
+export const getListStockBalancesResponseMock = (
+  overrideResponse: Partial<Extract<StockBalanceList, object>> = {},
+): StockBalanceList => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    product_id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    article: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    on_hand: faker.number.int({ min: 0 }),
+    reserved: faker.number.int({ min: 0 }),
+    free: faker.number.int({ min: 0 }),
+    incoming: faker.number.int({ min: 0 }),
+    next_expected: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    cells: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        cell: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        on_hand: faker.number.int({ min: 0 }),
+      }),
+    ),
+  })),
+  rights: { manage: faker.datatype.boolean(), ship: faker.datatype.boolean() },
+  ...overrideResponse,
+});
+
+export const getGetStockProductResponseMock = (
+  overrideResponse: Partial<Extract<StockProduct, object>> = {},
+): StockProduct => ({
+  product_id: faker.helpers.fromRegExp("^[0-9]+$"),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  article: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  on_hand: faker.number.int({ min: 0 }),
+  reserved: faker.number.int({ min: 0 }),
+  free: faker.number.int({ min: 0 }),
+  incoming: faker.number.int({ min: 0 }),
+  next_expected: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  cells: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    cell: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    on_hand: faker.number.int({ min: 0 }),
+  })),
+  reservations: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.helpers.fromRegExp("^[0-9]+$"),
+      product_id: faker.helpers.fromRegExp("^[0-9]+$"),
+      product_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      request: {
+        number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        client: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      },
+      line_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+      quantity: faker.number.int({ min: 1 }),
+      shipped_quantity: faker.number.int({ min: 0 }),
+      remaining: faker.number.int({ min: 0 }),
+      status: faker.helpers.arrayElement(["active", "released", "fulfilled"] as const),
+      created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      created_by: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+    }),
+  ),
+  incoming_orders: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => ({
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement(Object.values(SupplierOrderStatus)),
+    supplier: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    expected_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    quantity_left: faker.number.int({ min: 1 }),
+    path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  })),
+  movements: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      kind: faker.helpers.arrayElement(["receipt", "shipment", "adjustment"] as const),
+      quantity: faker.number.int(),
+      cell: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      by: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+      note: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+    }),
+  ),
+  rights: { manage: faker.datatype.boolean(), ship: faker.datatype.boolean() },
+  ...overrideResponse,
+});
+
+export const getAdjustStockResponseMock = (
+  overrideResponse: Partial<Extract<StockProduct, object>> = {},
+): StockProduct => ({
+  product_id: faker.helpers.fromRegExp("^[0-9]+$"),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  article: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  on_hand: faker.number.int({ min: 0 }),
+  reserved: faker.number.int({ min: 0 }),
+  free: faker.number.int({ min: 0 }),
+  incoming: faker.number.int({ min: 0 }),
+  next_expected: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  cells: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    cell: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    on_hand: faker.number.int({ min: 0 }),
+  })),
+  reservations: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.helpers.fromRegExp("^[0-9]+$"),
+      product_id: faker.helpers.fromRegExp("^[0-9]+$"),
+      product_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      request: {
+        number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        client: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      },
+      line_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+      quantity: faker.number.int({ min: 1 }),
+      shipped_quantity: faker.number.int({ min: 0 }),
+      remaining: faker.number.int({ min: 0 }),
+      status: faker.helpers.arrayElement(["active", "released", "fulfilled"] as const),
+      created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      created_by: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+    }),
+  ),
+  incoming_orders: Array.from(
+    { length: faker.number.int({ min: 1, max: 10 }) },
+    (_, i) => i + 1,
+  ).map(() => ({
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement(Object.values(SupplierOrderStatus)),
+    supplier: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    expected_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    quantity_left: faker.number.int({ min: 1 }),
+    path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  })),
+  movements: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      kind: faker.helpers.arrayElement(["receipt", "shipment", "adjustment"] as const),
+      quantity: faker.number.int(),
+      cell: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      by: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+      note: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+    }),
+  ),
+  rights: { manage: faker.datatype.boolean(), ship: faker.datatype.boolean() },
+  ...overrideResponse,
+});
+
+export const getListStockReservationsResponseMock = (
+  overrideResponse: Partial<Extract<StockReservationList, object>> = {},
+): StockReservationList => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    product_id: faker.helpers.fromRegExp("^[0-9]+$"),
+    product_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    request: {
+      number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      client: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    },
+    line_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+    quantity: faker.number.int({ min: 1 }),
+    shipped_quantity: faker.number.int({ min: 0 }),
+    remaining: faker.number.int({ min: 0 }),
+    status: faker.helpers.arrayElement(["active", "released", "fulfilled"] as const),
+    created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    created_by: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  })),
+  ...overrideResponse,
+});
+
+export const getReleaseStockReservationResponseMock = (
+  overrideResponse: Partial<Extract<StockReservation, object>> = {},
+): StockReservation => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  product_id: faker.helpers.fromRegExp("^[0-9]+$"),
+  product_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  request: {
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    client: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  line_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+  quantity: faker.number.int({ min: 1 }),
+  shipped_quantity: faker.number.int({ min: 0 }),
+  remaining: faker.number.int({ min: 0 }),
+  status: faker.helpers.arrayElement(["active", "released", "fulfilled"] as const),
+  created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  created_by: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  ...overrideResponse,
+});
+
+export const getReserveCalcLineResponseCalcQuoteMock = (
+  overrideResponse: Partial<CalcQuote> = {},
+): CalcQuote => ({
+  ...{
+    number: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    version: faker.number.int({ min: 1 }),
+    state: faker.helpers.arrayElement(Object.values(CalcState)),
+    director_comment: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    vat_rate: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+  },
+  ...overrideResponse,
+});
+
+export const getReserveCalcLineResponseCalcSupplierMock = (
+  overrideResponse: Partial<CalcSupplier> = {},
+): CalcSupplier => ({
+  ...{
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    lead_days: faker.helpers.arrayElement([faker.number.int(), null]),
+    min_order_qty: faker.number.int(),
+    price_valid_until: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 10),
+      null,
+    ]),
+    offer_price: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    offer_currency: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getReserveCalcLineResponseCalcLineVisaMock = (
+  overrideResponse: Partial<CalcLineVisa> = {},
+): CalcLineVisa => ({
+  ...{
+    by: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  },
+  ...overrideResponse,
+});
+
+export const getReserveCalcLineResponseMock = (
+  overrideResponse: Partial<Extract<CalcSheet, object>> = {},
+): CalcSheet => ({
+  number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  client: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  step: faker.helpers.arrayElement(Object.values(StepCode)),
+  path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  task: {
+    letter_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    letter_subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    resolution_text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    decided_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    decided_by: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    due: faker.date.past().toISOString().slice(0, 10),
+    min_margin_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    assignees: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        zone: faker.helpers.arrayElement(Object.values(LetterZone)),
+        name: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+      }),
+    ),
+  },
+  request: {
+    text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    lines: faker.number.int({ min: 0 }),
+  },
+  quote: faker.helpers.arrayElement([{ ...getReserveCalcLineResponseCalcQuoteMock() }, null]),
+  lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    article: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    product_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+    product_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    kind: faker.helpers.arrayElement(Object.values(CalcLineKind)),
+    zone: faker.helpers.arrayElement(Object.values(CalcZone)),
+    group: faker.helpers.arrayElement(["stock", "supply", "engineer"] as const),
+    quantity: faker.number.int({ min: 1 }),
+    unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    stock: {
+      on_hand: faker.helpers.arrayElement([faker.number.int(), null]),
+      free: faker.helpers.arrayElement([faker.number.int(), null]),
+      cell: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      reserved: faker.helpers.arrayElement([faker.number.int(), null]),
+    },
+    supplier: faker.helpers.arrayElement([
+      { ...getReserveCalcLineResponseCalcSupplierMock() },
+      null,
+    ]),
+    lead_days: faker.helpers.arrayElement([faker.number.int(), null]),
+    purchase_price: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    purchase_currency: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+    crew_rate: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    crew_days: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    cost: faker.helpers.arrayElement([faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"), null]),
+    client_price: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    markup_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    visa: faker.helpers.arrayElement([{ ...getReserveCalcLineResponseCalcLineVisaMock() }, null]),
+    can_edit: faker.datatype.boolean(),
+  })),
+  totals: {
+    client: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    purchase: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      undefined,
+    ]),
+    markup_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    vat_included: false,
+  },
+  visas: {
+    stock: {
+      state: faker.helpers.arrayElement(Object.values(CalcVisaState)),
+      total: faker.number.int({ min: 0 }),
+      signed: faker.number.int({ min: 0 }),
+      by: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+    },
+    supply: {
+      state: faker.helpers.arrayElement(Object.values(CalcVisaState)),
+      total: faker.number.int({ min: 0 }),
+      signed: faker.number.int({ min: 0 }),
+      by: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+    },
+    engineer: {
+      state: faker.helpers.arrayElement(Object.values(CalcVisaState)),
+      total: faker.number.int({ min: 0 }),
+      signed: faker.number.int({ min: 0 }),
+      by: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+    },
+  },
+  ready: {
+    allowed: faker.datatype.boolean(),
+    blocker: faker.helpers.arrayElement([
+      faker.helpers.arrayElement([
+        "not_started",
+        "not_in_calculation",
+        "not_draft",
+        "no_lines",
+        "visas_missing",
+      ] as const),
+      null,
+    ]),
+    missing: faker.number.int({ min: 0 }),
+  },
+  rights: {
+    goods: faker.datatype.boolean(),
+    services: faker.datatype.boolean(),
+    build: faker.datatype.boolean(),
+    cost: faker.datatype.boolean(),
+    stock: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  },
+  ...overrideResponse,
+});
+
+export const getReleaseCalcLineReservationResponseCalcQuoteMock = (
+  overrideResponse: Partial<CalcQuote> = {},
+): CalcQuote => ({
+  ...{
+    number: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    version: faker.number.int({ min: 1 }),
+    state: faker.helpers.arrayElement(Object.values(CalcState)),
+    director_comment: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    vat_rate: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+  },
+  ...overrideResponse,
+});
+
+export const getReleaseCalcLineReservationResponseCalcSupplierMock = (
+  overrideResponse: Partial<CalcSupplier> = {},
+): CalcSupplier => ({
+  ...{
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    lead_days: faker.helpers.arrayElement([faker.number.int(), null]),
+    min_order_qty: faker.number.int(),
+    price_valid_until: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 10),
+      null,
+    ]),
+    offer_price: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    offer_currency: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getReleaseCalcLineReservationResponseCalcLineVisaMock = (
+  overrideResponse: Partial<CalcLineVisa> = {},
+): CalcLineVisa => ({
+  ...{
+    by: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  },
+  ...overrideResponse,
+});
+
+export const getReleaseCalcLineReservationResponseMock = (
+  overrideResponse: Partial<Extract<CalcSheet, object>> = {},
+): CalcSheet => ({
+  number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  client: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  step: faker.helpers.arrayElement(Object.values(StepCode)),
+  path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  task: {
+    letter_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    letter_subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    resolution_text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    decided_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    decided_by: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    due: faker.date.past().toISOString().slice(0, 10),
+    min_margin_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    assignees: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        zone: faker.helpers.arrayElement(Object.values(LetterZone)),
+        name: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+      }),
+    ),
+  },
+  request: {
+    text: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    lines: faker.number.int({ min: 0 }),
+  },
+  quote: faker.helpers.arrayElement([
+    { ...getReleaseCalcLineReservationResponseCalcQuoteMock() },
+    null,
+  ]),
+  lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    article: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    product_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+    product_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    kind: faker.helpers.arrayElement(Object.values(CalcLineKind)),
+    zone: faker.helpers.arrayElement(Object.values(CalcZone)),
+    group: faker.helpers.arrayElement(["stock", "supply", "engineer"] as const),
+    quantity: faker.number.int({ min: 1 }),
+    unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    stock: {
+      on_hand: faker.helpers.arrayElement([faker.number.int(), null]),
+      free: faker.helpers.arrayElement([faker.number.int(), null]),
+      cell: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      reserved: faker.helpers.arrayElement([faker.number.int(), null]),
+    },
+    supplier: faker.helpers.arrayElement([
+      { ...getReleaseCalcLineReservationResponseCalcSupplierMock() },
+      null,
+    ]),
+    lead_days: faker.helpers.arrayElement([faker.number.int(), null]),
+    purchase_price: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    purchase_currency: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+    crew_rate: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    crew_days: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    cost: faker.helpers.arrayElement([faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"), null]),
+    client_price: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    markup_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    visa: faker.helpers.arrayElement([
+      { ...getReleaseCalcLineReservationResponseCalcLineVisaMock() },
+      null,
+    ]),
+    can_edit: faker.datatype.boolean(),
+  })),
+  totals: {
+    client: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    purchase: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      undefined,
+    ]),
+    markup_pct: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    vat_included: false,
+  },
+  visas: {
+    stock: {
+      state: faker.helpers.arrayElement(Object.values(CalcVisaState)),
+      total: faker.number.int({ min: 0 }),
+      signed: faker.number.int({ min: 0 }),
+      by: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+    },
+    supply: {
+      state: faker.helpers.arrayElement(Object.values(CalcVisaState)),
+      total: faker.number.int({ min: 0 }),
+      signed: faker.number.int({ min: 0 }),
+      by: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+    },
+    engineer: {
+      state: faker.helpers.arrayElement(Object.values(CalcVisaState)),
+      total: faker.number.int({ min: 0 }),
+      signed: faker.number.int({ min: 0 }),
+      by: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() =>
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+      ),
+    },
+  },
+  ready: {
+    allowed: faker.datatype.boolean(),
+    blocker: faker.helpers.arrayElement([
+      faker.helpers.arrayElement([
+        "not_started",
+        "not_in_calculation",
+        "not_draft",
+        "no_lines",
+        "visas_missing",
+      ] as const),
+      null,
+    ]),
+    missing: faker.number.int({ min: 0 }),
+  },
+  rights: {
+    goods: faker.datatype.boolean(),
+    services: faker.datatype.boolean(),
+    build: faker.datatype.boolean(),
+    cost: faker.datatype.boolean(),
+    stock: faker.helpers.arrayElement([faker.datatype.boolean(), undefined]),
+  },
+  ...overrideResponse,
+});
+
+export const getListCalcPriceRequestsResponseMock = (
+  overrideResponse: Partial<Extract<PriceRequestList, object>> = {},
+): PriceRequestList => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    supplier: {
+      id: faker.helpers.fromRegExp("^[0-9]+$"),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      email: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+    },
+    request: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    requested_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    requested_by: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    to_email: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    note: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    status: faker.helpers.arrayElement(["sent", "failed"] as const),
+    error: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    answered_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    answered_by: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    answer_note: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        line_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        article: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        quantity: faker.number.int({ min: 1 }),
+        unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      }),
+    ),
+  })),
+  ...overrideResponse,
+});
+
+export const getCreateCalcPriceRequestResponseMock = (
+  overrideResponse: Partial<Extract<PriceRequest, object>> = {},
+): PriceRequest => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  supplier: {
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    email: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  },
+  request: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  requested_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  requested_by: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  to_email: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  note: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  status: faker.helpers.arrayElement(["sent", "failed"] as const),
+  error: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  answered_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  answered_by: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  answer_note: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    line_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    article: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    quantity: faker.number.int({ min: 1 }),
+    unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  })),
+  ...overrideResponse,
+});
+
+export const getAnswerPriceRequestResponseMock = (
+  overrideResponse: Partial<Extract<PriceRequest, object>> = {},
+): PriceRequest => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  supplier: {
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    email: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  },
+  request: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  requested_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  requested_by: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  to_email: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  note: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  status: faker.helpers.arrayElement(["sent", "failed"] as const),
+  error: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  answered_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  answered_by: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  answer_note: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    line_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    article: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    quantity: faker.number.int({ min: 1 }),
+    unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  })),
+  ...overrideResponse,
+});
+
+export const getListStockSuppliersResponseMock = (
+  overrideResponse: Partial<Extract<StockSupplierList, object>> = {},
+): StockSupplierList => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    inn: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    email: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  })),
+  ...overrideResponse,
+});
+
+export const getListSupplierOrdersResponseMock = (
+  overrideResponse: Partial<Extract<SupplierOrderList, object>> = {},
+): SupplierOrderList => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement(Object.values(SupplierOrderStatus)),
+    supplier: {
+      id: faker.helpers.fromRegExp("^[0-9]+$"),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      email: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+    },
+    expected_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    overdue: faker.datatype.boolean(),
+    days_overdue: faker.helpers.arrayElement([faker.number.int({ min: 1 }), null]),
+    currency: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[A-Z]{3}$"), null]),
+    lines_count: faker.number.int({ min: 0 }),
+    quantity: faker.number.int({ min: 0 }),
+    received_quantity: faker.number.int({ min: 0 }),
+    receipt_state: faker.helpers.arrayElement(["none", "partial", "full"] as const),
+    total: faker.helpers.arrayElement([faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"), null]),
+    requests: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        client: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      }),
+    ),
+    created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    created_by: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    actions: {
+      edit: faker.datatype.boolean(),
+      send: faker.datatype.boolean(),
+      confirm: faker.datatype.boolean(),
+      receive: faker.datatype.boolean(),
+      cancel: faker.datatype.boolean(),
+    },
+    path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  })),
+  rights: {
+    manage: faker.datatype.boolean(),
+    ship: faker.datatype.boolean(),
+    prices: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
+export const getCreateSupplierOrderResponseStockRequestRefMock = (
+  overrideResponse: Partial<StockRequestRef> = {},
+): StockRequestRef => ({
+  ...{
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    client: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getCreateSupplierOrderResponseMock = (
+  overrideResponse: Partial<Extract<SupplierOrderDetail, object>> = {},
+): SupplierOrderDetail => ({
+  number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  status: faker.helpers.arrayElement(Object.values(SupplierOrderStatus)),
+  supplier: {
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    email: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  },
+  expected_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  overdue: faker.datatype.boolean(),
+  days_overdue: faker.helpers.arrayElement([faker.number.int({ min: 1 }), null]),
+  currency: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[A-Z]{3}$"), null]),
+  lines_count: faker.number.int({ min: 0 }),
+  quantity: faker.number.int({ min: 0 }),
+  received_quantity: faker.number.int({ min: 0 }),
+  receipt_state: faker.helpers.arrayElement(["none", "partial", "full"] as const),
+  total: faker.helpers.arrayElement([faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"), null]),
+  requests: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      client: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    }),
+  ),
+  created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  created_by: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  actions: {
+    edit: faker.datatype.boolean(),
+    send: faker.datatype.boolean(),
+    confirm: faker.datatype.boolean(),
+    receive: faker.datatype.boolean(),
+    cancel: faker.datatype.boolean(),
+  },
+  path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  note: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  sent_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
+  sent_to: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  confirmed_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  received_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  cancelled_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  cancel_reason: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    position: faker.number.int({ min: 1 }),
+    product_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    article: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    quantity: faker.number.int({ min: 1 }),
+    received_quantity: faker.number.int({ min: 0 }),
+    unit_price: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    line_total: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    request: faker.helpers.arrayElement([
+      { ...getCreateSupplierOrderResponseStockRequestRefMock() },
+      null,
+    ]),
+    line_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+  })),
+  receipts: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.helpers.fromRegExp("^[0-9]+$"),
+      received_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      received_by: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      supplier_doc: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      note: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => ({
+          order_line_id: faker.helpers.fromRegExp("^[0-9]+$"),
+          name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          quantity: faker.number.int({ min: 1 }),
+          cell: faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
+        }),
+      ),
+    }),
+  ),
+  log: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    kind: faker.helpers.arrayElement([
+      "created",
+      "edited",
+      "sent",
+      "confirmed",
+      "receipt",
+      "received",
+      "cancelled",
+      "overdue",
+    ] as const),
+    at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    by: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    detail: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  })),
+  rights: {
+    manage: faker.datatype.boolean(),
+    ship: faker.datatype.boolean(),
+    prices: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
+export const getCreateSupplierOrderFromRequestResponseStockRequestRefMock = (
+  overrideResponse: Partial<StockRequestRef> = {},
+): StockRequestRef => ({
+  ...{
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    client: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getCreateSupplierOrderFromRequestResponseMock = (
+  overrideResponse: Partial<Extract<SupplierOrderDetail, object>> = {},
+): SupplierOrderDetail => ({
+  number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  status: faker.helpers.arrayElement(Object.values(SupplierOrderStatus)),
+  supplier: {
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    email: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  },
+  expected_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  overdue: faker.datatype.boolean(),
+  days_overdue: faker.helpers.arrayElement([faker.number.int({ min: 1 }), null]),
+  currency: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[A-Z]{3}$"), null]),
+  lines_count: faker.number.int({ min: 0 }),
+  quantity: faker.number.int({ min: 0 }),
+  received_quantity: faker.number.int({ min: 0 }),
+  receipt_state: faker.helpers.arrayElement(["none", "partial", "full"] as const),
+  total: faker.helpers.arrayElement([faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"), null]),
+  requests: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      client: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    }),
+  ),
+  created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  created_by: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  actions: {
+    edit: faker.datatype.boolean(),
+    send: faker.datatype.boolean(),
+    confirm: faker.datatype.boolean(),
+    receive: faker.datatype.boolean(),
+    cancel: faker.datatype.boolean(),
+  },
+  path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  note: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  sent_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
+  sent_to: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  confirmed_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  received_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  cancelled_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  cancel_reason: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    position: faker.number.int({ min: 1 }),
+    product_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    article: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    quantity: faker.number.int({ min: 1 }),
+    received_quantity: faker.number.int({ min: 0 }),
+    unit_price: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    line_total: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    request: faker.helpers.arrayElement([
+      { ...getCreateSupplierOrderFromRequestResponseStockRequestRefMock() },
+      null,
+    ]),
+    line_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+  })),
+  receipts: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.helpers.fromRegExp("^[0-9]+$"),
+      received_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      received_by: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      supplier_doc: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      note: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => ({
+          order_line_id: faker.helpers.fromRegExp("^[0-9]+$"),
+          name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          quantity: faker.number.int({ min: 1 }),
+          cell: faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
+        }),
+      ),
+    }),
+  ),
+  log: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    kind: faker.helpers.arrayElement([
+      "created",
+      "edited",
+      "sent",
+      "confirmed",
+      "receipt",
+      "received",
+      "cancelled",
+      "overdue",
+    ] as const),
+    at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    by: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    detail: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  })),
+  rights: {
+    manage: faker.datatype.boolean(),
+    ship: faker.datatype.boolean(),
+    prices: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
+export const getGetSupplierOrderResponseStockRequestRefMock = (
+  overrideResponse: Partial<StockRequestRef> = {},
+): StockRequestRef => ({
+  ...{
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    client: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getGetSupplierOrderResponseMock = (
+  overrideResponse: Partial<Extract<SupplierOrderDetail, object>> = {},
+): SupplierOrderDetail => ({
+  number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  status: faker.helpers.arrayElement(Object.values(SupplierOrderStatus)),
+  supplier: {
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    email: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  },
+  expected_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  overdue: faker.datatype.boolean(),
+  days_overdue: faker.helpers.arrayElement([faker.number.int({ min: 1 }), null]),
+  currency: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[A-Z]{3}$"), null]),
+  lines_count: faker.number.int({ min: 0 }),
+  quantity: faker.number.int({ min: 0 }),
+  received_quantity: faker.number.int({ min: 0 }),
+  receipt_state: faker.helpers.arrayElement(["none", "partial", "full"] as const),
+  total: faker.helpers.arrayElement([faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"), null]),
+  requests: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      client: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    }),
+  ),
+  created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  created_by: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  actions: {
+    edit: faker.datatype.boolean(),
+    send: faker.datatype.boolean(),
+    confirm: faker.datatype.boolean(),
+    receive: faker.datatype.boolean(),
+    cancel: faker.datatype.boolean(),
+  },
+  path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  note: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  sent_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
+  sent_to: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  confirmed_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  received_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  cancelled_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  cancel_reason: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    position: faker.number.int({ min: 1 }),
+    product_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    article: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    quantity: faker.number.int({ min: 1 }),
+    received_quantity: faker.number.int({ min: 0 }),
+    unit_price: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    line_total: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    request: faker.helpers.arrayElement([
+      { ...getGetSupplierOrderResponseStockRequestRefMock() },
+      null,
+    ]),
+    line_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+  })),
+  receipts: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.helpers.fromRegExp("^[0-9]+$"),
+      received_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      received_by: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      supplier_doc: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      note: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => ({
+          order_line_id: faker.helpers.fromRegExp("^[0-9]+$"),
+          name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          quantity: faker.number.int({ min: 1 }),
+          cell: faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
+        }),
+      ),
+    }),
+  ),
+  log: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    kind: faker.helpers.arrayElement([
+      "created",
+      "edited",
+      "sent",
+      "confirmed",
+      "receipt",
+      "received",
+      "cancelled",
+      "overdue",
+    ] as const),
+    at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    by: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    detail: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  })),
+  rights: {
+    manage: faker.datatype.boolean(),
+    ship: faker.datatype.boolean(),
+    prices: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
+export const getUpdateSupplierOrderResponseStockRequestRefMock = (
+  overrideResponse: Partial<StockRequestRef> = {},
+): StockRequestRef => ({
+  ...{
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    client: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getUpdateSupplierOrderResponseMock = (
+  overrideResponse: Partial<Extract<SupplierOrderDetail, object>> = {},
+): SupplierOrderDetail => ({
+  number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  status: faker.helpers.arrayElement(Object.values(SupplierOrderStatus)),
+  supplier: {
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    email: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  },
+  expected_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  overdue: faker.datatype.boolean(),
+  days_overdue: faker.helpers.arrayElement([faker.number.int({ min: 1 }), null]),
+  currency: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[A-Z]{3}$"), null]),
+  lines_count: faker.number.int({ min: 0 }),
+  quantity: faker.number.int({ min: 0 }),
+  received_quantity: faker.number.int({ min: 0 }),
+  receipt_state: faker.helpers.arrayElement(["none", "partial", "full"] as const),
+  total: faker.helpers.arrayElement([faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"), null]),
+  requests: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      client: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    }),
+  ),
+  created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  created_by: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  actions: {
+    edit: faker.datatype.boolean(),
+    send: faker.datatype.boolean(),
+    confirm: faker.datatype.boolean(),
+    receive: faker.datatype.boolean(),
+    cancel: faker.datatype.boolean(),
+  },
+  path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  note: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  sent_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
+  sent_to: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  confirmed_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  received_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  cancelled_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  cancel_reason: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    position: faker.number.int({ min: 1 }),
+    product_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    article: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    quantity: faker.number.int({ min: 1 }),
+    received_quantity: faker.number.int({ min: 0 }),
+    unit_price: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    line_total: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    request: faker.helpers.arrayElement([
+      { ...getUpdateSupplierOrderResponseStockRequestRefMock() },
+      null,
+    ]),
+    line_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+  })),
+  receipts: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.helpers.fromRegExp("^[0-9]+$"),
+      received_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      received_by: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      supplier_doc: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      note: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => ({
+          order_line_id: faker.helpers.fromRegExp("^[0-9]+$"),
+          name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          quantity: faker.number.int({ min: 1 }),
+          cell: faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
+        }),
+      ),
+    }),
+  ),
+  log: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    kind: faker.helpers.arrayElement([
+      "created",
+      "edited",
+      "sent",
+      "confirmed",
+      "receipt",
+      "received",
+      "cancelled",
+      "overdue",
+    ] as const),
+    at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    by: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    detail: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  })),
+  rights: {
+    manage: faker.datatype.boolean(),
+    ship: faker.datatype.boolean(),
+    prices: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
+export const getSendSupplierOrderResponseStockRequestRefMock = (
+  overrideResponse: Partial<StockRequestRef> = {},
+): StockRequestRef => ({
+  ...{
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    client: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getSendSupplierOrderResponseMock = (
+  overrideResponse: Partial<Extract<SupplierOrderDetail, object>> = {},
+): SupplierOrderDetail => ({
+  number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  status: faker.helpers.arrayElement(Object.values(SupplierOrderStatus)),
+  supplier: {
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    email: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  },
+  expected_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  overdue: faker.datatype.boolean(),
+  days_overdue: faker.helpers.arrayElement([faker.number.int({ min: 1 }), null]),
+  currency: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[A-Z]{3}$"), null]),
+  lines_count: faker.number.int({ min: 0 }),
+  quantity: faker.number.int({ min: 0 }),
+  received_quantity: faker.number.int({ min: 0 }),
+  receipt_state: faker.helpers.arrayElement(["none", "partial", "full"] as const),
+  total: faker.helpers.arrayElement([faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"), null]),
+  requests: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      client: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    }),
+  ),
+  created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  created_by: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  actions: {
+    edit: faker.datatype.boolean(),
+    send: faker.datatype.boolean(),
+    confirm: faker.datatype.boolean(),
+    receive: faker.datatype.boolean(),
+    cancel: faker.datatype.boolean(),
+  },
+  path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  note: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  sent_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
+  sent_to: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  confirmed_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  received_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  cancelled_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  cancel_reason: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    position: faker.number.int({ min: 1 }),
+    product_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    article: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    quantity: faker.number.int({ min: 1 }),
+    received_quantity: faker.number.int({ min: 0 }),
+    unit_price: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    line_total: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    request: faker.helpers.arrayElement([
+      { ...getSendSupplierOrderResponseStockRequestRefMock() },
+      null,
+    ]),
+    line_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+  })),
+  receipts: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.helpers.fromRegExp("^[0-9]+$"),
+      received_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      received_by: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      supplier_doc: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      note: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => ({
+          order_line_id: faker.helpers.fromRegExp("^[0-9]+$"),
+          name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          quantity: faker.number.int({ min: 1 }),
+          cell: faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
+        }),
+      ),
+    }),
+  ),
+  log: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    kind: faker.helpers.arrayElement([
+      "created",
+      "edited",
+      "sent",
+      "confirmed",
+      "receipt",
+      "received",
+      "cancelled",
+      "overdue",
+    ] as const),
+    at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    by: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    detail: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  })),
+  rights: {
+    manage: faker.datatype.boolean(),
+    ship: faker.datatype.boolean(),
+    prices: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
+export const getConfirmSupplierOrderResponseStockRequestRefMock = (
+  overrideResponse: Partial<StockRequestRef> = {},
+): StockRequestRef => ({
+  ...{
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    client: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getConfirmSupplierOrderResponseMock = (
+  overrideResponse: Partial<Extract<SupplierOrderDetail, object>> = {},
+): SupplierOrderDetail => ({
+  number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  status: faker.helpers.arrayElement(Object.values(SupplierOrderStatus)),
+  supplier: {
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    email: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  },
+  expected_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  overdue: faker.datatype.boolean(),
+  days_overdue: faker.helpers.arrayElement([faker.number.int({ min: 1 }), null]),
+  currency: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[A-Z]{3}$"), null]),
+  lines_count: faker.number.int({ min: 0 }),
+  quantity: faker.number.int({ min: 0 }),
+  received_quantity: faker.number.int({ min: 0 }),
+  receipt_state: faker.helpers.arrayElement(["none", "partial", "full"] as const),
+  total: faker.helpers.arrayElement([faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"), null]),
+  requests: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      client: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    }),
+  ),
+  created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  created_by: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  actions: {
+    edit: faker.datatype.boolean(),
+    send: faker.datatype.boolean(),
+    confirm: faker.datatype.boolean(),
+    receive: faker.datatype.boolean(),
+    cancel: faker.datatype.boolean(),
+  },
+  path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  note: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  sent_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
+  sent_to: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  confirmed_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  received_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  cancelled_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  cancel_reason: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    position: faker.number.int({ min: 1 }),
+    product_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    article: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    quantity: faker.number.int({ min: 1 }),
+    received_quantity: faker.number.int({ min: 0 }),
+    unit_price: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    line_total: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    request: faker.helpers.arrayElement([
+      { ...getConfirmSupplierOrderResponseStockRequestRefMock() },
+      null,
+    ]),
+    line_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+  })),
+  receipts: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.helpers.fromRegExp("^[0-9]+$"),
+      received_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      received_by: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      supplier_doc: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      note: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => ({
+          order_line_id: faker.helpers.fromRegExp("^[0-9]+$"),
+          name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          quantity: faker.number.int({ min: 1 }),
+          cell: faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
+        }),
+      ),
+    }),
+  ),
+  log: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    kind: faker.helpers.arrayElement([
+      "created",
+      "edited",
+      "sent",
+      "confirmed",
+      "receipt",
+      "received",
+      "cancelled",
+      "overdue",
+    ] as const),
+    at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    by: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    detail: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  })),
+  rights: {
+    manage: faker.datatype.boolean(),
+    ship: faker.datatype.boolean(),
+    prices: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
+export const getCancelSupplierOrderResponseStockRequestRefMock = (
+  overrideResponse: Partial<StockRequestRef> = {},
+): StockRequestRef => ({
+  ...{
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    client: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getCancelSupplierOrderResponseMock = (
+  overrideResponse: Partial<Extract<SupplierOrderDetail, object>> = {},
+): SupplierOrderDetail => ({
+  number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  status: faker.helpers.arrayElement(Object.values(SupplierOrderStatus)),
+  supplier: {
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    email: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  },
+  expected_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  overdue: faker.datatype.boolean(),
+  days_overdue: faker.helpers.arrayElement([faker.number.int({ min: 1 }), null]),
+  currency: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[A-Z]{3}$"), null]),
+  lines_count: faker.number.int({ min: 0 }),
+  quantity: faker.number.int({ min: 0 }),
+  received_quantity: faker.number.int({ min: 0 }),
+  receipt_state: faker.helpers.arrayElement(["none", "partial", "full"] as const),
+  total: faker.helpers.arrayElement([faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"), null]),
+  requests: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      client: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    }),
+  ),
+  created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  created_by: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  actions: {
+    edit: faker.datatype.boolean(),
+    send: faker.datatype.boolean(),
+    confirm: faker.datatype.boolean(),
+    receive: faker.datatype.boolean(),
+    cancel: faker.datatype.boolean(),
+  },
+  path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  note: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  sent_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
+  sent_to: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  confirmed_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  received_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  cancelled_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  cancel_reason: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    position: faker.number.int({ min: 1 }),
+    product_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    article: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    quantity: faker.number.int({ min: 1 }),
+    received_quantity: faker.number.int({ min: 0 }),
+    unit_price: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    line_total: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    request: faker.helpers.arrayElement([
+      { ...getCancelSupplierOrderResponseStockRequestRefMock() },
+      null,
+    ]),
+    line_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+  })),
+  receipts: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.helpers.fromRegExp("^[0-9]+$"),
+      received_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      received_by: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      supplier_doc: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      note: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => ({
+          order_line_id: faker.helpers.fromRegExp("^[0-9]+$"),
+          name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          quantity: faker.number.int({ min: 1 }),
+          cell: faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
+        }),
+      ),
+    }),
+  ),
+  log: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    kind: faker.helpers.arrayElement([
+      "created",
+      "edited",
+      "sent",
+      "confirmed",
+      "receipt",
+      "received",
+      "cancelled",
+      "overdue",
+    ] as const),
+    at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    by: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    detail: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  })),
+  rights: {
+    manage: faker.datatype.boolean(),
+    ship: faker.datatype.boolean(),
+    prices: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
+export const getReceiveSupplierOrderResponseStockRequestRefMock = (
+  overrideResponse: Partial<StockRequestRef> = {},
+): StockRequestRef => ({
+  ...{
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    client: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getReceiveSupplierOrderResponseMock = (
+  overrideResponse: Partial<Extract<SupplierOrderDetail, object>> = {},
+): SupplierOrderDetail => ({
+  number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  status: faker.helpers.arrayElement(Object.values(SupplierOrderStatus)),
+  supplier: {
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    email: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  },
+  expected_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  overdue: faker.datatype.boolean(),
+  days_overdue: faker.helpers.arrayElement([faker.number.int({ min: 1 }), null]),
+  currency: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[A-Z]{3}$"), null]),
+  lines_count: faker.number.int({ min: 0 }),
+  quantity: faker.number.int({ min: 0 }),
+  received_quantity: faker.number.int({ min: 0 }),
+  receipt_state: faker.helpers.arrayElement(["none", "partial", "full"] as const),
+  total: faker.helpers.arrayElement([faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"), null]),
+  requests: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      client: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    }),
+  ),
+  created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  created_by: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  actions: {
+    edit: faker.datatype.boolean(),
+    send: faker.datatype.boolean(),
+    confirm: faker.datatype.boolean(),
+    receive: faker.datatype.boolean(),
+    cancel: faker.datatype.boolean(),
+  },
+  path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  note: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  sent_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
+  sent_to: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  confirmed_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  received_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  cancelled_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  cancel_reason: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    position: faker.number.int({ min: 1 }),
+    product_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    article: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    quantity: faker.number.int({ min: 1 }),
+    received_quantity: faker.number.int({ min: 0 }),
+    unit_price: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    line_total: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    request: faker.helpers.arrayElement([
+      { ...getReceiveSupplierOrderResponseStockRequestRefMock() },
+      null,
+    ]),
+    line_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+  })),
+  receipts: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.helpers.fromRegExp("^[0-9]+$"),
+      received_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+      received_by: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      supplier_doc: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      note: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+        () => ({
+          order_line_id: faker.helpers.fromRegExp("^[0-9]+$"),
+          name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+          quantity: faker.number.int({ min: 1 }),
+          cell: faker.helpers.arrayElement([
+            faker.string.alpha({ length: { min: 10, max: 20 } }),
+            null,
+          ]),
+        }),
+      ),
+    }),
+  ),
+  log: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    kind: faker.helpers.arrayElement([
+      "created",
+      "edited",
+      "sent",
+      "confirmed",
+      "receipt",
+      "received",
+      "cancelled",
+      "overdue",
+    ] as const),
+    at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    by: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    detail: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  })),
+  rights: {
+    manage: faker.datatype.boolean(),
+    ship: faker.datatype.boolean(),
+    prices: faker.datatype.boolean(),
+  },
+  ...overrideResponse,
+});
+
+export const getListStockReceiptsResponseStockRequestRefMock = (
+  overrideResponse: Partial<StockRequestRef> = {},
+): StockRequestRef => ({
+  ...{
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    client: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getListStockReceiptsResponseMock = (
+  overrideResponse: Partial<Extract<StockReceipts, object>> = {},
+): StockReceipts => ({
+  pending: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      order_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      order_path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      supplier: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      expected_date: faker.helpers.arrayElement([
+        faker.date.past().toISOString().slice(0, 10),
+        null,
+      ]),
+      overdue: faker.datatype.boolean(),
+      order_line_id: faker.helpers.fromRegExp("^[0-9]+$"),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      article: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      unit: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      quantity: faker.number.int({ min: 1 }),
+      received_quantity: faker.number.int({ min: 0 }),
+      request: faker.helpers.arrayElement([
+        { ...getListStockReceiptsResponseStockRequestRefMock() },
+        null,
+      ]),
+    }),
+  ),
+  done: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    order_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    order_path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    supplier: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    received_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    received_by: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    supplier_doc: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    quantity: faker.number.int({ min: 1 }),
+    lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        quantity: faker.number.int({ min: 1 }),
+        cell: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+      }),
+    ),
+  })),
+  rights: { manage: faker.datatype.boolean(), ship: faker.datatype.boolean() },
+  ...overrideResponse,
+});
+
+export const getListStockShipmentsResponseMock = (
+  overrideResponse: Partial<Extract<StockShipmentList, object>> = {},
+): StockShipmentList => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    request: {
+      number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      client: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    },
+    tracking: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    carrier: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    note: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+    shipped_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    shipped_by: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        product_id: faker.helpers.fromRegExp("^[0-9]+$"),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        quantity: faker.number.int({ min: 1 }),
+        cell: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+      }),
+    ),
+  })),
+  rights: { manage: faker.datatype.boolean(), ship: faker.datatype.boolean() },
+  ...overrideResponse,
+});
+
+export const getShipFromStockResponseMock = (
+  overrideResponse: Partial<Extract<StockShipment, object>> = {},
+): StockShipment => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  request: {
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    client: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  tracking: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  carrier: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  note: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  shipped_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  shipped_by: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  lines: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    product_id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    quantity: faker.number.int({ min: 1 }),
+    cell: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  })),
+  ...overrideResponse,
+});
+
+export const getListOverdueSupplierOrdersResponseMock = (
+  overrideResponse: Partial<Extract<SupplierOrderList, object>> = {},
+): SupplierOrderList => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    status: faker.helpers.arrayElement(Object.values(SupplierOrderStatus)),
+    supplier: {
+      id: faker.helpers.fromRegExp("^[0-9]+$"),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      email: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+    },
+    expected_date: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    overdue: faker.datatype.boolean(),
+    days_overdue: faker.helpers.arrayElement([faker.number.int({ min: 1 }), null]),
+    currency: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[A-Z]{3}$"), null]),
+    lines_count: faker.number.int({ min: 0 }),
+    quantity: faker.number.int({ min: 0 }),
+    received_quantity: faker.number.int({ min: 0 }),
+    receipt_state: faker.helpers.arrayElement(["none", "partial", "full"] as const),
+    total: faker.helpers.arrayElement([faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"), null]),
+    requests: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+      () => ({
+        number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        client: faker.helpers.arrayElement([
+          faker.string.alpha({ length: { min: 10, max: 20 } }),
+          null,
+        ]),
+        path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      }),
+    ),
+    created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    created_by: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    actions: {
+      edit: faker.datatype.boolean(),
+      send: faker.datatype.boolean(),
+      confirm: faker.datatype.boolean(),
+      receive: faker.datatype.boolean(),
+      cancel: faker.datatype.boolean(),
+    },
+    path: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  })),
+  rights: {
+    manage: faker.datatype.boolean(),
+    ship: faker.datatype.boolean(),
+    prices: faker.datatype.boolean(),
+  },
   ...overrideResponse,
 });
 
@@ -13563,6 +15860,578 @@ export const getParseCalcTextMockHandler = (
   );
 };
 
+export const getListStockBalancesMockHandler = (
+  overrideResponse?:
+    | StockBalanceList
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<StockBalanceList> | StockBalanceList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/erp/stock/balances",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListStockBalancesResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetStockProductMockHandler = (
+  overrideResponse?:
+    | StockProduct
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<StockProduct> | StockProduct),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/erp/stock/balances/:productId",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetStockProductResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getAdjustStockMockHandler = (
+  overrideResponse?:
+    | StockProduct
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<StockProduct> | StockProduct),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/erp/stock/adjustments",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getAdjustStockResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getListStockReservationsMockHandler = (
+  overrideResponse?:
+    | StockReservationList
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<StockReservationList> | StockReservationList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/erp/stock/reservations",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListStockReservationsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getReleaseStockReservationMockHandler = (
+  overrideResponse?:
+    | StockReservation
+    | ((
+        info: Parameters<Parameters<typeof http.delete>[1]>[0],
+      ) => Promise<StockReservation> | StockReservation),
+  options?: RequestHandlerOptions,
+) => {
+  return http.delete(
+    "*/erp/stock/reservations/:reservationId",
+    async (info: Parameters<Parameters<typeof http.delete>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getReleaseStockReservationResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getReserveCalcLineMockHandler = (
+  overrideResponse?:
+    | CalcSheet
+    | ((info: Parameters<Parameters<typeof http.put>[1]>[0]) => Promise<CalcSheet> | CalcSheet),
+  options?: RequestHandlerOptions,
+) => {
+  return http.put(
+    "*/erp/calc/:number/lines/:lineId/reserve",
+    async (info: Parameters<Parameters<typeof http.put>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getReserveCalcLineResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getReleaseCalcLineReservationMockHandler = (
+  overrideResponse?:
+    | CalcSheet
+    | ((info: Parameters<Parameters<typeof http.delete>[1]>[0]) => Promise<CalcSheet> | CalcSheet),
+  options?: RequestHandlerOptions,
+) => {
+  return http.delete(
+    "*/erp/calc/:number/lines/:lineId/reserve",
+    async (info: Parameters<Parameters<typeof http.delete>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getReleaseCalcLineReservationResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getListCalcPriceRequestsMockHandler = (
+  overrideResponse?:
+    | PriceRequestList
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<PriceRequestList> | PriceRequestList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/erp/calc/:number/price-requests",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListCalcPriceRequestsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getCreateCalcPriceRequestMockHandler = (
+  overrideResponse?:
+    | PriceRequest
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<PriceRequest> | PriceRequest),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/erp/calc/:number/price-requests",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCreateCalcPriceRequestResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getAnswerPriceRequestMockHandler = (
+  overrideResponse?:
+    | PriceRequest
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<PriceRequest> | PriceRequest),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/erp/price-requests/:requestId/answer",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getAnswerPriceRequestResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getListStockSuppliersMockHandler = (
+  overrideResponse?:
+    | StockSupplierList
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<StockSupplierList> | StockSupplierList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/erp/stock/suppliers",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListStockSuppliersResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getListSupplierOrdersMockHandler = (
+  overrideResponse?:
+    | SupplierOrderList
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<SupplierOrderList> | SupplierOrderList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/erp/stock/orders",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListSupplierOrdersResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getCreateSupplierOrderMockHandler = (
+  overrideResponse?:
+    | SupplierOrderDetail
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<SupplierOrderDetail> | SupplierOrderDetail),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/erp/stock/orders",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCreateSupplierOrderResponseMock(),
+        { status: 201 },
+      );
+    },
+    options,
+  );
+};
+
+export const getCreateSupplierOrderFromRequestMockHandler = (
+  overrideResponse?:
+    | SupplierOrderDetail
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<SupplierOrderDetail> | SupplierOrderDetail),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/erp/stock/orders/from-request",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCreateSupplierOrderFromRequestResponseMock(),
+        { status: 201 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetSupplierOrderMockHandler = (
+  overrideResponse?:
+    | SupplierOrderDetail
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<SupplierOrderDetail> | SupplierOrderDetail),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/erp/stock/orders/:orderNumber",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetSupplierOrderResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getUpdateSupplierOrderMockHandler = (
+  overrideResponse?:
+    | SupplierOrderDetail
+    | ((
+        info: Parameters<Parameters<typeof http.patch>[1]>[0],
+      ) => Promise<SupplierOrderDetail> | SupplierOrderDetail),
+  options?: RequestHandlerOptions,
+) => {
+  return http.patch(
+    "*/erp/stock/orders/:orderNumber",
+    async (info: Parameters<Parameters<typeof http.patch>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUpdateSupplierOrderResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getSendSupplierOrderMockHandler = (
+  overrideResponse?:
+    | SupplierOrderDetail
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<SupplierOrderDetail> | SupplierOrderDetail),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/erp/stock/orders/:orderNumber/send",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getSendSupplierOrderResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getConfirmSupplierOrderMockHandler = (
+  overrideResponse?:
+    | SupplierOrderDetail
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<SupplierOrderDetail> | SupplierOrderDetail),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/erp/stock/orders/:orderNumber/confirm",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getConfirmSupplierOrderResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getCancelSupplierOrderMockHandler = (
+  overrideResponse?:
+    | SupplierOrderDetail
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<SupplierOrderDetail> | SupplierOrderDetail),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/erp/stock/orders/:orderNumber/cancel",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCancelSupplierOrderResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getReceiveSupplierOrderMockHandler = (
+  overrideResponse?:
+    | SupplierOrderDetail
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<SupplierOrderDetail> | SupplierOrderDetail),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/erp/stock/orders/:orderNumber/receipts",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getReceiveSupplierOrderResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getListStockReceiptsMockHandler = (
+  overrideResponse?:
+    | StockReceipts
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<StockReceipts> | StockReceipts),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/erp/stock/receipts",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListStockReceiptsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getListStockShipmentsMockHandler = (
+  overrideResponse?:
+    | StockShipmentList
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<StockShipmentList> | StockShipmentList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/erp/stock/shipments",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListStockShipmentsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getShipFromStockMockHandler = (
+  overrideResponse?:
+    | StockShipment
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<StockShipment> | StockShipment),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/erp/stock/shipments",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getShipFromStockResponseMock(),
+        { status: 201 },
+      );
+    },
+    options,
+  );
+};
+
+export const getListOverdueSupplierOrdersMockHandler = (
+  overrideResponse?:
+    | SupplierOrderList
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<SupplierOrderList> | SupplierOrderList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/erp/stock/overdue",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListOverdueSupplierOrdersResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
 export const getListCrmLeadsMockHandler = (
   overrideResponse?:
     | LeadPage
@@ -13979,6 +16848,30 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getSignCalcLineMockHandler(),
   getMarkCalcReadyMockHandler(),
   getParseCalcTextMockHandler(),
+  getListStockBalancesMockHandler(),
+  getGetStockProductMockHandler(),
+  getAdjustStockMockHandler(),
+  getListStockReservationsMockHandler(),
+  getReleaseStockReservationMockHandler(),
+  getReserveCalcLineMockHandler(),
+  getReleaseCalcLineReservationMockHandler(),
+  getListCalcPriceRequestsMockHandler(),
+  getCreateCalcPriceRequestMockHandler(),
+  getAnswerPriceRequestMockHandler(),
+  getListStockSuppliersMockHandler(),
+  getListSupplierOrdersMockHandler(),
+  getCreateSupplierOrderMockHandler(),
+  getCreateSupplierOrderFromRequestMockHandler(),
+  getGetSupplierOrderMockHandler(),
+  getUpdateSupplierOrderMockHandler(),
+  getSendSupplierOrderMockHandler(),
+  getConfirmSupplierOrderMockHandler(),
+  getCancelSupplierOrderMockHandler(),
+  getReceiveSupplierOrderMockHandler(),
+  getListStockReceiptsMockHandler(),
+  getListStockShipmentsMockHandler(),
+  getShipFromStockMockHandler(),
+  getListOverdueSupplierOrdersMockHandler(),
   getListCrmLeadsMockHandler(),
   getGetCrmLeadMockHandler(),
   getListCrmClientsMockHandler(),

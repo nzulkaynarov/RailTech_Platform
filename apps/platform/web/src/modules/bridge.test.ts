@@ -150,7 +150,9 @@ describe("исполнимость адреса: есть ли экран в П�
     ["/eds/new?type=memo", true],
     ["/eds/payments/%D0%A1%D0%A7-2026%2F142", false],
     ["/erp/calc", true],
-    ["/erp/stock", false],
+    ["/erp/stock", true],
+    ["/erp/stock/%D0%97%D0%9F-2026-029", true],
+    ["/erp/catalog", false],
     ["/nowhere/at-all", true],
   ])("%s → %s", (path, expected) => {
     expect(isActionable(path)).toBe(expected);

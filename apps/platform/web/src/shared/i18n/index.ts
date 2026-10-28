@@ -23,6 +23,7 @@ import enApprovals from "./en/approvals.json";
 import enModules from "./en/modules.json";
 import enProfile from "./en/profile.json";
 import enShell from "./en/shell.json";
+import enStock from "./en/stock.json";
 import enUi from "./en/ui.json";
 import ruAudit from "./ru/audit.json";
 import ruBridge from "./ru/bridge.json";
@@ -46,6 +47,7 @@ import ruApprovals from "./ru/approvals.json";
 import ruModules from "./ru/modules.json";
 import ruProfile from "./ru/profile.json";
 import ruShell from "./ru/shell.json";
+import ruStock from "./ru/stock.json";
 import ruUi from "./ru/ui.json";
 import uzAudit from "./uz/audit.json";
 import uzBridge from "./uz/bridge.json";
@@ -69,6 +71,7 @@ import uzApprovals from "./uz/approvals.json";
 import uzModules from "./uz/modules.json";
 import uzProfile from "./uz/profile.json";
 import uzShell from "./uz/shell.json";
+import uzStock from "./uz/stock.json";
 import uzUi from "./uz/ui.json";
 
 export const LANGUAGES = ["ru", "uz", "en"] as const;
@@ -81,6 +84,7 @@ export const resources = {
     bridge: ruBridge,
     calc: ruCalc,
     shell: ruShell,
+    stock: ruStock,
     modules: ruModules,
     dictionary: ruDictionary,
     documents: ruDocuments,
@@ -106,6 +110,7 @@ export const resources = {
     bridge: uzBridge,
     calc: uzCalc,
     shell: uzShell,
+    stock: uzStock,
     modules: uzModules,
     dictionary: uzDictionary,
     documents: uzDocuments,
@@ -131,6 +136,7 @@ export const resources = {
     bridge: enBridge,
     calc: enCalc,
     shell: enShell,
+    stock: enStock,
     modules: enModules,
     dictionary: enDictionary,
     documents: enDocuments,

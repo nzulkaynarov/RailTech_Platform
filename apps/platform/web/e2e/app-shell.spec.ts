@@ -85,8 +85,10 @@ test.describe("панели", () => {
     await settledScreenshot(page, "erp-calc");
 
     // раздел-заглушка: выбирать нечего — боковое окно закрыто (W15-H4); «Панель» открывает его
-    await page.goto("/erp/stock");
-    await expect(page.getByRole("heading", { level: 1, name: "Склад" })).toBeVisible();
+    await page.goto("/erp/catalog");
+    await expect(
+      page.getByRole("heading", { level: 1, name: "Номенклатура и поставщики" }),
+    ).toBeVisible();
     await expect(panel).toHaveCount(0);
     await page.getByRole("button", { name: "Панель", exact: true }).click();
     await expect(panel).toBeVisible();

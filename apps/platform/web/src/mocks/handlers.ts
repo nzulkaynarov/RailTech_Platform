@@ -18,6 +18,7 @@ import { edsApprovalsHandlers } from "./edsApprovals";
 import { bridgeHandlers } from "./bridgeHandlers";
 import { edsLettersHandlers } from "./edsLetters";
 import { erpCalcHandlers } from "./erpCalc";
+import { erpStockHandlers } from "./erpStock";
 import { adminUsersHandlers } from "./adminUsers";
 import { edsDocumentsHandlers } from "./edsDocuments";
 import { eventStreamHandlers } from "./eventStream";
@@ -163,6 +164,7 @@ export const handlers = [
   ...edsLettersHandlers,
   ...edsApprovalsHandlers,
   ...erpCalcHandlers,
+  ...erpStockHandlers,
 
   getGetHealthMockHandler({
     status: "ok",

@@ -13,6 +13,7 @@ import { reworkQueueItems } from "./edsRework";
 import { computeAccess, type MockRole } from "./fixtures/roles";
 import { readSession, sessionRoles } from "./mockSession";
 import { crmNotificationsOf, markCrmNoteRead, ticketQueueItems } from "./ticketsHandlers";
+import { stockQueueItems } from "./erpStock";
 import { coveredQueueItems } from "./profileStore";
 
 /**
@@ -165,6 +166,7 @@ export const feedHandlers = [
     const own = [
       ...queueForView(roles.view),
       ...ticketQueueItems(roles.view), // обращения живут в CRM, как и лиды
+      ...stockQueueItems(roles.view), // просроченные заказы поставщикам (ERP, D2-2)
     ].filter((i) =>
       i.kind.endsWith("_lead") || i.kind === "ticket"
         ? !crmDown()
@@ -192,6 +194,7 @@ export const feedHandlers = [
     const denied = noQueue(roles);
     if (denied) return denied;
     const tickets = ticketQueueItems(roles.view).length;
+    const stockOverdue = stockQueueItems(roles.view).length;
     return HttpResponse.json({
       // ERP не отвечает: бейджи разделов ERP (EDS, ERP, «Все проекты») не показываются, остаются очередь и CRM
       items: [
@@ -204,6 +207,10 @@ export const feedHandlers = [
             (c) =>
               !edsDown() || !(c.module === "eds" && ["inbox", "approvals"].includes(c.section)),
           ),
+        // «Расчёт · Склад»: просроченные заказы поставщикам (D2-2)
+        ...(stockOverdue > 0 && !erpDown()
+          ? [{ module: "erp" as const, section: "stock", count: stockOverdue, attention: true }]
+          : []),
         // «Настройки · Обращения сотрудников»: число новых обращений (W15-H7)
         ...(tickets > 0
           ? [{ module: "admin" as const, section: "tickets", count: tickets, attention: true }]

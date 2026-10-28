@@ -173,6 +173,11 @@ import type {
   ListMemoApprovalsParams,
   ListNotificationsParams,
   ListQuoteApprovalsParams,
+  ListStockBalancesParams,
+  ListStockReservationsParams,
+  ListStockShipmentsParams,
+  ListStockSuppliersParams,
+  ListSupplierOrdersParams,
   ListTicketsParams,
   LoginIn,
   LogoUpload,
@@ -197,6 +202,10 @@ import type {
   PasswordConfirm,
   PlatformSettings,
   PlatformSettingsUpdate,
+  PriceRequest,
+  PriceRequestAnswerIn,
+  PriceRequestIn,
+  PriceRequestList,
   Profile,
   ProfileUpdate,
   ProviderKeyIn,
@@ -250,6 +259,27 @@ import type {
   SmtpConnector,
   SmtpSettingsIn,
   SpendReport,
+  StockAdjustIn,
+  StockBalanceList,
+  StockConflictResponse,
+  StockProduct,
+  StockReceipts,
+  StockReservation,
+  StockReservationList,
+  StockReserveIn,
+  StockShipIn,
+  StockShipment,
+  StockShipmentList,
+  StockSupplierList,
+  SupplierOrderCancelIn,
+  SupplierOrderConfirmIn,
+  SupplierOrderCreate,
+  SupplierOrderDetail,
+  SupplierOrderFromRequest,
+  SupplierOrderList,
+  SupplierOrderPatch,
+  SupplierOrderReceiptIn,
+  SupplierOrderSendIn,
   SystemStatus,
   TeamNoteIn,
   TelegramChannelList,
@@ -25560,6 +25590,3221 @@ export const useParseCalcText = <
 > => {
   return useMutation(getParseCalcTextMutationOptions(options), queryClient);
 };
+
+export const getListStockBalancesUrl = (params?: ListStockBalancesParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/erp/stock/balances?${stringifiedParams}`
+    : `/api/v1/erp/stock/balances`;
+};
+
+/**
+ * ERP `GET /stock/balances/`: товары с остатком, резервом или ожидаемым приходом (поиск `q` — по всей номенклатуре). Остаток, резерв, свободный остаток (остаток минус резервы), ожидаемый приход и ближайшая дата, ячейки. Раздел `erp.stock` — чтение.
+ * @summary Склад · Остатки и резервы по номенклатуре
+ */
+export const listStockBalances = async (
+  params?: ListStockBalancesParams,
+  options?: Parameters<typeof http>[1],
+): Promise<StockBalanceList> => {
+  return http<StockBalanceList>(getListStockBalancesUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListStockBalancesQueryKey = (params?: ListStockBalancesParams) => {
+  return [`/api/v1/erp/stock/balances`, ...(params ? [params] : [])] as const;
+};
+
+export const getListStockBalancesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listStockBalances>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListStockBalancesParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listStockBalances>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListStockBalancesQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listStockBalances>>> = ({ signal }) =>
+    listStockBalances(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listStockBalances>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListStockBalancesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listStockBalances>>
+>;
+export type ListStockBalancesQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse
+>;
+
+export function useListStockBalances<
+  TData = Awaited<ReturnType<typeof listStockBalances>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params: undefined | ListStockBalancesParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listStockBalances>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listStockBalances>>,
+          TError,
+          Awaited<ReturnType<typeof listStockBalances>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListStockBalances<
+  TData = Awaited<ReturnType<typeof listStockBalances>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListStockBalancesParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listStockBalances>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listStockBalances>>,
+          TError,
+          Awaited<ReturnType<typeof listStockBalances>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListStockBalances<
+  TData = Awaited<ReturnType<typeof listStockBalances>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListStockBalancesParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listStockBalances>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Склад · Остатки и резервы по номенклатуре
+ */
+
+export function useListStockBalances<
+  TData = Awaited<ReturnType<typeof listStockBalances>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListStockBalancesParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listStockBalances>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListStockBalancesQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getGetStockProductUrl = (productId: string) => {
+  return `/api/v1/erp/stock/balances/${productId}`;
+};
+
+/**
+ * ERP `GET /stock/balances/{product_id}/`: ячейки с остатками, резервы по проектам, заказы поставщикам с ожидаемым приходом и последние движения. Раздел `erp.stock` — чтение.
+ * @summary Склад · Товар: ячейки, резервы, приход, движения
+ */
+export const getStockProduct = async (
+  productId: string,
+  options?: Parameters<typeof http>[1],
+): Promise<StockProduct> => {
+  return http<StockProduct>(getGetStockProductUrl(productId), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetStockProductQueryKey = (productId: string) => {
+  return [`/api/v1/erp/stock/balances/${productId}`] as const;
+};
+
+export const getGetStockProductQueryOptions = <
+  TData = Awaited<ReturnType<typeof getStockProduct>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  productId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getStockProduct>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetStockProductQueryKey(productId);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getStockProduct>>> = ({ signal }) =>
+    getStockProduct(productId, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: productId !== null && productId !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getStockProduct>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetStockProductQueryResult = NonNullable<Awaited<ReturnType<typeof getStockProduct>>>;
+export type GetStockProductQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useGetStockProduct<
+  TData = Awaited<ReturnType<typeof getStockProduct>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  productId: string,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getStockProduct>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getStockProduct>>,
+          TError,
+          Awaited<ReturnType<typeof getStockProduct>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetStockProduct<
+  TData = Awaited<ReturnType<typeof getStockProduct>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  productId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getStockProduct>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getStockProduct>>,
+          TError,
+          Awaited<ReturnType<typeof getStockProduct>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetStockProduct<
+  TData = Awaited<ReturnType<typeof getStockProduct>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  productId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getStockProduct>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Склад · Товар: ячейки, резервы, приход, движения
+ */
+
+export function useGetStockProduct<
+  TData = Awaited<ReturnType<typeof getStockProduct>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  productId: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getStockProduct>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetStockProductQueryOptions(productId, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getAdjustStockUrl = () => {
+  return `/api/v1/erp/stock/adjustments`;
+};
+
+/**
+ * ERP `POST /stock/adjustments/`: начальные остатки и итоги инвентаризации — плюс оприходовать, минус списать, в ячейке. Ниже нуля и ниже суммы резервов остаток не уходит (409 `details.reason = not_enough_stock` или `below_reserved`). Раздел `erp.stock` — полный.
+ * @summary Склад · Оприходовать или списать вручную
+ */
+export const adjustStock = async (
+  stockAdjustIn: StockAdjustIn,
+  options?: Parameters<typeof http>[1],
+): Promise<StockProduct> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<StockProduct>(getAdjustStockUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(stockAdjustIn),
+  });
+};
+
+export const getAdjustStockMutationKey = () => ["adjustStock"] as const;
+
+export const getAdjustStockMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | StockConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof adjustStock>>,
+    TError,
+    AdjustStockMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof adjustStock>>,
+  TError,
+  AdjustStockMutationVariables,
+  TContext
+> => {
+  const mutationKey = getAdjustStockMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof adjustStock>>,
+    AdjustStockMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return adjustStock(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AdjustStockMutationResult = NonNullable<Awaited<ReturnType<typeof adjustStock>>>;
+export type AdjustStockMutationBody = StockAdjustIn;
+export type AdjustStockMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | StockConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type AdjustStockMutationVariables = { data: StockAdjustIn };
+
+/**
+ * @summary Склад · Оприходовать или списать вручную
+ */
+export const useAdjustStock = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | StockConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof adjustStock>>,
+      TError,
+      AdjustStockMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof adjustStock>>,
+  TError,
+  AdjustStockMutationVariables,
+  TContext
+> => {
+  return useMutation(getAdjustStockMutationOptions(options), queryClient);
+};
+
+export const getListStockReservationsUrl = (params?: ListStockReservationsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/erp/stock/reservations?${stringifiedParams}`
+    : `/api/v1/erp/stock/reservations`;
+};
+
+/**
+ * ERP `GET /stock/reservations/`: действующие резервы; `request` — только резервы этой заявки или проекта (для отгрузки). Раздел `erp.stock` — чтение.
+ * @summary Склад · Резервы под проекты
+ */
+export const listStockReservations = async (
+  params?: ListStockReservationsParams,
+  options?: Parameters<typeof http>[1],
+): Promise<StockReservationList> => {
+  return http<StockReservationList>(getListStockReservationsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListStockReservationsQueryKey = (params?: ListStockReservationsParams) => {
+  return [`/api/v1/erp/stock/reservations`, ...(params ? [params] : [])] as const;
+};
+
+export const getListStockReservationsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listStockReservations>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  params?: ListStockReservationsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listStockReservations>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListStockReservationsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listStockReservations>>> = ({ signal }) =>
+    listStockReservations(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listStockReservations>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListStockReservationsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listStockReservations>>
+>;
+export type ListStockReservationsQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useListStockReservations<
+  TData = Awaited<ReturnType<typeof listStockReservations>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  params: undefined | ListStockReservationsParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listStockReservations>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listStockReservations>>,
+          TError,
+          Awaited<ReturnType<typeof listStockReservations>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListStockReservations<
+  TData = Awaited<ReturnType<typeof listStockReservations>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  params?: ListStockReservationsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listStockReservations>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listStockReservations>>,
+          TError,
+          Awaited<ReturnType<typeof listStockReservations>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListStockReservations<
+  TData = Awaited<ReturnType<typeof listStockReservations>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  params?: ListStockReservationsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listStockReservations>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Склад · Резервы под проекты
+ */
+
+export function useListStockReservations<
+  TData = Awaited<ReturnType<typeof listStockReservations>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  params?: ListStockReservationsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listStockReservations>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListStockReservationsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getReleaseStockReservationUrl = (reservationId: string) => {
+  return `/api/v1/erp/stock/reservations/${reservationId}`;
+};
+
+/**
+ * ERP `DELETE /stock/reservations/{id}/`: ещё не отгруженное возвращается в свободный остаток. Раздел `erp.stock` — полный.
+ * @summary Склад · Снять резерв
+ */
+export const releaseStockReservation = async (
+  reservationId: string,
+  options?: Parameters<typeof http>[1],
+): Promise<StockReservation> => {
+  return http<StockReservation>(getReleaseStockReservationUrl(reservationId), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getReleaseStockReservationMutationKey = () => ["releaseStockReservation"] as const;
+
+export const getReleaseStockReservationMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | StockConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof releaseStockReservation>>,
+    TError,
+    ReleaseStockReservationMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof releaseStockReservation>>,
+  TError,
+  ReleaseStockReservationMutationVariables,
+  TContext
+> => {
+  const mutationKey = getReleaseStockReservationMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof releaseStockReservation>>,
+    ReleaseStockReservationMutationVariables
+  > = (props) => {
+    const { reservationId } = props ?? {};
+
+    return releaseStockReservation(reservationId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ReleaseStockReservationMutationResult = NonNullable<
+  Awaited<ReturnType<typeof releaseStockReservation>>
+>;
+
+export type ReleaseStockReservationMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | StockConflictResponse
+  | BackendUnavailableResponse
+>;
+export type ReleaseStockReservationMutationVariables = { reservationId: string };
+
+/**
+ * @summary Склад · Снять резерв
+ */
+export const useReleaseStockReservation = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | StockConflictResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof releaseStockReservation>>,
+      TError,
+      ReleaseStockReservationMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof releaseStockReservation>>,
+  TError,
+  ReleaseStockReservationMutationVariables,
+  TContext
+> => {
+  return useMutation(getReleaseStockReservationMutationOptions(options), queryClient);
+};
+
+export const getReserveCalcLineUrl = (number: string, lineId: string) => {
+  return `/api/v1/erp/calc/${number}/lines/${lineId}/reserve`;
+};
+
+/**
+ * ERP `POST /stock/reservations/` (резерв строки один: повтор меняет количество). Не больше количества строки и свободного остатка (409 `details.reason = not_enough_stock`, `details.free`); строка без карточки каталога — 409 `product_required`. Резерв не снимает визу строки. Ответ — обновлённый расчёт (колонка «Склад»: ячейка и резерв). Раздел `erp.stock` — полный.
+ * @summary Расчёт · Зарезервировать товар под строку
+ */
+export const reserveCalcLine = async (
+  number: string,
+  lineId: string,
+  stockReserveIn: StockReserveIn,
+  options?: Parameters<typeof http>[1],
+): Promise<CalcSheet> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<CalcSheet>(getReserveCalcLineUrl(number, lineId), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(stockReserveIn),
+  });
+};
+
+export const getReserveCalcLineMutationKey = () => ["reserveCalcLine"] as const;
+
+export const getReserveCalcLineMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | StockConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof reserveCalcLine>>,
+    TError,
+    ReserveCalcLineMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof reserveCalcLine>>,
+  TError,
+  ReserveCalcLineMutationVariables,
+  TContext
+> => {
+  const mutationKey = getReserveCalcLineMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof reserveCalcLine>>,
+    ReserveCalcLineMutationVariables
+  > = (props) => {
+    const { number, lineId, data } = props ?? {};
+
+    return reserveCalcLine(number, lineId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ReserveCalcLineMutationResult = NonNullable<
+  Awaited<ReturnType<typeof reserveCalcLine>>
+>;
+export type ReserveCalcLineMutationBody = StockReserveIn;
+export type ReserveCalcLineMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | StockConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type ReserveCalcLineMutationVariables = {
+  number: string;
+  lineId: string;
+  data: StockReserveIn;
+};
+
+/**
+ * @summary Расчёт · Зарезервировать товар под строку
+ */
+export const useReserveCalcLine = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | StockConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof reserveCalcLine>>,
+      TError,
+      ReserveCalcLineMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof reserveCalcLine>>,
+  TError,
+  ReserveCalcLineMutationVariables,
+  TContext
+> => {
+  return useMutation(getReserveCalcLineMutationOptions(options), queryClient);
+};
+
+export const getReleaseCalcLineReservationUrl = (number: string, lineId: string) => {
+  return `/api/v1/erp/calc/${number}/lines/${lineId}/reserve`;
+};
+
+/**
+ * BFF находит резерв строки среди резервов заявки и вызывает ERP `DELETE /stock/reservations/{id}/`. Раздел `erp.stock` — полный.
+ * @summary Расчёт · Снять резерв строки
+ */
+export const releaseCalcLineReservation = async (
+  number: string,
+  lineId: string,
+  options?: Parameters<typeof http>[1],
+): Promise<CalcSheet> => {
+  return http<CalcSheet>(getReleaseCalcLineReservationUrl(number, lineId), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getReleaseCalcLineReservationMutationKey = () =>
+  ["releaseCalcLineReservation"] as const;
+
+export const getReleaseCalcLineReservationMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | StockConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof releaseCalcLineReservation>>,
+    TError,
+    ReleaseCalcLineReservationMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof releaseCalcLineReservation>>,
+  TError,
+  ReleaseCalcLineReservationMutationVariables,
+  TContext
+> => {
+  const mutationKey = getReleaseCalcLineReservationMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof releaseCalcLineReservation>>,
+    ReleaseCalcLineReservationMutationVariables
+  > = (props) => {
+    const { number, lineId } = props ?? {};
+
+    return releaseCalcLineReservation(number, lineId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ReleaseCalcLineReservationMutationResult = NonNullable<
+  Awaited<ReturnType<typeof releaseCalcLineReservation>>
+>;
+
+export type ReleaseCalcLineReservationMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | StockConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type ReleaseCalcLineReservationMutationVariables = { number: string; lineId: string };
+
+/**
+ * @summary Расчёт · Снять резерв строки
+ */
+export const useReleaseCalcLineReservation = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | StockConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof releaseCalcLineReservation>>,
+      TError,
+      ReleaseCalcLineReservationMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof releaseCalcLineReservation>>,
+  TError,
+  ReleaseCalcLineReservationMutationVariables,
+  TContext
+> => {
+  return useMutation(getReleaseCalcLineReservationMutationOptions(options), queryClient);
+};
+
+export const getListCalcPriceRequestsUrl = (number: string) => {
+  return `/api/v1/erp/calc/${number}/price-requests`;
+};
+
+/**
+ * ERP `GET /stock/price-requests/?deal_id=`: кто, когда, кому и по каким строкам запрашивал цену. Раздел `erp.calc` — чтение.
+ * @summary Расчёт · Журнал запросов цены у поставщиков
+ */
+export const listCalcPriceRequests = async (
+  number: string,
+  options?: Parameters<typeof http>[1],
+): Promise<PriceRequestList> => {
+  return http<PriceRequestList>(getListCalcPriceRequestsUrl(number), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListCalcPriceRequestsQueryKey = (number: string) => {
+  return [`/api/v1/erp/calc/${number}/price-requests`] as const;
+};
+
+export const getListCalcPriceRequestsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listCalcPriceRequests>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  number: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCalcPriceRequests>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListCalcPriceRequestsQueryKey(number);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listCalcPriceRequests>>> = ({ signal }) =>
+    listCalcPriceRequests(number, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: number !== null && number !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof listCalcPriceRequests>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type ListCalcPriceRequestsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listCalcPriceRequests>>
+>;
+export type ListCalcPriceRequestsQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useListCalcPriceRequests<
+  TData = Awaited<ReturnType<typeof listCalcPriceRequests>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  number: string,
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCalcPriceRequests>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listCalcPriceRequests>>,
+          TError,
+          Awaited<ReturnType<typeof listCalcPriceRequests>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListCalcPriceRequests<
+  TData = Awaited<ReturnType<typeof listCalcPriceRequests>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  number: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCalcPriceRequests>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listCalcPriceRequests>>,
+          TError,
+          Awaited<ReturnType<typeof listCalcPriceRequests>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListCalcPriceRequests<
+  TData = Awaited<ReturnType<typeof listCalcPriceRequests>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  number: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCalcPriceRequests>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Расчёт · Журнал запросов цены у поставщиков
+ */
+
+export function useListCalcPriceRequests<
+  TData = Awaited<ReturnType<typeof listCalcPriceRequests>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  number: string,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listCalcPriceRequests>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListCalcPriceRequestsQueryOptions(number, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getCreateCalcPriceRequestUrl = (number: string) => {
+  return `/api/v1/erp/calc/${number}/price-requests`;
+};
+
+/**
+ * ERP `POST /stock/price-requests/`: письмо поставщику (почта ERP, шаблон; ответить можно на почту сотрудника) по выбранным строкам-товарам расчёта и запись в журнале. У поставщика нет почты — 409 `details.reason = supplier_email_required` (можно указать адрес в `to_email`). Письмо не ушло (почта выключена или недоступна) — запрос остаётся в журнале со статусом `failed`, ответ 200. Цена из ответа поставщика вносится вручную в строку расчёта (`PATCH …/lines/{line_id}`). Раздел `erp.stock` — полный.
+ * @summary Расчёт · Запросить цену у поставщика
+ */
+export const createCalcPriceRequest = async (
+  number: string,
+  priceRequestIn: PriceRequestIn,
+  options?: Parameters<typeof http>[1],
+): Promise<PriceRequest> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<PriceRequest>(getCreateCalcPriceRequestUrl(number), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(priceRequestIn),
+  });
+};
+
+export const getCreateCalcPriceRequestMutationKey = () => ["createCalcPriceRequest"] as const;
+
+export const getCreateCalcPriceRequestMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | StockConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createCalcPriceRequest>>,
+    TError,
+    CreateCalcPriceRequestMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createCalcPriceRequest>>,
+  TError,
+  CreateCalcPriceRequestMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateCalcPriceRequestMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createCalcPriceRequest>>,
+    CreateCalcPriceRequestMutationVariables
+  > = (props) => {
+    const { number, data } = props ?? {};
+
+    return createCalcPriceRequest(number, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateCalcPriceRequestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createCalcPriceRequest>>
+>;
+export type CreateCalcPriceRequestMutationBody = PriceRequestIn;
+export type CreateCalcPriceRequestMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | StockConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type CreateCalcPriceRequestMutationVariables = { number: string; data: PriceRequestIn };
+
+/**
+ * @summary Расчёт · Запросить цену у поставщика
+ */
+export const useCreateCalcPriceRequest = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | StockConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createCalcPriceRequest>>,
+      TError,
+      CreateCalcPriceRequestMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createCalcPriceRequest>>,
+  TError,
+  CreateCalcPriceRequestMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateCalcPriceRequestMutationOptions(options), queryClient);
+};
+
+export const getAnswerPriceRequestUrl = (requestId: string) => {
+  return `/api/v1/erp/price-requests/${requestId}/answer`;
+};
+
+/**
+ * ERP `POST /stock/price-requests/{id}/answer/`: поставщик ответил, цена внесена в расчёт. Раздел `erp.stock` — полный.
+ * @summary Расчёт · Отметить ответ поставщика
+ */
+export const answerPriceRequest = async (
+  requestId: string,
+  priceRequestAnswerIn?: PriceRequestAnswerIn,
+  options?: Parameters<typeof http>[1],
+): Promise<PriceRequest> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<PriceRequest>(getAnswerPriceRequestUrl(requestId), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(priceRequestAnswerIn),
+  });
+};
+
+export const getAnswerPriceRequestMutationKey = () => ["answerPriceRequest"] as const;
+
+export const getAnswerPriceRequestMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | StockConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof answerPriceRequest>>,
+    TError,
+    AnswerPriceRequestMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof answerPriceRequest>>,
+  TError,
+  AnswerPriceRequestMutationVariables,
+  TContext
+> => {
+  const mutationKey = getAnswerPriceRequestMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof answerPriceRequest>>,
+    AnswerPriceRequestMutationVariables
+  > = (props) => {
+    const { requestId, data } = props ?? {};
+
+    return answerPriceRequest(requestId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AnswerPriceRequestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof answerPriceRequest>>
+>;
+export type AnswerPriceRequestMutationBody = PriceRequestAnswerIn | undefined;
+export type AnswerPriceRequestMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | StockConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type AnswerPriceRequestMutationVariables = {
+  requestId: string;
+  data?: PriceRequestAnswerIn;
+};
+
+/**
+ * @summary Расчёт · Отметить ответ поставщика
+ */
+export const useAnswerPriceRequest = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | StockConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof answerPriceRequest>>,
+      TError,
+      AnswerPriceRequestMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof answerPriceRequest>>,
+  TError,
+  AnswerPriceRequestMutationVariables,
+  TContext
+> => {
+  return useMutation(getAnswerPriceRequestMutationOptions(options), queryClient);
+};
+
+export const getListStockSuppliersUrl = (params?: ListStockSuppliersParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/erp/stock/suppliers?${stringifiedParams}`
+    : `/api/v1/erp/stock/suppliers`;
+};
+
+/**
+ * ERP `GET /stock/suppliers/`: внешние поставщики (тип «поставщик», не своя компания) для запроса цены и заказа. Справочник поставщиков ведёт D2-3. Раздел `erp.stock` — чтение.
+ * @summary Склад · Поставщики для выбора
+ */
+export const listStockSuppliers = async (
+  params?: ListStockSuppliersParams,
+  options?: Parameters<typeof http>[1],
+): Promise<StockSupplierList> => {
+  return http<StockSupplierList>(getListStockSuppliersUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListStockSuppliersQueryKey = (params?: ListStockSuppliersParams) => {
+  return [`/api/v1/erp/stock/suppliers`, ...(params ? [params] : [])] as const;
+};
+
+export const getListStockSuppliersQueryOptions = <
+  TData = Awaited<ReturnType<typeof listStockSuppliers>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListStockSuppliersParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listStockSuppliers>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListStockSuppliersQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listStockSuppliers>>> = ({ signal }) =>
+    listStockSuppliers(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listStockSuppliers>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListStockSuppliersQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listStockSuppliers>>
+>;
+export type ListStockSuppliersQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse
+>;
+
+export function useListStockSuppliers<
+  TData = Awaited<ReturnType<typeof listStockSuppliers>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params: undefined | ListStockSuppliersParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listStockSuppliers>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listStockSuppliers>>,
+          TError,
+          Awaited<ReturnType<typeof listStockSuppliers>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListStockSuppliers<
+  TData = Awaited<ReturnType<typeof listStockSuppliers>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListStockSuppliersParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listStockSuppliers>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listStockSuppliers>>,
+          TError,
+          Awaited<ReturnType<typeof listStockSuppliers>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListStockSuppliers<
+  TData = Awaited<ReturnType<typeof listStockSuppliers>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListStockSuppliersParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listStockSuppliers>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Склад · Поставщики для выбора
+ */
+
+export function useListStockSuppliers<
+  TData = Awaited<ReturnType<typeof listStockSuppliers>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListStockSuppliersParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listStockSuppliers>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListStockSuppliersQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getListSupplierOrdersUrl = (params?: ListSupplierOrdersParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/erp/stock/orders?${stringifiedParams}`
+    : `/api/v1/erp/stock/orders`;
+};
+
+/**
+ * ERP `GET /stock/orders/`: заказы ЗП-ГГГГ-NNN — статус, поставщик, ожидаемая дата, просрочка, приёмка (нет, частичная, полная), заявки и проекты. Сумма — только тому, кто видит цены поставщиков. Раздел `erp.stock` — чтение.
+ * @summary Склад · Заказы поставщикам
+ */
+export const listSupplierOrders = async (
+  params?: ListSupplierOrdersParams,
+  options?: Parameters<typeof http>[1],
+): Promise<SupplierOrderList> => {
+  return http<SupplierOrderList>(getListSupplierOrdersUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListSupplierOrdersQueryKey = (params?: ListSupplierOrdersParams) => {
+  return [`/api/v1/erp/stock/orders`, ...(params ? [params] : [])] as const;
+};
+
+export const getListSupplierOrdersQueryOptions = <
+  TData = Awaited<ReturnType<typeof listSupplierOrders>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListSupplierOrdersParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listSupplierOrders>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListSupplierOrdersQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listSupplierOrders>>> = ({ signal }) =>
+    listSupplierOrders(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listSupplierOrders>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListSupplierOrdersQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listSupplierOrders>>
+>;
+export type ListSupplierOrdersQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse
+>;
+
+export function useListSupplierOrders<
+  TData = Awaited<ReturnType<typeof listSupplierOrders>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params: undefined | ListSupplierOrdersParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listSupplierOrders>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listSupplierOrders>>,
+          TError,
+          Awaited<ReturnType<typeof listSupplierOrders>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListSupplierOrders<
+  TData = Awaited<ReturnType<typeof listSupplierOrders>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListSupplierOrdersParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listSupplierOrders>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listSupplierOrders>>,
+          TError,
+          Awaited<ReturnType<typeof listSupplierOrders>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListSupplierOrders<
+  TData = Awaited<ReturnType<typeof listSupplierOrders>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListSupplierOrdersParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listSupplierOrders>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Склад · Заказы поставщикам
+ */
+
+export function useListSupplierOrders<
+  TData = Awaited<ReturnType<typeof listSupplierOrders>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListSupplierOrdersParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listSupplierOrders>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListSupplierOrdersQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getCreateSupplierOrderUrl = () => {
+  return `/api/v1/erp/stock/orders`;
+};
+
+/**
+ * ERP `POST /stock/orders/`: черновик с номером ЗП-ГГГГ-NNN (без пропусков). Строки — только товары каталога; строка может быть привязана к строке расчёта заявки (тогда принятое резервируется под проект). Цены поставщика задаёт тот, кто их видит (403 `details.reason = prices_forbidden`). Раздел `erp.stock` — полный.
+ * @summary Склад · Создать заказ поставщику (черновик)
+ */
+export const createSupplierOrder = async (
+  supplierOrderCreate: SupplierOrderCreate,
+  options?: Parameters<typeof http>[1],
+): Promise<SupplierOrderDetail> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<SupplierOrderDetail>(getCreateSupplierOrderUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(supplierOrderCreate),
+  });
+};
+
+export const getCreateSupplierOrderMutationKey = () => ["createSupplierOrder"] as const;
+
+export const getCreateSupplierOrderMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | StockConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createSupplierOrder>>,
+    TError,
+    CreateSupplierOrderMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createSupplierOrder>>,
+  TError,
+  CreateSupplierOrderMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateSupplierOrderMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createSupplierOrder>>,
+    CreateSupplierOrderMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createSupplierOrder(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateSupplierOrderMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createSupplierOrder>>
+>;
+export type CreateSupplierOrderMutationBody = SupplierOrderCreate;
+export type CreateSupplierOrderMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | StockConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type CreateSupplierOrderMutationVariables = { data: SupplierOrderCreate };
+
+/**
+ * @summary Склад · Создать заказ поставщику (черновик)
+ */
+export const useCreateSupplierOrder = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | StockConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createSupplierOrder>>,
+      TError,
+      CreateSupplierOrderMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createSupplierOrder>>,
+  TError,
+  CreateSupplierOrderMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateSupplierOrderMutationOptions(options), queryClient);
+};
+
+export const getCreateSupplierOrderFromRequestUrl = () => {
+  return `/api/v1/erp/stock/orders/from-request`;
+};
+
+/**
+ * ERP `POST /stock/orders/from-deal/`: по строкам-товарам КП заявки недостающее количество (количество строки минус резерв минус уже заказанное в живых заказах). Нечего заказывать — 409 `details.reason = no_shortage`. Раздел `erp.stock` — полный.
+ * @summary Склад · Черновик заказа на дефицит проекта
+ */
+export const createSupplierOrderFromRequest = async (
+  supplierOrderFromRequest: SupplierOrderFromRequest,
+  options?: Parameters<typeof http>[1],
+): Promise<SupplierOrderDetail> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<SupplierOrderDetail>(getCreateSupplierOrderFromRequestUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(supplierOrderFromRequest),
+  });
+};
+
+export const getCreateSupplierOrderFromRequestMutationKey = () =>
+  ["createSupplierOrderFromRequest"] as const;
+
+export const getCreateSupplierOrderFromRequestMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | StockConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createSupplierOrderFromRequest>>,
+    TError,
+    CreateSupplierOrderFromRequestMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createSupplierOrderFromRequest>>,
+  TError,
+  CreateSupplierOrderFromRequestMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateSupplierOrderFromRequestMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createSupplierOrderFromRequest>>,
+    CreateSupplierOrderFromRequestMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createSupplierOrderFromRequest(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateSupplierOrderFromRequestMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createSupplierOrderFromRequest>>
+>;
+export type CreateSupplierOrderFromRequestMutationBody = SupplierOrderFromRequest;
+export type CreateSupplierOrderFromRequestMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | StockConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type CreateSupplierOrderFromRequestMutationVariables = { data: SupplierOrderFromRequest };
+
+/**
+ * @summary Склад · Черновик заказа на дефицит проекта
+ */
+export const useCreateSupplierOrderFromRequest = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | StockConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createSupplierOrderFromRequest>>,
+      TError,
+      CreateSupplierOrderFromRequestMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createSupplierOrderFromRequest>>,
+  TError,
+  CreateSupplierOrderFromRequestMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateSupplierOrderFromRequestMutationOptions(options), queryClient);
+};
+
+export const getGetSupplierOrderUrl = (orderNumber: string) => {
+  return `/api/v1/erp/stock/orders/${orderNumber}`;
+};
+
+/**
+ * ERP `GET /stock/orders/{id}/` (заказ по номеру находит BFF: `GET /stock/orders/?number=`). Состав, приёмки, журнал (кто и когда менял статус), права. Раздел `erp.stock` — чтение.
+ * @summary Склад · Заказ поставщику ЗП-…
+ */
+export const getSupplierOrder = async (
+  orderNumber: string,
+  options?: Parameters<typeof http>[1],
+): Promise<SupplierOrderDetail> => {
+  return http<SupplierOrderDetail>(getGetSupplierOrderUrl(orderNumber), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetSupplierOrderQueryKey = (orderNumber: string) => {
+  return [`/api/v1/erp/stock/orders/${orderNumber}`] as const;
+};
+
+export const getGetSupplierOrderQueryOptions = <
+  TData = Awaited<ReturnType<typeof getSupplierOrder>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  orderNumber: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSupplierOrder>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetSupplierOrderQueryKey(orderNumber);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getSupplierOrder>>> = ({ signal }) =>
+    getSupplierOrder(orderNumber, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: orderNumber !== null && orderNumber !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getSupplierOrder>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetSupplierOrderQueryResult = NonNullable<Awaited<ReturnType<typeof getSupplierOrder>>>;
+export type GetSupplierOrderQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useGetSupplierOrder<
+  TData = Awaited<ReturnType<typeof getSupplierOrder>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  orderNumber: string,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSupplierOrder>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSupplierOrder>>,
+          TError,
+          Awaited<ReturnType<typeof getSupplierOrder>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetSupplierOrder<
+  TData = Awaited<ReturnType<typeof getSupplierOrder>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  orderNumber: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSupplierOrder>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSupplierOrder>>,
+          TError,
+          Awaited<ReturnType<typeof getSupplierOrder>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetSupplierOrder<
+  TData = Awaited<ReturnType<typeof getSupplierOrder>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  orderNumber: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSupplierOrder>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Склад · Заказ поставщику ЗП-…
+ */
+
+export function useGetSupplierOrder<
+  TData = Awaited<ReturnType<typeof getSupplierOrder>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  orderNumber: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSupplierOrder>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetSupplierOrderQueryOptions(orderNumber, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getUpdateSupplierOrderUrl = (orderNumber: string) => {
+  return `/api/v1/erp/stock/orders/${orderNumber}`;
+};
+
+/**
+ * ERP `PATCH /stock/orders/{id}/`: состав и поставщик — только в черновике (409 `details.reason = order_not_draft`), ожидаемая дата и примечание — пока заказ не закрыт. Раздел `erp.stock` — полный.
+ * @summary Склад · Изменить заказ
+ */
+export const updateSupplierOrder = async (
+  orderNumber: string,
+  supplierOrderPatch: SupplierOrderPatch,
+  options?: Parameters<typeof http>[1],
+): Promise<SupplierOrderDetail> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<SupplierOrderDetail>(getUpdateSupplierOrderUrl(orderNumber), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(supplierOrderPatch),
+  });
+};
+
+export const getUpdateSupplierOrderMutationKey = () => ["updateSupplierOrder"] as const;
+
+export const getUpdateSupplierOrderMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | StockConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateSupplierOrder>>,
+    TError,
+    UpdateSupplierOrderMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateSupplierOrder>>,
+  TError,
+  UpdateSupplierOrderMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateSupplierOrderMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateSupplierOrder>>,
+    UpdateSupplierOrderMutationVariables
+  > = (props) => {
+    const { orderNumber, data } = props ?? {};
+
+    return updateSupplierOrder(orderNumber, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateSupplierOrderMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateSupplierOrder>>
+>;
+export type UpdateSupplierOrderMutationBody = SupplierOrderPatch;
+export type UpdateSupplierOrderMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | StockConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type UpdateSupplierOrderMutationVariables = {
+  orderNumber: string;
+  data: SupplierOrderPatch;
+};
+
+/**
+ * @summary Склад · Изменить заказ
+ */
+export const useUpdateSupplierOrder = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | StockConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof updateSupplierOrder>>,
+      TError,
+      UpdateSupplierOrderMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof updateSupplierOrder>>,
+  TError,
+  UpdateSupplierOrderMutationVariables,
+  TContext
+> => {
+  return useMutation(getUpdateSupplierOrderMutationOptions(options), queryClient);
+};
+
+export const getSendSupplierOrderUrl = (orderNumber: string) => {
+  return `/api/v1/erp/stock/orders/${orderNumber}/send`;
+};
+
+/**
+ * ERP `POST /stock/orders/{id}/send/`: письмо поставщику (почта ERP) и запись в журнале заказа. Нет адреса — 409 `details.reason = supplier_email_required` (можно указать `to_email`); письмо не ушло — 409 `details.reason = email_failed`, статус не меняется. Недопустимый переход — 409 `transition_not_allowed`. Раздел `erp.stock` — полный.
+ * @summary Склад · Отправить заказ поставщику (черновик → отправлен)
+ */
+export const sendSupplierOrder = async (
+  orderNumber: string,
+  supplierOrderSendIn?: SupplierOrderSendIn,
+  options?: Parameters<typeof http>[1],
+): Promise<SupplierOrderDetail> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<SupplierOrderDetail>(getSendSupplierOrderUrl(orderNumber), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(supplierOrderSendIn),
+  });
+};
+
+export const getSendSupplierOrderMutationKey = () => ["sendSupplierOrder"] as const;
+
+export const getSendSupplierOrderMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | StockConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof sendSupplierOrder>>,
+    TError,
+    SendSupplierOrderMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof sendSupplierOrder>>,
+  TError,
+  SendSupplierOrderMutationVariables,
+  TContext
+> => {
+  const mutationKey = getSendSupplierOrderMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof sendSupplierOrder>>,
+    SendSupplierOrderMutationVariables
+  > = (props) => {
+    const { orderNumber, data } = props ?? {};
+
+    return sendSupplierOrder(orderNumber, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SendSupplierOrderMutationResult = NonNullable<
+  Awaited<ReturnType<typeof sendSupplierOrder>>
+>;
+export type SendSupplierOrderMutationBody = SupplierOrderSendIn | undefined;
+export type SendSupplierOrderMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | StockConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type SendSupplierOrderMutationVariables = {
+  orderNumber: string;
+  data?: SupplierOrderSendIn;
+};
+
+/**
+ * @summary Склад · Отправить заказ поставщику (черновик → отправлен)
+ */
+export const useSendSupplierOrder = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | StockConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof sendSupplierOrder>>,
+      TError,
+      SendSupplierOrderMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof sendSupplierOrder>>,
+  TError,
+  SendSupplierOrderMutationVariables,
+  TContext
+> => {
+  return useMutation(getSendSupplierOrderMutationOptions(options), queryClient);
+};
+
+export const getConfirmSupplierOrderUrl = (orderNumber: string) => {
+  return `/api/v1/erp/stock/orders/${orderNumber}/confirm`;
+};
+
+/**
+ * ERP `POST /stock/orders/{id}/confirm/`: нужна ожидаемая дата (409 `details.reason = expected_date_required`). Раздел `erp.stock` — полный.
+ * @summary Склад · Поставщик подтвердил (отправлен → подтверждён)
+ */
+export const confirmSupplierOrder = async (
+  orderNumber: string,
+  supplierOrderConfirmIn?: SupplierOrderConfirmIn,
+  options?: Parameters<typeof http>[1],
+): Promise<SupplierOrderDetail> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<SupplierOrderDetail>(getConfirmSupplierOrderUrl(orderNumber), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(supplierOrderConfirmIn),
+  });
+};
+
+export const getConfirmSupplierOrderMutationKey = () => ["confirmSupplierOrder"] as const;
+
+export const getConfirmSupplierOrderMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | StockConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof confirmSupplierOrder>>,
+    TError,
+    ConfirmSupplierOrderMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof confirmSupplierOrder>>,
+  TError,
+  ConfirmSupplierOrderMutationVariables,
+  TContext
+> => {
+  const mutationKey = getConfirmSupplierOrderMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof confirmSupplierOrder>>,
+    ConfirmSupplierOrderMutationVariables
+  > = (props) => {
+    const { orderNumber, data } = props ?? {};
+
+    return confirmSupplierOrder(orderNumber, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ConfirmSupplierOrderMutationResult = NonNullable<
+  Awaited<ReturnType<typeof confirmSupplierOrder>>
+>;
+export type ConfirmSupplierOrderMutationBody = SupplierOrderConfirmIn | undefined;
+export type ConfirmSupplierOrderMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | StockConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type ConfirmSupplierOrderMutationVariables = {
+  orderNumber: string;
+  data?: SupplierOrderConfirmIn;
+};
+
+/**
+ * @summary Склад · Поставщик подтвердил (отправлен → подтверждён)
+ */
+export const useConfirmSupplierOrder = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | StockConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof confirmSupplierOrder>>,
+      TError,
+      ConfirmSupplierOrderMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof confirmSupplierOrder>>,
+  TError,
+  ConfirmSupplierOrderMutationVariables,
+  TContext
+> => {
+  return useMutation(getConfirmSupplierOrderMutationOptions(options), queryClient);
+};
+
+export const getCancelSupplierOrderUrl = (orderNumber: string) => {
+  return `/api/v1/erp/stock/orders/${orderNumber}/cancel`;
+};
+
+/**
+ * ERP `POST /stock/orders/{id}/cancel/`: из черновика, отправленного и подтверждённого, если по нему ещё ничего не принято (409 `details.reason = order_has_receipts`). Раздел `erp.stock` — полный.
+ * @summary Склад · Отменить заказ
+ */
+export const cancelSupplierOrder = async (
+  orderNumber: string,
+  supplierOrderCancelIn?: SupplierOrderCancelIn,
+  options?: Parameters<typeof http>[1],
+): Promise<SupplierOrderDetail> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<SupplierOrderDetail>(getCancelSupplierOrderUrl(orderNumber), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(supplierOrderCancelIn),
+  });
+};
+
+export const getCancelSupplierOrderMutationKey = () => ["cancelSupplierOrder"] as const;
+
+export const getCancelSupplierOrderMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | StockConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof cancelSupplierOrder>>,
+    TError,
+    CancelSupplierOrderMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof cancelSupplierOrder>>,
+  TError,
+  CancelSupplierOrderMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCancelSupplierOrderMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof cancelSupplierOrder>>,
+    CancelSupplierOrderMutationVariables
+  > = (props) => {
+    const { orderNumber, data } = props ?? {};
+
+    return cancelSupplierOrder(orderNumber, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CancelSupplierOrderMutationResult = NonNullable<
+  Awaited<ReturnType<typeof cancelSupplierOrder>>
+>;
+export type CancelSupplierOrderMutationBody = SupplierOrderCancelIn | undefined;
+export type CancelSupplierOrderMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | StockConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type CancelSupplierOrderMutationVariables = {
+  orderNumber: string;
+  data?: SupplierOrderCancelIn;
+};
+
+/**
+ * @summary Склад · Отменить заказ
+ */
+export const useCancelSupplierOrder = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | StockConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof cancelSupplierOrder>>,
+      TError,
+      CancelSupplierOrderMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof cancelSupplierOrder>>,
+  TError,
+  CancelSupplierOrderMutationVariables,
+  TContext
+> => {
+  return useMutation(getCancelSupplierOrderMutationOptions(options), queryClient);
+};
+
+export const getReceiveSupplierOrderUrl = (orderNumber: string) => {
+  return `/api/v1/erp/stock/orders/${orderNumber}/receipts`;
+};
+
+/**
+ * ERP `POST /stock/orders/{id}/receipts/`: приёмка по строкам подтверждённого заказа, остаток склада растёт (ячейка — по желанию); строка, привязанная к проекту, резервируется под него. Больше, чем осталось принять, — 400 (`details.max`); строка чужого заказа — 404. Все строки получены — заказ «получен». Раздел `erp.stock` — полный.
+ * @summary Склад · Принять товар от поставщика (частично или полностью)
+ */
+export const receiveSupplierOrder = async (
+  orderNumber: string,
+  supplierOrderReceiptIn: SupplierOrderReceiptIn,
+  options?: Parameters<typeof http>[1],
+): Promise<SupplierOrderDetail> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<SupplierOrderDetail>(getReceiveSupplierOrderUrl(orderNumber), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(supplierOrderReceiptIn),
+  });
+};
+
+export const getReceiveSupplierOrderMutationKey = () => ["receiveSupplierOrder"] as const;
+
+export const getReceiveSupplierOrderMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | StockConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof receiveSupplierOrder>>,
+    TError,
+    ReceiveSupplierOrderMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof receiveSupplierOrder>>,
+  TError,
+  ReceiveSupplierOrderMutationVariables,
+  TContext
+> => {
+  const mutationKey = getReceiveSupplierOrderMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof receiveSupplierOrder>>,
+    ReceiveSupplierOrderMutationVariables
+  > = (props) => {
+    const { orderNumber, data } = props ?? {};
+
+    return receiveSupplierOrder(orderNumber, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ReceiveSupplierOrderMutationResult = NonNullable<
+  Awaited<ReturnType<typeof receiveSupplierOrder>>
+>;
+export type ReceiveSupplierOrderMutationBody = SupplierOrderReceiptIn;
+export type ReceiveSupplierOrderMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | StockConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type ReceiveSupplierOrderMutationVariables = {
+  orderNumber: string;
+  data: SupplierOrderReceiptIn;
+};
+
+/**
+ * @summary Склад · Принять товар от поставщика (частично или полностью)
+ */
+export const useReceiveSupplierOrder = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | StockConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof receiveSupplierOrder>>,
+      TError,
+      ReceiveSupplierOrderMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof receiveSupplierOrder>>,
+  TError,
+  ReceiveSupplierOrderMutationVariables,
+  TContext
+> => {
+  return useMutation(getReceiveSupplierOrderMutationOptions(options), queryClient);
+};
+
+export const getListStockReceiptsUrl = () => {
+  return `/api/v1/erp/stock/receipts`;
+};
+
+/**
+ * ERP `GET /stock/receipts/`. Раздел `erp.stock` — чтение.
+ * @summary Склад · Приёмка: ждут товара и последние приёмки
+ */
+export const listStockReceipts = async (
+  options?: Parameters<typeof http>[1],
+): Promise<StockReceipts> => {
+  return http<StockReceipts>(getListStockReceiptsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListStockReceiptsQueryKey = () => {
+  return [`/api/v1/erp/stock/receipts`] as const;
+};
+
+export const getListStockReceiptsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listStockReceipts>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listStockReceipts>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListStockReceiptsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listStockReceipts>>> = ({ signal }) =>
+    listStockReceipts({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listStockReceipts>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListStockReceiptsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listStockReceipts>>
+>;
+export type ListStockReceiptsQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse
+>;
+
+export function useListStockReceipts<
+  TData = Awaited<ReturnType<typeof listStockReceipts>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listStockReceipts>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listStockReceipts>>,
+          TError,
+          Awaited<ReturnType<typeof listStockReceipts>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListStockReceipts<
+  TData = Awaited<ReturnType<typeof listStockReceipts>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listStockReceipts>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listStockReceipts>>,
+          TError,
+          Awaited<ReturnType<typeof listStockReceipts>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListStockReceipts<
+  TData = Awaited<ReturnType<typeof listStockReceipts>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listStockReceipts>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Склад · Приёмка: ждут товара и последние приёмки
+ */
+
+export function useListStockReceipts<
+  TData = Awaited<ReturnType<typeof listStockReceipts>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listStockReceipts>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListStockReceiptsQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getListStockShipmentsUrl = (params?: ListStockShipmentsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/erp/stock/shipments?${stringifiedParams}`
+    : `/api/v1/erp/stock/shipments`;
+};
+
+/**
+ * ERP `GET /stock/shipments/`: внутренняя накладная ОТГ-ГГГГ-NNN, проект, строки, трек. Раздел `erp.stock` — чтение.
+ * @summary Склад · Отгрузки по проектам
+ */
+export const listStockShipments = async (
+  params?: ListStockShipmentsParams,
+  options?: Parameters<typeof http>[1],
+): Promise<StockShipmentList> => {
+  return http<StockShipmentList>(getListStockShipmentsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListStockShipmentsQueryKey = (params?: ListStockShipmentsParams) => {
+  return [`/api/v1/erp/stock/shipments`, ...(params ? [params] : [])] as const;
+};
+
+export const getListStockShipmentsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listStockShipments>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  params?: ListStockShipmentsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listStockShipments>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListStockShipmentsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listStockShipments>>> = ({ signal }) =>
+    listStockShipments(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listStockShipments>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListStockShipmentsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listStockShipments>>
+>;
+export type ListStockShipmentsQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useListStockShipments<
+  TData = Awaited<ReturnType<typeof listStockShipments>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  params: undefined | ListStockShipmentsParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listStockShipments>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listStockShipments>>,
+          TError,
+          Awaited<ReturnType<typeof listStockShipments>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListStockShipments<
+  TData = Awaited<ReturnType<typeof listStockShipments>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  params?: ListStockShipmentsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listStockShipments>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listStockShipments>>,
+          TError,
+          Awaited<ReturnType<typeof listStockShipments>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListStockShipments<
+  TData = Awaited<ReturnType<typeof listStockShipments>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  params?: ListStockShipmentsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listStockShipments>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Склад · Отгрузки по проектам
+ */
+
+export function useListStockShipments<
+  TData = Awaited<ReturnType<typeof listStockShipments>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  params?: ListStockShipmentsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listStockShipments>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListStockShipmentsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getShipFromStockUrl = () => {
+  return `/api/v1/erp/stock/shipments`;
+};
+
+/**
+ * ERP `POST /stock/shipments/`: по резервам одной заявки, после подписания договора (409 `details.reason = fulfillment_not_ready`). Остаток и резерв уменьшаются, выдаётся внутренняя накладная; когда весь товар КП отгружен, исполнение сделки переходит в «Отгружено». Резерв чужой заявки — 404. Раздел `erp.stock` — полный.
+ * @summary Склад · Отгрузить по проекту
+ */
+export const shipFromStock = async (
+  stockShipIn: StockShipIn,
+  options?: Parameters<typeof http>[1],
+): Promise<StockShipment> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<StockShipment>(getShipFromStockUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(stockShipIn),
+  });
+};
+
+export const getShipFromStockMutationKey = () => ["shipFromStock"] as const;
+
+export const getShipFromStockMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | StockConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof shipFromStock>>,
+    TError,
+    ShipFromStockMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof shipFromStock>>,
+  TError,
+  ShipFromStockMutationVariables,
+  TContext
+> => {
+  const mutationKey = getShipFromStockMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof shipFromStock>>,
+    ShipFromStockMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return shipFromStock(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ShipFromStockMutationResult = NonNullable<Awaited<ReturnType<typeof shipFromStock>>>;
+export type ShipFromStockMutationBody = StockShipIn;
+export type ShipFromStockMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | StockConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type ShipFromStockMutationVariables = { data: StockShipIn };
+
+/**
+ * @summary Склад · Отгрузить по проекту
+ */
+export const useShipFromStock = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | StockConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof shipFromStock>>,
+      TError,
+      ShipFromStockMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof shipFromStock>>,
+  TError,
+  ShipFromStockMutationVariables,
+  TContext
+> => {
+  return useMutation(getShipFromStockMutationOptions(options), queryClient);
+};
+
+export const getListOverdueSupplierOrdersUrl = () => {
+  return `/api/v1/erp/stock/overdue`;
+};
+
+/**
+ * ERP `GET /stock/overdue/`: источник вида очереди `supplier_overdue` («Мои задачи»). Раздел `erp.stock` — полный.
+ * @summary Склад · Просроченные заказы поставщикам
+ */
+export const listOverdueSupplierOrders = async (
+  options?: Parameters<typeof http>[1],
+): Promise<SupplierOrderList> => {
+  return http<SupplierOrderList>(getListOverdueSupplierOrdersUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListOverdueSupplierOrdersQueryKey = () => {
+  return [`/api/v1/erp/stock/overdue`] as const;
+};
+
+export const getListOverdueSupplierOrdersQueryOptions = <
+  TData = Awaited<ReturnType<typeof listOverdueSupplierOrders>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(options?: {
+  query?: Partial<
+    UseQueryOptions<Awaited<ReturnType<typeof listOverdueSupplierOrders>>, TError, TData>
+  >;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListOverdueSupplierOrdersQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listOverdueSupplierOrders>>> = ({
+    signal,
+  }) => listOverdueSupplierOrders({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listOverdueSupplierOrders>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListOverdueSupplierOrdersQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listOverdueSupplierOrders>>
+>;
+export type ListOverdueSupplierOrdersQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse
+>;
+
+export function useListOverdueSupplierOrders<
+  TData = Awaited<ReturnType<typeof listOverdueSupplierOrders>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options: {
+    query: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listOverdueSupplierOrders>>, TError, TData>
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listOverdueSupplierOrders>>,
+          TError,
+          Awaited<ReturnType<typeof listOverdueSupplierOrders>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListOverdueSupplierOrders<
+  TData = Awaited<ReturnType<typeof listOverdueSupplierOrders>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listOverdueSupplierOrders>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listOverdueSupplierOrders>>,
+          TError,
+          Awaited<ReturnType<typeof listOverdueSupplierOrders>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListOverdueSupplierOrders<
+  TData = Awaited<ReturnType<typeof listOverdueSupplierOrders>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listOverdueSupplierOrders>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Склад · Просроченные заказы поставщикам
+ */
+
+export function useListOverdueSupplierOrders<
+  TData = Awaited<ReturnType<typeof listOverdueSupplierOrders>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listOverdueSupplierOrders>>, TError, TData>
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListOverdueSupplierOrdersQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getListCrmLeadsUrl = (params?: ListCrmLeadsParams) => {
   const normalizedParams = new URLSearchParams();

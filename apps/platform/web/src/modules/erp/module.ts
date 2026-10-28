@@ -30,7 +30,11 @@ export const erp: ModuleConfig = {
     {
       key: "stock",
       path: "/erp/stock",
+      // Карточка заказа поставщику `/erp/stock/ЗП-…`; «Журнал» заказа — боковое окно (D2-2, SPEC-v3 §7.4).
+      detail: "/erp/stock/:id",
       access: { resource: "erp.stock" },
+      tabs: [{ key: "journal" }],
+      defaults: { panelOpen: false },
       actionTo: "/erp/catalog",
     },
     {

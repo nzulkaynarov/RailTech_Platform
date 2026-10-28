@@ -71,7 +71,8 @@
       ]
     },
     "request": "Ariza matni",
-    "requestEmpty": "Ariza matni yo‘q."
+    "requestEmpty": "Ariza matni yo‘q.",
+    "requestPrice": "Yetkazib beruvchidan narx so‘rash"
   },
   "lines": {
     "title": "Hisob-kitob qatorlari",
@@ -127,7 +128,14 @@
     "totals": "Jami",
     "noVat": "QQSsiz",
     "saved": "Saqlandi",
-    "mobileCost": "Tannarx {{value}} · ustama {{markup}} %"
+    "mobileCost": "Tannarx {{value}} · ustama {{markup}} %",
+    "cell": "Katakcha {{cell}}",
+    "free": "Bo‘sh · {{count}}",
+    "reservedTag": "Zaxira · {{count}}",
+    "reserve": "{{count}} zaxiralash",
+    "reserveLabel": "«{{name}}» uchun {{count}} zaxiralash",
+    "release": "Zaxirani olib tashlash",
+    "releaseLabel": "«{{name}}» qatori zaxirasini olib tashlash"
   },
   "add": {
     "button": "Qator qo‘shish",
