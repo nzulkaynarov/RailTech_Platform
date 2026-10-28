@@ -106,8 +106,9 @@
 | Резерв строки расчёта | `PUT`, `DELETE /erp/calc/{ЗВ}/lines/{id}/reserve` | `POST /stock/reservations/`, `DELETE /stock/reservations/{id}/` | ✓ (D2-2) |
 | **Расчёт готов → черновик КП директору** | `POST /erp/calc/{ЗВ}/ready` | `POST /calc/{deal_id}/ready/`: только со всеми визами строк (409 `VISAS_MISSING`), затем гейты отправки и `quote.ready_for_approval` в EDS (визы — подписи строк) | ✓ (D2-1) |
 | Склад | `GET /erp/stock/balances`, `/orders`, `/receipts`, `/shipments`; действия — `POST /erp/stock/orders…`, `/adjustments`, `/shipments` | `/api/v1/stock/*`: остатки как сумма движений, резервы, заказы ЗП, приёмка, отгрузки, просрочка | ✓ (BFF 0.27.0, D2-2; хвосты B-D22-2…6) |
-| Справочники | `GET /catalog/*` | `GET /catalog/products/`, `/catalog/offers/`, `/master-data/*`; бригады — новое | ✓ / Δ ERP-15 |
-| Документация (ТЗ, чертежи) | `GET /files?scope=` | `GET /crm/generated-documents/`; файлы номенклатуры — новое | Δ ERP-15 |
+| Номенклатура и поставщики (D2-3): позиции, поставщики и условия предложений, бригады, запросы на категории | `GET\|POST /erp/catalog/items`, `GET\|PATCH …/items/{id}`, `GET /erp/catalog/suppliers[/{id}]`, `PATCH …/suppliers/{id}/offers/{offer_id}`, `GET\|POST /erp/catalog/brigades`, `PATCH …/brigades/{id}`, `GET\|POST /erp/catalog/category-requests`, `GET /erp/catalog/lookups` (раздел `erp.stock`) | `catalog/items/`, `catalog/suppliers/` (+`offers/{id}/`), `catalog/brigades/`, `catalog/category-requests/`; цену закупки режет ERP (`quote.view_cost_margin` или зона товаров), ставку бригады — (`quote.view_cost_margin` или зона услуг), BFF — по полям `supplier_prices` и `cost_margin` | ✓ |
+| Справочники «только в Django admin» (B-035): курсы, ТН ВЭД, производители | `GET /erp/catalog/exchange-rates`, `GET\|POST /erp/catalog/hs-codes`, `PATCH …/{id}`, `GET\|POST /erp/catalog/manufacturers`, `PATCH …/{id}`; ввод курса — прежний `POST /admin/company/fx-rate` | `exchange-rates/`, `master-data/hs-codes/`, `catalog/manufacturers/` (запись — `catalog.manage`; курс — `settings.edit`) | ✓ |
+| Техдокументация: ТЗ, чертежи, сертификаты, регламенты ПНР (D2-3, B-019 часть ERP · Документация) | `GET\|POST /erp/docs/files`, `DELETE /erp/docs/files/{id}`, `GET /erp/docs/files/{id}/content` (поток, всегда вложением), `GET /erp/docs/deals` | `catalog/tech-docs/` (+`{id}/file/`), хранилище — приватный бакет ERP; привязка к позиции и сделке; просмотр PDF — в браузере из байт (CSP запрещает встроенные просмотрщики) | ✓ (отправка клиенту в чат — с разделом «Чаты», D3) |
 
 ### 1.6. Chats и Admin
 
@@ -257,7 +258,7 @@ CRM считает статус сама — поле `platform_status` лида
 | ERP-12 | «Напомнить клиенту» по КП и напоминание за 2 дня до истечения срока — событие для бота | P3 |
 | ERP-13 ✓ D2-5 | загрузка подписанного скана акта сотрудником; статусы акта SPEC-v3 §2.4 (вместе с FIX-62) | P3 |
 | ~~ERP-14~~ | **закрыт (D2-2)**; было: склад и закупки (бывшая веха M4): остатки как сумма движений, резерв под проект, заказы поставщикам ЗП, приёмка, отгрузки по строкам, ожидаемые даты; до этого Расчёт показывает наличие из предложений поставщиков | P4 (минимум резерва — P3, вопрос 9) |
-| ERP-15 | бригады и исполнители услуг; файлы номенклатуры и проектов (ТЗ, чертежи, сертификаты) | P4 |
+| ERP-15 | **закрыт в D2-3**: бригады и исполнители услуг (`catalog.Brigade`), техдокументация (`catalog.TechDocument`), НДС позиции (`Product.vat_rate`) | P4 |
 
 ### EDS (сервис `apps/eds`, ADR-0015; создаётся на этапе C1)
 

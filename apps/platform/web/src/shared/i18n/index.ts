@@ -1,10 +1,12 @@
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 
+import enArticles from "./en/articles.json";
 import enAudit from "./en/audit.json";
 import enBridge from "./en/bridge.json";
 import enCalc from "./en/calc.json";
 import enBus from "./en/bus.json";
+import enCatalog from "./en/catalog.json";
 import enBot from "./en/bot.json";
 import enCommon from "./en/common.json";
 import enCompany from "./en/company.json";
@@ -27,10 +29,12 @@ import enProfile from "./en/profile.json";
 import enShell from "./en/shell.json";
 import enStock from "./en/stock.json";
 import enUi from "./en/ui.json";
+import ruArticles from "./ru/articles.json";
 import ruAudit from "./ru/audit.json";
 import ruBridge from "./ru/bridge.json";
 import ruCalc from "./ru/calc.json";
 import ruBus from "./ru/bus.json";
+import ruCatalog from "./ru/catalog.json";
 import ruBot from "./ru/bot.json";
 import ruCommon from "./ru/common.json";
 import ruCompany from "./ru/company.json";
@@ -53,10 +57,12 @@ import ruProfile from "./ru/profile.json";
 import ruShell from "./ru/shell.json";
 import ruStock from "./ru/stock.json";
 import ruUi from "./ru/ui.json";
+import uzArticles from "./uz/articles.json";
 import uzAudit from "./uz/audit.json";
 import uzBridge from "./uz/bridge.json";
 import uzCalc from "./uz/calc.json";
 import uzBus from "./uz/bus.json";
+import uzCatalog from "./uz/catalog.json";
 import uzBot from "./uz/bot.json";
 import uzCommon from "./uz/common.json";
 import uzCompany from "./uz/company.json";
@@ -86,6 +92,7 @@ export type Language = (typeof LANGUAGES)[number];
 export const resources = {
   ru: {
     common: ruCommon,
+    articles: ruArticles,
     audit: ruAudit,
     bridge: ruBridge,
     calc: ruCalc,
@@ -110,10 +117,12 @@ export const resources = {
     bot: ruBot,
     ui: ruUi,
     company: ruCompany,
+    catalog: ruCatalog,
     help: ruHelp,
   },
   uz: {
     common: uzCommon,
+    articles: uzArticles,
     audit: uzAudit,
     bridge: uzBridge,
     calc: uzCalc,
@@ -138,10 +147,12 @@ export const resources = {
     bot: uzBot,
     ui: uzUi,
     company: uzCompany,
+    catalog: uzCatalog,
     help: uzHelp,
   },
   en: {
     common: enCommon,
+    articles: enArticles,
     audit: enAudit,
     bridge: enBridge,
     calc: enCalc,
@@ -166,6 +177,7 @@ export const resources = {
     bot: enBot,
     ui: enUi,
     company: enCompany,
+    catalog: enCatalog,
     help: enHelp,
   },
 } as const;
@@ -191,7 +203,7 @@ export function rememberLanguage(language: Language): void {
   }
 }
 
-/** ru — язык по умолчанию (SPEC-v3 §8); uz — латиница. Пространства имён: common, shell (каркас и вход), modules (меню и пустые состояния), bridge (заглушки разделов и мост в старые экраны), dictionary (словарь SPEC-v3 §2: стадии и статусы), ui (тексты общих компонентов), integrations (Admin · Внешние интеграции), company (Admin · Компания), kb (CRM · База знаний), bot (Admin · Настройки бота), bus (Admin · Журнал интеграций), documents (EDS · Создать документ и «Мои документы»), letters (EDS · Входящие письма и резолюция), messages (Клиенты · Ждут ответа, D1-1), leads, clients и request (Клиенты · Лиды, Клиенты и «Создать заявку», D1-2b), calc (Расчёт по заявке, D2-1), profile (страница /me, «Забыли пароль?»), quotes (EDS · КП на одобрение), projects (EDS · Проекты: договор, акт, сканы, D2-5), approvals (EDS · На согласовании), payments (EDS · Счета и оплаты бухгалтера, D2-4), help (помощь, первый вход и обращения к администратору, W15-H7). */
+/** ru — язык по умолчанию (SPEC-v3 §8); uz — латиница. Пространства имён: common, shell (каркас и вход), modules (меню и пустые состояния), bridge (заглушки разделов и мост в старые экраны), dictionary (словарь SPEC-v3 §2: стадии и статусы), ui (тексты общих компонентов), integrations (Admin · Внешние интеграции), company (Admin · Компания), kb (CRM · База знаний), bot (Admin · Настройки бота), bus (Admin · Журнал интеграций), documents (EDS · Создать документ и «Мои документы»), letters (EDS · Входящие письма и резолюция), messages (Клиенты · Ждут ответа, D1-1), leads, clients и request (Клиенты · Лиды, Клиенты и «Создать заявку», D1-2b), calc (Расчёт по заявке, D2-1), catalog (Расчёт · Номенклатура и поставщики, Техдокументация, D2-3), profile (страница /me, «Забыли пароль?»), quotes (EDS · КП на одобрение), projects (EDS · Проекты: договор, акт, сканы, D2-5), approvals (EDS · На согласовании), payments (EDS · Счета и оплаты бухгалтера, D2-4), help (помощь, первый вход и обращения к администратору, W15-H7), articles (Admin · Статьи компании и раздел «Как у нас принято» в Помощи, W18A-P5). */
 void i18n.use(initReactI18next).init({
   resources,
   lng: storedLanguage(),
@@ -220,8 +232,10 @@ void i18n.use(initReactI18next).init({
     "quotes",
     "projects",
     "approvals",
+    "catalog",
     "payments",
     "help",
+    "articles",
   ],
   interpolation: { escapeValue: false },
 });

@@ -41,8 +41,15 @@ export const erp: ModuleConfig = {
       key: "catalog",
       path: "/erp/catalog",
       access: { resource: "erp.stock" },
+      defaults: { panelOpen: false },
       actionTo: "/erp/stock",
     },
-    { key: "docs", path: "/erp/docs", access: { resource: "erp.stock" }, actionTo: "/erp/catalog" },
+    {
+      key: "docs",
+      path: "/erp/docs",
+      access: { resource: "erp.stock" },
+      defaults: { panelOpen: false },
+      actionTo: "/erp/catalog",
+    },
   ],
 };

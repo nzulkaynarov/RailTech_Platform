@@ -7,10 +7,33 @@ import { useViewport } from "../../app/shell/useViewport";
 import { WriteToAdminModal } from "../tickets/WriteToAdminModal";
 import { ArticleView } from "./ArticleView";
 import { StatusTag } from "../../shared/ui/StatusTag";
-import { HELP_ARTICLES, articleForSection, findArticle, searchArticles } from "./articles";
+import { articleForSection, searchArticles } from "./articles";
+import { useHelpArticles } from "./companyArticles";
 import { useWhatsNew } from "./whatsNew";
 
 import "./help.css";
+
+/** Название статьи кнопкой: открывает её тут же, в окне, не уводя со страницы. */
+function ArticleButton({ title, onClick }: { title: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      className="pf-help-link pf-focusable"
+      style={{
+        border: 0,
+        background: "none",
+        padding: 0,
+        textAlign: "left",
+        cursor: "pointer",
+        font: "inherit",
+        fontWeight: 500,
+      }}
+      onClick={onClick}
+    >
+      {title}
+    </button>
+  );
+}
 
 export interface HelpDrawerProps {
   open: boolean;
@@ -25,12 +48,13 @@ export interface HelpDrawerProps {
  * делает Drawer antd; ссылки закрывают окно, потому что ведут на другую страницу.
  */
 export function HelpDrawer({ open, onClose, sectionKey }: HelpDrawerProps) {
-  const { t } = useTranslation("help");
+  const { t } = useTranslation(["help", "articles"]);
   const { mobile } = useViewport();
   const searchId = useId();
   const [query, setQuery] = useState("");
   const [slug, setSlug] = useState<string | null>(null);
   const [writing, setWriting] = useState(false);
+  const { all, product, company, failed } = useHelpArticles();
   const { fresh } = useWhatsNew();
 
   // Каждое открытие и смена раздела — статья текущего раздела, а не прошлый поиск (сброс при отрисовке, без эффекта).
@@ -44,9 +68,9 @@ export function HelpDrawer({ open, onClose, sectionKey }: HelpDrawerProps) {
   }
 
   const forSection = articleForSection(sectionKey);
-  const chosen = slug ? findArticle(slug) : undefined;
+  const chosen = slug ? all.find((item) => item.slug === slug) : undefined;
   const article = chosen ?? (query.trim() === "" ? forSection : undefined);
-  const hits = query.trim() === "" ? [] : searchArticles(query);
+  const hits = query.trim() === "" ? [] : searchArticles(query, all);
 
   return (
     <>
@@ -115,24 +139,15 @@ export function HelpDrawer({ open, onClose, sectionKey }: HelpDrawerProps) {
                   <ul className="pf-help-list" aria-label={t("drawer.articlesLabel")}>
                     {hits.map((hit) => (
                       <li key={hit.slug}>
-                        <button
-                          type="button"
-                          className="pf-help-link pf-focusable"
-                          style={{
-                            border: 0,
-                            background: "none",
-                            padding: 0,
-                            textAlign: "left",
-                            cursor: "pointer",
-                            font: "inherit",
-                            fontWeight: 500,
-                          }}
+                        <ArticleButton
+                          title={hit.title}
                           onClick={() => {
                             setSlug(hit.slug);
                           }}
-                        >
-                          {hit.title}
-                        </button>
+                        />
+                        {hit.source === "company" ? (
+                          <span className="pf-hint"> · {t("articles:help.kindCompany")}</span>
+                        ) : null}
                       </li>
                     ))}
                   </ul>
@@ -157,30 +172,46 @@ export function HelpDrawer({ open, onClose, sectionKey }: HelpDrawerProps) {
             <div className="pf-help-block">
               <p style={{ margin: 0 }}>{t("drawer.noArticle")}</p>
               <ul className="pf-help-list" aria-label={t("drawer.articlesLabel")}>
-                {HELP_ARTICLES.slice(0, 5).map((item) => (
+                {product.slice(0, 5).map((item) => (
                   <li key={item.slug}>
-                    <button
-                      type="button"
-                      className="pf-help-link pf-focusable"
-                      style={{
-                        border: 0,
-                        background: "none",
-                        padding: 0,
-                        textAlign: "left",
-                        cursor: "pointer",
-                        font: "inherit",
-                        fontWeight: 500,
-                      }}
+                    <ArticleButton
+                      title={item.title}
                       onClick={() => {
                         setSlug(item.slug);
                       }}
-                    >
-                      {item.title}
-                    </button>
+                    />
                   </li>
                 ))}
               </ul>
             </div>
+          ) : null}
+          {query.trim() === "" && !chosen && (failed || company.length > 0) ? (
+            <section aria-labelledby="help-company-title" className="pf-help-block">
+              <h3
+                id="help-company-title"
+                style={{ margin: 0, fontSize: 14, lineHeight: "22px", fontWeight: 600 }}
+              >
+                {t("articles:help.section")}
+              </h3>
+              {failed ? (
+                <p className="pf-hint" style={{ margin: 0 }}>
+                  {t("articles:help.loadError")}
+                </p>
+              ) : (
+                <ul className="pf-help-list" aria-label={t("articles:help.section")}>
+                  {company.slice(0, 5).map((item) => (
+                    <li key={item.slug}>
+                      <ArticleButton
+                        title={item.title}
+                        onClick={() => {
+                          setSlug(item.slug);
+                        }}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
           ) : null}
         </div>
       </Drawer>

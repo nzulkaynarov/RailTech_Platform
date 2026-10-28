@@ -392,7 +392,9 @@
       "units": "Birliklar",
       "delivery-basis": "Yetkazib berish bazislari"
     },
-    "noApi": "Valyuta kurslari, TIF TN kodlari va ishlab chiqaruvchilarni hozircha ERP o'z panelida yuritadi: ularning Platforma uchun dasturiy interfeysi yo'q.",
+    "moved": "Valyuta kurslari, TIF TN kodlari va ishlab chiqaruvchilar «Hisob · Nomenklatura va yetkazib beruvchilar» → «Ma'lumotnomalar» bo'limida yuritiladi.",
+    "movedLink": "Ma'lumotnomalarni ochish",
+    "movedNoAccess": "Valyuta kurslari, TIF TN kodlari va ishlab chiqaruvchilar «Hisob · Nomenklatura va yetkazib beruvchilar» bo'limida yuritiladi; u ta'minot va rahbar rollariga ochiq.",
     "code": "Kod",
     "name": "Nomi",
     "alpha2": "ISO alpha-2",

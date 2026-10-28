@@ -13,6 +13,7 @@ import {
   ApprovalRouteStatus,
   AttentionKind,
   AuditActorType,
+  BrigadeKind,
   BusDeliveryStatus,
   BusDomain,
   BusInboxStatus,
@@ -22,10 +23,13 @@ import {
   CalcState,
   CalcVisaState,
   CalcZone,
+  CatalogItemKind,
   CategoryRequestStatus,
   ChecklistCode,
   ClientContactChannel,
   ClientSees,
+  CompanyArticleLanguage,
+  CompanyArticleStatus,
   DocumentKind,
   DocumentTemplateKind,
   DueLabel,
@@ -62,6 +66,7 @@ import {
   SourceState,
   StepCode,
   SupplierOrderStatus,
+  TechDocKind,
   TicketStatus,
   TicketSubject,
 } from "./model";
@@ -81,6 +86,8 @@ import type {
   BrandProfile,
   Bridge,
   BridgeErpSso,
+  Brigade,
+  BrigadePage,
   BusDeliveryPage,
   BusInboxPage,
   BusJournal,
@@ -95,6 +102,14 @@ import type {
   CalcSupplier,
   CatalogCategory,
   CatalogCategoryList,
+  CatalogItemDetail,
+  CatalogItemPage,
+  CatalogLookups,
+  CatalogMoney,
+  CatalogNamedRef,
+  CatalogOffer,
+  CatalogProductRef,
+  CatalogUnit,
   CategoryRequest,
   CategoryRequestList,
   ChargeTemplate,
@@ -105,10 +120,13 @@ import type {
   ClientList,
   ClientShort,
   Colleague,
+  CompanyArticle,
+  CompanyArticleList,
   CompanyProfile,
   ConversationCard,
   ConversationThread,
   CreatedId,
+  CrewRate,
   DocumentPlaceholders,
   DocumentPreview,
   DocumentTemplate,
@@ -131,6 +149,7 @@ import type {
   ErpConnector,
   ErpPairing,
   EscalationDryRun,
+  ExchangeRatePage,
   ExternalChatList,
   ExternalService,
   ExternalServiceDetail,
@@ -140,6 +159,8 @@ import type {
   FxRateOverview,
   HandoffInfo,
   Health,
+  HsCode,
+  HsCodePage,
   IntegrationsOverview,
   KbChunkList,
   KbDocument,
@@ -157,6 +178,8 @@ import type {
   LetterResolution,
   MailLog,
   MailQueued,
+  Manufacturer,
+  ManufacturerPage,
   Me,
   MemoApprovalCard,
   MemoApprovalPage,
@@ -231,9 +254,14 @@ import type {
   StockShipment,
   StockShipmentList,
   StockSupplierList,
+  SupplierDetail,
   SupplierOrderDetail,
   SupplierOrderList,
+  SupplierPage,
   SystemStatus,
+  TechDoc,
+  TechDocDeal,
+  TechDocPage,
   TelegramChannelList,
   TelegramConnector,
   TelegramLink,
@@ -929,6 +957,160 @@ export const getSetTicketStatusResponseMock = (
     }),
   ),
   resolved_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    undefined,
+  ]),
+  ...overrideResponse,
+});
+
+export const getListCompanyArticlesResponseMock = (
+  overrideResponse: Partial<Extract<CompanyArticleList, object>> = {},
+): CompanyArticleList => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.number.int({ min: 1 }),
+    title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    body: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    language: faker.helpers.arrayElement(Object.values(CompanyArticleLanguage)),
+    status: faker.helpers.arrayElement(Object.values(CompanyArticleStatus)),
+    created_by_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+    updated_by_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+    created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    published_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      undefined,
+    ]),
+  })),
+  ...overrideResponse,
+});
+
+export const getListAdminCompanyArticlesResponseMock = (
+  overrideResponse: Partial<Extract<CompanyArticleList, object>> = {},
+): CompanyArticleList => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.number.int({ min: 1 }),
+    title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    body: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    language: faker.helpers.arrayElement(Object.values(CompanyArticleLanguage)),
+    status: faker.helpers.arrayElement(Object.values(CompanyArticleStatus)),
+    created_by_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+    updated_by_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+    created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+    published_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      undefined,
+    ]),
+  })),
+  ...overrideResponse,
+});
+
+export const getCreateCompanyArticleResponseMock = (
+  overrideResponse: Partial<Extract<CompanyArticle, object>> = {},
+): CompanyArticle => ({
+  id: faker.number.int({ min: 1 }),
+  title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  body: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  language: faker.helpers.arrayElement(Object.values(CompanyArticleLanguage)),
+  status: faker.helpers.arrayElement(Object.values(CompanyArticleStatus)),
+  created_by_name: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  updated_by_name: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  published_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    undefined,
+  ]),
+  ...overrideResponse,
+});
+
+export const getUpdateCompanyArticleResponseMock = (
+  overrideResponse: Partial<Extract<CompanyArticle, object>> = {},
+): CompanyArticle => ({
+  id: faker.number.int({ min: 1 }),
+  title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  body: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  language: faker.helpers.arrayElement(Object.values(CompanyArticleLanguage)),
+  status: faker.helpers.arrayElement(Object.values(CompanyArticleStatus)),
+  created_by_name: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  updated_by_name: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  published_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    undefined,
+  ]),
+  ...overrideResponse,
+});
+
+export const getPublishCompanyArticleResponseMock = (
+  overrideResponse: Partial<Extract<CompanyArticle, object>> = {},
+): CompanyArticle => ({
+  id: faker.number.int({ min: 1 }),
+  title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  body: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  language: faker.helpers.arrayElement(Object.values(CompanyArticleLanguage)),
+  status: faker.helpers.arrayElement(Object.values(CompanyArticleStatus)),
+  created_by_name: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  updated_by_name: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  published_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    undefined,
+  ]),
+  ...overrideResponse,
+});
+
+export const getUnpublishCompanyArticleResponseMock = (
+  overrideResponse: Partial<Extract<CompanyArticle, object>> = {},
+): CompanyArticle => ({
+  id: faker.number.int({ min: 1 }),
+  title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  body: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  language: faker.helpers.arrayElement(Object.values(CompanyArticleLanguage)),
+  status: faker.helpers.arrayElement(Object.values(CompanyArticleStatus)),
+  created_by_name: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  updated_by_name: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  updated_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  published_at: faker.helpers.arrayElement([
     faker.date.past().toISOString().slice(0, 19) + "Z",
     undefined,
   ]),
@@ -14406,6 +14588,953 @@ export const getCopyCrmMessageAttachmentToRequestResponseMock = (
   ...overrideResponse,
 });
 
+export const getGetCatalogLookupsResponseMock = (
+  overrideResponse: Partial<Extract<CatalogLookups, object>> = {},
+): CatalogLookups => ({
+  units: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  })),
+  categories: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.helpers.fromRegExp("^[0-9]+$"),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      parent_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+    }),
+  ),
+  currencies: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      symbol: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    }),
+  ),
+  countries: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.helpers.fromRegExp("^[0-9]+$"),
+      name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    }),
+  ),
+  ...overrideResponse,
+});
+
+export const getListCatalogItemsResponseCatalogUnitMock = (
+  overrideResponse: Partial<CatalogUnit> = {},
+): CatalogUnit => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getListCatalogItemsResponseCatalogNamedRefMock = (
+  overrideResponse: Partial<CatalogNamedRef> = {},
+): CatalogNamedRef => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getListCatalogItemsResponseMock = (
+  overrideResponse: Partial<Extract<CatalogItemPage, object>> = {},
+): CatalogItemPage => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    kind: faker.helpers.arrayElement(Object.values(CatalogItemKind)),
+    unit: faker.helpers.arrayElement([{ ...getListCatalogItemsResponseCatalogUnitMock() }, null]),
+    vat_rate: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    vat_effective: faker.helpers.arrayElement([
+      faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+      null,
+    ]),
+    category: faker.helpers.arrayElement([
+      { ...getListCatalogItemsResponseCatalogNamedRefMock() },
+      null,
+    ]),
+    status: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    offers_count: faker.number.int({ min: 0 }),
+    nearest_valid_until: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 10),
+      null,
+    ]),
+    docs_count: faker.number.int({ min: 0 }),
+  })),
+  total: faker.number.int({ min: 0 }),
+  page: faker.number.int({ min: 1 }),
+  page_size: faker.number.int({ min: 1 }),
+  ...overrideResponse,
+});
+
+export const getCreateCatalogItemResponseCatalogUnitMock = (
+  overrideResponse: Partial<CatalogUnit> = {},
+): CatalogUnit => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getCreateCatalogItemResponseCatalogNamedRefMock = (
+  overrideResponse: Partial<CatalogNamedRef> = {},
+): CatalogNamedRef => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getCreateCatalogItemResponseCatalogMoneyMock = (
+  overrideResponse: Partial<CatalogMoney> = {},
+): CatalogMoney => ({
+  ...{
+    amount: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    currency: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getCreateCatalogItemResponseMock = (
+  overrideResponse: Partial<Extract<CatalogItemDetail, object>> = {},
+): CatalogItemDetail => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  kind: faker.helpers.arrayElement(Object.values(CatalogItemKind)),
+  unit: faker.helpers.arrayElement([{ ...getCreateCatalogItemResponseCatalogUnitMock() }, null]),
+  vat_rate: faker.helpers.arrayElement([faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"), null]),
+  vat_effective: faker.helpers.arrayElement([
+    faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    null,
+  ]),
+  category: faker.helpers.arrayElement([
+    { ...getCreateCatalogItemResponseCatalogNamedRefMock() },
+    null,
+  ]),
+  status: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  offers_count: faker.number.int({ min: 0 }),
+  nearest_valid_until: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 10),
+    null,
+  ]),
+  docs_count: faker.number.int({ min: 0 }),
+  description: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  gost_drawing: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  hs_code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  manufacturer_part_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  brand: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  offers: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.helpers.fromRegExp("^[0-9]+$"),
+      supplier: {
+        id: faker.helpers.fromRegExp("^[0-9]+$"),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      },
+      product: {
+        id: faker.helpers.fromRegExp("^[0-9]+$"),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      },
+      supplier_sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      price: faker.helpers.arrayElement([
+        { ...getCreateCatalogItemResponseCatalogMoneyMock() },
+        null,
+      ]),
+      quota_qty: faker.number.int({ min: 0 }),
+      min_order_qty: faker.number.int({ min: 1 }),
+      in_stock_lead_days: faker.number.int({ min: 0 }),
+      order_lead_days: faker.number.int({ min: 0 }),
+      stock_status: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      valid_from: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      is_active: faker.datatype.boolean(),
+      validity: faker.helpers.arrayElement(["ok", "expiring", "expired"] as const),
+    }),
+  ),
+  prices_visible: faker.datatype.boolean(),
+  tech_docs: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.helpers.fromRegExp("^[0-9]+$"),
+      title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      kind: faker.helpers.arrayElement(Object.values(TechDocKind)),
+    }),
+  ),
+  ...overrideResponse,
+});
+
+export const getGetCatalogItemResponseCatalogUnitMock = (
+  overrideResponse: Partial<CatalogUnit> = {},
+): CatalogUnit => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getGetCatalogItemResponseCatalogNamedRefMock = (
+  overrideResponse: Partial<CatalogNamedRef> = {},
+): CatalogNamedRef => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getGetCatalogItemResponseCatalogMoneyMock = (
+  overrideResponse: Partial<CatalogMoney> = {},
+): CatalogMoney => ({
+  ...{
+    amount: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    currency: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getGetCatalogItemResponseMock = (
+  overrideResponse: Partial<Extract<CatalogItemDetail, object>> = {},
+): CatalogItemDetail => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  kind: faker.helpers.arrayElement(Object.values(CatalogItemKind)),
+  unit: faker.helpers.arrayElement([{ ...getGetCatalogItemResponseCatalogUnitMock() }, null]),
+  vat_rate: faker.helpers.arrayElement([faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"), null]),
+  vat_effective: faker.helpers.arrayElement([
+    faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    null,
+  ]),
+  category: faker.helpers.arrayElement([
+    { ...getGetCatalogItemResponseCatalogNamedRefMock() },
+    null,
+  ]),
+  status: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  offers_count: faker.number.int({ min: 0 }),
+  nearest_valid_until: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 10),
+    null,
+  ]),
+  docs_count: faker.number.int({ min: 0 }),
+  description: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  gost_drawing: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  hs_code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  manufacturer_part_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  brand: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  offers: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.helpers.fromRegExp("^[0-9]+$"),
+      supplier: {
+        id: faker.helpers.fromRegExp("^[0-9]+$"),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      },
+      product: {
+        id: faker.helpers.fromRegExp("^[0-9]+$"),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      },
+      supplier_sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      price: faker.helpers.arrayElement([{ ...getGetCatalogItemResponseCatalogMoneyMock() }, null]),
+      quota_qty: faker.number.int({ min: 0 }),
+      min_order_qty: faker.number.int({ min: 1 }),
+      in_stock_lead_days: faker.number.int({ min: 0 }),
+      order_lead_days: faker.number.int({ min: 0 }),
+      stock_status: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      valid_from: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      is_active: faker.datatype.boolean(),
+      validity: faker.helpers.arrayElement(["ok", "expiring", "expired"] as const),
+    }),
+  ),
+  prices_visible: faker.datatype.boolean(),
+  tech_docs: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.helpers.fromRegExp("^[0-9]+$"),
+      title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      kind: faker.helpers.arrayElement(Object.values(TechDocKind)),
+    }),
+  ),
+  ...overrideResponse,
+});
+
+export const getUpdateCatalogItemResponseCatalogUnitMock = (
+  overrideResponse: Partial<CatalogUnit> = {},
+): CatalogUnit => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getUpdateCatalogItemResponseCatalogNamedRefMock = (
+  overrideResponse: Partial<CatalogNamedRef> = {},
+): CatalogNamedRef => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getUpdateCatalogItemResponseCatalogMoneyMock = (
+  overrideResponse: Partial<CatalogMoney> = {},
+): CatalogMoney => ({
+  ...{
+    amount: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    currency: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getUpdateCatalogItemResponseMock = (
+  overrideResponse: Partial<Extract<CatalogItemDetail, object>> = {},
+): CatalogItemDetail => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  kind: faker.helpers.arrayElement(Object.values(CatalogItemKind)),
+  unit: faker.helpers.arrayElement([{ ...getUpdateCatalogItemResponseCatalogUnitMock() }, null]),
+  vat_rate: faker.helpers.arrayElement([faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"), null]),
+  vat_effective: faker.helpers.arrayElement([
+    faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    null,
+  ]),
+  category: faker.helpers.arrayElement([
+    { ...getUpdateCatalogItemResponseCatalogNamedRefMock() },
+    null,
+  ]),
+  status: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  offers_count: faker.number.int({ min: 0 }),
+  nearest_valid_until: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 10),
+    null,
+  ]),
+  docs_count: faker.number.int({ min: 0 }),
+  description: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  gost_drawing: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  hs_code: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  manufacturer_part_number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  brand: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  offers: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.helpers.fromRegExp("^[0-9]+$"),
+      supplier: {
+        id: faker.helpers.fromRegExp("^[0-9]+$"),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      },
+      product: {
+        id: faker.helpers.fromRegExp("^[0-9]+$"),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      },
+      supplier_sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      price: faker.helpers.arrayElement([
+        { ...getUpdateCatalogItemResponseCatalogMoneyMock() },
+        null,
+      ]),
+      quota_qty: faker.number.int({ min: 0 }),
+      min_order_qty: faker.number.int({ min: 1 }),
+      in_stock_lead_days: faker.number.int({ min: 0 }),
+      order_lead_days: faker.number.int({ min: 0 }),
+      stock_status: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      valid_from: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      is_active: faker.datatype.boolean(),
+      validity: faker.helpers.arrayElement(["ok", "expiring", "expired"] as const),
+    }),
+  ),
+  prices_visible: faker.datatype.boolean(),
+  tech_docs: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.helpers.fromRegExp("^[0-9]+$"),
+      title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      kind: faker.helpers.arrayElement(Object.values(TechDocKind)),
+    }),
+  ),
+  ...overrideResponse,
+});
+
+export const getListCatalogSuppliersResponseMock = (
+  overrideResponse: Partial<Extract<SupplierPage, object>> = {},
+): SupplierPage => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    tin: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    country: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    offers_count: faker.number.int({ min: 0 }),
+    expired_count: faker.number.int({ min: 0 }),
+    expiring_count: faker.number.int({ min: 0 }),
+    nearest_valid_until: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 10),
+      null,
+    ]),
+  })),
+  total: faker.number.int({ min: 0 }),
+  page: faker.number.int({ min: 1 }),
+  page_size: faker.number.int({ min: 1 }),
+  ...overrideResponse,
+});
+
+export const getGetCatalogSupplierResponseCatalogMoneyMock = (
+  overrideResponse: Partial<CatalogMoney> = {},
+): CatalogMoney => ({
+  ...{
+    amount: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    currency: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getGetCatalogSupplierResponseMock = (
+  overrideResponse: Partial<Extract<SupplierDetail, object>> = {},
+): SupplierDetail => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  tin: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  country: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
+  offers_count: faker.number.int({ min: 0 }),
+  expired_count: faker.number.int({ min: 0 }),
+  expiring_count: faker.number.int({ min: 0 }),
+  nearest_valid_until: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 10),
+    null,
+  ]),
+  contact_person: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  phone: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  email: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  website: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  legal_address: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  offers: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(
+    () => ({
+      id: faker.helpers.fromRegExp("^[0-9]+$"),
+      supplier: {
+        id: faker.helpers.fromRegExp("^[0-9]+$"),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      },
+      product: {
+        id: faker.helpers.fromRegExp("^[0-9]+$"),
+        name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+        sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      },
+      supplier_sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
+      price: faker.helpers.arrayElement([
+        { ...getGetCatalogSupplierResponseCatalogMoneyMock() },
+        null,
+      ]),
+      quota_qty: faker.number.int({ min: 0 }),
+      min_order_qty: faker.number.int({ min: 1 }),
+      in_stock_lead_days: faker.number.int({ min: 0 }),
+      order_lead_days: faker.number.int({ min: 0 }),
+      stock_status: faker.helpers.arrayElement([
+        faker.string.alpha({ length: { min: 10, max: 20 } }),
+        null,
+      ]),
+      valid_from: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+      is_active: faker.datatype.boolean(),
+      validity: faker.helpers.arrayElement(["ok", "expiring", "expired"] as const),
+    }),
+  ),
+  prices_visible: faker.datatype.boolean(),
+  ...overrideResponse,
+});
+
+export const getUpdateSupplierOfferResponseCatalogMoneyMock = (
+  overrideResponse: Partial<CatalogMoney> = {},
+): CatalogMoney => ({
+  ...{
+    amount: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    currency: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  },
+  ...overrideResponse,
+});
+
+export const getUpdateSupplierOfferResponseMock = (
+  overrideResponse: Partial<Extract<CatalogOffer, object>> = {},
+): CatalogOffer => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  supplier: {
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  product: {
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  supplier_sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  price: faker.helpers.arrayElement([
+    { ...getUpdateSupplierOfferResponseCatalogMoneyMock() },
+    null,
+  ]),
+  quota_qty: faker.number.int({ min: 0 }),
+  min_order_qty: faker.number.int({ min: 1 }),
+  in_stock_lead_days: faker.number.int({ min: 0 }),
+  order_lead_days: faker.number.int({ min: 0 }),
+  stock_status: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  valid_from: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  is_active: faker.datatype.boolean(),
+  validity: faker.helpers.arrayElement(["ok", "expiring", "expired"] as const),
+  ...overrideResponse,
+});
+
+export const getListBrigadesResponseCrewRateMock = (
+  overrideResponse: Partial<CrewRate> = {},
+): CrewRate => ({
+  ...{
+    amount: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    currency: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    unit: faker.helpers.arrayElement(["day", "hour"] as const),
+  },
+  ...overrideResponse,
+});
+
+export const getListBrigadesResponseMock = (
+  overrideResponse: Partial<Extract<BrigadePage, object>> = {},
+): BrigadePage => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    kind: faker.helpers.arrayElement(Object.values(BrigadeKind)),
+    specialization: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    headcount: faker.number.int({ min: 1 }),
+    rate: faker.helpers.arrayElement([{ ...getListBrigadesResponseCrewRateMock() }, null]),
+    rate_visible: faker.datatype.boolean(),
+    note: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    is_active: faker.datatype.boolean(),
+  })),
+  total: faker.number.int({ min: 0 }),
+  page: faker.number.int({ min: 1 }),
+  page_size: faker.number.int({ min: 1 }),
+  ...overrideResponse,
+});
+
+export const getCreateBrigadeResponseCrewRateMock = (
+  overrideResponse: Partial<CrewRate> = {},
+): CrewRate => ({
+  ...{
+    amount: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    currency: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    unit: faker.helpers.arrayElement(["day", "hour"] as const),
+  },
+  ...overrideResponse,
+});
+
+export const getCreateBrigadeResponseMock = (
+  overrideResponse: Partial<Extract<Brigade, object>> = {},
+): Brigade => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  kind: faker.helpers.arrayElement(Object.values(BrigadeKind)),
+  specialization: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  headcount: faker.number.int({ min: 1 }),
+  rate: faker.helpers.arrayElement([{ ...getCreateBrigadeResponseCrewRateMock() }, null]),
+  rate_visible: faker.datatype.boolean(),
+  note: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  is_active: faker.datatype.boolean(),
+  ...overrideResponse,
+});
+
+export const getUpdateBrigadeResponseCrewRateMock = (
+  overrideResponse: Partial<CrewRate> = {},
+): CrewRate => ({
+  ...{
+    amount: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    currency: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    unit: faker.helpers.arrayElement(["day", "hour"] as const),
+  },
+  ...overrideResponse,
+});
+
+export const getUpdateBrigadeResponseMock = (
+  overrideResponse: Partial<Extract<Brigade, object>> = {},
+): Brigade => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  kind: faker.helpers.arrayElement(Object.values(BrigadeKind)),
+  specialization: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  headcount: faker.number.int({ min: 1 }),
+  rate: faker.helpers.arrayElement([{ ...getUpdateBrigadeResponseCrewRateMock() }, null]),
+  rate_visible: faker.datatype.boolean(),
+  note: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  is_active: faker.datatype.boolean(),
+  ...overrideResponse,
+});
+
+export const getListCatalogCategoryRequestsResponseMock = (
+  overrideResponse: Partial<Extract<CategoryRequestList, object>> = {},
+): CategoryRequestList => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    proposed_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    parent_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+    justification: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+    status: faker.helpers.arrayElement(Object.values(CategoryRequestStatus)),
+    company_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    requested_by: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+    resulting_category_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+    resulting_category_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+    review_notes: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      undefined,
+    ]),
+    reviewed_at: faker.helpers.arrayElement([
+      faker.date.past().toISOString().slice(0, 19) + "Z",
+      null,
+    ]),
+    created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  })),
+  ...overrideResponse,
+});
+
+export const getCreateCatalogCategoryRequestResponseMock = (
+  overrideResponse: Partial<Extract<CategoryRequest, object>> = {},
+): CategoryRequest => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  proposed_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  parent_name: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  justification: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  status: faker.helpers.arrayElement(Object.values(CategoryRequestStatus)),
+  company_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  requested_by: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  resulting_category_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+  resulting_category_name: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  review_notes: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    undefined,
+  ]),
+  reviewed_at: faker.helpers.arrayElement([
+    faker.date.past().toISOString().slice(0, 19) + "Z",
+    null,
+  ]),
+  created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  ...overrideResponse,
+});
+
+export const getListCatalogExchangeRatesResponseMock = (
+  overrideResponse: Partial<Extract<ExchangeRatePage, object>> = {},
+): ExchangeRatePage => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    currency: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    rate_to_uzs: faker.helpers.fromRegExp("^-?[0-9]+(\\.[0-9]+)?$"),
+    rate_date: faker.date.past().toISOString().slice(0, 10),
+    source: faker.helpers.arrayElement(["CBU", "MANUAL"] as const),
+  })),
+  total: faker.number.int({ min: 0 }),
+  page: faker.number.int({ min: 1 }),
+  page_size: faker.number.int({ min: 1 }),
+  ...overrideResponse,
+});
+
+export const getListHsCodesResponseMock = (
+  overrideResponse: Partial<Extract<HsCodePage, object>> = {},
+): HsCodePage => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    code: faker.helpers.fromRegExp("^[0-9]{2,10}$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    unit_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    extra_unit_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    level: faker.helpers.arrayElement([2, 4, 6, 8, 10] as const),
+    valid_from: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+    is_active: faker.datatype.boolean(),
+    source: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  })),
+  total: faker.number.int({ min: 0 }),
+  page: faker.number.int({ min: 1 }),
+  page_size: faker.number.int({ min: 1 }),
+  ...overrideResponse,
+});
+
+export const getCreateHsCodeResponseMock = (
+  overrideResponse: Partial<Extract<HsCode, object>> = {},
+): HsCode => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  code: faker.helpers.fromRegExp("^[0-9]{2,10}$"),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  unit_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  extra_unit_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  level: faker.helpers.arrayElement([2, 4, 6, 8, 10] as const),
+  valid_from: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  is_active: faker.datatype.boolean(),
+  source: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ...overrideResponse,
+});
+
+export const getUpdateHsCodeResponseMock = (
+  overrideResponse: Partial<Extract<HsCode, object>> = {},
+): HsCode => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  code: faker.helpers.fromRegExp("^[0-9]{2,10}$"),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  unit_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  extra_unit_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  level: faker.helpers.arrayElement([2, 4, 6, 8, 10] as const),
+  valid_from: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  valid_until: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 10), null]),
+  is_active: faker.datatype.boolean(),
+  source: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  ...overrideResponse,
+});
+
+export const getListManufacturersResponseMock = (
+  overrideResponse: Partial<Extract<ManufacturerPage, object>> = {},
+): ManufacturerPage => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    country_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+    country_name: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    website: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    is_active: faker.datatype.boolean(),
+  })),
+  total: faker.number.int({ min: 0 }),
+  page: faker.number.int({ min: 1 }),
+  page_size: faker.number.int({ min: 1 }),
+  ...overrideResponse,
+});
+
+export const getCreateManufacturerResponseMock = (
+  overrideResponse: Partial<Extract<Manufacturer, object>> = {},
+): Manufacturer => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  country_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+  country_name: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  website: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  is_active: faker.datatype.boolean(),
+  ...overrideResponse,
+});
+
+export const getUpdateManufacturerResponseMock = (
+  overrideResponse: Partial<Extract<Manufacturer, object>> = {},
+): Manufacturer => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  country_id: faker.helpers.arrayElement([faker.helpers.fromRegExp("^[0-9]+$"), null]),
+  country_name: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  website: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  is_active: faker.datatype.boolean(),
+  ...overrideResponse,
+});
+
+export const getListTechDocsResponseCatalogProductRefMock = (
+  overrideResponse: Partial<CatalogProductRef> = {},
+): CatalogProductRef => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getListTechDocsResponseTechDocDealMock = (
+  overrideResponse: Partial<TechDocDeal> = {},
+): TechDocDeal => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    client: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getListTechDocsResponseMock = (
+  overrideResponse: Partial<Extract<TechDocPage, object>> = {},
+): TechDocPage => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    kind: faker.helpers.arrayElement(Object.values(TechDocKind)),
+    title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    original_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    content_type: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    size_bytes: faker.number.int({ min: 0 }),
+    previewable: faker.datatype.boolean(),
+    product: faker.helpers.arrayElement([
+      { ...getListTechDocsResponseCatalogProductRefMock() },
+      null,
+    ]),
+    deal: faker.helpers.arrayElement([{ ...getListTechDocsResponseTechDocDealMock() }, null]),
+    uploaded_by: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+    created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  })),
+  total: faker.number.int({ min: 0 }),
+  page: faker.number.int({ min: 1 }),
+  page_size: faker.number.int({ min: 1 }),
+  ...overrideResponse,
+});
+
+export const getUploadTechDocResponseCatalogProductRefMock = (
+  overrideResponse: Partial<CatalogProductRef> = {},
+): CatalogProductRef => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    sku: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getUploadTechDocResponseTechDocDealMock = (
+  overrideResponse: Partial<TechDocDeal> = {},
+): TechDocDeal => ({
+  ...{
+    id: faker.helpers.fromRegExp("^[0-9]+$"),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    client: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  },
+  ...overrideResponse,
+});
+
+export const getUploadTechDocResponseMock = (
+  overrideResponse: Partial<Extract<TechDoc, object>> = {},
+): TechDoc => ({
+  id: faker.helpers.fromRegExp("^[0-9]+$"),
+  kind: faker.helpers.arrayElement(Object.values(TechDocKind)),
+  title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  original_name: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  content_type: faker.string.alpha({ length: { min: 10, max: 20 } }),
+  size_bytes: faker.number.int({ min: 0 }),
+  previewable: faker.datatype.boolean(),
+  product: faker.helpers.arrayElement([
+    { ...getUploadTechDocResponseCatalogProductRefMock() },
+    null,
+  ]),
+  deal: faker.helpers.arrayElement([{ ...getUploadTechDocResponseTechDocDealMock() }, null]),
+  uploaded_by: faker.helpers.arrayElement([
+    faker.string.alpha({ length: { min: 10, max: 20 } }),
+    null,
+  ]),
+  created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
+  ...overrideResponse,
+});
+
+export const getDownloadTechDocResponseMock = (): Blob =>
+  new Blob([new Uint8Array(faker.number.int({ min: 1, max: 64 }))]);
+
+export const getListTechDocDealOptionsResponseMock = (
+  overrideResponse: Partial<Extract<EdsDealOptions, object>> = {},
+): EdsDealOptions => ({
+  items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    erp_deal_id: faker.number.int(),
+    number: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    title: faker.string.alpha({ length: { min: 10, max: 20 } }),
+    company: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
+  })),
+  sources: {
+    crm: faker.helpers.arrayElement(Object.values(SourceState)),
+    erp: faker.helpers.arrayElement(Object.values(SourceState)),
+    eds: faker.helpers.arrayElement([
+      faker.helpers.arrayElement(Object.values(SourceState)),
+      undefined,
+    ]),
+  },
+  ...overrideResponse,
+});
+
 export const getLoginMockHandler = (
   overrideResponse?:
     | Session
@@ -14956,6 +16085,168 @@ export const getSetTicketStatusMockHandler = (
             ? await overrideResponse(info)
             : overrideResponse
           : getSetTicketStatusResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getListCompanyArticlesMockHandler = (
+  overrideResponse?:
+    | CompanyArticleList
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<CompanyArticleList> | CompanyArticleList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/help/company-articles",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListCompanyArticlesResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getListAdminCompanyArticlesMockHandler = (
+  overrideResponse?:
+    | CompanyArticleList
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<CompanyArticleList> | CompanyArticleList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/admin/company-articles",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListAdminCompanyArticlesResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getCreateCompanyArticleMockHandler = (
+  overrideResponse?:
+    | CompanyArticle
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<CompanyArticle> | CompanyArticle),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/company-articles",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCreateCompanyArticleResponseMock(),
+        { status: 201 },
+      );
+    },
+    options,
+  );
+};
+
+export const getUpdateCompanyArticleMockHandler = (
+  overrideResponse?:
+    | CompanyArticle
+    | ((
+        info: Parameters<Parameters<typeof http.patch>[1]>[0],
+      ) => Promise<CompanyArticle> | CompanyArticle),
+  options?: RequestHandlerOptions,
+) => {
+  return http.patch(
+    "*/admin/company-articles/:id",
+    async (info: Parameters<Parameters<typeof http.patch>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUpdateCompanyArticleResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getDeleteCompanyArticleMockHandler = (
+  overrideResponse?:
+    void | ((info: Parameters<Parameters<typeof http.delete>[1]>[0]) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.delete(
+    "*/admin/company-articles/:id",
+    async (info: Parameters<Parameters<typeof http.delete>[1]>[0]) => {
+      if (typeof overrideResponse === "function") {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options,
+  );
+};
+
+export const getPublishCompanyArticleMockHandler = (
+  overrideResponse?:
+    | CompanyArticle
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<CompanyArticle> | CompanyArticle),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/company-articles/:id/publish",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getPublishCompanyArticleResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getUnpublishCompanyArticleMockHandler = (
+  overrideResponse?:
+    | CompanyArticle
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<CompanyArticle> | CompanyArticle),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/admin/company-articles/:id/unpublish",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUnpublishCompanyArticleResponseMock(),
         { status: 200 },
       );
     },
@@ -20504,6 +21795,581 @@ export const getCopyCrmMessageAttachmentToRequestMockHandler = (
     options,
   );
 };
+
+export const getGetCatalogLookupsMockHandler = (
+  overrideResponse?:
+    | CatalogLookups
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<CatalogLookups> | CatalogLookups),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/erp/catalog/lookups",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetCatalogLookupsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getListCatalogItemsMockHandler = (
+  overrideResponse?:
+    | CatalogItemPage
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<CatalogItemPage> | CatalogItemPage),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/erp/catalog/items",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListCatalogItemsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getCreateCatalogItemMockHandler = (
+  overrideResponse?:
+    | CatalogItemDetail
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<CatalogItemDetail> | CatalogItemDetail),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/erp/catalog/items",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCreateCatalogItemResponseMock(),
+        { status: 201 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetCatalogItemMockHandler = (
+  overrideResponse?:
+    | CatalogItemDetail
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<CatalogItemDetail> | CatalogItemDetail),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/erp/catalog/items/:id",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetCatalogItemResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getUpdateCatalogItemMockHandler = (
+  overrideResponse?:
+    | CatalogItemDetail
+    | ((
+        info: Parameters<Parameters<typeof http.patch>[1]>[0],
+      ) => Promise<CatalogItemDetail> | CatalogItemDetail),
+  options?: RequestHandlerOptions,
+) => {
+  return http.patch(
+    "*/erp/catalog/items/:id",
+    async (info: Parameters<Parameters<typeof http.patch>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUpdateCatalogItemResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getListCatalogSuppliersMockHandler = (
+  overrideResponse?:
+    | SupplierPage
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<SupplierPage> | SupplierPage),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/erp/catalog/suppliers",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListCatalogSuppliersResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getGetCatalogSupplierMockHandler = (
+  overrideResponse?:
+    | SupplierDetail
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<SupplierDetail> | SupplierDetail),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/erp/catalog/suppliers/:id",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getGetCatalogSupplierResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getUpdateSupplierOfferMockHandler = (
+  overrideResponse?:
+    | CatalogOffer
+    | ((
+        info: Parameters<Parameters<typeof http.patch>[1]>[0],
+      ) => Promise<CatalogOffer> | CatalogOffer),
+  options?: RequestHandlerOptions,
+) => {
+  return http.patch(
+    "*/erp/catalog/suppliers/:id/offers/:offerId",
+    async (info: Parameters<Parameters<typeof http.patch>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUpdateSupplierOfferResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getListBrigadesMockHandler = (
+  overrideResponse?:
+    | BrigadePage
+    | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<BrigadePage> | BrigadePage),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/erp/catalog/brigades",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListBrigadesResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getCreateBrigadeMockHandler = (
+  overrideResponse?:
+    | Brigade
+    | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<Brigade> | Brigade),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/erp/catalog/brigades",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCreateBrigadeResponseMock(),
+        { status: 201 },
+      );
+    },
+    options,
+  );
+};
+
+export const getUpdateBrigadeMockHandler = (
+  overrideResponse?:
+    | Brigade
+    | ((info: Parameters<Parameters<typeof http.patch>[1]>[0]) => Promise<Brigade> | Brigade),
+  options?: RequestHandlerOptions,
+) => {
+  return http.patch(
+    "*/erp/catalog/brigades/:id",
+    async (info: Parameters<Parameters<typeof http.patch>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUpdateBrigadeResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getListCatalogCategoryRequestsMockHandler = (
+  overrideResponse?:
+    | CategoryRequestList
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<CategoryRequestList> | CategoryRequestList),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/erp/catalog/category-requests",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListCatalogCategoryRequestsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getCreateCatalogCategoryRequestMockHandler = (
+  overrideResponse?:
+    | CategoryRequest
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<CategoryRequest> | CategoryRequest),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/erp/catalog/category-requests",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCreateCatalogCategoryRequestResponseMock(),
+        { status: 201 },
+      );
+    },
+    options,
+  );
+};
+
+export const getListCatalogExchangeRatesMockHandler = (
+  overrideResponse?:
+    | ExchangeRatePage
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<ExchangeRatePage> | ExchangeRatePage),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/erp/catalog/exchange-rates",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListCatalogExchangeRatesResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getListHsCodesMockHandler = (
+  overrideResponse?:
+    | HsCodePage
+    | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<HsCodePage> | HsCodePage),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/erp/catalog/hs-codes",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListHsCodesResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getCreateHsCodeMockHandler = (
+  overrideResponse?:
+    HsCode | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<HsCode> | HsCode),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/erp/catalog/hs-codes",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCreateHsCodeResponseMock(),
+        { status: 201 },
+      );
+    },
+    options,
+  );
+};
+
+export const getUpdateHsCodeMockHandler = (
+  overrideResponse?:
+    HsCode | ((info: Parameters<Parameters<typeof http.patch>[1]>[0]) => Promise<HsCode> | HsCode),
+  options?: RequestHandlerOptions,
+) => {
+  return http.patch(
+    "*/erp/catalog/hs-codes/:id",
+    async (info: Parameters<Parameters<typeof http.patch>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUpdateHsCodeResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getListManufacturersMockHandler = (
+  overrideResponse?:
+    | ManufacturerPage
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<ManufacturerPage> | ManufacturerPage),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/erp/catalog/manufacturers",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListManufacturersResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getCreateManufacturerMockHandler = (
+  overrideResponse?:
+    | Manufacturer
+    | ((
+        info: Parameters<Parameters<typeof http.post>[1]>[0],
+      ) => Promise<Manufacturer> | Manufacturer),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/erp/catalog/manufacturers",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getCreateManufacturerResponseMock(),
+        { status: 201 },
+      );
+    },
+    options,
+  );
+};
+
+export const getUpdateManufacturerMockHandler = (
+  overrideResponse?:
+    | Manufacturer
+    | ((
+        info: Parameters<Parameters<typeof http.patch>[1]>[0],
+      ) => Promise<Manufacturer> | Manufacturer),
+  options?: RequestHandlerOptions,
+) => {
+  return http.patch(
+    "*/erp/catalog/manufacturers/:id",
+    async (info: Parameters<Parameters<typeof http.patch>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUpdateManufacturerResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getListTechDocsMockHandler = (
+  overrideResponse?:
+    | TechDocPage
+    | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<TechDocPage> | TechDocPage),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/erp/docs/files",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListTechDocsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
+
+export const getUploadTechDocMockHandler = (
+  overrideResponse?:
+    | TechDoc
+    | ((info: Parameters<Parameters<typeof http.post>[1]>[0]) => Promise<TechDoc> | TechDoc),
+  options?: RequestHandlerOptions,
+) => {
+  return http.post(
+    "*/erp/docs/files",
+    async (info: Parameters<Parameters<typeof http.post>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getUploadTechDocResponseMock(),
+        { status: 201 },
+      );
+    },
+    options,
+  );
+};
+
+export const getDeleteTechDocMockHandler = (
+  overrideResponse?:
+    void | ((info: Parameters<Parameters<typeof http.delete>[1]>[0]) => Promise<void> | void),
+  options?: RequestHandlerOptions,
+) => {
+  return http.delete(
+    "*/erp/docs/files/:id",
+    async (info: Parameters<Parameters<typeof http.delete>[1]>[0]) => {
+      if (typeof overrideResponse === "function") {
+        await overrideResponse(info);
+      }
+
+      return new HttpResponse(null, { status: 204 });
+    },
+    options,
+  );
+};
+
+export const getDownloadTechDocMockHandler = (
+  overrideResponse?:
+    Blob | ((info: Parameters<Parameters<typeof http.get>[1]>[0]) => Promise<Blob> | Blob),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/erp/docs/files/:id/content",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      const binaryBody =
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getDownloadTechDocResponseMock();
+      return new HttpResponse(binaryBody, {
+        status: 200,
+        headers: { "Content-Type": "application/octet-stream" },
+      });
+    },
+    options,
+  );
+};
+
+export const getListTechDocDealOptionsMockHandler = (
+  overrideResponse?:
+    | EdsDealOptions
+    | ((
+        info: Parameters<Parameters<typeof http.get>[1]>[0],
+      ) => Promise<EdsDealOptions> | EdsDealOptions),
+  options?: RequestHandlerOptions,
+) => {
+  return http.get(
+    "*/erp/docs/deals",
+    async (info: Parameters<Parameters<typeof http.get>[1]>[0]) => {
+      return HttpResponse.json(
+        overrideResponse !== undefined
+          ? typeof overrideResponse === "function"
+            ? await overrideResponse(info)
+            : overrideResponse
+          : getListTechDocDealOptionsResponseMock(),
+        { status: 200 },
+      );
+    },
+    options,
+  );
+};
 export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getLoginMockHandler(),
   getForgotPasswordMockHandler(),
@@ -20531,6 +22397,13 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getGetTicketMockHandler(),
   getReplyTicketMockHandler(),
   getSetTicketStatusMockHandler(),
+  getListCompanyArticlesMockHandler(),
+  getListAdminCompanyArticlesMockHandler(),
+  getCreateCompanyArticleMockHandler(),
+  getUpdateCompanyArticleMockHandler(),
+  getDeleteCompanyArticleMockHandler(),
+  getPublishCompanyArticleMockHandler(),
+  getUnpublishCompanyArticleMockHandler(),
   getGetProfileMockHandler(),
   getUpdateProfileMockHandler(),
   getUploadAvatarMockHandler(),
@@ -20772,4 +22645,29 @@ export const getRailTechPlatformBFFAPICRMERPMock = () => [
   getRetryCrmRequestMockHandler(),
   getUploadCrmRequestFileMockHandler(),
   getCopyCrmMessageAttachmentToRequestMockHandler(),
+  getGetCatalogLookupsMockHandler(),
+  getListCatalogItemsMockHandler(),
+  getCreateCatalogItemMockHandler(),
+  getGetCatalogItemMockHandler(),
+  getUpdateCatalogItemMockHandler(),
+  getListCatalogSuppliersMockHandler(),
+  getGetCatalogSupplierMockHandler(),
+  getUpdateSupplierOfferMockHandler(),
+  getListBrigadesMockHandler(),
+  getCreateBrigadeMockHandler(),
+  getUpdateBrigadeMockHandler(),
+  getListCatalogCategoryRequestsMockHandler(),
+  getCreateCatalogCategoryRequestMockHandler(),
+  getListCatalogExchangeRatesMockHandler(),
+  getListHsCodesMockHandler(),
+  getCreateHsCodeMockHandler(),
+  getUpdateHsCodeMockHandler(),
+  getListManufacturersMockHandler(),
+  getCreateManufacturerMockHandler(),
+  getUpdateManufacturerMockHandler(),
+  getListTechDocsMockHandler(),
+  getUploadTechDocMockHandler(),
+  getDeleteTechDocMockHandler(),
+  getDownloadTechDocMockHandler(),
+  getListTechDocDealOptionsMockHandler(),
 ];

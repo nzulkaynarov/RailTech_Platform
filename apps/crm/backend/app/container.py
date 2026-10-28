@@ -42,6 +42,7 @@ if TYPE_CHECKING:
     from app.services.client_notices import ClientNoticeService
     from app.services.client_requests import ClientRequestService
     from app.services.clients import ClientService
+    from app.services.company_articles import CompanyArticleService
     from app.services.documents import DocumentService
     from app.services.erp_access import ErpAccessService
     from app.services.erp_client_card import ErpClientCardService
@@ -683,6 +684,13 @@ class Container:
         return StaffTicketService(
             self.session_factory, self._staff_messenger, self.settings.platform_base_url
         )
+
+    @cached_property
+    def company_articles(self) -> "CompanyArticleService":
+        """Статьи компании: внутренние инструкции для «Помощи» (W18A-P5, B-079)."""
+        from app.services.company_articles import CompanyArticleService
+
+        return CompanyArticleService(self.session_factory)
 
     async def _staff_messenger(self) -> "StaffNotifier | None":
         from app.services.staff_notifier import StaffNotifier

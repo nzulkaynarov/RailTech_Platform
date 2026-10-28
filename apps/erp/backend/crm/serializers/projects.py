@@ -28,7 +28,7 @@ ACT_BLOCKERS = ["no_invoice", "act_exists", "forbidden"]
 JOURNAL_DOCUMENTS = ["contract", "act", "invoice", "quote", "project"]
 
 
-class MoneySerializer(serializers.Serializer):
+class ProjectMoneySerializer(serializers.Serializer):
     amount = serializers.CharField(help_text="Сумма строкой с двумя знаками, `-?\\d+\\.\\d{2}`")
     currency = serializers.CharField(help_text="Код валюты, три заглавные буквы")
 
@@ -80,7 +80,7 @@ class ProjectRowSerializer(serializers.Serializer):
     created_at = serializers.DateTimeField()
     step = serializers.ChoiceField(choices=STEPS)
     client_status = serializers.ChoiceField(choices=CLIENT_STATUSES, help_text="Ключ `client-statuses.yaml`")
-    total = MoneySerializer(allow_null=True, help_text="Сумма последнего КП, видимого клиенту, с НДС")
+    total = ProjectMoneySerializer(allow_null=True, help_text="Сумма последнего КП, видимого клиенту, с НДС")
     manager = PersonSerializer(allow_null=True)
     responsible = PersonSerializer(allow_null=True, help_text="Кто ведёт: взявший в работу, иначе менеджер")
     due_date = serializers.DateField(allow_null=True)
@@ -109,7 +109,7 @@ class QuoteCardSerializer(QuoteRefSerializer):
 
 
 class ContractCardSerializer(ContractRefSerializer):
-    total = MoneySerializer(allow_null=True)
+    total = ProjectMoneySerializer(allow_null=True)
     created_at = serializers.DateTimeField()
     client_agreed_at = serializers.DateTimeField(allow_null=True)
     signed_at = serializers.DateTimeField(allow_null=True)
@@ -126,16 +126,16 @@ class InvoiceCardSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     number = serializers.CharField()
     status = serializers.ChoiceField(choices=INVOICE_WORDS)
-    total = MoneySerializer(allow_null=True)
-    paid = MoneySerializer(allow_null=True)
-    balance_due = MoneySerializer(allow_null=True)
+    total = ProjectMoneySerializer(allow_null=True)
+    paid = ProjectMoneySerializer(allow_null=True)
+    balance_due = ProjectMoneySerializer(allow_null=True)
     issued_at = serializers.DateField(allow_null=True)
     due_date = serializers.DateField(allow_null=True)
     has_pdf = serializers.BooleanField()
 
 
 class ActCardSerializer(ActRefSerializer):
-    total = MoneySerializer(allow_null=True)
+    total = ProjectMoneySerializer(allow_null=True)
     issued_at = serializers.DateField(allow_null=True)
     signed_at = serializers.DateTimeField(allow_null=True)
     rejection_reason = serializers.CharField(allow_blank=True)

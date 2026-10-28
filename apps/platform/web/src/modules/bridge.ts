@@ -93,9 +93,6 @@ export const BRIDGE: Readonly<Record<string, BridgeEntry>> = {
   // «Все документы» и «Создать документ» (D1-5), «КП на одобрение» и «На согласовании» (D1-4), «Счета и оплаты» (D2-4) и
   // «Проекты» (D2-5) — настоящие экраны, записей моста у них нет.
 
-  "erp.catalog": { legacy: erp("#catalog-reference", "erpCatalog"), when: "pilot" },
-  "erp.docs": { legacy: erp("#company-files", "erpFiles"), when: "pilot" },
-
   "chats.all": { who: "chats", when: "pilot", objectKind: "chat" },
   "chats.internal": { who: "chats", when: "pilot", objectKind: "chat" },
   // B-D18-1: переписка отдельно от реестра лидов — «Входящие» старой CRM открываются только с разделом лидов; бухгалтеру
@@ -135,7 +132,10 @@ export const NATIVE_SECTIONS: readonly string[] = [
   "admin.company",
   "admin.bot",
   "admin.audit",
+  "erp.catalog",
+  "erp.docs",
   "admin.tickets",
+  "admin.articles",
 ];
 
 /** Главные действия модулей без экрана (кнопка внизу подменю неактивна): когда появятся. Остальных модулей это не касается. */

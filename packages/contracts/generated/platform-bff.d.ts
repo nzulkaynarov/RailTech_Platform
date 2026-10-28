@@ -462,6 +462,114 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/help/company-articles": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Статьи компании для Помощи (только опубликованные)
+     * @description Опубликованные статьи компании целиком (заголовок, Markdown, язык) — для раздела «Как у нас принято» в окне и на странице Помощи и для общего поиска по статьям. Черновиков здесь нет ни у кого, в том числе у администратора (он видит их в `GET /admin/company-articles`). Нужна сессия и хотя бы один раздел каталога; прав раздела не требуется. Новые выше.
+     */
+    get: operations["listCompanyArticles"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/company-articles": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Все статьи компании с черновиками (Настройки · Статьи компании)
+     * @description Раздел `admin` от чтения (директор читает, администратор правит). Недавно правленные выше; в каждой статье — полный текст для редактора.
+     */
+    get: operations["listAdminCompanyArticles"];
+    put?: never;
+    /**
+     * Создать статью компании (черновик)
+     * @description Раздел `admin` — полный. Новая статья всегда черновик; опубликовать — `POST /admin/company-articles/{id}/publish`. Ошибка значения — 422 `VALIDATION_FAILED` (`details.fields`: `title`, `body`, `language`; `details.reason`: `article_title_empty`, `article_title_too_long`, `article_body_empty`, `article_body_too_long`, `article_language_unknown`). Создание пишется в журнал действий.
+     */
+    post: operations["createCompanyArticle"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/company-articles/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /**
+     * Удалить статью компании
+     * @description Раздел `admin` — полный. Удаляет статью насовсем (SPA просит подтверждение); удаление пишется в журнал действий без текста статьи.
+     */
+    delete: operations["deleteCompanyArticle"];
+    options?: never;
+    head?: never;
+    /**
+     * Править статью компании
+     * @description Раздел `admin` — полный. Меняются присланные поля (`title`, `body`, `language`); статус не меняется — для него `publish` и `unpublish`. Правка опубликованной статьи сразу видна в Помощи. Ошибки значений — как у создания; правка пишется в журнал действий.
+     */
+    patch: operations["updateCompanyArticle"];
+    trace?: never;
+  };
+  "/admin/company-articles/{id}/publish": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Опубликовать статью компании
+     * @description Раздел `admin` — полный. Статья появляется в «Как у нас принято» у всех сотрудников. Повтор для уже опубликованной статьи ничего не меняет и в журнал второй раз не пишется.
+     */
+    post: operations["publishCompanyArticle"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/company-articles/{id}/unpublish": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Вернуть статью компании в черновики
+     * @description Раздел `admin` — полный. Статья исчезает из Помощи у всех, кроме тех, кто правит раздел.
+     */
+    post: operations["unpublishCompanyArticle"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/me/profile": {
     parameters: {
       query?: never;
@@ -4587,6 +4695,394 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/erp/catalog/lookups": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Расчёт · Справочники для форм: единицы, категории, валюты, страны
+     * @description ERP `master-data/units|currencies|countries`, `catalog/categories`. Раздел `erp.stock` — чтение.
+     */
+    get: operations["getCatalogLookups"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/catalog/items": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Расчёт · Номенклатура: позиции
+     * @description ERP `catalog/items/`. Тип позиции (товар со склада или под заказ, услуга фикс / по этапам / по времени) ERP вычисляет сам. Цен поставщиков в списке нет. Раздел `erp.stock` — чтение.
+     */
+    get: operations["listCatalogItems"];
+    put?: never;
+    /**
+     * Расчёт · Номенклатура: добавить позицию
+     * @description ERP `POST catalog/items/` — право `catalog.manage` (иначе 403 `FORBIDDEN`, `source = erp`). Новая позиция — черновик. Раздел `erp.stock` — полный.
+     */
+    post: operations["createCatalogItem"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/catalog/items/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Расчёт · Номенклатура: карточка позиции с предложениями поставщиков
+     * @description ERP `catalog/items/{id}/`. Цена закупки в предложении — `null` и `prices_visible = false` без поля `supplier_prices` (режет и ERP, и BFF). Раздел `erp.stock` — чтение.
+     */
+    get: operations["getCatalogItem"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /**
+     * Расчёт · Номенклатура: изменить позицию
+     * @description ERP `PATCH catalog/items/{id}/` — право `catalog.manage`. НДС `null` — ставка компании по умолчанию. Раздел `erp.stock` — полный.
+     */
+    patch: operations["updateCatalogItem"];
+    trace?: never;
+  };
+  "/erp/catalog/suppliers": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Расчёт · Поставщики
+     * @description ERP `catalog/suppliers/`: число предложений, истёкшие и истекающие сроки цен. Цен нет. Раздел `erp.stock` — чтение.
+     */
+    get: operations["listCatalogSuppliers"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/catalog/suppliers/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Расчёт · Поставщик: карточка с предложениями
+     * @description ERP `catalog/suppliers/{id}/`: квоты, сроки поставки и действия цен; цена закупки — только с полем `supplier_prices`. Раздел `erp.stock` — чтение.
+     */
+    get: operations["getCatalogSupplier"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/catalog/suppliers/{id}/offers/{offer_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /**
+     * Расчёт · Поставщик: изменить условия предложения
+     * @description ERP `PATCH catalog/suppliers/{id}/offers/{offer_id}/` — право `supply.manage`; цена — ещё и поле `supplier_prices` (иначе 403 `FORBIDDEN`). Раздел `erp.stock` — полный.
+     */
+    patch: operations["updateSupplierOffer"];
+    trace?: never;
+  };
+  "/erp/catalog/brigades": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Расчёт · Бригады и исполнители услуг
+     * @description ERP `catalog/brigades/`. Ставка — `null`, если нет поля `cost_margin` и раздела `erp.calc.services` (режет и ERP, и BFF). Раздел `erp.stock` — чтение.
+     */
+    get: operations["listBrigades"];
+    put?: never;
+    /**
+     * Расчёт · Бригады: добавить
+     * @description ERP `POST catalog/brigades/` — право `catalog.manage`; ставка — ещё и зона услуг или `cost_margin`. Раздел `erp.stock` — полный.
+     */
+    post: operations["createBrigade"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/catalog/brigades/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /**
+     * Расчёт · Бригады: изменить или убрать из выбора
+     * @description ERP `PATCH catalog/brigades/{id}/` — право `catalog.manage`. `is_active = false` убирает бригаду из выбора, не удаляя. Раздел `erp.stock` — полный.
+     */
+    patch: operations["updateBrigade"];
+    trace?: never;
+  };
+  "/erp/catalog/category-requests": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Расчёт · Запросы на категории
+     * @description ERP `catalog/category-requests/`: запросы своей компании. Решает директор: `approveCategoryRequest` и `rejectCategoryRequest` (раздел `company.settings`). Раздел `erp.stock` — чтение.
+     */
+    get: operations["listCatalogCategoryRequests"];
+    put?: never;
+    /**
+     * Расчёт · Запросить новую категорию
+     * @description ERP `POST catalog/category-requests/` — право `catalog.manage`. Запрос ничего не создаёт: категорию заводит директор или администратор и привязывает к запросу. Второй такой же запрос, пока первый на рассмотрении, — 409 `CONFLICT`. Раздел `erp.stock` — полный.
+     */
+    post: operations["createCatalogCategoryRequest"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/catalog/exchange-rates": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Расчёт · Справочники: курсы валют к UZS
+     * @description ERP `exchange-rates/`: строки по дням, источник — ЦБ или вручную. Ввод курса на дату — `createFxRate` (раздел `company.settings`). Раздел `erp.stock` — чтение.
+     */
+    get: operations["listCatalogExchangeRates"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/catalog/hs-codes": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Расчёт · Справочники: коды ТН ВЭД
+     * @description ERP `master-data/hs-codes/`. Раздел `erp.stock` — чтение.
+     */
+    get: operations["listHsCodes"];
+    put?: never;
+    /**
+     * Расчёт · Справочники: добавить код ТН ВЭД
+     * @description ERP `POST master-data/hs-codes/` — право `catalog.manage`. Повтор кода — 409 `CONFLICT` (`details.reason = hs_code_exists`). Раздел `erp.stock` — полный.
+     */
+    post: operations["createHsCode"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/catalog/hs-codes/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /**
+     * Расчёт · Справочники: изменить код ТН ВЭД
+     * @description ERP `PATCH master-data/hs-codes/{id}/` — право `catalog.manage`. Код не меняется; выведенный из обращения закрывается датой `valid_until`, не удаляется. Раздел `erp.stock` — полный.
+     */
+    patch: operations["updateHsCode"];
+    trace?: never;
+  };
+  "/erp/catalog/manufacturers": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Расчёт · Справочники: производители
+     * @description ERP `catalog/manufacturers/`. Отключённые видит только держатель `catalog.manage` (`include_inactive`). Раздел `erp.stock` — чтение.
+     */
+    get: operations["listManufacturers"];
+    put?: never;
+    /**
+     * Расчёт · Справочники: добавить производителя
+     * @description ERP `POST catalog/manufacturers/` — право `catalog.manage`. Название уникально без учёта регистра — 409 `CONFLICT` (`details.reason = manufacturer_exists`). Раздел `erp.stock` — полный.
+     */
+    post: operations["createManufacturer"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/catalog/manufacturers/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /**
+     * Расчёт · Справочники: изменить производителя
+     * @description ERP `PATCH catalog/manufacturers/{id}/` — право `catalog.manage`. `is_active = false` скрывает бренд в выборе. Раздел `erp.stock` — полный.
+     */
+    patch: operations["updateManufacturer"];
+    trace?: never;
+  };
+  "/erp/docs/files": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Расчёт · Техдокументация: файлы
+     * @description ERP `catalog/tech-docs/`: ТЗ, чертежи, сертификаты и регламенты ПНР с привязкой к позиции и заявке. Раздел `erp.stock` — чтение.
+     */
+    get: operations["listTechDocs"];
+    put?: never;
+    /**
+     * Расчёт · Техдокументация: загрузить файл
+     * @description ERP `POST catalog/tech-docs/` (multipart) — право `catalog.manage`. BFF читает тело до 21 МБ (копится в памяти BFF, B-D23-6), multipart не разбирает и передаёт ERP как есть; файл ≤ 20 МБ (PDF, PNG, JPEG, DOC(X), XLS(X)), содержимое сверяется с расширением. Нужна привязка к позиции или заявке. Раздел `erp.stock` — полный.
+     */
+    post: operations["uploadTechDoc"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/docs/files/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    /**
+     * Расчёт · Техдокументация: удалить файл
+     * @description ERP `DELETE catalog/tech-docs/{id}/` — право `catalog.manage`; файл удаляется из хранилища. Раздел `erp.stock` — полный.
+     */
+    delete: operations["deleteTechDoc"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/docs/files/{id}/content": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Расчёт · Техдокументация: содержимое файла
+     * @description ERP `catalog/tech-docs/{id}/file/` потоком. Всегда вложением с `X-Content-Type-Options: nosniff`: тип содержимого браузер не исполняет, просмотр PDF и изображений строит интерфейс сам из полученных байт. Раздел `erp.stock` — чтение.
+     */
+    get: operations["downloadTechDoc"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/erp/docs/deals": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Расчёт · Техдокументация: заявки и проекты для привязки
+     * @description ERP `crm/deals/` (как «Связь с проектом» в EDS); номер ЗВ/ПР составляется до ERP-09. Раздел `erp.stock` — чтение.
+     */
+    get: operations["listTechDocDealOptions"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -5848,6 +6344,52 @@ export interface components {
       /** @description Сколько обращений подходит под фильтр */
       total: number;
       counts: components["schemas"]["TicketCounts"];
+    };
+    /**
+     * @description Язык статьи. Сейчас в Помощи показываются статьи на любом языке, перевод по языку интерфейса — B-080
+     * @enum {string}
+     */
+    CompanyArticleLanguage: "ru" | "uz" | "en";
+    /**
+     * @description «Черновик» (видят те, кто правит раздел) или «Опубликовано» (видят все сотрудники)
+     * @enum {string}
+     */
+    CompanyArticleStatus: "draft" | "published";
+    CompanyArticleCreate: {
+      /** @description Заголовок — до 200 символов после сжатия пробелов (длиннее — 422 `article_title_too_long`) */
+      title: string;
+      /** @description Текст в простом Markdown (`##`-заголовки, абзацы, списки, **жирный**, `код`) — до 20000 символов после обрезки пробелов (длиннее — 422 `article_body_too_long`). HTML не интерпретируется: Помощь показывает его как текст. */
+      body: string;
+      language?: components["schemas"]["CompanyArticleLanguage"];
+    };
+    CompanyArticleUpdate: {
+      title?: string;
+      body?: string;
+      language?: components["schemas"]["CompanyArticleLanguage"];
+    };
+    CompanyArticle: {
+      id: number;
+      title: string;
+      /** @description Markdown статьи */
+      body: string;
+      language: components["schemas"]["CompanyArticleLanguage"];
+      status: components["schemas"]["CompanyArticleStatus"];
+      /** @description Кто создал; пусто, если сотрудник удалён */
+      created_by_name?: string;
+      /** @description Кто правил последним; пусто, если сотрудник удалён */
+      updated_by_name?: string;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      updated_at: string;
+      /**
+       * Format: date-time
+       * @description Когда опубликована; у черновика поля нет
+       */
+      published_at?: string;
+    };
+    CompanyArticleList: {
+      items: components["schemas"]["CompanyArticle"][];
     };
     ChangePasswordIn: {
       current_password: string;
@@ -9540,6 +10082,379 @@ export interface components {
       message: number;
       index: number;
     };
+    /**
+     * @description Товар со склада, товар под заказ, услуга: фикс / по этапам / по времени (ERP вычисляет)
+     * @enum {string}
+     */
+    CatalogItemKind: "stock" | "on_order" | "service_fixed" | "service_milestones" | "service_time";
+    CatalogNamedRef: {
+      id: components["schemas"]["CompanyItemRef"];
+      name: string;
+    };
+    CatalogUnit: {
+      id: components["schemas"]["CompanyItemRef"];
+      code: string;
+      name: string;
+    };
+    CatalogMoney: {
+      amount: components["schemas"]["DecimalString"];
+      /** @description Код валюты ISO 4217 */
+      currency: string | null;
+    };
+    CatalogMoneyIn: {
+      amount: components["schemas"]["DecimalString"];
+      currency: string;
+    };
+    CatalogItem: {
+      id: components["schemas"]["CompanyItemRef"];
+      sku: string;
+      name: string;
+      kind: components["schemas"]["CatalogItemKind"];
+      unit: components["schemas"]["CatalogUnit"] | null;
+      /** @description НДС позиции, %; `null` — ставка компании по умолчанию */
+      vat_rate: components["schemas"]["DecimalString"] | null;
+      /** @description Действующая ставка (своя или компании по умолчанию); `null` — нигде не задана */
+      vat_effective: components["schemas"]["DecimalString"] | null;
+      category: components["schemas"]["CatalogNamedRef"] | null;
+      /** @description Код статуса карточки: DRAFT, PUBLISHED */
+      status: string | null;
+      offers_count: number;
+      /** Format: date */
+      nearest_valid_until: string | null;
+      docs_count: number;
+    };
+    CatalogItemPage: {
+      items: components["schemas"]["CatalogItem"][];
+      total: number;
+      page: number;
+      page_size: number;
+    };
+    CatalogProductRef: {
+      id: components["schemas"]["CompanyItemRef"];
+      name: string;
+      sku: string;
+    };
+    /** @description Предложение поставщика. Квота — сколько единиц поставщик готов отгрузить по цене. */
+    CatalogOffer: {
+      id: components["schemas"]["CompanyItemRef"];
+      supplier: components["schemas"]["CatalogNamedRef"];
+      product: components["schemas"]["CatalogProductRef"];
+      supplier_sku: string;
+      /** @description Цена закупки — только с полем `supplier_prices`, иначе `null` */
+      price: components["schemas"]["CatalogMoney"] | null;
+      quota_qty: number;
+      min_order_qty: number;
+      in_stock_lead_days: number;
+      order_lead_days: number;
+      /** @description Код: IN_STOCK, ON_ORDER, EXPECTED… */
+      stock_status: string | null;
+      /** Format: date */
+      valid_from: string | null;
+      /** Format: date */
+      valid_until: string | null;
+      is_active: boolean;
+      /**
+       * @description Срок цены: действует, истекает в ближайшие 14 дней, истёк
+       * @enum {string}
+       */
+      validity: "ok" | "expiring" | "expired";
+    };
+    CatalogTechDocRef: {
+      id: components["schemas"]["CompanyItemRef"];
+      title: string;
+      kind: components["schemas"]["TechDocKind"];
+    };
+    CatalogItemDetail: {
+      id: components["schemas"]["CompanyItemRef"];
+      sku: string;
+      name: string;
+      kind: components["schemas"]["CatalogItemKind"];
+      unit: components["schemas"]["CatalogUnit"] | null;
+      /** @description НДС позиции, %; `null` — ставка компании по умолчанию */
+      vat_rate: components["schemas"]["DecimalString"] | null;
+      /** @description Действующая ставка (своя или компании по умолчанию); `null` — нигде не задана */
+      vat_effective: components["schemas"]["DecimalString"] | null;
+      category: components["schemas"]["CatalogNamedRef"] | null;
+      /** @description Код статуса карточки: DRAFT, PUBLISHED */
+      status: string | null;
+      offers_count: number;
+      /** Format: date */
+      nearest_valid_until: string | null;
+      docs_count: number;
+      description: string;
+      gost_drawing: string;
+      hs_code: string;
+      manufacturer_part_number: string;
+      brand: string | null;
+      offers: components["schemas"]["CatalogOffer"][];
+      /** @description Видит ли сотрудник цены поставщиков */
+      prices_visible: boolean;
+      tech_docs: components["schemas"]["CatalogTechDocRef"][];
+    };
+    CatalogItemCreate: {
+      name: string;
+      kind: components["schemas"]["CatalogItemKind"];
+      description?: string;
+      unit_id?: components["schemas"]["CompanyItemRef"] | null;
+      category_id?: components["schemas"]["CompanyItemRef"] | null;
+      /** @description Процент 0..100; `null` — по умолчанию компании */
+      vat_rate?: components["schemas"]["DecimalString"] | null;
+    };
+    CatalogItemUpdate: {
+      name?: string;
+      kind?: components["schemas"]["CatalogItemKind"];
+      description?: string;
+      unit_id?: components["schemas"]["CompanyItemRef"] | null;
+      category_id?: components["schemas"]["CompanyItemRef"] | null;
+      vat_rate?: components["schemas"]["DecimalString"] | null;
+    };
+    CatalogLookups: {
+      units: components["schemas"]["CatalogUnit"][];
+      categories: {
+        id: components["schemas"]["CompanyItemRef"];
+        name: string;
+        parent_id: components["schemas"]["CompanyItemRef"] | null;
+      }[];
+      currencies: {
+        code: string;
+        symbol: string;
+      }[];
+      countries: components["schemas"]["CatalogNamedRef"][];
+    };
+    SupplierRow: {
+      id: components["schemas"]["CompanyItemRef"];
+      name: string;
+      tin: string;
+      country: string | null;
+      offers_count: number;
+      /** @description Действующих предложений с истёкшим сроком цены */
+      expired_count: number;
+      /** @description Срок цены истекает в ближайшие 14 дней */
+      expiring_count: number;
+      /** Format: date */
+      nearest_valid_until: string | null;
+    };
+    SupplierPage: {
+      items: components["schemas"]["SupplierRow"][];
+      total: number;
+      page: number;
+      page_size: number;
+    };
+    SupplierDetail: {
+      id: components["schemas"]["CompanyItemRef"];
+      name: string;
+      tin: string;
+      country: string | null;
+      offers_count: number;
+      /** @description Действующих предложений с истёкшим сроком цены */
+      expired_count: number;
+      /** @description Срок цены истекает в ближайшие 14 дней */
+      expiring_count: number;
+      /** Format: date */
+      nearest_valid_until: string | null;
+      contact_person: string;
+      phone: string;
+      email: string;
+      website: string;
+      legal_address: string;
+      offers: components["schemas"]["CatalogOffer"][];
+      prices_visible: boolean;
+    };
+    SupplierOfferUpdate: {
+      price?: components["schemas"]["CatalogMoneyIn"];
+      quota_qty?: number;
+      min_order_qty?: number;
+      in_stock_lead_days?: number;
+      order_lead_days?: number;
+      stock_status?: string | null;
+      /** Format: date */
+      valid_from?: string | null;
+      /** Format: date */
+      valid_until?: string | null;
+      is_active?: boolean;
+    };
+    /** @enum {string} */
+    BrigadeKind: "brigade" | "person" | "subcontractor";
+    CrewRate: {
+      amount: components["schemas"]["DecimalString"];
+      currency: string | null;
+      /** @enum {string} */
+      unit: "day" | "hour";
+    };
+    Brigade: {
+      id: components["schemas"]["CompanyItemRef"];
+      name: string;
+      kind: components["schemas"]["BrigadeKind"];
+      specialization: string;
+      headcount: number;
+      /** @description Ставка — держатель зоны услуг расчёта или поле `cost_margin`; иначе `null` */
+      rate: components["schemas"]["CrewRate"] | null;
+      rate_visible: boolean;
+      note: string;
+      is_active: boolean;
+    };
+    BrigadePage: {
+      items: components["schemas"]["Brigade"][];
+      total: number;
+      page: number;
+      page_size: number;
+    };
+    BrigadeCreate: {
+      name: string;
+      kind?: components["schemas"]["BrigadeKind"];
+      specialization?: string;
+      headcount?: number;
+      rate?: components["schemas"]["CatalogMoneyIn"] | null;
+      /** @enum {string} */
+      rate_unit?: "day" | "hour";
+      note?: string;
+      is_active?: boolean;
+    };
+    BrigadeUpdate: {
+      name?: string;
+      kind?: components["schemas"]["BrigadeKind"];
+      specialization?: string;
+      headcount?: number;
+      rate?: components["schemas"]["CatalogMoneyIn"] | null;
+      /** @enum {string} */
+      rate_unit?: "day" | "hour";
+      note?: string;
+      is_active?: boolean;
+    };
+    CategoryProposalIn: {
+      name: string;
+      parent_id?: components["schemas"]["CompanyItemRef"] | null;
+      justification?: string;
+    };
+    ExchangeRateRow: {
+      id: components["schemas"]["CompanyItemRef"];
+      currency: string;
+      rate_to_uzs: components["schemas"]["DecimalString"];
+      /** Format: date */
+      rate_date: string;
+      /**
+       * @description Автозагрузка ЦБ РУз или вручную
+       * @enum {string}
+       */
+      source: "CBU" | "MANUAL";
+    };
+    ExchangeRatePage: {
+      items: components["schemas"]["ExchangeRateRow"][];
+      total: number;
+      page: number;
+      page_size: number;
+    };
+    HsCode: {
+      id: components["schemas"]["CompanyItemRef"];
+      code: string;
+      name: string;
+      unit_name: string;
+      extra_unit_name: string;
+      /** @enum {integer} */
+      level: 2 | 4 | 6 | 8 | 10;
+      /** Format: date */
+      valid_from: string | null;
+      /** Format: date */
+      valid_until: string | null;
+      is_active: boolean;
+      source: string;
+    };
+    HsCodePage: {
+      items: components["schemas"]["HsCode"][];
+      total: number;
+      page: number;
+      page_size: number;
+    };
+    HsCodeCreate: {
+      /** @description 2, 4, 6, 8 или 10 цифр */
+      code: string;
+      name: string;
+      unit_name?: string;
+      extra_unit_name?: string;
+      /** Format: date */
+      valid_from?: string | null;
+      /** Format: date */
+      valid_until?: string | null;
+    };
+    HsCodeUpdate: {
+      name?: string;
+      unit_name?: string;
+      extra_unit_name?: string;
+      /** Format: date */
+      valid_from?: string | null;
+      /** Format: date */
+      valid_until?: string | null;
+    };
+    Manufacturer: {
+      id: components["schemas"]["CompanyItemRef"];
+      name: string;
+      country_id: components["schemas"]["CompanyItemRef"] | null;
+      country_name: string | null;
+      website: string;
+      is_active: boolean;
+    };
+    ManufacturerPage: {
+      items: components["schemas"]["Manufacturer"][];
+      total: number;
+      page: number;
+      page_size: number;
+    };
+    ManufacturerCreate: {
+      name: string;
+      country_id?: components["schemas"]["CompanyItemRef"] | null;
+      website?: string;
+      is_active?: boolean;
+    };
+    ManufacturerUpdate: {
+      name?: string;
+      country_id?: components["schemas"]["CompanyItemRef"] | null;
+      website?: string;
+      is_active?: boolean;
+    };
+    /**
+     * @description ТЗ, чертёж, сертификат, регламент ПНР, другое
+     * @enum {string}
+     */
+    TechDocKind: "tz" | "drawing" | "certificate" | "pnr" | "other";
+    TechDocDeal: {
+      id: components["schemas"]["CompanyItemRef"];
+      /** @description Номер для показа (`ЗВ-2026-104`, `ПР-…`); составляется до ERP-09 */
+      number: string;
+      title: string;
+      client: string;
+    };
+    TechDoc: {
+      id: components["schemas"]["CompanyItemRef"];
+      kind: components["schemas"]["TechDocKind"];
+      title: string;
+      original_name: string;
+      content_type: string;
+      size_bytes: number;
+      /** @description PDF и изображения открываются для просмотра; остальное скачивается */
+      previewable: boolean;
+      product: components["schemas"]["CatalogProductRef"] | null;
+      deal: components["schemas"]["TechDocDeal"] | null;
+      uploaded_by: string | null;
+      /** Format: date-time */
+      created_at: string;
+    };
+    TechDocPage: {
+      items: components["schemas"]["TechDoc"][];
+      total: number;
+      page: number;
+      page_size: number;
+    };
+    TechDocUpload: {
+      /**
+       * Format: binary
+       * @description До 20 МБ: PDF, PNG, JPEG, DOC(X), XLS(X)
+       */
+      file: string;
+      kind?: components["schemas"]["TechDocKind"];
+      title?: string;
+      product_id?: components["schemas"]["CompanyItemRef"];
+      deal_id?: components["schemas"]["CompanyItemRef"];
+    };
   };
   responses: {
     /** @description `SESSION_EXPIRED` — сессии нет, истекла или сотрудник отключён */
@@ -9755,6 +10670,8 @@ export interface components {
     };
   };
   parameters: {
+    /** @description Идентификатор статьи компании */
+    CompanyArticleIdPath: number;
     /** @description Номер обращения `ОБР-0012` (в адресе — закодированный) */
     TicketNumberPath: string;
     /** @description Клиент CRM (id) */
@@ -10648,6 +11565,206 @@ export interface operations {
         };
       };
       422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listCompanyArticles: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Опубликованные статьи */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CompanyArticleList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listAdminCompanyArticles: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Все статьи */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CompanyArticleList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  createCompanyArticle: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CompanyArticleCreate"];
+      };
+    };
+    responses: {
+      /** @description Статья создана (черновик) */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CompanyArticle"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  deleteCompanyArticle: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Идентификатор статьи компании */
+        id: components["parameters"]["CompanyArticleIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Удалена */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  updateCompanyArticle: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Идентификатор статьи компании */
+        id: components["parameters"]["CompanyArticleIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CompanyArticleUpdate"];
+      };
+    };
+    responses: {
+      /** @description Обновлённая статья */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CompanyArticle"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  publishCompanyArticle: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Идентификатор статьи компании */
+        id: components["parameters"]["CompanyArticleIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Опубликованная статья */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CompanyArticle"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  unpublishCompanyArticle: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Идентификатор статьи компании */
+        id: components["parameters"]["CompanyArticleIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Статья-черновик */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CompanyArticle"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
       503: components["responses"]["BackendUnavailable"];
     };
   };
@@ -18139,6 +19256,821 @@ export interface operations {
       404: components["responses"]["NotFound"];
       413: components["responses"]["EdsPayloadTooLarge"];
       415: components["responses"]["EdsUnsupportedMedia"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getCatalogLookups: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CatalogLookups"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listCatalogItems: {
+    parameters: {
+      query?: {
+        /** @description Поиск */
+        q?: string;
+        page?: number;
+        page_size?: number;
+        /** @description Тип */
+        kind?: components["schemas"]["CatalogItemKind"];
+        /** @description Категория */
+        category_id?: components["schemas"]["CompanyItemRef"];
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CatalogItemPage"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  createCatalogItem: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CatalogItemCreate"];
+      };
+    };
+    responses: {
+      /** @description Создана */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CatalogItemDetail"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getCatalogItem: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Id объекта ERP (строкой) */
+        id: components["parameters"]["CompanyItemId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CatalogItemDetail"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  updateCatalogItem: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id объекта ERP (строкой) */
+        id: components["parameters"]["CompanyItemId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CatalogItemUpdate"];
+      };
+    };
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CatalogItemDetail"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listCatalogSuppliers: {
+    parameters: {
+      query?: {
+        /** @description Поиск */
+        q?: string;
+        page?: number;
+        page_size?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SupplierPage"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getCatalogSupplier: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Id объекта ERP (строкой) */
+        id: components["parameters"]["CompanyItemId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["SupplierDetail"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  updateSupplierOffer: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id поставщика */
+        id: components["schemas"]["CompanyItemRef"];
+        /** @description Id предложения */
+        offer_id: components["schemas"]["CompanyItemRef"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["SupplierOfferUpdate"];
+      };
+    };
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CatalogOffer"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listBrigades: {
+    parameters: {
+      query?: {
+        /** @description Поиск */
+        q?: string;
+        page?: number;
+        page_size?: number;
+        kind?: components["schemas"]["BrigadeKind"];
+        /** @description Вместе с теми, кто не работает */
+        include_inactive?: boolean;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["BrigadePage"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  createBrigade: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["BrigadeCreate"];
+      };
+    };
+    responses: {
+      /** @description Создана */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Brigade"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  updateBrigade: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id объекта ERP (строкой) */
+        id: components["parameters"]["CompanyItemId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["BrigadeUpdate"];
+      };
+    };
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Brigade"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listCatalogCategoryRequests: {
+    parameters: {
+      query?: {
+        status?: components["schemas"]["CategoryRequestStatus"];
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CategoryRequestList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  createCatalogCategoryRequest: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["CategoryProposalIn"];
+      };
+    };
+    responses: {
+      /** @description Запрос подан */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["CategoryRequest"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      /** @description `CONFLICT` — такой запрос уже на рассмотрении */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listCatalogExchangeRates: {
+    parameters: {
+      query?: {
+        /** @description Код валюты */
+        currency?: string;
+        page?: number;
+        page_size?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ExchangeRatePage"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listHsCodes: {
+    parameters: {
+      query?: {
+        /** @description Поиск */
+        q?: string;
+        page?: number;
+        page_size?: number;
+        /** @description Число знаков */
+        level?: 2 | 4 | 6 | 8 | 10;
+        /** @description Только действующие */
+        active?: boolean;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HsCodePage"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  createHsCode: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["HsCodeCreate"];
+      };
+    };
+    responses: {
+      /** @description Добавлен */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HsCode"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      /** @description `CONFLICT` — такой код уже есть */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  updateHsCode: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id объекта ERP (строкой) */
+        id: components["parameters"]["CompanyItemId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["HsCodeUpdate"];
+      };
+    };
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HsCode"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listManufacturers: {
+    parameters: {
+      query?: {
+        /** @description Поиск */
+        q?: string;
+        page?: number;
+        page_size?: number;
+        include_inactive?: boolean;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ManufacturerPage"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  createManufacturer: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ManufacturerCreate"];
+      };
+    };
+    responses: {
+      /** @description Добавлен */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Manufacturer"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      /** @description `CONFLICT` — такой производитель уже есть */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  updateManufacturer: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id объекта ERP (строкой) */
+        id: components["parameters"]["CompanyItemId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ManufacturerUpdate"];
+      };
+    };
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Manufacturer"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      /** @description `CONFLICT` — такой производитель уже есть */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listTechDocs: {
+    parameters: {
+      query?: {
+        /** @description Поиск */
+        q?: string;
+        page?: number;
+        page_size?: number;
+        kind?: components["schemas"]["TechDocKind"];
+        /** @description Позиция номенклатуры */
+        product_id?: components["schemas"]["CompanyItemRef"];
+        /** @description Заявка или проект (id сделки ERP) */
+        deal_id?: components["schemas"]["CompanyItemRef"];
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TechDocPage"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  uploadTechDoc: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["TechDocUpload"];
+      };
+    };
+    responses: {
+      /** @description Загружен */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TechDoc"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      /** @description `PAYLOAD_TOO_LARGE` — файл больше 20 МБ (`details.max_bytes`) */
+      413: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  deleteTechDoc: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Id объекта ERP (строкой) */
+        id: components["parameters"]["CompanyItemId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Удалён */
+      204: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content?: never;
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  downloadTechDoc: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Id объекта ERP (строкой) */
+        id: components["parameters"]["CompanyItemId"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Файл */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/octet-stream": string;
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listTechDocDealOptions: {
+    parameters: {
+      query?: {
+        /** @description Номер, название или компания */
+        q?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Готово */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EdsDealOptions"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
       503: components["responses"]["BackendUnavailable"];
     };
   };
