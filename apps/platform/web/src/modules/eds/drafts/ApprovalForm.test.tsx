@@ -216,12 +216,13 @@ describe("Одобрение КП: форма", () => {
     expect(screen.getByText("Итого с НДС")).toBeVisible();
   });
 
-  it("«Что произойдёт» не обещает отправку: «Готово к отправке», клиенту отправит менеджер заявки", async () => {
+  it("«Что произойдёт»: с каналами КП сразу уходит клиенту, недоступный канал — с причиной (ERP-11)", async () => {
     const { form } = await openForm();
     const consequence = within(form).getByRole("group", { name: "Что произойдёт" });
 
-    expect(consequence).toHaveTextContent("станет «Готово к отправке»");
-    expect(consequence).toHaveTextContent("его отправит менеджер заявки");
+    expect(consequence).toHaveTextContent("получит исходящий номер ИСХ");
+    expect(consequence).toHaveTextContent("КП сразу уйдёт клиенту по выбранным каналам");
+    expect(consequence).toHaveTextContent("менеджеру заявки придёт уведомление");
     expect(consequence).not.toHaveTextContent("КП · Отправлено");
   });
 

@@ -292,6 +292,7 @@ def test_guard_detects_broken_responses(client, world):
 
 WRITE_PATHS = {
     ("POST", "/clients/handoff"),
+    ("POST", "/clients/{crm_client_id}/requests"),
     ("POST", "/clients/{crm_client_id}/invite"),
     ("PUT", "/contacts/{crm_contact_id}"),
     ("POST", "/users/provision"),
@@ -324,6 +325,20 @@ def handoff_body(crm_client_id, inn):
         "consent": {"given_at": "2026-10-01T09:30:00+05:00", "version": "2026-09"},
         "create_request": True,
         "invite": {"channels": ["email"]},
+    }
+
+
+def client_request_body(crm_request_id, *, contact=None):
+    """`ClientRequestIn` шва 0.9.0 (W16-D1-2): «Создать заявку» CRM для переданного клиента."""
+    return {
+        "crm_request_id": crm_request_id,
+        "crm_lead_id": 501,
+        "contact": contact,
+        "need": {"summary": "Вторая партия рельсов Р65", "product_interest": ["Рельс Р65"]},
+        "owner": {"crm_user_id": 101, "name": "Менеджер Продаж"},
+        "urgency": "urgent",
+        "letter_file_id": "3f2c1a7e-5b9d-4c8e-9a1f-0d2e3c4b5a69",
+        "process": "v3",
     }
 
 
@@ -363,6 +378,7 @@ THROTTLE_CASES = {
     ("GET", "/ai-usage"): ("/ai-usage?date_from=2026-01-01&date_to=2026-12-31", None),
     ("GET", "/health"): ("/health", None),
     ("POST", "/clients/handoff"): ("/clients/handoff", handoff_body(8301, "830100001")),
+    ("POST", "/clients/{crm_client_id}/requests"): ("/clients/999999/requests", client_request_body(8399)),
     ("POST", "/clients/{crm_client_id}/invite"): ("/clients/999999/invite", {"channel": "email"}),
     ("PUT", "/contacts/{crm_contact_id}"): ("/contacts/999999", handoff_body(8301, "830100001")["contacts"][0]),
     ("POST", "/users/provision"): ("/users/provision", provision_body(8901, "guard-8901@railtech.uz")),
@@ -435,6 +451,21 @@ def exercise_all(client, world):
     hit("POST", "/clients/handoff", "/clients/handoff", 422, body={"crm_client_id": 1})
     hit("POST", "/clients/handoff", "/clients/handoff", 401, api=anonymous, body=handoff_body(8103, "810300001"))
     assert created["erp_company_id"]
+
+    # POST /clients/{id}/requests (0.9.0): 201 → 200 (повтор по crm_request_id) → 404 (клиент не передан) → 422 → 401
+    requests_path = "/clients/{crm_client_id}/requests"
+    made = hit("POST", requests_path, "/clients/8101/requests", 201, body=client_request_body(8111))
+    again = hit("POST", requests_path, "/clients/8101/requests", 200, body=client_request_body(8111))
+    assert made == again and made["number"].startswith("ЗВ-")
+    hit("POST", requests_path, "/clients/999999/requests", 404, body=client_request_body(8112))
+    # тот же Idempotency-Key, другое тело — 409 IDEMPOTENCY_CONFLICT, второй заявки нет
+    same_key = str(uuid.uuid4())
+    for body, expected in ((client_request_body(8115), 201), ({**client_request_body(8115), "urgency": "normal"}, 409)):
+        response = client.post(PREFIX + "/clients/8101/requests", body, format="json", HTTP_IDEMPOTENCY_KEY=same_key)
+        assert response.status_code == expected, response.content
+        out.append(("POST", requests_path, expected, json.loads(response.content)))
+    hit("POST", requests_path, "/clients/8101/requests", 422, body={"crm_request_id": 8113})
+    hit("POST", requests_path, "/clients/8101/requests", 401, api=anonymous, body=client_request_body(8114))
 
     # POST /clients/{id}/invite (0.8.0): 200 (Telegram — событие боту CRM; письмо — свой канал; причина в `error`) → 404 → 422 → 401
     invite = "/clients/{crm_client_id}/invite"
@@ -574,7 +605,7 @@ def exercised(client, world, catalog_product, monkeypatch):
 
 def test_every_operation_has_a_throttle_case():
     assert set(THROTTLE_CASES) == set(contract_operations()), "каждой операции контракта нужен вызов на 429"
-    assert len(THROTTLE_CASES) == 16
+    assert len(THROTTLE_CASES) == 17
 
 
 @pytest.mark.parametrize(("method", "path"), sorted(THROTTLE_CASES), ids=lambda value: str(value))
@@ -642,9 +673,19 @@ def test_error_codes_are_the_documented_ones(exercised):
             "PAIRING_PROOF_REPLAYED",
         }
     )
-    assert codes[404] == {"NOT_FOUND"}
+    assert codes[404] == {"NOT_FOUND", "CLIENT_NOT_FOUND"}
     assert codes[422] == {"VALIDATION_ERROR", "PAIRING_PARTIAL_REPEAT"}  # 0.6.1: частичный повтор ротации
-    assert codes[409] <= {"INN_CONFLICT", "EMAIL_CONFLICT", "BOOTSTRAP_CLOSED", "NOT_SWITCHABLE"} and codes[409]
+    assert (
+        codes[409]
+        <= {
+            "INN_CONFLICT",
+            "EMAIL_CONFLICT",
+            "BOOTSTRAP_CLOSED",
+            "NOT_SWITCHABLE",
+            "IDEMPOTENCY_CONFLICT",
+        }
+        and codes[409]
+    )
 
 
 # --- FIX-63: `role_codes` в провижининге (SystemRoleCode) --------------------------------------------------------

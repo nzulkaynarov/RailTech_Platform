@@ -55,6 +55,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/integration/v1/clients/{crm_client_id}/requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description POST /api/integration/v1/clients/{crm_client_id}/requests — «Создать заявку» CRM (шов 0.9.0, CRM-03). */
+        post: operations["api_integration_v1_clients_requests_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/integration/v1/clients/handoff": {
         parameters: {
             query?: never;
@@ -4510,7 +4527,7 @@ export interface paths {
         };
         /**
          * List deals
-         * @description Returns deals accessible to the current user. Admins/managers see all; clients see only their company's deals.
+         * @description Returns deals accessible to the current user. Admins/managers see all; clients see only their company's deals. `search` finds deals by number (ЗВ-ГГГГ-NNN / ПР-ГГГГ-NNN — the same NNN under either prefix, latin ZV/PR and spaces accepted), title or client company name (ERP-09).
          */
         get: operations["crm_deals_list"];
         put?: never;
@@ -9308,6 +9325,15 @@ export interface components {
         DealDetail: {
             readonly id: number;
             /**
+             * Номер заявки
+             * @description ЗВ-ГГГГ-NNN; после принятия КП клиентом — ПР-ГГГГ-NNN (тот же NNN)
+             */
+            readonly number: string;
+            /** Процесс заявки */
+            readonly process: components["schemas"]["ProcessEnum"];
+            /** Срочность */
+            readonly urgency: components["schemas"]["UrgencyEnum"];
+            /**
              * Компания
              * @description Компания-клиент, с которой ведётся сделка. Пусто — черновик-калькулятор без клиента.
              */
@@ -9409,6 +9435,15 @@ export interface components {
         /** @description MED-3: Optimized list serializer with human-readable names. */
         DealList: {
             readonly id: number;
+            /**
+             * Номер заявки
+             * @description ЗВ-ГГГГ-NNN; после принятия КП клиентом — ПР-ГГГГ-NNN (тот же NNN)
+             */
+            readonly number: string;
+            /** Процесс заявки */
+            readonly process: components["schemas"]["ProcessEnum"];
+            /** Срочность */
+            readonly urgency: components["schemas"]["UrgencyEnum"];
             /**
              * Название сделки
              * @description Краткое описание сделки (опционально)
@@ -12663,6 +12698,12 @@ export interface components {
             logo?: string | null;
         };
         /**
+         * @description * `legacy` - legacy
+         *     * `v3` - v3
+         * @enum {string}
+         */
+        ProcessEnum: "legacy" | "v3";
+        /**
          * @description Strip supplier-cost fields (offers / base_price) from viewers who don't own
          *     the product. Only the OWNING seller's team + platform admins see cost & supplier
          *     identity — clients, other sellers and anon never do (C1 cost-leak fix). React was
@@ -13378,6 +13419,8 @@ export interface components {
             readonly director_comment: string;
             /** @description Каналы отправки клиенту, выбранные директором при одобрении (telegram, cabinet, email) */
             readonly send_channels: string[];
+            /** @description Итог автоотправки после одобрения директором (ERP-11): requested, sent_via, skipped [{channel, reason}], error; пусто — автоотправки не было */
+            readonly send_report: unknown;
             readonly items: components["schemas"]["QuoteItem"][];
             readonly charges: components["schemas"]["QuoteCharge"][];
             readonly economics: components["schemas"]["QuoteEconomics"] | null;
@@ -14456,6 +14499,12 @@ export interface components {
              */
             is_active?: boolean;
         };
+        /**
+         * @description * `normal` - Обычная
+         *     * `urgent` - Срочная
+         * @enum {string}
+         */
+        UrgencyEnum: "normal" | "urgent";
         User: {
             readonly id: number;
             /**
@@ -14706,6 +14755,26 @@ export interface operations {
         };
     };
     api_integration_v1_clients_invite_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                crm_client_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_integration_v1_clients_requests_create: {
         parameters: {
             query?: never;
             header?: never;

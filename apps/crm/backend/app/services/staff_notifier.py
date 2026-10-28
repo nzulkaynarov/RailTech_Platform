@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.domain.errors import ConflictError, Reason, ValidationFailedError
 from app.domain.lead_sources import WEB_NOTE_MARK
+from app.domain.platform_links import LinkBase
 from app.domain.staff_notify import (
     Staff,
     alert_recipients,
@@ -74,7 +75,9 @@ class StaffNotifier:
             return False
         return await self._deliver(user_id, user.tg_user_id, escape(text), key=key)
 
-    async def lead_message(self, lead_id: int, now: datetime, window: timedelta, base: str) -> bool:
+    async def lead_message(
+        self, lead_id: int, now: datetime, window: timedelta, links: LinkBase
+    ) -> bool:
         """Новое сообщение лида → ответственному менеджеру, не чаще раза за `window`."""
         if self._bot is None:
             return False
@@ -89,7 +92,7 @@ class StaffNotifier:
             if target is None:
                 return False
             text = await _last_lead_text(session, lead_id)
-            body = lead_dm_text(lead.display_name, text, base, lead_id)
+            body = lead_dm_text(lead.display_name, text, links.lead(lead_id), lead_id)
             user_id = lead.assigned_user_id
         if not await self._deliver(user_id, target, body, key="lead_message", lead_id=lead_id):
             return False
@@ -100,7 +103,7 @@ class StaffNotifier:
                 lead.manager_notified_at = now
         return True
 
-    async def handed_over(self, lead_id: int, user_id: int, base: str) -> bool:
+    async def handed_over(self, lead_id: int, user_id: int, links: LinkBase) -> bool:
         """«Передать коллеге» → личное сообщение новому ответственному."""
         if self._bot is None:
             return False
@@ -109,7 +112,7 @@ class StaffNotifier:
             lead = await session.get(Lead, lead_id)
         if user is None or lead is None or not user.is_active or user.tg_user_id is None:
             return False
-        url = escape(f"{base.rstrip('/')}/leads/{lead_id}", quote=True)
+        url = escape(links.lead(lead_id), quote=True)
         body = tx.HANDOVER_DM.format(
             lead_id=lead_id,
             name=escape(lead.display_name or tx.NO_NAME),
@@ -120,7 +123,7 @@ class StaffNotifier:
     async def web_lead(
         self,
         lead_id: int,
-        base: str,
+        links: LinkBase,
         minutes: int,
         *,
         overdue: bool = False,
@@ -152,7 +155,7 @@ class StaffNotifier:
             company=lead.company_name,
             need=need or lead.need_summary,
             minutes=minutes,
-            crm_url=base,
+            lead_url=links.lead(lead_id),
             lead_id=lead_id,
         )
         delivered = 0

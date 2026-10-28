@@ -36,11 +36,18 @@
  * канал `telegram` в приглашении доставляется ботом CRM по событию `uz.railtech.erp.invite.requested.v1` (ERP в Telegram не
  * пишет), поэтому `sent_via: [telegram]` значит «передано боту», а итог доставки CRM знает сама.
  *
- * OpenAPI spec version: 0.8.0
+ * 0.9.0 (волна 16, W16-D1-2; аддитивно): `POST /clients/{crm_client_id}/requests` — «Создать заявку» из CRM для клиента,
+ * уже переданного в ERP (CRM-03): срочность, файл письма директору (EDS), процесс `v3`, менеджер заявки = владелец сделки
+ * ERP (B-008); номер заявки `ЗВ-ГГГГ-NNN` выдаёт ERP (`Deal.number`, ERP-09) и возвращает в ответе; `number` у
+ * `DealListItem` — этот номер (у сделок, заведённых до ERP-09, тоже — номера выданы миграцией).
+ *
+ * OpenAPI spec version: 0.9.0
  */
 import type {
   AiUsageRow,
   CatalogItem,
+  ClientRequestIn,
+  ClientRequestOut,
   CompanySummary,
   Contact,
   ContactIn,
@@ -294,6 +301,59 @@ export const listDealDocuments = async (
   const body = [204, 205, 304].includes(res.status) ? null : await res.text();
 
   const data: Document[] = body ? JSON.parse(body) : {};
+  return data;
+};
+
+export const getCreateClientRequestUrl = (crmClientId: number) => {
+  return `/clients/${crmClientId}/requests`;
+};
+
+/**
+ * Менеджер CRM создаёт заявку из лида или из карточки клиента (SPEC-v3 §3.1 шаг 2). Клиент уже передан
+ * (`POST /clients/handoff` создал сопоставление `crm_client_id`); иначе — 404 `CLIENT_NOT_FOUND`, и CRM сначала
+ * передаёт клиента. ERP создаёт сделку в стадии FSM `DRAFT` с номером `ЗВ-ГГГГ-NNN` (ERP-09, нумерация без пропусков),
+ * процессом `v3` (ERP-07), срочностью и менеджером заявки — сотрудником ERP, сопоставленным с `owner.crm_user_id`
+ * (владелец сделки, B-008; сопоставления нет — сделка без менеджера), и публикует `request.created(source=crm)` с
+ * `request_number`, `urgency`, `letter_file_id`, `crm_request_id`, `process` в той же транзакции: EDS регистрирует
+ * входящее письмо директору со срочностью и файлом письма. Контакт заявки — по `contact.crm_contact_id`; контакт, которого
+ * ERP ещё не знает, создаётся в компании и сопоставляется (как в передаче). Идемпотентно по `crm_request_id`: повтор
+ * (с любым `Idempotency-Key`) — 200 с той же заявкой, без второй сделки и второго события. E-mail контакта не обязателен.
+ * @summary Новая заявка клиента, переданного в ERP («Создать заявку» CRM, CRM-03)
+ */
+export const createClientRequest = async (
+  crmClientId: number,
+  clientRequestIn: ClientRequestIn,
+  options?: RequestInit,
+): Promise<ClientRequestOut> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  const res = await fetch(getCreateClientRequestUrl(crmClientId), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(clientRequestIn),
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: ClientRequestOut = body ? JSON.parse(body) : {};
   return data;
 };
 

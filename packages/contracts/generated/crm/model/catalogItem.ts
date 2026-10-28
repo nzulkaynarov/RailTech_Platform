@@ -36,7 +36,12 @@
  * канал `telegram` в приглашении доставляется ботом CRM по событию `uz.railtech.erp.invite.requested.v1` (ERP в Telegram не
  * пишет), поэтому `sent_via: [telegram]` значит «передано боту», а итог доставки CRM знает сама.
  *
- * OpenAPI spec version: 0.8.0
+ * 0.9.0 (волна 16, W16-D1-2; аддитивно): `POST /clients/{crm_client_id}/requests` — «Создать заявку» из CRM для клиента,
+ * уже переданного в ERP (CRM-03): срочность, файл письма директору (EDS), процесс `v3`, менеджер заявки = владелец сделки
+ * ERP (B-008); номер заявки `ЗВ-ГГГГ-NNN` выдаёт ERP (`Deal.number`, ERP-09) и возвращает в ответе; `number` у
+ * `DealListItem` — этот номер (у сделок, заведённых до ERP-09, тоже — номера выданы миграцией).
+ *
+ * OpenAPI spec version: 0.9.0
  */
 import type { Availability } from "./availability";
 import type { CatalogItemKind } from "./catalogItemKind";

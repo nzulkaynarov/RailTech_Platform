@@ -138,7 +138,7 @@ SPECTACULAR_SETTINGS = {
         "Supports deal lifecycle management, quoting, product catalog (PIM), "
         "Excel imports, and real-time notifications via WebSocket."
     ),
-    "VERSION": "1.0.0",
+    "VERSION": "1.1.0",
     "CONTACT": {"name": "ERP API Support", "email": "support@example.com"},
     "LICENSE": {"name": "Proprietary"},
     "SERVE_INCLUDE_SCHEMA": False,

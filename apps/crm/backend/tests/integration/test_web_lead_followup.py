@@ -19,6 +19,7 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.config import Settings
+from app.domain.platform_links import LinkBase
 from app.domain.start_link import link_key, verify_lead_link
 from app.integrations.smtp import SmtpCheck, SmtpConnection
 from app.main import create_app
@@ -36,6 +37,8 @@ from app.services.mail import MailService
 from app.services.staff_notifier import StaffNotifier
 from tests.integration.crm_helpers import FakeSender, login, make_user
 from tests.integration.test_lead_intake import web_body
+
+OLD_CRM = LinkBase(platform=None, crm="https://crm.example.com")
 
 pytestmark = pytest.mark.integration
 
@@ -510,7 +513,7 @@ async def test_new_web_lead_is_sent_to_subscribed_managers_in_telegram(
         assert no_telegram.id
 
     bot = FakeSender()
-    delivered = await StaffNotifier(sessions, bot).web_lead(lead_id, "https://crm.example.com", 15)
+    delivered = await StaffNotifier(sessions, bot).web_lead(lead_id, OLD_CRM, 15)
 
     assert delivered == 1
     [(chat, text)] = bot.sent
@@ -534,9 +537,7 @@ async def test_overdue_reminder_goes_to_everyone_subscribed(
         await session.execute(update(User).where(User.id == two.id).values(tg_user_id=8102))
     bot = FakeSender()
 
-    sent = await StaffNotifier(sessions, bot).web_lead(
-        lead_id, "https://crm.example.com", 15, overdue=True
-    )
+    sent = await StaffNotifier(sessions, bot).web_lead(lead_id, OLD_CRM, 15, overdue=True)
 
     assert sent == 2
     assert {chat for chat, _ in bot.sent} == {8101, 8102}
@@ -562,7 +563,7 @@ async def test_repeat_request_notifies_only_the_owner_when_a_human_leads_the_lea
     post_web(client, live_settings, text="Ещё вопрос")
     bot = FakeSender()
 
-    await StaffNotifier(sessions, bot).web_lead(lead_id, "https://crm.example.com", 15, repeat=True)
+    await StaffNotifier(sessions, bot).web_lead(lead_id, OLD_CRM, 15, repeat=True)
 
     assert [chat for chat, _ in bot.sent] == [8201]
     async with sessions() as session:
@@ -607,14 +608,14 @@ async def test_repeat_request_of_an_unowned_lead_notifies_nobody_and_quotes_the_
     bot = FakeSender()
     notifier = StaffNotifier(sessions, bot)
 
-    assert await notifier.web_lead(lead_id, "https://crm.example.com", 15, repeat=True) == 0
+    assert await notifier.web_lead(lead_id, OLD_CRM, 15, repeat=True) == 0
     assert bot.sent == []
 
     async with sessions() as session, session.begin():
         await session.execute(
             update(Lead).where(Lead.id == lead_id).values(assigned_user_id=manager_a.id)
         )
-    assert await notifier.web_lead(lead_id, "https://crm.example.com", 15, repeat=True) == 1
+    assert await notifier.web_lead(lead_id, OLD_CRM, 15, repeat=True) == 1
     assert "Ещё вопрос" in bot.sent[0][1], "повторный запрос — его текст, а не первый"
 
 

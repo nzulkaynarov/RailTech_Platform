@@ -34,7 +34,7 @@ def assign_calc(deal, *assignees, letter_id: uuid.UUID | None = None, margin=Non
     ).task
 
 
-def _decide(quote, decision: str, route_status: str, *, comment=None, outgoing_number=None) -> str:
+def _decide(quote, decision: str, route_status: str, *, comment=None, outgoing_number=None, channels=None) -> str:
     quote.refresh_from_db()
     return apply_director_decision(
         erp_quote_id=quote.pk,
@@ -43,15 +43,16 @@ def _decide(quote, decision: str, route_status: str, *, comment=None, outgoing_n
         route_status=route_status,
         comment=comment,
         outgoing_number=outgoing_number,
-        channels=["cabinet"] if decision == "approve" else None,
+        channels=channels if decision == "approve" else None,
         decided_by={"crm_user_id": 3, "full_name": "Директор"},
         decided_at=timezone.now(),
     )
 
 
-def approve_in_eds(quote, outgoing_number: str = "ИСХ-001/26") -> str:
-    """Директор одобрил текущую редакцию КП в EDS: ИСХ-номер на КП, «Готово к отправке»."""
-    return _decide(quote, "approve", "approved", outgoing_number=outgoing_number)
+def approve_in_eds(quote, outgoing_number: str = "ИСХ-001/26", channels=None) -> str:
+    """Директор одобрил текущую редакцию КП в EDS: ИСХ-номер на КП, «Готово к отправке». С каналами — ERP сразу
+    отправляет КП клиенту по доступным из них (ERP-11); без каналов (по умолчанию) — отправляет менеджер (C1-G-4)."""
+    return _decide(quote, "approve", "approved", outgoing_number=outgoing_number, channels=channels)
 
 
 def return_in_eds(quote, comment: str = "На доработку") -> str:
