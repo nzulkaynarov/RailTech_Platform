@@ -301,6 +301,147 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/me/onboarding": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Закрыть приветствие и тур первого входа
+     * @description «Пропустить» и «Больше не показывать»: ставит `Me.onboarding_done = true` (CRM `PATCH /me {onboarding_done: true}`), обратно флаг не снимается. Только про себя; повторный вызов безвреден. Ответ — обновлённый профиль.
+     */
+    put: operations["finishOnboarding"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/tickets": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Мои обращения к администратору
+     * @description Только обращения самого сотрудника, новейшие первыми (CRM `GET /staff-tickets/mine`). Нужна сессия и хотя бы один раздел каталога; прав раздела не требуется.
+     */
+    get: operations["listMyTickets"];
+    put?: never;
+    /**
+     * Написать администратору
+     * @description Создаёт обращение: тема из списка, текст, адрес страницы (внутренний путь Платформы, `/eds/inbox?panel=open`). Роль автора подставляет BFF из сессии. Админам уходит строка в колокольчик и личное сообщение бота; не больше пяти обращений в час на сотрудника — иначе 429 `TOO_MANY_REQUESTS` с `details.reason = ticket_rate_limited`. Ошибка значения — 422 `VALIDATION_FAILED` (`details.fields`: `subject`, `body`, `page`; `details.reason`: `ticket_subject_unknown`, `ticket_text_empty`, `ticket_text_too_long`, `ticket_page_invalid`).
+     */
+    post: operations["createTicket"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/tickets/{number}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Моё обращение с ответами администратора
+     * @description Чужое обращение отвечает 404: его для этого сотрудника не существует.
+     */
+    get: operations["getMyTicket"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/tickets": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Все обращения сотрудников (Настройки · Обращения сотрудников)
+     * @description Раздел `admin` от чтения (директор читает, администратор правит). Порядок: «Новое» и «В работе» выше «Решено», внутри — свежее выше. `counts` — по статусам без учёта фильтра.
+     */
+    get: operations["listTickets"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/tickets/{number}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Обращение с ответами (карточка в боковом окне) */
+    get: operations["getTicket"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/tickets/{number}/reply": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Ответить на обращение
+     * @description Раздел `admin` — полный. Ответ уходит автору в колокольчик и в Telegram (если привязан); новое обращение берётся «В работу», `status` задаёт итог сразу («Решено»). Недопустимый переход — 409 `CONFLICT` (`details.reason = ticket_status_transition`), пустой или слишком длинный ответ — 422.
+     */
+    post: operations["replyTicket"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/admin/tickets/{number}/status": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Сменить статус обращения
+     * @description Раздел `admin` — полный. «Новое → В работе → Решено»; «Решено» можно вернуть «В работу». Решение без ответа тоже сообщается автору. Иначе — 409 `CONFLICT` (`details.reason = ticket_status_transition`).
+     */
+    post: operations["setTicketStatus"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/me/profile": {
     parameters: {
       query?: never;
@@ -565,7 +706,12 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Отметить все прочитанными */
+    /**
+     * Отметить все прочитанными
+     * @description Отмечает обе ленты — ERP и CRM (у каждой своя). Недоступность одной ленты не отменяет отметку другой: ответ 204,
+     *     недоступный источник остаётся непрочитанным и виден в `sources` следующей выдачи `GET /notifications`. Ошибка
+     *     возвращается, только если не отмечена ни одна лента.
+     */
     post: operations["markAllNotificationsRead"];
     delete?: never;
     options?: never;
@@ -707,6 +853,126 @@ export interface paths {
     get: operations["downloadEdsDocumentFile"];
     put?: never;
     post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/quotes": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * EDS · КП на одобрение: список
+     * @description EDS `GET /approvals?template=quote`. `scope=mine` (по умолчанию) — маршруты, текущий шаг которых ждёт этого сотрудника; `scope=all` — все КП, которые EDS показывает сотруднику (директор и менеджер — все). Порядок — от новых к старым; страница — непрозрачный `cursor`. Клиент, сумма и срок приходят из снимка КП маршрута (EDS отдаёт снимок только тому, кто решает шаг: у менеджера `client_name` и `total` — `null`). Раздел `eds.drafts` — чтение. EDS не ответил — 503 `BACKEND_UNAVAILABLE` (`source = eds`); нет прав в EDS — 403 `FORBIDDEN` (`details.reason = eds_not_granted`).
+     */
+    get: operations["listQuoteApprovals"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/quotes/{ref}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * EDS · Карточка КП на одобрение (по id маршрута или по номеру КП)
+     * @description Маршрут «КП» EDS `GET /approvals/{id}` (шаги, чек-лист, снимок КП) плюс данные ERP по ссылкам маршрута: состав КП и итоги (`GET /crm/quotes/{id}/`), заявка и контакт клиента для каналов отправки (`GET /crm/deals/{id}/`, `GET /accounts/contacts/{id}/`); письмо заявки — EDS `GET /letters?q=<номер заявки>`. `ref` — UUID маршрута или номер КП `КП-2026/115` (сначала `GET /registry?number=&kind=quote`; у номера несколько версий — берётся открытая, иначе последняя); косая черта допускается в пути как есть и как `%2F`. ERP не ответил — 200 без строк и итогов, `sources.erp = unavailable`. **Внутренний блок** `internal` (себестоимость, маржа, порог, условия оплаты, сроки) и значение маржи в чек-листе BFF вырезает у роли без группы `cost_margin`: поле не передаётся совсем. Раздел `eds.drafts` — чтение (менеджер видит КП без маржи и без кнопок решения).
+     */
+    get: operations["getQuoteApproval"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/quotes/{id}/decision": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * EDS · Одобрить КП → отправить клиенту / Вернуть на доработку / Отклонить
+     * @description EDS `POST /approvals/{id}/decision` (право `approvals.decide`). Раздел `eds.drafts` — полный: роль только для чтения получает 403 в BFF до EDS. **Проверку чек-листа делает EDS**, не BFF: `approve` при красной блокирующей строке (визы, маржа) — 409 `CONFLICT`, `details.reason = checklist_not_green`, `details.failed` — коды красных строк; строка `due` (срок) — предупреждение, КП одобряется с отметкой `approved_late`. Маршрут уже закрыт (решил другой директор, новая версия КП) — 409 `details.reason = route_closed`; сотрудника не ждёт шаг — 403 `FORBIDDEN`, `details.reason = not_your_step`. `comment` обязателен для `return` и `reject` — пустой 422 в BFF до EDS (`details.fields = [comment]`); `channels` — только для `approve`. При одобрении EDS присваивает `ИСХ-NNN/ГГ` и публикует `approval.decided` с выбранными `channels`: ERP переводит КП в «Готово к отправке» и сохраняет каналы; клиенту КП отправляет менеджер заявки (`quote.send`, C1-G-4) — автоотправка по каналам делается в W16-D1-2. Ответ — обновлённая карточка.
+     */
+    post: operations["decideQuoteApproval"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/memo-approvals": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * EDS · На согласовании: служебные записки, заявления, отчёты
+     * @description EDS `GET /approvals` по шаблонам «Служебная записка», «Заявление», «Отчёт». `scope=mine` (по умолчанию) — документы на шаге этого сотрудника; `scope=all` — документы, где он автор или участник маршрута (с правом реестра — все). Автор, тема, сумма и «нужно до» читаются из документа EDS. Порядок — от новых к старым. Раздел `eds.memo.approve` или `eds.memo.create` — чтение.
+     */
+    get: operations["listMemoApprovals"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/memo-approvals/{ref}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * EDS · Карточка документа на согласовании (по id документа или по номеру)
+     * @description EDS `GET /documents/{id}` и `GET /approvals/{approval_id}` (маршрут: шаги, `can_decide`, `allowed_decisions`). `ref` — UUID документа или номер `СЗ-2026/014`, `ЗЯ-…`, `ОТ-…` (по номеру — `GET /registry?number=`; косая черта допускается в пути как есть и как `%2F`). Документа нет в реестре или он не служебный — 404 `NOT_FOUND`. Автор без права решения получает карточку в режиме чтения (`can_decide = false`). Раздел `eds.memo.approve` или `eds.memo.create` — чтение.
+     */
+    get: operations["getMemoApproval"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/eds/memo-approvals/{id}/decision": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * EDS · Согласовать / Вернуть на доработку / Отклонить документ
+     * @description EDS `POST /approvals/{id}/decision` (права `memos.approve` / `approvals.decide` на шаге директора, `payments.confirm` на шаге бухгалтера). Раздел `eds.memo.approve` — полный (директор) или `eds.payments` — полный (бухгалтер на своём шаге): автор без права решения получает 403 в BFF до EDS; чей это шаг, решает EDS. Бухгалтер: «Принять к оплате» (`approve`) и «Вернуть». `comment` обязателен для `return` и `reject` — пустой 422 в BFF до EDS (`details.fields = [comment]`). Шаг не этого сотрудника — 403 EDS (`details.reason = not_your_step`); маршрут уже закрыт — 409 `CONFLICT`, `details.reason = route_closed`. Служебная записка с суммой после директора идёт бухгалтеру. `{id}` — `approval_id` из карточки. Ответ — обновлённая карточка.
+     */
+    post: operations["decideMemoApproval"];
     delete?: never;
     options?: never;
     head?: never;
@@ -4179,6 +4445,100 @@ export interface components {
         crm: boolean;
         erp: boolean;
       };
+      /** @description Приветствие и тур первого входа уже показаны («Пропустить» или «Больше не показывать»); `false` — SPA показывает карточку «Добро пожаловать». Флаг хранит CRM (`PUT /me/onboarding`), а не браузер. */
+      onboarding_done: boolean;
+    };
+    /**
+     * @description Тема обращения — «Нужен доступ к разделу», «Не приходит уведомление», «Нужен шаблон документа», «Ошибка», «Другое»
+     * @enum {string}
+     */
+    TicketSubject: "access" | "notification" | "template" | "error" | "other";
+    /**
+     * @description «Новое», «В работе», «Решено»
+     * @enum {string}
+     */
+    TicketStatus: "new" | "in_progress" | "resolved";
+    TicketCreate: {
+      subject: components["schemas"]["TicketSubject"];
+      /** @description Что случилось — до 4000 символов после обрезки пробелов (длиннее — 422 `ticket_text_too_long`) */
+      body: string;
+      /** @description Внутренний путь страницы Платформы с запросом (`/eds/inbox?panel=open`); внешний адрес — 422 */
+      page?: string;
+    };
+    TicketReply: {
+      body: string;
+      status?: components["schemas"]["TicketStatus"];
+    };
+    TicketStatusChange: {
+      status: components["schemas"]["TicketStatus"];
+    };
+    TicketAuthor: {
+      /** @description `crm_user_id` */
+      id: string;
+      name: string;
+    };
+    TicketRow: {
+      /** @example ОБР-0012 */
+      number: string;
+      subject: components["schemas"]["TicketSubject"];
+      status: components["schemas"]["TicketStatus"];
+      author: components["schemas"]["TicketAuthor"];
+      /** @description Роли автора на момент обращения (текст; подставляет BFF) */
+      author_role?: string;
+      /** @description Страница, с которой написано обращение */
+      page?: string;
+      /** @description Начало текста для списка */
+      preview: string;
+      /** @description Сколько ответов администратора */
+      replies: number;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      updated_at: string;
+    };
+    TicketMessage: {
+      /** @description Кто ответил (администратор); пусто, если сотрудник удалён */
+      author_name?: string;
+      body: string;
+      /** Format: date-time */
+      created_at: string;
+    };
+    Ticket: {
+      /** @example ОБР-0012 */
+      number: string;
+      subject: components["schemas"]["TicketSubject"];
+      status: components["schemas"]["TicketStatus"];
+      author: components["schemas"]["TicketAuthor"];
+      /** @description Роли автора на момент обращения (текст; подставляет BFF) */
+      author_role?: string;
+      /** @description Страница, с которой написано обращение */
+      page?: string;
+      preview: string;
+      replies: number;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      updated_at: string;
+      /** @description Полный текст обращения */
+      body: string;
+      /** @description Ответы администратора по порядку */
+      messages: components["schemas"]["TicketMessage"][];
+      /** Format: date-time */
+      resolved_at?: string;
+    };
+    TicketList: {
+      items: components["schemas"]["TicketRow"][];
+    };
+    TicketCounts: {
+      new: number;
+      in_progress: number;
+      resolved: number;
+    };
+    TicketPage: {
+      items: components["schemas"]["TicketRow"][];
+      /** @description Сколько обращений подходит под фильтр */
+      total: number;
+      counts: components["schemas"]["TicketCounts"];
     };
     ChangePasswordIn: {
       current_password: string;
@@ -4723,6 +5083,282 @@ export interface components {
       recipient?: components["schemas"]["EdsRecipient"] | null;
       /** @default false */
       submit: boolean;
+    };
+    /**
+     * @description Статус маршрута согласования EDS; открыт — ждёт решения
+     * @enum {string}
+     */
+    ApprovalRouteStatus: "open" | "approved" | "returned" | "rejected";
+    /** @enum {string} */
+    ApprovalDecision: "approve" | "return" | "reject";
+    /**
+     * @description Telegram-бот, Кабинет клиента, почта
+     * @enum {string}
+     */
+    QuoteSendChannel: "telegram" | "cabinet" | "email";
+    /**
+     * @description Виза снабженца, виза гл. инженера, маржа не ниже порога резолюции, срок клиента выдержан
+     * @enum {string}
+     */
+    ChecklistCode: "visa_goods" | "visa_services" | "margin" | "due";
+    QuoteApprovalRow: {
+      /**
+       * Format: uuid
+       * @description Маршрут одобрения КП (EDS)
+       */
+      id: string;
+      /**
+       * @description Номер КП
+       * @example КП-2026/115
+       */
+      number: string;
+      version: number;
+      /** @description Бизнес-номер заявки ЗВ */
+      request_number: string | null;
+      /** @description Из снимка КП; `null` у роли, которой EDS снимок не отдаёт */
+      client_name: string | null;
+      /** @description Итог с НДС из снимка КП */
+      total: components["schemas"]["EdsMoney"] | null;
+      /**
+       * Format: date
+       * @description Срок расчёта из резолюции (снимок КП)
+       */
+      due: string | null;
+      status: components["schemas"]["ApprovalRouteStatus"];
+      /** @description Текущий шаг ждёт этого сотрудника (из маршрута EDS; не удалось прочитать — `false`) */
+      can_decide: boolean;
+      /** @description ИСХ-номер одобренного КП */
+      outgoing_number: string | null;
+      /**
+       * Format: date-time
+       * @description Когда КП пришло на одобрение
+       */
+      created_at: string;
+    };
+    QuoteApprovalPage: {
+      items: components["schemas"]["QuoteApprovalRow"][];
+      next_cursor: string | null;
+    };
+    QuoteLine: {
+      /** @description Номер строки по порядку */
+      position: number;
+      name: string;
+      quantity: number;
+      unit: string | null;
+      /** @description Цена без НДС */
+      unit_price: string;
+      /** @description Сумма строки без НДС */
+      amount: string;
+      /** @description Срок поставки строки, дней */
+      lead_time_days: number | null;
+      /** @description Опциональная позиция — в итог не входит по решению ERP */
+      optional: boolean;
+    };
+    QuoteTotals: {
+      currency: string;
+      /** @description Без НДС */
+      subtotal: string | null;
+      /** @description Ставка НДС, % */
+      vat_rate: string | null;
+      vat_amount: string | null;
+      /** @description С НДС */
+      total: string;
+    };
+    /** @description Внутренний блок КП — группа полей `cost_margin`. Клиент получает PDF без этих полей. Блок не передаётся совсем, если ни одна роль сотрудника не видит `cost_margin`, и если EDS не отдал снимок КП. */
+    QuoteInternal: {
+      /** @description Себестоимость */
+      cost: string | null;
+      margin_amount: string | null;
+      /** @description Маржа КП, %; может быть отрицательной */
+      margin_pct: string;
+      /** @description Порог маржи из резолюции, % */
+      min_margin_pct: string | null;
+      /** @description Условия оплаты. ERP хранит их на уровне компании, а не КП, и в снимке КП их нет — пока всегда `null` (хвост в `docs/BACKLOG.md`) */
+      payment_terms: string | null;
+      /**
+       * Format: date
+       * @description Срок действия КП
+       */
+      valid_until: string | null;
+      /**
+       * Format: date
+       * @description До какой даты действует цена поставщика. В снимке КП нет — пока всегда `null` (хвост в `docs/BACKLOG.md`)
+       */
+      supplier_price_until: string | null;
+    };
+    QuoteChecklistLine: {
+      code: components["schemas"]["ChecklistCode"];
+      ok: boolean;
+      /** @description `true` — красная строка блокирует одобрение (визы, маржа); `false` — предупреждение (срок, C1-G-1) */
+      blocking: boolean;
+      /** @description Кто поставил визу */
+      by_name: string | null;
+      /** Format: date-time */
+      at: string | null;
+      /** @description Значение для показа (`17.6 % ≥ 15 %`); строка `margin` — только с группой `cost_margin`, иначе поле не передаётся */
+      value?: string | null;
+    };
+    /** @description Что известно об основном контакте клиента в ERP (`GET /accounts/contacts/{id}/`); адреса и идентификаторы наружу не отдаются */
+    QuoteChannels: {
+      contact_name: string | null;
+      /** @description Контакт привязан к боту */
+      telegram: boolean;
+      /** @description У компании клиента есть кабинет */
+      cabinet: boolean;
+      /** @description У контакта указан e-mail */
+      email: boolean;
+    };
+    QuoteLetterRef: {
+      /** @example ВХ-104/26 */
+      number: string;
+      path: string;
+    };
+    QuoteCalculator: {
+      name: string;
+      /** @enum {string} */
+      zone: "goods" | "services";
+    };
+    QuoteApprovalCard: {
+      /**
+       * Format: uuid
+       * @description Маршрут одобрения КП (EDS); именно он идёт в `POST /eds/quotes/{id}/decision`
+       */
+      id: string;
+      number: string;
+      version: number;
+      round: number;
+      status: components["schemas"]["ApprovalRouteStatus"];
+      stage: components["schemas"]["StepCode"];
+      can_decide: boolean;
+      /** @description Что можно сейчас; `approve` нет, пока красна блокирующая строка чек-листа (решает EDS) */
+      allowed_decisions: components["schemas"]["ApprovalDecision"][];
+      /** @description КП одобрено с опозданием (C1-G-1) */
+      approved_late: boolean;
+      outgoing_number: string | null;
+      /** Format: date-time */
+      created_at: string;
+      /**
+       * Format: date-time
+       * @description Когда расчёт готов (снимок КП)
+       */
+      ready_at: string | null;
+      /**
+       * Format: date
+       * @description Срок расчёта из резолюции (снимок КП)
+       */
+      due: string | null;
+      client_name: string | null;
+      request: components["schemas"]["LetterRequest"] | null;
+      /** @description Письмо заявки в «Входящих» */
+      letter: components["schemas"]["QuoteLetterRef"] | null;
+      /** @description Кто считал — авторы виз чек-листа */
+      calculated_by: components["schemas"]["QuoteCalculator"][];
+      /** @description Итог с НДС из снимка КП (EDS отдаёт его только решающему шаг); `null` — снимка нет */
+      snapshot_total: components["schemas"]["EdsMoney"] | null;
+      /** @description Итог ERP расходится с итогом снимка EDS — КП в ERP менялось после передачи на одобрение; экран предупреждает */
+      totals_mismatch: boolean;
+      /** @description Состав КП из ERP; `null` — ERP не ответил, не отдал КП (нет доступа) или у ERP другая редакция КП, чем в маршруте (закрытые круги прежних версий): тогда строки не показываются, только снимок. Пока `lines = null`, одобрить КП на экране нельзя (подпись «Нет данных КП из ERP — обновите карточку») */
+      lines: components["schemas"]["QuoteLine"][] | null;
+      /** @description Итоги из ERP; `null` — ERP не ответил */
+      totals: components["schemas"]["QuoteTotals"] | null;
+      internal?: components["schemas"]["QuoteInternal"];
+      checklist: components["schemas"]["QuoteChecklistLine"][];
+      steps: components["schemas"]["EdsRouteStep"][];
+      /** @description `null` — контакт клиента не получен из ERP */
+      channels: components["schemas"]["QuoteChannels"] | null;
+      sources: components["schemas"]["Sources"];
+    };
+    QuoteDecisionIn: {
+      decision: components["schemas"]["ApprovalDecision"];
+      /** @description Обязателен для `return` и `reject` */
+      comment?: string | null;
+      /** @description Только `approve` — каналы отправки клиенту; пусто — одобрить без отправки (отправит менеджер заявки) */
+      channels?: components["schemas"]["QuoteSendChannel"][];
+    };
+    MemoApprovalRow: {
+      /**
+       * Format: uuid
+       * @description Документ EDS
+       */
+      id: string;
+      /** Format: uuid */
+      approval_id: string;
+      /** @example СЗ-2026/014 */
+      number: string | null;
+      /** @enum {string} */
+      kind: "memo" | "application" | "report";
+      subject: string;
+      author: components["schemas"]["EdsPerson"] | null;
+      amount: components["schemas"]["EdsMoney"] | null;
+      /** Format: date */
+      due_date: string | null;
+      status: components["schemas"]["ApprovalRouteStatus"];
+      /** @description Чей шаг сейчас: «Директор», «Бухгалтер»; `null` — маршрут закрыт */
+      step_label: string | null;
+      can_decide: boolean;
+      /** Format: date-time */
+      created_at: string;
+    };
+    MemoApprovalPage: {
+      items: components["schemas"]["MemoApprovalRow"][];
+      next_cursor: string | null;
+    };
+    MemoApprovalCard: {
+      /**
+       * Format: uuid
+       * @description Документ EDS
+       */
+      id: string;
+      /**
+       * Format: uuid
+       * @description Маршрут; идёт в `POST /eds/memo-approvals/{id}/decision`
+       */
+      approval_id: string;
+      number: string | null;
+      /** @enum {string} */
+      kind: "memo" | "application" | "report";
+      subject: string;
+      text: string;
+      /** @enum {string} */
+      document_status:
+        | "draft"
+        | "on_approval"
+        | "returned"
+        | "rejected"
+        | "approved"
+        | "to_accountant"
+        | "paid"
+        | "sent";
+      status: components["schemas"]["ApprovalRouteStatus"];
+      round: number;
+      author: components["schemas"]["EdsPerson"];
+      /** @description `null` — директор */
+      addressee: components["schemas"]["EdsPerson"] | null;
+      amount: components["schemas"]["EdsMoney"] | null;
+      /**
+       * Format: date
+       * @description «Нужно до»
+       */
+      due_date: string | null;
+      /** @description Вложения скачиваются через `GET /eds/document-files/{file_id}` */
+      files: components["schemas"]["EdsFile"][];
+      deal: components["schemas"]["EdsDealRef"] | null;
+      /** @description Шаги маршрута текущего круга; автор — вне списка */
+      steps: components["schemas"]["EdsRouteStep"][];
+      /** @description Текущий шаг — бухгалтера (право `payments.confirm`): кнопки «Принять к оплате» и «Вернуть» */
+      accountant_step: boolean;
+      decisions: components["schemas"]["EdsDecision"][];
+      can_decide: boolean;
+      allowed_decisions: components["schemas"]["ApprovalDecision"][];
+      /** Format: date-time */
+      created_at: string;
+      /** Format: date-time */
+      updated_at: string;
+    };
+    MemoDecisionIn: {
+      decision: components["schemas"]["ApprovalDecision"];
+      /** @description Обязателен для `return` и `reject` */
+      comment?: string | null;
     };
     EdsDealOption: {
       erp_deal_id: number;
@@ -6089,8 +6725,19 @@ export interface components {
         "application/json": components["schemas"]["Error"];
       };
     };
+    /** @description 409 `CONFLICT` — `details.reason = checklist_not_green` (одобрение КП при красной блокирующей строке чек-листа, `details.failed` — коды строк) или `route_closed` (маршрут уже решён другим или заменён новой версией КП); обновите карточку */
+    ApprovalConflict: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["Error"];
+      };
+    };
   };
   parameters: {
+    /** @description Номер обращения `ОБР-0012` (в адресе — закодированный) */
+    TicketNumberPath: string;
     /** @description Номер лида `L-NNNN` */
     LeadNumber: string;
     /** @description `crm_user_id` — число без ведущих нулей (`07` и `007` — не адрес сотрудника) */
@@ -6130,6 +6777,12 @@ export interface components {
     ReferenceKindPath: components["schemas"]["ReferenceKind"];
     /** @description UUID входящего письма (EDS) */
     LetterIdPath: string;
+    /** @description UUID маршрута согласования EDS (`id` карточки КП, `approval_id` карточки документа) */
+    ApprovalIdPath: string;
+    /** @description `mine` — на моём шаге (по умолчанию); `all` — всё, что EDS показывает сотруднику */
+    ApprovalScope: "mine" | "all";
+    /** @description Только маршруты в этих статусах (параметр повторяется); без параметра — `mine` показывает открытые, `all` — любые */
+    ApprovalStatusFilter: components["schemas"]["ApprovalRouteStatus"][];
   };
   requestBodies: never;
   headers: never;
@@ -6685,6 +7338,257 @@ export interface operations {
       };
     };
   };
+  finishOnboarding: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Профиль с `onboarding_done = true` */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Me"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listMyTickets: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Мои обращения */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TicketList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  createTicket: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["TicketCreate"];
+      };
+    };
+    responses: {
+      /** @description Обращение создано */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Ticket"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+      429: components["responses"]["TooManyRequests"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getMyTicket: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Номер обращения `ОБР-0012` (в адресе — закодированный) */
+        number: components["parameters"]["TicketNumberPath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Обращение */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Ticket"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listTickets: {
+    parameters: {
+      query?: {
+        status?: components["schemas"]["TicketStatus"];
+        subject?: components["schemas"]["TicketSubject"];
+        limit?: number;
+        offset?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Страница обращений */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["TicketPage"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getTicket: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Номер обращения `ОБР-0012` (в адресе — закодированный) */
+        number: components["parameters"]["TicketNumberPath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Обращение */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Ticket"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  replyTicket: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер обращения `ОБР-0012` (в адресе — закодированный) */
+        number: components["parameters"]["TicketNumberPath"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["TicketReply"];
+      };
+    };
+    responses: {
+      /** @description Обновлённое обращение */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Ticket"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      /** @description `CONFLICT` — статус так сменить нельзя */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  setTicketStatus: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Номер обращения `ОБР-0012` (в адресе — закодированный) */
+        number: components["parameters"]["TicketNumberPath"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["TicketStatusChange"];
+      };
+    };
+    responses: {
+      /** @description Обновлённое обращение */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Ticket"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      /** @description `CONFLICT` — статус так сменить нельзя */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
   getProfile: {
     parameters: {
       query?: never;
@@ -7146,7 +8050,7 @@ export interface operations {
     };
     requestBody?: never;
     responses: {
-      /** @description Отмечены */
+      /** @description Отмечены (хотя бы одна лента) */
       204: {
         headers: {
           [name: string]: unknown;
@@ -7392,6 +8296,198 @@ export interface operations {
       401: components["responses"]["SessionExpired"];
       403: components["responses"]["Forbidden"];
       404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listQuoteApprovals: {
+    parameters: {
+      query?: {
+        /** @description `mine` — на моём шаге (по умолчанию); `all` — всё, что EDS показывает сотруднику */
+        scope?: components["parameters"]["ApprovalScope"];
+        /** @description Только маршруты в этих статусах (параметр повторяется); без параметра — `mine` показывает открытые, `all` — любые */
+        status?: components["parameters"]["ApprovalStatusFilter"];
+        /** @description Непрозрачный курсор из `next_cursor` */
+        cursor?: string;
+        /** @description Размер страницы */
+        limit?: components["parameters"]["PageLimit"];
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Страница КП на одобрение */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["QuoteApprovalPage"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getQuoteApproval: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description UUID маршрута одобрения КП или номер `КП-ГГГГ/NNN` */
+        ref: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Карточка КП */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["QuoteApprovalCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  decideQuoteApproval: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description UUID маршрута согласования EDS (`id` карточки КП, `approval_id` карточки документа) */
+        id: components["parameters"]["ApprovalIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["QuoteDecisionIn"];
+      };
+    };
+    responses: {
+      /** @description Решение принято */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["QuoteApprovalCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["ApprovalConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listMemoApprovals: {
+    parameters: {
+      query?: {
+        /** @description `mine` — на моём шаге (по умолчанию); `all` — всё, что EDS показывает сотруднику */
+        scope?: components["parameters"]["ApprovalScope"];
+        /** @description Только маршруты в этих статусах (параметр повторяется); без параметра — `mine` показывает открытые, `all` — любые */
+        status?: components["parameters"]["ApprovalStatusFilter"];
+        /** @description Непрозрачный курсор из `next_cursor` */
+        cursor?: string;
+        /** @description Размер страницы */
+        limit?: components["parameters"]["PageLimit"];
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Страница документов на согласовании */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["MemoApprovalPage"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getMemoApproval: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description UUID документа или номер СЗ/ЗЯ/ОТ */
+        ref: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Карточка документа */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["MemoApprovalCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  decideMemoApproval: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description UUID маршрута согласования EDS (`id` карточки КП, `approval_id` карточки документа) */
+        id: components["parameters"]["ApprovalIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["MemoDecisionIn"];
+      };
+    };
+    responses: {
+      /** @description Решение принято */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["MemoApprovalCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["ApprovalConflict"];
+      422: components["responses"]["ValidationFailed"];
       503: components["responses"]["BackendUnavailable"];
     };
   };

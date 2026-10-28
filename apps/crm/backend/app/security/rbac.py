@@ -43,6 +43,7 @@ CATALOG: Final[dict[str, tuple[str, ...]]] = {
     "reply_templates": ("read", "write"),
     "export": ("read",),
     "external_services": ("read", "write"),
+    "tickets": ("read", "write"),
 }
 
 

@@ -140,7 +140,7 @@ describe("Dashboard · Моя очередь", () => {
     expect(within(page).queryAllByRole("link", { name: /^Открыть:/ })).toHaveLength(0);
   });
 
-  it("строка директора с родным экраном (письмо) — «Открыть» primary; без экрана (КП, служебка) — «Где сделать»", async () => {
+  it("строка директора с родным экраном (письмо, КП) — «Открыть»: у писем primary, у КП обычная кнопка", async () => {
     server.use(
       http.get("*/queue", () =>
         HttpResponse.json({
@@ -202,7 +202,7 @@ describe("Dashboard · Моя очередь", () => {
     expect(first).toHaveClass("ant-btn-primary");
     expect(second).toHaveClass("ant-btn-primary");
     expect(
-      within(page).getByRole("button", { name: "Где сделать: Одобрить КП-2026/118 (черновик)" }),
+      within(page).getByRole("link", { name: "Открыть: Одобрить КП-2026/118 (черновик)" }),
     ).not.toHaveClass("ant-btn-primary");
   });
 

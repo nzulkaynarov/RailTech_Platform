@@ -22,7 +22,8 @@
     "bellUnread": "Notification center, {{count}} new",
     "hidePanel": "Hide panel",
     "showPanel": "Panel",
-    "searchShort": "Search"
+    "searchShort": "Search",
+    "help": "Help (key ?)"
   },
   "notifications": {
     "title": "Notification center",
@@ -84,7 +85,8 @@
     "changePassword": "Change password",
     "logout": "Sign out",
     "rolesMany": "All roles",
-    "selected": "Selected"
+    "selected": "Selected",
+    "help": "Help"
   },
   "languages": {
     "ru": "Русский",
@@ -188,8 +190,7 @@
     "textRoles": "The section is available to roles: {{roles}}. If you need it for work, write to the administrator.",
     "write": "Write to the administrator",
     "titleActiveRole": "This section is not available for the selected role",
-    "textActiveRole": "Choose “All roles” in the profile menu (the avatar) to get back all your sections. If you need this one for work, write to the administrator.",
-    "writeSoon": "Coming by the pilot. For now, message the administrator directly"
+    "textActiveRole": "Choose “All roles” in the profile menu (the avatar) to get back all your sections. If you need this one for work, write to the administrator."
   },
   "notFound": {
     "heading": "Page not found",

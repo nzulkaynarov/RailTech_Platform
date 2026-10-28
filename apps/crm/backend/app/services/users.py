@@ -326,6 +326,17 @@ class UserService:
                 )
             return await _loaded_view(session, user)
 
+    async def set_onboarding_done(self, actor: Actor, user_id: int) -> UserView:
+        """«Пропустить» / «Больше не показывать» в туре первого входа (W15-H7): сам, один раз."""
+        async with self._sessions() as session, session.begin():
+            user = await repo.get(session, user_id, for_update=True)
+            if user is None:
+                raise NotFoundError("user not found")
+            if user.onboarding_done_at is None:
+                user.onboarding_done_at = datetime.now(UTC)
+                await audit.record(session, actor, "user.onboarding_done", "user", user_id)
+            return await _loaded_view(session, user)
+
     async def bootstrap_admin(self, email: str, full_name: str, password: str | None) -> str:
         """Первый админ или восстановление (CLI `create-admin`). Возвращает пароль (временный,
         если не задан).

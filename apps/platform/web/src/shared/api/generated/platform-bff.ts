@@ -133,6 +133,36 @@
  * (директор читает), сброс пароля — `admin: full`; профиль доступен каждому вошедшему. Секреты из записей журнала BFF вырезает
  * (значения полей `password`, `secret`, `token`, `key`, `*_key`, `credentials`, `authorization`, `pin` и им подобных -> `***` целиком, любого типа).
  *
+ * **0.25.0 (W15-H7) — помощь, первый вход и обращения к администратору.** Добавляющее изменение (тег `tickets`). **Обращения
+ * сотрудников** (домен CRM, ADR-0015): `POST /tickets` (тема из списка `access|notification|template|error|other`, текст,
+ * адрес страницы; роль автора BFF берёт из сессии), `GET /tickets` и `GET /tickets/{number}` — только свои обращения
+ * (чужое — 404), не больше пяти в час (429 `TOO_MANY_REQUESTS`, `details.reason = ticket_rate_limited`). Админ:
+ * `GET /admin/tickets` (список с фильтрами `status`, `subject`, постранично, `counts` по статусам), `GET /admin/tickets/{number}`,
+ * `POST /admin/tickets/{number}/reply` (ответ; новое обращение берётся «В работу», `status` задаёт итог) и
+ * `POST /admin/tickets/{number}/status` («Новое → В работе → Решено», «Решено» можно вернуть «В работу»; иначе 409
+ * `CONFLICT`, `details.reason = ticket_status_transition`). Раздел `admin`: чтение — директор, ответ и статус — администратор.
+ * Номер обращения — `ОБР-0012`, внутренних id в адресах нет. Ошибки значений — 422 `VALIDATION_FAILED` с `details.fields`
+ * и `details.reason` (`ticket_subject_unknown`, `ticket_text_empty`, `ticket_text_too_long`, `ticket_reply_empty`…).
+ * **Колокольчик** (`GET /notifications`) получил ленту CRM: идентификаторы `crm:<id>`, объект — обращение (`kind = ticket`);
+ * ответ и решение уходят автору, новое обращение — администраторам; `POST /notifications/{id}/read` и `read-all` отмечают
+ * обе ленты. **Первый вход:** `Me.onboarding_done` и `PUT /me/onboarding` («Пропустить» / «Больше не показывать» —
+ * флаг хранит CRM, не браузер).
+ *
+ * **0.24.0 (D1-4) — EDS · КП на одобрение и документы на согласовании.** Добавляющее изменение, тег `eds-approvals`: `GET /eds/quotes`
+ * (КП на одобрение: «на моём шаге» или все), `GET /eds/quotes/{ref}` (карточка КП по id маршрута или номеру `КП-2026/115`: шаги маршрута,
+ * чек-лист с датой и автором, состав и итоги из ERP, письмо и заявка, каналы отправки по контакту клиента; **внутренний блок**
+ * `internal` — себестоимость, маржа, порог, сроки — и значение маржи в чек-листе BFF вырезает у роли без группы `cost_margin`),
+ * `POST /eds/quotes/{id}/decision` («Одобрить КП → отправить клиенту» с `channels`, «Вернуть на доработку», «Отклонить»; чек-лист
+ * проверяет EDS: красная блокирующая строка — 409 `checklist_not_green`, строка «срок» — предупреждение, КП одобряется с отметкой),
+ * `GET /eds/memo-approvals` и `GET /eds/memo-approvals/{ref}` (служебные записки, заявления, отчёты на согласовании; карточка по id
+ * документа или номеру `СЗ-2026/014`, шаги маршрута, вложения), `POST /eds/memo-approvals/{id}/decision` («Согласовать», «Вернуть
+ * на доработку», «Отклонить»). Разделы: КП — `eds.drafts` (полный — решение, чтение — менеджер); служебки — `eds.memo.approve`
+ * (полный — решение директора) или `eds.payments` (полный — решение бухгалтера на его шаге), чтение также у `eds.memo.create` (автор видит свой документ). `comment` для `return` и `reject` обязателен
+ * (422 в BFF до EDS). Ошибки EDS (`not_your_step`, `route_closed`, `checklist_not_green` с `details.failed`) приходят в формате `Error`.
+ * Карточка КП: `snapshot_total` (итог снимка EDS), `totals_mismatch` (итог ERP расходится со снимком), строки ERP не показываются при другой редакции КП в ERP;
+ * карточка документа: `accountant_step` (шаг бухгалтера — «Принять к оплате», решает держатель `eds.payments` full). Отправки КП по `channels` пока нет (Δ ERP-11).
+ *
+ *
  * **0.23.0 (W15-H8) — Admin · Компания: шаблоны документов и лента.** Добавляющее изменение. `DocumentTemplateIn.kind` — вид
  * шаблона при создании (`letter`, `report`, `custom`, `contract`, `invoice`, `act`, `receipt`, `delivery_note`; без поля — `custom`,
  * как раньше); `DocumentTemplate.kind` отдаёт вид кодом. `DocumentTemplatePreviewIn.kind` — предпросмотр договора, счёта и акта идёт
@@ -223,7 +253,7 @@
  * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; «Забыли пароль?» — 5 запросов в час на IP и на адрес; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.23.0
+ * OpenAPI spec version: 0.25.0
  */
 import { useMutation, useQuery } from "@tanstack/react-query";
 import type {
@@ -250,6 +280,7 @@ import type {
   AiModelList,
   AiModelTest,
   AiSpendReport,
+  ApprovalConflictResponse,
   AssistIn,
   AssistSuggestion,
   AuditPage,
@@ -373,13 +404,19 @@ import type {
   ListKbGapsParams,
   ListLettersParams,
   ListMailLogParams,
+  ListMemoApprovalsParams,
   ListNotificationsParams,
+  ListQuoteApprovalsParams,
+  ListTicketsParams,
   LoginIn,
   LogoUpload,
   MailLog,
   MailQueued,
   Me,
   MeUpdate,
+  MemoApprovalCard,
+  MemoApprovalPage,
+  MemoDecisionIn,
   MenuCounters,
   MessageInbox,
   MessagesConflictResponse,
@@ -400,6 +437,9 @@ import type {
   ProviderKeyResult,
   Queue,
   QueueCards,
+  QuoteApprovalCard,
+  QuoteApprovalPage,
+  QuoteDecisionIn,
   QuoteDefaults,
   QuoteDefaultsUpdate,
   ReferenceItem,
@@ -444,6 +484,12 @@ import type {
   TelegramConnector,
   TelegramLink,
   TelegramTokenIn,
+  Ticket,
+  TicketCreate,
+  TicketList,
+  TicketPage,
+  TicketReply,
+  TicketStatusChange,
   TooManyRequestsResponse,
   ValidationFailedResponse,
 } from "./model";
@@ -2277,6 +2323,989 @@ export const useSendTestNotification = <
   return useMutation(getSendTestNotificationMutationOptions(options), queryClient);
 };
 
+export const getFinishOnboardingUrl = () => {
+  return `/api/v1/me/onboarding`;
+};
+
+/**
+ * «Пропустить» и «Больше не показывать»: ставит `Me.onboarding_done = true` (CRM `PATCH /me {onboarding_done: true}`), обратно флаг не снимается. Только про себя; повторный вызов безвреден. Ответ — обновлённый профиль.
+ * @summary Закрыть приветствие и тур первого входа
+ */
+export const finishOnboarding = async (options?: Parameters<typeof http>[1]): Promise<Me> => {
+  return http<Me>(getFinishOnboardingUrl(), {
+    ...options,
+    method: "PUT",
+  });
+};
+
+export const getFinishOnboardingMutationKey = () => ["finishOnboarding"] as const;
+
+export const getFinishOnboardingMutationOptions = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof finishOnboarding>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<Awaited<ReturnType<typeof finishOnboarding>>, TError, void, TContext> => {
+  const mutationKey = getFinishOnboardingMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof finishOnboarding>>, void> = () => {
+    return finishOnboarding(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type FinishOnboardingMutationResult = NonNullable<
+  Awaited<ReturnType<typeof finishOnboarding>>
+>;
+
+export type FinishOnboardingMutationError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse
+>;
+
+/**
+ * @summary Закрыть приветствие и тур первого входа
+ */
+export const useFinishOnboarding = <
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof finishOnboarding>>,
+      TError,
+      void,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<Awaited<ReturnType<typeof finishOnboarding>>, TError, void, TContext> => {
+  return useMutation(getFinishOnboardingMutationOptions(options), queryClient);
+};
+
+export const getListMyTicketsUrl = () => {
+  return `/api/v1/tickets`;
+};
+
+/**
+ * Только обращения самого сотрудника, новейшие первыми (CRM `GET /staff-tickets/mine`). Нужна сессия и хотя бы один раздел каталога; прав раздела не требуется.
+ * @summary Мои обращения к администратору
+ */
+export const listMyTickets = async (options?: Parameters<typeof http>[1]): Promise<TicketList> => {
+  return http<TicketList>(getListMyTicketsUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListMyTicketsQueryKey = () => {
+  return [`/api/v1/tickets`] as const;
+};
+
+export const getListMyTicketsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listMyTickets>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyTickets>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListMyTicketsQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listMyTickets>>> = ({ signal }) =>
+    listMyTickets({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listMyTickets>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListMyTicketsQueryResult = NonNullable<Awaited<ReturnType<typeof listMyTickets>>>;
+export type ListMyTicketsQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse
+>;
+
+export function useListMyTickets<
+  TData = Awaited<ReturnType<typeof listMyTickets>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyTickets>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listMyTickets>>,
+          TError,
+          Awaited<ReturnType<typeof listMyTickets>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListMyTickets<
+  TData = Awaited<ReturnType<typeof listMyTickets>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyTickets>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listMyTickets>>,
+          TError,
+          Awaited<ReturnType<typeof listMyTickets>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListMyTickets<
+  TData = Awaited<ReturnType<typeof listMyTickets>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyTickets>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Мои обращения к администратору
+ */
+
+export function useListMyTickets<
+  TData = Awaited<ReturnType<typeof listMyTickets>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listMyTickets>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListMyTicketsQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getCreateTicketUrl = () => {
+  return `/api/v1/tickets`;
+};
+
+/**
+ * Создаёт обращение: тема из списка, текст, адрес страницы (внутренний путь Платформы, `/eds/inbox?panel=open`). Роль автора подставляет BFF из сессии. Админам уходит строка в колокольчик и личное сообщение бота; не больше пяти обращений в час на сотрудника — иначе 429 `TOO_MANY_REQUESTS` с `details.reason = ticket_rate_limited`. Ошибка значения — 422 `VALIDATION_FAILED` (`details.fields`: `subject`, `body`, `page`; `details.reason`: `ticket_subject_unknown`, `ticket_text_empty`, `ticket_text_too_long`, `ticket_page_invalid`).
+ * @summary Написать администратору
+ */
+export const createTicket = async (
+  ticketCreate: TicketCreate,
+  options?: Parameters<typeof http>[1],
+): Promise<Ticket> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<Ticket>(getCreateTicketUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(ticketCreate),
+  });
+};
+
+export const getCreateTicketMutationKey = () => ["createTicket"] as const;
+
+export const getCreateTicketMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | TooManyRequestsResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createTicket>>,
+    TError,
+    CreateTicketMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createTicket>>,
+  TError,
+  CreateTicketMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateTicketMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createTicket>>,
+    CreateTicketMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createTicket(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateTicketMutationResult = NonNullable<Awaited<ReturnType<typeof createTicket>>>;
+export type CreateTicketMutationBody = TicketCreate;
+export type CreateTicketMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | ValidationFailedResponse
+  | TooManyRequestsResponse
+  | BackendUnavailableResponse
+>;
+export type CreateTicketMutationVariables = { data: TicketCreate };
+
+/**
+ * @summary Написать администратору
+ */
+export const useCreateTicket = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | TooManyRequestsResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof createTicket>>,
+      TError,
+      CreateTicketMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof createTicket>>,
+  TError,
+  CreateTicketMutationVariables,
+  TContext
+> => {
+  return useMutation(getCreateTicketMutationOptions(options), queryClient);
+};
+
+export const getGetMyTicketUrl = (number: string) => {
+  return `/api/v1/tickets/${number}`;
+};
+
+/**
+ * Чужое обращение отвечает 404: его для этого сотрудника не существует.
+ * @summary Моё обращение с ответами администратора
+ */
+export const getMyTicket = async (
+  number: string,
+  options?: Parameters<typeof http>[1],
+): Promise<Ticket> => {
+  return http<Ticket>(getGetMyTicketUrl(number), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetMyTicketQueryKey = (number: string) => {
+  return [`/api/v1/tickets/${number}`] as const;
+};
+
+export const getGetMyTicketQueryOptions = <
+  TData = Awaited<ReturnType<typeof getMyTicket>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  number: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyTicket>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetMyTicketQueryKey(number);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getMyTicket>>> = ({ signal }) =>
+    getMyTicket(number, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: number !== null && number !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getMyTicket>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetMyTicketQueryResult = NonNullable<Awaited<ReturnType<typeof getMyTicket>>>;
+export type GetMyTicketQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useGetMyTicket<
+  TData = Awaited<ReturnType<typeof getMyTicket>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  number: string,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyTicket>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getMyTicket>>,
+          TError,
+          Awaited<ReturnType<typeof getMyTicket>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetMyTicket<
+  TData = Awaited<ReturnType<typeof getMyTicket>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  number: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyTicket>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getMyTicket>>,
+          TError,
+          Awaited<ReturnType<typeof getMyTicket>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetMyTicket<
+  TData = Awaited<ReturnType<typeof getMyTicket>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  number: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyTicket>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Моё обращение с ответами администратора
+ */
+
+export function useGetMyTicket<
+  TData = Awaited<ReturnType<typeof getMyTicket>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  number: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getMyTicket>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetMyTicketQueryOptions(number, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getListTicketsUrl = (params?: ListTicketsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/admin/tickets?${stringifiedParams}`
+    : `/api/v1/admin/tickets`;
+};
+
+/**
+ * Раздел `admin` от чтения (директор читает, администратор правит). Порядок: «Новое» и «В работе» выше «Решено», внутри — свежее выше. `counts` — по статусам без учёта фильтра.
+ * @summary Все обращения сотрудников (Настройки · Обращения сотрудников)
+ */
+export const listTickets = async (
+  params?: ListTicketsParams,
+  options?: Parameters<typeof http>[1],
+): Promise<TicketPage> => {
+  return http<TicketPage>(getListTicketsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListTicketsQueryKey = (params?: ListTicketsParams) => {
+  return [`/api/v1/admin/tickets`, ...(params ? [params] : [])] as const;
+};
+
+export const getListTicketsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listTickets>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListTicketsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listTickets>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListTicketsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listTickets>>> = ({ signal }) =>
+    listTickets(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listTickets>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListTicketsQueryResult = NonNullable<Awaited<ReturnType<typeof listTickets>>>;
+export type ListTicketsQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse
+>;
+
+export function useListTickets<
+  TData = Awaited<ReturnType<typeof listTickets>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params: undefined | ListTicketsParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listTickets>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listTickets>>,
+          TError,
+          Awaited<ReturnType<typeof listTickets>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListTickets<
+  TData = Awaited<ReturnType<typeof listTickets>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListTicketsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listTickets>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listTickets>>,
+          TError,
+          Awaited<ReturnType<typeof listTickets>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListTickets<
+  TData = Awaited<ReturnType<typeof listTickets>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListTicketsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listTickets>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Все обращения сотрудников (Настройки · Обращения сотрудников)
+ */
+
+export function useListTickets<
+  TData = Awaited<ReturnType<typeof listTickets>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  params?: ListTicketsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listTickets>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListTicketsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getGetTicketUrl = (number: string) => {
+  return `/api/v1/admin/tickets/${number}`;
+};
+
+/**
+ * @summary Обращение с ответами (карточка в боковом окне)
+ */
+export const getTicket = async (
+  number: string,
+  options?: Parameters<typeof http>[1],
+): Promise<Ticket> => {
+  return http<Ticket>(getGetTicketUrl(number), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetTicketQueryKey = (number: string) => {
+  return [`/api/v1/admin/tickets/${number}`] as const;
+};
+
+export const getGetTicketQueryOptions = <
+  TData = Awaited<ReturnType<typeof getTicket>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  number: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getTicket>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetTicketQueryKey(number);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getTicket>>> = ({ signal }) =>
+    getTicket(number, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: number !== null && number !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getTicket>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetTicketQueryResult = NonNullable<Awaited<ReturnType<typeof getTicket>>>;
+export type GetTicketQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useGetTicket<
+  TData = Awaited<ReturnType<typeof getTicket>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  number: string,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getTicket>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getTicket>>,
+          TError,
+          Awaited<ReturnType<typeof getTicket>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetTicket<
+  TData = Awaited<ReturnType<typeof getTicket>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  number: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getTicket>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getTicket>>,
+          TError,
+          Awaited<ReturnType<typeof getTicket>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetTicket<
+  TData = Awaited<ReturnType<typeof getTicket>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  number: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getTicket>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Обращение с ответами (карточка в боковом окне)
+ */
+
+export function useGetTicket<
+  TData = Awaited<ReturnType<typeof getTicket>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  number: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getTicket>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetTicketQueryOptions(number, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getReplyTicketUrl = (number: string) => {
+  return `/api/v1/admin/tickets/${number}/reply`;
+};
+
+/**
+ * Раздел `admin` — полный. Ответ уходит автору в колокольчик и в Telegram (если привязан); новое обращение берётся «В работу», `status` задаёт итог сразу («Решено»). Недопустимый переход — 409 `CONFLICT` (`details.reason = ticket_status_transition`), пустой или слишком длинный ответ — 422.
+ * @summary Ответить на обращение
+ */
+export const replyTicket = async (
+  number: string,
+  ticketReply: TicketReply,
+  options?: Parameters<typeof http>[1],
+): Promise<Ticket> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<Ticket>(getReplyTicketUrl(number), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(ticketReply),
+  });
+};
+
+export const getReplyTicketMutationKey = () => ["replyTicket"] as const;
+
+export const getReplyTicketMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | Error
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof replyTicket>>,
+    TError,
+    ReplyTicketMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof replyTicket>>,
+  TError,
+  ReplyTicketMutationVariables,
+  TContext
+> => {
+  const mutationKey = getReplyTicketMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof replyTicket>>,
+    ReplyTicketMutationVariables
+  > = (props) => {
+    const { number, data } = props ?? {};
+
+    return replyTicket(number, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ReplyTicketMutationResult = NonNullable<Awaited<ReturnType<typeof replyTicket>>>;
+export type ReplyTicketMutationBody = TicketReply;
+export type ReplyTicketMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | Error
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type ReplyTicketMutationVariables = { number: string; data: TicketReply };
+
+/**
+ * @summary Ответить на обращение
+ */
+export const useReplyTicket = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | Error
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof replyTicket>>,
+      TError,
+      ReplyTicketMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof replyTicket>>,
+  TError,
+  ReplyTicketMutationVariables,
+  TContext
+> => {
+  return useMutation(getReplyTicketMutationOptions(options), queryClient);
+};
+
+export const getSetTicketStatusUrl = (number: string) => {
+  return `/api/v1/admin/tickets/${number}/status`;
+};
+
+/**
+ * Раздел `admin` — полный. «Новое → В работе → Решено»; «Решено» можно вернуть «В работу». Решение без ответа тоже сообщается автору. Иначе — 409 `CONFLICT` (`details.reason = ticket_status_transition`).
+ * @summary Сменить статус обращения
+ */
+export const setTicketStatus = async (
+  number: string,
+  ticketStatusChange: TicketStatusChange,
+  options?: Parameters<typeof http>[1],
+): Promise<Ticket> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<Ticket>(getSetTicketStatusUrl(number), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(ticketStatusChange),
+  });
+};
+
+export const getSetTicketStatusMutationKey = () => ["setTicketStatus"] as const;
+
+export const getSetTicketStatusMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | Error
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof setTicketStatus>>,
+    TError,
+    SetTicketStatusMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof setTicketStatus>>,
+  TError,
+  SetTicketStatusMutationVariables,
+  TContext
+> => {
+  const mutationKey = getSetTicketStatusMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof setTicketStatus>>,
+    SetTicketStatusMutationVariables
+  > = (props) => {
+    const { number, data } = props ?? {};
+
+    return setTicketStatus(number, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SetTicketStatusMutationResult = NonNullable<
+  Awaited<ReturnType<typeof setTicketStatus>>
+>;
+export type SetTicketStatusMutationBody = TicketStatusChange;
+export type SetTicketStatusMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | Error
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type SetTicketStatusMutationVariables = { number: string; data: TicketStatusChange };
+
+/**
+ * @summary Сменить статус обращения
+ */
+export const useSetTicketStatus = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | Error
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof setTicketStatus>>,
+      TError,
+      SetTicketStatusMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof setTicketStatus>>,
+  TError,
+  SetTicketStatusMutationVariables,
+  TContext
+> => {
+  return useMutation(getSetTicketStatusMutationOptions(options), queryClient);
+};
+
 export const getGetProfileUrl = () => {
   return `/api/v1/me/profile`;
 };
@@ -4102,6 +5131,9 @@ export const getMarkAllNotificationsReadUrl = () => {
 };
 
 /**
+ * Отмечает обе ленты — ERP и CRM (у каждой своя). Недоступность одной ленты не отменяет отметку другой: ответ 204,
+ * недоступный источник остаётся непрочитанным и виден в `sources` следующей выдачи `GET /notifications`. Ошибка
+ * возвращается, только если не отмечена ни одна лента.
  * @summary Отметить все прочитанными
  */
 export const markAllNotificationsRead = async (
@@ -5269,6 +6301,890 @@ export function useDownloadEdsDocumentFile<
 
   return withQueryKey(query, queryOptions.queryKey);
 }
+
+export const getListQuoteApprovalsUrl = (params?: ListQuoteApprovalsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    const explodeParameters = ["status"];
+
+    if (Array.isArray(value) && explodeParameters.includes(key)) {
+      value.forEach((v) => {
+        normalizedParams.append(key, v === null ? "null" : String(v));
+      });
+      return;
+    }
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/eds/quotes?${stringifiedParams}`
+    : `/api/v1/eds/quotes`;
+};
+
+/**
+ * EDS `GET /approvals?template=quote`. `scope=mine` (по умолчанию) — маршруты, текущий шаг которых ждёт этого сотрудника; `scope=all` — все КП, которые EDS показывает сотруднику (директор и менеджер — все). Порядок — от новых к старым; страница — непрозрачный `cursor`. Клиент, сумма и срок приходят из снимка КП маршрута (EDS отдаёт снимок только тому, кто решает шаг: у менеджера `client_name` и `total` — `null`). Раздел `eds.drafts` — чтение. EDS не ответил — 503 `BACKEND_UNAVAILABLE` (`source = eds`); нет прав в EDS — 403 `FORBIDDEN` (`details.reason = eds_not_granted`).
+ * @summary EDS · КП на одобрение: список
+ */
+export const listQuoteApprovals = async (
+  params?: ListQuoteApprovalsParams,
+  options?: Parameters<typeof http>[1],
+): Promise<QuoteApprovalPage> => {
+  return http<QuoteApprovalPage>(getListQuoteApprovalsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListQuoteApprovalsQueryKey = (params?: ListQuoteApprovalsParams) => {
+  return [`/api/v1/eds/quotes`, ...(params ? [params] : [])] as const;
+};
+
+export const getListQuoteApprovalsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listQuoteApprovals>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListQuoteApprovalsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listQuoteApprovals>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListQuoteApprovalsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listQuoteApprovals>>> = ({ signal }) =>
+    listQuoteApprovals(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listQuoteApprovals>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListQuoteApprovalsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listQuoteApprovals>>
+>;
+export type ListQuoteApprovalsQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse | BackendUnavailableResponse
+>;
+
+export function useListQuoteApprovals<
+  TData = Awaited<ReturnType<typeof listQuoteApprovals>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params: undefined | ListQuoteApprovalsParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listQuoteApprovals>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listQuoteApprovals>>,
+          TError,
+          Awaited<ReturnType<typeof listQuoteApprovals>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListQuoteApprovals<
+  TData = Awaited<ReturnType<typeof listQuoteApprovals>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListQuoteApprovalsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<Awaited<ReturnType<typeof listQuoteApprovals>>, TError, TData>
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listQuoteApprovals>>,
+          TError,
+          Awaited<ReturnType<typeof listQuoteApprovals>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListQuoteApprovals<
+  TData = Awaited<ReturnType<typeof listQuoteApprovals>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListQuoteApprovalsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listQuoteApprovals>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary EDS · КП на одобрение: список
+ */
+
+export function useListQuoteApprovals<
+  TData = Awaited<ReturnType<typeof listQuoteApprovals>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListQuoteApprovalsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listQuoteApprovals>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListQuoteApprovalsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getGetQuoteApprovalUrl = (ref: string) => {
+  return `/api/v1/eds/quotes/${ref}`;
+};
+
+/**
+ * Маршрут «КП» EDS `GET /approvals/{id}` (шаги, чек-лист, снимок КП) плюс данные ERP по ссылкам маршрута: состав КП и итоги (`GET /crm/quotes/{id}/`), заявка и контакт клиента для каналов отправки (`GET /crm/deals/{id}/`, `GET /accounts/contacts/{id}/`); письмо заявки — EDS `GET /letters?q=<номер заявки>`. `ref` — UUID маршрута или номер КП `КП-2026/115` (сначала `GET /registry?number=&kind=quote`; у номера несколько версий — берётся открытая, иначе последняя); косая черта допускается в пути как есть и как `%2F`. ERP не ответил — 200 без строк и итогов, `sources.erp = unavailable`. **Внутренний блок** `internal` (себестоимость, маржа, порог, условия оплаты, сроки) и значение маржи в чек-листе BFF вырезает у роли без группы `cost_margin`: поле не передаётся совсем. Раздел `eds.drafts` — чтение (менеджер видит КП без маржи и без кнопок решения).
+ * @summary EDS · Карточка КП на одобрение (по id маршрута или по номеру КП)
+ */
+export const getQuoteApproval = async (
+  ref: string,
+  options?: Parameters<typeof http>[1],
+): Promise<QuoteApprovalCard> => {
+  return http<QuoteApprovalCard>(getGetQuoteApprovalUrl(ref), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetQuoteApprovalQueryKey = (ref: string) => {
+  return [`/api/v1/eds/quotes/${ref}`] as const;
+};
+
+export const getGetQuoteApprovalQueryOptions = <
+  TData = Awaited<ReturnType<typeof getQuoteApproval>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  ref: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getQuoteApproval>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetQuoteApprovalQueryKey(ref);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getQuoteApproval>>> = ({ signal }) =>
+    getQuoteApproval(ref, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: ref !== null && ref !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getQuoteApproval>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetQuoteApprovalQueryResult = NonNullable<Awaited<ReturnType<typeof getQuoteApproval>>>;
+export type GetQuoteApprovalQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useGetQuoteApproval<
+  TData = Awaited<ReturnType<typeof getQuoteApproval>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  ref: string,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getQuoteApproval>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getQuoteApproval>>,
+          TError,
+          Awaited<ReturnType<typeof getQuoteApproval>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetQuoteApproval<
+  TData = Awaited<ReturnType<typeof getQuoteApproval>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  ref: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getQuoteApproval>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getQuoteApproval>>,
+          TError,
+          Awaited<ReturnType<typeof getQuoteApproval>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetQuoteApproval<
+  TData = Awaited<ReturnType<typeof getQuoteApproval>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  ref: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getQuoteApproval>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary EDS · Карточка КП на одобрение (по id маршрута или по номеру КП)
+ */
+
+export function useGetQuoteApproval<
+  TData = Awaited<ReturnType<typeof getQuoteApproval>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  ref: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getQuoteApproval>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetQuoteApprovalQueryOptions(ref, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getDecideQuoteApprovalUrl = (id: string) => {
+  return `/api/v1/eds/quotes/${id}/decision`;
+};
+
+/**
+ * EDS `POST /approvals/{id}/decision` (право `approvals.decide`). Раздел `eds.drafts` — полный: роль только для чтения получает 403 в BFF до EDS. **Проверку чек-листа делает EDS**, не BFF: `approve` при красной блокирующей строке (визы, маржа) — 409 `CONFLICT`, `details.reason = checklist_not_green`, `details.failed` — коды красных строк; строка `due` (срок) — предупреждение, КП одобряется с отметкой `approved_late`. Маршрут уже закрыт (решил другой директор, новая версия КП) — 409 `details.reason = route_closed`; сотрудника не ждёт шаг — 403 `FORBIDDEN`, `details.reason = not_your_step`. `comment` обязателен для `return` и `reject` — пустой 422 в BFF до EDS (`details.fields = [comment]`); `channels` — только для `approve`. При одобрении EDS присваивает `ИСХ-NNN/ГГ` и публикует `approval.decided` с выбранными `channels`: ERP переводит КП в «Готово к отправке» и сохраняет каналы; клиенту КП отправляет менеджер заявки (`quote.send`, C1-G-4) — автоотправка по каналам делается в W16-D1-2. Ответ — обновлённая карточка.
+ * @summary EDS · Одобрить КП → отправить клиенту / Вернуть на доработку / Отклонить
+ */
+export const decideQuoteApproval = async (
+  id: string,
+  quoteDecisionIn: QuoteDecisionIn,
+  options?: Parameters<typeof http>[1],
+): Promise<QuoteApprovalCard> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<QuoteApprovalCard>(getDecideQuoteApprovalUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(quoteDecisionIn),
+  });
+};
+
+export const getDecideQuoteApprovalMutationKey = () => ["decideQuoteApproval"] as const;
+
+export const getDecideQuoteApprovalMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ApprovalConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof decideQuoteApproval>>,
+    TError,
+    DecideQuoteApprovalMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof decideQuoteApproval>>,
+  TError,
+  DecideQuoteApprovalMutationVariables,
+  TContext
+> => {
+  const mutationKey = getDecideQuoteApprovalMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof decideQuoteApproval>>,
+    DecideQuoteApprovalMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return decideQuoteApproval(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DecideQuoteApprovalMutationResult = NonNullable<
+  Awaited<ReturnType<typeof decideQuoteApproval>>
+>;
+export type DecideQuoteApprovalMutationBody = QuoteDecisionIn;
+export type DecideQuoteApprovalMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | ApprovalConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type DecideQuoteApprovalMutationVariables = { id: string; data: QuoteDecisionIn };
+
+/**
+ * @summary EDS · Одобрить КП → отправить клиенту / Вернуть на доработку / Отклонить
+ */
+export const useDecideQuoteApproval = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ApprovalConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof decideQuoteApproval>>,
+      TError,
+      DecideQuoteApprovalMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof decideQuoteApproval>>,
+  TError,
+  DecideQuoteApprovalMutationVariables,
+  TContext
+> => {
+  return useMutation(getDecideQuoteApprovalMutationOptions(options), queryClient);
+};
+
+export const getListMemoApprovalsUrl = (params?: ListMemoApprovalsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    const explodeParameters = ["status"];
+
+    if (Array.isArray(value) && explodeParameters.includes(key)) {
+      value.forEach((v) => {
+        normalizedParams.append(key, v === null ? "null" : String(v));
+      });
+      return;
+    }
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/eds/memo-approvals?${stringifiedParams}`
+    : `/api/v1/eds/memo-approvals`;
+};
+
+/**
+ * EDS `GET /approvals` по шаблонам «Служебная записка», «Заявление», «Отчёт». `scope=mine` (по умолчанию) — документы на шаге этого сотрудника; `scope=all` — документы, где он автор или участник маршрута (с правом реестра — все). Автор, тема, сумма и «нужно до» читаются из документа EDS. Порядок — от новых к старым. Раздел `eds.memo.approve` или `eds.memo.create` — чтение.
+ * @summary EDS · На согласовании: служебные записки, заявления, отчёты
+ */
+export const listMemoApprovals = async (
+  params?: ListMemoApprovalsParams,
+  options?: Parameters<typeof http>[1],
+): Promise<MemoApprovalPage> => {
+  return http<MemoApprovalPage>(getListMemoApprovalsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListMemoApprovalsQueryKey = (params?: ListMemoApprovalsParams) => {
+  return [`/api/v1/eds/memo-approvals`, ...(params ? [params] : [])] as const;
+};
+
+export const getListMemoApprovalsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listMemoApprovals>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListMemoApprovalsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listMemoApprovals>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListMemoApprovalsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listMemoApprovals>>> = ({ signal }) =>
+    listMemoApprovals(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listMemoApprovals>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListMemoApprovalsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listMemoApprovals>>
+>;
+export type ListMemoApprovalsQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse | BackendUnavailableResponse
+>;
+
+export function useListMemoApprovals<
+  TData = Awaited<ReturnType<typeof listMemoApprovals>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params: undefined | ListMemoApprovalsParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listMemoApprovals>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listMemoApprovals>>,
+          TError,
+          Awaited<ReturnType<typeof listMemoApprovals>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListMemoApprovals<
+  TData = Awaited<ReturnType<typeof listMemoApprovals>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListMemoApprovalsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listMemoApprovals>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listMemoApprovals>>,
+          TError,
+          Awaited<ReturnType<typeof listMemoApprovals>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListMemoApprovals<
+  TData = Awaited<ReturnType<typeof listMemoApprovals>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListMemoApprovalsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listMemoApprovals>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary EDS · На согласовании: служебные записки, заявления, отчёты
+ */
+
+export function useListMemoApprovals<
+  TData = Awaited<ReturnType<typeof listMemoApprovals>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListMemoApprovalsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listMemoApprovals>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListMemoApprovalsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getGetMemoApprovalUrl = (ref: string) => {
+  return `/api/v1/eds/memo-approvals/${ref}`;
+};
+
+/**
+ * EDS `GET /documents/{id}` и `GET /approvals/{approval_id}` (маршрут: шаги, `can_decide`, `allowed_decisions`). `ref` — UUID документа или номер `СЗ-2026/014`, `ЗЯ-…`, `ОТ-…` (по номеру — `GET /registry?number=`; косая черта допускается в пути как есть и как `%2F`). Документа нет в реестре или он не служебный — 404 `NOT_FOUND`. Автор без права решения получает карточку в режиме чтения (`can_decide = false`). Раздел `eds.memo.approve` или `eds.memo.create` — чтение.
+ * @summary EDS · Карточка документа на согласовании (по id документа или по номеру)
+ */
+export const getMemoApproval = async (
+  ref: string,
+  options?: Parameters<typeof http>[1],
+): Promise<MemoApprovalCard> => {
+  return http<MemoApprovalCard>(getGetMemoApprovalUrl(ref), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetMemoApprovalQueryKey = (ref: string) => {
+  return [`/api/v1/eds/memo-approvals/${ref}`] as const;
+};
+
+export const getGetMemoApprovalQueryOptions = <
+  TData = Awaited<ReturnType<typeof getMemoApproval>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  ref: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getMemoApproval>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetMemoApprovalQueryKey(ref);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getMemoApproval>>> = ({ signal }) =>
+    getMemoApproval(ref, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: ref !== null && ref !== undefined,
+    ...queryOptions,
+  } as UseQueryOptions<Awaited<ReturnType<typeof getMemoApproval>>, TError, TData> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+};
+
+export type GetMemoApprovalQueryResult = NonNullable<Awaited<ReturnType<typeof getMemoApproval>>>;
+export type GetMemoApprovalQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+>;
+
+export function useGetMemoApproval<
+  TData = Awaited<ReturnType<typeof getMemoApproval>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  ref: string,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getMemoApproval>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getMemoApproval>>,
+          TError,
+          Awaited<ReturnType<typeof getMemoApproval>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetMemoApproval<
+  TData = Awaited<ReturnType<typeof getMemoApproval>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  ref: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getMemoApproval>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getMemoApproval>>,
+          TError,
+          Awaited<ReturnType<typeof getMemoApproval>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetMemoApproval<
+  TData = Awaited<ReturnType<typeof getMemoApproval>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  ref: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getMemoApproval>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary EDS · Карточка документа на согласовании (по id документа или по номеру)
+ */
+
+export function useGetMemoApproval<
+  TData = Awaited<ReturnType<typeof getMemoApproval>>,
+  TError = ErrorType<
+    SessionExpiredResponse | ForbiddenResponse | NotFoundResponse | BackendUnavailableResponse
+  >,
+>(
+  ref: string,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getMemoApproval>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetMemoApprovalQueryOptions(ref, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getDecideMemoApprovalUrl = (id: string) => {
+  return `/api/v1/eds/memo-approvals/${id}/decision`;
+};
+
+/**
+ * EDS `POST /approvals/{id}/decision` (права `memos.approve` / `approvals.decide` на шаге директора, `payments.confirm` на шаге бухгалтера). Раздел `eds.memo.approve` — полный (директор) или `eds.payments` — полный (бухгалтер на своём шаге): автор без права решения получает 403 в BFF до EDS; чей это шаг, решает EDS. Бухгалтер: «Принять к оплате» (`approve`) и «Вернуть». `comment` обязателен для `return` и `reject` — пустой 422 в BFF до EDS (`details.fields = [comment]`). Шаг не этого сотрудника — 403 EDS (`details.reason = not_your_step`); маршрут уже закрыт — 409 `CONFLICT`, `details.reason = route_closed`. Служебная записка с суммой после директора идёт бухгалтеру. `{id}` — `approval_id` из карточки. Ответ — обновлённая карточка.
+ * @summary EDS · Согласовать / Вернуть на доработку / Отклонить документ
+ */
+export const decideMemoApproval = async (
+  id: string,
+  memoDecisionIn: MemoDecisionIn,
+  options?: Parameters<typeof http>[1],
+): Promise<MemoApprovalCard> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<MemoApprovalCard>(getDecideMemoApprovalUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(memoDecisionIn),
+  });
+};
+
+export const getDecideMemoApprovalMutationKey = () => ["decideMemoApproval"] as const;
+
+export const getDecideMemoApprovalMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ApprovalConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof decideMemoApproval>>,
+    TError,
+    DecideMemoApprovalMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof decideMemoApproval>>,
+  TError,
+  DecideMemoApprovalMutationVariables,
+  TContext
+> => {
+  const mutationKey = getDecideMemoApprovalMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof decideMemoApproval>>,
+    DecideMemoApprovalMutationVariables
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return decideMemoApproval(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DecideMemoApprovalMutationResult = NonNullable<
+  Awaited<ReturnType<typeof decideMemoApproval>>
+>;
+export type DecideMemoApprovalMutationBody = MemoDecisionIn;
+export type DecideMemoApprovalMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | NotFoundResponse
+  | ApprovalConflictResponse
+  | ValidationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type DecideMemoApprovalMutationVariables = { id: string; data: MemoDecisionIn };
+
+/**
+ * @summary EDS · Согласовать / Вернуть на доработку / Отклонить документ
+ */
+export const useDecideMemoApproval = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | NotFoundResponse
+    | ApprovalConflictResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof decideMemoApproval>>,
+      TError,
+      DecideMemoApprovalMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof decideMemoApproval>>,
+  TError,
+  DecideMemoApprovalMutationVariables,
+  TContext
+> => {
+  return useMutation(getDecideMemoApprovalMutationOptions(options), queryClient);
+};
 
 export const getListEdsDealOptionsUrl = (params?: ListEdsDealOptionsParams) => {
   const normalizedParams = new URLSearchParams();

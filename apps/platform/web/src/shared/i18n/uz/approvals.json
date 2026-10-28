@@ -1,0 +1,197 @@
+{
+  "state": {
+    "retry": "Qayta urinish",
+    "loadError": {
+      "title": "Hujjatlar yuklanmadi",
+      "text": "Ma'lumotni olib bo'lmadi. Yana urinib ko'ring."
+    },
+    "unavailable": {
+      "title": "Hujjat aylanishi javob bermayapti",
+      "text": "Hujjatlar xizmati vaqtincha mavjud emas. Hech narsa yo'qolmadi — birozdan so'ng takrorlang."
+    },
+    "forbidden": {
+      "title": "Ruxsat yo'q",
+      "text": "«Kelishuvda» bo'limi rolingizga berilmagan."
+    },
+    "notGranted": {
+      "title": "Hujjat aylanishiga ruxsat yo'q",
+      "text": "Hisobingiz hujjat aylanishiga hali kiritilmagan. Administratorga yozing."
+    },
+    "notFound": {
+      "title": "Hujjat topilmadi",
+      "text": "Bunday hujjat yo'q, kelishuvga yuborilmagan yoki rolingizga ko'rinmaydi.",
+      "action": "Kelishuvlar ro'yxatiga"
+    }
+  },
+  "kinds": {
+    "memo": "Xizmat yozuvi",
+    "application": "Ariza",
+    "report": "Hisobot"
+  },
+  "list": {
+    "subtitle": "Kelishuvdagi xizmat yozuvlari, arizalar va hisobotlar.",
+    "caption": "Kelishuvdagi hujjatlar",
+    "scroll": "Kelishuvdagi hujjatlar jadvali",
+    "scope": {
+      "label": "Qaysi hujjatlarni ko'rsatish",
+      "mine": "Mening bosqichimda",
+      "all": "Mening barcha kelishuvlarim"
+    },
+    "columns": {
+      "number": "Raqam",
+      "subject": "Mavzu",
+      "author": "Kimdan",
+      "amount": "Summa",
+      "due": "Qachongacha kerak",
+      "received": "Kelgan",
+      "status": "Holat",
+      "action": "Amal"
+    },
+    "select": "{{number}} hujjatni yon oynada ko'rsatish",
+    "open": "Ochish",
+    "openLabel": "{{number}} hujjat kartasini ochish",
+    "more": "Yana ko'rsatish",
+    "waiting": "Kelishuvda · {{label}}",
+    "status": {
+      "open": "Kelishuvda",
+      "approved": "Kelishilgan",
+      "returned": "Qayta ishlashga qaytarilgan",
+      "rejected": "Rad etilgan"
+    },
+    "empty": {
+      "mine": {
+        "title": "Bosqichingizda hech narsa yo'q",
+        "text": "Kelishuv marshrutiga ega xizmat yozuvlari va boshqa hujjatlar shu yerda paydo bo'ladi.",
+        "action": "Barcha kelishuvlarni ko'rsatish"
+      },
+      "all": {
+        "title": "Hozircha kelishuvlar yo'q",
+        "text": "Siz yuborgan yoki kelishadigan hujjatlar shu yerda paydo bo'ladi.",
+        "action": "Yangilash"
+      }
+    }
+  },
+  "card": {
+    "title": "{{number}}",
+    "readOnly": "Faqat ko'rish",
+    "readOnlyHint": "Qarorni kelishuvchi qabul qiladi. Siz hujjatni faqat o'qish rejimida ko'rasiz.",
+    "agree": "Kelishuvni ochish",
+    "text": "Matn",
+    "files": "Ilovalar",
+    "noFiles": "Ilovalar yo'q.",
+    "download": "{{name}} faylini yuklab olish",
+    "route": "Kelishuv marshruti",
+    "routeAuthor": "Muallif: {{name}}",
+    "routeStep": {
+      "pending": "{{label}}: navbat hali kelmagan",
+      "current": "{{label}}: qaror kutmoqda",
+      "approved": "{{label}}: kelishildi",
+      "returned": "{{label}}: qayta ishlashga qaytarildi",
+      "rejected": "{{label}}: rad etildi",
+      "skipped": "{{label}}: o'tkazib yuborildi"
+    },
+    "decisions": "Qarorlar",
+    "decision": {
+      "approve": "Kelishildi",
+      "return": "Qayta ishlashga qaytarildi",
+      "reject": "Rad etildi"
+    },
+    "requisites": "Rekvizitlar",
+    "fields": {
+      "kind": "Turi",
+      "from": "Kimdan",
+      "to": "Kimga",
+      "date": "Sana",
+      "amount": "Summa",
+      "due": "Qachongacha kerak",
+      "deal": "Loyiha"
+    },
+    "toDirector": "Direktor"
+  },
+  "panel": {
+    "sheetTitle": "{{number}} kelishuvi",
+    "sheetLabel": "Hujjat kelishuvi",
+    "sheetClose": "Yopish",
+    "briefOpen": "Hujjat kartasini ochish",
+    "brief": {
+      "from": "Kimdan",
+      "amount": "Summa",
+      "due": "Qachongacha kerak",
+      "text": "Matn"
+    },
+    "readOnly": {
+      "title": "Hujjat kelishuvda",
+      "text": "Qarorni kelishuvchi qabul qiladi. Siz hujjatni faqat o'qish rejimida ko'rasiz.",
+      "notYourStep": "Hozir boshqa kelishuvchining bosqichi. Navbat kelganda qaror qila olasiz."
+    },
+    "decided": {
+      "approved": {
+        "title": "Hujjat kelishildi",
+        "text": "Qaror qabul qilindi. Muallif xabar oldi; hujjat reyestrda vizangiz va sanangiz bilan qoladi."
+      },
+      "returned": {
+        "title": "Hujjat qayta ishlashga qaytarildi",
+        "text": "Muallif tuzatib, hujjatni qayta yuboradi."
+      },
+      "rejected": {
+        "title": "Hujjat rad etildi",
+        "text": "Qaror qabul qilingan va yopilgan. Muallif izohni oldi."
+      }
+    }
+  },
+  "form": {
+    "name": "Hujjatni kelishish",
+    "draft": "Izoh qoralamadan tiklandi.",
+    "comment": {
+      "label": "Izoh",
+      "hint": "Qayta ishlashga qaytarish yoki rad etish uchun majburiy; kelishish uchun — ixtiyoriy."
+    },
+    "consequence": {
+      "title": "Nima bo'ladi",
+      "step1": "Hujjat «Kelishilgan» holatini oladi.",
+      "step2": "Muallif izohingiz bilan xabar oladi.",
+      "step2Next": "Keyin hujjatni oladi: {{label}}.",
+      "step3": "Hujjat reyestrda vizangiz, sanangiz va izohingiz bilan qoladi."
+    },
+    "submit": "Kelishish",
+    "return": "Qayta ishlashga qaytarish",
+    "reject": "Rad etish",
+    "disabled": "Qaytarish va rad etish faqat izoh bilan mumkin: izoh bo'sh bo'lsa tugmalar faol emas.",
+    "done": {
+      "approve": "Hujjat kelishildi",
+      "return": "Hujjat qayta ishlashga qaytarildi",
+      "reject": "Hujjat rad etildi"
+    },
+    "failed": {
+      "approve": "Saqlanmadi: {{reason}}",
+      "return": "Saqlanmadi: {{reason}}",
+      "reject": "Saqlanmadi: {{reason}}"
+    },
+    "reasons": {
+      "route_closed": "hujjatni boshqa kelishuvchi hal qilgan, karta yangilandi",
+      "checklist_not_green": "kelishuv shartlari bajarilmagan, karta yangilandi",
+      "checklist_not_green_plain": "kelishuv shartlari bajarilmagan, karta yangilandi",
+      "not_your_step": "hozir sizning bosqichingiz emas",
+      "eds_not_granted": "siz hujjat aylanishiga kiritilmagansiz",
+      "forbidden": "amal rolingizga berilmagan",
+      "unavailable": "hujjatlar xizmati javob bermayapti, izoh shaklda qoldi",
+      "validation": "izohni tekshiring",
+      "unknown": "nimadir xato ketdi, izoh shaklda qoldi"
+    }
+  },
+  "accountant": {
+    "submit": "To'lovga qabul qilish",
+    "return": "Qaytarish",
+    "consequence": {
+      "step1": "Xizmat yozuvi to'lovga qabul qilinadi va «Hisoblar va to'lovlar»da «to'lovga» sifatida paydo bo'ladi.",
+      "step2": "Muallif izohingiz bilan xabar oladi.",
+      "step3": "Hujjat reyestrda vizangiz, sanangiz va izohingiz bilan qoladi."
+    },
+    "done": {
+      "approve": "Hujjat to'lovga qabul qilindi",
+      "return": "Hujjat qaytarildi",
+      "reject": "Hujjat rad etildi"
+    },
+    "hint": "Sizning bosqichingiz — buxgalter: hujjatni to'lovga qabul qiling yoki izoh bilan qaytaring."
+  }
+}

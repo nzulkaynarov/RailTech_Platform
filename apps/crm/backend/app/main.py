@@ -36,6 +36,8 @@ from app.api.v1 import (
     setup,
     spend,
     staff,
+    staff_notifications,
+    staff_tickets,
     stream,
     system,
     system_status,
@@ -96,12 +98,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app = FastAPI(
         title="RailTech CRM API",
-        # 0.11.0 (W16-D1-2): «Создать заявку» из лида и клиента, `platform_status` и фильтры лидов
-        # (CRM-02, CRM-03); 0.10.0 (D1-9): приглашение в кабинет и подтверждение запроса в карточках
-        # лида и клиента; 0.9.0 (D1-1): записка передачи в /inbox, client_message_id ответа,
-        # reply_in_progress, delivery_unknown/unconfirmed, вложение сообщения; 0.8.0 (W15-H6):
-        # профиль; 0.6.0 — W15-H3.
-        version="0.11.0",
+        # 0.12.0 (W16-D1-2): «Создать заявку» из лида и клиента, `platform_status` и фильтры лидов
+        # (CRM-02, CRM-03); 0.11.0 (W15-H7): обращения сотрудников /me/tickets и /staff-tickets,
+        # колокольчик /me/notifications, флаг тура users.onboarding_done; 0.10.0 (D1-9): приглашение
+        # в кабинет и подтверждение запроса; 0.9.0 (D1-1): записка передачи в /inbox, ответы;
+        # 0.8.0 (W15-H6): профиль; 0.6.0 — W15-H3.
+        version="0.12.0",
         lifespan=lifespan,
         # operationId = имя функции роута → читаемые имена в клиенте orval.
         generate_unique_id_function=lambda route: route.name,
@@ -125,6 +127,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         auth,
         me,
         staff,
+        staff_notifications,
+        staff_tickets,
         users,
         platform_roles,
         # Раньше `leads`: `/leads/web*` не должен перехватываться `/leads/{lead_id}`.
@@ -155,4 +159,5 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     for module in routers:
         router = module.router
         app.include_router(router)
+    app.include_router(staff_tickets.mine_router)
     return app
