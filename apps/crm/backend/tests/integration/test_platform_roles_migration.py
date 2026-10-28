@@ -124,7 +124,7 @@ def test_codes_become_roles_the_column_goes_and_downgrade_brings_the_codes_back(
             ("erp_provision_user", {"user_id": ids[name]})
             for name in ("mgr_acc", "admin", "dir_sup", "dir_sup")
         ]
-        # Директор: лиды и внешние чаты — чтение (0038), «Счета и оплаты» — чтение (0048, D2-4);
+        # Директор: лиды и внешние чаты — чтение (0038), «Счета и оплаты» — чтение (0049, D2-4);
         # версия роли выросла дважды.
         director = conn.execute(
             "SELECT access, version FROM platform_roles WHERE code = 'DIRECTOR'"
@@ -256,7 +256,7 @@ def test_accountant_template_loses_supplier_prices_and_downgrade_returns_them(
 def test_director_reads_payments_and_downgrade_returns_full(
     alembic_config: Config, live_settings: Settings
 ) -> None:
-    """0048 (D2-4, Q-D2-4-1 п. 1): у «Директора» `eds.payments` — `read`, версия растёт."""
+    """0049 (D2-4, Q-D2-4-1 п. 1): у «Директора» `eds.payments` — `read`, версия растёт."""
 
     def director() -> tuple[str, int]:
         with psycopg.connect(live_settings.libpq_dsn, autocommit=True) as conn:
@@ -268,7 +268,7 @@ def test_director_reads_payments_and_downgrade_returns_full(
         return str(row[0]), int(row[1])
 
     command.upgrade(alembic_config, "head")
-    command.downgrade(alembic_config, "0047_accountant_supplier_prices")
+    command.downgrade(alembic_config, "9362ca08ba13")
     level, version = director()
     assert level == "full"
 

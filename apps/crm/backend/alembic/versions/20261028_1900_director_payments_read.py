@@ -7,9 +7,9 @@
 пересчитывает автопереопубликация по отпечатку каталога (`services/identity_catalog.py`).
 Downgrade возвращает `full` и тоже поднимает версию.
 
-Revision ID: 0048_director_payments_read
-Revises: 0047_accountant_supplier_prices
-Create Date: 2026-10-28 18:00:00+00:00
+Revision ID: 0049_director_payments_read
+Revises: 9362ca08ba13
+Create Date: 2026-10-28 19:00:00+00:00
 """
 
 from collections.abc import Sequence
@@ -17,8 +17,8 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "0048_director_payments_read"
-down_revision: str | None = "0047_accountant_supplier_prices"
+revision: str = "0049_director_payments_read"
+down_revision: str | None = "9362ca08ba13"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

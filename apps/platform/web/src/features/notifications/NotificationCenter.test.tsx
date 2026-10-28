@@ -44,7 +44,7 @@ describe("Центр уведомлений", () => {
     });
     expect(tabs).toHaveLength(4);
     const list = await within(center).findByRole("list", { name: "Уведомления" });
-    expect(within(list).getAllByRole("listitem")).toHaveLength(5);
+    expect(within(list).getAllByRole("listitem")).toHaveLength(7);
     // непрочитанное помечено словом, не только цветом; договор (раздел без экрана) — кнопка «Где посмотреть», а не ссылка
     const first = within(list).getAllByRole("button", { name: /Где посмотреть/ })[0] as HTMLElement;
     expect(first).toHaveTextContent("Новое: Клиент согласовал проект договора ДОГ-2026/091");
@@ -106,6 +106,47 @@ describe("Центр уведомлений", () => {
     });
     server.events.removeAllListeners();
   });
+
+  it.each([
+    [
+      "director@demo.example",
+      /Письмо ВХ-104\/26 ждёт резолюции/,
+      "/eds/inbox/%D0%92%D0%A5-104%2F26",
+      "?panel=open&tab=resolution",
+    ],
+    [
+      "director@demo.example",
+      /КП-2026\/118 ждёт вашего согласования/,
+      "/eds/drafts/%D0%9A%D0%9F-2026%2F118",
+      "?panel=open&tab=approve",
+    ],
+    [
+      "director@demo.example",
+      /СЗ-2026\/031 на согласовании/,
+      "/eds/approvals/%D0%A1%D0%97-2026%2F031",
+      "?panel=open&tab=agree",
+    ],
+    ["manager@demo.example", /Лид L-2041 просит КП/, "/crm/messages", "?lead=L-2041"],
+  ])(
+    "%s: «%s» открывает объект и вкладку решения, без «Где посмотреть» (D1-6)",
+    async (email, title, pathname, search) => {
+      signInAs(email);
+      const { router } = renderApp("/dashboard/queue");
+      const center = await openBell();
+
+      expect(
+        within(center).queryByRole("button", {
+          name: /^Где посмотреть: .*(ВХ-104|КП-2026\/118|СЗ-2026|L-2041)/,
+        }),
+      ).toBeNull();
+      fireEvent.click(await within(center).findByRole("link", { name: title }));
+
+      await waitFor(() => {
+        expect(router.state.location.pathname).toBe(pathname);
+      });
+      expect(router.state.location.search).toBe(search);
+    },
+  );
 
   it("уведомление об объекте без экрана: не заглушка, а «Где посмотреть» с мостом; окно остаётся открытым, прочитано", async () => {
     signInAs("director@demo.example");

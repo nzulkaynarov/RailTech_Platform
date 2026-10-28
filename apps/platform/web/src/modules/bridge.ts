@@ -97,7 +97,6 @@ export const BRIDGE: Readonly<Record<string, BridgeEntry>> = {
     when: "pilot",
   },
 
-  "eds.documents": { legacy: erp("#crm-quotes", "erpDocuments"), when: "pilot" },
   "eds.outbox": {
     legacy: erp("#crm-quotes", "erpQuotes"),
     when: "pilot",
@@ -108,9 +107,8 @@ export const BRIDGE: Readonly<Record<string, BridgeEntry>> = {
     when: "pilot",
     objectKind: "project",
   },
-  // «КП на одобрение» и «На согласовании» — настоящие экраны (D1-4), записей моста у них нет.
-  // «Счета и оплаты» — настоящий экран (D2-4), записи моста у него нет.
-  "eds.new": { who: "newDocument", when: "soon" },
+  // «Все документы» и «Создать документ» (D1-5), «КП на одобрение» и «На согласовании» (D1-4), «Счета и оплаты» (D2-4) — настоящие
+  // экраны, записей моста у них нет.
 
   "erp.stock": { legacy: erp("#my-products", "erpStock"), when: "pilot" },
   "erp.catalog": { legacy: erp("#catalog-reference", "erpCatalog"), when: "pilot" },
@@ -127,6 +125,8 @@ export const NATIVE_SECTIONS: readonly string[] = [
   "dashboard.queue",
   "crm.messages",
   "crm.kb",
+  "eds.documents",
+  "eds.new",
   "eds.inbox",
   "erp.requests",
   "erp.calc",

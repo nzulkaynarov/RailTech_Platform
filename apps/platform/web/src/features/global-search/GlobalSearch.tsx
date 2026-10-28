@@ -5,6 +5,7 @@ import { useNavigate } from "react-router";
 
 import { useAuth } from "../../app/auth/useAuth";
 import { isActionable } from "../../modules/bridge";
+import { objectLink } from "../../modules/objectLinks";
 import { moduleName } from "../../modules/registry";
 import { WhereToDo } from "../../modules/stub/WhereToDo";
 import { useSearch } from "../../shared/api/generated/platform-bff";
@@ -98,7 +99,7 @@ export function GlobalSearch({ inputRef, shortcut, mobile }: GlobalSearchProps) 
           title: hit.title,
           subtitle: hit.subtitle,
           tag: t(`search.kind.${hit.object.kind}`),
-          path: hit.object.path,
+          path: objectLink(hit.object),
         })),
       });
     });

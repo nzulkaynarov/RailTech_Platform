@@ -253,6 +253,10 @@ QUEUE: Final[dict[str, tuple[str, Level]]] = {
         "eds.memo.approve",
         "full",
     ),
+    "rework_document": (
+        "eds.memo.create",
+        "full",
+    ),
     "problem_project": (
         "eds.projects",
         "full",

@@ -3,9 +3,9 @@
 SPEC-v3 §3.2 п. 5, §2.4 «Служебная записка … Передана бухгалтеру → Оплачена»: оплата фиксируется операцией
 `POST /documents/{id}/payment` (право `payments.confirm`), одна запись на документ.
 
-Revision ID: 0006_document_payments
-Revises: 0005_c1_gate_tails
-Create Date: 2026-10-28 10:00:00+00:00
+Revision ID: 0007_document_payments
+Revises: 0006_employee_sections
+Create Date: 2026-10-28 12:00:00+00:00
 """
 
 from collections.abc import Sequence
@@ -13,8 +13,8 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "0006_document_payments"
-down_revision: str | Sequence[str] | None = "0005_c1_gate_tails"
+revision: str = "0007_document_payments"
+down_revision: str | Sequence[str] | None = "0006_employee_sections"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

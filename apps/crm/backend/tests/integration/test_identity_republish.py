@@ -67,7 +67,7 @@ async def test_publishes_full_snapshot_for_every_staff_member(
         data = row["envelope"]["data"]
         assert "changed_fields" not in data  # необязательное поле: менять нечего
         assert data["actor"] == {"type": "system"}
-        assert set(data["user"]["permissions"]) == {"eds"}
+        assert set(data["user"]["permissions"]) == {"eds", "sections"}
         assert data["user"]["email"].endswith("@railtech.uz")
     assert len({row["envelope"]["id"] for row in rows}) == 3
 

@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
 import { isActionable } from "../../modules/bridge";
+import { objectLink } from "../../modules/objectLinks";
 import { WhereToDo } from "../../modules/stub/WhereToDo";
 import type { Notification } from "../../shared/api/generated/model";
 import { TONE_STYLE, type StatusTone } from "../../shared/lib/statuses";
@@ -79,12 +80,13 @@ export function NotificationList({ items, onOpen, onRead, label }: NotificationL
           </>
         );
         const className = item.read ? "pf-note" : "pf-note pf-note--unread";
-        const stub = item.object !== undefined && !isActionable(item.object.path);
+        const to = item.object ? objectLink(item.object) : undefined;
+        const stub = to !== undefined && !isActionable(to);
         return (
           <li key={item.id}>
-            {item.object && !stub ? (
+            {to && !stub ? (
               <Link
-                to={item.object.path}
+                to={to}
                 className={className}
                 onClick={() => {
                   onOpen(item);
@@ -110,9 +112,9 @@ export function NotificationList({ items, onOpen, onRead, label }: NotificationL
                 {body}
               </button>
             )}
-            {stub && item.object && where === item.id ? (
+            {stub && to && where === item.id ? (
               <section className="pf-note-where" aria-label={t("notifications.where")}>
-                <WhereToDo path={item.object.path} />
+                <WhereToDo path={to} />
               </section>
             ) : null}
           </li>

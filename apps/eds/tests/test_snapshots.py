@@ -39,6 +39,23 @@ def test_permissions_are_optional_and_sorted_unique() -> None:
     ]
 
 
+def test_catalog_sections_are_optional_and_default_to_none() -> None:
+    """D1-8: разделы каталога — аддитивное поле; нет поля (CRM до D1-8) — разделов нет."""
+    example = json.loads((CONTRACTS / "user.updated.v1.json").read_text(encoding="utf-8"))
+    assert UserEnvelope.model_validate(example["data"]).user.sections["erp.calc.goods"] == "full"
+    without = user_snapshot()
+    assert UserEnvelope.model_validate({"user": without}).user.sections == {}
+    del without["permissions"]
+    assert UserEnvelope.model_validate({"user": without}).user.sections == {}
+    given = user_snapshot(permissions={"eds": [], "sections": {"eds.payments": "full", "eds.projects": "read"}})
+    assert UserEnvelope.model_validate({"user": given}).user.sections == {
+        "eds.payments": "full",
+        "eds.projects": "read",
+    }
+    with pytest.raises(ValidationError):
+        UserEnvelope.model_validate({"user": user_snapshot(permissions={"sections": ["eds.payments"]})})
+
+
 def test_extra_fields_are_ignored_but_wrong_types_are_not() -> None:
     assert UserEnvelope.model_validate({"user": user_snapshot(new_field=1), "actor": {"type": "system"}}).user
     with pytest.raises(ValidationError):

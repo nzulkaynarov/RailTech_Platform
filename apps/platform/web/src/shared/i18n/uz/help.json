@@ -30,6 +30,8 @@
       "articles": "Maqolalar",
       "keys": "Tezkor tugmalar",
       "news": "Yangiliklar",
+      "roadmap": "Rejada nima bor",
+      "about": "Tizim haqida",
       "requests": "Mening murojaatlarim"
     },
     "write": "Administratorga yozish",
@@ -234,24 +236,70 @@
     ]
   },
   "news": {
-    "intro": "Platformada nima o‘zgardi.",
-    "items": [
-      {
-        "date": "2026-yil 28-oktyabr",
-        "title": "Yordam, birinchi kirish va administratorga murojaatlar",
-        "text": "«?» tugmasi joriy ekran uchun yordamni ochadi; «Administratorga yozish» «Ruxsat yo‘q» ekranidan va Yordamdan ishlaydi; javoblar qo‘ng‘iroqchaga va Telegramga keladi."
-      },
-      {
-        "date": "2026-yil 27-oktyabr",
-        "title": "Halol to‘ldirgichlar va boshi berk ko‘chasiz navbat",
-        "text": "Platformada hali yo‘q bo‘lim ishning hozir qayerda bajarilishini aytadi; «Mening vazifalarim»da ekran hali bo‘lmasa «Ochish» o‘rniga «Qayerda bajarish» chiqadi."
-      },
-      {
-        "date": "2026-yil 27-oktyabr",
-        "title": "Profil",
-        "text": "Surat, telefon, imzo, Telegram va ta’til paytidagi o‘rinbosar profil sahifasida."
-      }
-    ]
+    "intro": "Platformada nima o‘zgardi — chiqarilgan sanalar bo‘yicha. Banddagi belgi — o‘zgarish kim uchun.",
+    "forAll": "Hamma uchun",
+    "empty": "Hozircha yozuvlar yo‘q: ular keyingi yangilanishdan so‘ng paydo bo‘ladi."
+  },
+  "roadmap": {
+    "missing": "Reja hali e’lon qilinmagan."
+  },
+  "about": {
+    "title": "Tizim haqida",
+    "versionWithSha": "Platforma {{version}} · {{sha}}",
+    "version": "Platforma {{version}}",
+    "localBuild": "Platforma · mahalliy yig‘ma",
+    "releasedAt": "Yangilangan: {{date}}",
+    "builtAt": "Yig‘ilgan: {{date}}",
+    "services": "Xizmatlar",
+    "service": {
+      "bff": "Platforma (BFF)",
+      "crm": "CRM",
+      "erp": "ERP",
+      "eds": "Hujjatlar (EDS)"
+    },
+    "status": {
+      "ok": "Ishlayapti",
+      "fail": "Javob bermayapti",
+      "disabled": "Ulanmagan"
+    },
+    "serviceVersion": "versiya {{version}}",
+    "noVersion": "versiyani bildirmaydi",
+    "copy": "Qo‘llab-quvvatlash uchun ma’lumotlarni nusxalash",
+    "copied": "Nusxalandi. Murojaat yoki administratorga xabarga qo‘ying.",
+    "copyFailed": "Brauzer nusxalashga ruxsat bermadi. Yuqoridagi matnni belgilab, qo‘lda nusxalang.",
+    "supportLabel": "Qo‘llab-quvvatlash uchun ma’lumotlar",
+    "supportHint": "Ism, pochta va telefonsiz: versiya, rol, til, brauzer, ekran va vaqt.",
+    "loading": "Versiyani aniqlayapmiz va xizmatlarni tekshiryapmiz…",
+    "error": "Versiyani aniqlab bo‘lmadi: Platforma javob bermadi. Sahifani yangilang.",
+    "menu": "Tizim haqida",
+    "support": {
+      "version": "Versiya: {{value}}",
+      "role": "Rol: {{value}}",
+      "language": "Til: {{value}}",
+      "browser": "Brauzer: {{value}}",
+      "screen": "Ekran: {{value}}",
+      "time": "Vaqt: {{value}}"
+    }
+  },
+  "whatsNew": {
+    "title": "Platforma yangilandi",
+    "text": "{{date}}: {{title}}. Siz uchun nima yangi ekanini ko‘ring.",
+    "open": "Yangiliklar",
+    "close": "Yopish",
+    "fresh": "Yangi",
+    "helpFresh": "Yordam (? tugmasi), yangilik bor"
+  },
+  "feedback": {
+    "label": "Maqola haqida fikr",
+    "question": "Maqola yordam berdimi?",
+    "yes": "Ha",
+    "no": "Yo‘q",
+    "thanks": "Rahmat! Yordam berganidan xursandmiz.",
+    "sorry": "Afsus. Nima yetishmaganini yozing — administrator maqolani tuzatadi.",
+    "write": "Administratorga yozish",
+    "outdated": "Bu yer eskirgan",
+    "outdatedBody": "Yordam maqolasi «{{title}}» eskirgan: {{link}}\nNima o‘zgardi: ",
+    "missingBody": "Yordam maqolasi «{{title}}» yordam bermadi: {{link}}\nNima yetishmadi: "
   },
   "articles": {
     "intro": "Platforma bo‘limlari bo‘yicha maqolalar. Sarlavhadagi «?» tugmasi kerakli maqolaga olib boradi.",
@@ -280,8 +328,8 @@
     "body": "Nima bo‘ldi",
     "bodyPlaceholder": "Masalan: ta’minotchi topshiriqlarini ko‘rish uchun «Hisob-kitob» bo‘limiga kirish kerak",
     "bodyHint": "4000 belgigacha.",
-    "auto": "Avtomatik biriktiriladi: sahifa {{page}}, rol {{role}}.",
-    "autoNoPage": "Avtomatik biriktiriladi: rol {{role}}.",
+    "auto": "Avtomatik biriktiriladi: sahifa {{page}}, rol {{role}}, Platforma versiyasi.",
+    "autoNoPage": "Avtomatik biriktiriladi: rol {{role}}, Platforma versiyasi.",
     "consequence": [
       "Administrator murojaatni «Sozlamalar · Xodimlar murojaatlari»da va Telegramda oladi.",
       "Sahifa va rolingiz o‘zi biriktiriladi.",

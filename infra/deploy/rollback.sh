@@ -17,6 +17,9 @@ rel="$(release_dir "$target")"
 
 require_env_file
 export RT_IMAGE_TAG="$target"
+# Версия «О системе» после отката — дата выкладки того релиза (W-REL).
+RT_RELEASE_DATE="$(release_date "$rel")"
+export RT_RELEASE_DATE
 log "откат $cur → $target"
 compose "$rel" config -q
 # Платформа (INF-P0-5) есть не в каждом релизе: откат на тег до неё не должен просить у compose несуществующие сервисы.

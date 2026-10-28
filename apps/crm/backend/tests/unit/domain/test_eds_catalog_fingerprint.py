@@ -69,6 +69,23 @@ def test_eds_result_of_system_role_changes_it() -> None:
     assert _fp(role_access=changed) != _fp()
 
 
+def test_published_section_of_system_role_changes_it() -> None:
+    """D1-8: раздел `erp.calc.*` роли уходит в `permissions.sections` — отпечаток меняется, хотя
+    кодов EDS у раздела нет."""
+    changed = copy.deepcopy(ROLE_ACCESS)
+    changed["MANAGER"]["erp.calc.services"] = "full"
+    assert _fp(role_access=changed) != _fp()
+    level = copy.deepcopy(ROLE_ACCESS)
+    level["MANAGER"]["eds.inbox"] = "full"
+    assert _fp(role_access=level) != _fp()
+    changed_real = copy.deepcopy(generated.ROLE_ACCESS)
+    changed_real["DIRECTOR"]["erp.calc.goods"] = "read"
+    assert (
+        eds_catalog_fingerprint(generated.EDS_BACKEND, changed_real, generated.SYSTEM_ROLE_CODES)
+        != eds_catalog_fingerprint()
+    )
+
+
 def test_eds_result_of_role_template_changes_it() -> None:
     """B-005: шаблоны `tpl:*` создаются ролями из каталога; их права EDS входят в отпечаток."""
     changed = copy.deepcopy(ROLE_ACCESS)
