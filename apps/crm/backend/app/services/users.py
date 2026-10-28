@@ -340,6 +340,28 @@ class UserService:
                 await audit.record(session, actor, "user.onboarding_done", "user", user_id)
             return await _loaded_view(session, user)
 
+    async def set_whats_new(
+        self, user_id: int, *, shown: str | None = None, read: str | None = None
+    ) -> UserView:
+        """«Что нового» (W-REL): отметки только растут.
+
+        Даты записей `ГГГГ-ММ-ДД` сравниваются строкой.
+
+        Без аудита: это отметка «прочитано» сотрудника о самом себе, как прочтение колокольчика.
+        """
+        async with self._sessions() as session, session.begin():
+            user = await repo.get(session, user_id, for_update=True)
+            if user is None:
+                raise NotFoundError("user not found")
+            if shown is not None and (user.whats_new_shown or "") < shown:
+                user.whats_new_shown = shown
+            if read is not None and (user.whats_new_read or "") < read:
+                user.whats_new_read = read
+                # Открыл «Что нового» — окно о той же записи больше не нужно.
+                if (user.whats_new_shown or "") < read:
+                    user.whats_new_shown = read
+            return await _loaded_view(session, user)
+
     async def bootstrap_admin(self, email: str, full_name: str, password: str | None) -> str:
         """Первый админ или восстановление (CLI `create-admin`). Возвращает пароль (временный,
         если не задан).

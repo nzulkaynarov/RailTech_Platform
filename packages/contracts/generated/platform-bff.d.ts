@@ -321,6 +321,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/me/whats-new": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    /**
+     * Отметить, что окно «Платформа обновлена» показано или «Что нового» открыт
+     * @description W-REL. `shown` — сотрудник закрыл или открыл окно «Платформа обновлена» о записи этой даты (окно больше не показывается); `read` — открыл раздел «Что нового» (снимается отметка «Новое» у «?», окно о той же записи тоже не нужно). Отметки хранит CRM (`PATCH /me {whats_new_shown|whats_new_read}`), а не браузер; они только растут — более ранняя дата ничего не меняет. Только про себя; ответ — обновлённый профиль.
+     */
+    put: operations["markWhatsNew"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/tickets": {
     parameters: {
       query?: never;
@@ -581,6 +601,26 @@ export interface paths {
     };
     /** Состояние BFF и источников */
     get: operations["getHealth"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/about": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * О системе — версия Платформы и состояние сервисов
+     * @description W-REL. Версия релиза — по дате выкладки (`2026.10.28`) и короткому sha коммита; BFF берёт их из тега образа и переменных окружения (`PLATFORM_RELEASE`, `PLATFORM_RELEASE_DATE`, при сборке — `PLATFORM_BUILD_SHA`, `PLATFORM_BUILD_DATE`). Локальная сборка без них — `version = dev`. Сервисы — BFF и источники CRM, ERP, EDS: состояние по их health за 3 с и версия, если health её сообщает (сейчас — EDS и сам BFF). Нужна сессия, прав раздела не нужно: «О системе» есть в помощи у каждого сотрудника. Персональных данных в ответе нет.
+     */
+    get: operations["getAbout"];
     put?: never;
     post?: never;
     delete?: never;
@@ -4654,6 +4694,16 @@ export interface components {
       };
       /** @description Приветствие и тур первого входа уже показаны («Пропустить» или «Больше не показывать»); `false` — SPA показывает карточку «Добро пожаловать». Флаг хранит CRM (`PUT /me/onboarding`), а не браузер. */
       onboarding_done: boolean;
+      /** @description W-REL. Дата записи «Что нового» (`2026-10-28`), о которой окно «Платформа обновлена» уже показано; `null` — ни одной. Запись новее — SPA один раз показывает окно. Хранит CRM (`PUT /me/whats-new`). */
+      whats_new_shown?: components["schemas"]["WhatsNewDate"] | null;
+      /** @description W-REL. Дата последней открытой записи «Что нового»; запись новее — у «?» отметка «Новое», пока сотрудник её не откроет. `null` — не открывал ни одной. */
+      whats_new_read?: components["schemas"]["WhatsNewDate"] | null;
+    };
+    /** @description Запись «Что нового» — дата выкладки (`docs/kb/help/changelog/<дата>.md`) */
+    WhatsNewDate: string;
+    WhatsNewMark: {
+      shown?: components["schemas"]["WhatsNewDate"];
+      read?: components["schemas"]["WhatsNewDate"];
     };
     /**
      * @description Тема обращения — «Нужен доступ к разделу», «Не приходит уведомление», «Нужен шаблон документа», «Ошибка», «Другое»
@@ -4667,7 +4717,7 @@ export interface components {
     TicketStatus: "new" | "in_progress" | "resolved";
     TicketCreate: {
       subject: components["schemas"]["TicketSubject"];
-      /** @description Что случилось — до 4000 символов после обрезки пробелов (длиннее — 422 `ticket_text_too_long`) */
+      /** @description Что случилось — до 4000 символов после обрезки пробелов (длиннее — 422 `ticket_text_too_long`). BFF сам дописывает в конец строку «Версия: Платформа 2026.10.28 · 1a2b3c4» (W-REL), если она помещается в предел. */
       body: string;
       /** @description Внутренний путь страницы Платформы с запросом (`/eds/inbox?panel=open`); внешний адрес — 422 */
       page?: string;
@@ -4908,6 +4958,41 @@ export interface components {
       };
       version?: string;
     };
+    About: {
+      release: components["schemas"]["Release"];
+      /** @description BFF, CRM, ERP и EDS — в этом порядке */
+      services: components["schemas"]["ServiceVersion"][];
+      /** Format: date-time */
+      checked_at: string;
+    };
+    /** @description Версия Платформы: «Платформа 2026.10.28 · 1a2b3c4» — `version` и `sha`. Один релиз — один sha для всех образов ансамбля (deploy.yml выкладывает их одним тегом). */
+    Release: {
+      /** @description Дата выкладки `ГГГГ.ММ.ДД` (нет даты выкладки — дата сборки образа); локальная сборка — `dev` */
+      version: string;
+      /** @description Короткий sha коммита релиза (7 знаков); нет — локальная сборка */
+      sha?: string;
+      /**
+       * Format: date
+       * @description Дата выкладки на сервер (deploy.sh); нет — выкладка без даты
+       */
+      released_at?: string;
+      /**
+       * Format: date
+       * @description Дата сборки образа BFF
+       */
+      built_at?: string;
+    };
+    ServiceVersion: {
+      /** @enum {string} */
+      key: "bff" | "crm" | "erp" | "eds";
+      /**
+       * @description `ok` — health ответил 200; `fail` — не ответил за 3 с или ошибка; `disabled` — сервис не подключён (EDS без адреса)
+       * @enum {string}
+       */
+      status: "ok" | "fail" | "disabled";
+      /** @description Версия сервиса, если его health её сообщает */
+      version?: string;
+    };
     MenuCounter: {
       module: components["schemas"]["ModuleCode"];
       /** @description Ключ раздела подменю (`queue`, `inbox`, `drafts`, `approvals`, `payments`, `calc`, `leads`, `messages`…) */
@@ -4932,6 +5017,7 @@ export interface components {
       | "resolve_letter"
       | "approve_quote"
       | "approve_memo"
+      | "rework_document"
       | "problem_project"
       | "calc_task"
       | "supplier_overdue"
@@ -7863,6 +7949,37 @@ export interface operations {
       503: components["responses"]["BackendUnavailable"];
     };
   };
+  markWhatsNew: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["WhatsNewMark"];
+      };
+    };
+    responses: {
+      /** @description Профиль с новыми отметками `whats_new_shown` и `whats_new_read` */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Me"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
   listMyTickets: {
     parameters: {
       query?: never;
@@ -8390,6 +8507,27 @@ export interface operations {
           "application/json": components["schemas"]["Health"];
         };
       };
+    };
+  };
+  getAbout: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Версия и сервисы */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["About"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
     };
   };
   getMenuCounters: {

@@ -7,7 +7,7 @@ import type { TicketSubject } from "./ticketSubject";
 export interface TicketCreate {
   subject: TicketSubject;
   /**
-   * Что случилось — до 4000 символов после обрезки пробелов (длиннее — 422 `ticket_text_too_long`)
+   * Что случилось — до 4000 символов после обрезки пробелов (длиннее — 422 `ticket_text_too_long`). BFF сам дописывает в конец строку «Версия: Платформа 2026.10.28 · 1a2b3c4» (W-REL), если она помещается в предел.
    * @minLength 1
    * @maxLength 20000
    */

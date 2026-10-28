@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — BFF API (Платформа → CRM и ERP)
-  version: 0.26.0
+  version: 0.27.0
   summary: Пространство `/api/v1/` BFF Платформы — вызывает SPA `apps/platform/web` от имени сотрудника.
   description: |
     Контракт по ADR-0011 и `docs/architecture/platform-bff.md`. Версия 0.1.0 (INF-P0-1) покрывает фазу P1:
@@ -138,6 +138,15 @@ info:
     привязан ли, подписки, последняя неудача доставки, пробное сообщение). Журнал и журнал роли — раздел `admin` от чтения
     (директор читает), сброс пароля — `admin: full`; профиль доступен каждому вошедшему. Секреты из записей журнала BFF вырезает
     (значения полей `password`, `secret`, `token`, `key`, `*_key`, `credentials`, `authorization`, `pin` и им подобных -> `***` целиком, любого типа).
+
+    **0.27.0 (D1-6b) — «Доработать» в «Моей очереди» автора.** Добавляющее изменение (новое значение enum `QueueItemKind` oasdiff считает требующим минора): `QueueItemKind` += `rework_document` (секция `queue`
+    каталога: раздел `eds.memo.create`, уровень `full` — автор документа). Строка — документ сотрудника, который согласующий вернул на
+    доработку (служебная записка, заявление, отчёт в статусе «Возвращён на доработку»): «Доработать: СЗ-… · тема», в подписи — кто вернул и его
+    комментарий; срок — «нужно до» документа, без него — «сегодня»; `object.path` — `/eds/new?draft=<id документа>` (форма «Продолжить»). Строка
+    исчезает, когда автор отправил документ снова. Источник — EDS (`GET /documents?mine=true&status=returned`) по токену сотрудника
+    (`aud=eds`): что вернул EDS, то и строки. `Sources.eds` (необязательное, `SourceState`, с D1-6) — есть, когда ответ собран и из EDS: `unavailable` — EDS
+    не ответил (остальные строки показаны), `not_applicable` — EDS не пустил сотрудника по его токену; без доступа к разделам EDS и без обращения
+    к нему поля нет. Подсказка потока (SSE): решение по документу (`approval.decided`, в том числе возврат) -> тема `queue`.
 
     **0.25.0 (W15-H7) — помощь, первый вход и обращения к администратору.** Добавляющее изменение (тег `tickets`). **Обращения
     сотрудников** (домен CRM, ADR-0015): `POST /tickets` (тема из списка `access|notification|template|error|other`, текст,
@@ -844,6 +853,40 @@ paths:
         '503':
           $ref: '#/components/responses/BackendUnavailable'
 
+  /me/whats-new:
+    put:
+      tags: [me]
+      operationId: markWhatsNew
+      summary: Отметить, что окно «Платформа обновлена» показано или «Что нового» открыт
+      description: >-
+        W-REL. `shown` — сотрудник закрыл или открыл окно «Платформа обновлена» о записи этой даты (окно больше не
+        показывается); `read` — открыл раздел «Что нового» (снимается отметка «Новое» у «?», окно о той же записи тоже не
+        нужно). Отметки хранит CRM (`PATCH /me {whats_new_shown|whats_new_read}`), а не браузер; они только растут — более
+        ранняя дата ничего не меняет. Только про себя; ответ — обновлённый профиль.
+      parameters:
+        - $ref: '#/components/parameters/CsrfToken'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WhatsNewMark'
+      responses:
+        '200':
+          description: Профиль с новыми отметками `whats_new_shown` и `whats_new_read`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Me'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+        '503':
+          $ref: '#/components/responses/BackendUnavailable'
+
   /tickets:
     get:
       tags: [tickets]
@@ -1354,6 +1397,27 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Health'
+
+  /about:
+    get:
+      tags: [system]
+      operationId: getAbout
+      summary: О системе — версия Платформы и состояние сервисов
+      description: >-
+        W-REL. Версия релиза — по дате выкладки (`2026.10.28`) и короткому sha коммита; BFF берёт их из тега образа и
+        переменных окружения (`PLATFORM_RELEASE`, `PLATFORM_RELEASE_DATE`, при сборке — `PLATFORM_BUILD_SHA`,
+        `PLATFORM_BUILD_DATE`). Локальная сборка без них — `version = dev`. Сервисы — BFF и источники CRM, ERP, EDS: состояние
+        по их health за 3 с и версия, если health её сообщает (сейчас — EDS и сам BFF). Нужна сессия, прав раздела не нужно:
+        «О системе» есть в помощи у каждого сотрудника. Персональных данных в ответе нет.
+      responses:
+        '200':
+          description: Версия и сервисы
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/About'
+        '401':
+          $ref: '#/components/responses/SessionExpired'
 
   /menu-counters:
     get:
@@ -8577,6 +8641,35 @@ components:
           description: >-
             Приветствие и тур первого входа уже показаны («Пропустить» или «Больше не показывать»); `false` — SPA показывает
             карточку «Добро пожаловать». Флаг хранит CRM (`PUT /me/onboarding`), а не браузер.
+        whats_new_shown:
+          description: >-
+            W-REL. Дата записи «Что нового» (`2026-10-28`), о которой окно «Платформа обновлена» уже показано; `null` — ни
+            одной. Запись новее — SPA один раз показывает окно. Хранит CRM (`PUT /me/whats-new`).
+          oneOf:
+            - $ref: '#/components/schemas/WhatsNewDate'
+            - type: 'null'
+        whats_new_read:
+          description: >-
+            W-REL. Дата последней открытой записи «Что нового»; запись новее — у «?» отметка «Новое», пока сотрудник её не
+            откроет. `null` — не открывал ни одной.
+          oneOf:
+            - $ref: '#/components/schemas/WhatsNewDate'
+            - type: 'null'
+
+    WhatsNewDate:
+      type: string
+      pattern: '^\d{4}-\d{2}-\d{2}$'
+      description: Запись «Что нового» — дата выкладки (`docs/kb/help/changelog/<дата>.md`)
+
+    WhatsNewMark:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        shown:
+          $ref: '#/components/schemas/WhatsNewDate'
+        read:
+          $ref: '#/components/schemas/WhatsNewDate'
 
     TicketSubject:
       type: string
@@ -8599,7 +8692,9 @@ components:
           type: string
           minLength: 1
           maxLength: 20000
-          description: Что случилось — до 4000 символов после обрезки пробелов (длиннее — 422 `ticket_text_too_long`)
+          description: >-
+            Что случилось — до 4000 символов после обрезки пробелов (длиннее — 422 `ticket_text_too_long`). BFF сам дописывает
+            в конец строку «Версия: Платформа 2026.10.28 · 1a2b3c4» (W-REL), если она помещается в предел.
         page:
           type: string
           maxLength: 2000
@@ -9127,6 +9222,61 @@ components:
         version:
           type: string
 
+    About:
+      type: object
+      additionalProperties: false
+      required: [release, services, checked_at]
+      properties:
+        release:
+          $ref: '#/components/schemas/Release'
+        services:
+          type: array
+          description: BFF, CRM, ERP и EDS — в этом порядке
+          items:
+            $ref: '#/components/schemas/ServiceVersion'
+        checked_at:
+          type: string
+          format: date-time
+
+    Release:
+      type: object
+      additionalProperties: false
+      required: [version]
+      description: >-
+        Версия Платформы: «Платформа 2026.10.28 · 1a2b3c4» — `version` и `sha`. Один релиз — один sha для всех образов
+        ансамбля (deploy.yml выкладывает их одним тегом).
+      properties:
+        version:
+          type: string
+          description: Дата выкладки `ГГГГ.ММ.ДД` (нет даты выкладки — дата сборки образа); локальная сборка — `dev`
+        sha:
+          type: string
+          description: Короткий sha коммита релиза (7 знаков); нет — локальная сборка
+        released_at:
+          type: string
+          format: date
+          description: Дата выкладки на сервер (deploy.sh); нет — выкладка без даты
+        built_at:
+          type: string
+          format: date
+          description: Дата сборки образа BFF
+
+    ServiceVersion:
+      type: object
+      additionalProperties: false
+      required: [key, status]
+      properties:
+        key:
+          type: string
+          enum: [bff, crm, erp, eds]
+        status:
+          type: string
+          enum: [ok, fail, disabled]
+          description: '`ok` — health ответил 200; `fail` — не ответил за 3 с или ошибка; `disabled` — сервис не подключён (EDS без адреса)'
+        version:
+          type: string
+          description: Версия сервиса, если его health её сообщает
+
     MenuCounter:
       type: object
       additionalProperties: false
@@ -9167,6 +9317,7 @@ components:
         - resolve_letter
         - approve_quote
         - approve_memo
+        - rework_document
         - problem_project
         - calc_task
         - supplier_overdue

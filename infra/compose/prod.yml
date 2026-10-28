@@ -404,6 +404,9 @@ services:
     environment:
       # Прод — только https: cookie сессии всегда Secure, значением из .env.prod это не выключить (Q-PLT-10-1 п. 5).
       PLATFORM_COOKIE_SECURE: "true"
+      # Версия «О системе» (W-REL): тег выкладки и её дата (deploy.sh и rollback.sh экспортируют RT_RELEASE_DATE).
+      PLATFORM_RELEASE: ${RT_IMAGE_TAG:?set RT_IMAGE_TAG}
+      PLATFORM_RELEASE_DATE: ${RT_RELEASE_DATE:-}
 
   platform-web:
     <<: [*ops, *mem-64]

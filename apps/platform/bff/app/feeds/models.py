@@ -38,6 +38,7 @@ QueueItemKind = Literal[
     "resolve_letter",
     "approve_quote",
     "approve_memo",
+    "rework_document",
     "problem_project",
     "calc_task",
     "supplier_overdue",

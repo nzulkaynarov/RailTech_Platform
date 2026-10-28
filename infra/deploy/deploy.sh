@@ -21,6 +21,9 @@ require_env_var PLATFORM_DOMAIN "добавьте строку PLATFORM_DOMAIN=p
 # Схемы событий и подписки шины rt_bus вшиты в образ ERP (/opt/rt/contracts, B3, L14): файлов контрактов в релизе
 # больше не требуется (общий файл схемы событий снят вместе с вебхуками ERP → CRM).
 export RT_IMAGE_TAG="$tag"
+# Дата выкладки — в «О системе» Платформы (W-REL); первая выкладка этого релиза, повтор её не меняет.
+RT_RELEASE_DATE="$(release_date "$rel")"
+export RT_RELEASE_DATE
 # Каталог секретов владельца (ключ сервисного аккаунта Google для offsite-backup, OPS-GDRIVE): создаём сами, от deploy и chmod 700, —
 # иначе Docker создал бы его при монтировании от root, и владелец не смог бы положить ключ без sudo. Пустой каталог — копия «не настроена».
 export RT_SECRETS_DIR

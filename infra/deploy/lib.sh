@@ -106,6 +106,14 @@ wait_healthy() {
 release_dir() { echo "$RT_RELEASES/$1"; }
 
 state_get() { cat "$RT_STATE/$1" 2>/dev/null || true; }
+
+# Дата выкладки релиза (W-REL, версия «Платформа ГГГГ.ММ.ДД»): пишется в каталог релиза при первой выкладке и дальше не
+# меняется — повтор деплоя и откат на этот релиз показывают ту же версию. release_date <каталог-релиза>
+release_date() {
+  local file="$1/.released_at"
+  [[ -s "$file" ]] || date -u +%Y-%m-%d > "$file" 2>/dev/null || true
+  cat "$file" 2>/dev/null || true
+}
 state_set() { mkdir -p "$RT_STATE"; printf '%s\n' "$2" > "$RT_STATE/$1"; }
 
 # Удаляет образы rt-* всех тегов, кроме перечисленных (текущий и предыдущий), и каталоги релизов старше пяти.

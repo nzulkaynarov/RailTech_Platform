@@ -130,6 +130,16 @@
   text-align: center;
   font-variant-numeric: tabular-nums;
 }
+/* Отметка «Новое» у «?» (W-REL): слово — в aria-label кнопки, точка — только для глаз */
+.pf-help-fresh {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #a8071a;
+}
 .pf-badge--quiet {
   background: #f0f0f0;
   color: #595959;

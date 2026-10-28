@@ -25,6 +25,7 @@ import {
   writeMemos,
   writeQuotes,
 } from "./fixtures/approvals";
+import { recordReturn } from "./fixtures/edsDocuments";
 import { buildMe, readSession } from "./mockSession";
 
 /**
@@ -379,6 +380,9 @@ export const edsApprovalsHandlers = [
       ],
     };
     writeMemos(readMemos().map((m) => (m.id === card.id ? next : m)));
+    // Возврат — работа автора: документ становится «Возвращён на доработку» в его документах (строка «Доработать» в очереди).
+    const last = next.decisions[next.decisions.length - 1];
+    if (body.decision === "return" && last) recordReturn(next, last);
     return HttpResponse.json(next);
   }),
 ];

@@ -7,6 +7,8 @@ import { canSee } from "../../app/access";
 import { useAuth } from "../../app/auth/useAuth";
 import { getGetMeQueryKey, useFinishOnboarding } from "../../shared/api/generated/platform-bff";
 import { rolesText, startKindsOf, useStartSteps } from "../help/startKinds";
+import { isNewer } from "../help/changelog";
+import { useWhatsNew } from "../help/whatsNew";
 
 import "../help/help.css";
 
@@ -215,6 +217,7 @@ export function Onboarding() {
   const [hidden, setHidden] = useState(() => skippedThisSession(me.id));
   const [phase, setPhase] = useState<"welcome" | "tour">("welcome");
   const finish = useFinishOnboarding();
+  const whatsNew = useWhatsNew();
   const kinds = startKindsOf(me);
   const steps = useStartSteps(kinds[0] ?? "default");
   const tourSteps = useMemo(
@@ -233,6 +236,11 @@ export function Onboarding() {
     setHidden(true);
     queryClient.setQueryData(getGetMeQueryKey(), { ...me, onboarding_done: true });
     finish.mutate();
+    // Новичку окно «Платформа обновлена» сразу после приветствия ни к чему (W-REL): записи до его прихода он видит в
+    // «Что нового» с отметкой «Новое» у «?», а окно покажется со следующей выкладкой.
+    if (whatsNew.latest && isNewer(me.whats_new_shown, whatsNew.latest)) {
+      whatsNew.mark({ shown: whatsNew.latest });
+    }
   };
 
   if (phase === "tour") return <TourCard steps={tourSteps} onSkip={skip} onNever={never} />;

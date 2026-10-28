@@ -118,6 +118,11 @@ class User(TimestampMixin, Base):
     # Когда сотрудник закрыл приветствие и тур первого входа («Пропустить» или «Больше не
     # показывать», W15-H7); NULL — карточку «Добро пожаловать» ещё покажут. Хранится в CRM.
     onboarding_done_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # «Что нового» (W-REL): дата последней записи, о которой показано окно «Платформа
+    # обновлена» (`whats_new_shown`), и последней открытой записи (`whats_new_read`; пока меньше
+    # новой — отметка «Новое» у «?»). NULL — ничего не видел. Хранится в CRM, не в браузере.
+    whats_new_shown: Mapped[str | None] = mapped_column(String(10))
+    whats_new_read: Mapped[str | None] = mapped_column(String(10))
 
 
 class Role(Base):

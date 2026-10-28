@@ -86,6 +86,10 @@ class Me(BaseModel):
     access: AccessFlags
     # Приветствие и тур первого входа показаны (W15-H7): `false` — показать «Добро пожаловать».
     onboarding_done: bool
+    # «Что нового» (W-REL): дата записи, о которой окно показано, и последней открытой;
+    # None — ничего.
+    whats_new_shown: str | None = None
+    whats_new_read: str | None = None
 
     @model_serializer(mode="wrap")
     def _omit_empty_position(self, handler: Any) -> dict[str, Any]:
@@ -126,6 +130,8 @@ def build_me(data: SessionData) -> Me:
         restricted_fields=cast(list[RestrictedField], list(shown.fields)),
         access=AccessFlags(crm=True, erp="erp" in data.platform_access),
         onboarding_done=data.onboarding_done,
+        whats_new_shown=data.whats_new_shown,
+        whats_new_read=data.whats_new_read,
     )
 
 
