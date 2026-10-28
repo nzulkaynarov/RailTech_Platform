@@ -1,0 +1,39 @@
+{
+  "specversion": "1.0",
+  "id": "6b1f2d44-8c53-4a6f-8d2e-3b4c5d6e7f80",
+  "source": "rt://eds",
+  "type": "uz.railtech.eds.mail.requested.v1",
+  "time": "2026-10-28T09:15:00Z",
+  "datacontenttype": "application/json",
+  "dataschema": "rt://contracts/events/eds/mail.requested/v1",
+  "tenant": "railtech",
+  "correlationid": "3f0c1d2e-4b5a-4c6d-8e7f-90a1b2c3d4e5",
+  "subject": "mail/eds:letter:77",
+  "data": {
+    "request_key": "eds:letter:77",
+    "purpose": "outgoing_letter",
+    "to": [
+      "office@example.org"
+    ],
+    "reply_to": "info@example.com",
+    "subject": "Письмо ИСХ-2026-0031",
+    "language": "ru",
+    "ref": {
+      "kind": "letter",
+      "id": "77"
+    },
+    "notify": true,
+    "attachments": [
+      {
+        "filename": "ИСХ-2026-0031.pdf",
+        "content_type": "application/pdf",
+        "size": 96512,
+        "sha256": "0a1b2c3d4e5f60718293a4b5c6d7e8f90011223344556677889900aabbccddee"
+      }
+    ],
+    "content": {
+      "alg": "fernet-pair-v1",
+      "ciphertext": "gAAAAABnH0x5ZXhhbXBsZS1jaXBoZXJ0ZXh0LW5vdC1hLXJlYWwtdG9rZW4tLXRleHQtaHRtbC1hbmQtbGlua3M="
+    }
+  }
+}

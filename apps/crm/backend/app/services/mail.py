@@ -10,23 +10,33 @@ Procrastinate (`tasks/mail.py` → `deliver()`), чтобы медленный �
 Выключатель «Почта» в центре внешних сервисов (ADR-0024) — пауза очереди: письмо остаётся в
 журнале `queued` (тело шифртекстом) и не ставится в очередь, воркер `queued` не отправляет;
 `resume_queued()` при включении ставит ожидающие письма в очередь заново.
+
+Один отправитель ансамбля (W18A-P1, B-INB-6): письма ERP и EDS приходят запросом по шине
+(`app/services/mail_requests.py`) и уходят тем же `deliver()` — с HTML, ответом на другой адрес
+и вложениями по ссылке (`app/integrations/mail_attachments.py`). Временная ошибка (сеть, TLS,
+вход, 4xx) оставляет строку `queued` с причиной и повторяется задачей; постоянная (5xx на адрес,
+отправителя или данные, недоступное вложение) или последняя попытка — `failed` с причиной.
+Итог письма другой системы с `notify` уходит ей событием `crm.mail.sent|failed` в той же
+транзакции, что и статус (`app/bus/events.py`).
 """
 
 from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Final
 
 import structlog
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app.bus import events as bus_events
 from app.config import Settings
 from app.domain.errors import ConflictError, MailTemplateMissingError, Reason
+from app.integrations.mail_attachments import AttachmentError, AttachmentFetcher
 from app.integrations.smtp import SmtpProbeError, SmtpResolution, SmtpTransport, resolve_smtp
 from app.models.email import EMAIL_STATUSES, EmailLog
-from app.security.secrets_store import SecretCipher, SecretsKeyError, SecretsStore
-from app.services import mail_templates
+from app.security.secrets_store import SecretCipher, SecretsStore
+from app.services import mail_outgoing, mail_templates
 from app.services.settings import SettingsService
 
 logger = structlog.get_logger(__name__)
@@ -35,6 +45,8 @@ MAX_ATTEMPTS: Final = 3
 LOG_LIMIT: Final = 50
 Enqueue = Callable[[int], Awaitable[object]]
 Paused = Callable[[], Awaitable[bool]]
+#: Письмо `queued` старше этого срока сборщик ставит в очередь снова (потерянная постановка).
+SWEEP_AFTER: Final = timedelta(minutes=2)
 
 
 async def _never_paused() -> bool:
@@ -55,6 +67,9 @@ class EmailLogView:
     requested_by: int | None
     created_at: datetime
     sent_at: datetime | None
+    source: str = "crm"
+    purpose: str | None = None
+    attachments: int = 0
 
 
 class MailService:
@@ -70,6 +85,7 @@ class MailService:
         *,
         max_attempts: int = MAX_ATTEMPTS,
         paused: Paused = _never_paused,
+        fetcher: AttachmentFetcher | None = None,
     ) -> None:
         self._sessions = sessions
         self._store = store
@@ -80,10 +96,23 @@ class MailService:
         self._enqueue = enqueue
         self._max_attempts = max_attempts
         self._paused = paused
+        self._fetcher = fetcher
 
     @property
     def transport(self) -> SmtpTransport:
         return self._transport
+
+    @property
+    def cipher(self) -> SecretCipher | None:
+        return self._cipher
+
+    async def enqueue(self, email_log_ids: list[int]) -> int:
+        """Поставить строки в очередь отправки (после коммита их записи); пауза — не ставить."""
+        if not email_log_ids or await self._paused():
+            return 0
+        for email_log_id in email_log_ids:
+            await self._enqueue(email_log_id)
+        return len(email_log_ids)
 
     async def resolution(self) -> SmtpResolution:
         return await resolve_smtp(self._store, self._config, self._settings)
@@ -171,10 +200,11 @@ class MailService:
         return view
 
     async def deliver(self, email_log_id: int) -> bool:
-        """Задача очереди: отправить письмо `queued`. Сбой — `failed` с причиной, повтор по ретраям.
+        """Задача очереди: отправить письмо `queued`.
 
-        Возвращает True, если письмо ушло; False — нечего отправлять (не `queued`).
-        Исключение `SmtpProbeError` пробрасывается, пока остаются попытки.
+        Возвращает True, если письмо ушло; False — отправлять нечего или итог «ошибка».
+        Временная ошибка бросается дальше (повтор задачи), пока остаются попытки; строка остаётся
+        `queued` с причиной в `error`.
         """
         if await self._paused():
             logger.info("email_delivery_paused", email_log_id=email_log_id)
@@ -183,40 +213,78 @@ class MailService:
             row = await session.get(EmailLog, email_log_id)
             if row is None or row.status != "queued":
                 return False
-            to, subject, ciphertext, attempts = (
-                row.to_email,
-                row.subject,
-                row.body_ciphertext,
-                row.attempts,
-            )
-        attempt = attempts + 1
-        last = attempt >= self._max_attempts
-        if ciphertext is None:
-            await self._finish(email_log_id, "failed", "body_expired", attempts=attempt)
+            attempt = row.attempts + 1
+            try:
+                outgoing = mail_outgoing.decode(row, self._cipher)
+            except mail_outgoing.UndeliverableError as exc:
+                outgoing, reason = None, exc.reason
+        if outgoing is None:
+            await self._finish(email_log_id, "failed", reason, attempts=attempt, clear_body=True)
             return False
+        last = attempt >= self._max_attempts
         connection = (await self.resolution()).connection
-        if connection is None or self._cipher is None:
+        if connection is None:
             await self._finish(email_log_id, "failed", "smtp_not_configured", attempts=attempt)
             return False
         try:
-            body = self._cipher.decrypt(ciphertext)
-        except SecretsKeyError:
-            await self._finish(email_log_id, "failed", "secrets_key_changed", attempts=attempt)
-            return False
-        try:
-            await self._transport.send(connection, to, subject, body)
-        except SmtpProbeError as exc:
-            logger.warning(
-                "email_send_failed", email_log_id=email_log_id, kind=exc.kind, attempt=attempt
+            files = await mail_outgoing.download(self._fetcher, outgoing.refs)
+            await mail_outgoing.send(self._transport, connection, outgoing, files)
+        except (SmtpProbeError, AttachmentError) as exc:
+            error = mail_outgoing.error_text(exc)
+            return await self._failed_attempt(
+                email_log_id, attempt, error, last or exc.permanent, exc
             )
-            error = f"{exc.kind}: {exc.detail}" if exc.detail else exc.kind
-            await self._finish(email_log_id, "failed", error, attempts=attempt, clear_body=last)
-            if last:
-                return False
-            raise
+        except Exception as exc:  # noqa: BLE001 — непредвиденный сбой отправки — тоже попытка
+            error = f"unexpected: {type(exc).__name__}"
+            return await self._failed_attempt(email_log_id, attempt, error, last, exc)
         await self._finish(email_log_id, "sent", None, attempts=attempt, clear_body=True)
         logger.info("email_sent", email_log_id=email_log_id)
         return True
+
+    async def _failed_attempt(
+        self, email_log_id: int, attempt: int, error: str, final: bool, exc: Exception
+    ) -> bool:
+        """Неудачная попытка считается всегда (иначе строка `queued` без роста `attempts`
+        крутилась бы у сборщика вечно): последняя или постоянная — `failed` с причиной, иначе
+        повтор задачи."""
+        logger.warning(
+            "email_send_failed",
+            email_log_id=email_log_id,
+            error=error,
+            attempt=attempt,
+            final=final,
+        )
+        status = "failed" if final else "queued"
+        await self._finish(email_log_id, status, error, attempts=attempt, clear_body=final)
+        if final:
+            return False
+        raise exc
+
+    async def sweep(self, now: datetime | None = None) -> int:
+        """Сборщик: письма `queued` с телом, которые давно не ушли (постановка потерялась после
+        коммита), — снова в очередь. Повторная постановка безопасна: задача с блокировкой по
+        строке, а отправленная строка уже не `queued`."""
+        if await self._paused():
+            return 0
+        border = (now or datetime.now(UTC)) - SWEEP_AFTER
+        async with self._sessions() as session:
+            ids = (
+                await session.scalars(
+                    select(EmailLog.id)
+                    .where(
+                        EmailLog.status == "queued",
+                        EmailLog.body_ciphertext.is_not(None),
+                        EmailLog.updated_at < border,
+                    )
+                    .order_by(EmailLog.id)
+                    .limit(200)
+                )
+            ).all()
+        for email_log_id in ids:
+            await self._enqueue(email_log_id)
+        if ids:
+            logger.info("email_queue_swept", count=len(ids))
+        return len(ids)
 
     async def resume_queued(self) -> int:
         """После паузы: письма `queued` с телом — снова в очередь. Возвращает их число."""
@@ -272,6 +340,10 @@ class MailService:
                 row.sent_at = datetime.now(UTC)
             if clear_body or status == "sent":
                 row.body_ciphertext = None
+                row.html_ciphertext = None
+                row.links_ciphertext = None
+            if status in ("sent", "failed"):
+                await bus_events.mail_result(session, row)
 
 
 def _view(row: EmailLog) -> EmailLogView:
@@ -288,4 +360,7 @@ def _view(row: EmailLog) -> EmailLogView:
         requested_by=row.requested_by,
         created_at=row.created_at,
         sent_at=row.sent_at,
+        source=row.source or "crm",
+        purpose=row.purpose,
+        attachments=len(row.attachments or []),
     )

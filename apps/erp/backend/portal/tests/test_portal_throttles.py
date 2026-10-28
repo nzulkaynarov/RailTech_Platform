@@ -2,7 +2,7 @@
 
 import pytest
 from django.core import mail
-from portal.tests.conftest import LOCMEM_CHANNELS, PortalAPIClient, make_telegram_init_data
+from portal.tests.conftest import LOCMEM_BACKEND, PortalAPIClient, make_telegram_init_data
 from rest_framework import status
 from rest_framework.throttling import SimpleRateThrottle
 
@@ -24,7 +24,7 @@ def client_for(session) -> PortalAPIClient:
 
 @pytest.fixture(autouse=True)
 def _no_broker(settings, inline_magic_link_task):
-    settings.EMAIL_CHANNELS = LOCMEM_CHANNELS
+    settings.EMAIL_BACKEND = LOCMEM_BACKEND
     mail.outbox.clear()
 
 

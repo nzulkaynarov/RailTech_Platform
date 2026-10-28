@@ -376,6 +376,81 @@ class LeadUpdatedV1(BaseModel):
     actor: Actor
 
 
+class MailFailedV1(BaseModel):
+    """
+    Тип uz.railtech.crm.mail.failed.v1, источник rt://crm. Поле data конверта (envelope.v1.json). Итог запроса uz.railtech.<домен>.mail.requested.v1 с notify = true: письмо окончательно не ушло — постоянная ошибка SMTP (адрес отклонён), исчерпаны повторы временной ошибки, почта не настроена, вложение недоступно или тело не расшифровано. Без текста письма и адресов (W18A-P1).
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    requester: Annotated[str, Field(pattern="^[a-z][a-z0-9-]{0,31}$")]
+    """
+    Кто запросил письмо (erp, eds) — подписчик применяет только свои итоги
+    """
+    request_key: Annotated[str, Field(pattern="^[A-Za-z0-9._:/-]{1,128}$")]
+    """
+    Ключ идемпотентности из запроса
+    """
+    purpose: Annotated[str, Field(pattern="^[a-z][a-z0-9_.-]{0,63}$")]
+    ref: Ref | None = None
+    """
+    Объект отправителя из запроса
+    """
+    email_log_id: int
+    """
+    Строка журнала доставки CRM
+    """
+    attempts: Annotated[int | None, Field(ge=0)] = None
+    """
+    Попыток SMTP
+    """
+    failed_at: AwareDatetime
+    reason: Annotated[str, Field(pattern="^[a-z][a-z0-9_]{0,63}$")]
+    """
+    Код причины: smtp_not_configured, rejected, auth_failed, unavailable, tls_failed, invalid_host, attachment_unavailable, content_unreadable… (список открытый — новый код не ломает подписчика)
+    """
+    detail: Annotated[str | None, Field(max_length=500)] = None
+    """
+    Пояснение для журнала (код ответа SMTP), без секретов
+    """
+
+
+class MailSentV1(BaseModel):
+    """
+    Тип uz.railtech.crm.mail.sent.v1, источник rt://crm. Поле data конверта (envelope.v1.json). Итог запроса uz.railtech.<домен>.mail.requested.v1 с notify = true: SMTP-релей карточки «Почта» принял письмо. Без текста письма и адресов — только ключ запроса, назначение и объект отправителя (W18A-P1).
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    requester: Annotated[str, Field(pattern="^[a-z][a-z0-9-]{0,31}$")]
+    """
+    Кто запросил письмо (erp, eds) — подписчик применяет только свои итоги
+    """
+    request_key: Annotated[str, Field(pattern="^[A-Za-z0-9._:/-]{1,128}$")]
+    """
+    Ключ идемпотентности из запроса
+    """
+    purpose: Annotated[str, Field(pattern="^[a-z][a-z0-9_.-]{0,63}$")]
+    ref: Ref | None = None
+    """
+    Объект отправителя из запроса
+    """
+    email_log_id: int
+    """
+    Строка журнала доставки CRM
+    """
+    attempts: Annotated[int | None, Field(ge=0)] = None
+    """
+    Попыток SMTP
+    """
+    sent_at: AwareDatetime
+    """
+    Когда SMTP-релей принял письмо
+    """
+
+
 class Phone(RootModel[str]):
     root: Annotated[str, Field(pattern="^\\+[1-9][0-9]{6,14}$")]
     """
@@ -387,6 +462,18 @@ class PreferredChannel(StrEnum):
     telegram = "telegram"
     email = "email"
     both = "both"
+
+
+class Ref(BaseModel):
+    """
+    Объект отправителя из запроса
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    kind: Annotated[str, Field(pattern="^[a-z][a-z0-9_.-]{0,31}$")]
+    id: Annotated[str, Field(max_length=64, min_length=1)]
 
 
 class Type(StrEnum):

@@ -112,8 +112,8 @@ function seedServices(): ExternalService[] {
     }),
     service(
       "mail",
-      "Почтовый релей (SMTP)",
-      "Письма сотрудникам: приглашение, сброс пароля, оповещения",
+      "Почта (SMTP)",
+      "Вся исходящая почта ансамбля: сотрудникам, клиентам кабинета, КП и документы ERP, письма EDS",
       {
         status: "warn",
         cause_key: "mail:last_failed",
@@ -251,7 +251,7 @@ function seedServices(): ExternalService[] {
       system: "ensemble",
       summary: "Права EDS опубликованы",
     }),
-    service("erp.mail", "Почта ERP", "Письма клиентам и сотрудникам бэк-офиса из ERP", {
+    service("erp.s3", "Файлы ERP (S3)", "PDF КП и договоров, вложения, изображения каталога", {
       system: "erp",
       source: "erp",
       frequency: "erp",
@@ -292,6 +292,9 @@ function seedMailLog(): MailLogItem[] {
     to_email: to,
     subject,
     template: "invite",
+    purpose: "invite",
+    source: "crm",
+    attachments: 0,
     status,
     error: null,
     attempts: 1,
@@ -300,6 +303,22 @@ function seedMailLog(): MailLogItem[] {
     ...over,
   });
   return [
+    // Письма ERP идут через почтовый сервис CRM (W18A-P1): КП с вложением и ссылка входа в кабинет.
+    row(7, "sent", "Коммерческое предложение КП-2026-0142", "buyer@demo.example", {
+      template: "quote_sent",
+      purpose: "quote_sent",
+      source: "erp",
+      attachments: 1,
+      created_at: "2026-10-26T08:55:00Z",
+      sent_at: "2026-10-26T08:55:04Z",
+    }),
+    row(6, "failed", "Вход в кабинет", "old-address@demo.example", {
+      template: "portal_magic_link",
+      purpose: "portal_magic_link",
+      source: "erp",
+      error: "rejected: SMTP 550",
+      created_at: "2026-10-26T08:52:00Z",
+    }),
     row(5, "queued", "Сброс пароля", "colleague5@demo.example", {
       created_at: "2026-10-26T08:50:00Z",
     }),

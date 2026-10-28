@@ -27,14 +27,16 @@ from app.bus.erp_event import (
     INLINE_TYPES,
     INVITE_TYPE,
     NOT_FOR_CRM,
+    OWN_HANDLER,
     erp_types,
     parse_erp_event,
     plain,
 )
 from tests.bus_events import event_types, example_envelope, example_types
 
-#: Типы ERP, которые принимает CRM (без адресованных EDS — `NOT_FOR_CRM`).
-ALL_TYPES = [t for t in event_types("erp") if t not in NOT_FOR_CRM]
+#: События ERP о сделке и клиенте, которые принимает CRM (без адресованных EDS — `NOT_FOR_CRM`, и
+#: без запроса письма почтовому сервису — `OWN_HANDLER`, W18A-P1).
+ALL_TYPES = [t for t in event_types("erp") if t not in NOT_FOR_CRM | OWN_HANDLER]
 REGISTRY = SchemaRegistry()
 
 
@@ -46,6 +48,16 @@ def test_the_contract_has_twenty_three_erp_types_for_the_crm_with_one_example_ea
     assert len(ALL_TYPES) == 23
     examples = set(example_types("erp"))
     assert examples == set(event_types("erp")), "на каждое событие контракта — один пример"
+
+
+def test_mail_request_of_erp_goes_to_the_mail_service_not_to_the_deal_feed() -> None:
+    """W18A-P1: `erp.mail.requested` — один обработчик (почтовый сервис), не `ErpEventsService`."""
+    from app.bus.handlers import on_mail_requested
+
+    for event_type in OWN_HANDLER | {"uz.railtech.eds.mail.requested.v1"}:
+        (handler,) = default_registry.match(event_type)
+        assert handler.inline is False
+        assert handler.func is on_mail_requested
 
 
 def test_the_crm_listens_to_exactly_the_erp_events_of_the_contract_except_the_code() -> None:

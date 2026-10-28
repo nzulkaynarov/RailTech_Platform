@@ -372,6 +372,7 @@ export * from "./loginIn";
 export * from "./logoUpload";
 export * from "./mailLog";
 export * from "./mailLogItem";
+export * from "./mailLogItemSource";
 export * from "./mailLogItemStatus";
 export * from "./mailQueued";
 export * from "./mailQueuedStatus";

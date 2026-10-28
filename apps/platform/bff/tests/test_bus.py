@@ -93,6 +93,16 @@ async def test_crm_lead_event_hints_counters_and_queue(web: Web) -> None:
     ]
 
 
+async def test_mail_request_is_accepted_without_a_hint(web: Web) -> None:
+    """W18A-P1: запрос письма почтовому сервису CRM приходит по маске ERP, но экранов не меняет."""
+    assert topics_for("uz.railtech.erp.mail.requested.v1") == ()
+    assert topics_for("uz.railtech.eds.mail.requested.v1") == ()
+    headers, raw = delivery(envelope("erp", "mail.requested"))
+    status, body = await post(web, headers, raw)
+    assert (status, body["status"]) == (200, "processed")
+    assert hints(web) == []
+
+
 async def test_duplicate_delivery_does_not_repeat_the_hint(web: Web) -> None:
     headers, raw = delivery(envelope("erp", "invoice.paid"))
     assert (await post(web, headers, raw))[1]["status"] == "processed"

@@ -7,13 +7,15 @@
 откатывается, а не уходит без события. Данные — снимок сущности (`app.bus.snapshots`), телефоны и
 почта нормализованы до публикации.
 
-Типы: `uz.railtech.crm.{client,contact,lead}.*.v1`, `uz.railtech.identity.user.*.v1`.
+Типы: `uz.railtech.crm.{client,contact,lead}.*.v1`, `uz.railtech.identity.user.*.v1`,
+`uz.railtech.crm.mail.{sent,failed}.v1` — итог письма, запрошенного ERP или EDS (W18A-P1).
 Сообщение переписки (`lead.message_added`, D1-1) — сигнал без текста: подписчик (BFF
 Платформы) перезапрашивает переписку API CRM.
 """
 
+import re
 from collections.abc import Iterable
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from rt_bus.errors import NotInTransactionError
@@ -24,6 +26,7 @@ from app.bus.reasons import reason_code
 from app.bus.runtime import get_bus
 from app.models.auth import User
 from app.models.clients import Client, ClientContact
+from app.models.email import EmailLog
 from app.models.leads import Lead, Message
 from app.security.audit import Actor
 
@@ -41,6 +44,8 @@ LEAD_STAGE_CHANGED = "uz.railtech.crm.lead.stage_changed.v1"
 USER_CREATED = "uz.railtech.identity.user.created.v1"
 USER_UPDATED = "uz.railtech.identity.user.updated.v1"
 USER_DEACTIVATED = "uz.railtech.identity.user.deactivated.v1"
+MAIL_SENT = "uz.railtech.crm.mail.sent.v1"
+MAIL_FAILED = "uz.railtech.crm.mail.failed.v1"
 
 
 def _require_transaction(session: AsyncSession) -> None:
@@ -269,3 +274,43 @@ async def user_deactivated(
         data["reason"] = text
     data["actor"] = snapshots.actor_of(actor)
     await _publish(session, USER_DEACTIVATED, data, f"user/{user_id}")
+
+
+async def mail_result(session: AsyncSession, row: EmailLog) -> None:
+    """Итог письма другой системы (W18A-P1): `sent` или `failed` — в транзакции смены статуса.
+
+    Только для запросов по шине с `notify`; свои письма CRM итогов не публикуют. Ни текста, ни
+    адресов — ключ запроса, назначение и объект отправителя.
+    """
+    if row.source == "crm" or not row.notify or row.request_key is None:
+        return
+    _require_transaction(session)
+    data: dict[str, Any] = {
+        "requester": row.source,
+        "request_key": row.request_key,
+        "purpose": row.purpose or row.template,
+        "email_log_id": row.id,
+        "attempts": row.attempts,
+    }
+    if row.ref_kind and row.ref_id:
+        data["ref"] = {"kind": row.ref_kind, "id": row.ref_id}
+    if row.status == "sent":
+        data["sent_at"] = snapshots.utc(row.sent_at or datetime.now(UTC))
+        event_type = MAIL_SENT
+    else:
+        reason, _, detail = (row.error or "failed").partition(":")
+        data["failed_at"] = snapshots.utc(datetime.now(UTC))
+        data["reason"] = _reason_code(reason)
+        detail = _ADDRESS.sub("<адрес>", detail).strip()
+        if detail:
+            data["detail"] = detail[:500]
+        event_type = MAIL_FAILED
+    await _publish(session, event_type, data, f"email_log/{row.id}")
+
+
+_ADDRESS = re.compile(r"[^\s,:;<>]+@[^\s,:;<>]+")
+
+
+def _reason_code(reason: str) -> str:
+    code = "".join(ch if ch.isalnum() or ch == "_" else "_" for ch in reason.strip().lower())
+    return (code if code[:1].isalpha() else "failed")[:64]

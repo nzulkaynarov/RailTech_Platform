@@ -1,7 +1,7 @@
 """Внешние сервисы ERP для `GET /health` integration (M3-ERP-06, ORCHESTRATOR §3.13; контракт `Health.externals`).
 
 Источник данных — только то, что ERP уже пишет, и ни одного обращения к самим сервисам (ответ быстрый, < 300 мс):
-- почта — журнал `core.EmailLog` (письма, не отправленные из-за выключателя, в счёт не идут);
+- почты нет: письма ERP отправляет почтовый сервис CRM (W18A-P1), строка «Почта» — одна на ансамбль, в CRM;
 - модели — журнал вызовов шлюза `ai.AICall`;
 - курсы ЦБ, ТН ВЭД, S3 — лёгкие отметки в кэше (`core.external_status`), которые ставят места настоящих вызовов;
 - Sentry — только настройка (доставка событий из ERP не наблюдаема).
@@ -89,32 +89,6 @@ def _customs_tariff(now: datetime) -> Facts:
     return facts
 
 
-def _mail_configured() -> bool:
-    try:
-        backend = settings.EMAIL_CHANNELS["transactional"]["backend"]
-    except (AttributeError, KeyError):
-        backend = getattr(settings, "EMAIL_BACKEND", "")
-    return str(backend).endswith("smtp.EmailBackend")
-
-
-def _mail(now: datetime) -> Facts:
-    from core.models import EmailLog
-
-    since = ext.window_start(now)
-    sent = EmailLog.objects.filter(status=EmailLog.STATUS_SENT)
-    failed = EmailLog.objects.filter(status=EmailLog.STATUS_FAILED).exclude(error__startswith=ext.SWITCHED_OFF_MARK)
-    last_ok = sent.order_by("-created_at").values_list("created_at", flat=True).first()
-    last_err = failed.order_by("-created_at").values_list("created_at", "error").first()
-    return Facts(
-        _mail_configured(),
-        last_ok,
-        last_err[0] if last_err else None,
-        ext.short_error(last_err[1]) if last_err else None,
-        sent.filter(created_at__gte=since).count(),
-        failed.filter(created_at__gte=since).count(),
-    )
-
-
 def _litellm_configured() -> bool:
     return bool(
         getattr(settings, "AI_IMPORT_ENABLED", False)
@@ -154,12 +128,11 @@ def _sentry(now: datetime) -> Facts:
 _BUILDERS: dict[str, Callable[[datetime], Facts]] = {
     "cbu_rates": _cbu_rates,
     "customs_tariff": _customs_tariff,
-    "mail": _mail,
     "litellm": _litellm,
     "s3": _s3,
     "sentry": _sentry,
 }
-assert set(_BUILDERS) == set(ext.CODES), "каждому коду контракта нужен сборщик фактов"
+assert set(_BUILDERS) == set(ext.REPORTED_CODES), "каждому показываемому коду нужен сборщик фактов"
 
 
 def _iso(moment: datetime | None) -> str | None:
@@ -167,11 +140,11 @@ def _iso(moment: datetime | None) -> str | None:
 
 
 def build_externals(now: datetime | None = None) -> list[dict]:
-    """`Health.externals`: по записи на сервис в порядке `core.external_status.CODES`. Сбой сборки одного сервиса —
+    """`Health.externals`: по записи на сервис в порядке `core.external_status.REPORTED_CODES`. Сбой сборки одного сервиса —
     он `unknown`, остальные и сам `/health` не страдают."""
     now = now or timezone.now()
     rows: list[dict] = []
-    for code in ext.CODES:
+    for code in ext.REPORTED_CODES:
         enabled = ext.is_enabled(code)
         try:
             facts = _BUILDERS[code](now)

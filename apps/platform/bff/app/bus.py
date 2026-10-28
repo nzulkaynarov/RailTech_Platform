@@ -36,6 +36,12 @@ HANDLED = (ERP_EVENTS, LEAD_EVENTS, USER_EVENTS, EDS_EVENTS)
 # бота (`handoff`), ещё бейдж «Ждут ответа» и «Моя очередь» (непрочитанное). Диалог с ботом
 # счётчиков не меняет; ленту «Сегодня» сообщение не меняет.
 MESSAGE_ADDED = "uz.railtech.crm.lead.message_added.v1"
+# Запрос письма почтовому сервису CRM (W18A-P1) приходит по маскам ERP и EDS, но экранов не меняет:
+# письмо — не сделка и не документ. Подсказки нет (иначе каждое письмо дёргало бы счётчики
+# и очередь).
+NO_HINT: frozenset[str] = frozenset(
+    {"uz.railtech.erp.mail.requested.v1", "uz.railtech.eds.mail.requested.v1"}
+)
 _MESSAGE_TOPICS: tuple[str, ...] = ("messages",)
 _HANDOFF_MESSAGE_TOPICS: tuple[str, ...] = ("counters", "queue", "messages")
 
@@ -51,6 +57,8 @@ _TOPICS_BY_MASK: tuple[tuple[str, tuple[str, ...]], ...] = (
 
 
 def topics_for(event_type: str, data: Mapping[str, Any] | None = None) -> tuple[str, ...]:
+    if event_type in NO_HINT:
+        return ()
     if event_type == MESSAGE_ADDED:
         handoff = bool((data or {}).get("handoff", True))
         exact = _HANDOFF_MESSAGE_TOPICS if handoff else _MESSAGE_TOPICS
@@ -70,7 +78,9 @@ def create_receiver(hub: EventHub) -> MemoryReceiver:
     registry = HandlerRegistry()
 
     async def on_event(event: Event) -> None:
-        await hub.publish(Hint(topics_for(event.type, event.data), event.type))
+        topics = topics_for(event.type, event.data)
+        if topics:
+            await hub.publish(Hint(topics, event.type))
 
     for mask in HANDLED:
         registry.add(mask, on_event)

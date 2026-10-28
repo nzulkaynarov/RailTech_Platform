@@ -19,6 +19,8 @@ from rt_contracts.events.crm import (
     LeadMessageAddedV1,
     LeadStageChangedV1,
     LeadUpdatedV1,
+    MailFailedV1,
+    MailSentV1,
 )
 from rt_contracts.events.eds import (
     ApprovalDecidedV1,
@@ -29,6 +31,7 @@ from rt_contracts.events.eds import (
     LetterRejectedV1,
     LetterResolvedV1,
     LetterReturnedV1,
+    MailRequestedV1,
 )
 from rt_contracts.events.envelope import Envelope
 from rt_contracts.events.erp import (
@@ -49,6 +52,7 @@ from rt_contracts.events.erp import (
     InvoiceIssuedV1,
     InvoiceOverdueV1,
     InvoicePaidV1,
+    MailRequestedV1,
     QuoteAcceptanceCodeRequestedV1,
     QuoteAcceptedV1,
     QuoteReadyForApprovalV1,
@@ -71,6 +75,8 @@ TYPES: dict[str, type[BaseModel]] = {
     "uz.railtech.crm.lead.message_added.v1": LeadMessageAddedV1,
     "uz.railtech.crm.lead.stage_changed.v1": LeadStageChangedV1,
     "uz.railtech.crm.lead.updated.v1": LeadUpdatedV1,
+    "uz.railtech.crm.mail.failed.v1": MailFailedV1,
+    "uz.railtech.crm.mail.sent.v1": MailSentV1,
     "uz.railtech.erp.act.accepted.v1": ActAcceptedV1,
     "uz.railtech.erp.act.issued.v1": ActIssuedV1,
     "uz.railtech.erp.act.returned.v1": ActReturnedV1,
@@ -88,6 +94,7 @@ TYPES: dict[str, type[BaseModel]] = {
     "uz.railtech.erp.invoice.issued.v1": InvoiceIssuedV1,
     "uz.railtech.erp.invoice.overdue.v1": InvoiceOverdueV1,
     "uz.railtech.erp.invoice.paid.v1": InvoicePaidV1,
+    "uz.railtech.erp.mail.requested.v1": MailRequestedV1,
     "uz.railtech.erp.quote.acceptance_code_requested.v1": QuoteAcceptanceCodeRequestedV1,
     "uz.railtech.erp.quote.accepted.v1": QuoteAcceptedV1,
     "uz.railtech.erp.quote.ready_for_approval.v1": QuoteReadyForApprovalV1,
@@ -103,6 +110,7 @@ TYPES: dict[str, type[BaseModel]] = {
     "uz.railtech.eds.letter.rejected.v1": LetterRejectedV1,
     "uz.railtech.eds.letter.resolved.v1": LetterResolvedV1,
     "uz.railtech.eds.letter.returned.v1": LetterReturnedV1,
+    "uz.railtech.eds.mail.requested.v1": MailRequestedV1,
     "uz.railtech.identity.user.created.v1": UserCreatedV1,
     "uz.railtech.identity.user.deactivated.v1": UserDeactivatedV1,
     "uz.railtech.identity.user.updated.v1": UserUpdatedV1,
@@ -148,6 +156,10 @@ __all__ = [
     "LetterRejectedV1",
     "LetterResolvedV1",
     "LetterReturnedV1",
+    "MailFailedV1",
+    "MailRequestedV1",
+    "MailRequestedV1",
+    "MailSentV1",
     "QuoteAcceptanceCodeRequestedV1",
     "QuoteAcceptedV1",
     "QuoteReadyForApprovalV1",

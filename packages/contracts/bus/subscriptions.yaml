@@ -25,6 +25,11 @@ subscribers:
       - uz.railtech.erp.quote.rejected.v1
       - uz.railtech.erp.quote.sent.v1
       - uz.railtech.erp.quote.viewed.v1
+      # W18A-P1 (B-INB-6): исходящая почта ансамбля — один отправитель. ERP и EDS письма сами не шлют: публикуют запрос,
+      # CRM доставляет через SMTP карточки «Почта» (журнал доставки, повторы, итог — crm.mail.sent/failed отправителю).
+      # Секрет пары eds → crm — RT_BUS_SECRET_EDS_CRM (только окружение).
+      - uz.railtech.erp.mail.requested.v1
+      - uz.railtech.eds.mail.requested.v1
 
   - name: erp
     endpoint: http://erp-backend:8000/bus/v1/events
@@ -36,6 +41,8 @@ subscribers:
       - uz.railtech.eds.letter.resolved.v1
       - uz.railtech.eds.letter.rejected.v1
       - uz.railtech.eds.approval.decided.v1
+      # W18A-P1: итог доставки письма, запрошенного ERP с notify = true (журнал писем ERP, Quote.send_report КП).
+      - uz.railtech.crm.mail.*.v1
 
   # BFF Платформы (B5): события ERP, лидов CRM и сотрудников → подсказки инвалидации в SSE браузеру (уведомления, счётчики
   # меню, «Моя очередь», лента «Сегодня»). Данных событий BFF не хранит. Приёмник — только внутри сети compose (Caddy

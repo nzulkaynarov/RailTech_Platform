@@ -116,7 +116,9 @@ def create(
             reply_to=[user.email] if getattr(user, "email", "") else None,
             fail_silently=True,
         )
-        failed = log.status != "SENT"
+        # W18A-P1: письмо передано почтовому сервису CRM — «В очереди» (QUEUED), итог придёт событием; не ушло —
+        # только если передать не удалось (FAILED).
+        failed = log is None or log.status == "FAILED"
         error = (log.error or "")[:500] if failed else ""
     except Exception as exc:  # noqa: BLE001 — журнал запроса важнее исключения почты
         logger.exception("Запрос цены %s не отправлен", request.pk)

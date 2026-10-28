@@ -9,7 +9,13 @@ from typing import Any, ClassVar
 import pytest
 
 from app.config import Settings
-from app.integrations.smtp import SmtpConnection, SmtplibTransport, SmtpProbeError, resolve_smtp
+from app.integrations.smtp import (
+    MailAttachment,
+    SmtpConnection,
+    SmtplibTransport,
+    SmtpProbeError,
+    resolve_smtp,
+)
 from app.security.secrets_store import SMTP_PASSWORD, SMTP_USERNAME, SecretsStore
 
 CONN = SmtpConnection(
@@ -97,6 +103,53 @@ async def test_send_builds_message_with_sender_and_subject() -> None:
     assert message["Subject"] == "Тема письма"
     assert message.get_content() == "Текст\n"
     assert "login:crm" in client.calls
+
+
+async def test_send_with_html_reply_to_and_attachment_for_requests_of_erp_and_eds() -> None:
+    """W18A-P1: письмо ERP/EDS — текст + HTML-альтернатива, Reply-To и вложение; несколько
+    получателей через запятую."""
+    pdf = MailAttachment("КП-0142.pdf", "application/pdf", b"%PDF-1.7 fake")
+    await SmtplibTransport().send(
+        CONN,
+        "a@example.com, b@example.com",
+        "КП",
+        "Текст\n",
+        html="<p>Текст</p>",
+        reply_to="office@example.com",
+        attachments=(pdf,),
+    )
+    (message,) = FakeSmtp.instances[0].sent
+    assert message["To"] == "a@example.com, b@example.com"
+    assert message["Reply-To"] == "office@example.com"
+    body = message.get_body(preferencelist=("html",))
+    assert body is not None
+    assert "<p>Текст</p>" in body.get_content()
+    plain = message.get_body(preferencelist=("plain",))
+    assert plain is not None
+    assert plain.get_content() == "Текст\n"
+    (part,) = list(message.iter_attachments())
+    assert part.get_filename() == "КП-0142.pdf"
+    assert part.get_content_type() == "application/pdf"
+    assert part.get_content() == b"%PDF-1.7 fake"
+
+
+@pytest.mark.parametrize(
+    ("error", "permanent"),
+    [
+        (smtplib.SMTPRecipientsRefused({"x@y.z": (550, b"no such user")}), True),
+        (smtplib.SMTPRecipientsRefused({"x@y.z": (450, b"mailbox busy")}), False),
+        (smtplib.SMTPSenderRefused(553, b"sender rejected", "crm@example.com"), True),
+        (smtplib.SMTPDataError(552, b"too big"), True),
+        (smtplib.SMTPDataError(451, b"try later"), False),
+        (smtplib.SMTPServerDisconnected("gone"), False),
+    ],
+)
+async def test_permanent_only_for_5xx_answers(error: Exception, permanent: bool) -> None:
+    """5xx на адрес, отправителя или данные — постоянная ошибка (без повтора), прочее — повтор."""
+    FakeSmtp.scenario = {"send": error}
+    with pytest.raises(SmtpProbeError) as info:
+        await SmtplibTransport().send(CONN, "x@y.z", "s", "b")
+    assert info.value.permanent is permanent
 
 
 @pytest.mark.parametrize(

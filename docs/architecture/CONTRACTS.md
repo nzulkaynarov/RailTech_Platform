@@ -129,6 +129,7 @@ inline и до БД не доходит (§9.2).
 | `document.created` | `erp_document_id, kind, number` | индекс документов клиента в CRM (без файла) |
 | `invite.sent` | `channels[]` | лента |
 | `invite.requested` | `channel: telegram, erp_contact_id, crm_contact_id, language?` | бот присылает контакту приглашение с кнопкой «Открыть кабинет» (Mini App; ссылок и токенов нет); итог доставки — в карточке клиента (D1-9, Q-FIX23-1). Inline-обработчик, как у кода акцепта |
+| `mail.requested` (W18A-P1) | не по форме этой таблицы: `request_key`, `purpose`, `to`, `subject`, `content` (шифртекст), `attachments?`, `ref?`, `notify?` — §9.9 | почтовый сервис CRM отправляет письмо ERP (журнал доставки, повторы); итог — `crm.mail.sent|failed` (§9.9) |
 
 ## 4. Portal API (Cabinet → ERP)
 
@@ -362,6 +363,8 @@ enum, отсутствующее обязательное поле, наруше
 | `uz.railtech.identity.user.deactivated.v1` | `rt://crm` → platform-bff, eds | `crm_user_id`, `reason?`, `actor` |
 | `uz.railtech.erp.quote.ready_for_approval.v1` | `rt://erp` → eds (platform-bff — подсказка) | КП готово к одобрению директором (EDS-03): `erp_company_id`, `crm_client_id` (может быть `null`), `deal`, `actor`, `payload` — снимок КП (`QuoteReadyForApproval`: номер, версия, сумма, валюта, себестоимость, маржа %, порог маржи резолюции, нужные и собранные визы — кто и когда, срок); **CRM не подписана** (себестоимость и маржа) |
 | `uz.railtech.eds.*.v1` — 8 типов §10.2 | `rt://eds` → erp (`letter.resolved`, `letter.rejected`, `approval.decided`), platform-bff (все) | письма, документы реестра, маршруты согласования (`events/eds/_defs.v1.json`) |
+| `uz.railtech.erp.mail.requested.v1`, `uz.railtech.eds.mail.requested.v1` (W18A-P1) | `rt://erp`, `rt://eds` → crm (platform-bff получает по маскам и подсказок не даёт) | запрос письма почтовому сервису CRM: `request_key`, `purpose`, `to`, `reply_to?`, `subject`, `language?`, `ref?`, `notify?`, `attachments?` (метаданные), `content` (`alg = fernet-pair-v1`, шифртекст) — §9.9 |
+| `uz.railtech.crm.mail.sent.v1`, `uz.railtech.crm.mail.failed.v1` (W18A-P1) | `rt://crm` → erp (EDS подпишется, когда итог понадобится — B-W18AP1-1) | итог запроса с `notify`: `requester`, `request_key`, `purpose`, `ref?`, `email_log_id`, `attempts`, `sent_at` либо `failed_at` + `reason` (+ `detail`); ни текста, ни адресов |
 
 События CRM и identity — снимки (event-carried state transfer): подписчик заменяет проекцию целиком по внешнему
 идентификатору; снимок с `updated_at` старше применённого не применяется (доставка может прийти не по порядку). Только
@@ -438,7 +441,8 @@ subscribers:
 `invoice`, `request` — маской `uz.railtech.erp.<сущность>.*.v1`, КП — пять типов поимённо), то есть все типы ERP, кроме
 `quote.ready_for_approval` (волна 12: себестоимость и маржа адресованы EDS); `erp` ← `uz.railtech.crm.client.updated.v1`,
 `uz.railtech.crm.contact.*.v1` (ERP обновляет проекции компании и контактов, B4) и с волны 12 `uz.railtech.eds.letter.resolved.v1`,
-`uz.railtech.eds.letter.rejected.v1`, `uz.railtech.eds.approval.decided.v1`; `eds` — §10.2.
+`uz.railtech.eds.letter.rejected.v1`, `uz.railtech.eds.approval.decided.v1`, с W18A-P1 — `uz.railtech.crm.mail.*.v1` (итог письма);
+`crm` с W18A-P1 ещё и ← `uz.railtech.erp.mail.requested.v1`, `uz.railtech.eds.mail.requested.v1` (§9.9); `eds` — §10.2.
 `platform-bff` (B5) ← `uz.railtech.erp.*.v1`, `uz.railtech.crm.lead.*.v1`, `uz.railtech.identity.user.*.v1` и с волны 12
 `uz.railtech.eds.*.v1` (с D1-6 — подсказки `queue`, `counters`, `notifications`): BFF Платформы
 превращает события в подсказки инвалидации SSE (`GET /api/v1/events/stream`, `platform-bff.yaml` 0.5.0), данных событий не
@@ -488,6 +492,7 @@ subscribers:
 | `document.created` | переход «не выпущен → выпущен» у КП, договора, счёта, акта, накладной, `GeneratedDocument` (правило `portal.services.documents.is_issued`) |
 | `invite.sent` | `invite_contact_to_portal` (за ушедшее письмо) |
 | `invite.requested` | `invite_contact_to_portal` (канал `telegram`: ERP в Telegram не пишет, событие уходит только контакту с `telegram_user_id` и сопоставлением с контактом CRM) |
+| `mail.requested` | любое письмо ERP (W18A-P1): `notifications.emails.send_templated_email` → Django `EmailBackend` `notifications.bus_backend.BusEmailBackend` → `notifications/mail_bus.py` (§9.9); `send_mail` тоже идёт этим путём, SMTP в ERP нет |
 
 Компания без `CrmClientMapping` событий не порождает. `correlationid` по умолчанию — `X-Request-ID` входящего запроса
 (`RequestIDMiddleware` принимает только безопасную строку `A-Za-z0-9._-` до 128 знаков, иначе новый UUID), вне запроса
@@ -532,6 +537,7 @@ Telegram, язык, канал, признак основного); сегмен
 | `crm.lead.erased.v1` | лид обезличен по `/delete` бота (без данных, только идентификаторы) |
 | `crm.lead.merged.v1` | склейка Telegram-лида и лида с тем же телефоном |
 | `identity.user.created.v1` / `updated.v1` / `deactivated.v1` | `UserService`: создание, смена имени, должности, языка, ролей Платформы и доступа, отключение; первый администратор; смена имени при входе по SSO (`SsoService`) |
+| `crm.mail.sent.v1` / `crm.mail.failed.v1` | итог письма, запрошенного ERP или EDS с `notify` (W18A-P1): `MailService` в транзакции смены статуса строки `email_log` (`app/bus/events.py::mail_result`), §9.9 |
 
 Диалоги песочницы (`source = sandbox`) на шину не уходят. Контактов лида и переписки в событиях нет. `correlationid` — `X-Request-ID`
 запроса (middleware `BusCorrelationMiddleware` после `CorrelationIdMiddleware`), для задач очереди — новый UUID; `traceparent` —
@@ -551,6 +557,60 @@ Telegram, язык, канал, признак основного); сегмен
 `hex(HMAC-SHA256(webhook_secret, "rt-bus/v1/<издатель>-><подписчик>"))` из каждого действующего секрета вебхуков сопряжения
 (текущего и предыдущего, «Подключения» → ERP); перечитывается при каждом приёме и доставке, поэтому смена и ротация действуют
 без перезапуска. Прочие подписчики — только окружение. Эксплуатация (журнал, DLQ, повтор, метрики) — runbook `docs/runbooks/rt-bus-crm.md`.
+
+### 9.9. Почта: один отправитель (W18A-P1, B-INB-6)
+
+Исходящую почту ансамбля отправляет **только почтовый сервис CRM** — через SMTP карточки «Почта» Платформы («Подключения →
+Почта»: пароль только на запись, последние символы, «Проверить связь», «Проверить отправку» с итогом словами, смена — в журнале
+аудита `integrations.smtp`). ERP и EDS SMTP не знают; переменных `EMAIL_*` у ERP нет. Решения владельца 2026-10-28 («почта —
+один канал на вход и выход», «настройка интеграций только через интерфейс», «рассылки — только с основного домена»; рассылок
+пока нет — B-MKT-1).
+
+**Запрос.** Система-владелец шаблона рендерит тему, текст и HTML сама и публикует `uz.railtech.<домен>.mail.requested.v1` в
+транзакции своего изменения (outbox; откат — письма нет). Схема `data` у ERP и EDS одна (тест `test_mail_request_is_the_same_for_erp_and_eds`):
+
+| Поле | Что |
+|---|---|
+| `request_key` | ключ идемпотентности отправителя (`^[A-Za-z0-9._:/-]{1,128}$`): одно письмо на (`source`, ключ) — UNIQUE в `email_log`; ERP — `erp:email_log:<id>`, EDS — `eds:<объект>:<id>` |
+| `purpose` | назначение — код шаблона отправителя (`quote_sent`, `portal_magic_link`…); видно в журнале доставки словами |
+| `to`, `reply_to?`, `subject`, `language?` | до 10 адресов, одно письмо всем; тема без секретов (видна в журнале) |
+| `ref?`, `notify?` | объект отправителя (`{kind, id}`) и нужен ли итог; итог несёт тот же `ref` |
+| `attachments?` | метаданные вложений: `filename`, `content_type`, `size` (≤ 20 МиБ), `sha256` |
+| `content` | `{alg: "fernet-pair-v1", ciphertext}` — JSON `{text, html, links: [{url, expires_at}]}` шифртекстом |
+
+**Тело шифруется ключом пары.** Ключ Fernet = `urlsafe_b64(HMAC-SHA256(секрет пары «<домен> → crm», "rt-mail/v1/content"))`:
+секрет пары обе стороны уже знают (он подписывает доставку, §9.3; для ERP ↔ CRM выводится из секрета вебхуков сопряжения, L12;
+EDS → CRM — `RT_BUS_SECRET_EDS_CRM`), шифрует первый, CRM пробует каждый действующий. Поэтому ссылки входа в кабинет, приглашения
+и ссылки на вложения не лежат открыто ни в outbox отправителя, ни в inbox CRM, ни в их бэкапах. Открыть не удалось — итог
+`failed` `content_unreadable`. Тест-вектор формата — в тестах CRM, ERP и EDS. Почему не `stash` (§9.2): он живёт 20 минут в
+Redis отправителя — простой CRM дольше терял бы письмо, а у EDS Redis нет.
+
+**Вложения — по ссылке на объект хранилища отправителя**, не байтами по шине. Ключи S3 у каждого сервиса свои (S0-9), чужих
+бакетов CRM не видит: отправитель кладёт файл в своё хранилище (ERP — `erp-temp/mail/<uuid>/…`, правило удаления 1 сутки; EDS —
+`eds-private`, `ObjectStorage.presign`) и передаёт подписанную ссылку S3 на чтение **одного** объекта со сроком (ERP — 24 ч) —
+только внутри шифртекста. Почтовый воркер CRM скачивает файл перед отправкой (не в пути пользователя): только с хранилища
+ансамбля (`S3_ENDPOINT`, без перенаправлений), с пределом размера, сверяет размер и sha256 (`app/integrations/mail_attachments.py`).
+Ссылка истекла или объект удалён (403/404/410) — итог `failed` `attachment_unavailable`; 5xx и сеть — повтор.
+
+**CRM.** Обработчик (`app/services/mail_requests.py`, в транзакции inbox) пишет строку журнала доставки `email_log` (`source`
+`erp`/`eds`, `purpose`, `request_key`, `ref`, `notify`; тело, HTML и ссылки — шифртекстом `SECRETS_KEY`, стираются после
+итога); повтор с тем же ключом — без второй строки (проверка + UNIQUE и точка сохранения: два воркера одновременно — одна
+строка, тест с барьером). Почта не настроена — сразу `skipped_no_smtp` и `failed` `smtp_not_configured` (решение архитектора 2026-10-28: ждать настройки письмо не должно; в журнале доставки причина словами «Почта не настроена — Настройки · Подключения · Почта»). Для пилота сопряжение ERP с CRM обязательно (без него у ERP нет секрета пары — `MAIL_PAIR_SECRET_MISSING`, runbook `deploy.md`, «Первый вход»). Постановка в очередь —
+после коммита (хук `after_processed`), потерянную подбирает сборщик раз в 2 минуты; задача на строку одна (`queueing_lock`) и не
+идёт параллельно (`lock`). Временная ошибка SMTP (сеть, TLS, вход, ответ 4xx) — строка остаётся `queued` с причиной и
+повторяется (3 попытки); постоянная (5xx на адрес, отправителя или данные) или последняя попытка — `failed` с причиной.
+Выключатель «Почта» центра внешних сервисов держит письма всех систем в очереди.
+
+**Итог.** При `notify` CRM публикует `uz.railtech.crm.mail.sent.v1` / `mail.failed.v1` в транзакции смены статуса (без текста
+и адресов; адреса в `detail` заменены на `<адрес>`). ERP (`integration/bus_handlers.py` → `notifications/mail_bus.apply_mail_result`)
+применяет только `requester = erp`: журнал писем ERP (`EmailLog` `QUEUED` → `SENT`/`FAILED`), для `ref.kind = quote` — журнал КП
+(`quote.email_sent` / `quote.email_failed`) и `Quote.send_report` (почта из `sent_via` в `skipped` с `EMAIL_DELIVERY_FAILED`).
+Повтор итога идемпотентен; «ошибка» после «отправлено» не применяется.
+
+**Строка здоровья «Почта» — одна на ансамбль** (сервис `mail` реестра CRM); `erp.mail` из реестра и из `/health` ERP убран (код в
+enum `ExternalServiceCode` контракта ERP остаётся — читатель пропускает неизвестные, выключатель `PUT /externals/mail/switch`
+принимается и ни на что не влияет). Журнал доставки — `GET /api/v1/integrations/smtp/log` CRM (поля `source`, `purpose`,
+`attachments`) → BFF `listMailLog` → карточка «Почта».
 
 ## 10. EDS (волна 12, этап C1)
 
@@ -621,6 +681,7 @@ ADR-0015 (EDS — отдельный сервис, владелец реестр
 | `uz.railtech.eds.document.archived.v1` | автоматически: маршрут документа завершён окончательно (одобрен на последнем шаге или отклонён), исходящее письмо отправлено | platform-bff |
 | `uz.railtech.eds.approval.requested.v1` | шаг стал текущим: маршрут (круг) открыт — первый шаг; решение передало маршрут дальше — следующий шаг (`step.index`); кто решает | platform-bff |
 | `uz.railtech.eds.approval.decided.v1` | решение на шаге: `decision`, `comment`, `route_status`, для одобренного КП — `outgoing_number` (ИСХ), `channels` и `approved_late` (одобрено с опозданием; необязательное, с 2026-10-26) | erp (EDS-03 для `object.kind = quote` и закрытого маршрута), platform-bff |
+| `uz.railtech.eds.mail.requested.v1` (W18A-P1) | EDS просит почтовый сервис CRM отправить письмо (`app/services/mail_out.py::request_mail`; первый вызов — письмо на бланке, P4) — §9.9 | crm (platform-bff — без подсказки) |
 
 ERP публикует `uz.railtech.erp.quote.ready_for_approval.v1` (EDS-03) — EDS открывает маршрут «КП» с чек-листом. Подписка `eds` ←
 `uz.railtech.identity.user.*.v1` (проекция сотрудников с `permissions.eds`), `uz.railtech.erp.request.created.v1` (письмо по
@@ -628,7 +689,8 @@ ERP публикует `uz.railtech.erp.quote.ready_for_approval.v1` (EDS-03) �
 `contact_name`, `manager_crm_user_id`; ERP берёт менеджера из ответственного передачи CRM, иначе из ответственного сделки с
 сопоставлением CRM), `uz.railtech.erp.quote.ready_for_approval.v1`. Объект маршрута для ERP — `approval.object` (`erp_quote_id`,
 `quote_version`, `erp_deal_id`): решение применяется к той версии КП, для которой открыт маршрут. Секреты пар (только окружение):
-`RT_BUS_SECRET_CRM_EDS`, `RT_BUS_SECRET_ERP_EDS`, `RT_BUS_SECRET_EDS_ERP`, `RT_BUS_SECRET_EDS_PLATFORM_BFF`.
+`RT_BUS_SECRET_CRM_EDS`, `RT_BUS_SECRET_ERP_EDS`, `RT_BUS_SECRET_EDS_ERP`, `RT_BUS_SECRET_EDS_PLATFORM_BFF`, с W18A-P1 —
+`RT_BUS_SECRET_EDS_CRM` (запрос письма, им же шифруется тело — §9.9).
 
 ERP применяет события EDS (E5) — §10.6.
 

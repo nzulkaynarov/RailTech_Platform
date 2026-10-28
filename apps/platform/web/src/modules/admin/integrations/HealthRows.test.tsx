@@ -264,10 +264,10 @@ describe("Внешние сервисы: состояние словом", () =>
     expect(tag.closest("[data-tone]")).toHaveAttribute("data-tone", "default");
     expect(within(docling).getByText(/Тестовый стенд: здесь это ожидаемо/)).toBeVisible();
 
-    const erpMail = within(side).getByText("Почта ERP").closest("li");
-    if (!erpMail) throw new Error("нет строки Почта ERP");
-    expect(within(erpMail).getByText("Не проверено")).toBeVisible();
-    expect(within(erpMail).getByText("Не проверено — нажмите «Проверить»")).toBeVisible();
+    const erpFiles = within(side).getByText("Файлы ERP (S3)").closest("li");
+    if (!erpFiles) throw new Error("нет строки Файлы ERP (S3)");
+    expect(within(erpFiles).getByText("Не проверено")).toBeVisible();
+    expect(within(erpFiles).getByText("Не проверено — нажмите «Проверить»")).toBeVisible();
 
     const langfuse = within(side).getByText("Langfuse (журнал работы ИИ)").closest("li");
     if (!langfuse) throw new Error("нет строки Langfuse");

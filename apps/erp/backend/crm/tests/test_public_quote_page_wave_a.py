@@ -49,9 +49,8 @@ def _clear_cache():
 
 @pytest.fixture(autouse=True)
 def locmem_email(settings):
-    chans = {k: dict(v) for k, v in settings.EMAIL_CHANNELS.items()}
-    chans["transactional"]["backend"] = "django.core.mail.backends.locmem.EmailBackend"
-    settings.EMAIL_CHANNELS = chans
+    """Письма — в mail.outbox (боевой бэкенд ERP — событие почтовому сервису CRM, W18A-P1)."""
+    settings.EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
 
 
 @pytest.fixture

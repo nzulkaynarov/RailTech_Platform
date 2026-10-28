@@ -295,16 +295,22 @@ class DryRunRowOut(BaseModel):
 
 class EmailLogItem(BaseModel):
     """
-    Строка журнала писем; тела письма (временного пароля) в журнале нет.
+    Строка журнала доставки; тела письма (временного пароля, ссылок входа) в журнале нет.
+
+    `source` — система-источник: свои письма CRM или запросы ERP и EDS по шине (W18A-P1);
+    `purpose` — назначение (код шаблона отправителя), `attachments` — число вложений.
     """
 
+    attachments: Annotated[int, Field(title="Attachments")]
     attempts: Annotated[int, Field(title="Attempts")]
     created_at: Annotated[AwareDatetime, Field(title="Created At")]
     error: Annotated[str | None, Field(title="Error")]
     id: Annotated[int, Field(title="Id")]
     lang: Annotated[str, Field(title="Lang")]
+    purpose: Annotated[str | None, Field(title="Purpose")]
     requested_by: Annotated[int | None, Field(title="Requested By")]
     sent_at: Annotated[AwareDatetime | None, Field(title="Sent At")]
+    source: Annotated[Source1, Field(title="Source")]
     status: Annotated[Status1, Field(title="Status")]
     subject: Annotated[str, Field(title="Subject")]
     template: Annotated[str, Field(title="Template")]
@@ -494,7 +500,7 @@ class ExternalServiceOut(BaseModel):
     """
     Когда впервые обнаружено (не в порядке с …)
     """
-    source: Annotated[Source1, Field(title="Source")]
+    source: Annotated[Source2, Field(title="Source")]
     """
     Кто проверяет: CRM сама или передаёт ERP
     """
@@ -1169,6 +1175,12 @@ class Source(StrEnum):
 
 
 class Source1(StrEnum):
+    crm = "crm"
+    erp = "erp"
+    eds = "eds"
+
+
+class Source2(StrEnum):
     """
     Кто проверяет: CRM сама или передаёт ERP
     """
@@ -1177,7 +1189,7 @@ class Source1(StrEnum):
     erp = "erp"
 
 
-class Source2(StrEnum):
+class Source3(StrEnum):
     db = "db"
     env = "env"
     none = "none"
@@ -1332,7 +1344,7 @@ class TelegramStatusOut(BaseModel):
     mode: Annotated[str, Field(title="Mode")]
     running: Annotated[bool, Field(title="Running")]
     secrets_enabled: Annotated[bool, Field(title="Secrets Enabled")]
-    source: Annotated[Source2, Field(title="Source")]
+    source: Annotated[Source3, Field(title="Source")]
     updated_at: Annotated[AwareDatetime | None, Field(title="Updated At")]
     username: Annotated[str | None, Field(title="Username")]
 

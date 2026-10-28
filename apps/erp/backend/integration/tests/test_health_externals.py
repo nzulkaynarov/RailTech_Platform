@@ -1,7 +1,9 @@
 """M3-ERP-06: `GET /health` отдаёт `externals[]` — внешние сервисы ERP — и выключатель `PUT /externals/{code}/switch`.
 
 Каждый сервис — три исхода (работает, ошибка, нет данных); в ответе нет секретов; выключатель действительно
-останавливает вызовы (курсы, ТН ВЭД, почта, модели, S3). Контракт — `Health.externals`, `ExternalSwitchState`.
+останавливает вызовы (курсы, ТН ВЭД, модели, S3). Контракт — `Health.externals`, `ExternalSwitchState`. Почты в ERP нет
+(W18A-P1): письма отправляет почтовый сервис CRM, строка «Почта» — одна на ансамбль, в CRM; код `mail` в `/health` ERP не
+показывается, выключатель `mail` принимается и ни на что не влияет.
 """
 
 from __future__ import annotations
@@ -50,12 +52,11 @@ def ago(**kwargs) -> datetime.datetime:
 # ── Общая форма ─────────────────────────────────────────────────────────────────────────────────────
 
 
-def test_health_lists_all_six_services_in_contract_order(client):
+def test_health_lists_the_five_services_in_contract_order_without_mail(client):
     body = client.get(HEALTH).json()
     assert [row["code"] for row in body["externals"]] == [
         "cbu_rates",
         "customs_tariff",
-        "mail",
         "litellm",
         "s3",
         "sentry",
@@ -98,10 +99,10 @@ def test_health_without_externals_support_still_answers_when_building_fails(clie
     def broken(now):
         raise RuntimeError("journal is unreadable")
 
-    monkeypatch.setitem(__import__("integration.services.externals", fromlist=["_BUILDERS"])._BUILDERS, "mail", broken)
+    monkeypatch.setitem(__import__("integration.services.externals", fromlist=["_BUILDERS"])._BUILDERS, "s3", broken)
     rows = externals(client)
-    assert rows["mail"]["status"] == "unknown"
-    assert rows["cbu_rates"]["status"] == "unknown" and len(rows) == 6
+    assert rows["s3"]["status"] == "unknown"
+    assert rows["cbu_rates"]["status"] == "unknown" and len(rows) == 5
 
 
 # ── Курсы ЦБ ────────────────────────────────────────────────────────────────────────────────────────
@@ -187,90 +188,11 @@ def test_customs_tariff_stale_after_two_weeks(client):
 # ── Почта ───────────────────────────────────────────────────────────────────────────────────────────
 
 
-@pytest.fixture
-def smtp_mail(settings):
-    settings.EMAIL_CHANNELS = {"transactional": {"backend": "django.core.mail.backends.smtp.EmailBackend"}}
-
-
-def email_log(status, error="", created=None, template="t"):
-    from core.models import EmailLog
-
-    row = EmailLog.objects.create(
-        template=template,
-        channel="transactional",
-        subject="s",
-        from_email="a@b.c",
-        to_emails=["x@y.z"],
-        status=status,
-        error=error,
-    )
-    if created:
-        EmailLog.objects.filter(pk=row.pk).update(created_at=created)
-    return row
-
-
-def test_mail_is_disabled_without_a_real_relay(client):
-    assert externals(client)["mail"]["status"] == "disabled", "locmem/console — реального релея нет"
-
-
-def test_mail_unknown_ok_degraded_fail(client, smtp_mail):
-    assert externals(client)["mail"]["status"] == "unknown"
-
-    email_log("SENT", created=ago(hours=5))
-    email_log("SENT", created=ago(hours=4))
-    row = externals(client)["mail"]
-    assert (row["status"], row["ok_24h"], row["errors_24h"]) == ("ok", 2, 0)
-
-    email_log("FAILED", "SMTPServerDisconnected: connection unexpectedly closed", created=ago(hours=1))
-    row = externals(client)["mail"]
-    assert row["status"] == "degraded" and row["errors_24h"] == 1
-    assert row["last_error"] == "SMTPServerDisconnected: connection unexpectedly closed"
-
-    from core.models import EmailLog
-
-    EmailLog.objects.filter(status="SENT").update(created_at=ago(hours=30))
-    assert externals(client)["mail"]["status"] == "fail", "за 24 ч успешных нет, последнее письмо не ушло"
-
-
-def test_mail_ignores_letters_held_back_by_the_switch(client, smtp_mail):
-    email_log("SENT", created=ago(hours=2))
-    email_log("FAILED", f"{ext.SWITCHED_OFF_MARK}: отправка выключена из CRM", created=ago(hours=1))
-    row = externals(client)["mail"]
-    assert (row["status"], row["errors_24h"], row["last_error_at"]) == ("ok", 0, None)
-
-
-def test_send_templated_email_does_not_reach_smtp_when_switched_off(client, smtp_mail, monkeypatch, settings):
-    from core.models import EmailLog
-    from notifications.emails import EmailDeliveryError, send_templated_email
-
-    settings.EMAIL_CHANNELS = {
-        "transactional": {
-            "backend": "django.core.mail.backends.locmem.EmailBackend",
-            "host": "h",
-            "port": 25,
-            "username": "",
-            "password": "",
-            "use_tls": False,
-            "from_email": "noreply@example.com",
-        }
-    }
-    sent = []
-    monkeypatch.setattr(
-        "django.core.mail.EmailMultiAlternatives.send", lambda self, fail_silently=False: sent.append(self) or 1
-    )
-    ext.set_enabled("mail", False, reason="утечка")
-
-    with pytest.raises(EmailDeliveryError):
-        send_templated_email("setup_password", {"first_name": "А", "setup_url": "https://x"}, to=["a@example.com"])
-    log = send_templated_email(
-        "setup_password", {"first_name": "А", "setup_url": "https://x"}, to=["a@example.com"], fail_silently=True
-    )
-    assert sent == [], "в SMTP ничего не ушло"
-    assert log.status == EmailLog.STATUS_FAILED and log.error.startswith(ext.SWITCHED_OFF_MARK)
-
-    ext.set_enabled("mail", True)
-    send_templated_email("setup_password", {"first_name": "А", "setup_url": "https://x"}, to=["a@example.com"])
-    assert len(sent) == 1
+def test_mail_is_not_an_erp_service_any_more(client):
+    """W18A-P1: письма ERP отправляет почтовый сервис CRM — строки «Почта ERP» нет; выключатель `mail` остаётся
+    в контракте (код `ExternalServiceCode`), принимается и на отправку писем ERP не влияет."""
+    assert "mail" not in externals(client)
+    assert put(client, "mail", {"enabled": False}).status_code == 200
 
 
 # ── LiteLLM ─────────────────────────────────────────────────────────────────────────────────────────
@@ -422,13 +344,12 @@ def test_sentry_is_disabled_without_dsn_and_ok_with_it_without_leaking_the_dsn(c
 # ── Секреты ─────────────────────────────────────────────────────────────────────────────────────────
 
 
-def test_no_secret_reaches_the_response(client, smtp_mail, ai_on, settings):
+def test_no_secret_reaches_the_response(client, ai_on, settings):
     settings.MINIO_ENDPOINT = "http://minio:9000"
     settings.SENTRY_DSN = "https://publickey@o123.ingest.sentry.io/456"
     ext.record_failure("cbu_rates", RuntimeError("https://admin:hunter2@cbu.uz/json?token=hunter2"))
     ext.record_failure("customs_tariff", RuntimeError("Authorization: Bearer sk-live-0123456789abcdef0123456789"))
     ext.record_failure("s3", RuntimeError("AccessDenied for key AKIAIOSFODNN7EXAMPLE"))
-    email_log("FAILED", "SMTPAuthenticationError: (535, b'smtp-user@example.com password=hunter2')")
     ai_call("error", "AI_GATEWAY_ERROR")
     text = client.get(HEALTH).content.decode()
     for secret in SECRETS + ["publickey", "sk-erp-test", "minio:9000/erp"]:
@@ -458,7 +379,7 @@ def test_switch_off_and_on_is_idempotent_and_visible_in_health(client):
     assert externals(client)["cbu_rates"]["enabled"] is True
 
 
-@pytest.mark.parametrize("code", ["cbu_rates", "customs_tariff", "mail", "litellm", "s3"])
+@pytest.mark.parametrize("code", ["cbu_rates", "customs_tariff", "litellm", "s3"])
 def test_every_switchable_service_accepts_the_switch(client, code):
     assert put(client, code, {"enabled": False}).status_code == 200
     assert externals(client)[code]["enabled"] is False

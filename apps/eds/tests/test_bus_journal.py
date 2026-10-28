@@ -68,7 +68,8 @@ async def test_admin_reads_overview_dlq_and_failed_inbox_without_event_bodies(
     body = overview.json()
     assert (body["service"], body["dlq_size"], body["inbox_failed"]) == ("eds", 1, 1)
     subs = {s["name"]: s for s in body["subscribers"]}
-    assert set(subs) == {"erp", "platform-bff"}  # EDS доставляет eds.* ERP и BFF; себе — нет
+    # EDS доставляет eds.* ERP и BFF, запрос письма (eds.mail.requested, W18A-P1) — CRM; себе — нет
+    assert set(subs) == {"crm", "erp", "platform-bff"}
     assert subs["erp"]["dead"] == 1
 
     dead = await client.get("/api/v1/bus/deliveries", params={"status": "dead"}, headers=headers)

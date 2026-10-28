@@ -34,7 +34,7 @@
     "telegram": { "title": "Telegram", "purpose": "Customer bot, team channel and bot profile." },
     "mail": {
       "title": "Mail",
-      "purpose": "One SMTP for the whole system: invitations, password reset, alerts."
+      "purpose": "One sender for the whole system: emails to staff, cabinet clients, quotes and documents from ERP, EDS letters."
     },
     "services": {
       "title": "External services",
@@ -246,8 +246,11 @@
       "details": "{{server}} · {{ms}} ms"
     },
     "test": {
-      "button": "Test email",
-      "queued": "A test email to {{email}} is queued"
+      "button": "Check sending",
+      "waiting": "The email to {{email}} is queued — waiting for the mail server…",
+      "late": "The email to {{email}} is still queued. The result will appear in the log below.",
+      "sent": "The email to {{email}} was sent: the mail server accepted it.",
+      "failed": "The email to {{email}} was not sent."
     },
     "settings": {
       "button": "Configure SMTP",
@@ -263,12 +266,12 @@
       "smtpPasswordHint": "Leave empty to keep the current one.",
       "submit": "Save settings",
       "step1": "CRM saves the mail settings; the SMTP password is stored encrypted, only the last 4 characters stay on screen.",
-      "step2": "Emails to staff will go through this server.",
-      "step3": "Check the connection and send a test email to make sure it works.",
+      "step2": "All emails — to staff, cabinet clients, quotes and documents from ERP, EDS letters — will go through this server.",
+      "step3": "Check the connection and sending — the result appears right under the buttons.",
       "saved": "Mail settings saved"
     },
     "log": {
-      "title": "Sending log",
+      "title": "Delivery log",
       "filter": "Show",
       "all": "All emails",
       "status": {
@@ -278,7 +281,51 @@
         "skipped_no_smtp": "Skipped: mail not configured"
       },
       "empty": "No emails in the log yet.",
-      "error": "Reason: {{error}}"
+      "error": "Reason: {{error}}",
+      "source": { "crm": "CRM", "erp": "ERP", "eds": "Documents" },
+      "attachments_one": "{{count}} attachment",
+      "attachments_other": "{{count}} attachments"
+    },
+    "reason": {
+      "smtp_not_configured": "Mail is not configured — Settings · Connections · Mail",
+      "secrets_key_missing": "The secrets encryption key is not set",
+      "secrets_key_changed": "The secrets encryption key changed — the email cannot be read",
+      "rejected": "The mail server rejected the email",
+      "unavailable": "The mail server is unavailable",
+      "auth_failed": "Login to the mail server failed",
+      "tls_failed": "A secure connection could not be established",
+      "invalid_host": "The mail server address is wrong",
+      "attachment_unavailable": "The attachment is unavailable",
+      "attachment_mismatch": "The attachment does not match what was sent",
+      "attachment_too_large": "The attachment is too large",
+      "attachment_foreign_host": "The attachment link does not point to the platform storage",
+      "content_unreadable": "The email text could not be decrypted (system link key)",
+      "body_expired": "The email text has already been deleted",
+      "queue": "The email could not be queued"
+    },
+    "purpose": {
+      "quote_sent": "Quote to client",
+      "generated_document": "Document to client",
+      "portal_magic_link": "Cabinet sign-in link",
+      "portal_invitation": "Cabinet invitation",
+      "invite_member": "Cabinet team invitation",
+      "setup_password": "Password setup",
+      "reset_password": "Password reset",
+      "invoice_issued": "Invoice issued",
+      "payment_received": "Payment received",
+      "payment_reminder": "Payment reminder",
+      "act_awaiting_acceptance": "Act to sign",
+      "quote_acceptance_code": "Quote confirmation code",
+      "quote_accepted_contact": "Quote accepted",
+      "account_created_by_operator": "Account created",
+      "invite": "Staff invitation",
+      "password_reset": "Temporary password",
+      "password_reset_link": "Password reset link",
+      "service_alert": "Outage alert",
+      "telegram_linked": "Telegram linked",
+      "test": "Sending check",
+      "outgoing_letter": "Outgoing letter",
+      "erp_mail": "ERP email"
     }
   },
   "services": {

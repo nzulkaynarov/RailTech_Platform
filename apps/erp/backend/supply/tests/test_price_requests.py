@@ -55,7 +55,8 @@ def test_request_goes_to_the_supplier_and_is_journaled(world):
     assert message.reply_to == ["supply@demo.test"]
     assert "Нужны сертификаты" in message.body and "Болт путевой М22" in message.body and "100" in message.body
     assert "1000" not in message.body, "наши цены поставщику не уходят"
-    assert EmailLog.objects.get(template="price_request").status == "SENT"
+    # W18A-P1: письмо передано почтовому сервису CRM — «В очереди» до итога доставки
+    assert EmailLog.objects.get(template="price_request").status == "QUEUED"
     assert ActivityLog.objects.filter(deal=deal, event_code="rfq.price_requested").count() == 1
     listing = api(world["reader"]).get(URL, {"deal_id": deal.pk}).json()["results"]
     assert [row["id"] for row in listing] == [body["id"]], "журнал читает любой сотрудник"

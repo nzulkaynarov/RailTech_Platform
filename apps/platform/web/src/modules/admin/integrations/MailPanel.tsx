@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 
 import type {
   ListMailLogStatus,
+  MailLogItem,
   MailLogItemStatus,
   SmtpConnector,
 } from "../../../shared/api/generated/model";
@@ -37,6 +38,31 @@ const MAIL_TONE: Record<MailLogItemStatus, StatusTone> = {
 };
 const MAIL_STATUSES: readonly MailLogItemStatus[] = ["queued", "sent", "failed", "skipped_no_smtp"];
 const SECURITY = ["starttls", "ssl", "none"] as const;
+/** Сколько ждать итога «Проверить отправку»: опрос журнала раз в 2 с, не дольше минуты. */
+const TEST_POLL_MS = 2000;
+const TEST_WAIT_MS = 60_000;
+
+/** Код причины из журнала (`rejected: SMTP 550`) → словами; неизвестный код — как есть. */
+function useReason() {
+  const { t, i18n } = useTranslation("integrations");
+  return (error: string) => {
+    const [code = "", ...rest] = error.split(":");
+    const key = `mail.reason.${code.trim()}`;
+    if (!i18n.exists(key, { ns: "integrations" })) return error;
+    const detail = rest.join(":").trim();
+    return detail ? `${t(key)} (${detail})` : t(key);
+  };
+}
+
+/** Назначение письма: код шаблона системы-источника → словами; неизвестный — код. */
+function usePurpose() {
+  const { t, i18n } = useTranslation("integrations");
+  return (row: MailLogItem) => {
+    const code = row.purpose ?? row.template;
+    const key = `mail.purpose.${code}`;
+    return i18n.exists(key, { ns: "integrations" }) ? t(key) : code;
+  };
+}
 
 function SettingsForm({ smtp, onDone }: { smtp: SmtpConnector; onDone: () => void }) {
   const { t } = useTranslation("integrations");
@@ -171,6 +197,8 @@ function SettingsForm({ smtp, onDone }: { smtp: SmtpConnector; onDone: () => voi
 function MailLog() {
   const { t } = useTranslation("integrations");
   const { date } = useFormat();
+  const reason = useReason();
+  const purpose = usePurpose();
   const [status, setStatus] = useState<ListMailLogStatus | "all">("all");
   const log = useListMailLog({ limit: 20, ...(status === "all" ? {} : { status }) });
   return (
@@ -205,10 +233,18 @@ function MailLog() {
                     </StatusTag>
                   </div>
                   <p className="pf-int-sub">
+                    {t(`mail.log.source.${row.source}`)} · {purpose(row)}
+                    {row.attachments > 0
+                      ? ` · ${t("mail.log.attachments", { count: row.attachments })}`
+                      : ""}
+                  </p>
+                  <p className="pf-int-sub">
                     {row.to_email} · {date(row.sent_at ?? row.created_at, "datetime")}
                   </p>
                   {row.error ? (
-                    <p className="pf-int-sub">{t("mail.log.error", { error: row.error })}</p>
+                    <p className="pf-int-sub">
+                      {t("mail.log.error", { error: reason(row.error) })}
+                    </p>
                   ) : null}
                 </li>
               ))}
@@ -220,9 +256,52 @@ function MailLog() {
   );
 }
 
+/** Итог «Проверить отправку» словами: строка журнала тестового письма, пока она в очереди — опрос. */
+function TestResult({ id, email }: { id: number; email: string }) {
+  const { t } = useTranslation("integrations");
+  const reason = useReason();
+  const [startedAt] = useState(() => Date.now());
+  const log = useListMailLog(
+    { limit: 20 },
+    {
+      query: {
+        refetchInterval: (query) => {
+          const row = query.state.data?.items.find((item) => item.id === id);
+          const waiting = !row || row.status === "queued";
+          return waiting && Date.now() - startedAt < TEST_WAIT_MS ? TEST_POLL_MS : false;
+        },
+      },
+    },
+  );
+  const row = log.data?.items.find((item) => item.id === id);
+  if (!row || row.status === "queued") {
+    const late = log.dataUpdatedAt - startedAt >= TEST_WAIT_MS;
+    return (
+      <Alert
+        type="info"
+        showIcon
+        role="status"
+        message={t(late ? "mail.test.late" : "mail.test.waiting", { email })}
+        description={row?.error ? t("mail.log.error", { error: reason(row.error) }) : undefined}
+      />
+    );
+  }
+  if (row.status === "sent") {
+    return <Alert type="success" showIcon role="status" message={t("mail.test.sent", { email })} />;
+  }
+  return (
+    <Alert
+      type="error"
+      showIcon
+      role="status"
+      message={t("mail.test.failed", { email })}
+      description={row.error ? t("mail.log.error", { error: reason(row.error) }) : undefined}
+    />
+  );
+}
+
 function MailBody({ smtp, editable }: { smtp: SmtpConnector; editable: boolean }) {
   const { t } = useTranslation("integrations");
-  const { message } = App.useApp();
   const refresh = useRefreshIntegrations();
   const [open, setOpen] = useState(false);
   const check = useCheckSmtp({
@@ -234,9 +313,8 @@ function MailBody({ smtp, editable }: { smtp: SmtpConnector; editable: boolean }
   });
   const test = useSendSmtpTest({
     mutation: {
-      onSuccess: (queued) => {
+      onSuccess: () => {
         refresh();
-        void message.success(t("mail.test.queued", { email: queued.to_email }));
       },
     },
   });
@@ -302,6 +380,13 @@ function MailBody({ smtp, editable }: { smtp: SmtpConnector; editable: boolean }
               })}
             />
           ) : null}
+          {test.data ? (
+            <TestResult
+              key={test.data.email_log_id}
+              id={test.data.email_log_id}
+              email={test.data.to_email}
+            />
+          ) : null}
           <ErrorNote error={check.error} />
           <ErrorNote error={test.error} />
           <ActionToggle label={t("mail.settings.button")} open={open} onToggle={setOpen}>
@@ -323,7 +408,8 @@ function MailBody({ smtp, editable }: { smtp: SmtpConnector; editable: boolean }
   );
 }
 
-/** Карточка «Почта»: SMTP (настройки, пароль — маска), «Проверить», тестовое письмо, журнал отправок. */
+/** Карточка «Почта» — один отправитель ансамбля (W18A-P1): SMTP (настройки, пароль — маска), «Проверить связь»,
+ * «Проверить отправку» с итогом словами, журнал доставки писем CRM, ERP и EDS. */
 export function MailPanel({ editable }: { editable: boolean }) {
   const { t } = useTranslation("integrations");
   const query = useGetSmtpConnector();

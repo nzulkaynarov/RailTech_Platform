@@ -63,6 +63,7 @@ if TYPE_CHECKING:
     from app.services.leads import LeadService
     from app.services.llm_usage import DbUsageRecorder
     from app.services.mail import MailService
+    from app.services.mail_requests import MailRequestService
     from app.services.offsite_connector import OffsiteConnectorService
     from app.services.password_reset import PasswordResetService
     from app.services.platform_roles import PlatformRoleService
@@ -554,9 +555,28 @@ class Container:
         return build_bus(
             lambda: self.session_factory(),
             self._bus_webhook_secrets,
-            after_processed=self.erp_notices.deliver,
+            after_processed=self._after_bus_processed,
             enqueue=tasks.enqueue,
             wakeup=tasks.wakeup,
+        )
+
+    async def _after_bus_processed(self, event_id: str) -> None:
+        """После коммита обработки события: сообщения Telegram по событиям ERP и письмо, которое
+        ERP или EDS попросили отправить (W18A-P1) — в очередь."""
+        await self.erp_notices.deliver(event_id)
+        await self.mail_requests.dispatch(event_id)
+
+    @cached_property
+    def mail_requests(self) -> "MailRequestService":
+        """Письма ERP и EDS по шине (W18A-P1): приём запроса в журнал доставки и постановка."""
+        from app.services.mail_requests import MailRequestService
+
+        bus = self.bus
+        return MailRequestService(
+            self.session_factory,
+            self.mail_service,
+            bus.config.secrets,
+            refresh=bus.secret_cache.refresh,
         )
 
     async def _bus_webhook_secrets(self) -> tuple[str, ...]:
@@ -569,6 +589,7 @@ class Container:
     @cached_property
     def mail_service(self) -> "MailService":
         """Коннектор «Почта» (M3-CRM-08): рендер, журнал `email_log`, отправка задачей очереди."""
+        from app.integrations.mail_attachments import HttpAttachmentFetcher
         from app.integrations.smtp import SmtplibTransport
         from app.services.mail import MailService
 
@@ -581,6 +602,7 @@ class Container:
             SmtplibTransport(),
             _enqueue_email,
             paused=self._mail_paused,
+            fetcher=HttpAttachmentFetcher((str(self.settings.s3_endpoint),)),
         )
 
     async def _mail_paused(self) -> bool:

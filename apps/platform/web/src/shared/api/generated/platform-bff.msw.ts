@@ -3321,11 +3321,17 @@ export const getListMailLogResponseMock = (
   overrideResponse: Partial<Extract<MailLog, object>> = {},
 ): MailLog => ({
   items: Array.from({ length: faker.number.int({ min: 1, max: 10 }) }, (_, i) => i + 1).map(() => ({
+    attachments: faker.number.int(),
     attempts: faker.number.int(),
     created_at: faker.date.past().toISOString().slice(0, 19) + "Z",
     error: faker.helpers.arrayElement([faker.string.alpha({ length: { min: 10, max: 20 } }), null]),
     id: faker.number.int(),
+    purpose: faker.helpers.arrayElement([
+      faker.string.alpha({ length: { min: 10, max: 20 } }),
+      null,
+    ]),
     sent_at: faker.helpers.arrayElement([faker.date.past().toISOString().slice(0, 19) + "Z", null]),
+    source: faker.helpers.arrayElement(["crm", "erp", "eds"] as const),
     status: faker.helpers.arrayElement(["queued", "sent", "failed", "skipped_no_smtp"] as const),
     subject: faker.string.alpha({ length: { min: 10, max: 20 } }),
     template: faker.string.alpha({ length: { min: 10, max: 20 } }),

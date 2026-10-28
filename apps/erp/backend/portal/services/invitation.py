@@ -1,6 +1,7 @@
 """Portal Invitation service (CONTRACTS §4, M2-ERP-02).
 
-Приглашение контакта клиента в Cabinet. Письмо ERP отправляет сама (`send_templated_email` → `EmailLog`). Telegram-бот
+Приглашение контакта клиента в Cabinet. Письмо ERP рендерит сама и передаёт почтовому сервису CRM (`send_templated_email` →
+`EmailLog` QUEUED → событие `erp.mail.requested`, W18A-P1; синхронный сбой — только передача письма). Telegram-бот
 принадлежит CRM, ERP в Telegram не пишет (CONVENTIONS.md §11), поэтому канал `telegram` — это событие шины
 `invite.requested` (D1-9, Q-FIX23-1): бот CRM присылает контакту сообщение с кнопкой «Открыть кабинет» (Mini App, вход по
 Telegram-аккаунту контакта; ссылок и токенов в событии нет). Событие уходит только контакту с привязанным
@@ -109,7 +110,7 @@ def _send_email(contact: Contact, clean_email: str, language: Optional[str]) -> 
             channel="transactional",
             language=language or contact.language or "ru",
         )
-    except Exception as exc:  # noqa: BLE001 — любой сбой транспорта: письмо не ушло, «отправлено» писать нельзя
+    except Exception as exc:  # noqa: BLE001 — письмо не передано почтовому сервису CRM: «отправлено» писать нельзя
         logger.warning("Failed to send portal invitation email to %s: %s", clean_email, exc)
         return "EMAIL_DELIVERY_FAILED"
     return None
