@@ -363,7 +363,7 @@ test.describe("Колокольчик: объект с экраном откры
       const center = page.getByRole("dialog", { name: "Центр уведомлений" });
       await center.getByRole("link", { name: title }).click();
       await expectOpened(page, key);
-      if (key === "letter") await shoot(page, "bell-opened-letter");
+      if (key === "letter") await settledScreenshot(page, "bell-opened-letter");
     });
   }
 
