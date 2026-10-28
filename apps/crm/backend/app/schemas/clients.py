@@ -6,6 +6,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 from app.domain.consent import ConsentMethod
+from app.schemas.notices import InvitationOut
 
 DocType = Literal["contract", "proposal", "letter", "invoice", "act", "other"]
 
@@ -141,6 +142,8 @@ class ClientReceivablesOut(BaseModel):
 
 
 class ClientDetail(ClientOut):
+    # Приглашение в кабинет: итог последней попытки, каналы контакта, действие «повторить» (D1-9).
+    invitation: InvitationOut | None = None
     identities: list[IdentityOut]
     candidates: list[IdentityOut]
     leads: list[LeadBrief]
@@ -175,6 +178,9 @@ class ContactOut(BaseModel):
     is_primary: bool
     note: str | None
     created_at: datetime
+    # Предпочитаемый канал связи и приглашения в кабинет (D1-9); null — по тому, что у контакта
+    # есть.
+    preferred_channel: Literal["telegram", "email", "both"] | None = None
 
 
 class ContactSuggestion(BaseModel):
@@ -202,3 +208,4 @@ class ContactIn(BaseModel):
     is_primary: bool = False
     note: str | None = Field(default=None, max_length=2000)
     telegram_identity_id: int | None = Field(default=None, gt=0)
+    preferred_channel: Literal["telegram", "email", "both"] | None = None

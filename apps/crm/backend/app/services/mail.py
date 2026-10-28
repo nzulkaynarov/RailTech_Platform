@@ -120,6 +120,22 @@ class MailService:
             # Ошибка развёртывания (нет каталога шаблонов): понятный ответ API, детали — в лог.
             logger.error("mail_template_missing", template=template, lang=lang, error=str(exc))
             raise MailTemplateMissingError from exc
+        return await self.send_rendered(
+            template, to, rendered, user_id=user_id, requested_by=requested_by
+        )
+
+    async def send_rendered(
+        self,
+        template: str,
+        to: str,
+        rendered: mail_templates.RenderedEmail,
+        *,
+        user_id: int | None = None,
+        requested_by: int | None = None,
+    ) -> EmailLogView:
+        """Письмо с уже готовым текстом (клиентские тексты D1-9 — `domain/client_texts.py`): та же
+        очередь,
+        тот же журнал и те же ошибки, что у `send`; `template` — метка в журнале."""
         row = EmailLog(
             to_email=to.strip().lower(),
             subject=rendered.subject,

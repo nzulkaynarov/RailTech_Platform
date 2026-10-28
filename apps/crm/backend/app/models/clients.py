@@ -134,6 +134,10 @@ class ClientContact(TimestampMixin, Base):
 
     __tablename__ = "client_contacts"
     __table_args__ = (
+        CheckConstraint(
+            "preferred_channel IS NULL OR preferred_channel IN ('telegram', 'email', 'both')",
+            name="preferred_channel",
+        ),
         Index("ix_client_contacts_client_id", "client_id"),
         Index(
             "uq_client_contacts_primary",
@@ -154,3 +158,6 @@ class ClientContact(TimestampMixin, Base):
     )
     is_primary: Mapped[bool] = mapped_column(Boolean, server_default=sql("false"))
     note: Mapped[str | None] = mapped_column(Text)
+    # Предпочитаемый канал связи и приглашения в кабинет (D1-9): `telegram` | `email` | `both`; NULL
+    # — по тому, что есть.
+    preferred_channel: Mapped[str | None] = mapped_column(String(8))

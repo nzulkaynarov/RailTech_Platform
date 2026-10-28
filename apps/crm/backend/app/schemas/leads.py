@@ -6,6 +6,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
+from app.schemas.notices import InvitationOut, NoticeOut
+
 
 class EscalationOut(BaseModel):
     id: int
@@ -98,6 +100,15 @@ class LeadDetail(LeadOut):
     # Состояние передачи клиента лида в бэк-офис (FIX-31, `clients.erp_handoff_*`).
     client_handoff_status: Literal["pending", "done", "failed"] | None = None
     client_handoff_error: str | None = None
+    # Запрос с сайта (D1-9): срок первого ответа, пока лид без ответственного (иначе null), и
+    # просрочен ли он.
+    first_response_due_at: datetime | None = None
+    first_response_overdue: bool = False
+    # Подтверждение запроса клиенту: канал, итог, причина словами (null — не заводилось).
+    confirmation: NoticeOut | None = None
+    # Приглашение клиента лида в кабинет: итог, каналы контакта, «повторить другим каналом» (null —
+    # клиента нет).
+    invitation: InvitationOut | None = None
 
 
 class LeadPage(BaseModel):

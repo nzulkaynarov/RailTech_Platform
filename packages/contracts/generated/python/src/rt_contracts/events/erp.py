@@ -419,6 +419,43 @@ class DocumentCreatedV1(BaseModel):
     payload: DocumentCreated
 
 
+class InviteRequested(BaseModel):
+    """
+    Приглашение контакта в Cabinet через бот CRM (D1-9). Рабочей ссылки и токенов нет: контакт входит в Mini App по своему Telegram-аккаунту (initData), поэтому событие не секретно.
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    channel: Literal["telegram"]
+    erp_contact_id: int
+    crm_contact_id: int
+    language: Language | None = None
+    """
+    Язык контакта в ERP; бот CRM берёт язык лида, если он известен
+    """
+
+
+class InviteRequestedV1(BaseModel):
+    """
+    Тип uz.railtech.erp.invite.requested.v1, источник rt://erp. Поле data конверта (envelope.v1.json). ERP в Telegram не пишет (бот принадлежит CRM): сотрудник или передача из CRM пригласили контакта в канал telegram — ERP публикует событие, бот CRM присылает контакту сообщение с кнопкой «Открыть кабинет» (Mini App; вход по Telegram-аккаунту контакта, секретов в событии нет). Что делает CRM: доставка ботом; итог (отправлено или причина отказа словами) виден менеджеру в карточке клиента. ERP публикует событие только контакту с crm_contact_id и привязанным telegram_user_id (D1-9).
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    erp_company_id: int
+    """
+    Компания клиента в ERP
+    """
+    crm_client_id: int
+    """
+    Клиент в CRM
+    """
+    actor: Actor
+    payload: InviteRequested
+
+
 class InviteSent(BaseModel):
     model_config = ConfigDict(
         extra="ignore",
@@ -536,6 +573,16 @@ class Kind(StrEnum):
     waybill = "waybill"
     receipt = "receipt"
     other = "other"
+
+
+class Language(StrEnum):
+    """
+    Язык контакта в ERP; бот CRM берёт язык лида, если он известен
+    """
+
+    ru = "ru"
+    uz = "uz"
+    en = "en"
 
 
 class LineNo(RootModel[int]):

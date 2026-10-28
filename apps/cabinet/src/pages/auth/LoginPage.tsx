@@ -24,6 +24,7 @@ export function LoginPage() {
   const navigate = useNavigate();
   const emailId = useId();
   const errorId = useId();
+  const telegramHintId = useId();
   const [email, setEmail] = useState('');
   const me = useMe().data;
   const telegramLink = botLink();
@@ -80,11 +81,19 @@ export function LoginPage() {
             <>
               <p className="text-center text-xs text-muted-foreground">{t('auth.login.or')}</p>
               <Button asChild variant="outline">
-                <a href={telegramLink} target="_blank" rel="noopener noreferrer">
+                <a
+                  href={telegramLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-describedby={telegramHintId}
+                >
                   <Send aria-hidden="true" />
                   {t('auth.login.telegram')}
                 </a>
               </Button>
+              <p id={telegramHintId} className="text-center text-xs text-muted-foreground">
+                {t('auth.login.telegramHint')}
+              </p>
             </>
           ) : null}
         </CardContent>

@@ -80,6 +80,9 @@ ignore = ["RUF001", "RUF002", "RUF003", "SIM905"]
 "alembic/versions/**" = ["S608"]
 "app/schemas/settings.py" = ["E501"]
 "app/schemas/settings_client.py" = ["E501"]
+# Тексты клиенту и сотруднику (D1-9): длинные строки текста читаются лучше, чем склейка литералов.
+"app/domain/client_texts.py" = ["E501"]
+"app/domain/notice_errors.py" = ["E501"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["app", "tests"]

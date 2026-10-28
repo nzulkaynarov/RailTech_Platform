@@ -1,0 +1,114 @@
+[
+  {
+    "screen": "01-login",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 39,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "01-login",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 39,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "02-login-sent",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 34,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "02-login-sent",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 34,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "03-new-client",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 39,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "03-new-client",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 39,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "04-new-client-filled",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 39,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "04-new-client-filled",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 39,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "05-new-client-sent",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 34,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "05-new-client-sent",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 34,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "06-login-sent-uz",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 34,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "06-login-sent-uz",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 34,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "07-login-en",
+    "width": 1440,
+    "axe": true,
+    "rulesPassed": 39,
+    "overflowPx": 0,
+    "violations": []
+  },
+  {
+    "screen": "07-login-en",
+    "width": 390,
+    "axe": true,
+    "rulesPassed": 39,
+    "overflowPx": 0,
+    "violations": []
+  }
+]
