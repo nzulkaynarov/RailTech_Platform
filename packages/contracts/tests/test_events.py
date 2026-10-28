@@ -45,7 +45,7 @@ ASYNCAPI = yaml.safe_load((EVENTS / "asyncapi.yaml").read_text(encoding="utf-8")
 def test_types_present() -> None:
     domains = {t.domain for t in TYPES}
     assert {"erp", "crm", "identity", "eds"} <= domains
-    assert len([t for t in TYPES if t.domain == "erp"]) == 24
+    assert len([t for t in TYPES if t.domain == "erp"]) == 25  # + mail.requested (W18A-P1)
 
 
 @pytest.mark.parametrize("path", schema_files(), ids=lambda p: p.relative_to(CONTRACTS).as_posix())
@@ -150,11 +150,14 @@ ERP_EVENTS_C1 = {"quote.ready_for_approval"}
 #: Волна 16 (D1-9): приглашение контакта в Cabinet через бот CRM — ERP в Telegram не пишет.
 ERP_EVENTS_D1 = {"invite.requested"}
 
+#: W18A-P1 (B-INB-6): ERP письма сама не шлёт — запрос отправки почтовому сервису CRM.
+ERP_EVENTS_W18A = {"mail.requested"}
+
 
 def test_erp_types_are_the_22_events_of_the_former_webhook_and_the_c1_ones() -> None:
     """22 события бывшего вебхука (events.schema.json удалён в B4) — по-прежнему uz.railtech.erp.<тип>.v1; плюс C1."""
     erp = {f"{t.entity}.{t.action}" for t in TYPES if t.domain == "erp" and t.version == 1}
-    assert erp == ERP_EVENTS | ERP_EVENTS_C1 | ERP_EVENTS_D1
+    assert erp == ERP_EVENTS | ERP_EVENTS_C1 | ERP_EVENTS_D1 | ERP_EVENTS_W18A
 
 
 EDS_EVENTS = {
@@ -166,11 +169,13 @@ EDS_EVENTS = {
     "document.archived",
     "approval.requested",
     "approval.decided",
+    # W18A-P1: письмо EDS (письмо на бланке, P4) отправляет почтовый сервис CRM.
+    "mail.requested",
 }
 
 
 def test_eds_types_are_those_of_the_runbook() -> None:
-    """Волна 12 §2.4: восемь типов uz.railtech.eds.*.v1, издатель rt://eds."""
+    """Волна 12 §2.4: восемь типов uz.railtech.eds.*.v1 и запрос письма (W18A-P1), издатель rt://eds."""
     eds = [t for t in TYPES if t.domain == "eds"]
     assert {f"{t.entity}.{t.action}" for t in eds} == EDS_EVENTS
     assert {t.source for t in eds} == {"rt://eds"}
@@ -384,6 +389,8 @@ def test_initial_subscriptions_v1() -> None:
         "uz.railtech.crm.contact.created.v1",
         "uz.railtech.crm.contact.deleted.v1",
         "uz.railtech.crm.contact.updated.v1",
+        "uz.railtech.crm.mail.failed.v1",
+        "uz.railtech.crm.mail.sent.v1",
         "uz.railtech.eds.approval.decided.v1",
         "uz.railtech.eds.letter.rejected.v1",
         "uz.railtech.eds.letter.resolved.v1",
@@ -394,7 +401,10 @@ def test_crm_gets_every_erp_event_except_the_quote_for_eds_approval() -> None:
     """CRM — все типы ERP, кроме quote.ready_for_approval: в нём себестоимость и маржа, адресат — EDS (волна 12)."""
     crm = {s["name"]: s for s in SUBSCRIPTIONS["subscribers"]}["crm"]
     erp_types = {t.name for t in TYPES if t.domain == "erp"}
-    assert _gets(crm) == erp_types - {"uz.railtech.erp.quote.ready_for_approval.v1"}
+    erp_got = {n for n in _gets(crm) if n.startswith("uz.railtech.erp.")}
+    assert erp_got == erp_types - {"uz.railtech.erp.quote.ready_for_approval.v1"}
+    # от EDS — только запрос письма (W18A-P1)
+    assert _gets(crm) - erp_got == {"uz.railtech.eds.mail.requested.v1"}
 
 
 def test_eds_subscription_c1() -> None:
@@ -456,3 +466,44 @@ def test_generated_models_parse_examples(t: EventType) -> None:
     # Читатель терпимый: неизвестное поле новой версии схемы не ломает модель.
     MODELS[env.type].model_validate({**env.data, "future_optional_field": 1})
     assert data.model_dump(mode="json", by_alias=True, exclude_unset=True) == env.data
+
+
+# ─── почта: один отправитель (W18A-P1) ────────────────────────────────────────────────────────
+
+
+def _without_ids(schema: dict) -> dict:
+    out = copy.deepcopy(schema)
+    for key in ("$id", "description"):
+        out.pop(key, None)
+    out["properties"]["content"].pop("description", None)
+    return out
+
+
+def test_mail_request_is_the_same_for_erp_and_eds() -> None:
+    """ERP и EDS просят CRM об одном и том же: схема data запроса письма одинакова (кроме $id и описаний)."""
+    erp = load_json(EVENTS / "erp" / "mail.requested.v1.json")
+    eds = load_json(EVENTS / "eds" / "mail.requested.v1.json")
+    assert _without_ids(erp) == _without_ids(eds)
+
+
+def test_mail_request_keeps_text_and_links_encrypted() -> None:
+    """Текст, HTML и ссылки на вложения — только шифртекстом: открытых полей тела в запросе нет."""
+    schema = load_json(EVENTS / "erp" / "mail.requested.v1.json")
+    assert {"text", "html", "body", "links", "url"}.isdisjoint(_property_names(schema))
+    assert schema["properties"]["content"]["properties"]["alg"] == {"type": "string", "const": "fernet-pair-v1"}
+    attachment = schema["properties"]["attachments"]["items"]["properties"]
+    assert set(attachment) == {"filename", "content_type", "size", "sha256"}
+
+
+def test_mail_results_carry_no_text_or_addresses() -> None:
+    """Итог доставки — ключ запроса, назначение, объект отправителя; ни текста, ни адресов."""
+    for name in ("mail.sent", "mail.failed"):
+        names = _property_names(load_json(EVENTS / "crm" / f"{name}.v1.json"))
+        assert {"to", "subject", "text", "html", "content", "email"}.isdisjoint(names), name
+
+
+def test_mail_requests_go_to_crm_and_results_to_erp() -> None:
+    subs = {s["name"]: s for s in SUBSCRIPTIONS["subscribers"]}
+    assert {"uz.railtech.erp.mail.requested.v1", "uz.railtech.eds.mail.requested.v1"} <= _gets(subs["crm"])
+    assert {"uz.railtech.crm.mail.sent.v1", "uz.railtech.crm.mail.failed.v1"} <= _gets(subs["erp"])
+    assert not {n for n in _gets(subs["eds"]) | _gets(subs["erp"]) if n.endswith(".mail.requested.v1")}

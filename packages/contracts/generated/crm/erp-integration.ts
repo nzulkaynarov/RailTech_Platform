@@ -86,8 +86,9 @@ export const getInviteClientContactUrl = (crmClientId: number) => {
 };
 
 /**
- * Менеджер CRM нажимает «Отправить повторно другим каналом» в карточке клиента. `email` — ERP отправляет письмо сама
- * (`portal_invitation`); `telegram` — ERP публикует `uz.railtech.erp.invite.requested.v1`, доставляет бот CRM;
+ * Менеджер CRM нажимает «Отправить повторно другим каналом» в карточке клиента. `email` — ERP готовит письмо
+ * (`portal_invitation`) и передаёт его почтовому сервису CRM событием `uz.railtech.erp.mail.requested.v1` (W18A-P1:
+ * один отправитель; `EMAIL_DELIVERY_FAILED` — письмо не удалось передать); `telegram` — ERP публикует `uz.railtech.erp.invite.requested.v1`, доставляет бот CRM;
  * `both` — оба канала. Контакт — по `crm_contact_id`, без него — основной контакт компании. Ответ всегда 200:
  * `error` называет причину, по которой приглашение не ушло ни одним из каналов
  * (`CONTACT_EMAIL_REQUIRED`, `CONTACT_TELEGRAM_REQUIRED`, `EMAIL_DELIVERY_FAILED`, `INVALID_CHANNEL`,
@@ -620,7 +621,7 @@ export const getSetExternalSwitchUrl = (code: ExternalServiceCode) => {
 };
 
 /**
- * Выключенный сервис ERP перестаёт вызываться: курсы ЦБ и синхронизация ТН ВЭД пропускают прогон, письма не уходят в SMTP (в журнале ERP — `FAILED` с причиной «выключено из CRM»), вызовы моделей возвращают нейтральный отказ, файлы не пишутся в S3. Состояние хранится в ERP и переживает перезапуск; операция идемпотентна (повтор того же состояния — 200). Sentry выключить нельзя (`switchable: false` → 409 `NOT_SWITCHABLE`).
+ * Выключенный сервис ERP перестаёт вызываться: курсы ЦБ и синхронизация ТН ВЭД пропускают прогон, вызовы моделей возвращают нейтральный отказ, файлы не пишутся в S3. `mail` принимается, но ни на что не влияет (W18A-P1): письма ERP отправляет почтовый сервис CRM, паузу держит выключатель «Почта» CRM. Состояние хранится в ERP и переживает перезапуск; операция идемпотентна (повтор того же состояния — 200). Sentry выключить нельзя (`switchable: false` → 409 `NOT_SWITCHABLE`).
  * @summary Выключатель внешнего сервиса ERP (центр внешних сервисов CRM)
  */
 export const setExternalSwitch = async (

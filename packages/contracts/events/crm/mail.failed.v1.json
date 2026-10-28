@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://railtech.uz/contracts/events/crm/mail.failed.v1.json",
+  "title": "Письмо не отправлено",
+  "description": "Тип uz.railtech.crm.mail.failed.v1, источник rt://crm. Поле data конверта (envelope.v1.json). Итог запроса uz.railtech.<домен>.mail.requested.v1 с notify = true: письмо окончательно не ушло — постоянная ошибка SMTP (адрес отклонён), исчерпаны повторы временной ошибки, почта не настроена, вложение недоступно или тело не расшифровано. Без текста письма и адресов (W18A-P1).",
+  "type": "object",
+  "required": [
+    "requester",
+    "request_key",
+    "purpose",
+    "email_log_id",
+    "failed_at",
+    "reason"
+  ],
+  "properties": {
+    "requester": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{0,31}$",
+      "description": "Кто запросил письмо (erp, eds) — подписчик применяет только свои итоги"
+    },
+    "request_key": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._:/-]{1,128}$",
+      "description": "Ключ идемпотентности из запроса"
+    },
+    "purpose": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_.-]{0,63}$"
+    },
+    "ref": {
+      "type": "object",
+      "required": [
+        "kind",
+        "id"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9_.-]{0,31}$"
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        }
+      },
+      "additionalProperties": false,
+      "description": "Объект отправителя из запроса"
+    },
+    "email_log_id": {
+      "type": "integer",
+      "description": "Строка журнала доставки CRM"
+    },
+    "attempts": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Попыток SMTP"
+    },
+    "failed_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "reason": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{0,63}$",
+      "description": "Код причины: smtp_not_configured, rejected, auth_failed, unavailable, tls_failed, invalid_host, attachment_unavailable, content_unreadable… (список открытый — новый код не ломает подписчика)"
+    },
+    "detail": {
+      "type": "string",
+      "maxLength": 500,
+      "description": "Пояснение для журнала (код ответа SMTP), без секретов"
+    }
+  },
+  "additionalProperties": false
+}

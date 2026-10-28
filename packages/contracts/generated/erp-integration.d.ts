@@ -40,8 +40,9 @@ export interface paths {
     put?: never;
     /**
      * Повторное приглашение контакта клиента в Cabinet выбранным каналом
-     * @description Менеджер CRM нажимает «Отправить повторно другим каналом» в карточке клиента. `email` — ERP отправляет письмо сама
-     *     (`portal_invitation`); `telegram` — ERP публикует `uz.railtech.erp.invite.requested.v1`, доставляет бот CRM;
+     * @description Менеджер CRM нажимает «Отправить повторно другим каналом» в карточке клиента. `email` — ERP готовит письмо
+     *     (`portal_invitation`) и передаёт его почтовому сервису CRM событием `uz.railtech.erp.mail.requested.v1` (W18A-P1:
+     *     один отправитель; `EMAIL_DELIVERY_FAILED` — письмо не удалось передать); `telegram` — ERP публикует `uz.railtech.erp.invite.requested.v1`, доставляет бот CRM;
      *     `both` — оба канала. Контакт — по `crm_contact_id`, без него — основной контакт компании. Ответ всегда 200:
      *     `error` называет причину, по которой приглашение не ушло ни одним из каналов
      *     (`CONTACT_EMAIL_REQUIRED`, `CONTACT_TELEGRAM_REQUIRED`, `EMAIL_DELIVERY_FAILED`, `INVALID_CHANNEL`,
@@ -369,7 +370,7 @@ export interface paths {
     get?: never;
     /**
      * Выключатель внешнего сервиса ERP (центр внешних сервисов CRM)
-     * @description Выключенный сервис ERP перестаёт вызываться: курсы ЦБ и синхронизация ТН ВЭД пропускают прогон, письма не уходят в SMTP (в журнале ERP — `FAILED` с причиной «выключено из CRM»), вызовы моделей возвращают нейтральный отказ, файлы не пишутся в S3. Состояние хранится в ERP и переживает перезапуск; операция идемпотентна (повтор того же состояния — 200). Sentry выключить нельзя (`switchable: false` → 409 `NOT_SWITCHABLE`).
+     * @description Выключенный сервис ERP перестаёт вызываться: курсы ЦБ и синхронизация ТН ВЭД пропускают прогон, вызовы моделей возвращают нейтральный отказ, файлы не пишутся в S3. `mail` принимается, но ни на что не влияет (W18A-P1): письма ERP отправляет почтовый сервис CRM, паузу держит выключатель «Почта» CRM. Состояние хранится в ERP и переживает перезапуск; операция идемпотентна (повтор того же состояния — 200). Sentry выключить нельзя (`switchable: false` → 409 `NOT_SWITCHABLE`).
      */
     put: operations["setExternalSwitch"];
     post?: never;
@@ -851,7 +852,7 @@ export interface components {
       externals?: components["schemas"]["ExternalService"][];
     };
     /**
-     * @description `cbu_rates` — курсы ЦБ РУз; `customs_tariff` — классификатор ТН ВЭД и тариф (tarif.customs.uz); `mail` — почта ERP; `litellm` — вызовы моделей через шлюз; `s3` — файловое хранилище; `sentry` — сбор ошибок. Читатель пропускает неизвестный код.
+     * @description `cbu_rates` — курсы ЦБ РУз; `customs_tariff` — классификатор ТН ВЭД и тариф (tarif.customs.uz); `mail` — бывшая почта ERP (W18A-P1: ERP его больше не передаёт — письма отправляет почтовый сервис CRM); `litellm` — вызовы моделей через шлюз; `s3` — файловое хранилище; `sentry` — сбор ошибок. Читатель пропускает неизвестный код.
      * @enum {string}
      */
     ExternalServiceCode: "cbu_rates" | "customs_tariff" | "mail" | "litellm" | "s3" | "sentry";

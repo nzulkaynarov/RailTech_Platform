@@ -4215,15 +4215,24 @@ export interface components {
       latency_ms: number;
       server: string;
     };
-    /** @description Строка журнала писем сотрудникам; тела письма (временного пароля) в журнале нет. */
+    /** @description Строка журнала доставки почты ансамбля: письма CRM и письма, которые ERP и EDS просят отправить по шине (W18A-P1, один отправитель); тела письма (временного пароля, ссылок входа) в журнале нет. */
     MailLogItem: {
+      /** @description Число вложений (по ссылке на объект хранилища системы-источника) */
+      attachments: number;
       attempts: number;
       /** Format: date-time */
       created_at: string;
       error: string | null;
       id: number;
+      /** @description Назначение письма — код шаблона системы-источника (quote_sent, portal_magic_link, invite…) */
+      purpose: string | null;
       /** Format: date-time */
       sent_at: string | null;
+      /**
+       * @description Система-источник: crm — свои письма CRM; erp, eds — запрос по шине (W18A-P1)
+       * @enum {string}
+       */
+      source: "crm" | "erp" | "eds";
       /** @enum {string} */
       status: "queued" | "sent" | "failed" | "skipped_no_smtp";
       subject: string;
