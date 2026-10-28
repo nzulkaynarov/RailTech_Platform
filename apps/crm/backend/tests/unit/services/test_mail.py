@@ -186,6 +186,8 @@ async def test_without_secrets_key_body_cannot_be_stored() -> None:
 
 
 async def test_failed_delivery_retries_then_gives_up_and_wipes_body() -> None:
+    """Временная ошибка: строка остаётся `queued` с причиной (повтор задачи её отправит),
+    последняя попытка — `failed`, тело стёрто."""
     transport = FakeTransport(fail=SmtpProbeError("auth_failed", "SMTP 535"))
     service, db, _, _ = build(transport=transport)
     view = await service.send("password_reset", "aziz@railtech.uz", CONTEXT)
@@ -193,16 +195,40 @@ async def test_failed_delivery_retries_then_gives_up_and_wipes_body() -> None:
     for attempt in (1, 2):
         with pytest.raises(SmtpProbeError):
             await service.deliver(view.id)
-        assert (row.status, row.attempts, row.error) == ("failed", attempt, "auth_failed: SMTP 535")
+        assert (row.status, row.attempts, row.error) == ("queued", attempt, "auth_failed: SMTP 535")
         assert row.body_ciphertext is not None  # ещё будут попытки — тело нужно
-        row.status = "queued"  # так делает повтор задачи: строка снова в работе
     assert await service.deliver(view.id) is False  # последняя попытка не бросает
     assert (row.status, row.attempts, row.body_ciphertext) == ("failed", 3, None)
-    # Релей починили → письмо уходит, если строку вернуть в очередь.
+    # Релей починили → письмо уже не отправить: тела больше нет.
     transport.fail = None
     row.status = "queued"
-    assert await service.deliver(view.id) is False  # тела больше нет: не отправить
+    assert await service.deliver(view.id) is False
     assert (row.status, row.error) == ("failed", "body_expired")
+
+
+async def test_retry_after_temporary_error_sends_the_letter() -> None:
+    """Повтор задачи после временной ошибки действительно отправляет письмо (раньше строка
+    становилась `failed` уже после первой ошибки, и повтор ничего не делал)."""
+    transport = FakeTransport(fail=SmtpProbeError("unavailable", "TimeoutError"))
+    service, db, _, _ = build(transport=transport)
+    view = await service.send("invite", "aziz@railtech.uz", CONTEXT)
+    with pytest.raises(SmtpProbeError):
+        await service.deliver(view.id)
+    transport.fail = None
+    assert await service.deliver(view.id) is True
+    row = db.rows[view.id]
+    assert (row.status, row.attempts, len(transport.sent)) == ("sent", 2, 1)
+
+
+async def test_permanent_rejection_fails_at_once_without_retry() -> None:
+    """Адрес отклонён (5xx) — повтор не поможет: сразу `failed` с причиной, тело стёрто."""
+    rejected = SmtpProbeError("rejected", "aziz@railtech.uz: SMTP 550", permanent=True)
+    service, db, _, _ = build(transport=FakeTransport(fail=rejected))
+    view = await service.send("invite", "aziz@railtech.uz", CONTEXT)
+    assert await service.deliver(view.id) is False
+    row = db.rows[view.id]
+    assert (row.status, row.attempts, row.body_ciphertext) == ("failed", 1, None)
+    assert row.error == "rejected: aziz@railtech.uz: SMTP 550"
 
 
 async def test_enqueue_failure_is_recorded_not_lost() -> None:

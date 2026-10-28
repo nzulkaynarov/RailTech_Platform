@@ -48,7 +48,6 @@ def test_registry_lists_every_external_service_of_the_ensemble() -> None:
         "tls.cabinet",
         "erp.cbu_rates",
         "erp.customs_tariff",
-        "erp.mail",
         "erp.litellm",
         "erp.s3",
         "erp.sentry",
@@ -91,12 +90,12 @@ def test_without_gateway_aliases_registry_still_has_the_rest() -> None:
     assert {"telegram", "litellm", "mail", "erp.sentry"} <= set(keys({}))
 
 
-def test_erp_entries_are_the_six_services_of_the_contract() -> None:
+def test_erp_entries_are_the_services_of_the_contract_without_mail() -> None:
+    """Почта ERP — не отдельный сервис (W18A-P1): письма ERP уходят через почтовый сервис CRM."""
     erp = [s for s in reg.registry(DEFAULT) if s.source == "erp"]
     assert [s.key for s in erp] == [
         "erp.cbu_rates",
         "erp.customs_tariff",
-        "erp.mail",
         "erp.litellm",
         "erp.s3",
         "erp.sentry",
@@ -105,7 +104,6 @@ def test_erp_entries_are_the_six_services_of_the_contract() -> None:
     assert {s.key: s.switch for s in erp} == {
         "erp.cbu_rates": "erp",
         "erp.customs_tariff": "erp",
-        "erp.mail": "erp",
         "erp.litellm": "erp",
         "erp.s3": "erp",
         "erp.sentry": None,
