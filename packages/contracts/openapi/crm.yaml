@@ -4809,6 +4809,116 @@ components:
       - created_at
       title: NoticeOut
       type: object
+    OffsiteCheckOut:
+      description: 'Итог «Проверить» внешней копии (OPS-GDRIVE-2): `reason` — `ok` или что исправить владельцу
+
+        (`key_rejected`, `drive_api_disabled`, `folder_not_found`, `not_folder`, `not_shared_drive`,
+
+        `read_only`), `network` — Google не ответил (хостинг).'
+      properties:
+        checked_at:
+          format: date-time
+          title: Checked At
+          type: string
+        folder_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Folder Name
+        ok:
+          title: Ok
+          type: boolean
+        reason:
+          title: Reason
+          type: string
+      required:
+      - ok
+      - reason
+      - folder_name
+      - checked_at
+      title: OffsiteCheckOut
+      type: object
+    OffsiteConnectorIn:
+      additionalProperties: false
+      description: 'Сохранение: `key_json` — содержимое JSON-ключа сервисного аккаунта (`null` — оставить
+
+        прежний), `folder_id` — ID папки общего диска или её адрес, `password` — пароль админа.'
+      properties:
+        folder_id:
+          maxLength: 512
+          minLength: 1
+          title: Folder Id
+          type: string
+        key_json:
+          anyOf:
+          - format: password
+            maxLength: 16384
+            minLength: 1
+            type: string
+            writeOnly: true
+          - type: 'null'
+          title: Key Json
+        password:
+          format: password
+          maxLength: 256
+          minLength: 1
+          title: Password
+          type: string
+          writeOnly: true
+      required:
+      - folder_id
+      - password
+      title: OffsiteConnectorIn
+      type: object
+    OffsiteStatusOut:
+      description: 'Внешняя копия бэкапов на Google Drive: ключ не возвращается — адрес аккаунта и `key_suffix`
+
+        (последние 4 символа ID ключа); `delivered_at` — когда ключ и папка ушли сервису копирования.'
+      properties:
+        client_email:
+          title: Client Email
+          type: string
+        configured:
+          title: Configured
+          type: boolean
+        delivered_at:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          title: Delivered At
+        folder_id:
+          title: Folder Id
+          type: string
+        key_suffix:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Key Suffix
+        key_updated_at:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          title: Key Updated At
+        last_check:
+          anyOf:
+          - $ref: '#/components/schemas/OffsiteCheckOut'
+          - type: 'null'
+        secrets_enabled:
+          title: Secrets Enabled
+          type: boolean
+      required:
+      - configured
+      - folder_id
+      - client_email
+      - key_suffix
+      - key_updated_at
+      - delivered_at
+      - last_check
+      - secrets_enabled
+      title: OffsiteStatusOut
+      type: object
     PasswordReset:
       properties:
         temporary_password:
@@ -5449,6 +5559,10 @@ components:
       - smtp_auth_failed
       - smtp_tls_failed
       - smtp_rejected
+      - offsite_key_invalid
+      - offsite_folder_invalid
+      - offsite_not_configured
+      - offsite_delivery_failed
       - lead_exists
       - client_exists
       - contact_required
@@ -9862,6 +9976,95 @@ paths:
       security:
       - HTTPBearer: []
       summary: Rotate Erp Keys
+      tags:
+      - integrations
+  /api/v1/integrations/offsite:
+    get:
+      description: 'Внешняя копия бэкапов на Google Drive (OPS-GDRIVE-2): папка, адрес сервисного аккаунта,
+
+        последние символы ID ключа, доставка сервису копирования, итог последней проверки. Ключ не
+
+        возвращается никогда. Состояние самой копии — строка `offsite_backup` внешних сервисов.'
+      operationId: get_offsite_status
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OffsiteStatusOut'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Get Offsite Status
+      tags:
+      - integrations
+    put:
+      description: 'Сохранить ключ сервисного аккаунта и папку (после пароля админа) и сразу проверить у Google.
+
+
+        Ключ доставляется сервису копирования (бакет `offsite-config`, у CRM — только запись) и
+
+        хранится зашифрованным; `key_json = null` — оставить прежний. Итог проверки — `last_check`.
+
+        Ошибки: `offsite_key_invalid` (422, `key_json`; `details.problem`: `not_json`,
+
+        `not_service_account`, `missing_fields`), `offsite_folder_invalid` (422, `folder_id`),
+
+        `wrong_password` (422), `secrets_key_missing` (409), `offsite_delivery_failed` (502).'
+      operationId: put_offsite_connector
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OffsiteConnectorIn'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OffsiteStatusOut'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Put Offsite Connector
+      tags:
+      - integrations
+  /api/v1/integrations/offsite/check:
+    post:
+      description: '«Проверить»: ключ из хранилища → токен Google → папка (общий диск, право добавлять файлы).
+
+
+        Ничего не пишет на Drive. Итог — 200 с `reason`; ошибка: `offsite_not_configured` (409).'
+      operationId: check_offsite_connector
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OffsiteCheckOut'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: Check Offsite Connector
       tags:
       - integrations
   /api/v1/integrations/smtp:

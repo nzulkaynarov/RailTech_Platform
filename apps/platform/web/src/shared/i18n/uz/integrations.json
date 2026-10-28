@@ -449,6 +449,55 @@
     }
   },
   "storage": {
+    "offsite": {
+      "title": "Zaxira nusxalarning tashqi nusxasi (Google Drive)",
+      "purpose": "Kuniga bir marta baza arxivi kompaniyangizning Google umumiy diskidagi papkaga nusxalanadi — ikkala server yo'qolsa ham tiklash mumkin. Hammasi shu yerda sozlanadi, serverga kirish shart emas.",
+      "copyState": "Nusxa holati",
+      "folder": "Umumiy disk papkasi (ID)",
+      "account": "Xizmat hisobi",
+      "key": "Kalit",
+      "delivered": "Nusxalash xizmatiga uzatildi",
+      "notDelivered": "hali yo'q",
+      "checkedAt": "Tekshirildi: {{date}}",
+      "check": "Tekshirish",
+      "setup": "Sozlash",
+      "change": "Kalit yoki papkani almashtirish",
+      "reason": {
+        "ok": "Kirish bor: «{{folder}}» papkasi umumiy diskda, fayl qo'shish mumkin.",
+        "key_rejected": "Google kalitni qabul qilmadi: u bekor qilingan yoki o'chirilgan, yoki xizmat hisobi o'chirilgan. Yangi kalit yarating (3-qadam) va yuklang.",
+        "drive_api_disabled": "Google Cloud loyihasida Google Drive API yoqilmagan — yoqing (2-qadam) va qayta tekshiring.",
+        "folder_not_found": "Papka topilmadi: ID noto'g'ri yoki xizmat hisobiga kirish berilmagan (4-qadam).",
+        "not_folder": "Bu ID papka emas — papka manzilidagi ID ni kiriting.",
+        "not_shared_drive": "«{{folder}}» papkasi «Mening diskim»da, umumiy diskdagi papka kerak: xizmat hisobining o'z joyi yo'q (1-qadam).",
+        "read_only": "Xizmat hisobi «{{folder}}» papkasiga fayl qo'sha olmaydi: unga «Kontent menejeri» rolini bering (4-qadam).",
+        "network": "Google javob bermadi: server aloqasi muammosi. Keyinroq takrorlang; o'tmasa — xostingga xabar bering."
+      },
+      "steps": {
+        "title": "Google'da tayyorlash (bir marta, ≈ 15 daqiqa)",
+        "drive": "Umumiy disk va unda nusxalar uchun papka yarating.",
+        "driveLink": "Umumiy disklar",
+        "api": "Google Cloud'da loyiha tanlang yoki yarating va Google Drive API ni yoqing.",
+        "apiLink": "Google Drive API",
+        "account": "Xizmat hisobini yarating (loyiha rollari kerak emas) va uning JSON kalitini yuklab oling: Keys → Add key → JSON.",
+        "accountLink": "Xizmat hisoblari",
+        "share": "Papkada xizmat hisobi manziliga «Kontent menejeri» roli bilan kirish bering, bildirishnomani o'chiring."
+      },
+      "form": {
+        "title": "Kalit va papka",
+        "submit": "Saqlash va tekshirish",
+        "step1": "Kalit shifrlangan holda saqlanadi; faqat hisob manzili va kalitning oxirgi belgilari ko'rinadi.",
+        "step2": "Kalit va papka nusxalash xizmatiga uzatiladi — birinchi nusxa bir necha daqiqada boshlanadi.",
+        "step3": "Saqlangandan so'ng darhol Google'da papkaga kirish tekshiriladi; o'zgarish amallar jurnaliga yoziladi.",
+        "key": "Xizmat hisobi kaliti (JSON fayl)",
+        "keyHint": "3-qadamda yuklab olingan fayl. Shifrlangan holda saqlanadi va ko'rsatilmaydi.",
+        "keyKeepHint": "Avvalgi kalitni qoldirish uchun fayl tanlamang.",
+        "keyChosen": "{{name}} tanlandi: xizmat hisobi {{email}}.",
+        "keyTooBig": "Fayl xizmat hisobi kaliti uchun juda katta.",
+        "keyNotServiceAccount": "Bu Google xizmat hisobi kaliti emas: \"type\": \"service_account\" bo'lgan JSON kerak.",
+        "folder": "Umumiy disk papkasi ID si",
+        "folderHint": "Papka manzilining /folders/ dan keyingi qismi — yoki manzilni to'liq qo'ying."
+      }
+    },
     "files": {
       "title": "Fayllar saqlanishi",
       "none": "Fayllar saqlanishi xizmatlar reyestrida topilmadi."
@@ -515,6 +564,10 @@
       "api_base": "API manzili noto'g'ri: u http:// yoki https:// bilan boshlanib, probelsiz bo'lishi kerak."
     },
     "reasons": {
+      "offsite_key_invalid": "Fayl Google xizmat hisobi kaliti emas. JSON kalitni qayta yuklab oling (3-qadam).",
+      "offsite_folder_invalid": "Papka ID si noto'g'ri: manzilning /folders/ dan keyingi qismi kerak.",
+      "offsite_delivery_failed": "Kalitni nusxalash xizmatiga uzatib bo'lmadi (ombor javob bermadi). Hech narsa saqlanmadi — keyinroq takrorlang.",
+      "offsite_not_configured": "Tashqi nusxa hali sozlanmagan: kalitni yuklang va papkani kiriting.",
       "erp_not_configured": "ERP hali ulanmagan.",
       "erp_invalid_url": "ERP manzili noto‘g‘ri kiritilgan.",
       "erp_https_required": "Ish muhitida ERP manzili https bilan boshlanishi kerak.",

@@ -39,6 +39,7 @@ READS: tuple[tuple[str, str], ...] = (
     (f"{BASE}/telegram/channels", "/admin/integrations/telegram/channels"),
     (f"{BASE}/telegram/profile", "/admin/integrations/telegram/profile"),
     (f"{BASE}/smtp", "/admin/integrations/smtp"),
+    (f"{BASE}/offsite", "/admin/integrations/offsite"),
     (f"{BASE}/smtp/log", "/admin/integrations/smtp/log"),
     (f"{BASE}/services", "/admin/integrations/services"),
     (f"{BASE}/services/telegram", "/admin/integrations/services/{key}"),
@@ -88,6 +89,13 @@ WRITES: tuple[tuple[str, str, str, dict[str, Any] | None], ...] = (
         {"host": "smtp.demo.example", "password": PASSWORD},
     ),
     ("POST", f"{BASE}/smtp/check", "/admin/integrations/smtp/check", None),
+    (
+        "PUT",
+        f"{BASE}/offsite",
+        "/admin/integrations/offsite",
+        {"folder_id": "0AbCdEfGhIjKlMnOpQrStUvWxYz", "password": PASSWORD},
+    ),
+    ("POST", f"{BASE}/offsite/check", "/admin/integrations/offsite/check", None),
     ("POST", f"{BASE}/smtp/test-send", "/admin/integrations/smtp/test-send", None),
     ("POST", f"{BASE}/services/mail/check", "/admin/integrations/services/{key}/check", None),
     (
@@ -1066,3 +1074,96 @@ async def test_network_failure_on_probe_is_crm_unavailable(
     assert response.status_code == 503
     check(response, "/admin/integrations/erp/check", "post")
     assert response.json()["code"] == "BACKEND_UNAVAILABLE"
+
+
+async def test_offsite_key_goes_to_crm_only_and_never_comes_back(
+    web: Web, crm: CrmIntegrationsFake, check: ContractChecker
+) -> None:
+    """OPS-GDRIVE-2: ключ сервисного аккаунта — только на запись; в ответе — адрес и 4 символа."""
+    await web.login(["ADMIN"])
+    private = fresh_secret("pk", 24)
+    key_json = (
+        '{"type": "service_account", "client_email": "rt@x.iam.gserviceaccount.com", '
+        f'"private_key_id": "abcd1a2b", "private_key": "{private}"}}'
+    )
+
+    response = await web.send(
+        "PUT",
+        f"{BASE}/offsite",
+        json={
+            "key_json": key_json,
+            "folder_id": " 0AbCdEfGhIjKlMnOpQrStUvWxYz ",
+            "password": PASSWORD,
+        },
+    )
+
+    assert response.status_code == 200
+    check(response, "/admin/integrations/offsite", "put")
+    assert crm.body("PUT", "integrations/offsite") == {
+        "key_json": key_json,
+        "folder_id": "0AbCdEfGhIjKlMnOpQrStUvWxYz",
+        "password": PASSWORD,
+    }
+    assert private not in response.text
+    assert PASSWORD not in response.text
+    assert response.json()["key_suffix"] == "1a2b"
+    read = await web.client.get(f"{BASE}/offsite")
+    check(read, "/admin/integrations/offsite", "get")
+    assert "private_key" not in read.text
+
+
+async def test_offsite_keeps_key_when_not_sent_and_check_passes_reason(
+    web: Web, crm: CrmIntegrationsFake, check: ContractChecker
+) -> None:
+    await web.login(["ADMIN"])
+    saved = await web.send(
+        "PUT",
+        f"{BASE}/offsite",
+        json={"folder_id": "0AbCdEfGhIjKlMnOpQrStUvWxYz", "password": PASSWORD},
+    )
+    assert saved.status_code == 200
+    assert crm.body("PUT", "integrations/offsite")["key_json"] is None
+
+    checked = await web.send("POST", f"{BASE}/offsite/check")
+    assert checked.status_code == 200
+    check(checked, "/admin/integrations/offsite/check", "post")
+    assert (checked.json()["ok"], checked.json()["reason"]) == (False, "not_shared_drive")
+
+
+async def test_offsite_errors_are_translated(
+    web: Web, crm: CrmIntegrationsFake, check: ContractChecker
+) -> None:
+    await web.login(["ADMIN"])
+    crm.answer(
+        "POST",
+        "integrations/offsite/check",
+        409,
+        {"code": "conflict", "message": "x", "details": {"reason": "offsite_not_configured"}},
+    )
+    missing = await web.send("POST", f"{BASE}/offsite/check")
+    assert (missing.status_code, missing.json()["code"]) == (409, "NOT_CONFIGURED")
+    check(missing, "/admin/integrations/offsite/check", "post")
+
+    crm.answer(
+        "PUT",
+        "integrations/offsite",
+        422,
+        {
+            "code": "validation_failed",
+            "message": "x",
+            "details": {
+                "reason": "offsite_key_invalid",
+                "field": "key_json",
+                "problem": "not_json",
+            },
+        },
+    )
+    invalid = await web.send(
+        "PUT",
+        f"{BASE}/offsite",
+        json={"key_json": "x", "folder_id": "f" * 20, "password": PASSWORD},
+    )
+    assert invalid.status_code == 422
+    check(invalid, "/admin/integrations/offsite", "put")
+    assert invalid.json()["details"]["reason"] == "offsite_key_invalid"
+    assert invalid.json()["details"]["fields"] == ["key_json"]

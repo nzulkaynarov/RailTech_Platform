@@ -12,8 +12,10 @@
 #   - Полоса ограничена ($OFFSITE_BWLIMIT), повторы и тайм-ауты rclone; выборка больше квоты $OFFSITE_MAX_GB не выгружается.
 #   - Итог каждой попытки — status.json в бакете `offsite` RustFS (время, объём, итог, причина). Его читает CRM для строки
 #     «Внешняя копия бэкапов» (ключ CRM — только чтение бакета `offsite`: ни архива, ни Drive CRM не видит).
-#   - Нет ключа сервисного аккаунта или ID папки — не ошибка: итог not_configured, повторная проверка раз в 10 минут; положенный
-#     ключ подхватывается без перезапуска (ID папки — переменная окружения: после правки .env.prod — infra/deploy/offsite-check.sh).
+#   - Ключ сервисного аккаунта и ID папки задаются в интерфейсе (OPS-GDRIVE-2: Admin → Подключения → «Хранилище» → «Внешняя копия
+#     бэкапов»): CRM кладёт их в бакет `offsite-config` (у CRM там только запись, у offsite — только чтение), сервис забирает их раз
+#     в минуту и после смены сразу копирует. Аварийный путь — файл /secrets/gdrive-sa.json и OFFSITE_GDRIVE_FOLDER_ID: если заданы,
+#     они сильнее настройки из интерфейса. Нет ни того ни другого — не ошибка: итог not_configured, проверка раз в 10 минут.
 # Запуск: gdrive-sync.sh [--daemon | --now | --probe | --health]. Журнал — JSON-строки в stdout; ключи, секреты и ID папки в журнал и в
 # status.json не попадают.
 set -eu
@@ -25,9 +27,14 @@ PREFIX="${OFFSITE_WAL_PREFIX:-pg17}"
 SRC="${OFFSITE_SRC:-rustfs:${OFFSITE_WAL_BUCKET:-wal}/$PREFIX}"
 DST="${OFFSITE_DST:-gdrive:$PREFIX}"
 STATUS_DST="${OFFSITE_STATUS_DST:-rustfs:${OFFSITE_STATUS_BUCKET:-offsite}/status.json}"
-SA="${OFFSITE_GDRIVE_SA_FILE:-/secrets/gdrive-sa.json}"
-SA_HOST="${OFFSITE_SA_HOST_PATH:-$SA}"
-FOLDER="${OFFSITE_GDRIVE_FOLDER_ID:-}"
+# Аварийный путь (файл на сервере и переменная .env.prod) и настройка из интерфейса (бакет offsite-config, OPS-GDRIVE-2).
+SA_FILE="${OFFSITE_GDRIVE_SA_FILE:-/secrets/gdrive-sa.json}"
+SA_HOST="${OFFSITE_SA_HOST_PATH:-$SA_FILE}"
+ENV_FOLDER="${OFFSITE_GDRIVE_FOLDER_ID:-}"
+CFG_SRC="${OFFSITE_CONFIG_SRC:-rustfs:${OFFSITE_CONFIG_BUCKET:-offsite-config}}"
+CFG_DIR="$STATE/config"
+SA="$SA_FILE"
+FOLDER="$ENV_FOLDER"
 KEEP_DAYS="${OFFSITE_KEEP_DAYS:-14}"
 MAX_GB="${OFFSITE_MAX_GB:-100}"
 BWLIMIT="${OFFSITE_BWLIMIT:-2M}"
@@ -136,9 +143,9 @@ last_error() { grep -E 'ERROR|CRITICAL|Failed' "$1" 2>/dev/null | tail -n 1 || t
 
 message_of() { # <причина>
   case "$1" in
-    no_key) echo "Нет ключа сервисного аккаунта Google: файл $SA_HOST не найден или пуст" ;;
-    bad_key) echo "Файл $SA_HOST — не ключ сервисного аккаунта Google (нужен JSON с type service_account)" ;;
-    no_folder) echo "Не задан ID папки общего диска: OFFSITE_GDRIVE_FOLDER_ID в .env.prod" ;;
+    no_key) echo "Нет ключа сервисного аккаунта Google: загрузите его в Платформе (Admin → Подключения → «Хранилище» → «Внешняя копия бэкапов»)" ;;
+    bad_key) echo "Ключ сервисного аккаунта не принят (нужен JSON с type service_account): загрузите его заново в Платформе; аварийный файл — $SA_HOST" ;;
+    no_folder) echo "Не задан ID папки общего диска: укажите его в Платформе (Admin → Подключения → «Хранилище» → «Внешняя копия бэкапов»)" ;;
     access) echo "Google Drive отказал в доступе: ключ отозван, папка не найдена или у сервисного аккаунта нет роли «Менеджер контента»" ;;
     not_shared_drive) echo "Папка не на общем диске: у сервисного аккаунта нет своего места, нужна папка общего диска (Shared Drive)" ;;
     quota) echo "Нет места: квота общего диска Google или предел $MAX_GB ГБ копии" ;;
@@ -175,6 +182,29 @@ write_status() { # <итог ok|fail|not_configured> <причина> [техн�
   fi
 }
 
+# Настройка из интерфейса: объекты бакета offsite-config (gdrive-sa.json, settings.json) копируются в том состояния, когда меняются
+# (отметка — список объектов с размером и временем). Новая настройка — копирование сразу (файл force). Хранилище не ответило —
+# остаётся прежняя копия настройки. Аварийный путь сильнее: файл ключа на сервере, ID папки в переменной окружения.
+load_config() {
+  stamp="$(rcl lsf --format tsp --separator ';' "$CFG_SRC" 2>/dev/null | grep -E ';(gdrive-sa|settings)\.json$' | sort | tr '\n' ' ' || true)"
+  if [ -n "$stamp" ] && [ "$stamp" != "$(cat "$STATE/config_stamp" 2>/dev/null || true)" ]; then
+    mkdir -p "$CFG_DIR"; chmod 700 "$CFG_DIR"
+    if rcl copyto "$CFG_SRC/gdrive-sa.json" "$CFG_DIR/gdrive-sa.json.new" 2>/dev/null \
+      && rcl copyto "$CFG_SRC/settings.json" "$CFG_DIR/settings.json" 2>/dev/null; then
+      chmod 600 "$CFG_DIR/gdrive-sa.json.new"; mv "$CFG_DIR/gdrive-sa.json.new" "$CFG_DIR/gdrive-sa.json"
+      sed -n 's/.*"folder_id"[[:space:]]*:[[:space:]]*"\([A-Za-z0-9_-]*\)".*/\1/p' "$CFG_DIR/settings.json" | head -n 1 > "$CFG_DIR/folder_id"
+      printf '%s' "$stamp" > "$STATE/config_stamp"
+      : > "$STATE/force"
+      log "offsite_config_loaded"
+    else
+      rm -f "$CFG_DIR/gdrive-sa.json.new"
+    fi
+  fi
+  if [ -s "$SA_FILE" ]; then SA="$SA_FILE"; else SA="$CFG_DIR/gdrive-sa.json"; fi
+  if [ -n "$ENV_FOLDER" ]; then FOLDER="$ENV_FOLDER"; else FOLDER="$(cat "$CFG_DIR/folder_id" 2>/dev/null || true)"; fi
+  export RCLONE_CONFIG_GDRIVE_SERVICE_ACCOUNT_FILE="$SA" RCLONE_CONFIG_GDRIVE_ROOT_FOLDER_ID="$FOLDER"
+}
+
 config_problem() { # пусто — настроено, иначе причина
   if [ ! -s "$SA" ] || [ ! -r "$SA" ]; then echo no_key; return; fi
   if ! grep -q '"type"[[:space:]]*:[[:space:]]*"service_account"' "$SA" || ! grep -q '"private_key"' "$SA"; then echo bad_key; return; fi
@@ -191,6 +221,8 @@ fail_run() { # <причина> [журнал]
 }
 
 run_once() {
+  load_config
+  rm -f "$STATE/force"
   problem="$(config_problem)"
   if [ -n "$problem" ]; then
     log "offsite_not_configured" ",\"reason\":\"$problem\""
@@ -285,6 +317,7 @@ recover_marker() {
 }
 
 due() {
+  [ ! -e "$STATE/force" ] || return 0
   t="$(now)"; last_try="$(marker last_attempt)"; last_ok="$(marker last_success)"
   result="$(cat "$STATE/last_result" 2>/dev/null || echo none)"
   if [ "$result" = not_configured ]; then [ $((t - last_try)) -ge "$NOT_CONFIGURED_EVERY_S" ]; return; fi
@@ -314,6 +347,7 @@ daemon() {
   recover_marker
   while true; do
     mark heartbeat "$(now)"
+    load_config
     if due; then locked_run || true; fi
     sleep 60 &
     wait $! || true
@@ -322,6 +356,7 @@ daemon() {
 
 # Диагностика связи и доступа (runbook offsite-gdrive.md, раздел 3): список папки на Drive и бакета архива, без копирования.
 probe() {
+  load_config
   problem="$(config_problem)"
   if [ -n "$problem" ]; then echo "не настроено: $(message_of "$problem")"; return 3; fi
   work="$(mktemp -d)"; rc=0

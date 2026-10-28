@@ -42,7 +42,13 @@ NOT_SWITCHABLE_MESSAGE = "У этого сервиса нет выключате
 INTEGRATION_FAILED_MESSAGE = "Проверка не прошла: сервис не ответил или отказал."
 
 _NOT_CONFIGURED = frozenset(
-    {"erp_not_configured", "smtp_not_configured", "bot_not_configured", "channel_not_configured"}
+    {
+        "erp_not_configured",
+        "smtp_not_configured",
+        "bot_not_configured",
+        "channel_not_configured",
+        "offsite_not_configured",
+    }
 )
 # Поле CRM -> поле контракта (`details.fields`).
 _FIELDS = {"base_url": "base_url", "code": "code", "host": "host", "from_email": "from_email"}

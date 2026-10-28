@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Включение и проверка внешней копии архива на Google Drive (OPS-GDRIVE; docs/runbooks/offsite-gdrive.md). VPS 1, от deploy:
+# АВАРИЙНЫЙ путь включения внешней копии на Google Drive — ключ на сервере (OPS-GDRIVE; docs/runbooks/offsite-gdrive.md, раздел 1а).
+# Основной путь — интерфейс: Admin → Подключения → «Хранилище» → «Внешняя копия бэкапов» (OPS-GDRIVE-2). VPS 1, от deploy:
 #   /opt/rt/current/infra/deploy/offsite-check.sh
 # 1. Проверяет ключ сервисного аккаунта ($RT_SECRETS_DIR/gdrive-sa.json): есть, chmod 600, владелец — текущий пользователь, это ключ
 #    сервисного аккаунта Google (печатает только адрес аккаунта — ему владелец даёт доступ к папке; сам ключ не печатается).

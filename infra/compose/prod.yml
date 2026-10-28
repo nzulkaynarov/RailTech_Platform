@@ -128,6 +128,8 @@ services:
       # Тот же каталог архива, что у WAL-G на VPS 2 и у строки CRM «Архив WAL» (по умолчанию pg17).
       OFFSITE_WAL_PREFIX: ${WAL_S3_PREFIX:-pg17}
       OFFSITE_STATUS_BUCKET: offsite
+      # Ключ и ID папки из интерфейса (OPS-GDRIVE-2): CRM пишет, сервис читает раз в минуту.
+      OFFSITE_CONFIG_BUCKET: offsite-config
       OFFSITE_GDRIVE_SA_FILE: /secrets/gdrive-sa.json
       OFFSITE_SA_HOST_PATH: ${RT_SECRETS_DIR:-/opt/rt/secrets}/gdrive-sa.json
       OFFSITE_GDRIVE_FOLDER_ID: ${OFFSITE_GDRIVE_FOLDER_ID:-}

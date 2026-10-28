@@ -185,6 +185,9 @@ import type {
   NumberingPreviewIn,
   NumberingScheme,
   NumberingUpdate,
+  OffsiteBackup,
+  OffsiteBackupIn,
+  OffsiteCheck,
   PasswordConfirm,
   PlatformSettings,
   PlatformSettingsUpdate,
@@ -8530,6 +8533,349 @@ export const useSaveBotProfile = <
   TContext
 > => {
   return useMutation(getSaveBotProfileMutationOptions(options), queryClient);
+};
+
+export const getGetOffsiteBackupUrl = () => {
+  return `/api/v1/admin/integrations/offsite`;
+};
+
+/**
+ * CRM `GET /integrations/offsite` (OPS-GDRIVE-2). Ключ сервисного аккаунта не возвращается — только адрес аккаунта и `key_suffix` (последние 4 символа ID ключа); `delivered_at` — когда ключ и папка ушли сервису копирования; `last_check` — итог последней проверки. Состояние самой копии — строка `offsite_backup` в `/admin/integrations/services`.
+ * @summary Внешняя копия бэкапов (Google Drive): папка, сервисный аккаунт, ключ — маска
+ */
+export const getOffsiteBackup = async (
+  options?: Parameters<typeof http>[1],
+): Promise<OffsiteBackup> => {
+  return http<OffsiteBackup>(getGetOffsiteBackupUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetOffsiteBackupQueryKey = () => {
+  return [`/api/v1/admin/integrations/offsite`] as const;
+};
+
+export const getGetOffsiteBackupQueryOptions = <
+  TData = Awaited<ReturnType<typeof getOffsiteBackup>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(options?: {
+  query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getOffsiteBackup>>, TError, TData>>;
+  request?: SecondParameter<typeof http>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetOffsiteBackupQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getOffsiteBackup>>> = ({ signal }) =>
+    getOffsiteBackup({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getOffsiteBackup>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type GetOffsiteBackupQueryResult = NonNullable<Awaited<ReturnType<typeof getOffsiteBackup>>>;
+export type GetOffsiteBackupQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse
+>;
+
+export function useGetOffsiteBackup<
+  TData = Awaited<ReturnType<typeof getOffsiteBackup>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof getOffsiteBackup>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getOffsiteBackup>>,
+          TError,
+          Awaited<ReturnType<typeof getOffsiteBackup>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetOffsiteBackup<
+  TData = Awaited<ReturnType<typeof getOffsiteBackup>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getOffsiteBackup>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getOffsiteBackup>>,
+          TError,
+          Awaited<ReturnType<typeof getOffsiteBackup>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useGetOffsiteBackup<
+  TData = Awaited<ReturnType<typeof getOffsiteBackup>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getOffsiteBackup>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Внешняя копия бэкапов (Google Drive): папка, сервисный аккаунт, ключ — маска
+ */
+
+export function useGetOffsiteBackup<
+  TData = Awaited<ReturnType<typeof getOffsiteBackup>>,
+  TError = ErrorType<SessionExpiredResponse | ForbiddenResponse | BackendUnavailableResponse>,
+>(
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getOffsiteBackup>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getGetOffsiteBackupQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getSaveOffsiteBackupUrl = () => {
+  return `/api/v1/admin/integrations/offsite`;
+};
+
+/**
+ * CRM `PUT /integrations/offsite`. `key_json` — содержимое JSON-ключа сервисного аккаунта Google (`null` — оставить прежний), `folder_id` — ID папки общего диска или её адрес, `password` — пароль администратора. Ключ хранится зашифрованным и доставляется сервису копирования без захода на сервер. `INTEGRATION_INVALID` (422) — `details.reason`: `offsite_key_invalid` (`details.fields = [key_json]`), `offsite_folder_invalid` (`[folder_id]`); `INTEGRATION_FAILED` (502) — `offsite_delivery_failed` (хранилище недоступно, ничего не сохранено).
+ * @summary Сохранить ключ сервисного аккаунта и папку и сразу проверить у Google
+ */
+export const saveOffsiteBackup = async (
+  offsiteBackupIn: OffsiteBackupIn,
+  options?: Parameters<typeof http>[1],
+): Promise<OffsiteBackup> => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(
+          h as Iterable<Iterable<string>>,
+          (entry) => Array.from(entry) as [string, string],
+        ),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+  return http<OffsiteBackup>(getSaveOffsiteBackupUrl(), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...getHeaders(options?.headers) },
+    body: JSON.stringify(offsiteBackupIn),
+  });
+};
+
+export const getSaveOffsiteBackupMutationKey = () => ["saveOffsiteBackup"] as const;
+
+export const getSaveOffsiteBackupMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | IntegrationConflictResponse
+    | IntegrationInvalidResponse
+    | AccountLockedResponse
+    | TooManyRequestsResponse
+    | IntegrationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof saveOffsiteBackup>>,
+    TError,
+    SaveOffsiteBackupMutationVariables,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof saveOffsiteBackup>>,
+  TError,
+  SaveOffsiteBackupMutationVariables,
+  TContext
+> => {
+  const mutationKey = getSaveOffsiteBackupMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof saveOffsiteBackup>>,
+    SaveOffsiteBackupMutationVariables
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return saveOffsiteBackup(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SaveOffsiteBackupMutationResult = NonNullable<
+  Awaited<ReturnType<typeof saveOffsiteBackup>>
+>;
+export type SaveOffsiteBackupMutationBody = OffsiteBackupIn;
+export type SaveOffsiteBackupMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | IntegrationConflictResponse
+  | IntegrationInvalidResponse
+  | AccountLockedResponse
+  | TooManyRequestsResponse
+  | IntegrationFailedResponse
+  | BackendUnavailableResponse
+>;
+export type SaveOffsiteBackupMutationVariables = { data: OffsiteBackupIn };
+
+/**
+ * @summary Сохранить ключ сервисного аккаунта и папку и сразу проверить у Google
+ */
+export const useSaveOffsiteBackup = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | IntegrationConflictResponse
+    | IntegrationInvalidResponse
+    | AccountLockedResponse
+    | TooManyRequestsResponse
+    | IntegrationFailedResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof saveOffsiteBackup>>,
+      TError,
+      SaveOffsiteBackupMutationVariables,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<typeof saveOffsiteBackup>>,
+  TError,
+  SaveOffsiteBackupMutationVariables,
+  TContext
+> => {
+  return useMutation(getSaveOffsiteBackupMutationOptions(options), queryClient);
+};
+
+export const getCheckOffsiteBackupUrl = () => {
+  return `/api/v1/admin/integrations/offsite/check`;
+};
+
+/**
+ * CRM `POST /integrations/offsite/check`: токен сервисного аккаунта, папка, общий ли диск, можно ли добавлять файлы. Ничего не пишет на Drive. Итог — 200 с `reason`; `NOT_CONFIGURED` (409) — ключа или папки ещё нет.
+ * @summary Проверить ключ и папку у Google
+ */
+export const checkOffsiteBackup = async (
+  options?: Parameters<typeof http>[1],
+): Promise<OffsiteCheck> => {
+  return http<OffsiteCheck>(getCheckOffsiteBackupUrl(), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getCheckOffsiteBackupMutationKey = () => ["checkOffsiteBackup"] as const;
+
+export const getCheckOffsiteBackupMutationOptions = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | IntegrationConflictResponse
+    | TooManyRequestsResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof checkOffsiteBackup>>,
+    TError,
+    void,
+    TContext
+  >;
+  request?: SecondParameter<typeof http>;
+}): UseMutationOptions<Awaited<ReturnType<typeof checkOffsiteBackup>>, TError, void, TContext> => {
+  const mutationKey = getCheckOffsiteBackupMutationKey();
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && "mutationKey" in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<Awaited<ReturnType<typeof checkOffsiteBackup>>, void> = () => {
+    return checkOffsiteBackup(requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CheckOffsiteBackupMutationResult = NonNullable<
+  Awaited<ReturnType<typeof checkOffsiteBackup>>
+>;
+
+export type CheckOffsiteBackupMutationError = ErrorType<
+  | SessionExpiredResponse
+  | ForbiddenResponse
+  | IntegrationConflictResponse
+  | TooManyRequestsResponse
+  | BackendUnavailableResponse
+>;
+
+/**
+ * @summary Проверить ключ и папку у Google
+ */
+export const useCheckOffsiteBackup = <
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | IntegrationConflictResponse
+    | TooManyRequestsResponse
+    | BackendUnavailableResponse
+  >,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof checkOffsiteBackup>>,
+      TError,
+      void,
+      TContext
+    >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<Awaited<ReturnType<typeof checkOffsiteBackup>>, TError, void, TContext> => {
+  return useMutation(getCheckOffsiteBackupMutationOptions(options), queryClient);
 };
 
 export const getGetSmtpConnectorUrl = () => {
