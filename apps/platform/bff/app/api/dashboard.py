@@ -25,7 +25,7 @@ async def get_menu_counters(authed: QueueAuthed) -> MenuCounters:
     feed = Feed(authed)
     view = roles_of_view(authed, None)
     snap = await load_snapshot(
-        feed, view, inbox=True, approvals=True, deals=wants_projects(view), eds=True
+        feed, view, inbox=True, approvals=True, deals=wants_projects(view), eds=True, tickets=True
     )
     items = queue.build_queue(feed, view, snap)
     return MenuCounters(items=queue.build_counters(view, snap, items), sources=feed.sources)
@@ -38,7 +38,7 @@ async def get_queue(authed: QueueAuthed, role: RoleParam = None) -> Queue:
     feed = Feed(authed)
     view = roles_of_view(authed, role)
     snap = await load_snapshot(
-        feed, view, inbox=True, approvals=True, deals=wants_approvals(view), eds=True
+        feed, view, inbox=True, approvals=True, deals=wants_approvals(view), eds=True, tickets=True
     )
     return Queue(items=queue.build_queue(feed, view, snap), sources=feed.sources)
 
@@ -59,6 +59,7 @@ async def get_queue_cards(authed: QueueAuthed, role: RoleParam = None) -> QueueC
         approvals=True,
         deals=wants_projects(view) or wants_approvals(view),
         eds=True,
+        tickets=True,
     )
     items = queue.build_queue(feed, view, snap)
     return QueueCards(cards=queue.build_cards(view, snap, items), sources=feed.sources)

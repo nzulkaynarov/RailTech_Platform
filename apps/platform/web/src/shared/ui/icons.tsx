@@ -103,6 +103,16 @@ export function BellIcon() {
   );
 }
 
+export function HelpIcon() {
+  return (
+    <Icon size={20}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M9.6 9.4a2.5 2.5 0 0 1 4.8.9c0 1.6-2.4 2-2.4 3.5" />
+      <path d="M12 17.2h.01" />
+    </Icon>
+  );
+}
+
 export function PanelIcon() {
   return (
     <Icon size={16} stroke={1.8}>
