@@ -61,12 +61,6 @@ const erp = (path: string, where: string, object?: LegacyTarget["object"]): Lega
   ...(object ? { object } : {}),
 });
 
-/** `L-2041` -> `/leads/2041`: в старой CRM лид открывается по числовому id, номер лида — `L-<id>`. */
-const leadPath = (objectId: string) => {
-  const hit = /^L-(\d+)$/.exec(objectId);
-  // BFF форматирует номер как `L-{id:04d}`: ведущие нули в старом адресе не нужны.
-  return hit ? `/leads/${String(Number(hit[1]))}` : undefined;
-};
 const numericPath = (prefix: string) => (objectId: string) =>
   /^\d+$/.test(objectId) ? `${prefix}${objectId}` : undefined;
 
@@ -79,18 +73,7 @@ export const BRIDGE: Readonly<Record<string, BridgeEntry>> = {
   },
   "dashboard.summary": { legacy: crm("/dashboard", "crmDashboard"), when: "pilot" },
 
-  "crm.leads": {
-    legacy: crm("/leads", "crmLeads", leadPath),
-    when: "soon",
-    legacyCount: true,
-    objectKind: "lead",
-  },
-  "crm.clients": {
-    legacy: crm("/clients", "crmClients", numericPath("/clients/")),
-    when: "soon",
-    legacyCount: true,
-    objectKind: "client",
-  },
+  // «Лиды» и «Клиенты» — настоящие экраны (D1-2b), записей моста у них нет.
   "crm.requests": {
     legacy: erp("#crm-deals", "erpDeals", numericPath("#request-detail/")),
     when: "pilot",
@@ -140,6 +123,8 @@ export const BRIDGE: Readonly<Record<string, BridgeEntry>> = {
 export const NATIVE_SECTIONS: readonly string[] = [
   "dashboard.queue",
   "crm.messages",
+  "crm.leads",
+  "crm.clients",
   "crm.kb",
   "eds.documents",
   "eds.new",
@@ -162,7 +147,6 @@ export const NATIVE_SECTIONS: readonly string[] = [
 
 /** Главные действия модулей без экрана (кнопка внизу подменю неактивна): когда появятся. Остальных модулей это не касается. */
 export const MODULE_ACTION_WHEN: Readonly<Partial<Record<ModuleCode, When>>> = {
-  crm: "soon",
   eds: "soon",
   erp: "pilot",
   chats: "pilot",

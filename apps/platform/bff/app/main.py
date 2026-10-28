@@ -21,8 +21,11 @@ from app.api import (
     auth,
     bridge,
     chats,
+    crm_clients,
     crm_kb,
+    crm_leads,
     crm_messages,
+    crm_requests,
     dashboard,
     eds_approvals,
     eds_documents,
@@ -114,6 +117,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(crm_kb.router, prefix=API_PREFIX)
     app.include_router(crm_messages.router, prefix=API_PREFIX)
     app.include_router(chats.router, prefix=API_PREFIX)
+    app.include_router(crm_leads.router, prefix=API_PREFIX)
+    app.include_router(crm_clients.router, prefix=API_PREFIX)
+    app.include_router(crm_requests.router, prefix=API_PREFIX)
     app.include_router(eds_documents.router, prefix=API_PREFIX)
     app.include_router(eds_letters.router, prefix=API_PREFIX)
     app.include_router(eds_approvals.router, prefix=API_PREFIX)

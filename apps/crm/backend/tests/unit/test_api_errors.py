@@ -270,4 +270,6 @@ def test_reason_values_are_a_stable_contract() -> None:
         "request_not_allowed",
         "request_key_reused",
         "erp_request_conflict",
+        "request_not_failed",
+        "request_not_retryable",
     }

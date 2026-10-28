@@ -337,6 +337,12 @@
   gap: 8px;
 }
 
+.pf-msg-file-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .pf-msg-file {
   font-size: 13px;
   border: 1px solid #d9d9d9;

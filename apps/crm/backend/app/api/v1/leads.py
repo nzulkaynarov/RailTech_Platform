@@ -171,9 +171,25 @@ async def list_leads(
     overdue: Annotated[
         bool | None, Query(description="Просроченные: открытая передача с истёкшим SLA ответа")
     ] = None,
+    source: Annotated[
+        str | None,
+        Query(
+            pattern=r"^[a-z][a-z_]{0,15}(,[a-z][a-z_]{0,15})*$",
+            description="Канал лида (источник), через запятую",
+        ),
+    ] = None,
 ) -> LeadPage:
     flt = crm.LeadFilter(
-        stage, owner, min_score, language, q, created_from, created_to, platform_status, overdue
+        stage,
+        owner,
+        min_score,
+        language,
+        q,
+        created_from,
+        created_to,
+        platform_status,
+        overdue,
+        source,
     )
     async with container.session_factory() as session:
         rows, total = await crm.list_leads(session, flt, who.user_id, limit, offset, sort)

@@ -656,7 +656,8 @@ ERP применяет события EDS (E5) — §10.6.
 
 Коды v1 (`EdsPermission`): `letters.read`, `letters.register`, `letters.resolve`, `memos.create`, `memos.approve`,
 `approvals.decide`, `registry.read`, `registry.export`, `payments.confirm` (решение архитектора: шаг «бухгалтер» служебной
-записки с суммой) и с eds.yaml 0.3.0 `bus.manage` — журнал шины EDS в Admin · Журнал интеграций (W13-A2). Перечень — в `eds.yaml` и схеме каталога; в событиях шины (`identity`, `eds`) код — строка по шаблону
+записки с суммой), с eds.yaml 0.3.0 `bus.manage` — журнал шины EDS в Admin · Журнал интеграций (W13-A2),
+`files.upload` (D1-2b) — загрузить свой файл и читать только свои файлы (письмо на имя директора к «Создать заявку», D1-2b). Перечень — в `eds.yaml` и схеме каталога; в событиях шины (`identity`, `eds`) код — строка по шаблону
 `^[a-z_]+\.[a-z_]+$`, не перечень, поэтому новый код не ломает события v1. CRM вычисляет их из ролей Платформы так же, как права ERP (объединение по
 разделам; `full` включает `read`), и публикует в `identity.user.*` как `user.permissions.eds`. Отображение (`platform-rbac.yaml`,
 `backend.eds`):
@@ -670,10 +671,11 @@ ERP применяет события EDS (E5) — §10.6.
 | `eds.memo.create` | — | `memos.create` |
 | `eds.memo.approve` | — | `memos.approve` |
 | `admin` | — | `bus.manage` (журнал шины, W13-A2) |
+| `crm.clients` | — | `files.upload` (свой файл — письмо директору к «Создать заявку»; чужой файл — 404, документов и реестра не открывает; D1-2b) |
 
-Итог по ролям (тест `packages/contracts/tests/test_platform_rbac.py`): «Директор» — все девять кодов документов (без
+Итог по ролям (тест `packages/contracts/tests/test_platform_rbac.py`): «Директор» — все коды документов и `files.upload` (без
 `bus.manage`: у директора `admin` — только чтение); «Менеджер» — `letters.read`,
-`registry.read`, `memos.create`; «Снабженец», «Гл. инженер» — `registry.read`, `memos.create`; «Бухгалтер» — `letters.read`,
+`registry.read`, `memos.create`, `files.upload`; «Снабженец», «Гл. инженер» — `registry.read`, `memos.create`; «Бухгалтер» — `letters.read`,
 `registry.read`, `registry.export`, `payments.confirm`, `memos.create`; «Менеджер и бухгалтер» гейта R-3 (лиды и «Счета и
 оплаты» — полный доступ) — `registry.read`, `registry.export`, `payments.confirm`; «Администратор» — `memos.create` (свои
 служебные записки; писем, реестра и маршрутов не видит — R3-D-2; допустимо, решено архитектором) и `bus.manage` (метаданные

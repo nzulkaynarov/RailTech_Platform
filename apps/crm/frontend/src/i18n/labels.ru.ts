@@ -138,6 +138,7 @@ export const labelsRu = {
     "client.create_request": "Создал заявку для клиента",
     "deal.erp_request_done": "Заявка передана в бэк-офис (ERP)",
     "deal.erp_request_failed": "Ошибка передачи заявки в ERP",
+    "deal.erp_request_retry": "Повторил отправку заявки в ERP",
     "client.erp_handoff_failed": "Передача клиента в бэк-офис (ERP) не удалась",
     "client.unlink_telegram": "Отвязал Telegram",
     "client.close_request": "Закрыл сервисный запрос",
