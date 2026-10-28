@@ -54,3 +54,15 @@ export function nextStep(checklist: SetupChecklist): SetupStep | undefined {
 export function needsSetup(checklist: SetupChecklist): boolean {
   return nextStep(checklist) !== undefined || checklist.company?.required === true;
 }
+
+/**
+ * После шага ERP мастер остаётся на «Ваша компания», пока компании нет (нужна форма) или ERP ещё не выдала доступ
+ * (данных о компании нет, `erp_unavailable`: ~12 с после сопряжения) — W15-G-10. Иначе он уходил к шагу «Telegram-бот»,
+ * и компания оставалась «Нет данных».
+ */
+export function staysOnCompany(checklist: SetupChecklist): boolean {
+  return (
+    checklist.company?.required === true ||
+    (checklist.company === null && checklist.company_blocker === "erp_unavailable")
+  );
+}
