@@ -47,6 +47,7 @@ CATALOG: Final[dict[str, tuple[str, ...]]] = {
     # Переписка с клиентами отдельно от реестра лидов (B-D18-1): только диалоги, где сотрудник
     # участвует или назначенные его зоне (`invoiced` — «Счета и оплаты»); `domain/chat_access`.
     "chats": ("read", "reply", "note", "assist", "invoiced"),
+    "company_articles": ("read", "write"),
 }
 
 

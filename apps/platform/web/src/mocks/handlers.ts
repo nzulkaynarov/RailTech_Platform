@@ -12,6 +12,7 @@ import { adminIntegrationsHandlers } from "./adminIntegrations";
 import { adminCompanyHandlers } from "./adminCompany";
 import { adminRolesHandlers } from "./adminRoles";
 import { botKbHandlers } from "./botKb";
+import { companyArticlesHandlers } from "./companyArticlesHandlers";
 import { crmLeadsHandlers } from "./crmLeads";
 import { crmMessagesHandlers } from "./crmMessages";
 import { edsApprovalsHandlers } from "./edsApprovals";
@@ -161,6 +162,7 @@ export const handlers = [
   ...crmLeadsHandlers,
   ...bridgeHandlers,
   ...ticketsHandlers,
+  ...companyArticlesHandlers,
   // Раньше «Создать документ»: вложения служебок к оплате (счёт поставщика, платёжка) отдаются здесь, остальное — дальше.
   ...edsPaymentsHandlers,
   ...edsDocumentsHandlers,

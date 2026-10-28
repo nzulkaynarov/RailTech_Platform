@@ -212,6 +212,7 @@ MENU: Final[dict[ModuleCode, dict[str, tuple[str, ...]]]] = {
         "org": ("admin",),
         "integrations": ("admin",),
         "tickets": ("admin",),
+        "articles": ("admin",),
         "company": ("company.settings",),
         "bot": ("admin",),
         "audit": ("admin",),
