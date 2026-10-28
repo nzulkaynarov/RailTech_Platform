@@ -253,7 +253,18 @@
  * Лимиты: вход — 10 неудачных попыток в минуту на IP и e-mail; «Забыли пароль?» — 5 запросов в час на IP и на адрес; остальные запросы — 300 в минуту на сессию; превышение — 429
  * `TOO_MANY_REQUESTS` с `Retry-After`.
  *
- * OpenAPI spec version: 0.25.0
+ * **0.26.0 (W16-D1-2b) — Клиенты · Лиды, Клиенты и «+ Создать заявку».** Добавляющее изменение (теги `leads`, `clients`,
+ * `requests`). `GET /crm/leads` (вкладки по статусу лида Платформы `platform_status` CRM-02, «мои / все / просроченные»,
+ * поиск, канал), `GET /crm/leads/{lead}` (карточка в боковом окне: контакты и каналы, согласие, факты квалификации, последние
+ * сообщения, подтверждение заявки, срок первого ответа, приглашение), `GET /crm/clients` и `GET /crm/clients/{id}` (карточка
+ * 360°: компания с ИНН, живые контакты с каналами, переписка, заявки и проекты с шагом из 7 и «что видит клиент», документы,
+ * приглашение в кабинет), `POST /crm/clients/{id}/invitation` («Отправить повторно другим каналом», D1-9),
+ * `POST /crm/requests` («Создать заявку» из лида или клиента: `request_key` формы — повтор 200 с той же заявкой),
+ * `POST /crm/requests/{deal}/retry` («Повторить отправку в ERP», B-082), `POST /crm/request-files` и
+ * `POST /crm/request-files/from-message` (письмо на имя директора — файл EDS, загружается до заявки). Лиды — раздел
+ * `crm.leads`, клиенты и заявки — `crm.clients`; изменения — уровень `full`.
+ *
+ * OpenAPI spec version: 0.26.0
  */
 
 export * from "./accessLevel";
@@ -355,6 +366,28 @@ export * from "./chargeTemplateUpdate";
 export * from "./chargeType";
 export * from "./chargeTypeList";
 export * from "./checklistCode";
+export * from "./clientCard";
+export * from "./clientCardHandoff";
+export * from "./clientCardHandoffStatus";
+export * from "./clientCardSources";
+export * from "./clientContactChannel";
+export * from "./clientContactView";
+export * from "./clientContactViewPreferredChannel";
+export * from "./clientDocumentRow";
+export * from "./clientDocumentRowType";
+export * from "./clientInvitation";
+export * from "./clientInvitationAvailableChannelsItem";
+export * from "./clientInvitationStatus";
+export * from "./clientInvitationSuggestedChannel";
+export * from "./clientLeadLink";
+export * from "./clientList";
+export * from "./clientRequestRow";
+export * from "./clientRequestRowTransfer";
+export * from "./clientRequestRowUrgency";
+export * from "./clientRow";
+export * from "./clientRowHandoffStatus";
+export * from "./clientSees";
+export * from "./clientShort";
 export * from "./colleague";
 export * from "./companyItemRef";
 export * from "./companyProfile";
@@ -483,6 +516,8 @@ export * from "./integrationsOverview";
 export * from "./integrationStatus";
 export * from "./invalidationHint";
 export * from "./invalidationTopic";
+export * from "./invitationResendIn";
+export * from "./invitationResendInChannel";
 export * from "./kbChunk";
 export * from "./kbChunkList";
 export * from "./kbDocument";
@@ -502,7 +537,18 @@ export * from "./kbSearchHit";
 export * from "./kbSearchIn";
 export * from "./kbSearchResult";
 export * from "./language";
+export * from "./leadCard";
+export * from "./leadCardConsent";
+export * from "./leadCardConsentMethod";
+export * from "./leadCardFirstResponse";
+export * from "./leadMessagePreview";
+export * from "./leadMessagePreviewAuthor";
+export * from "./leadNotice";
+export * from "./leadNoticeStatus";
 export * from "./leadOwnerMode";
+export * from "./leadPage";
+export * from "./leadPlatformStatus";
+export * from "./leadRow";
 export * from "./letterAssignee";
 export * from "./letterCard";
 export * from "./letterClient";
@@ -523,6 +569,10 @@ export * from "./listAuditParams";
 export * from "./listBusDeliveriesParams";
 export * from "./listBusInboxParams";
 export * from "./listCategoryRequestsParams";
+export * from "./listCrmClientsParams";
+export * from "./listCrmLeadsParams";
+export * from "./listCrmLeadsScope";
+export * from "./listCrmLeadsTab";
 export * from "./listEdsDealOptionsParams";
 export * from "./listEdsDocumentsParams";
 export * from "./listEdsDocumentsScope";
@@ -621,6 +671,18 @@ export * from "./replyIn";
 export * from "./replyTemplate";
 export * from "./replyTemplateIn";
 export * from "./replyTemplateList";
+export * from "./requestConflictResponse";
+export * from "./requestContactFormIn";
+export * from "./requestCreatedView";
+export * from "./requestCreatedViewTransfer";
+export * from "./requestFileFromMessageIn";
+export * from "./requestFormIn";
+export * from "./requestFormInCompany";
+export * from "./requestFormInConsent";
+export * from "./requestFormInConsentMethod";
+export * from "./requestFormInUrgency";
+export * from "./requestRetriedView";
+export * from "./requestRetriedViewTransfer";
 export * from "./resetPasswordIn";
 export * from "./resolutionAssigneeIn";
 export * from "./resolutionAssignees";
