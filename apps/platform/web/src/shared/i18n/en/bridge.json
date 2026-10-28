@@ -47,7 +47,6 @@
     "erpCalc": "“Сделки” → request card → quote calculation",
     "erpQuotes": "“Документы” → “Коммерческие предложения”",
     "erpDocuments": "“Документы” (quotes, contracts, invoices, acts)",
-    "erpPayments": "“Документы” → “Платежи”",
     "erpStock": "“Товары” → “Мои товары” (stock and lead time are on the product card)",
     "erpCatalog": "“Товары” → “Справочники”",
     "erpFiles": "“Документы” → “Файлы”"

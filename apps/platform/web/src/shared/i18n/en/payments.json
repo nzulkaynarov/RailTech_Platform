@@ -1,0 +1,430 @@
+{
+  "state": {
+    "retry": "Retry",
+    "loadError": {
+      "title": "Invoices did not load",
+      "text": "Could not get the data. Please try again."
+    },
+    "unavailable": {
+      "title": "The service is not responding",
+      "text": "ERP or document flow is temporarily unavailable. Nothing is lost — try again shortly."
+    },
+    "forbidden": {
+      "title": "No access",
+      "text": "The “Invoices & payments” section is not available to your role."
+    },
+    "erpForbidden": {
+      "title": "Customer invoices are not shown to you",
+      "text": "Money on invoices is visible to accounting and the director. Memos to pay on the neighbouring tab are available."
+    },
+    "notGranted": {
+      "title": "No access to document flow",
+      "text": "Your account has not been added to document flow yet. Contact the administrator."
+    },
+    "notFound": {
+      "title": "Invoice not found",
+      "text": "There is no such invoice or it is not visible to your role.",
+      "action": "Back to invoices"
+    },
+    "memoNotFound": {
+      "title": "Memo not found",
+      "text": "There is no such memo, it is not a memo, or it is not visible to your role.",
+      "action": "Back to memos to pay"
+    }
+  },
+  "list": {
+    "subtitle": "Customer invoices, payment orders to confirm and memos to pay.",
+    "tabsLabel": "Invoice and payment tabs",
+    "tabs": {
+      "to_issue": "To issue",
+      "awaiting": "Awaiting payment",
+      "proofs": "Payment orders to confirm",
+      "overdue": "Overdue",
+      "memos": "Memos to pay",
+      "all": "All invoices"
+    },
+    "search": {
+      "label": "Search by invoice number or customer",
+      "placeholder": "СЧ-2026/142 or customer"
+    },
+    "caption": "Invoices",
+    "scroll": "Invoices table",
+    "columns": {
+      "number": "Invoice and project",
+      "client": "Customer",
+      "amount": "Amount",
+      "issued": "Issued",
+      "due": "Due date",
+      "status": "Status",
+      "action": "Action"
+    },
+    "select": "Show invoice {{number}} in the side panel",
+    "open": "Open",
+    "more": "Show more",
+    "balance": "balance {{amount}}",
+    "overdueDays": "overdue by {{count}} d.",
+    "action": {
+      "confirm": "Confirm",
+      "review": "Check",
+      "open": "Open"
+    },
+    "empty": {
+      "to_issue": {
+        "title": "No invoices to issue",
+        "text": "The prepayment invoice appears here once the project contract is signed.",
+        "action": "Awaiting payment"
+      },
+      "awaiting": {
+        "title": "No invoices awaiting payment",
+        "text": "Issued invoices wait for payment here. See customer payment orders on the “Payment orders to confirm” tab.",
+        "action": "Payment orders to confirm"
+      },
+      "proofs": {
+        "title": "No payment orders to confirm",
+        "text": "A payment order appears here when you attach it to an invoice. The “I have paid” button in the customer cabinet and the bot will send them automatically once it is built.",
+        "action": "Awaiting payment"
+      },
+      "overdue": {
+        "title": "No overdue invoices",
+        "text": "An invoice lands here when its due date has passed and the money has not arrived.",
+        "action": "Awaiting payment"
+      },
+      "all": {
+        "title": "No invoices yet",
+        "text": "Invoices appear after project contracts are signed.",
+        "action": "Retry"
+      },
+      "search": {
+        "title": "Nothing found",
+        "text": "Check the invoice number or the customer name.",
+        "action": "Clear search"
+      }
+    },
+    "actionLabel": "{{action}}: {{number}}",
+    "actionName": {
+      "confirm": "Confirm payment",
+      "review": "Check payment order",
+      "open": "Open invoice card"
+    }
+  },
+  "status": {
+    "draft": "Not issued",
+    "cancelled": "Cancelled"
+  },
+  "brief": {
+    "client": "Customer",
+    "project": "Project",
+    "amount": "Invoice amount",
+    "paid": "Paid",
+    "balance": "Balance",
+    "issued": "Issued",
+    "due": "Due date",
+    "overdue": "Overdue"
+  },
+  "panel": {
+    "sheetLabel": "Invoice payment",
+    "sheetTitle": "Payment · {{number}}",
+    "sheetClose": "Close",
+    "open": "Open invoice card",
+    "readOnly": {
+      "title": "View only",
+      "text": "Payments are confirmed by the accountant. You can see payment orders and the invoice history."
+    },
+    "closed": {
+      "paid": {
+        "title": "Invoice paid",
+        "text": "The money is received and recorded. Payment history is below."
+      },
+      "draft": {
+        "title": "Invoice not issued yet",
+        "text": "A payment can only be confirmed for an issued invoice."
+      },
+      "cancelled": {
+        "title": "Invoice cancelled",
+        "text": "A cancelled invoice does not accept payment."
+      }
+    }
+  },
+  "proofs": {
+    "title": "Customer payment orders",
+    "none": "No payment order yet. Ask the customer to send it or attach the file if it came by email.",
+    "received": "Received {{date}}",
+    "byStaff": "attached by {{name}}",
+    "claimed": "Customer stated {{amount}} dated {{date}}",
+    "download": "Download payment order {{name}}",
+    "state": {
+      "PENDING": "Awaiting confirmation",
+      "CONFIRMED": "Payment confirmed"
+    },
+    "source": {
+      "CABINET": "Customer cabinet",
+      "BOT": "Telegram bot",
+      "EMAIL": "Email",
+      "MANUAL": "Attached by accountant"
+    },
+    "from": "From: {{source}}"
+  },
+  "attach": {
+    "toggle": "Attach payment order",
+    "form": "Customer payment order",
+    "file": {
+      "label": "Payment order file",
+      "hint": "PDF, image or Office document, up to 25 MB"
+    },
+    "source": {
+      "label": "Where it came from"
+    },
+    "note": {
+      "label": "Note",
+      "hint": "Optional"
+    },
+    "submit": "Attach",
+    "done": "Payment order attached",
+    "failed": "Not attached: {{reason}}",
+    "needFile": "Choose the payment order file.",
+    "reasons": {
+      "not_open": "the invoice no longer awaits payment, the card is refreshed",
+      "forbidden": "the action is not allowed for your role",
+      "too_large": "the file is larger than 25 MB",
+      "unsupported": "PDF, images and Office documents are allowed",
+      "unavailable": "the service is not responding, the file stayed in the form",
+      "unknown": "something went wrong, the file stayed in the form"
+    }
+  },
+  "confirm": {
+    "name": "Payment confirmation",
+    "proof": {
+      "label": "Customer payment order",
+      "none": "No payment order (by bank statement)"
+    },
+    "amount": {
+      "label": "Amount per bank statement",
+      "hint": "Invoice balance: {{balance}}. Less than the balance means a partial payment."
+    },
+    "date": {
+      "label": "Date received",
+      "hint": "Per bank statement, not later than today"
+    },
+    "reference": {
+      "label": "Bank operation number",
+      "hint": "Optional. Repeating the same number does not create a second payment."
+    },
+    "submit": "Confirm payment",
+    "submitPartial": "Confirm partial payment",
+    "partial": "Partial payment",
+    "partialHint": "Enter the amount received — it is less than the balance.",
+    "done": "Payment confirmed: {{amount}}",
+    "donePartial": "Partial payment confirmed: {{amount}}, balance {{rest}}",
+    "replayed": "This payment was already confirmed — nothing was recorded again.",
+    "consequence": {
+      "full": {
+        "step1": "Invoice {{number}} becomes “Paid”: {{amount}} received.",
+        "step2": "Project {{project}} moves to “Payment done” once all its invoices are paid.",
+        "step3": "The customer gets a payment message in Telegram — if the bot is on and the contact has connected it."
+      },
+      "partial": {
+        "step1": "Invoice {{number}} becomes “Partially paid”: {{amount}} received, balance {{rest}}.",
+        "step2": "The balance stays on “Awaiting payment” — confirm it when the money arrives.",
+        "step3": "The customer message about payment goes out once the invoice is fully paid."
+      }
+    },
+    "invalidAmount": "Enter an amount above zero, for example 1500000.00.",
+    "invalidDate": "Enter a received date not later than today.",
+    "failed": "Not saved: {{reason}}",
+    "reasons": {
+      "exceeds_balance": "the amount is above the invoice balance ({{balance}}), nothing was recorded",
+      "already_paid": "the invoice is already paid in full, the card is refreshed",
+      "not_issued": "the invoice is not issued yet",
+      "not_open": "the invoice no longer awaits payment, the card is refreshed",
+      "cancelled": "the invoice is cancelled",
+      "reference_conflict": "a payment with this operation number is already recorded with another amount or date",
+      "forbidden": "the action is not allowed for your role",
+      "unavailable": "the service is not responding, your input stayed in the form",
+      "validation": "check the amount and the date",
+      "not_found": "the payment order or invoice was not found, the card is refreshed",
+      "unknown": "something went wrong, your input stayed in the form"
+    }
+  },
+  "request": {
+    "toggle": "Request payment order",
+    "title": "Message to the customer",
+    "label": "Message text",
+    "template": "Hello! Please send the payment order for invoice {{number}} for {{amount}}. Due date: {{due}}. Thank you!",
+    "templateNoDue": "Hello! Please send the payment order for invoice {{number}} for {{amount}}. Thank you!",
+    "note": "There is no automatic sending to the customer’s bot or email yet: copy the text, send it in “Chats”, then mark the request.",
+    "copy": "Copy text",
+    "copied": "Text copied",
+    "copyFailed": "Could not copy — select the text by hand.",
+    "mark": "Mark: payment order requested",
+    "done": "Payment order request noted in the invoice log",
+    "requestedAt": "Payment order requested {{date}}",
+    "failed": "Not noted: {{reason}}"
+  },
+  "history": {
+    "title": "Invoice log",
+    "empty": "No log entries yet.",
+    "by": "{{name}}",
+    "code": {
+      "payment_recorded": "Payment confirmed",
+      "payment_doc_attached": "Customer payment order attached",
+      "payment_doc_requested": "Payment order requested from the customer"
+    }
+  },
+  "payments": {
+    "title": "Payments",
+    "none": "No payments on this invoice yet.",
+    "columns": {
+      "date": "Date",
+      "amount": "Amount",
+      "reference": "Operation number",
+      "by": "Confirmed by"
+    },
+    "caption": "Payments on the invoice"
+  },
+  "items": {
+    "title": "Invoice lines",
+    "caption": "Invoice lines",
+    "columns": {
+      "name": "Item",
+      "quantity": "Qty",
+      "price": "Price",
+      "total": "Amount"
+    },
+    "subtotal": "Total excl. VAT",
+    "vat": "VAT",
+    "total": "Total incl. VAT"
+  },
+  "view": {
+    "back": "Back to invoices",
+    "backMemos": "Back to memos to pay",
+    "projectLine": "Project {{project}} · {{client}}"
+  },
+  "memo": {
+    "caption": "Memos to pay",
+    "scroll": "Memos to pay table",
+    "scope": {
+      "label": "Which memos to show",
+      "to_pay": "To pay",
+      "paid": "Paid"
+    },
+    "columns": {
+      "number": "Memo and subject",
+      "author": "From",
+      "amount": "Amount",
+      "due": "Needed by",
+      "invoice": "Supplier invoice",
+      "status": "Status",
+      "action": "Action"
+    },
+    "invoice": {
+      "attached": "Attached",
+      "missing": "Not attached"
+    },
+    "status": {
+      "to_pay": "Passed to accountant",
+      "paid": "Paid"
+    },
+    "paidOn": "paid {{date}}",
+    "select": "Show memo {{number}} in the side panel",
+    "openLabel": "Open memo {{number}}",
+    "empty": {
+      "to_pay": {
+        "title": "No memos to pay",
+        "text": "Memos with an amount appear here after the director approves them, together with the supplier invoice.",
+        "action": "Paid"
+      },
+      "paid": {
+        "title": "No paid memos yet",
+        "text": "Paid memos stay here with the date, amount and payment order.",
+        "action": "To pay"
+      }
+    },
+    "panel": {
+      "sheetLabel": "Memo payment",
+      "sheetTitle": "Payment · {{number}}",
+      "from": "From",
+      "amount": "Approved amount",
+      "due": "Needed by",
+      "text": "Memo text",
+      "files": "Supplier invoice and attachments",
+      "noFiles": "No supplier invoice attached. Return the memo to the author so they attach the invoice.",
+      "download": "Download {{name}}",
+      "open": "Open memo card",
+      "paidTitle": "Paid",
+      "paidText": "Paid {{date}}: {{amount}}. The payment order and date are in the memo log.",
+      "paidBy": "Payment confirmed by: {{name}}",
+      "receipt": "Payment order",
+      "readOnly": {
+        "title": "View only",
+        "text": "The accountant whose step it is pays the memo. You can see the supplier invoice and the log."
+      },
+      "notYourStep": {
+        "title": "Not your step",
+        "text": "Another accountant pays this memo, and a colleague pays your own memo."
+      },
+      "journal": "Memo log"
+    },
+    "form": {
+      "name": "Memo payment",
+      "date": {
+        "label": "Payment date",
+        "hint": "Not later than today"
+      },
+      "amount": {
+        "label": "Amount paid, {{currency}}",
+        "hint": "Not above the approved amount {{approved}}"
+      },
+      "receipt": {
+        "label": "Payment order",
+        "hint": "PDF, image or Office document, up to 25 MB. Optional",
+        "uploaded": "Uploaded: {{name}}"
+      },
+      "note": {
+        "label": "Note",
+        "hint": "Optional"
+      },
+      "submit": "Paid",
+      "done": "Memo {{number}} is paid",
+      "failed": "Not saved: {{reason}}",
+      "invalidAmount": "Enter an amount above zero, for example 1500000.00.",
+      "invalidDate": "Enter a payment date not later than today.",
+      "consequence": {
+        "step1": "Memo {{number}} becomes “Paid”: {{amount}} dated {{date}}.",
+        "step2": "The date, amount and payment order are written to the memo log.",
+        "step3": "The memo goes to the document archive."
+      },
+      "return": {
+        "toggle": "Return to author",
+        "label": "Reason for return",
+        "hint": "Required: the author sees it and fixes the memo.",
+        "submit": "Return memo",
+        "done": "Memo returned to the author",
+        "failed": "Not returned: {{reason}}"
+      },
+      "reasons": {
+        "amount_exceeds_approved": "the amount is above what the director approved",
+        "amount_currency_mismatch": "the payment currency differs from the memo currency",
+        "amount_must_be_positive": "the amount must be above zero",
+        "paid_on_in_future": "the payment date is in the future",
+        "already_paid": "the memo is already paid with other data, the card is refreshed",
+        "invalid_state": "the memo is not with the accountant, the card is refreshed",
+        "route_closed": "the memo is already decided, the card is refreshed",
+        "not_your_step": "it is not your step now",
+        "file": "the payment order is unavailable, upload it again",
+        "forbidden": "the action is not allowed for your role",
+        "unavailable": "the document service is not responding, your input stayed in the form",
+        "validation": "check the amount and the date",
+        "unknown": "something went wrong, your input stayed in the form"
+      }
+    },
+    "journalAction": {
+      "document_created": "Created",
+      "document_submitted": "Sent for approval",
+      "approval_requested": "Passed for approval",
+      "approval_decided": "Decision made",
+      "document_paid": "Paid",
+      "document_archived": "Moved to archive",
+      "file_attached": "File attached"
+    }
+  }
+}

@@ -148,7 +148,7 @@ describe("исполнимость адреса: есть ли экран в П�
     ["/crm/leads?lead=L-2041&panel=open&tab=card", false],
     ["/eds/drafts/%D0%9A%D0%9F-2026%2F118?panel=open&tab=approve", true],
     ["/eds/approvals/%D0%A1%D0%97-2026%2F031?panel=open&tab=agree", true],
-    ["/eds/payments/%D0%A1%D0%A7-2026%2F142", false],
+    ["/eds/payments/%D0%A1%D0%A7-2026%2F142", true],
     ["/erp/calc", false],
     ["/nowhere/at-all", true],
   ])("%s → %s", (path, expected) => {

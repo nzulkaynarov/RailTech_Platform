@@ -58,14 +58,7 @@ describe("SectionStubPage · раздел с мостом", () => {
 
   it("ни «пока нет», ни «фаза Pn» нет ни на одной заглушке", async () => {
     signInAs("all@demo.example");
-    for (const path of [
-      "/crm/leads",
-      "/crm/clients",
-      "/eds/payments",
-      "/erp/calc",
-      "/chats",
-      "/admin/tickets",
-    ]) {
+    for (const path of ["/crm/leads", "/crm/clients", "/erp/calc", "/chats", "/admin/tickets"]) {
       renderApp(path);
       await main();
       const text = document.body.textContent;
