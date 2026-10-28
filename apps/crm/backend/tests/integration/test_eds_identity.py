@@ -137,6 +137,7 @@ async def test_created_user_carries_the_eds_permissions_of_the_roles(
                 "registry.read",
                 "registry.export",
                 "payments.confirm",
+                "files.upload",  # crm.clients: full — письмо директору (D1-2b)
             ]
         ),
         ACCOUNTANT,
@@ -159,9 +160,9 @@ async def test_assigning_and_removing_roles_publishes_the_new_eds_permissions(
 
     first, second, third = await events(sessions)
     assert first["user"]["permissions"] == {
-        "eds": ["letters.read", "memos.create", "registry.read"]
+        "eds": ["files.upload", "letters.read", "memos.create", "registry.read"]
     }
-    assert second["user"]["permissions"] == {"eds": ACCOUNTANT}
+    assert second["user"]["permissions"] == {"eds": sorted([*ACCOUNTANT, "files.upload"])}
     assert "payments.confirm" in second["user"]["permissions"]["eds"]
     assert third["user"]["permissions"] == {"eds": []}
     for data in (first, second, third):
@@ -206,7 +207,7 @@ async def test_deactivation_and_activation_follow_the_eds_permissions(
     (activated,) = await events(sessions)
     assert activated["user"]["is_active"] is True
     assert activated["user"]["permissions"] == {
-        "eds": ["letters.read", "memos.create", "registry.read"]
+        "eds": ["files.upload", "letters.read", "memos.create", "registry.read"]
     }
     assert activated["changed_fields"] == ["is_active", "permissions"]
 
