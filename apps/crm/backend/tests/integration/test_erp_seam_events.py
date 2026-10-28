@@ -1,7 +1,8 @@
 """События ERP → CRM на настоящей БД; примеры контракта как фикстуры (FIX-35 → B4; I-15, G-5).
 
 Код акцепта (`quote.acceptance_code_requested`) — отдельно: `test_erp_acceptance_code.py`;
-приглашение в кабинет (`invite.requested`, D1-9) — `test_portal_invites.py`.
+приглашение в кабинет (`invite.requested`, D1-9) — `test_portal_invites.py`; запрос письма
+(`mail.requested`, W18A-P1) — `test_mail_bus.py`.
 
 Вход — примеры полного конверта из `packages/contracts/events/erp/examples` (те же файлы использует
 ERP): подписанная доставка через настоящий приёмник шины → запись inbox → обработка → зеркало
@@ -20,7 +21,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from app.bus.erp_event import INLINE_TYPES, NOT_FOR_CRM
+from app.bus.erp_event import INLINE_TYPES, NOT_FOR_CRM, OWN_HANDLER
 from app.models.clients import Client, Document
 from app.models.leads import LeadNote
 from tests.bus_events import event_types, example_envelope
@@ -29,7 +30,12 @@ from tests.integration.bus_harness import Harness
 pytestmark = pytest.mark.integration
 
 #: Код акцепта и приглашение в кабинет не проходят очередь, как остальные: отдельные наборы тестов.
-ALL_TYPES = [t for t in event_types("erp") if t not in INLINE_TYPES and t not in NOT_FOR_CRM]
+#: Запрос письма (`mail.requested`, W18A-P1) — не событие сделки: `test_mail_bus.py`.
+ALL_TYPES = [
+    t
+    for t in event_types("erp")
+    if t not in INLINE_TYPES and t not in NOT_FOR_CRM and t not in OWN_HANDLER
+]
 COMPANY = 118  # erp_company_id в примерах контракта
 #: События, по которым бот пишет клиенту (`client_message` в erp_bot_messages); по остальным молчит.
 CLIENT_MESSAGE_EVENTS = {
