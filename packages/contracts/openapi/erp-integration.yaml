@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform ERP — Integration API (CRM → ERP)
-  version: 0.8.0
+  version: 0.9.0
   summary: Пространство `/api/integration/v1/` — вызывает только CRM под сервисным токеном.
   description: |
     Контракт по `docs/architecture/CONTRACTS.md` §0 и §2. Версия 0 (M0-INF-02): форма запросов и ответов, по которой
@@ -37,6 +37,15 @@ info:
     `POST /clients/{crm_client_id}/invite` — повторное приглашение контакта другим каналом из карточки клиента CRM;
     канал `telegram` в приглашении доставляется ботом CRM по событию `uz.railtech.erp.invite.requested.v1` (ERP в Telegram не
     пишет), поэтому `sent_via: [telegram]` значит «передано боту», а итог доставки CRM знает сама.
+
+    0.9.0 (волна 16, W16-D1-2; аддитивно): `POST /clients/{crm_client_id}/requests` — «Создать заявку» из CRM для клиента,
+    уже переданного в ERP (CRM-03): срочность, файл письма директору (EDS), процесс `v3`, менеджер заявки = владелец сделки
+    ERP (B-008); номер заявки `ЗВ-ГГГГ-NNN` выдаёт ERP (`Deal.number`, ERP-09) и возвращает в ответе; `number` у
+    `DealListItem` — этот номер (у сделок, заведённых до ERP-09, тоже — номера выданы миграцией).
+
+    D2-1 (волна 17, в 0.9.0; аддитивно, без подъёма версии): `ErpPermission` + `quote.visa_goods`, `quote.visa_services` —
+    виза строки расчёта по типу позиции (ADR-0012 п. 6). CRM выдаёт их из разделов `erp.calc.goods` и `erp.calc.services`
+    каталога Платформы.
   contact:
     name: RailTech Platform — docs/architecture/CONTRACTS.md
 servers:
@@ -265,6 +274,65 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+
+  /clients/{crm_client_id}/requests:
+    post:
+      tags: [clients]
+      operationId: createClientRequest
+      summary: Новая заявка клиента, переданного в ERP («Создать заявку» CRM, CRM-03)
+      description: |
+        Менеджер CRM создаёт заявку из лида или из карточки клиента (SPEC-v3 §3.1 шаг 2). Клиент уже передан
+        (`POST /clients/handoff` создал сопоставление `crm_client_id`); иначе — 404 `CLIENT_NOT_FOUND`, и CRM сначала
+        передаёт клиента. ERP создаёт сделку в стадии FSM `DRAFT` с номером `ЗВ-ГГГГ-NNN` (ERP-09, нумерация без пропусков),
+        процессом `v3` (ERP-07), срочностью и менеджером заявки — сотрудником ERP, сопоставленным с `owner.crm_user_id`
+        (владелец сделки, B-008; сопоставления нет — сделка без менеджера), и публикует `request.created(source=crm)` с
+        `request_number`, `urgency`, `letter_file_id`, `crm_request_id`, `process` в той же транзакции: EDS регистрирует
+        входящее письмо директору со срочностью и файлом письма. Контакт заявки — по `contact.crm_contact_id`; контакт, которого
+        ERP ещё не знает, создаётся в компании и сопоставляется (как в передаче). Идемпотентно по `crm_request_id`: повтор
+        (с любым `Idempotency-Key`) — 200 с той же заявкой, без второй сделки и второго события. E-mail контакта не обязателен.
+      parameters:
+        - $ref: '#/components/parameters/CrmClientId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientRequestIn'
+      responses:
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '200':
+          description: Заявка с этим `crm_request_id` уже создана — возвращена она же
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientRequestOut'
+        '201':
+          description: Заявка создана
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClientRequestOut'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: '`CLIENT_NOT_FOUND` — клиент CRM не передан в ERP (нет сопоставления `crm_client_id`)'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: >-
+            `IDEMPOTENCY_CONFLICT` — тот же `Idempotency-Key` пришёл с другим телом (данные заявки изменились после
+            первой отправки): ничего не создано и не перезаписано. CRM повтор не делает — заявка `failed` с причиной
+            `erp_request_conflict`, менеджер создаёт заявку заново.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          $ref: '#/components/responses/ValidationError'
 
   /documents/{erp_document_id}/link:
     get:
@@ -1010,6 +1078,77 @@ components:
           type: string
           format: date-time
 
+    ClientRequestIn:
+      type: object
+      description: Заявка из «Создать заявку» CRM (CRM-03); лишние поля — 422
+      required: [crm_request_id, need, owner, urgency, process]
+      properties:
+        crm_request_id:
+          type: integer
+          format: int64
+          minimum: 1
+          description: Заявка на стороне CRM (зеркало сделки) — ключ идемпотентности и связь события `request.created`
+        crm_lead_id:
+          type: [integer, 'null']
+          format: int64
+          description: Лид, из которого создана заявка; из карточки клиента — `null`
+        contact:
+          description: Контакт заявки с каналом (телефон, Telegram или e-mail; e-mail не обязателен); нет — основной контакт компании
+          oneOf:
+            - $ref: '#/components/schemas/ContactIn'
+            - type: 'null'
+        need:
+          type: object
+          required: [summary]
+          properties:
+            summary:
+              type: string
+              minLength: 1
+              maxLength: 5000
+            product_interest:
+              type: array
+              items:
+                type: string
+          additionalProperties: false
+        owner:
+          type: object
+          description: Менеджер заявки (сотрудник CRM) — владелец сделки ERP (B-008) и отправитель КП (`quote.send`)
+          required: [crm_user_id, name]
+          properties:
+            crm_user_id:
+              type: integer
+              format: int64
+            name:
+              type: string
+          additionalProperties: false
+        urgency:
+          type: string
+          enum: [normal, urgent]
+        letter_file_id:
+          type: [string, 'null']
+          format: uuid
+          description: Файл письма на имя директора, загруженный менеджером в EDS (`POST /files`); ERP его не читает, а передаёт в `request.created`
+        process:
+          type: string
+          enum: [v3]
+          description: Процесс заявки (ERP-07); из CRM — только `v3`
+      additionalProperties: false
+
+    ClientRequestOut:
+      type: object
+      required: [erp_company_id, erp_request_id, number]
+      properties:
+        erp_company_id:
+          type: integer
+          format: int64
+        erp_request_id:
+          type: integer
+          format: int64
+        number:
+          type: string
+          description: Номер заявки `ЗВ-ГГГГ-NNN` (ERP-09)
+      additionalProperties: false
+
     CompanySummary:
       type: object
       required: [erp_company_id, crm_client_id, name, open_deals, receivables, receivables_by_currency]
@@ -1356,6 +1495,8 @@ components:
         - quote.view_cost_margin
         - quote.send
         - quote.review
+        - quote.visa_goods
+        - quote.visa_services
         - contract.manage
         - contract.sign
         - catalog.manage
@@ -1363,6 +1504,7 @@ components:
         - supply.manage
         - fulfillment.manage
         - fulfillment.act
+        - finance.view
         - finance.invoice
         - finance.payment
         - finance.rates

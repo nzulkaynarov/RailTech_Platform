@@ -7,6 +7,7 @@
 - [`crm-erp-pairing.md`](crm-erp-pairing.md) — сопряжение CRM ↔ ERP; [`log-secrets.md`](log-secrets.md) — что не попадает в логи.
 
 - [`backup-pitr.md`](backup-pitr.md) — WAL-архив PostgreSQL (WAL-G), восстановление на момент времени, ежемесячная проверка;
+  [`offsite-gdrive.md`](offsite-gdrive.md) — внешняя копия архива на корпоративном Google Drive: включение владельцем, строка «Внешняя копия бэкапов», восстановление и ежемесячные учения;
   [`request-id.md`](request-id.md) — найти запрос по `X-Request-ID` в журналах Caddy, CRM и ERP;
   [`rt-bus-erp.md`](rt-bus-erp.md) — шина rt_bus в ERP: журнал, DLQ, повтор, метрики, неверный endpoint (B3);
   [`rt-bus-crm.md`](rt-bus-crm.md) — шина rt_bus в CRM: DLQ, повтор, метрики, события ERP не обработаны (B4).
@@ -22,4 +23,5 @@
 **Отчёты прогонов глазами** — [`m1_qa_02_report.md`](m1_qa_02_report.md), [`m2_qa_01_report.md`](m2_qa_01_report.md),
 [`m2_qa_02_report.md`](m2_qa_02_report.md), [`plt_p1_gate_report.md`](plt_p1_gate_report.md);
 [`c1_eds_gate_report.md`](c1_eds_gate_report.md) (гейт этапа C1, сервис EDS; скрипты и выводы — `qa/c1-eds/`);
-[`c2a_admin_gate_report.md`](c2a_admin_gate_report.md) (гейт этапа C2a, паритет Admin в Платформе, волна 13; скрипты — `qa/w13-a7-gate/`, снимки — `../screens/w13-a7-gate/`); снимки — `qa/`.
+[`c2a_admin_gate_report.md`](c2a_admin_gate_report.md) (гейт этапа C2a, паритет Admin в Платформе, волна 13; скрипты — `qa/w13-a7-gate/`, снимки — `../screens/w13-a7-gate/`);
+[`wave15_gate_report.md`](wave15_gate_report.md) (гейт волны 15 «Честный интерфейс», проход по ролям; скрипты — `qa/w15-h9-gate/`, снимки — `../screens/w15-h9/`); снимки — `qa/`.

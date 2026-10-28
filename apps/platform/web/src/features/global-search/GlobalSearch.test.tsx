@@ -106,21 +106,73 @@ describe("Глобальный поиск", () => {
     expect(box).toHaveValue("");
   });
 
+  it.each([
+    [
+      "ВХ-104/26",
+      /Письмо ВХ-104\/26/,
+      "/eds/inbox/%D0%92%D0%A5-104%2F26",
+      "?panel=open&tab=resolution",
+    ],
+    [
+      "КП-2026/118",
+      /КП-2026\/118/,
+      "/eds/drafts/%D0%9A%D0%9F-2026%2F118",
+      "?panel=open&tab=approve",
+    ],
+    [
+      "СЗ-2026/031",
+      /СЗ-2026\/031/,
+      "/eds/approvals/%D0%A1%D0%97-2026%2F031",
+      "?panel=open&tab=agree",
+    ],
+  ])(
+    "директор: результат «%s» открывает объект в боковом окне на вкладке решения (D1-6)",
+    async (query, option, pathname, search) => {
+      signInAs("director@demo.example");
+      const { router } = renderApp("/dashboard/queue");
+      const box = await searchBox();
+
+      type(box, query);
+      fireEvent.click(await screen.findByRole("option", { name: option }));
+
+      await waitFor(() => {
+        expect(router.state.location.pathname).toBe(pathname);
+      });
+      expect(router.state.location.search).toBe(search);
+      expect(screen.queryByRole("region", { name: "Где посмотреть" })).toBeNull();
+    },
+  );
+
+  it("менеджер: письмо из поиска открывается в режиме чтения — без формы резолюции, с пометкой «Только просмотр» (D1-6)", async () => {
+    signInAs("manager@demo.example");
+    const { router } = renderApp("/dashboard/queue");
+    const box = await searchBox();
+
+    type(box, "ВХ-104/26");
+    fireEvent.click(await screen.findByRole("option", { name: /Письмо ВХ-104\/26/ }));
+
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/eds/inbox/%D0%92%D0%A5-104%2F26");
+    });
+    expect(
+      await screen.findByRole("heading", { level: 1, name: "Письмо ВХ-104/26" }),
+    ).toBeVisible();
+    expect(screen.getByText("Только просмотр")).toBeVisible();
+    expect(screen.queryByRole("button", { name: /Утвердить резолюцию/ })).toBeNull();
+  });
+
   it("у объекта без экрана — «Где посмотреть» с мостом, а не заглушка: адрес не меняется, поиск остаётся открытым", async () => {
     signInAs("manager@demo.example");
     const { router } = renderApp("/dashboard/queue");
     const box = await searchBox();
 
-    type(box, "L-2041");
-    fireEvent.click(await screen.findByRole("option", { name: /L-2041/ }));
+    type(box, "ЗВ-2026-104");
+    fireEvent.click(await screen.findByRole("option", { name: /ЗВ-2026-104/ }));
 
     const where = await screen.findByRole("region", { name: "Где посмотреть" });
-    expect(within(where).getByText(/Сейчас — в старой CRM: раздел «Лиды»/)).toBeInTheDocument();
-    expect(
-      await within(where).findByRole("link", { name: /Открыть в старой CRM/ }),
-    ).toHaveAttribute("href", "http://crm.localhost:8088/leads/2041");
+    expect(within(where).getByText(/Сейчас — в старом ERP: раздел «Сделки»/)).toBeInTheDocument();
     expect(router.state.location.pathname).toBe("/dashboard/queue");
-    expect(box).toHaveValue("L-2041");
+    expect(box).toHaveValue("ЗВ-2026-104");
 
     fireEvent.click(within(where).getByRole("button", { name: "Закрыть подсказку" }));
     expect(screen.queryByRole("region", { name: "Где посмотреть" })).toBeNull();
@@ -128,16 +180,20 @@ describe("Глобальный поиск", () => {
 
   it("слова «создать заявку» добавляют группу «Действия»; без права на запись действия нет", async () => {
     signInAs("manager@demo.example");
-    renderApp("/dashboard/queue");
+    const { router } = renderApp("/dashboard/queue");
     const box = await searchBox();
 
     type(box, "создать заявку");
     const action = await screen.findByRole("option", { name: /Создать заявку/ });
     expect(within(action).getByText("Действие")).toBeInTheDocument();
     expect(screen.getByRole("group", { name: "Действия" })).toBeInTheDocument();
+    // «Лиды» — настоящий экран (D1-2b): действие ведёт к лидам, которые просят КП
     fireEvent.click(action);
-    const where = await screen.findByRole("region", { name: /Где посмотреть/ });
-    expect(within(where).getByText(/Сейчас — в старой CRM/)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/crm/leads");
+    });
+    expect(router.state.location.search).toBe("?status=wants_quote");
+    expect(screen.queryByRole("region", { name: /Где посмотреть/ })).toBeNull();
 
     type(box, "пригласить");
     await waitFor(() => {
@@ -150,8 +206,8 @@ describe("Глобальный поиск", () => {
     renderApp("/dashboard/queue");
     const box = await searchBox();
 
-    type(box, "L-2041");
-    fireEvent.click(await screen.findByRole("option", { name: /L-2041/ }));
+    type(box, "ЗВ-2026-104");
+    fireEvent.click(await screen.findByRole("option", { name: /ЗВ-2026-104/ }));
 
     const where = await screen.findByRole("region", { name: "Где посмотреть" });
     expect(where.parentElement).toHaveAttribute("aria-live", "polite");
@@ -202,15 +258,19 @@ describe("Глобальный поиск", () => {
     expect(screen.queryByRole("region", { name: /Где посмотреть/ })).toBeNull();
   });
 
-  it("действие без экрана подписано честно: «Пока делается в старой системе»", async () => {
+  it("у всех действий поиска есть экран: подписи «Пока делается в старой системе» нет", async () => {
+    // «Создать заявку» (D1-2b) и «Создать документ» (D1-6b) — настоящие экраны
     signInAs("manager@demo.example");
-    renderApp("/dashboard/queue");
+    const { router } = renderApp("/dashboard/queue");
     const box = await searchBox();
 
-    type(box, "создать заявку");
-    const action = await screen.findByRole("option", { name: /Создать заявку/ });
-    expect(action).toHaveTextContent("Пока делается в старой системе");
-    expect(action).not.toHaveTextContent(/фаз/i);
+    type(box, "служебка");
+    const action = await screen.findByRole("option", { name: /Создать служебную записку/ });
+    expect(action).not.toHaveTextContent("Пока делается в старой системе");
+    fireEvent.click(action);
+    await waitFor(() => {
+      expect(router.state.location.pathname).toBe("/eds/new");
+    });
   });
 
   it("администратор: «пригласить» — действие, которое ведёт в Оргструктуру с приглашением", async () => {

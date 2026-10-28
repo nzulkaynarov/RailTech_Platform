@@ -38,6 +38,7 @@ from app.feeds.numbers import (
     deal_title,
     number_query,
 )
+from app.feeds.rework import drop_returned
 from app.feeds.snapshot import DEALS_PARAMS, DEALS_PATH
 from app.rbac import allows
 from app.schemas_eds_documents import (
@@ -213,6 +214,8 @@ async def update_document(id: DocumentId, body: EdsDocumentUpdateIn, authed: Wri
             result = await _submit(proxy, str(id))
         except PlatformError as exc:
             raise _with_document(exc, str(id), created=False) from exc
+        # Документ ушёл на согласование — он больше не «Доработать» в очереди автора (D1-6b)
+        await drop_returned(Feed(authed))
     return await present(proxy, result, me=authed.data.user_id)
 
 

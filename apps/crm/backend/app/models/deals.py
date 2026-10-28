@@ -1,5 +1,6 @@
 """Сделки клиента (SPEC §5.2, ADR-0019): продукт, сумма, стадия, причина итога."""
 
+import uuid
 from datetime import date, datetime
 from decimal import Decimal
 
@@ -14,6 +15,8 @@ from sqlalchemy import (
     Index,
     Numeric,
     String,
+    Text,
+    Uuid,
 )
 from sqlalchemy import text as sql
 from sqlalchemy.orm import Mapped, mapped_column
@@ -31,6 +34,20 @@ class Deal(TimestampMixin, Base):
         Index("ix_deals_stage_closed_at", "stage", "closed_at"),
         # Одна заявка ERP — одно зеркало (FIX-33); NULL (локальные сделки) уникальность не нарушают.
         Index("uq_deals_erp_deal_id", "erp_deal_id", unique=True),
+        Index("uq_deals_request_key", "request_key", unique=True),
+        Index(
+            "ix_deals_client_id_invoiced",
+            "client_id",
+            postgresql_where=sql("invoice_issued_at IS NOT NULL"),
+        ),
+        CheckConstraint(
+            "request_urgency IS NULL OR request_urgency IN ('normal', 'urgent')",
+            name="request_urgency",
+        ),
+        CheckConstraint(
+            "erp_request_status IS NULL OR erp_request_status IN ('pending', 'done', 'failed')",
+            name="erp_request_status",
+        ),
     )
 
     id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
@@ -49,3 +66,19 @@ class Deal(TimestampMixin, Base):
     external_stage: Mapped[str | None] = mapped_column(String(64))
     # `occurred_at` последнего применённого события ERP: более старое событие стадию не откатывает.
     external_stage_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # «Создать заявку» (W16-D1-2, CRM-03): заявка CRM, которая уходит в ERP задачей после коммита
+    # (`services/erp_requests.py`); номер ЗВ/ПР — из ERP (события обновляют `erp_number`).
+    # Ключ идемпотентности формы «Создать заявку» (UNIQUE): повтор с тем же ключом — та же заявка.
+    request_key: Mapped[uuid.UUID | None] = mapped_column(Uuid)
+    request_summary: Mapped[str | None] = mapped_column(Text)
+    request_urgency: Mapped[str | None] = mapped_column(String(8))
+    request_letter_file_id: Mapped[uuid.UUID | None] = mapped_column(Uuid)
+    request_contact_id: Mapped[int | None] = mapped_column(
+        ForeignKey("client_contacts.id", ondelete="SET NULL")
+    )
+    erp_request_status: Mapped[str | None] = mapped_column(String(16))
+    erp_request_error: Mapped[str | None] = mapped_column(String(500))
+    erp_number: Mapped[str | None] = mapped_column(String(32))
+    # Когда ERP выставила по сделке первый счёт (`erp/invoice.issued`, B-D18-1): факт, а не стадия —
+    # стадия зеркала уходит дальше, а зона переписки «Счета и оплаты» держится за счёт.
+    invoice_issued_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

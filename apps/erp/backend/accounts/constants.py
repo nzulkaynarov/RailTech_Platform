@@ -45,6 +45,10 @@ class Permission(models.TextChoices):
     # Визы КП внутри компании. Одобрение КП директором — маршрут EDS (EDS-03, волна 12): права ERP на него нет.
     # Акцепт КП клиентом — не право бэк-офиса (Cabinet / публичная ссылка).
     QUOTE_REVIEW = "quote.review", "Согласовывать КП"
+    # Виза строки расчёта по типу позиции (ADR-0012 п. 6, D2-1): товар — «расчёт товаров и склад», услуга — «расчёт
+    # услуг». Права вычисляет CRM из разделов каталога `erp.calc.goods` и `erp.calc.services` (platform-rbac.yaml).
+    QUOTE_VISA_GOODS = "quote.visa_goods", "Визировать товары в расчёте"
+    QUOTE_VISA_SERVICES = "quote.visa_services", "Визировать услуги в расчёте"
     # Договоры
     CONTRACT_MANAGE = "contract.manage", "Готовить договоры"
     CONTRACT_SIGN = "contract.sign", "Подписывать договоры от компании"
@@ -57,6 +61,8 @@ class Permission(models.TextChoices):
     FULFILLMENT_MANAGE = "fulfillment.manage", "Вести отгрузки и накладные"
     FULFILLMENT_ACT = "fulfillment.act", "Оформлять акты"
     # Финансы
+    # D2-4 (Q-D2-4-1): чтение счетов и оплат без права действовать — директор, менеджер («Ч» в SPEC-v3 §4.2).
+    FINANCE_VIEW = "finance.view", "Видеть счета и оплаты клиентов"
     FINANCE_INVOICE = "finance.invoice", "Выставлять счета клиентам"
     FINANCE_PAYMENT = "finance.payment", "Фиксировать оплаты"
     # Курс КП вручную (с причиной) и фактическая закупка для отклонения маржи (M1-ERP-08)
@@ -78,12 +84,19 @@ PERMISSION_GROUPS = {
         Permission.QUOTE_VIEW_COST_MARGIN,
         Permission.QUOTE_SEND,
         Permission.QUOTE_REVIEW,
+        Permission.QUOTE_VISA_GOODS,
+        Permission.QUOTE_VISA_SERVICES,
     ],
     "contracts": [Permission.CONTRACT_MANAGE, Permission.CONTRACT_SIGN],
     "catalog": [Permission.CATALOG_MANAGE, Permission.CATALOG_PUBLISH],
     "supply": [Permission.SUPPLY_MANAGE],
     "fulfillment": [Permission.FULFILLMENT_MANAGE, Permission.FULFILLMENT_ACT],
-    "finance": [Permission.FINANCE_INVOICE, Permission.FINANCE_PAYMENT, Permission.FINANCE_RATES],
+    "finance": [
+        Permission.FINANCE_VIEW,
+        Permission.FINANCE_INVOICE,
+        Permission.FINANCE_PAYMENT,
+        Permission.FINANCE_RATES,
+    ],
     "settings": [Permission.SETTINGS_EDIT, Permission.SETTINGS_CHARGE_TEMPLATES, Permission.TEAM_MANAGE],
     "data": [Permission.DATA_EXPORT],
 }
@@ -113,6 +126,8 @@ ROLE_TEMPLATES = {
         P.QUOTE_VIEW_COST_MARGIN,
         P.QUOTE_SEND,
         P.QUOTE_REVIEW,
+        P.QUOTE_VISA_GOODS,
+        P.QUOTE_VISA_SERVICES,
         P.CONTRACT_MANAGE,
     ],
     BackofficeRoleCode.CATALOG_SUPPLY: [
@@ -123,6 +138,7 @@ ROLE_TEMPLATES = {
     ],
     BackofficeRoleCode.FULFILLMENT: [P.FULFILLMENT_MANAGE, P.FULFILLMENT_ACT],
     BackofficeRoleCode.FINANCE: [
+        P.FINANCE_VIEW,
         P.FINANCE_INVOICE,
         P.FINANCE_PAYMENT,
         P.FINANCE_RATES,

@@ -19,12 +19,12 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import clock
-from app.errors import conflict, invalid_fields, not_found
+from app.errors import EdsError, conflict, invalid_fields, not_found
 from app.models import Letter
 from app.schemas.common import ErpLinksIn
 from app.schemas.letters import LetterCreate, LetterStatus, LetterSubmitIn, ResolutionIn
 from app.services import events, files, journal, numbering
-from app.services.people import active_ids, default_director, load_directory
+from app.services.people import active_ids, default_director, load_directory, zone_mismatches
 
 log = structlog.get_logger(__name__)
 
@@ -205,10 +205,15 @@ async def register_from_request(
     erp_request_id: int | None,
     summary: str | None,
     parties: RequestParties | None = None,
+    urgent: bool = False,
+    letter_file_id: uuid.UUID | None = None,
 ) -> Letter:
     """Письмо по заявке ERP (`erp.request.created`, EDS-01). Идемпотентно: повтор — то же письмо, без второго номера.
 
     Отправитель (компания, ИНН, контакт) и менеджер — из `parties` (C1-G-7); их нет — письмо без них, как раньше.
+    «Создать заявку» (W16-D1-2): срочность — `urgent`; файл письма директору `letter_file_id` привязывается к письму,
+    если его загрузил менеджер заявки и он ещё ни к чему не привязан; иначе письмо регистрируется без файла (в журнал —
+    `letter_file_not_attached`), событие не повторяется. Старое событие без этих полей — письмо как раньше.
     """
     if erp_request_id is not None:
         existing = await find_by_request(session, erp_request_id)
@@ -228,9 +233,26 @@ async def register_from_request(
         "deal_number": deal_number[:64],
         "crm_client_id": crm_client_id,
         "erp_company_id": erp_company_id,
+        "urgent": urgent,
         **(parties or RequestParties()).values(),
     }
-    return await _insert(session, bus, actor_id=None, values=values, file_ids=[])
+    letter = await _insert(session, bus, actor_id=None, values=values, file_ids=[])
+    if letter_file_id is not None:
+        await _attach_request_file(session, letter, letter_file_id)
+    return letter
+
+
+async def _attach_request_file(session: AsyncSession, letter: Letter, file_id: uuid.UUID) -> None:
+    """Файл письма по заявке — от имени загрузившего его менеджера заявки; чужой или занятый файл не прикрепляется."""
+    manager = letter.manager_crm_user_id
+    if manager is None:
+        log.warning("letter_file_not_attached", number=letter.number, file_id=str(file_id), reason="no_manager")
+        return
+    try:
+        async with session.begin_nested():
+            await files.attach(session, [file_id], actor_id=manager, letter_id=letter.id)
+    except EdsError as exc:
+        log.warning("letter_file_not_attached", number=letter.number, file_id=str(file_id), reason=exc.body.code)
 
 
 async def resolve(
@@ -247,6 +269,8 @@ async def resolve(
     inactive = {uid for uid, _ in pairs} - await active_ids(session, (uid for uid, _ in pairs))
     if inactive:
         raise invalid_fields("Исполнитель не найден или отключён.", assignees="not_active_employee")
+    if await zone_mismatches(session, pairs):  # B-007: исполнитель зоны имеет раздел зоны (проекция из identity)
+        raise invalid_fields("У исполнителя нет раздела выбранной зоны.", assignees="assignee_zone_mismatch")
     now = clock.now()
     letter.status = LetterStatus.RESOLVED.value
     letter.resolution_text = data.text

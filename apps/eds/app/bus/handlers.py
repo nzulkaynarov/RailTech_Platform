@@ -103,6 +103,8 @@ def build_registry(get_bus: Callable[[], AsyncBus] | None = None) -> HandlerRegi
                     contact_name=payload.contact_name,
                     manager_crm_user_id=payload.manager_crm_user_id,
                 ),
+                urgent=payload.urgency == "urgent",
+                letter_file_id=payload.letter_file_id,
             )
             log.info("letter_for_request", number=letter.number, event_id=event.id)
 

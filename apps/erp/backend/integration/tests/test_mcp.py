@@ -626,7 +626,7 @@ def test_list_client_deals_cross_tenant_isolation(test_data):
     deals_a = payload(sdk_call(customer(test_data), "list_client_deals"))
     assert len(deals_a) == 1
     assert deals_a[0]["erp_deal_id"] == test_data["deal_a"].id
-    assert deals_a[0]["number"] == f"D-{test_data['deal_a'].id}"
+    assert deals_a[0]["number"] == test_data["deal_a"].number and test_data["deal_a"].number.startswith("ЗВ-")
 
     deals_b = payload(sdk_call(customer(test_data, "comp_b"), "list_client_deals"))
     assert [d["erp_deal_id"] for d in deals_b] == [test_data["deal_b"].id]
@@ -788,7 +788,7 @@ def test_create_request_creates_deal_and_publishes_one_event(test_data):
 
     data = payload(sdk_call(customer(test_data, crm_client_id=10), "create_request", req_payload))
     deal_id = data["erp_request_id"]
-    assert data["number"] == f"D-{deal_id}"
+    assert data["number"] == Deal.objects.get(pk=deal_id).number and data["number"].startswith("ЗВ-")
     assert data["status"] == "request"
 
     deal = Deal.objects.get(pk=deal_id)

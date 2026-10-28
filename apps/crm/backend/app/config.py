@@ -48,6 +48,20 @@ class Settings(BaseSettings):
     s3_bucket_attachments: str = "tg-attachments"
     # Бакет, куда бэкап VPS 2 выгружает дампы (`infra/db/backup.sh`, BACKUP_RUSTFS_BUCKET).
     s3_bucket_backups: str = "backups"
+    # Бакет и каталог архива WAL (`WAL_S3_BUCKET`, `WAL_S3_PREFIX` у walg на VPS 2): CRM только
+    # читает их список, чтобы показать возраст последнего сегмента в «Состоянии» (W15-H8b).
+    s3_bucket_wal: str = "wal"
+    wal_s3_prefix: str = "pg17"
+    # Отметка внешней копии архива на Google Drive (сервис offsite-backup на VPS 1, OPS-GDRIVE):
+    # status.json в бакете `offsite` — CRM только читает её, ни архива, ни Drive не видит.
+    s3_bucket_offsite: str = "offsite"
+    # Настройка внешней копии из интерфейса (OPS-GDRIVE-2): CRM кладёт сюда ключ сервисного аккаунта
+    # и ID папки для offsite-backup — только запись (политика `crm` в infra/s3/init.sh).
+    s3_bucket_offsite_config: str = "offsite-config"
+    # Redis ансамбля (CRM его не использует, адреса нужны пробе состояния): брокер (Celery ERP,
+    # Channels, очереди Langfuse) и кэш (кэш ERP, сессии Платформы). Пусто — «не проверено».
+    redis_broker_url: SecretStr = SecretStr("")
+    redis_cache_url: SecretStr = SecretStr("")
 
     litellm_base_url: AnyHttpUrl = AnyHttpUrl("http://litellm:4000")
     litellm_api_key: SecretStr = SecretStr("")

@@ -29,7 +29,7 @@ test.describe("Мои задачи", () => {
     page,
   }) => {
     await loginAndWait(page, "director@demo.example");
-    await expect(page.getByRole("main").getByText(/Директор · .* · 3 решения/)).toBeVisible();
+    await expect(page.getByRole("main").getByText(/Директор · .* · 4 решения/)).toBeVisible();
     // Поток подключается вместе с каркасом: ждём, пока MSW примет соединение.
     await expect
       .poll(() => page.evaluate("window.__rtMockStreamCount?.() ?? 0"), { timeout: 5_000 })
@@ -56,7 +56,7 @@ test.describe("Мои задачи", () => {
     await loginAndWait(page, "director@demo.example");
     const main = page.getByRole("main");
 
-    await expect(main.getByText(/Директор · .* · 3 решения/)).toBeVisible();
+    await expect(main.getByText(/Директор · .* · 4 решения/)).toBeVisible();
     const cards = main.getByRole("region", { name: "Счётчики очереди" }).getByRole("link");
     await expect(cards).toHaveCount(4);
     await expect(cards.nth(0)).toContainText("Входящие без резолюции");
@@ -64,11 +64,13 @@ test.describe("Мои задачи", () => {
 
     const queue = main.getByRole("region", { name: "Что сделать сейчас" });
     const rows = queue.getByRole("listitem");
-    await expect(rows).toHaveCount(3);
-    await expect(rows.nth(0)).toContainText("срок сегодня");
-    await expect(rows.nth(0)).toContainText("Наложить резолюцию на письмо ВХ-104/26");
-    await expect(rows.nth(1)).toContainText("завтра");
-    await expect(rows.nth(2)).toContainText("служебка");
+    await expect(rows).toHaveCount(4);
+    // D2-2: просроченный заказ поставщику (erp.stock: полный) — первым
+    await expect(rows.nth(0)).toContainText("Просрочен заказ");
+    await expect(rows.nth(1)).toContainText("срок сегодня");
+    await expect(rows.nth(1)).toContainText("Наложить резолюцию на письмо ВХ-104/26");
+    await expect(rows.nth(2)).toContainText("завтра");
+    await expect(rows.nth(3)).toContainText("служебка");
 
     const panel = page.getByRole("complementary", { name: "Боковое окно" });
     await expect(panel.getByRole("tab", { name: "Сегодня", selected: true })).toBeVisible();
@@ -102,13 +104,10 @@ test.describe("Мои задачи", () => {
   });
 
   test("пустая очередь: слова SPEC-v3 §7.1", async ({ page }) => {
-    await loginAndWait(page, "supply@demo.example");
+    await loginAndWait(page, "accountant@demo.example");
 
-    await expect(page.getByText("Заданий на расчёт нет")).toBeVisible();
     await expect(
-      page.getByText(
-        "Они приходят после резолюции директора — мы сообщим в колокольчике и в Telegram.",
-      ),
+      page.getByText("Платёжек на подтверждение и счетов к выставлению нет"),
     ).toBeVisible();
     await expect(page.getByRole("main").getByText(/0 решений/)).toBeVisible();
     await settledScreenshot(page, "dashboard-empty");
@@ -126,7 +125,9 @@ test.describe("Мои задачи", () => {
     await expect(page.getByRole("main").getByRole("status")).toContainText(
       "Не загрузились КП на одобрение и расчёты: раздел «Расчёт» не ответил. Остальное показано.",
     );
-    await expect(page.getByText("Наложить резолюцию на письмо ВХ-104/26")).toHaveCount(0);
+    // КП ведёт ERP — строки нет; письмо читает EDS (D1-6) — строка на месте
+    await expect(page.getByText("Одобрить КП-2026/118 (черновик)")).toHaveCount(0);
+    await expect(page.getByText("Наложить резолюцию на письмо ВХ-104/26")).toBeVisible();
     await settledScreenshot(page, "dashboard-erp-down");
     await expectNoViolations(page, "erp down");
   });
@@ -178,17 +179,11 @@ test.describe("Центр уведомлений", () => {
     await settledScreenshot(page, "dashboard-notifications");
     await expectNoViolations(page, "notifications popover");
 
-    // Счёт: раздела с экраном ещё нет — вместо заглушки «Где посмотреть» с мостом, окно остаётся открытым
-    await center.getByRole("button", { name: /Где посмотреть: .*СЧ-2026\/142/ }).click();
-    const where = center.getByRole("region", { name: "Где посмотреть" });
-    await expect(where.getByRole("link", { name: /Открыть в старом ERP/ })).toHaveAttribute(
-      "href",
-      "http://erp.localhost:8088/#payments",
-    );
-    await expect(page).toHaveURL(/\/dashboard\/queue/);
+    // Договор: у раздела «Проекты» есть экран (D2-5) — уведомление ведёт в карточку проекта на вкладку договора, счётчик уменьшается
+    await center.getByRole("link", { name: /ДОГ-2026\/091/ }).click();
+    await expect(page).toHaveURL(/\/eds\/projects\/.*tab=contract/);
     await expect(page.getByRole("button", { name: "Центр уведомлений, 2 новых" })).toBeVisible();
-    await settledScreenshot(page, "notification-where");
-    await expectNoViolations(page, "notification where");
+    await expectNoViolations(page, "notification opens the project");
   });
 
   test("с клавиатуры: Enter на колокольчике → фокус в диалоге → Tab внутри → Escape возвращает на колокольчик", async ({
@@ -269,8 +264,8 @@ test(
     await settledScreenshot(page, "dashboard-notifications");
     await expectNoViolations(page, "notifications popover 390");
 
-    await center.getByRole("button", { name: /Где посмотреть: .*СЧ-2026\/142/ }).click();
-    await expect(center.getByRole("region", { name: "Где посмотреть" })).toBeVisible();
+    await center.getByRole("link", { name: /ДОГ-2026\/091/ }).click();
+    await expect(page).toHaveURL(/\/eds\/projects\/.*(sheet|tab)=contract/);
   },
 );
 

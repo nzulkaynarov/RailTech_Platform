@@ -148,7 +148,9 @@ function useCardCheck() {
 function noteText(t: ReturnType<typeof useTranslation>["t"], card: IntegrationCard): string {
   if (card.access === "forbidden") return t("access.forbidden");
   if (card.access === "unavailable") return t("access.unavailable");
-  return t(`notes.${card.note}`, { count: card.count ?? 0 });
+  // «Всё в порядке» не может стоять рядом с бейджем «Нет данных»: состояние неизвестно — так и пишем (W15-G-6).
+  const note = card.note === "all_ok" && card.status === "unknown" ? "no_data" : card.note;
+  return t(`notes.${note}`, { count: card.count ?? 0 });
 }
 
 function IntegrationTile({

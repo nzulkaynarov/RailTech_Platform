@@ -1,0 +1,30 @@
+{% load i18n %}<!DOCTYPE html>
+<html lang="ru">
+<body style="margin:0; padding:24px; background-color:#f4f6f8; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; color:#1f2937; font-size:15px; line-height:1.6;">
+  <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="max-width:640px; margin:0 auto; background-color:#ffffff; border-radius:12px;">
+    <tr><td style="padding:28px 32px;">
+      <p style="margin:0 0 16px 0;">{% blocktranslate %}Здравствуйте, {{ supplier_name }}!{% endblocktranslate %}</p>
+      <p style="margin:0 0 16px 0;">{% blocktranslate %}Просим сообщить цену, срок поставки и наличие по позициям (ссылка на запрос: <strong>{{ reference }}</strong>):{% endblocktranslate %}</p>
+      <table role="presentation" cellpadding="6" cellspacing="0" width="100%" style="border-collapse:collapse; margin:0 0 16px 0;">
+        <tr style="background-color:#f3f4f6; text-align:left;">
+          <th style="border:1px solid #e5e7eb;">№</th>
+          <th style="border:1px solid #e5e7eb;">{% translate "Позиция" %}</th>
+          <th style="border:1px solid #e5e7eb;">{% translate "Артикул" %}</th>
+          <th style="border:1px solid #e5e7eb;">{% translate "Количество" %}</th>
+        </tr>
+        {% for line in lines %}
+        <tr>
+          <td style="border:1px solid #e5e7eb;">{{ forloop.counter }}</td>
+          <td style="border:1px solid #e5e7eb;">{{ line.name }}</td>
+          <td style="border:1px solid #e5e7eb;">{{ line.article }}</td>
+          <td style="border:1px solid #e5e7eb;">{{ line.quantity }}{% if line.unit %} {{ line.unit }}{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </table>
+      {% if note %}<p style="margin:0 0 16px 0;">{{ note|linebreaksbr }}</p>{% endif %}
+      <p style="margin:0 0 16px 0;">{% translate "Ответьте, пожалуйста, на это письмо: цена за единицу, валюта, условия поставки, срок действия цены." %}</p>
+      <p style="margin:0;">{{ sender_name }}{% if sender_email %}<br>{{ sender_email }}{% endif %}</p>
+    </td></tr>
+  </table>
+</body>
+</html>

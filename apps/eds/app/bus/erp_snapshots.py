@@ -32,6 +32,10 @@ class RequestPayload(_Tolerant):
     company_inn: str | None = None
     contact_name: str | None = None
     manager_crm_user_id: int | None = None
+    # «Создать заявку» Платформы (W16-D1-2, необязательные): срочность и файл письма директору, загруженный менеджером.
+    urgency: Literal["normal", "urgent"] | None = None
+    letter_file_id: uuid.UUID | None = None
+    request_number: str | None = None
 
 
 class RequestCreated(_Tolerant):

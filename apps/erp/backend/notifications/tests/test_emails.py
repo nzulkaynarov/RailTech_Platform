@@ -153,6 +153,37 @@ TEMPLATE_CASES = [
             "login_url": "https://cabinet.example.com/auth/magic#token=tok",
         },
     ),
+    (
+        "price_request",
+        {
+            "supplier_name": "ООО Вымышленный Поставщик",
+            "reference": "ЗВ-2026-104",
+            "sender_name": "Сергей Снабжен",
+            "sender_email": "supply@demo.example",
+            "note": "Нужны сертификаты",
+            "lines": [{"name": "Перевод стрелочный Р65 1/11", "article": "СП-Р65-11", "quantity": 2, "unit": "шт."}],
+        },
+    ),
+    (
+        "supplier_order",
+        {
+            "supplier_name": "ООО Вымышленный Поставщик",
+            "number": "ЗП-2026-031",
+            "expected_date": "30.11.2026",
+            "note": "",
+            "sender_name": "Сергей Снабжен",
+            "with_prices": True,
+            "lines": [
+                {
+                    "name": "Болт путевой М22",
+                    "article": "БП-М22",
+                    "quantity": 100,
+                    "unit": "шт.",
+                    "unit_price": "1500.00",
+                }
+            ],
+        },
+    ),
 ]
 
 

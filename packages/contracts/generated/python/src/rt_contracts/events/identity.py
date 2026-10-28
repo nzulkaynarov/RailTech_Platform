@@ -66,6 +66,10 @@ class Permissions(BaseModel):
         extra="ignore",
     )
     eds: list[EdsPermission] | None = None
+    sections: dict[str, Sections] | None = None
+    """
+    Необязательно (v1, аддитивно с D1-8): разделы каталога platform-rbac.yaml модулей EDS и ERP (ключи `eds.*`, `erp.*`), которые даёт сотруднику объединение матриц его ролей, и уровень (full ⊇ read); скрытых разделов нет, разделы CRM, чатов и настроек не публикуются. Нужны сервисам, которые проверяют не код права, а раздел (EDS: зона исполнителя резолюции — erp.calc.goods, erp.calc.services, eds.payments). У неактивного сотрудника — пусто. Нет поля — разделы неизвестны (снимок до D1-8), подписчик считает, что их нет. Подписчик заменяет разделы целиком по снимку
+    """
 
 
 class PlatformRoleCode(RootModel[str]):
@@ -73,6 +77,11 @@ class PlatformRoleCode(RootModel[str]):
     """
     Код роли Платформы из platform-rbac.yaml (MANAGER, DIRECTOR, SUPPLY, ENGINEER, ACCOUNTANT, ADMIN, …)
     """
+
+
+class Sections(StrEnum):
+    full = "full"
+    read = "read"
 
 
 class System(StrEnum):

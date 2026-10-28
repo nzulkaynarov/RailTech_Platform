@@ -62,7 +62,9 @@
       "partial": {
         "crm": "Leads and client replies did not load: the “{{crm}}” section did not respond. The rest is shown.",
         "erp": "Quotes to approve and costings did not load: the “{{erp}}” section did not respond. The rest is shown.",
-        "both": "Leads, quotes to approve and costings did not load: the “{{crm}}” and “{{erp}}” sections did not respond. The rest is shown."
+        "both": "Leads, quotes to approve and costings did not load: the “{{crm}}” and “{{erp}}” sections did not respond. The rest is shown.",
+        "eds": "Letters and documents did not load: the “{{eds}}” section did not respond. The rest is shown.",
+        "multi": "Data from the {{names}} sections did not load. The rest is shown."
       },
       "partialEmpty": {
         "title": "The queue loaded only in part",
@@ -183,6 +185,7 @@
       "companyUnknown": "ERP has not responded yet. A new administrator gets ERP access with a delay: try again in a few seconds.",
       "companyNoRights": "Only an ERP administrator can create the company. Sign in as an administrator.",
       "companyRetry": "Check again",
+      "companyWaiting": "Waiting for ERP to grant access…",
       "companyName": "Company name",
       "companyNameRequired": "Enter the company name",
       "companyInn": "Tax ID (optional)",

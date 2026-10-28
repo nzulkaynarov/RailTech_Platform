@@ -1,5 +1,5 @@
 # CONTRACTS — шов между CRM и ERP (и портальный вход Cabinet, сервис EDS)
-Статус: действует · Владелец: архитектор · Обновлено: 2026-10-27
+Статус: действует · Владелец: архитектор · Обновлено: 2026-10-28
 
 Версия 0 · 2026-10-13 · Источник истины — файлы в `packages/contracts/` (OpenAPI — в том числе `crm.yaml`, который генерирует CRM, — и JSON-схемы);
 этот документ объясняет их. Изменение контракта — PR с обеих сторон в одной вехе (ORCHESTRATOR §3.3).
@@ -36,6 +36,7 @@ Contract-first действует для `portal`, `integration`, событий
 |---|---|---|
 | `POST /clients/handoff` | передача клиента из CRM | вход: `crm_client_id`, `crm_lead_id?`, `company{name, inn?, segment?, language}`, `contacts[{crm_contact_id, name, phone?, email?, telegram_user_id?, language, is_primary, preferred_channel}]`, `need{summary, product_interest[], attachments[]?}`, `owner{crm_user_id, name}`, `consent{given_at, version}`, `create_request: bool`, `invite{channels: [telegram, email]}`. Ответ: `erp_company_id`, `erp_request_id?`, `invite{sent_via[], cabinet_url, error?}`. Идемпотентно по `crm_client_id` |
 | `POST /clients/{crm_client_id}/invite` | повторное приглашение контакта другим каналом (0.8.0, D1-9) | вход: `channel: email|telegram|both`, `crm_contact_id?` (без него — основной контакт). Ответ всегда 200: `sent_via[]`, `cabinet_url`, `error?` — код причины, если не ушло ни одним каналом (`CONTACT_EMAIL_REQUIRED`, `CONTACT_TELEGRAM_REQUIRED`, `EMAIL_DELIVERY_FAILED`, `CONTACT_CHANNEL_REQUIRED`, `INVALID_CHANNEL`, `COMPANY_ARCHIVED`, `CONTACT_ARCHIVED`, `CONTACT_WITHOUT_COMPANY`, `CONTACT_NOT_FOUND`); 404 — клиент неизвестен |
+| `POST /clients/{crm_client_id}/requests` | «Создать заявку» CRM для переданного клиента (шов 0.9.0, CRM-03, W16-D1-2) | вход: `crm_request_id` (строка `deals` CRM — ключ идемпотентности), `crm_lead_id?`, `contact?` (как в передаче; незнакомый ERP контакт создаётся и сопоставляется; e-mail не обязателен), `need{summary, product_interest[]?}`, `owner{crm_user_id, name}` (менеджер заявки — владелец сделки ERP, B-008), `urgency: normal\|urgent`, `letter_file_id?` (файл письма в EDS), `process: v3`. Ответ: `erp_company_id`, `erp_request_id`, `number` (`ЗВ-ГГГГ-NNN`). Клиент не передан — 404 `CLIENT_NOT_FOUND`; повтор `crm_request_id` — 200 с той же заявкой; тот же `Idempotency-Key` с другим телом — 409 `IDEMPOTENCY_CONFLICT` (ничего не создано; CRM: заявка `failed`, `erp_request_conflict`, без повтора) |
 | `PUT /contacts/{crm_contact_id}` | обновление контакта / Telegram-привязки | те же поля контакта |
 | `GET /companies/{erp_company_id}/summary` | карточка клиента для CRM | открытые сделки, последний документ, дебиторка, ближайшая поставка |
 | `GET /companies/{erp_company_id}/deals` | список сделок | `[{erp_deal_id, number, title, stage, amount, currency, next_step, updated_at}]`; `amount` — сумма последнего КП, отправленного клиенту, `null` — КП ещё не отправлялось (черновик не утекает) |
@@ -73,6 +74,13 @@ v1.<ts>.<jti>.<hex>` — доказательство владения общи�
 неизвестные `code` и `status` пропускаются. Выключенный из CRM сервис ERP не вызывается (курсы и ТН ВЭД — прогон
 пропускается, почта — `FAILED` «выключено из CRM», модели — нейтральный отказ, S3 — запись отклоняется).
 
+«Создать заявку» (W16-D1-2): CRM коммитит лида-клиента и заявку (`deals` с сутью, срочностью, контактом и id файла письма EDS),
+задача после коммита передаёт клиента, если его ещё нет в ERP (`/clients/handoff` с `create_request: false`), затем вызывает
+`POST /clients/{crm_client_id}/requests`. Номер заявки `Deal.number` (`ЗВ-ГГГГ-NNN`, после принятия КП — `ПР-ГГГГ-NNN` с тем же
+NNN; ERP-09) выдаёт ERP из счётчика года под блокировкой, без пропусков; он же — `number` в `DealListItem`, `DealRef` событий
+и инструментах `erp-mcp`. Список сделок ERP (`GET /api/v1/crm/deals/?search=`) ищет по номеру под любым префиксом, названию и
+компании. Портал (Cabinet) пока показывает `D-<id>` (контракт `erp-portal.yaml`, отдельная задача).
+
 Передача (`/clients/handoff`): компания ищется по `crm_client_id`, затем по ИНН; сопоставление создаётся **до** сделки, поэтому
 `request.created(source=crm)` и `invite.sent` доходят до CRM; ИНН чужого `crm_client_id` — 409 `INN_CONFLICT`; согласие хранится
 в ERP как пришло. Стадия `stage` во всех ответах, событиях и инструментах MCP — одна функция сопоставления FSM ERP → шкала
@@ -107,9 +115,9 @@ inline и до БД не доходит (§9.2).
 
 | Событие | payload | Что делает CRM |
 |---|---|---|
-| `request.created` | `source: crm|cabinet|erp` | лента лида; зеркало сделки `open` |
+| `request.created` | `source: crm|cabinet|erp`; с W16-D1-2 необязательные `request_number` (ЗВ), `urgency`, `letter_file_id` (файл письма в EDS), `crm_request_id`, `process` | лента лида; зеркало сделки `open` — заявка CRM по `crm_request_id`, иначе открытая сделка лида; EDS — письмо ВХ со срочностью и файлом |
 | `deal.stage_changed` | `from, to, reason?` | лента; `external_stage` |
-| `quote.sent` | `version, public_url, valid_until` | бот: «КП готово» с кнопками |
+| `quote.sent` | `version, public_url, valid_until`; `channels?` (ERP-11: каналы автоотправки по решению директора) | бот: «КП готово» с кнопками — если `channels` нет или в них есть `telegram` |
 | `quote.viewed` / `quote.accepted` / `quote.rejected` | `version, reason?, erp_contact_id?, crm_contact_id?` | лента; при accepted — уведомление ответственному |
 | `quote.acceptance_code_requested` | `version, erp_contact_id, crm_contact_id, code, expires_at` | бот присылает код контакту в Telegram; `code` не хранится и не логируется (Q-FIX22-1) |
 | `contract.signed` | `by: client|company|both` | лента |
@@ -204,9 +212,20 @@ JWT HS256, секрет `PLATFORM_SSO_SECRET` общий. Claims: `iss` (`crm`|`
 
 | Файл | Что | Кто читает |
 |---|---|---|
-| `openapi/platform-bff.yaml` | API BFF `/api/v1` (0.5.0 — поток подсказок SSE `/events/stream` (B5); 0.3.0 — роли-данные ADR-0012: `RoleRef`, `/admin/roles*` и предпросмотр «что произойдёт», повтор приглашения, передача лидов; 0.2.x — фаза P1: сессия, профиль, очередь, уведомления, поиск, Admin · Оргструктура); растёт минорными версиями до кода экранов | SPA (orval), BFF (тесты ответов по схеме) |
+| `openapi/platform-bff.yaml` | API BFF `/api/v1` (0.5.0 — поток подсказок SSE `/events/stream` (B5); 0.3.0 — роли-данные ADR-0012: `RoleRef`, `/admin/roles*` и предпросмотр «что произойдёт», повтор приглашения, передача лидов; 0.2.x — фаза P1: сессия, профиль, очередь, уведомления, поиск, Admin · Оргструктура); добавления — до кода экранов и без подъёма версии, минор — только ломающее (§7.1) | SPA (orval), BFF (тесты ответов по схеме) |
 | `platform-rbac.yaml` (+ `.schema.json`) | **каталог возможностей версии 2** (ADR-0012, R-2): разделы с уровнями и отображением в права CRM (casbin) и ERP (`ErpPermission` шва), поля с ограничением, меню, виды работы «Моей очереди», две системные роли и шаблоны; роли — данные в CRM. Единственный каталог ролей в `packages/contracts` (тест в BFF); версия 1 удалена, её снимок — фикстура тестов миграции CRM | CRM (генератор `gen_platform_roles.py`, права и провижининг), BFF и SPA (генератор `apps/platform/scripts/gen_rbac.py`) |
 | `client-statuses.yaml` (+ `.schema.json`) | статусы для клиента SPEC-v3 §2.5 на трёх языках | бот CRM, Cabinet, письма ERP, BFF |
+
+**Переписка с клиентами отдельно от реестра лидов (B-D18-1, W18A-P3; решение архитектора 2026-10-28).** В каталоге раздел
+`crm.leads` даёт CRM `leads:*` — реестр (очередь, список, карточка, воронка) и любой диалог; раздел `chats.external` даёт
+`chats:read` (на `full` — ещё `chats:reply`, `chats:note`, `chats:assist`) — только переписку, вложения и заметки команды тех
+диалогов, где сотрудник **участвует** (ответственный за лида, клиента или сделку клиента, автор ответа клиенту) или которые
+**назначены его зоне**; зона «Счета и оплаты» — право `chats:invoiced` раздела `eds.payments` на полном уровне: диалоги
+клиентов, по сделке которых ERP выставила счёт (`deals.invoice_issued_at` CRM из события `erp/invoice.issued`, синхронных
+вызовов ERP нет). Зона без `chats:<действие>` переписку не открывает. Правило — детерминированный код CRM
+(`app/domain/chat_access.py`); держателю только `chats:*` чужой диалог — 404, без обоих прав — 403. Список открытых диалогов —
+CRM `GET /chats`, BFF `GET /chats/external`; лента и вложения — прежние маршруты (`getCrmThread`, `downloadCrmAttachment`),
+BFF пускает `crm.leads` или `chats.external` от чтения и объект не проверяет сам.
 
 Правила: словарь SPEC-v3 §2 — в именах полей и значениях; номера объектов — бизнес-номера; ошибки — `Error` с `source`;
 агрегирующие ответы несут `sources`. Разрывы бэкендов, нужные экранам, меняют контракты CRM и ERP в том же PR, что и код
@@ -227,11 +246,13 @@ ADR-0016: у каждого файла контракта своя версия 
   `make contracts` и в CI (§9.6).
 - **Старый вебхук §3** (поле `version` в теле) — в ERP снят (B3), приёмник CRM `/integrations/erp/events` удаляет B4.
 
-### 7.1. Проверки машиной: `oasdiff` и `events_compat`
+### 7.1. Проверки машиной: `oasdiff`, `events_compat`, `documents_compat`
 
 Обе проверки входят в `make contracts` (цели `openapi-compat` и `compat` в `packages/contracts/Makefile`), в `scripts/ci_local.sh
-contracts` и в job «packages · contracts» CI. Сравнивают рабочее дерево с базой `CONTRACTS_BASE_REF` (по умолчанию
-`origin/main`; CI и `ci_local.sh` перед этим скачивают её). Файла в базе нет — он новый, не ломающее. Красный результат
+contracts` и в job «packages · contracts» CI. Сравнивают рабочее дерево с базой `CONTRACTS_BASE_REF`: CI задаёт её явно
+(PR — вершина `origin/main`, то есть проверяется итог слияния; push в `main` — коммит до push); локально без переменной —
+точка ответвления `HEAD` от `origin/main` (`git merge-base`; DECISIONS 2026-10-28): отставшая ветка не краснеет от чужих
+слитых изменений и не делает merge `main` ради зелёного. `ci_local.sh` перед проверкой скачивает `origin/main`. Файла в базе нет — он новый, не ломающее. Красный результат
 обойти нельзя: ни флагом, ни пропуском; можно только сделать изменение совместимым или поднять версию (до 1.0 — минорную,
 с 1.0 — мажор).
 
@@ -239,6 +260,7 @@ contracts` и в job «packages · contracts» CI. Сравнивают рабо
 |---|---|---|
 | `openapi/*.yaml` — все файлы (с волны 12 их шесть, новый — `eds.yaml`), в том числе сгенерированные `erp-internal.yaml` и `crm.yaml` | `scripts/openapi_compat.py` → `oasdiff breaking`, закреплённая версия (одноразовый контейнер `tufin/oasdiff` с тегом и digest; свой бинарь — `OASDIFF_BIN`) | oasdiff: уровень ERR валит; WARN (например, удалено необязательное свойство запроса) печатается и не валит — решение лида, строже (`--fail-on WARN`) не включено |
 | `events/**`, `bus/subscriptions.schema.json` | `scripts/events_compat.py` | §9.6: в пределах `vN` — только новые необязательные поля |
+| `documents/**` (тело документа, каталог переменных) | `scripts/documents_compat.py` | §11: тела хранятся годами — в мажоре схема только расширяется; каждое тело-пример базы проходит схему head, semver растёт, коды каталога не удаляются |
 
 **Что считается ломающим в OpenAPI (ERR).** Удалён путь или операция (без `deprecated: true` и даты `x-sunset` не ближе 180 дней от пометки —
 «api-path-removed-without-deprecation», «api-path-removed-before-sunset»); удалено обязательное поле ответа; новое обязательное поле
@@ -266,6 +288,12 @@ events-compat: ломающие изменения относительно orig
    понижение версии — ошибка; переход `0.x → 1.0.0` с ломающим допустим (первая стабильная). Правило «контракт раньше
    кода, обе стороны в одном PR» (ORCHESTRATOR §3 п. 3) остаётся: поднятая минорная не отменяет синхронную правку
    потребителей. Схем событий это не касается — для них по-прежнему только `v(N+1)` (§9.6).
+   **Добавляющее изменение (нет ERR) версию не поднимает** — проверка этого не требует (владелец 2026-10-28, DECISIONS):
+   прежнее «минор на PR» давало параллельным PR один и тот же номер и очередь слияния. Журнал версий в `info.description`
+   не пополняется: что изменилось — в описании PR (раздел «Контракт»). Ломающий PR перед слиянием делает merge
+   `origin/main` и проверяет, что его минор выше минора `main` (два ломающих PR с одним минором — второй поднимает ещё);
+   иначе push в `main` покраснеет на той же проверке. Сгенерированные клиенты версию и описание не вшивают (шапка orval —
+   `override.header` в `orval.config.ts`: только название), поэтому разница версий их не меняет.
 3. **С 1.0** — новый мажор: путь `/v2/…` (API) или файл `…v2.json` (событие), `info.version` файла OpenAPI получает мажор 2;
    старый мажор остаётся и обслуживается ≥ 6 месяцев (ADR-0016), помечается `deprecated: true` и `x-sunset: ГГГГ-ММ-ДД`
    (не раньше чем через 180 дней) в схеме. Поднятая версия и пути `/v2` сами по себе ломающее старого мажора **не
@@ -423,7 +451,7 @@ subscribers:
 `uz.railtech.crm.contact.*.v1` (ERP обновляет проекции компании и контактов, B4) и с волны 12 `uz.railtech.eds.letter.resolved.v1`,
 `uz.railtech.eds.letter.rejected.v1`, `uz.railtech.eds.approval.decided.v1`; `eds` — §10.2.
 `platform-bff` (B5) ← `uz.railtech.erp.*.v1`, `uz.railtech.crm.lead.*.v1`, `uz.railtech.identity.user.*.v1` и с волны 12
-`uz.railtech.eds.*.v1` (обработчика в BFF пока нет — `skipped`; колокольчик и счётчики — этап D): BFF Платформы
+`uz.railtech.eds.*.v1` (с D1-6 — подсказки `queue`, `counters`, `notifications`): BFF Платформы
 превращает события в подсказки инвалидации SSE (`GET /api/v1/events/stream`, `platform-bff.yaml` 0.5.0), данных событий не
 хранит; приёмник `http://platform-bff:8000/bus/v1/events` виден только внутри сети compose (Caddy `/bus/*` на домене
 Платформы отдаёт 404); секреты пар — `RT_BUS_SECRET_ERP_PLATFORM_BFF`, `RT_BUS_SECRET_CRM_PLATFORM_BFF`, с волны 12
@@ -546,7 +574,7 @@ ADR-0015 (EDS — отдельный сервис, владелец реестр
 | `openapi/eds.yaml` | API EDS `/api/v1` для BFF Платформы: обмен токена, `/me`, письма и резолюции, документы, маршруты согласования, реестр и экспорт, файлы с версиями; `/health` | 0.2.0 |
 | `events/eds/*.v1.json` (+ `_defs.v1.json`, `examples/`) | 8 типов `uz.railtech.eds.*.v1` | v1 |
 | `events/erp/quote.ready_for_approval.v1.json` | КП готово к одобрению (определения — `QuoteReadyForApproval`, `QuoteVisa` в `erp/_defs.v1.json`) | v1 |
-| `events/identity/_defs.v1.json` | `User.permissions.eds` — необязательное, аддитивно в v1 | v1 |
+| `events/identity/_defs.v1.json` | `User.permissions.eds` — необязательное, аддитивно в v1; `User.permissions.sections` — разделы модулей EDS и ERP и уровень (`full`/`read`), необязательное, аддитивно в v1 (D1-8: зона исполнителя резолюции в EDS, `assignee_zone_mismatch`) | v1 |
 | `bus/subscriptions.yaml` | подписчик `eds`; новые типы `erp` и `platform-bff`; `crm` без `quote.ready_for_approval` | — |
 | `platform-rbac.yaml` (+ схема) | `backend.eds` разделов EDS → коды прав EDS | каталог v2 |
 
@@ -628,7 +656,8 @@ ERP применяет события EDS (E5) — §10.6.
 
 Коды v1 (`EdsPermission`): `letters.read`, `letters.register`, `letters.resolve`, `memos.create`, `memos.approve`,
 `approvals.decide`, `registry.read`, `registry.export`, `payments.confirm` (решение архитектора: шаг «бухгалтер» служебной
-записки с суммой) и с eds.yaml 0.3.0 `bus.manage` — журнал шины EDS в Admin · Журнал интеграций (W13-A2). Перечень — в `eds.yaml` и схеме каталога; в событиях шины (`identity`, `eds`) код — строка по шаблону
+записки с суммой), с eds.yaml 0.3.0 `bus.manage` — журнал шины EDS в Admin · Журнал интеграций (W13-A2),
+`files.upload` (D1-2b) — загрузить свой файл и читать только свои файлы (письмо на имя директора к «Создать заявку», D1-2b). Перечень — в `eds.yaml` и схеме каталога; в событиях шины (`identity`, `eds`) код — строка по шаблону
 `^[a-z_]+\.[a-z_]+$`, не перечень, поэтому новый код не ломает события v1. CRM вычисляет их из ролей Платформы так же, как права ERP (объединение по
 разделам; `full` включает `read`), и публикует в `identity.user.*` как `user.permissions.eds`. Отображение (`platform-rbac.yaml`,
 `backend.eds`):
@@ -642,10 +671,11 @@ ERP применяет события EDS (E5) — §10.6.
 | `eds.memo.create` | — | `memos.create` |
 | `eds.memo.approve` | — | `memos.approve` |
 | `admin` | — | `bus.manage` (журнал шины, W13-A2) |
+| `crm.clients` | — | `files.upload` (свой файл — письмо директору к «Создать заявку»; чужой файл — 404, документов и реестра не открывает; D1-2b) |
 
-Итог по ролям (тест `packages/contracts/tests/test_platform_rbac.py`): «Директор» — все девять кодов документов (без
+Итог по ролям (тест `packages/contracts/tests/test_platform_rbac.py`): «Директор» — все коды документов и `files.upload` (без
 `bus.manage`: у директора `admin` — только чтение); «Менеджер» — `letters.read`,
-`registry.read`, `memos.create`; «Снабженец», «Гл. инженер» — `registry.read`, `memos.create`; «Бухгалтер» — `letters.read`,
+`registry.read`, `memos.create`, `files.upload`; «Снабженец», «Гл. инженер» — `registry.read`, `memos.create`; «Бухгалтер» — `letters.read`,
 `registry.read`, `registry.export`, `payments.confirm`, `memos.create`; «Менеджер и бухгалтер» гейта R-3 (лиды и «Счета и
 оплаты» — полный доступ) — `registry.read`, `registry.export`, `payments.confirm`; «Администратор» — `memos.create` (свои
 служебные записки; писем, реестра и маршрутов не видит — R3-D-2; допустимо, решено архитектором) и `bus.manage` (метаданные
@@ -690,7 +720,13 @@ ERP применяет события EDS (E5) — §10.6.
   компании клиента (черновик-калькулятор) на согласование не уходит (`QUOTE_CLIENT_REQUIRED`).
 - **`eds.approval.decided` по КП** (закрытый маршрут; решения по документам EDS ERP не касаются): `approve` — ИСХ-номер
   (`outgoing_number`) и `channels` на КП, статус «Готово к отправке» (отправка клиенту разблокирована; `approved_late` —
-  отметка «одобрено с опозданием» в журнале КП); `return` — черновик с
+  отметка «одобрено с опозданием» в журнале КП); с выбранными `channels` ERP **сразу отправляет КП клиенту** по доступным из
+  них (ERP-11, решение архитектора 2026-10-28): почта — получатель с e-mail, Telegram — контакт с Telegram у клиента из CRM
+  (пишет бот CRM по `quote.sent.channels`), кабинет — контакт, приглашённый или входивший; недоступный канал и остановка
+  отправки гейтом или любой сбой (`SEND_FAILED`, `error_detail`) — в `Quote.send_report` (`requested`, `sent_via`,
+  `skipped[{channel, reason}]`, `error`) и журнале КП, одобрение в силе (откатывается только точка сохранения отправки),
+  менеджеру заявки — уведомление «КП не отправлено по каналу X — отправьте вручную» (`quote.auto_send_failed`); кабинет из
+  каналов не исключается (отправленное КП видно в кабинете всегда); повтор события второй отправки не даёт; `return` — черновик с
   комментарием директора; `reject` — КП отклонено (статус `REJECTED`; от отказа клиента его отличает
   `Quote.director_decision = reject` — КП клиенту не уходило, в портале и в сумме сделки его нет). Решение по `quote_version`, отличной от текущей редакции, или по КП, которое
   уже не ждёт одобрения, не применяется — запись в журнал КП; повтор применённого решения — без изменений.
@@ -699,6 +735,21 @@ ERP применяет события EDS (E5) — §10.6.
   `quote.review`); данные ролей ERP чистят миграции `accounts/0010`, `integration/0010`. **Отправить одобренное КП клиенту**
   (`quote.send`, `POST /crm/quotes/{id}/send-to-client/`) могут менеджер заявки и директор: с 2026-10-26 код отделён от
   `eds.drafts` и дан разделу `crm.clients` full (решение архитектора, C1-G-4); снабженец-автор, гл. инженер и бухгалтер — 403.
-  Объектной проверки «своя заявка» нет: в пути C1 у сделки из CRM нет ответственного в ERP.
+  Объектная проверка (B-008, W16-D1-2): менеджер отправляет КП только своей заявки — `Deal.manager`, сотрудник ERP,
+  сопоставленный с менеджером «Создать заявку» (`owner.crm_user_id` передачи и `POST /clients/{id}/requests`); чужую заявку —
+  только держатель и `quote.review` (директор, роль с `eds.drafts` full, прежние роли ERP «Расчёт» и «Руководитель»). Сделка
+  без менеджера (`Deal.manager = NULL`: заявки до Платформы, портал) — тоже только с `quote.review`. Та же объектная проверка —
+  у отзыва публичной ссылки КП (`POST /crm/quotes/{id}/revoke-public-link/`).
 - **API КП** (`erp-internal.yaml`, `QuoteSerializer`, C1-G-5): `outgoing_number`, `director_decision`, `director_comment`,
-  `send_channels` — только чтение; решение, комментарий и каналы видят сотрудники своей компании, не покупатель.
+  `send_channels`, `send_report` (ERP-11) — только чтение; решение, комментарий и каналы видят сотрудники своей компании, не покупатель.
+
+## 11. Документы: тело и каталог (ADR-0020, D-DOC1)
+
+`packages/contracts/documents/` — единый формат тела документов EDS и ERP: `body.schema.json` (узлы ProseMirror/Tiptap и
+параметры страницы; цвет и шрифт — только из бланка), каталог видов, переменных и блоков с замком `variables.yaml`
+(подписи ru, uz-латиница, en; обязательные блоки видов), примеры тел. Рендер — пакет `packages/rt-docs`; устройство, API и
+эталоны — [`rt-docs.md`](rt-docs.md). Версии: semver в `$comment` схем; в мажоре — только расширение (новые узлы, атрибуты,
+значения enum, коды), потому что выпущенные документы хранят снимок тела; мажор 2 — новый файл `body.v2.schema.json` и
+конвертер (§7.1, `documents_compat`). Лимиты: вложенность узлов ≤ 20, таблица ≤ 500 строк, тело ≤ 1 МБ; управляющие символы
+(кроме `\t`, `\n`) в теле запрещены и вычищаются на входе (`rt_docs.normalize_body`). Событие бланка `erp.company.letterhead.updated.v1` и API предпросмотра — в задачах D-DOC2
+и D-DOC3 (контракт раньше кода).

@@ -54,6 +54,7 @@ ServiceAction = Literal[
     "write_owner",
     "write_hosting",
     "disable_provider",
+    "open_bus",
 ]
 MailStatus = Literal["queued", "sent", "failed", "skipped_no_smtp"]
 
@@ -92,6 +93,15 @@ class SmtpSettingsIn(_In):
     from_name: str = Field(default="", max_length=120)
     username: str | None = Field(default=None, max_length=255)
     smtp_password: SecretStr | None = Field(default=None, min_length=1, max_length=512)
+    password: SecretStr = Field(min_length=1, max_length=256)
+
+
+class OffsiteBackupIn(_In):
+    """Внешняя копия бэкапов (OPS-GDRIVE-2): ключ сервисного аккаунта Google (`None` — прежний),
+    папка общего диска, пароль администратора. Ключ дальше CRM не уходит и не возвращается."""
+
+    key_json: SecretStr | None = Field(default=None, min_length=1, max_length=16384)
+    folder_id: str = Field(min_length=1, max_length=512)
     password: SecretStr = Field(min_length=1, max_length=256)
 
 
@@ -230,6 +240,36 @@ class SmtpConnector(_Out):
     secrets_enabled: bool
     security: Literal["starttls", "ssl", "none"]
     username: str
+
+
+OffsiteReason = Literal[
+    "ok",
+    "key_rejected",
+    "drive_api_disabled",
+    "folder_not_found",
+    "not_folder",
+    "not_shared_drive",
+    "read_only",
+    "network",
+]
+
+
+class OffsiteCheck(_Out):
+    ok: bool
+    reason: OffsiteReason
+    folder_name: str | None
+    checked_at: datetime
+
+
+class OffsiteBackup(_Out):
+    configured: bool
+    folder_id: str
+    client_email: str
+    key_suffix: str | None
+    key_updated_at: datetime | None
+    delivered_at: datetime | None
+    last_check: OffsiteCheck | None
+    secrets_enabled: bool
 
 
 class SmtpCheck(_Out):

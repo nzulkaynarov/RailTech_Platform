@@ -161,8 +161,20 @@ def _contract_signed(env: ErpEvent, deal: Deal | None) -> str:
     return f"Договор {env.payload.number or ''} подписан ({plain(env.payload.by)})."
 
 
+def mark_invoiced(deal: Deal | None, occurred_at: datetime) -> None:
+    """Факт «по сделке выставлен счёт» (B-D18-1): самое раннее событие счёта, порядок прихода
+    не важен; опоздавшее событие отметку не снимает (зона переписки «Счета и оплаты»)."""
+    if deal is None:
+        return
+    moment = aware(occurred_at)
+    if deal.invoice_issued_at is None or moment < aware(deal.invoice_issued_at):
+        deal.invoice_issued_at = moment
+
+
 def _invoice(env: ErpEvent, deal: Deal | None) -> str:
     payload = env.payload
+    # Оплата и просрочка тоже значат, что счёт выставлен (если `invoice.issued` ещё в пути).
+    mark_invoiced(deal, env.occurred_at)
     amount, currency = plain(payload.amount), plain(payload.currency)
     if env.event == "invoice.issued":
         _set_stage(deal, "invoiced")

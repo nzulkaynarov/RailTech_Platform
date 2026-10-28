@@ -8,6 +8,7 @@ from django.urls import path
 from .views import (
     AiUsageView,
     CatalogSearchView,
+    ClientRequestView,
     CompanyDealsView,
     CompanySummaryView,
     ContactDetailView,
@@ -26,6 +27,7 @@ from .views import (
 
 urlpatterns = [
     path("clients/handoff", HandoffClientView.as_view(), name="integration-clients-handoff"),
+    path("clients/<int:crm_client_id>/requests", ClientRequestView.as_view(), name="integration-client-requests"),
     path("clients/<int:crm_client_id>/invite", InviteClientContactView.as_view(), name="integration-clients-invite"),
     path("contacts/<int:crm_contact_id>", ContactDetailView.as_view(), name="integration-contact-detail"),
     path("companies/<int:erp_company_id>/summary", CompanySummaryView.as_view(), name="integration-company-summary"),

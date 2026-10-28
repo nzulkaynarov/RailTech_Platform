@@ -17,7 +17,7 @@ from urllib.parse import quote
 
 from app.feeds.feed import SNAPSHOT_TTL_SECONDS, Feed, rows
 from app.feeds.models import Notification, NotificationPage, NotificationTab, ObjectRef
-from app.feeds.numbers import deal_number, deal_ref
+from app.feeds.numbers import deal_number, deal_ref, supplier_order_ref
 from app.feeds.snapshot import Snapshot
 from app.feeds.text import join, parse_dt, short
 
@@ -39,6 +39,7 @@ _DECISIONS = frozenset(
         "delivery.line_disputed",
         "fulfillment.accept_failed",
         "delivery.line_event_failed",
+        "supplier_order.overdue",
     }
 )
 # Клиенты: что произошло с клиентом, его заявкой и документами.
@@ -76,6 +77,15 @@ def tab_of(event_code: str) -> NotificationTab:
 
 
 def _object(row: dict[str, Any], deals: dict[int, dict[str, Any]]) -> ObjectRef | None:
+    params = row.get("event_params")
+    if (
+        str(row.get("event_code") or "").startswith("supplier_order.")
+        and isinstance(params, dict)
+        and isinstance(params.get("number"), str)
+    ):
+        # Заказ поставщику (D2-2): заявки у уведомления нет, ведёт на карточку ЗП.
+        supplier = params.get("supplier")
+        return supplier_order_ref(params["number"], supplier if isinstance(supplier, str) else None)
     deal = deals.get(row["deal"]) if isinstance(row.get("deal"), int) else None
     if deal is None:
         return None

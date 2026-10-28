@@ -16,6 +16,7 @@ from typing import Any, Literal
 
 import httpx
 import structlog
+from pydantic import SecretStr
 
 from app.config import Settings
 from app.domain import external_ai_replies as ai_rules
@@ -23,23 +24,32 @@ from app.domain import external_erp_events as erp_events_rules
 from app.domain import external_erp_handoff as erp_handoff_rules
 from app.domain import external_erp_reported as erp_reported_rules
 from app.domain import external_erp_sync as erp_sync_rules
+from app.domain import external_infra as infra_rules
+from app.domain import external_offsite as offsite_rules
 from app.domain import external_status as rules
 from app.domain import external_vendor as vendor_rules
 from app.domain import system_status
 from app.domain.external_registry import vendor_of
 from app.domain.external_status import CheckResult, HttpFacts, Metric
+from app.domain.platform_roles import eds_catalog_fingerprint
 from app.domain.system_status import ErpFacts
 from app.integrations import external_probes as probes
 from app.integrations.litellm_admin import LiteLLMAdmin, ProviderBudget
 from app.integrations.litellm_catalog import ModelCatalog
+from app.integrations.redis_probe import RedisProbe
+from app.integrations.redis_probe import probe as redis_probe_run
 from app.integrations.s3 import ObjectStorage
 from app.integrations.smtp import SmtpProbeError
 from app.integrations.telegram import resolve_token
+from app.models.system import IdentityCatalogState
 from app.repositories import external_services as repo
 from app.security.secrets_store import SecretsStore
 from app.services import backups as backup_rules
+from app.services import identity_catalog
 from app.services.ai_spend import SpendLogSource
 from app.services.backups import BackupReader
+from app.services.external_services import offsite as offsite_reader
+from app.services.external_services import wal as wal_reader
 from app.services.external_services.providers import providers as alias_providers
 from app.services.mail import MailService
 from app.services.settings import SettingsService
@@ -64,6 +74,10 @@ _DAY_KEYS = (
     "fallback_24h",
 )
 _CARRY_PREFIXES = ("bucket.", "_smtp")
+# Повтор публикации прав EDS дешёвым проходом — не чаще раза в 5 минут (шину не долбим).
+EDS_RETRY_EVERY = timedelta(minutes=5)
+_EDS_RETRY_AT = "_eds_retry_at"
+_EDS_ERROR = "_eds_error"
 
 
 @dataclass
@@ -81,6 +95,10 @@ class Deps:
     erp_url: Callable[[], Awaitable[str]]
     transport: httpx.AsyncBaseTransport | None = None
     tls_probe: Callable[[str], Awaitable[probes.TlsProbe]] = probes.tls
+    redis_probe: Callable[[str], Awaitable[RedisProbe]] = redis_probe_run
+    # Права EDS (B-005): записанный отпечаток и публикация; по умолчанию — через `sessions`.
+    eds_stored: Callable[[], Awaitable[tuple[str | None, int]]] | None = None
+    eds_publish: Callable[[], Awaitable[identity_catalog.CatalogSyncResult]] | None = None
     # Значения по умолчанию алиасов: строки вендоров есть и при недоступном шлюзе.
     defaults: Path | None = None
     # Коннектор «ERP» настроен (адрес и токен из «Подключений» или `.env`); не задан — по адресу.
@@ -171,6 +189,12 @@ class _Run:
             "erp_handoff": self.erp_handoff,
             "ai_replies": self.ai_replies,
             "erp_events": self.erp_events,
+            "wal_archive": self.wal_archive,
+            "offsite_backup": self.offsite_backup,
+            "redis_broker": self.redis_broker,
+            "redis_cache": self.redis_cache,
+            "bus_dlq": self.bus_dlq,
+            "eds_rights": self.eds_rights,
         }
         return await handler[key]()
 
@@ -319,6 +343,97 @@ class _Run:
             erp_events_rules.ErpEventsFacts(stats.dead, stats.failed, stats.stuck, stats.last_error)
         )
 
+    async def bus_dlq(self) -> CheckResult:
+        """Недоставленное на шине (кроме ERP): счётчик за неделю; «Сломано» — по общей политике."""
+        async with self.d.sessions() as session:
+            stats = await repo.bus_dlq_stats(session, self.now)
+        return infra_rules.bus_dlq(
+            infra_rules.BusDlqFacts(stats.dead, stats.failed, stats.last_error)
+        )
+
+    async def eds_rights(self) -> CheckResult:
+        """Права EDS опубликованы под действующим отпечатком каталога? Нет — повторяем публикацию
+        здесь же (самолечение: воркер при старте мог упасть из-за шины), не чаще `EDS_RETRY_EVERY`;
+        «Перепроверить» и тяжёлый проход повторяют сразу. Сбой — причина `eds_rights` (B-005)."""
+        current = eds_catalog_fingerprint()
+        stored, users = await self._eds_stored()
+        if stored == current:
+            return infra_rules.eds_rights(infra_rules.EdsRightsFacts(stored, current, users))
+        prev = self.previous.get("eds_rights", {})
+        last_try = _when(prev.get(_EDS_RETRY_AT))
+        prev_error = prev.get(_EDS_ERROR)
+        carried = {
+            _EDS_RETRY_AT: last_try.isoformat() if last_try else None,
+            _EDS_ERROR: prev_error if isinstance(prev_error, str) else None,
+        }
+        if not (self.heavy or last_try is None or self.now - last_try >= EDS_RETRY_EVERY):
+            facts = infra_rules.EdsRightsFacts(stored, current, users, error=carried[_EDS_ERROR])
+            return _with_metrics(infra_rules.eds_rights(facts), carried)
+        error: str | None = None
+        outcome: identity_catalog.CatalogSyncResult | None = None
+        try:
+            outcome = await self._eds_publish()
+        except Exception as exc:  # noqa: BLE001 — любой сбой публикации — причина строки, не обвал
+            error = type(exc).__name__
+            logger.warning("eds_rights_republish_failed", error=type(exc).__name__, source="check")
+        if outcome is not None and outcome.skipped_locked:
+            error = "skipped_locked"
+        if error is None:
+            done = infra_rules.EdsRightsFacts(
+                stored, current, outcome.users if outcome else users, outcome is not None
+            )
+            return _with_metrics(
+                infra_rules.eds_rights(done), {_EDS_RETRY_AT: None, _EDS_ERROR: None}
+            )
+        failed = infra_rules.EdsRightsFacts(stored, current, users, error=error)
+        return _with_metrics(
+            infra_rules.eds_rights(failed), {_EDS_RETRY_AT: self.now.isoformat(), _EDS_ERROR: error}
+        )
+
+    async def _eds_stored(self) -> tuple[str | None, int]:
+        if self.d.eds_stored is not None:
+            return await self.d.eds_stored()
+        async with self.d.sessions() as session:
+            row = await session.get(IdentityCatalogState, identity_catalog.EDS_KEY)
+        return (row.fingerprint, row.published_users) if row is not None else (None, 0)
+
+    async def _eds_publish(self) -> identity_catalog.CatalogSyncResult:
+        if self.d.eds_publish is not None:
+            return await self.d.eds_publish()
+        return await identity_catalog.ensure_eds_rights_published(self.d.sessions)
+
+    async def wal_archive(self) -> CheckResult:
+        cfg = self.d.config
+        previous = self.previous.get("wal_archive", {})
+        facts, carry = await wal_reader.read(
+            self.d.storage,
+            cfg.s3_bucket_wal,
+            cfg.wal_s3_prefix,
+            previous,
+            refresh_base=self.heavy,
+        )
+        return _with_metrics(infra_rules.wal_archive(facts, self.now), carry)
+
+    async def offsite_backup(self) -> CheckResult:
+        """Внешняя копия на Google Drive (OPS-GDRIVE): отметка сервиса offsite-backup, без Drive."""
+        facts = await offsite_reader.read(self.d.storage, self.d.config.s3_bucket_offsite)
+        return offsite_rules.offsite_backup(facts, self.now)
+
+    async def redis_broker(self) -> CheckResult:
+        return await self._redis(infra_rules.REDIS_BROKER, self.d.config.redis_broker_url)
+
+    async def redis_cache(self) -> CheckResult:
+        return await self._redis(infra_rules.REDIS_CACHE, self.d.config.redis_cache_url)
+
+    async def _redis(self, key: str, url: SecretStr) -> CheckResult:
+        address = url.get_secret_value()
+        if not address:
+            return infra_rules.redis(infra_rules.RedisFacts(key, configured=False), self.now)
+        found = await self.d.redis_probe(address)
+        return infra_rules.redis(
+            infra_rules.RedisFacts(key, True, found.error, found.latency_ms, found.info), self.now
+        )
+
     async def langfuse(self) -> CheckResult:
         cfg = self.d.config
         secret = cfg.langfuse_secret_key.get_secret_value()
@@ -439,7 +554,17 @@ def _with_metrics(result: CheckResult, extra: Mapping[str, Metric]) -> CheckResu
         result.hint,
         result.latency_ms,
         {**result.metrics, **extra},
+        cause=result.cause,
     )
+
+
+def _when(raw: Metric) -> datetime | None:
+    if not isinstance(raw, str):
+        return None
+    try:
+        return datetime.fromisoformat(raw)
+    except ValueError:
+        return None
 
 
 def _str(raw: object) -> str | None:

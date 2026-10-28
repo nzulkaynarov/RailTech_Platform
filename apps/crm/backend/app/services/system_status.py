@@ -4,9 +4,11 @@
 (`system_alerts`), очередь Procrastinate и конфигурация. Платных вызовов моделей нет.
 """
 
-from collections.abc import Sequence
+import asyncio
+from collections.abc import Awaitable, Sequence
 from datetime import datetime, timedelta
 
+import structlog
 from pydantic import SecretStr
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -28,6 +30,12 @@ from app.services import backups as backup_rules
 from app.services.backups import BackupReader
 from app.services.readiness import ReadinessService
 from app.services.settings import SettingsService
+
+logger = structlog.get_logger(__name__)
+
+# Предел ожидания каждого источника «Состояния системы»: медленный даёт строку «не проверено»,
+# а не держит всю карточку (BFF ждёт CRM 5 с, SPA повторяет запрос — карточка «висит в загрузке»).
+SOURCE_TIMEOUT_S = 2.0
 
 REQUIRED_SECRETS = (
     "postgres_password",
@@ -95,27 +103,59 @@ class SystemStatusService:
         `ai_budget` — расход ИИ сегодня по системам из журнала LiteLLM (M3-CRM-09, кэш 60 с);
         None — журнал недоступен.
         """
-        report = await self._readiness.check()
+        # Три независимых источника идут вместе, каждый со своим пределом.
+        report, from_db, backup = await asyncio.gather(
+            self._readiness.check(),
+            self._bounded(
+                self._database_components(now), now, "state_db", "Состояние из базы", "БД"
+            ),
+            self._bounded(
+                self._backup_components(now), now, "backup", rules.BACKUP_TITLE, "бакет копий"
+            ),
+        )
         components = rules.dependencies(report.checks, now)
         if report.checks.get("database", False):
-            cfg = await self._settings.get()
-            alerts, facts = await self._db_facts(now)
-            components += rules.models(alerts)
-            components.append(rules.budget(alerts, now))
-            components.append(rules.queue(facts, now))
-            components.append(rules.channel(cfg.notifications.channel_id, now))
-            platform = rules.PlatformUrlFacts(
-                self._config.platform_base_url, self._config.app_env == "prod"
-            )
-            components.append(rules.crm_url(cfg.company.crm_base_url, now, platform))
+            components += from_db
         components.append(rules.bot(bot, self._config.telegram_mode, now))
-        components.append(await self._backup(now))
+        components += backup
         components.append(rules.erp(erp or ErpFacts(configured=False), now))
         components.append(rules.ai_budget(ai_budget, now))
         missing = missing_secrets(self._config, token_elsewhere=token_configured)
         has_key = bool(self._config.secrets_key.get_secret_value())
         components.append(rules.secrets(missing, now, secrets_key=has_key))
         return rules.ordered(components)
+
+    async def _bounded(
+        self,
+        parts: Awaitable[list[Component]],
+        now: datetime,
+        key: str,
+        title: str,
+        source: str,
+    ) -> list[Component]:
+        """Источник уложился в `SOURCE_TIMEOUT_S` — его строки; нет — одна строка «не проверено»."""
+        try:
+            return await asyncio.wait_for(parts, SOURCE_TIMEOUT_S)
+        except Exception as exc:  # noqa: BLE001 — «Состояние» не падает из-за одного источника
+            logger.warning("system_status_source_failed", source=key, error=type(exc).__name__)
+            return [rules.not_checked(key, title, now, source)]
+
+    async def _database_components(self, now: datetime) -> list[Component]:
+        cfg = await self._settings.get()
+        alerts, facts = await self._db_facts(now)
+        platform = rules.PlatformUrlFacts(
+            self._config.platform_base_url, self._config.app_env == "prod"
+        )
+        return [
+            *rules.models(alerts),
+            rules.budget(alerts, now),
+            rules.queue(facts, now),
+            rules.channel(cfg.notifications.channel_id, now),
+            rules.crm_url(cfg.company.crm_base_url, now, platform),
+        ]
+
+    async def _backup_components(self, now: datetime) -> list[Component]:
+        return [await self._backup(now)]
 
     async def _db_facts(self, now: datetime) -> tuple[list[AlertRow], QueueFacts]:
         async with self._sessions() as session:

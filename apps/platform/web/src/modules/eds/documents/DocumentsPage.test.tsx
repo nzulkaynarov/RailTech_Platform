@@ -171,6 +171,13 @@ describe("EDS · Документы: список", () => {
     expect(screen.queryByText("Не удалось загрузить документы")).toBeNull();
   });
 
+  it("снабженец (реестр через проекты, без входящих): вкладки «Письма» нет, `?kind=letters` — «Все»", async () => {
+    await openDocuments("supply@demo.example", "?kind=letters");
+    expect(await screen.findByRole("tab", { name: "Все типы", selected: true })).toBeVisible();
+    expect(screen.getByRole("tab", { name: "Служебные" })).toBeVisible();
+    expect(screen.queryByRole("tab", { name: "Письма" })).toBeNull();
+  });
+
   it("администратор без доступа к реестру видит только «Мои», без переключателя; пусто — словами и с действием", async () => {
     await openDocuments("admin@demo.example", "?scope=all");
 

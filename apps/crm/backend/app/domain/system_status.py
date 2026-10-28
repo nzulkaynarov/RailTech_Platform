@@ -11,6 +11,7 @@ from typing import Final, Literal
 from urllib.parse import urlsplit
 
 from app.domain.alerts import QUEUE_LIMIT
+from app.domain.plural import minutes, plural_ru, tasks
 from app.domain.public_urls import is_local_url
 
 Status = Literal["ok", "warn", "fail", "unknown"]
@@ -47,6 +48,12 @@ class Component:
     status: Status
     reason: str
     checked_at: datetime | None
+
+
+def not_checked(key: str, title: str, now: datetime, source: str) -> Component:
+    """Источник не ответил в срок: строка «не проверено», а не пустая карточка (W15b-1)."""
+    reason = f"Не проверено: {source} не ответил в срок — обновите карточку через минуту"
+    return Component(key, title, "unknown", reason, now)
 
 
 @dataclass(frozen=True, slots=True)
@@ -274,7 +281,10 @@ _PLATFORM_HOSTING: Final = "Это настраивает хостинг: PLATFO
 def platform_url_problem(facts: PlatformUrlFacts) -> str | None:
     """Почему ссылка «Вход» в письмах сотрудникам не откроется; None — адрес годится."""
     if not facts.url:
-        return f"Адрес Платформы не задан — приглашения по почте не уходят. {_PLATFORM_HOSTING}"
+        return (
+            "Адрес Платформы не задан — приглашения по почте не уходят, а ссылки из Telegram "
+            f"ведут в старую CRM. {_PLATFORM_HOSTING}"
+        )
     if facts.prod and is_local_url(facts.url):
         return (
             "Адрес Платформы указывает на localhost — ссылка «Вход» в письмах сотрудникам "
@@ -284,11 +294,15 @@ def platform_url_problem(facts: PlatformUrlFacts) -> str | None:
 
 
 def crm_url(url: str, now: datetime, platform: PlatformUrlFacts | None = None) -> Component:
-    """Адреса для ссылок: CRM (Telegram, «Настройки» → «Компания») и Платформа (письма)."""
+    """Адреса для ссылок: Платформа (письма и ссылки Telegram) и CRM («Настройки» → «Компания»).
+
+    Ссылки из Telegram ведут в Платформу (B-009); адрес CRM нужен только как запасной, пока адреса
+    Платформы нет, поэтому его неполадки показываются лишь тогда."""
     title = "Адреса для ссылок"
     problems: list[str] = []
     crm_problem = crm_url_problem(url)
-    if crm_problem is not None:
+    platform_used = platform is not None and bool(platform.url)
+    if crm_problem is not None and not platform_used:
         problems.append(f"{crm_problem} — укажите адрес CRM в «Настройки» → «Компания»")
     platform_problem = platform_url_problem(platform) if platform is not None else None
     if platform_problem is not None:
@@ -314,11 +328,13 @@ def channel(channel_id: int | None, now: datetime) -> Component:
 def queue(facts: QueueFacts, now: datetime) -> Component:
     problems = []
     if facts.stalled:
-        problems.append(f"{facts.stalled} задач выполняются дольше {STALLED_MINUTES} минут")
+        verb = plural_ru(facts.stalled, "выполняется", "выполняются", "выполняются")
+        problems.append(f"{tasks(facts.stalled)} {verb} дольше {minutes(STALLED_MINUTES)}")
     if facts.waiting > QUEUE_LIMIT:
-        problems.append(f"{facts.waiting} задач в ожидании (порог {QUEUE_LIMIT})")
+        problems.append(f"{tasks(facts.waiting)} в ожидании (порог {QUEUE_LIMIT})")
     if facts.failed_last_hour:
-        problems.append(f"{facts.failed_last_hour} задач упали за последний час")
+        verb = plural_ru(facts.failed_last_hour, "упала", "упали", "упали")
+        problems.append(f"{tasks(facts.failed_last_hour)} {verb} за последний час")
     status: Status = "warn" if problems else "ok"
     reason = "; ".join(problems) if problems else f"в ожидании: {facts.waiting}"
     return Component("queue", "Очередь задач", status, reason, now)

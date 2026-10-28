@@ -12,6 +12,7 @@
 - `sample-dialogs` — выгрузка диалогов для еженедельной разметки (YAML в stdout);
 - `create-admin --email ...` — первый администратор CRM;
 - `republish-identity [--user-id N] [--dry-run]` — снимки сотрудников на шину для новых подписчиков;
+- `reprovision-erp` — права ERP заново всем с доступом к ERP (запасной путь к отпечатку каталога);
 - `litellm-seed` — модели ролей по умолчанию в БД LiteLLM (ADR-0020);
 - `bus status|dead|failed|retry|retry-dead|retry-inbox` — шина rt_bus (runbook `rt-bus-crm`).
 """
@@ -53,7 +54,8 @@ async def _run_worker() -> None:
     from rt_bus.contrib.procrastinate import WORKER_OPTIONS
 
     from app.container import get_container
-    from app.services.identity_catalog import sync_eds_rights_on_start
+    from app.services.identity_catalog import sync_eds_rights_on_start, sync_erp_rights_on_start
+    from app.tasks.erp_users import enqueue_erp_sync
     from app.tasks.queue import queue
 
     try:
@@ -62,6 +64,8 @@ async def _run_worker() -> None:
                 # Права EDS при смене каталога (W13C-F4): очередь уже открыта — коммит с событием
                 # будит ретранслятор; сбой не мешает старту.
                 await sync_eds_rights_on_start(get_container().session_factory)
+                # Права ERP при смене каталога (D2-1, B-073): провижининг всем с доступом к ERP.
+                await sync_erp_rights_on_start(get_container().session_factory, enqueue_erp_sync)
                 # опрос очереди раз в секунду: потерянное уведомление не задержит пробуждение шины
                 await queue.run_worker_async(
                     concurrency=get_settings().worker_concurrency, **WORKER_OPTIONS
@@ -134,6 +138,9 @@ def _parser() -> argparse.ArgumentParser:
     republish.add_argument(
         "--dry-run", action="store_true", help="только посчитать, не публиковать"
     )
+    commands.add_parser(
+        "reprovision-erp", help="провижининг прав ERP заново всем сотрудникам с доступом к ERP"
+    )
     commands.add_parser("test-alert", help="тестовый пост в канал команды")
     commands.add_parser("litellm-seed", help="модели ролей по умолчанию в БД LiteLLM")
     load = commands.add_parser("load-test", help="нагрузочный smoke: N параллельных диалогов")
@@ -187,6 +194,10 @@ async def _run_cli(args: argparse.Namespace) -> int:
         from app.cli import republish_identity
 
         return await republish_identity.run(args)
+    if args.command == "reprovision-erp":
+        from app.cli import reprovision_erp
+
+        return await reprovision_erp.run()
     if args.command == "bus":
         from app.cli import bus_cli
 

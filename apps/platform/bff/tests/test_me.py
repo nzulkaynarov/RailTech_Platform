@@ -190,7 +190,7 @@ async def test_active_role_is_a_view(web: Web, check: ContractChecker) -> None:
     assert me["active_role"] == rid("ACCOUNTANT")
     assert me["modules"] == expected_modules(["ACCOUNTANT"])
     assert me["resources"] == expected_resources(["ACCOUNTANT"])
-    assert me["restricted_fields"] == ["supplier_prices", "totals_only"]
+    assert me["restricted_fields"] == ["totals_only"]
     assert "crm.leads" not in me["resources"]  # у бухгалтера раздела нет, у менеджера есть
 
     reset = await web.send("PATCH", "/api/v1/me", json={"active_role": None})

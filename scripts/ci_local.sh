@@ -9,7 +9,7 @@ set -euo pipefail
 unset MAKEFLAGS MFLAGS MAKELEVEL args
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-ALL=(gitleaks crm contracts tokens infra erp cabinet platform eds rt-bus crm-integration crm-build crm-e2e crm-audit platform-e2e cpu-baseline)
+ALL=(gitleaks crm contracts tokens infra erp cabinet platform eds rt-bus rt-docs crm-integration crm-build crm-e2e crm-audit platform-e2e cpu-baseline)
 GITLEAKS_IMAGE=ghcr.io/gitleaks/gitleaks:v8.30.1
 CADDY_IMAGE=caddy:2.11.7-alpine
 LOGS="$ROOT/.ci-local"
@@ -27,19 +27,21 @@ usage() {
 
 Пропуск уже зелёного: после успеха задание пишет штамп .ci-local/<задание>.ok с ключом — хешем дерева (коммит + незакоммиченные
 и неотслеживаемые, но не игнорируемые файлы; тот же скрипт входит в дерево) плюс «внешнее»: для gitleaks — HEAD (сканируется
-история), для contracts — origin/main (oasdiff). Тот же ключ на следующем запуске — «пропуск»; любая правка файла, новый коммит
+история), для contracts — база oasdiff (точка ответвления от origin/main). Тот же ключ на следующем запуске — «пропуск»; любая правка файла, новый коммит
 или merge меняют ключ, и задание идёт заново. Провал удаляет штамп. Не штампуются: crm-audit (база уязвимостей меняется сама).
 
 Задания:
-  gitleaks          секреты в истории текущей ветки (.gitleaks.toml, legacy/ в allowlist) и ссылки документации
+  gitleaks          секреты в истории текущей ветки (.gitleaks.toml, legacy/ в allowlist), ссылки документации,
+                    тесты сборщика «Что нового» и мягкая проверка помощи (scripts/tests, scripts/help_freshness.py)
   crm               make check-crm (ruff, mypy, eslint, prettier, tsc, unit) + OpenAPI CRM (packages/contracts/openapi/crm.yaml) без диффа
-  contracts         make contracts (в т. ч. совместимость событий и oasdiff по OpenAPI с origin/main) + чистый packages/contracts/generated
+  contracts         make contracts (в т. ч. совместимость событий и oasdiff по OpenAPI с точкой ответвления от origin/main) + чистый generated
   tokens            make -C packages/ui-tokens check
   infra             docker compose config (dev + observability) и caddy validate
   erp, cabinet      make check-erp | make check-cabinet (до M1/M2 — пропуск внутри цели)
   platform          make check-platform (ruff, mypy, pytest bff; eslint, tsc, vitest web; клиент orval и токены свежие)
   eds               make check-eds — сервис документооборота: ruff, mypy --strict, pytest на одноразовом postgres:17 (миграции, шина, вход, права)
   rt-bus            make check-rt-bus — библиотека шины: ruff, mypy, миграция Django, pytest на одноразовом postgres:17
+  rt-docs           make check-rt-docs — документы: ruff, mypy, pytest с эталонными PDF в одноразовом контейнере (без сети)
   crm-integration   apps/crm/scripts/test_int_local.sh — одноразовые Postgres 17 и RustFS
   crm-build         образы CRM backend/frontend (prod) и backup с проверкой pg_dump 17
   crm-e2e           apps/crm/scripts/ci_local.sh e2e — одноразовый Postgres, API, preview, Playwright
@@ -66,7 +68,7 @@ for a in "$@"; do
     *) STAGES+=("$a") ;;
   esac
 done
-[ ${#STAGES[@]} -eq 0 ] && STAGES=(gitleaks crm contracts tokens infra erp cabinet platform eds rt-bus crm-integration crm-build)
+[ ${#STAGES[@]} -eq 0 ] && STAGES=(gitleaks crm contracts tokens infra erp cabinet platform eds rt-bus rt-docs crm-integration crm-build)
 # platform-e2e всегда после platform: check-platform пересоздаёт src/shared/api/generated (orval), и vite e2e на лету
 # перезапускается/теряет модули (ERR_CONNECTION_REFUSED). Стадии идут строго по одной; порядок фиксируем явно.
 if [[ " ${STAGES[*]} " == *" platform-e2e "* ]]; then
@@ -95,11 +97,12 @@ tree_sha() {
   [ $rc -eq 0 ] && [ -n "$sha" ] && printf '%s' "$sha"
 }
 
-# Что, кроме дерева, влияет на итог задания: gitleaks сканирует историю (HEAD), contracts сравнивает с origin/main.
+# Что, кроме дерева, влияет на итог задания: gitleaks сканирует историю (HEAD), contracts сравнивает с базой — точкой
+# ответвления HEAD от origin/main (contracts_base; уход main вперёд штамп не сбрасывает).
 stage_extra() {
   case "$1" in
     gitleaks) git -C "$ROOT" rev-parse HEAD ;;
-    contracts) git -C "$ROOT" rev-parse --verify -q "${CONTRACTS_BASE_REF:-origin/main}" || echo none ;;
+    contracts) git -C "$ROOT" rev-parse --verify -q "$(contracts_base)" || echo none ;;
     *) echo - ;;
   esac
 }
@@ -131,6 +134,8 @@ stage_gitleaks() {
     return 1
   fi
   (cd "$ROOT" && scripts/check-doc-links.sh)   # как шаг задания gitleaks в ci.yml (DOCS-1)
+  # W-REL, как шаг задания gitleaks в ci.yml: тесты сборщика «Что нового» и мягкая проверка помощи (предупреждения, не сбой)
+  (cd "$ROOT" && python3 -m unittest discover -s scripts/tests && python3 scripts/help_freshness.py --base origin/main)
 }
 
 stage_crm() {
@@ -141,12 +146,20 @@ stage_crm() {
     || { echo "OpenAPI CRM или клиент orval устарели — make -C apps/crm openapi и закоммитьте"; return 1; }
 }
 
+# База совместимости контракта локально — точка ответвления HEAD от origin/main (DECISIONS 2026-10-28): ветка, отставшая от
+# main, не краснеет от чужих слитых изменений и не обязана делать merge main ради зелёного. Итог слияния с вершиной main
+# проверяет CI на PR (там CONTRACTS_BASE_REF=origin/main). Явный CONTRACTS_BASE_REF — как задан.
+contracts_base() {
+  [ -n "${CONTRACTS_BASE_REF:-}" ] && { echo "$CONTRACTS_BASE_REF"; return; }
+  git -C "$ROOT" merge-base HEAD origin/main 2>/dev/null || echo origin/main
+}
+
 stage_contracts() {
-  # Совместимость схем событий (L8) и OpenAPI (oasdiff, ADR-0016) — против свежей origin/main, как в CI; без сети — с последней
-  # скачанной. oasdiff — закреплённый образ в одноразовом контейнере (нужен Docker; образ тянется при первом запуске).
+  # Совместимость схем событий (L8) и OpenAPI (oasdiff, ADR-0016) — против точки ответвления от свежей origin/main; без сети —
+  # от последней скачанной. oasdiff — закреплённый образ в одноразовом контейнере (нужен Docker; образ тянется при первом запуске).
   (cd "$ROOT" && git fetch --no-tags --quiet origin main) \
     || echo "contracts: git fetch origin main не удался — сравнение с локальной origin/main"
-  (cd "$ROOT" && CONTRACTS_BASE_REF="${CONTRACTS_BASE_REF:-origin/main}" make contracts \
+  (cd "$ROOT" && CONTRACTS_BASE_REF="$(contracts_base)" make contracts \
     && git diff --exit-code -- packages/contracts/generated \
     && [ -z "$(git status --porcelain --untracked-files=all -- packages/contracts/generated)" ]) \
     || { echo "make contracts упал или packages/contracts/generated устарел — make contracts и закоммитьте"; return 1; }
@@ -189,6 +202,8 @@ stage_platform() { (cd "$ROOT" && make check-platform); }
 stage_eds() { (cd "$ROOT" && make -C apps/eds install && make check-eds); }
 # Как job rt-bus в ci.yml; PostgreSQL — одноразовый контейнер packages/rt-bus/scripts/with_pg.sh (стенд не трогается).
 stage_rt-bus() { (cd "$ROOT" && make -C packages/rt-bus install && make check-rt-bus); }
+# Как job rt-docs в ci.yml (D-DOC1); рендер PDF — одноразовый контейнер packages/rt-docs/docker/test.Dockerfile.
+stage_rt-docs() { (cd "$ROOT" && make -C packages/rt-docs install && make check-rt-docs); }
 
 stage_crm-integration() {
   local status=0

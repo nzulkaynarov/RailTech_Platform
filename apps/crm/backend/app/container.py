@@ -40,6 +40,7 @@ if TYPE_CHECKING:
     from app.services.budget import BudgetGuard
     from app.services.client_contacts import ClientContactService
     from app.services.client_notices import ClientNoticeService
+    from app.services.client_requests import ClientRequestService
     from app.services.clients import ClientService
     from app.services.documents import DocumentService
     from app.services.erp_access import ErpAccessService
@@ -48,6 +49,7 @@ if TYPE_CHECKING:
     from app.services.erp_events import ErpEventsService
     from app.services.erp_handoff import ErpHandoffService
     from app.services.erp_pairing import ErpPairingService
+    from app.services.erp_requests import ErpRequestService
     from app.services.external_services.checks import ExternalChecks
     from app.services.external_services.switches import SwitchService
     from app.services.external_services.view import ExternalServicesView
@@ -61,9 +63,11 @@ if TYPE_CHECKING:
     from app.services.leads import LeadService
     from app.services.llm_usage import DbUsageRecorder
     from app.services.mail import MailService
+    from app.services.offsite_connector import OffsiteConnectorService
     from app.services.password_reset import PasswordResetService
     from app.services.platform_roles import PlatformRoleService
     from app.services.portal_invites import PortalInviteService
+    from app.services.request_retry import RequestRetryService
     from app.services.sandbox import SandboxService
     from app.services.setup import SetupService
     from app.services.smtp_connector import SmtpConnectorService
@@ -201,7 +205,9 @@ class Container:
     @cached_property
     def settings_service(self) -> SettingsService:
         return SettingsService(
-            self.session_factory, crm_base_url_default=self.settings.crm_base_url_default
+            self.session_factory,
+            crm_base_url_default=self.settings.crm_base_url_default,
+            platform_url=self.settings.platform_base_url,
         )
 
     @cached_property
@@ -416,6 +422,38 @@ class Container:
         return ErpHandoffService(self.session_factory, self.erp_client)
 
     @cached_property
+    def client_request_service(self) -> "ClientRequestService":
+        """«Создать заявку» из лида и клиента (CRM-03, W16-D1-2)."""
+        from app.services.client_requests import ClientRequestService
+
+        return ClientRequestService(
+            self.session_factory,
+            backoffice_mode=self.backoffice_mode,
+            enqueue=_enqueue_erp_request,
+            on_chats_changed=_chats_changed,
+        )
+
+    @cached_property
+    def request_retry_service(self) -> "RequestRetryService":
+        """«Повторить отправку в ERP» (B-082)."""
+        from app.services.request_retry import RequestRetryService
+
+        return RequestRetryService(
+            self.session_factory, _enqueue_erp_request, backoffice_mode=self.backoffice_mode
+        )
+
+    @cached_property
+    def erp_request_service(self) -> "ErpRequestService":
+        """Заявка CRM → ERP задачей после коммита (шов 0.9.0)."""
+        from app.integrations.erp_requests import HttpxErpRequestClient
+        from app.services.erp_requests import ErpRequestService
+
+        client = HttpxErpRequestClient(
+            self.secrets_store, self.settings, self.settings_service, http=self.erp_http
+        )
+        return ErpRequestService(self.session_factory, client, self.erp_handoff_service)
+
+    @cached_property
     def erp_client(self) -> "ErpClient":
         """Клиент интеграции ERP (M3-CRM-03): передача клиента (handoff)."""
         from app.integrations.erp import HttpxErpClient
@@ -558,6 +596,24 @@ class Container:
             self.settings_service,
             self.secrets_store,
             self.mail_service,
+            lockout=LockoutPolicy(
+                self.settings.login_max_failures, self.settings.login_lockout_minutes
+            ),
+        )
+
+    @cached_property
+    def offsite_connector(self) -> "OffsiteConnectorService":
+        from app.integrations.gdrive import probe
+        from app.security.reauth import LockoutPolicy
+        from app.services.offsite_connector import OffsiteConnectorService
+
+        return OffsiteConnectorService(
+            self.session_factory,
+            self.settings_service,
+            self.secrets_store,
+            self.storage,
+            self.settings.s3_bucket_offsite_config,
+            probe,
             lockout=LockoutPolicy(
                 self.settings.login_max_failures, self.settings.login_lockout_minutes
             ),
@@ -766,10 +822,16 @@ async def _enqueue_extraction(document_id: int) -> object:
     return await extract_document_text.defer_async(document_id=document_id)
 
 
-async def _enqueue_erp_sync(action: str, user_id: int) -> int:
+async def _enqueue_erp_sync(action: str, user_id: int) -> int | None:
     from app.tasks.erp_users import enqueue_erp_sync
 
     return await enqueue_erp_sync(action, user_id)
+
+
+async def _enqueue_erp_request(deal_id: int, client_id: int, user_id: int) -> object:
+    from app.tasks.erp_requests import enqueue_erp_request
+
+    return await enqueue_erp_request(deal_id, client_id, user_id)
 
 
 async def _enqueue_erp_handoff(client_id: int, lead_id: int, user_id: int) -> object:

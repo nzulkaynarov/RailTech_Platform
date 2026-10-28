@@ -327,6 +327,7 @@ const MEMO_SEEDS: readonly MemoSeed[] = [
     author: SUPPLY_PERSON,
     amount: "4200000.00",
     due: "2026-11-03",
+    file: true,
     atAccountant: true,
   },
 ];

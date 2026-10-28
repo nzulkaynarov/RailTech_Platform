@@ -1,0 +1,1 @@
+{% load i18n %}{% blocktranslate %}Запрос цены и срока поставки — {{ reference }}{% endblocktranslate %}

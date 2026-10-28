@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: RailTech Platform — EDS API (электронный документооборот)
-  version: 0.5.0
+  version: 0.7.0
   summary: Пространство `/api/v1/` сервиса EDS — вызывает BFF Платформы от имени сотрудника.
   description: |
     Контракт сервиса EDS (`apps/eds`, ADR-0015; `docs/runbooks/wave12-eds-c1.md` §2). EDS — владелец реестра документов и
@@ -19,7 +19,7 @@ info:
     токен доступа EDS (JWT HS256, секрет `EDS_ACCESS_SECRET`, `iss = eds`, `aud = eds-api`, срок 15 минут, без refresh: истёк — BFF берёт у CRM новый токен
     сотрудника и обменивает снова). Каждый запрос `/api/v1/*`, кроме обмена, — `Authorization: Bearer <токен доступа EDS>`.
 
-    **0.5.0 (D2-5).** Добавляющее изменение: реестр показывает договоры, счета и акты проектов — `RegistryKind` дополнен значениями
+    **0.7.0 (D2-5).** Добавляющее изменение: реестр показывает договоры, счета и акты проектов — `RegistryKind` дополнен значениями
     `contract`, `invoice`, `act`. Это проекция по событиям ERP (`erp.contract.status_changed`, `erp.invoice.issued|paid|overdue`,
     `erp.act.issued|accepted|returned`; общих таблиц нет, владелец полей — ERP); статусы — слова SPEC-v3 §2.4: договор `project`,
     `client_agreed`, `issued_at_operator`, `signed`, `rejected`, `cancelled`; счёт `issued`, `paid`, `overdue`; акт `issued`,
@@ -28,9 +28,17 @@ info:
 
     **0.4.0 (D1-5).** Добавляющее изменение: `PATCH /api/v1/documents/{document_id}` — правка черновика (или возвращённого документа) без отправки.
 
+    **Оплата служебной записки (D2-4).** «Оплачено» для служебной записки с суммой: `POST /api/v1/documents/{document_id}/payment` (право `payments.confirm`) —
+    дата, сумма и платёжка бухгалтера; закрывает шаг «Бухгалтер», статус `to_accountant` → `paid`, журнал `document.paid`.
+    `Document.payment` (факт оплаты или `null`), `DocumentListItem.files_count` и `paid_on`. Решение `approve` на шаге бухгалтера через
+    `/approvals/{id}/decision` теперь отклоняется (409, `details.reason = payment_required`) и не входит в `allowed_decisions`:
+    «согласовать» без суммы и даты платежа записки не оплачивает. Новых событий нет: закрытие шага — прежние `approval.decided`
+    и `document.archived`.
+
     **Права (runbook §2.2).** Коды EDS v1: `letters.read`, `letters.register`, `letters.resolve`, `memos.create`, `memos.approve`,
     `approvals.decide`, `registry.read`, `registry.export`, `payments.confirm` (`EdsPermission`; `payments.confirm` — решение
-    архитектора: шаг «бухгалтер» служебной записки с суммой), с 0.3.0 — `bus.manage` (журнал шины, раздел `admin` каталога). Их вычисляет CRM из ролей Платформы по каталогу
+    архитектора: шаг «бухгалтер» служебной записки с суммой), с 0.3.0 — `bus.manage` (журнал шины, раздел `admin` каталога), `files.upload` —
+    свой файл (раздел `crm.clients` уровня `full`, D1-2b). Их вычисляет CRM из ролей Платформы по каталогу
     (`platform-rbac.yaml`, `backend.eds`) и публикует в `identity.user.created/updated` (`user.permissions.eds`); EDS держит
     проекцию сотрудников и проверяет право **на каждый запрос по проекции на момент запроса** (claim `permissions` токена —
     справочный, не применяется): отзыв роли или отключение сотрудника действуют сразу, без ожидания срока токена. Нет поля
@@ -290,7 +298,10 @@ paths:
       description: |
         Только письмо в статусе `awaiting_resolution` (иначе 409 `CONFLICT`, `details.reason = invalid_state`). Статус →
         `resolved`; публикуется `letter.resolved` (исполнители, срок, мин. маржа, ссылки на заявку и сделку ERP) — ERP создаёт
-        задание расчёта (EDS-01). Исполнители — активные сотрудники проекции (иначе 422, `details.fields.assignees`). Срок
+        задание расчёта (EDS-01). Исполнители — активные сотрудники проекции (иначе 422, `details.fields.assignees =
+        not_active_employee`), у каждого — раздел каталога его зоны на уровне `full`: товары — `erp.calc.goods`, услуги —
+        `erp.calc.services`, условия оплаты — `eds.payments` (проекция берёт разделы из `identity.user.*`,
+        `user.permissions.sections`; иначе 422, `details.fields.assignees = assignee_zone_mismatch`; D1-8, B-007). Срок
         `due` — не раньше сегодняшней даты по `Asia/Tashkent` (иначе 422, `details.fields.due`; решение архитектора
         2026-10-26, C1-G-1).
       x-rt-permissions: [letters.resolve]
@@ -609,6 +620,48 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationFailed'
 
+  /api/v1/documents/{document_id}/payment:
+    post:
+      tags: [documents]
+      operationId: payDocument
+      summary: «Оплачено» — оплата согласованной служебной записки (D2-4)
+      description: |
+        Бухгалтер фиксирует оплату записки с суммой, которую согласовал директор (SPEC-v3 §3.2 п. 5): `paid_on` — дата платежа
+        (не позже сегодняшней по `Asia/Tashkent`), `amount` — сумма (валюта записки, не больше согласованной суммы),
+        `receipt_file_id` — платёжка, загруженная `POST /files` (привязывается к документу), `note` — необязательно.
+        Записка обязана быть в статусе `to_accountant`, а шаг «Бухгалтер» — ждать этого сотрудника (автор записки её не платит,
+        если есть другой держатель права): иначе 409 `CONFLICT` (`details.reason = invalid_state`, `route_closed`) или 403
+        `FORBIDDEN` (`not_your_step`). Шаг закрывается решением `approve` (`approval.decided`), документ получает `paid`,
+        архивируется (`document.archived`), журнал — `document.paid` (дата, сумма, файл платёжки). Повтор с теми же датой и суммой
+        возвращает прежний документ (идемпотентно); другие данные по оплаченной записке — 409 (`already_paid`). Сумма, валюта и дата
+        вне правил — 422 `VALIDATION_FAILED` (`amount`: `must_be_positive`, `currency_mismatch`, `exceeds_approved`; `paid_on`: `in_future`).
+      x-rt-permissions: [payments.confirm]
+      parameters:
+        - $ref: '#/components/parameters/DocumentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentPaymentIn'
+      responses:
+        '200':
+          description: Записка оплачена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationFailed'
+
   /api/v1/approvals:
     get:
       tags: [approvals]
@@ -702,6 +755,8 @@ paths:
         `approval.approved_late`, событие `approval.decided` — `approved_late: true` (решение архитектора 2026-10-26, C1-G-1).
         При одобрении КП присваивается `ИСХ-NNN/ГГ`, выбранные `channels` уходят в событие. Маршрут закрыт — 409
         (`details.reason = route_closed`). Каждое решение — строка журнала и `approval.decided`.
+        Шаг «Бухгалтер» служебной записки с суммой: `approve` недоступно — 409 `CONFLICT`, `details.reason = payment_required`
+        (оплату фиксирует `payDocument`: дата, сумма, платёжка); `return` и `reject` работают.
       x-rt-permissions: [memos.approve, approvals.decide, payments.confirm]
       parameters:
         - $ref: '#/components/parameters/ApprovalId'
@@ -736,7 +791,7 @@ paths:
       summary: Реестр «Все документы» (SPEC-v3 §7.3)
       description: |
         Единый реестр с вкладками по типу и фильтрами статус · период · ответственный · клиент. КП — маршруты одобрения
-        (номер КП ERP); договоры, счета и акты проектов (0.5.0, D2-5) — проекция событий ERP: `title` — название сделки,
+        (номер КП ERP); договоры, счета и акты проектов (0.7.0, D2-5) — проекция событий ERP: `title` — название сделки,
         `client` и `responsible` — из письма по той же заявке (нет письма — `null`), `links.deal_number` — номер сделки в ERP.
 
         `registry.read` открывает сам реестр, но он **не шире прав на вид документа**: входящие и исходящие письма
@@ -827,7 +882,7 @@ paths:
         `multipart/form-data`: `file` и необязательный `version_of` (id файла — новая версия той же цепочки; прежние версии
         остаются). Не больше 25 МБ (413), типы — PDF, изображения, документы Office (415). Файл привязывается к документу
         полем `file_ids` при создании или отправке; непривязанный видит только загрузивший.
-      x-rt-permissions: [letters.register, letters.resolve, memos.create, memos.approve, approvals.decide]
+      x-rt-permissions: [letters.register, letters.resolve, memos.create, memos.approve, approvals.decide, files.upload]
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -871,7 +926,7 @@ paths:
       summary: Скачать файл (поток)
       description: |
         Последняя версия, или `version`. Видит тот, кому виден документ, к которому файл привязан (чужой черновик и исходящее письмо без `letters.read` не видны), или загрузивший; иначе 404.
-      x-rt-permissions: [letters.read, memos.create, memos.approve, approvals.decide, registry.read]
+      x-rt-permissions: [letters.read, memos.create, memos.approve, approvals.decide, registry.read, files.upload]
       parameters:
         - $ref: '#/components/parameters/FileId'
         - name: version
@@ -909,7 +964,7 @@ paths:
       tags: [files]
       operationId: listFileVersions
       summary: Версии файла
-      x-rt-permissions: [letters.read, memos.create, memos.approve, approvals.decide, registry.read]
+      x-rt-permissions: [letters.read, memos.create, memos.approve, approvals.decide, registry.read, files.upload]
       parameters:
         - $ref: '#/components/parameters/FileId'
       responses:
@@ -1330,10 +1385,12 @@ components:
         - registry.export
         - payments.confirm
         - bus.manage
+        - files.upload
       description: |
         Код права EDS v1 (runbook волны 12 §2.2; `platform-rbac.yaml`, `backend.eds`). `payments.confirm` — шаг «бухгалтер»
         маршрута служебной записки с суммой (решение архитектора). `bus.manage` (0.3.0, W13-A2) — «Журнал интеграций» шины:
-        раздел `admin` каталога, уровень `full`. В событиях шины (`identity`, `eds`) код — строка по шаблону
+        раздел `admin` каталога, уровень `full`. `files.upload` (D1-2b) — загрузить свой файл и читать свои файлы
+        (письмо директору к «Создать заявку»): раздел `crm.clients`, уровень `full`. В событиях шины (`identity`, `eds`) код — строка по шаблону
         `^[a-z_]+\.[a-z_]+$`, не перечень: новый код не ломает события v1.
 
     Uuid:
@@ -2142,6 +2199,46 @@ components:
           maxItems: 50
           items:
             $ref: '#/components/schemas/Uuid'
+    DocumentPaymentIn:
+      type: object
+      additionalProperties: false
+      required: [paid_on, amount]
+      description: «Оплачено» — дата и сумма платежа, платёжка бухгалтера
+      properties:
+        paid_on:
+          type: string
+          format: date
+        amount:
+          $ref: '#/components/schemas/Money'
+        receipt_file_id:
+          oneOf:
+            - $ref: '#/components/schemas/Uuid'
+            - type: 'null'
+        note:
+          type: [string, 'null']
+          maxLength: 500
+    DocumentPayment:
+      type: object
+      additionalProperties: false
+      required: [paid_on, amount, receipt_file_id, note, paid_by, recorded_at]
+      description: Факт оплаты служебной записки
+      properties:
+        paid_on:
+          type: string
+          format: date
+        amount:
+          $ref: '#/components/schemas/Money'
+        receipt_file_id:
+          oneOf:
+            - $ref: '#/components/schemas/Uuid'
+            - type: 'null'
+        note:
+          type: [string, 'null']
+        paid_by:
+          $ref: '#/components/schemas/PersonRef'
+        recorded_at:
+          type: string
+          format: date-time
     DocumentUpdate:
       type: object
       additionalProperties: false
@@ -2200,7 +2297,7 @@ components:
     DocumentListItem:
       type: object
       additionalProperties: false
-      required: [id, kind, number, status, subject, author, created_at]
+      required: [id, kind, number, status, subject, author, files_count, paid_on, created_at]
       properties:
         id:
           $ref: '#/components/schemas/Uuid'
@@ -2224,6 +2321,14 @@ components:
         due_date:
           type: [string, 'null']
           format: date
+        files_count:
+          type: integer
+          minimum: 0
+          description: Сколько файлов приложено к документу (у записки к оплате — счёт поставщика и платёжка)
+        paid_on:
+          type: [string, 'null']
+          format: date
+          description: Дата оплаты записки; `null` — не оплачена
         created_at:
           type: string
           format: date-time
@@ -2258,6 +2363,7 @@ components:
         - erp_deal_id
         - deal_number
         - approval_id
+        - payment
         - decisions
         - journal
         - created_at
@@ -2318,6 +2424,11 @@ components:
             - $ref: '#/components/schemas/Uuid'
             - type: 'null'
           description: Маршрут текущего круга; `null` — не отправлялся
+        payment:
+          oneOf:
+            - $ref: '#/components/schemas/DocumentPayment'
+            - type: 'null'
+          description: Факт оплаты служебной записки; `null` — не оплачена
         decisions:
           type: array
           items:
@@ -2696,7 +2807,7 @@ components:
     RegistryKind:
       type: string
       enum: [letter_in, letter_out, quote, memo, application, report, contract, invoice, act]
-      description: 'Вкладки «Все документы»: письма (входящие, исходящие), КП (маршруты одобрения), служебные, заявления, отчёты; с 0.5.0 — договоры, счета и акты проектов (проекция событий ERP)'
+      description: 'Вкладки «Все документы»: письма (входящие, исходящие), КП (маршруты одобрения), служебные, заявления, отчёты; с 0.7.0 — договоры, счета и акты проектов (проекция событий ERP)'
     RegistryItem:
       type: object
       additionalProperties: false

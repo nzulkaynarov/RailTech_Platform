@@ -1,0 +1,269 @@
+{
+  "list": {
+    "subtitle": "Costing tasks after the director's resolution: deadline, line sign-offs and owner",
+    "subtitleMine": "Requests where you are an assignee of the director's resolution",
+    "caption": "Requests in costing",
+    "scroll": "Table of requests in costing",
+    "columns": {
+      "number": "Request no.",
+      "client": "Client",
+      "stage": "Stage",
+      "due": "Costing due",
+      "visas": "Sign-offs",
+      "responsible": "Owner",
+      "action": "Action"
+    },
+    "open": "Open costing",
+    "openLabel": "Open costing for request {{number}}",
+    "select": "Show the task for request {{number}} in the side panel",
+    "overdue": "Overdue",
+    "empty": {
+      "title": "No costing tasks",
+      "text": "No costing tasks. They arrive after the director's resolution — we will notify you in the bell.",
+      "action": "Refresh",
+      "mineTitle": "You have no costing tasks",
+      "mineText": "No costing tasks. They arrive after the director's resolution: a task appears here when the director assigns you.",
+      "mineAction": "All requests in costing"
+    }
+  },
+  "state": {
+    "not_started": "Not started",
+    "in_progress": "In progress",
+    "returned": "Returned for rework",
+    "at_director": "Draft quote with the director",
+    "rejected": "Quote rejected",
+    "approved": "Quote approved"
+  },
+  "groups": {
+    "stock": "Stock",
+    "supply": "Supply",
+    "engineer": "Chief engineer"
+  },
+  "visaState": {
+    "done": "{{group}} ✓",
+    "waiting": "{{group}} · waiting",
+    "none": "{{group}} · not needed",
+    "doneLabel": "{{group}}: all signed off",
+    "waitingLabel": "{{group}}: waiting for sign-off",
+    "noneLabel": "{{group}}: no lines, sign-off not needed"
+  },
+  "sheet": {
+    "title": "Costing for request {{number}}",
+    "subtitle": "{{client}} · letter {{letter}} · costing due {{due}}",
+    "margin": "margin at least {{value}} %",
+    "steps": "Request path",
+    "openTask": "Task and sign-offs",
+    "atDirector": "Draft quote {{number}} is with the director for approval. Lines are locked until the director decides.",
+    "returned": "The director returned the quote for rework: “{{comment}}”. Fix the lines and sign them off again.",
+    "rejected": "The director rejected the quote. Costing is closed.",
+    "approved": "The director approved the quote. Costing is locked.",
+    "readOnly": "Read only: lines are edited and signed off by supply (goods) or the chief engineer (services).",
+    "notStarted": {
+      "title": "Costing has not started",
+      "textLines": "The request has {{count}} line(s). Move them into costing, then add lines and match them with the catalogue.",
+      "textEmpty": "The request has no lines, only text. Start costing and parse the request text into lines or add them manually.",
+      "action": "Start costing",
+      "noRights": "Costing can be started by an employee with full access to “Costing”.",
+      "consequence": [
+        "Request lines move into the costing draft quote (exact part number and standard matches get a catalogue card at once).",
+        "The purchase price comes from the company's own offer when there is one; you fill in the rest.",
+        "The client gets nothing: they see “Accepted, we are costing”."
+      ]
+    },
+    "request": "Request text",
+    "requestEmpty": "No request text.",
+    "requestPrice": "Request a supplier price"
+  },
+  "lines": {
+    "title": "Costing lines",
+    "caption": "Costing lines for request {{number}}",
+    "scroll": "Table of costing lines",
+    "columns": {
+      "position": "Item",
+      "quantity": "Qty",
+      "stock": "Stock",
+      "supplier": "Supplier · lead time",
+      "purchase": "Purchase, UZS",
+      "client": "Client price, UZS",
+      "markup": "Markup, %",
+      "visa": "Sign-off",
+      "action": "Action"
+    },
+    "kind": {
+      "goods": "Goods",
+      "goods_to_order": "Goods to order",
+      "service": "Service"
+    },
+    "inStock": "In stock · {{count}}",
+    "noStock": "None · 0",
+    "noStockData": "Not in catalogue",
+    "stockMore": "Bin and reserve — on the “Stock” screen",
+    "days": "{{count}} days",
+    "supplierHint": "min. order {{qty}} · price valid to {{date}}",
+    "supplierHintNoDate": "min. order {{qty}} · price validity not set",
+    "offerPrice": "Supplier price: {{price}}",
+    "noSupplier": "No supplier chosen",
+    "service": "Crew",
+    "crewRate": "Crew rate, UZS/day",
+    "crewDays": "Days",
+    "crewLabel": "Crew rate for “{{name}}”",
+    "daysLabel": "Crew days for “{{name}}”",
+    "purchaseLabel": "Unit purchase price for “{{name}}”",
+    "clientLabel": "Unit client price excl. VAT for “{{name}}”",
+    "quantityLabel": "Quantity for “{{name}}”",
+    "hidden": "—",
+    "costHidden": "Purchase prices are visible to employees with access to cost",
+    "match": "Match with catalogue",
+    "matchLabel": "Match “{{name}}” with the catalogue",
+    "remove": "Delete line “{{name}}”",
+    "removeConfirm": "Delete line “{{name}}” from costing?",
+    "removeOk": "Delete",
+    "cancel": "Cancel",
+    "confirm": "Sign off",
+    "confirmLabel": "Sign off line “{{name}}”",
+    "signed": "{{group}} ✓ {{name}}",
+    "signedGroup": "{{group}} ✓",
+    "waits": "{{group}} · waiting",
+    "empty": "No lines yet. Add a line or parse the request text.",
+    "totals": "Total",
+    "noVat": "excl. VAT",
+    "saved": "Saved",
+    "mobileCost": "Cost {{value}} · markup {{markup}} %",
+    "cell": "Cell {{cell}}",
+    "free": "Free · {{count}}",
+    "reservedTag": "Reserved · {{count}}",
+    "reserve": "Reserve {{count}}",
+    "reserveLabel": "Reserve {{count}} for “{{name}}”",
+    "release": "Release reservation",
+    "releaseLabel": "Release the reservation of line “{{name}}”"
+  },
+  "add": {
+    "button": "Add line",
+    "title": "New costing line",
+    "name": "Name",
+    "nameRequired": "Enter a name.",
+    "quantity": "Quantity",
+    "unit": "Unit",
+    "kind": "Type",
+    "kindGoods": "Goods",
+    "kindService": "Service",
+    "kindHint": "Goods are signed off by supply, services by the chief engineer.",
+    "submit": "Add",
+    "cancel": "Cancel"
+  },
+  "parse": {
+    "button": "Parse request text",
+    "title": "AI parsing of the request text",
+    "intro": "AI will suggest lines from the request text. Nothing is saved until you tick the lines and press “Add selected”.",
+    "text": "Text to parse",
+    "textHint": "You can edit it or paste your own text.",
+    "start": "Parse",
+    "pending": "Parsing the text… This usually takes up to a minute.",
+    "proposal": "AI suggestion: tick the lines to add",
+    "nothing": "AI found no lines in this text. Add lines manually.",
+    "addSelected": "Add selected ({{count}})",
+    "cancel": "Close",
+    "failed": "Parsing failed: {{reason}}. Add lines manually or try again.",
+    "reasons": {
+      "ai_disabled": "AI parsing is switched off in model settings",
+      "request_text_empty": "the request has no text",
+      "ai_extract_failed": "the model did not respond",
+      "ai_budget_exceeded": "the daily AI budget is used up",
+      "other": "service error"
+    },
+    "truncated": "Showing the first 50 lines of {{count}}."
+  },
+  "match": {
+    "title": "Match with catalogue",
+    "search": "Search the catalogue",
+    "searchHint": "Name, part number, manufacturer code or standard",
+    "find": "Find",
+    "nothing": "Nothing found in the catalogue. Try other words.",
+    "choose": "Choose",
+    "chooseLabel": "Choose “{{name}}” for the line",
+    "stock": "in stock {{count}}",
+    "supplier": "{{name}}, {{days}} days",
+    "cancel": "Close"
+  },
+  "ready": {
+    "button": "Costing ready → draft quote to director",
+    "hint": {
+      "visas_missing": "The button becomes active when every line is signed off: {{count}} without sign-off.",
+      "no_lines": "Add at least one line.",
+      "not_started": "Start costing first.",
+      "not_draft": "Costing has already gone to the director.",
+      "at_director": "The draft quote is already with the director: lines are locked until the decision.",
+      "approved": "The director approved the quote — costing is closed. Change it with a new quote version.",
+      "rejected": "The director rejected the quote — costing is closed.",
+      "not_in_calculation": "The request is closed or past costing — the quote cannot be sent to the director from here."
+    },
+    "missingGroups": "Waiting for sign-off: {{groups}}.",
+    "consequence": [
+      "The quote gets a number and goes to the director for approval (Documents · Draft quotes).",
+      "The director sees cost, margin, line sign-offs and the margin limit from the resolution.",
+      "Lines are locked until the director decides; if returned for rework, you edit and sign off again."
+    ],
+    "done": "Draft quote with the director"
+  },
+  "task": {
+    "resolution": "Director's resolution",
+    "decided": "{{name}} · {{date}}",
+    "letter": "Letter {{number}}",
+    "due": "Costing due",
+    "margin": "Margin at least",
+    "visas": "Request sign-offs",
+    "assigned": "assigned by the resolution: {{names}}",
+    "nobodyAssigned": "nobody assigned by the resolution",
+    "notInErp": "the employee has not signed in yet",
+    "signedBy": "signed off: {{names}}",
+    "counts": "{{signed}} of {{total}}",
+    "state": {
+      "done": "Done",
+      "waiting": "Waiting",
+      "none": "Not needed"
+    },
+    "chat": "Project chat",
+    "chatText": "The project chat arrives with the “Chats” section (by the pilot). For now the team agrees in its work chat.",
+    "memo": "A purchase outside the quote — a memo to the director.",
+    "memoAction": "Write a memo",
+    "open": "Open costing",
+    "empty": {
+      "title": "No request selected",
+      "text": "Select a row in the table — the task and sign-offs open here."
+    }
+  },
+  "errors": {
+    "visas_missing": "Not every line is signed off.",
+    "quote_not_draft": "Costing is already with the director — lines are locked.",
+    "line_incomplete": "Fill in the purchase and client prices first.",
+    "purchase_required": "Enter the purchase price first: markup is calculated from it.",
+    "client_price_below_cost": "The client price is below the purchase price.",
+    "markup_out_of_range": "Markup is outside 0–500 %.",
+    "zone_not_permitted": "Another specialist edits this line: goods — supply, services — the chief engineer.",
+    "cost_forbidden": "Purchase prices are edited by employees with access to cost.",
+    "forbidden": "Your role does not allow this action.",
+    "unavailable": "ERP did not respond. Try again in a minute.",
+    "other": "Not saved: {{message}}",
+    "deal_not_in_calculation": "The request is closed or past costing."
+  },
+  "load": {
+    "retry": "Retry",
+    "loadError": {
+      "title": "Costing did not load",
+      "text": "Refresh the page or try again in a minute."
+    },
+    "unavailable": {
+      "title": "ERP is not responding",
+      "text": "Costing data is temporarily unavailable. Try again in a minute."
+    },
+    "forbidden": {
+      "title": "This section is not part of your role",
+      "text": "Costing is visible to supply, the chief engineer, the director and the accountant. Ask the administrator if you need access."
+    },
+    "notFound": {
+      "title": "The request is not among costing tasks",
+      "text": "A task appears after the director's resolution. Check the number or open the list.",
+      "action": "Requests in costing"
+    }
+  }
+}

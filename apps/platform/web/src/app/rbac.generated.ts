@@ -94,7 +94,7 @@ export const RESOURCES = {
   "eds.payments": {
     module: "eds",
     levels: ["read", "full"],
-    backends: ["erp"],
+    backends: ["crm", "erp"],
     label: {
       ru: "Документы · Счета и оплаты · подтвердить оплату, запросить платёжку",
       uz: "Hujjatlar · Hisoblar va to‘lovlar · to‘lovni tasdiqlash, to‘lov topshiriqnomasini so‘rash",
@@ -313,6 +313,10 @@ export const QUEUE = {
     resource: "eds.memo.approve",
     level: "full",
   },
+  rework_document: {
+    resource: "eds.memo.create",
+    level: "full",
+  },
   problem_project: {
     resource: "eds.projects",
     level: "full",
@@ -397,7 +401,7 @@ export const SYSTEM_ROLES = {
       "eds.inbox": "full",
       "eds.drafts": "full",
       "eds.projects": "full",
-      "eds.payments": "full",
+      "eds.payments": "read",
       "eds.memo.create": "full",
       "eds.memo.approve": "full",
       "erp.calc": "full",
@@ -491,7 +495,7 @@ export const TEMPLATES = {
       "chats.internal": "full",
       "chats.external": "full",
     },
-    restricted_fields: ["supplier_prices", "totals_only"],
+    restricted_fields: ["totals_only"],
   },
 } satisfies Record<string, CatalogRole>;
 

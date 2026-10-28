@@ -8,6 +8,7 @@ import type {
   EdsRecipient,
   EdsRegistryKind,
 } from "../../shared/api/generated/model";
+import { MOCK_USER_CRM_ID } from "./approvals";
 import { DEMO_USERS } from "./users";
 
 /**
@@ -265,6 +266,57 @@ function initial(): EdsMock {
     },
     next: { doc: 100, memo: 34, application: 13, report: 8, outgoing: 82 },
   };
+}
+
+/** Служебка на согласовании, как её видит директор (`MemoApprovalCard`): ровно те поля, что нужны документу автора. */
+export interface ReturnedSource {
+  id: string;
+  number: string | null;
+  kind: EdsDocumentKind;
+  subject: string;
+  text: string;
+  amount: EdsMoney | null;
+  due_date: string | null;
+  author: EdsPerson;
+}
+
+/**
+ * Согласующий вернул документ на доработку (D1-6b): в документах автора он получает статус «Возвращён на доработку» и
+ * решение «Вернуть» с комментарием, как это делает EDS, — по нему автор видит в «Моих задачах» строку «Доработать» и открывает
+ * «Продолжить». Автор не демо-пользователь Платформы (офис-менеджер без входа) — записывать некому.
+ */
+export function recordReturn(source: ReturnedSource, decision: EdsDecision): void {
+  const ownerId = Object.entries(MOCK_USER_CRM_ID).find(
+    ([, crmId]) => crmId === source.author.crm_user_id,
+  )?.[0];
+  if (!ownerId) return;
+  const state = readEds();
+  const found = state.documents.find((doc) => doc.number === source.number);
+  if (found) {
+    found.status = "returned";
+    found.decisions = [...found.decisions, decision];
+    found.updated_at = decision.at;
+  } else {
+    state.documents.push({
+      id: source.id,
+      kind: source.kind,
+      number: source.number,
+      status: "returned",
+      version: 1,
+      subject: source.subject,
+      text: source.text,
+      ownerId,
+      amount: source.amount,
+      due_date: source.due_date,
+      file_ids: [],
+      erp_deal_id: null,
+      recipient: null,
+      decisions: [decision],
+      created_at: EARLIER,
+      updated_at: decision.at,
+    });
+  }
+  writeEds(state);
 }
 
 let memory: EdsMock | null = null;

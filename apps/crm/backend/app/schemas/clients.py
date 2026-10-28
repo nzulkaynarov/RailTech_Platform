@@ -49,6 +49,8 @@ class ClientUpdate(BaseModel):
 
 
 class IdentityOut(BaseModel):
+    # id привязки: по нему контакт (`telegram_identity_id`) находит свой Telegram (W16-D1-2b)
+    id: int | None = None
     tg_user_id: int
     tg_username: str | None
     tg_first_name: str | None
@@ -119,6 +121,8 @@ class LeadBrief(BaseModel):
     display_name: str
     stage: str
     created_at: datetime
+    # Последнее сообщение лида — «Переписка» карточки клиента Платформы (W16-D1-2b)
+    last_lead_msg_at: datetime | None = None
 
 
 class MoneyOut(BaseModel):

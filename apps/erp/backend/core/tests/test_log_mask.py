@@ -233,11 +233,18 @@ def test_httpx_request_log_never_shows_the_bot_token_even_if_level_is_raised(mon
     stream = io.StringIO()
     monkeypatch.setattr(console, "stream", stream)
     httpx_logger = logging.getLogger("httpx")
-    monkeypatch.setattr(httpx_logger, "level", logging.INFO)
+    # Именно setLevel, а не monkeypatch.setattr(level): setLevel сбрасывает кэш `isEnabledFor`. Если до теста в этом
+    # процессе кто-то уже спрашивал httpx про INFO (любой другой тест с httpx), кэш держит «выключено», и без сброса
+    # запись не доходит до обработчика — тест краснел по порядку выполнения (W15-H8b).
+    previous = httpx_logger.level
+    httpx_logger.setLevel(logging.INFO)
 
     transport = httpx.MockTransport(lambda request: httpx.Response(200, json={"ok": True}))
-    with httpx.Client(transport=transport) as client:
-        client.get(f"https://api.telegram.org/bot{FAKE_BOT}/getMe")
+    try:
+        with httpx.Client(transport=transport) as client:
+            client.get(f"https://api.telegram.org/bot{FAKE_BOT}/getMe")
+    finally:
+        httpx_logger.setLevel(previous)
 
     printed = stream.getvalue()
     assert "HTTP Request: GET" in printed  # запись есть (уровень поднят), но без токена

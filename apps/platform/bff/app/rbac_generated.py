@@ -138,7 +138,10 @@ RESOURCE_BACKENDS: Final[dict[str, tuple[str, ...]]] = {
     "eds.inbox": ("erp",),
     "eds.drafts": ("erp",),
     "eds.projects": ("erp",),
-    "eds.payments": ("erp",),
+    "eds.payments": (
+        "crm",
+        "erp",
+    ),
     "eds.memo.create": (),
     "eds.memo.approve": (),
     "erp.calc": ("erp",),
@@ -253,6 +256,10 @@ QUEUE: Final[dict[str, tuple[str, Level]]] = {
         "eds.memo.approve",
         "full",
     ),
+    "rework_document": (
+        "eds.memo.create",
+        "full",
+    ),
     "problem_project": (
         "eds.projects",
         "full",
@@ -330,7 +337,7 @@ SYSTEM_ROLES: Final[dict[str, CatalogRole]] = {
             "eds.inbox": "full",
             "eds.drafts": "full",
             "eds.projects": "full",
-            "eds.payments": "full",
+            "eds.payments": "read",
             "eds.memo.create": "full",
             "eds.memo.approve": "full",
             "erp.calc": "full",
@@ -430,9 +437,6 @@ TEMPLATES: Final[dict[str, CatalogRole]] = {
             "chats.internal": "full",
             "chats.external": "full",
         },
-        "restricted_fields": (
-            "supplier_prices",
-            "totals_only",
-        ),
+        "restricted_fields": ("totals_only",),
     },
 }

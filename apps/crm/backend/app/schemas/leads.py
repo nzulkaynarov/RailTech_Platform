@@ -68,6 +68,13 @@ class LeadOut(BaseModel):
     escalation: EscalationOut | None = None
     # Откуда пришёл лид (M3-CRM-05): telegram | web | phone | email | referral (| sandbox).
     source: str = "telegram"
+    # Статус лида для Платформы (CRM-02, W16-D1-2): вкладки «Лиды» —
+    # docs/architecture/integration-map.md §3.1. CRM заполняет всегда; `null` — терпимый читатель
+    # (строковое умолчание у перечисления ломало типы сгенерированных моделей BFF).
+    platform_status: (
+        Literal["new", "dialog", "wants_quote", "no_answer", "client", "lost"] | None
+    ) = None
+
     # Записка передачи — только в `GET /inbox` (CRM-06); в остальных выдачах null.
     handoff_note: HandoffNote | None = None
 
@@ -120,6 +127,9 @@ class MessageOut(BaseModel):
     id: int
     role: str
     text: str
+    # Вложения сообщения по порядку: `kind`, `name`, `mime`, `size`, `stored` (файл сохранён),
+    # `too_large`/`note` (почему не сохранён). Ключа хранилища нет (D1-8, B-014): файл отдаёт только
+    # `GET /leads/{lead_id}/messages/{message_id}/attachments/{index}` по номеру в этом списке.
     attachments: list[dict[str, Any]]
     sent_by_user_id: int | None
     created_at: datetime
@@ -153,8 +163,13 @@ class Assign(BaseModel):
 
 
 class TeamMember(BaseModel):
+    """Сотрудник в выборе («кому передать лида», «исполнитель зоны»): без почты, телефона, ролей."""
+
     id: int
     full_name: str
+    # Первые буквы имени и фамилии (до двух, заглавные); нет имени — первая буква почты (D1-8).
+    initials: str = Field(max_length=3)
+    position: str | None = None
 
 
 class Close(BaseModel):

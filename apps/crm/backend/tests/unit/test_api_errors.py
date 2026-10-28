@@ -222,6 +222,10 @@ def test_reason_values_are_a_stable_contract() -> None:
         "smtp_auth_failed",
         "smtp_tls_failed",
         "smtp_rejected",
+        "offsite_key_invalid",
+        "offsite_folder_invalid",
+        "offsite_not_configured",
+        "offsite_delivery_failed",
         "lead_exists",
         "client_exists",
         "contact_required",
@@ -261,4 +265,11 @@ def test_reason_values_are_a_stable_contract() -> None:
         "ticket_reply_empty",
         "ticket_reply_too_long",
         "ticket_rate_limited",
+        # «Создать заявку» (W16-D1-2, CRM-03)
+        "contact_channel_required",
+        "request_not_allowed",
+        "request_key_reused",
+        "erp_request_conflict",
+        "request_not_failed",
+        "request_not_retryable",
     }

@@ -112,6 +112,12 @@ class CalcZone(StrEnum):
 
 class Channel(StrEnum):
     telegram = "telegram"
+    cabinet = "cabinet"
+    email = "email"
+
+
+class Channel1(StrEnum):
+    telegram = "telegram"
     email = "email"
 
 
@@ -501,7 +507,7 @@ class InviteSent(BaseModel):
     model_config = ConfigDict(
         extra="ignore",
     )
-    channels: Annotated[list[Channel], Field(min_length=1)]
+    channels: Annotated[list[Channel1], Field(min_length=1)]
     erp_contact_id: int | None = None
     crm_contact_id: int | None = None
 
@@ -628,6 +634,15 @@ class Language(StrEnum):
 
 class LineNo(RootModel[int]):
     root: Annotated[int, Field(ge=1)]
+
+
+class Process(StrEnum):
+    """
+    Процесс заявки (ERP-07): v3 — заявка Платформы (резолюция, визы, одобрение КП в EDS); legacy — заявка, начатая до Платформы. Необязательное; нет — legacy
+    """
+
+    legacy = "legacy"
+    v3 = "v3"
 
 
 class QuoteAcceptanceCodeRequested(BaseModel):
@@ -821,6 +836,10 @@ class QuoteSent(BaseModel):
     valid_until: date | None = None
     total: Amount | None = None
     currency: Currency | None = None
+    channels: list[Channel] | None = None
+    """
+    Каналы, по которым КП ушло клиенту (ERP-11, W16-D1-2): автоотправка после одобрения директором — только доступные из выбранных директором. CRM пишет клиенту в Telegram, только если в списке есть telegram. Необязательное; нет — все каналы клиента, как прежде (отправка менеджером)
+    """
 
 
 class QuoteSentV1(BaseModel):
@@ -912,6 +931,26 @@ class RequestCreated(BaseModel):
     """
     Менеджер заявки — сотрудник CRM (crm_user_id): ответственный передачи из CRM, иначе ответственный сделки ERP с сопоставлением CRM. Нет — менеджер не назначен. Необязательное (C1-G-7)
     """
+    request_number: Annotated[str | None, Field(pattern="^ЗВ-\\d{4}-\\d{3,}$")] = None
+    """
+    Номер заявки ЗВ-ГГГГ-NNN (Deal.number ERP, ERP-09; тот же, что deal.number при публикации). Необязательное, с 2026-10-28 (W16-D1-2); старое событие без него принимается
+    """
+    urgency: Urgency | None = None
+    """
+    Срочность заявки, выбранная менеджером в «Создать заявку» (W16-D1-2): urgent — письмо EDS по заявке срочное. Необязательное; нет — обычная
+    """
+    letter_file_id: UUID | None = None
+    """
+    Файл письма на имя директора, загруженный менеджером в EDS (`POST /files` eds.yaml) до создания заявки; EDS прикрепляет его к входящему письму по заявке, если файл загрузил менеджер заявки (manager_crm_user_id) и он ещё ни к чему не привязан. Необязательное (W16-D1-2)
+    """
+    crm_request_id: Annotated[int | None, Field(ge=1)] = None
+    """
+    Заявка на стороне CRM (зеркало сделки), по которой создана заявка ERP (`POST /clients/{crm_client_id}/requests` шва): CRM связывает событие с этой записью. Необязательное (W16-D1-2)
+    """
+    process: Process | None = None
+    """
+    Процесс заявки (ERP-07): v3 — заявка Платформы (резолюция, визы, одобрение КП в EDS); legacy — заявка, начатая до Платформы. Необязательное; нет — legacy
+    """
 
 
 class RequestCreatedV1(BaseModel):
@@ -967,3 +1006,12 @@ class Type(StrEnum):
     system = "system"
     staff = "staff"
     client = "client"
+
+
+class Urgency(StrEnum):
+    """
+    Срочность заявки, выбранная менеджером в «Создать заявку» (W16-D1-2): urgent — письмо EDS по заявке срочное. Необязательное; нет — обычная
+    """
+
+    normal = "normal"
+    urgent = "urgent"

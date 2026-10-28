@@ -11,7 +11,7 @@ import time
 from typing import Any
 
 import structlog
-from rt_bus import get_correlation_id
+from rt_bus import get_correlation_id, structlog_extra_processor
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 from structlog.types import EventDict, Processor, WrappedLogger
 
@@ -34,6 +34,7 @@ def _shared_processors() -> list[Processor]:
         structlog.contextvars.merge_contextvars,
         structlog.stdlib.add_log_level,
         structlog.stdlib.add_logger_name,
+        structlog_extra_processor,  # B-006: extra журнала шины (причина, код, подписчик, событие)
         add_request_id,
         structlog.processors.TimeStamper(fmt="iso", utc=True),
         structlog.processors.StackInfoRenderer(),

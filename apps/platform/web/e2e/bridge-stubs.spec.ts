@@ -38,51 +38,62 @@ async function shoot(page: Page, name: string): Promise<void> {
 test.describe("Заглушки и мост", () => {
   test.skip(({ isMobile }) => isMobile, "ширины задаёт сам сценарий");
 
-  test("менеджер: по прямой ссылке — карточка лида с кнопкой «Открыть в старой CRM» и тем, что знает очередь", async ({
+  test("по прямой ссылке — карточка объекта без экрана с кнопкой «Открыть в старом ERP»", async ({
     page,
   }) => {
-    await loginAndWait(page, "manager@demo.example");
-    // из очереди эта строка теперь «Где сделать»; карточка по прямой ссылке (поиск, письмо, закладка) остаётся честной
-    await spaGoto(page, "/crm/leads?lead=L-2041&panel=open&tab=card");
-    await expect(page.getByRole("heading", { level: 1, name: "Лид L-2041" })).toBeVisible();
+    await loginAndWait(page, "all@demo.example");
+    // «Лиды» (D1-2b) и «Счета и оплаты» (D2-4) — настоящие экраны; заглушка-карточка остаётся у разделов без экрана (проекты)
+    await spaGoto(page, "/eds/projects/%D0%9F%D0%A0-2026-099?panel=open&tab=documents");
+    await expect(page.getByRole("heading", { level: 1, name: "Проект ПР-2026-099" })).toBeVisible();
     const main = page.getByRole("main");
-    await expect(main.getByText("Взять в работу лида L-2041")).toBeVisible();
-    await expect(main.getByText(/ООО «Демо-Депо» · просит КП/)).toBeVisible();
-    const open = main.getByRole("link", { name: /Открыть в старой CRM/ });
-    await expect(open).toHaveAttribute("href", "http://crm.localhost:8088/leads/2041");
+    const open = main.getByRole("link", { name: /Открыть в старом ERP/ });
+    await expect(open).toHaveAttribute("href", "http://erp.localhost:8088/#crm-deals");
     await expect(open).toHaveAttribute("target", "_blank");
     expect(await open.getAttribute("rel")).toContain("noopener");
-    await expect(main.getByText("Когда появится: в ближайшем обновлении.")).toBeVisible();
-    await expect(main.getByText(/Лидов пока нет/)).toHaveCount(0);
-    await shoot(page, "object-from-queue-lead");
+    await expect(main.getByText("Когда появится: к пилоту.")).toBeVisible();
+    await shoot(page, "object-from-queue-invoice");
   });
 
-  test("менеджер: «Лиды» — мост в старую CRM; бейдж меню только с подсказкой «ещё в старой системе: 2»", async ({
+  test("менеджер: прямая ссылка на лида открывает новый экран «Лиды» с карточкой (D1-2b)", async ({
     page,
   }) => {
-    // «Ждут ответа» — уже настоящий экран (D1-1, `e2e/crm-messages.spec.ts`); мост — на соседнем разделе.
     await loginAndWait(page, "manager@demo.example");
-    await spaGoto(page, "/crm/leads");
+    await spaGoto(page, "/crm/leads?lead=L-2041&panel=open&tab=card");
     await expect(page.getByRole("heading", { level: 1, name: "Лиды" })).toBeVisible();
+    await expect(
+      page.locator("#pf-context-panel").getByRole("heading", { name: "Азиз Демо" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("main").getByRole("link", { name: /Открыть в старой CRM/ }),
+    ).toHaveCount(0);
+  });
+
+  test("директор: «Проекты» — мост в старый ERP; бейдж меню только с подсказкой «ещё в старой системе: 4»", async ({
+    page,
+  }) => {
+    await loginAndWait(page, "director@demo.example");
+    await spaGoto(page, "/dashboard/projects");
+    await expect(page.getByRole("heading", { level: 1, name: "Проекты" })).toBeVisible();
     const main = page.getByRole("main");
     await expect(
       main.getByRole("heading", { level: 2, name: "Этот раздел ещё переносится в Платформу" }),
     ).toBeVisible();
     await expect(
-      main.getByText("Сейчас эта работа делается в старой CRM: раздел «Лиды». Данные не потеряны."),
+      main.getByText(
+        "Сейчас эта работа делается в старом ERP: раздел «Сделки». Данные не потеряны.",
+      ),
     ).toBeVisible();
-    await expect(main.getByRole("link", { name: /Открыть в старой CRM/ })).toHaveAttribute(
+    await expect(main.getByRole("link", { name: /Открыть в старом ERP/ })).toHaveAttribute(
       "href",
-      "http://crm.localhost:8088/leads",
+      "http://erp.localhost:8088/#crm-deals",
     );
-    await expect(main.getByText("Вход в старую CRM — теми же логином и паролем.")).toBeVisible();
 
     const menu = page.getByRole("navigation", { name: "Разделы модуля" });
-    await expect(menu.getByRole("link", { name: /^Лиды/ })).toHaveAccessibleName(
-      /ещё в старой системе: 2/,
+    await expect(menu.getByRole("link", { name: /^Проекты/ })).toHaveAccessibleName(
+      /ещё в старой системе: 4/,
     );
     // настоящий экран — живой бейдж без подсказки о старой системе
-    await expect(menu.getByRole("link", { name: /Ждут ответа/ })).not.toHaveAccessibleName(
+    await expect(menu.getByRole("link", { name: /Мои задачи/ })).not.toHaveAccessibleName(
       /ещё в старой системе/,
     );
     await shoot(page, "stub-with-bridge");
@@ -103,6 +114,36 @@ test.describe("Заглушки и мост", () => {
     const menu = page.getByRole("navigation", { name: "Разделы модуля" });
     await expect(menu.getByRole("link", { name: /^Команда/ })).toHaveAccessibleName("Команда");
     await shoot(page, "stub-without-bridge");
+  });
+
+  test("«Чаты · С клиентами» (B-D18-1): менеджеру с разделом лидов — «Входящие» старой CRM", async ({
+    page,
+  }) => {
+    await loginAndWait(page, "manager@demo.example");
+    await spaGoto(page, "/chats?scope=external");
+    await expect(page.getByRole("heading", { level: 1, name: "С клиентами" })).toBeVisible();
+    await expect(
+      page.getByRole("main").getByRole("link", { name: /Открыть в старой CRM/ }),
+    ).toHaveAttribute("href", "http://crm.localhost:8088/inbox");
+    await shoot(page, "stub-chats-external-manager");
+  });
+
+  test("«Чаты · С клиентами» (B-D18-1): бухгалтеру без реестра лидов — кто делает, без кнопки в старую CRM", async ({
+    page,
+  }) => {
+    await loginAndWait(page, "accountant@demo.example");
+    await spaGoto(page, "/chats?scope=external");
+    await expect(page.getByRole("heading", { level: 1, name: "С клиентами" })).toBeVisible();
+    const main = page.getByRole("main");
+    await expect(
+      main.getByText(
+        "Сейчас этой работы в интерфейсе нет; её делает менеджер клиента: попросите его переслать нужное сообщение или файл.",
+      ),
+    ).toBeVisible();
+    await expect(main.getByRole("link", { name: /Открыть в/ })).toHaveCount(0);
+    // Реестра лидов у бухгалтера нет: «Ждут ответа» и «Лиды» в меню не показываются.
+    await expect(page.getByRole("link", { name: /Ждут ответа|^Лиды/ })).toHaveCount(0);
+    await shoot(page, "stub-chats-external-accountant");
   });
 
   test("снабженец: «Справочники» — мост в старый ERP; клик открывает SSO-адрес в новой вкладке", async ({

@@ -64,9 +64,9 @@ ERP сам их не описывает. Токены дизайна — из `p
 | `parties` | контрагенты: клиент / поставщик / субподрядчик; контакты (`telegram_user_id`, язык, предпочитаемый канал); реквизиты; `crm_client_id` | `accounts` `Company`, `Contact`, `CompanyDocumentProfile` минус KYC-уровни, merge по ИНН, `CounterpartyRelationship` |
 | `catalog` | единая карточка «товар / услуга», два слоя (внутренний / опубликованный), политика видимости `cabinet` / `on_request`, категории, импорт Excel, ИИ-обогащение по полям, полнота, ТН ВЭД как справочник | `catalog/` + `master_data.HSCode` минус `EquipmentGroup`, `DomainType` ЖД; `SupplierOffer` → `supply` |
 | `sales` | запрос → сделка (FSM) → КП (билдер, версии, экономика, согласование, курс на дату) → договор → публичная страница акцепта | `crm/` (deals, quotes, contracts, approvals, numbering, wording, document_blocks) |
-| `supply` (M4) | поставщик, заказ поставщику (back-to-back, дропшип), приёмка, счёт и оплата поставщику, сроки; субподряд как этапы | `catalog.SupplierOffer`, `crm/services/availability.py`; остальное новое |
-| `inventory` (M4) | журнал движений, остаток = сумма движений, резервы, «доступно к обещанию»; отгрузки по строкам | `crm` `Fulfillment` |
-| `finance` | счета клиентам, платежи, акты (двусторонние), напоминания, отклонение маржи по курсу | `crm/services/billing.py`, `invoice_lifecycle.py`, `deal_emails.py` |
+| `supply` (D2-2: заказы ЗП, приёмка, запросы цен, просрочка; остальное — M4) | поставщик, заказ поставщику (back-to-back, дропшип), приёмка, счёт и оплата поставщику, сроки; субподряд как этапы | `catalog.SupplierOffer`, `crm/services/availability.py`; остальное новое |
+| `inventory` (D2-2: остатки по ячейкам, журнал, резервы, отгрузки; `/api/v1/stock/*`) | журнал движений, остаток = сумма движений, резервы, «доступно к обещанию»; отгрузки по строкам | `crm` `Fulfillment` |
+| `finance` | счета клиентам, платежи, акты (двусторонние), напоминания, отклонение маржи по курсу; **«Счета и оплаты» бухгалтера (D2-4)**: доска вкладок без пересечений, карточка, подтверждение оплаты (полное и частичное), платёжка клиента `PaymentConfirmation`, запрос платёжки — `/api/v1/finance/receivables/*`; чтение — `finance.invoice` или `finance.payment`, действия — `finance.payment`; «Просрочен» вычисляется по сроку, не статусом | `crm/services/billing.py`, `invoice_lifecycle.py`, `deal_emails.py`; `finance/services/receivables.py`, `finance/views_receivables.py`, `finance/serializers_receivables.py` |
 | `documents` | шаблоны компании, PDF off-thread, квитанции, накладные, поиск, «недавние» | `crm/services/documents/`, `generated_documents.py`, `crm.tasks.render_document_pdf` |
 | `ai` | очередь `ai`: разбор запроса, сопоставление с каталогом, черновик КП, обогащение карточки, разбор прайса (M4), диф КП; клиент LiteLLM; трейсы Langfuse; evals | `sourcing/` (`services_ai*.py`, `tasks_ai.py`, `AIJob`, `ImportTask`) минус прямой SDK |
 | `portal` (M2) | `/api/portal/v1/*`: только своя компания; вход Telegram `initData` / magic-link; действия клиента | покупательские вьюхи `crm`, `crm/views/documents_public.py`, `crm/services/public_page.py` |
@@ -89,6 +89,7 @@ Makefile · .env.example · docs/ (ADR и runbooks ERP в docs/runbooks/erp/ —
 - Бизнес-логика **только в `<app>/services/`** как обычные функции: переходы FSM, валидации, побочные эффекты, письма, Celery-диспетчи. `views` и `admin.py` — тонкие обёртки: авторизовать → валидировать → вызвать одну функцию сервиса → вернуть. Одна и та же логика в admin-action и DRF-эндпоинте — запрещена; оба зовут сервис.
 - **События — только через шину `rt_bus` из сервисного слоя, в транзакции изменения** (ORCHESTRATOR §3 п. 14, ADR-0014): `events.publish_*` внутри `transaction.atomic()` сервиса; ни сигналов Django, ни вебхуков, ни `except Exception` вокруг публикации; откат — события нет, ошибка публикации — откат изменения (подробно — ниже, «События ERP → CRM»).
 - **Словари сеются миграциями** (`RunPython` + `get_or_create`, reverse no-op): стадии, статусы, виды документов, роли, образцы шаблонов. После `migrate` на пустой базе каждый код, на который ссылаются сервисы, уже существует. В горячих путях — `Model.objects.get(code=...)`, не `get_or_create`. `loaddata` и management-команды — только для dev/demo.
+- **Параллельные миграции (владелец 2026-10-28, ORCHESTRATOR §4.1).** Номер в имени файла Django (`0011_…`) не бронируется и не перенумеровывается ради очереди: два PR с миграциями одного приложения от одного листа дают конфликт листьев, его громко ловит `makemigrations --check` (задание CI `erp-schema` на PR и на push в `main`, локально `apps/erp/scripts/test_backend_local.sh --migration-check`). Тогда в своей ветке после merge `origin/main` — `python manage.py makemigrations --merge <app>` или перевести `dependencies` своей миграции на новый лист (переименовать файл в следующий номер — по желанию). Уже применённые на проде миграции не переименовываются.
 - **Нет фейковых данных:** каждый эндпоинт читает реальную БД; никаких статических массивов и заглушек в продуктовом коде.
 - **Нет хардкода:** URL, ключи, идентификаторы — из окружения; бизнес-константы — из БД или настроек; роли, стадии, статусы сравниваются по `code`, никогда по переведённому `name`.
 - Ошибки API — `{"detail": "<CODE>"}` (DRF-native, CONTRACTS §0); фронтенд сравнивает код по значению. Держит тест вида `core/tests/test_error_shape.py` B2B.
@@ -178,12 +179,12 @@ Makefile · .env.example · docs/ (ADR и runbooks ERP в docs/runbooks/erp/ —
 | Раздел | Коды |
 |---|---|
 | Запросы и сделки | `deal.manage` (создать/править, стадия, взять в работу, документы и вложения сделки, книга клиентов), `deal.assign` (назначить ответственного, вернуть чужую заявку в очередь) |
-| КП | `quote.build` (жизненный цикл: на согласование, отзыв, копия, PDF, базис, ИИ-подбор позиций), `quote.edit_pricing` (создание и правка КП и его позиций — они несут цены, скидки, статьи расходов; ИИ-черновик и «Взять и подготовить КП»), `quote.view_cost_margin`, `quote.send`, `quote.review` (виза КП; одобрение КП директором — маршрут EDS, EDS-03, волна 12) |
+| КП | `quote.build` (жизненный цикл: на согласование, отзыв, копия, PDF, базис, ИИ-подбор позиций), `quote.edit_pricing` (создание и правка КП и его позиций — они несут цены, скидки, статьи расходов; ИИ-черновик и «Взять и подготовить КП»), `quote.view_cost_margin`, `quote.send`, `quote.review` (виза КП; одобрение КП директором — маршрут EDS, EDS-03, волна 12), `quote.visa_goods`, `quote.visa_services` (виза строки расчёта по типу позиции — товар и услуга, D2-1; CRM выдаёт из разделов `erp.calc.goods` и `erp.calc.services`) |
 | Договоры | `contract.manage` (подготовка, правка, формулировки, скан), `contract.sign` (подпись от компании) |
 | Каталог | `catalog.manage`, `catalog.publish` |
 | Снабжение | `supply.manage` (поставщики и их предложения; M4 добавит заказы поставщикам и приёмку) |
 | Исполнение и логистика | `fulfillment.manage` (отгрузки, накладные), `fulfillment.act` (акты: выставить из счёта, переоформить, отменить, напомнить) |
-| Финансы | `finance.invoice` (счета клиентам), `finance.payment` (фиксация оплат), `finance.rates` (договорной курс КП с причиной — `fx-override`; факт закупки для отклонения маржи — вместе с `supply.manage`; M1-ERP-08) |
+| Финансы | `finance.view` (читать счета и оплаты без права действовать — директор и менеджер Платформы, D2-4), `finance.invoice` (счета клиентам), `finance.payment` (фиксация оплат), `finance.rates` (договорной курс КП с причиной — `fx-override`; факт закупки для отклонения маржи — вместе с `supply.manage`; M1-ERP-08) |
 | Настройки и команда | `settings.edit` (реквизиты, бланк, шаблоны документов, нумерация, формулировки), `settings.charge_templates` (шаблоны статей расходов КП), `team.manage` (команда и роли) |
 | Данные | `data.export` |
 
@@ -192,10 +193,10 @@ Makefile · .env.example · docs/ (ADR и runbooks ERP в docs/runbooks/erp/ —
 
 | Код | Роль | Права |
 |---|---|---|
-| `CALCULATION` | Расчёт | `deal.manage`, `quote.build`, `quote.edit_pricing`, `quote.view_cost_margin`, `quote.send`, `quote.review`, `contract.manage` |
+| `CALCULATION` | Расчёт | `deal.manage`, `quote.build`, `quote.edit_pricing`, `quote.view_cost_margin`, `quote.send`, `quote.review`, `quote.visa_goods`, `quote.visa_services`, `contract.manage` |
 | `CATALOG_SUPPLY` | Каталог и закупки | `catalog.manage`, `catalog.publish`, `supply.manage`, `quote.view_cost_margin` |
 | `FULFILLMENT` | Исполнение и логистика | `fulfillment.manage`, `fulfillment.act` |
-| `FINANCE` | Финансы | `finance.invoice`, `finance.payment`, `finance.rates`, `quote.view_cost_margin`, `data.export` |
+| `FINANCE` | Финансы | `finance.view`, `finance.invoice`, `finance.payment`, `finance.rates`, `quote.view_cost_margin`, `data.export` |
 | `HEAD` | Руководитель | все коды (визы КП, подпись договора, команда, настройки; одобрение КП директором — в EDS) |
 | `VIEWER` | Наблюдатель | — (только просмотр) |
 

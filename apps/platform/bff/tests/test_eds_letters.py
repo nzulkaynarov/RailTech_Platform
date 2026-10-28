@@ -23,13 +23,12 @@ from tests.eds_letters_support import (
     NUMBER,
     CrmDirectory,
     EdsFake,
-    crm_role,
-    crm_user,
     deal,
     eds_error_body,
     letter,
     resolved,
     row,
+    team_member,
 )
 from tests.roles import Role, custom
 
@@ -682,25 +681,19 @@ async def test_unreadable_eds_answer_is_503(web: Web, eds: EdsFake) -> None:
 
 # --- кандидаты в исполнители ---------------------------------------------------------------------
 
-GOODS_ROLE = crm_role(11, {"erp.calc": "full", "erp.calc.goods": "full"})
-SERVICES_ROLE = crm_role(12, {"erp.calc": "full", "erp.calc.services": "full"})
-PAY_ROLE = crm_role(13, {"eds.payments": "full", "eds.projects": "full"})
-READ_ROLE = crm_role(14, {"erp.calc.goods": "read", "eds.payments": "read"})
 
-
-async def test_candidates_come_from_catalog_sections_not_role_codes(
+async def test_candidates_come_from_the_crm_team_operation_by_zone_section(
     web: Web, eds: EdsFake, directory: CrmDirectory, check: ContractChecker
 ) -> None:
-    directory.roles = [GOODS_ROLE, SERVICES_ROLE, PAY_ROLE, READ_ROLE]
-    directory.users = [
-        crm_user(3, "Снабженец Демо", [11], position="Снабженец"),
-        crm_user(4, "Инженер Демо", [12]),
-        crm_user(5, "Бухгалтер Демо", [13], position="Бухгалтер"),
-        crm_user(6, "Универсал Демо", [11, 12, 13]),
-        crm_user(7, "Читатель Демо", [14]),
-        crm_user(8, "Отключённый Демо", [11], active=False),
-        crm_user(9, "Без ролей", []),
-    ]
+    everyone = team_member(6, "Универсал Демо", "УД")
+    directory.sections = {
+        "erp.calc.goods": [
+            team_member(3, "Снабженец Демо", "СД", "Снабженец"),
+            everyone,
+        ],
+        "erp.calc.services": [team_member(4, "Инженер Демо", "ИД"), everyone],
+        "eds.payments": [team_member(5, "Бухгалтер Демо", "БД", "Бухгалтер"), everyone],
+    }
     await _director(web)
 
     response = await web.client.get(f"{BASE}/resolution/assignees")
@@ -718,9 +711,34 @@ async def test_candidates_come_from_catalog_sections_not_role_codes(
     goods = body["zones"][0]["candidates"][0]
     assert goods == {"id": "3", "name": "Снабженец Демо", "initials": "СД", "position": "Снабженец"}
     assert "email" not in json.dumps(body)
+    # BFF не сводит `/users` и `/platform-roles`: по вызову на зону, раздел зоны, уровень «полный»
+    assert sorted((c.url.params["section"], c.url.params["level"]) for c in directory.calls) == [
+        ("eds.payments", "full"),
+        ("erp.calc.goods", "full"),
+        ("erp.calc.services", "full"),
+    ]
+    assert {c.url.path for c in directory.calls} == {"/api/v1/team"}
     # справочник читается токеном сотрудника в CRM; EDS не нужен
     assert eds.calls == []
     assert all(c.headers["authorization"].startswith("Bearer crm-access-") for c in directory.calls)
+
+
+async def test_the_author_of_the_resolution_is_not_a_candidate(
+    web: Web, directory: CrmDirectory
+) -> None:
+    """Автор резолюции (директор в роли-универсале) исключён по id, не по роли."""
+    await _director(web)
+    me = (await web.client.get("/api/v1/me")).json()["id"]
+    directory.sections = {
+        "erp.calc.goods": [
+            team_member(int(me), "Директор Демо", "ДД"),
+            team_member(3, "Снабженец Демо", "СД"),
+        ]
+    }
+
+    body = (await web.client.get(f"{BASE}/resolution/assignees")).json()
+
+    assert [c["id"] for c in body["zones"][0]["candidates"]] == ["3"]
 
 
 @pytest.mark.parametrize(

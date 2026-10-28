@@ -21,7 +21,7 @@ MATRIX: Final[dict[str, str]] = {
     "eds.inbox": "HFRHHR",
     "eds.drafts": "HFRHHH",
     "eds.projects": "HFRRRF",
-    "eds.payments": "HFRHHF",
+    "eds.payments": "HRRHHF",
     "eds.memo.create": "FFFFFF",
     "eds.memo.approve": "HFHHHH",
     "erp.calc": "HFHFFR",
@@ -45,7 +45,7 @@ FIELDS: Final[dict[str, tuple[str, ...]]] = {
     "MANAGER": (),
     "SUPPLY": ("cost_margin", "supplier_prices"),
     "ENGINEER": (),
-    "ACCOUNTANT": ("supplier_prices", "totals_only"),
+    "ACCOUNTANT": ("totals_only",),
 }
 
 

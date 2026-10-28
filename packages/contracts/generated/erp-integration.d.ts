@@ -142,6 +142,34 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/clients/{crm_client_id}/requests": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Новая заявка клиента, переданного в ERP («Создать заявку» CRM, CRM-03)
+     * @description Менеджер CRM создаёт заявку из лида или из карточки клиента (SPEC-v3 §3.1 шаг 2). Клиент уже передан
+     *     (`POST /clients/handoff` создал сопоставление `crm_client_id`); иначе — 404 `CLIENT_NOT_FOUND`, и CRM сначала
+     *     передаёт клиента. ERP создаёт сделку в стадии FSM `DRAFT` с номером `ЗВ-ГГГГ-NNN` (ERP-09, нумерация без пропусков),
+     *     процессом `v3` (ERP-07), срочностью и менеджером заявки — сотрудником ERP, сопоставленным с `owner.crm_user_id`
+     *     (владелец сделки, B-008; сопоставления нет — сделка без менеджера), и публикует `request.created(source=crm)` с
+     *     `request_number`, `urgency`, `letter_file_id`, `crm_request_id`, `process` в той же транзакции: EDS регистрирует
+     *     входящее письмо директору со срочностью и файлом письма. Контакт заявки — по `contact.crm_contact_id`; контакт, которого
+     *     ERP ещё не знает, создаётся в компании и сопоставляется (как в передаче). Идемпотентно по `crm_request_id`: повтор
+     *     (с любым `Idempotency-Key`) — 200 с той же заявкой, без второй сделки и второго события. E-mail контакта не обязателен.
+     */
+    post: operations["createClientRequest"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/documents/{erp_document_id}/link": {
     parameters: {
       query?: never;
@@ -525,6 +553,51 @@ export interface components {
       /** Format: date-time */
       updated_at: string;
     };
+    /** @description Заявка из «Создать заявку» CRM (CRM-03); лишние поля — 422 */
+    ClientRequestIn: {
+      /**
+       * Format: int64
+       * @description Заявка на стороне CRM (зеркало сделки) — ключ идемпотентности и связь события `request.created`
+       */
+      crm_request_id: number;
+      /**
+       * Format: int64
+       * @description Лид, из которого создана заявка; из карточки клиента — `null`
+       */
+      crm_lead_id?: number | null;
+      /** @description Контакт заявки с каналом (телефон, Telegram или e-mail; e-mail не обязателен); нет — основной контакт компании */
+      contact?: components["schemas"]["ContactIn"] | null;
+      need: {
+        summary: string;
+        product_interest?: string[];
+      };
+      /** @description Менеджер заявки (сотрудник CRM) — владелец сделки ERP (B-008) и отправитель КП (`quote.send`) */
+      owner: {
+        /** Format: int64 */
+        crm_user_id: number;
+        name: string;
+      };
+      /** @enum {string} */
+      urgency: "normal" | "urgent";
+      /**
+       * Format: uuid
+       * @description Файл письма на имя директора, загруженный менеджером в EDS (`POST /files`); ERP его не читает, а передаёт в `request.created`
+       */
+      letter_file_id?: string | null;
+      /**
+       * @description Процесс заявки (ERP-07); из CRM — только `v3`
+       * @enum {string}
+       */
+      process: "v3";
+    };
+    ClientRequestOut: {
+      /** Format: int64 */
+      erp_company_id: number;
+      /** Format: int64 */
+      erp_request_id: number;
+      /** @description Номер заявки `ЗВ-ГГГГ-NNN` (ERP-09) */
+      number: string;
+    };
     CompanySummary: {
       /** Format: int64 */
       erp_company_id: number;
@@ -728,6 +801,8 @@ export interface components {
       | "quote.view_cost_margin"
       | "quote.send"
       | "quote.review"
+      | "quote.visa_goods"
+      | "quote.visa_services"
       | "contract.manage"
       | "contract.sign"
       | "catalog.manage"
@@ -735,6 +810,7 @@ export interface components {
       | "supply.manage"
       | "fulfillment.manage"
       | "fulfillment.act"
+      | "finance.view"
       | "finance.invoice"
       | "finance.payment"
       | "finance.rates"
@@ -1114,6 +1190,65 @@ export interface operations {
       };
       401: components["responses"]["Unauthorized"];
       404: components["responses"]["NotFound"];
+      429: components["responses"]["TooManyRequests"];
+    };
+  };
+  createClientRequest: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description UUID запроса; ERP хранит ключ 7 дней и возвращает первый ответ на повтор. */
+        "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+      };
+      path: {
+        crm_client_id: components["parameters"]["CrmClientId"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["ClientRequestIn"];
+      };
+    };
+    responses: {
+      /** @description Заявка с этим `crm_request_id` уже создана — возвращена она же */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ClientRequestOut"];
+        };
+      };
+      /** @description Заявка создана */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ClientRequestOut"];
+        };
+      };
+      401: components["responses"]["Unauthorized"];
+      /** @description `CLIENT_NOT_FOUND` — клиент CRM не передан в ERP (нет сопоставления `crm_client_id`) */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      /** @description `IDEMPOTENCY_CONFLICT` — тот же `Idempotency-Key` пришёл с другим телом (данные заявки изменились после первой отправки): ничего не создано и не перезаписано. CRM повтор не делает — заявка `failed` с причиной `erp_request_conflict`, менеджер создаёт заявку заново. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Error"];
+        };
+      };
+      422: components["responses"]["ValidationError"];
       429: components["responses"]["TooManyRequests"];
     };
   };

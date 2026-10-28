@@ -53,6 +53,7 @@ Action = Literal[
     "write_owner",
     "write_hosting",
     "disable_provider",
+    "open_bus",
 ]
 
 #: «Сломано» — только непрерывный `fail` не короче этого срока (от начала полосы); короче —
@@ -60,6 +61,8 @@ Action = Literal[
 ALERT_AFTER: Final = timedelta(minutes=15)
 #: «Восстановлено» — только после непрерывного `ok` не короче этого срока.
 RECOVERY_AFTER: Final = timedelta(minutes=5)
+#: Последняя строка оповещения; рассылка заменяет её ссылкой на «Подключения» Платформы (B-009).
+OPEN_LINE: Final = "Открыть: Платформа → Admin → Подключения."
 #: Не больше одного «Сломано» на причину за это время; повторные провалы — сводка, не серия.
 ALERT_COOLDOWN: Final = timedelta(hours=24)
 #: Дребезг: столько провалов (полос `fail`) за `FLAP_WINDOW` — «Нестабильно», даже если сейчас `ok`.
@@ -83,7 +86,9 @@ _SEVERITY: Final[dict[State, int]] = {
     "ok": 7,
 }
 #: Причины «ещё не подключено»: слово «Не настроено», а не «Сломано».
-NOT_CONFIGURED: Final = frozenset({"no_token", "not_configured", "erp_not_connected"})
+NOT_CONFIGURED: Final = frozenset(
+    {"no_token", "not_configured", "erp_not_connected", "offsite_not_configured"}
+)
 #: Причины «так задумано»: выключено намеренно (настройкой сервера или вручную).
 INTENTIONAL: Final = frozenset({"intentional", "disabled_manual"})
 #: Причины, у которых корень общий для нескольких сервисов: ключ группы — по области, не по сервису.
@@ -137,6 +142,15 @@ ROUTES: Final[dict[str, Route]] = {
     "erp_sync_failed": _ADMIN_FIX,
     "erp_handoff_failed": _ADMIN_FIX,
     "erp_events_failed": _ADMIN_FIX,
+    # Недоставленное на шине (кроме ERP, у него своя строка): журнал обмена открывает админ.
+    "bus_dlq": Route("admin", "open_bus", ("recheck",)),
+    # Права EDS не ушли на шину (B-005): проверка повторяет публикацию сама, шину чинит хостинг.
+    "eds_rights": _HOSTING,
+    # Внешняя копия на Google Drive (OPS-GDRIVE): ключ сервисного аккаунта, папка общего диска и
+    # место на нём — у владельца компании; сеть и сервис копирования — у хостинга (server_down).
+    "offsite_not_configured": Route("owner", "write_owner"),
+    "offsite_access": Route("owner", "write_owner", ("recheck",)),
+    "offsite_quota": Route("owner", "write_owner", ("recheck",)),
     "checks_stale": _HOSTING,
     "ai_unavailable": Route("admin", "recheck", ("open_settings",)),
     "flapping": Route(None, "recheck"),
@@ -229,6 +243,9 @@ def route_of(spec: ServiceSpec, cause: str | None) -> Route:
 
 
 def cause_key_of(spec_key: str, cause: str | None, state: State) -> str:
+    if cause == "checks_stale":
+        # Фоновые проверки не идут (воркер или периодика): одна причина на все устаревшие сервисы.
+        return "worker:checks_stale"
     if state in ("not_checked", "disabled", "ok"):
         return f"{spec_key}:{'disabled' if state == 'disabled' else state}"
     scope = SHARED_SCOPE.get(cause or "", spec_key)
@@ -573,7 +590,7 @@ def broken_alert(
         lines.append(f"Кто исправляет: {OWNER_LABEL[group.owner]}.")
     if group.detail:
         lines.append(f"Что сделать: {group.detail}")
-    lines.append("Открыть: Платформа → Admin → Подключения.")
+    lines.append(OPEN_LINE)
     return AlertText(f"⚠️ Сломано: {group.headline}", tuple(lines))
 
 
@@ -589,5 +606,5 @@ def _plural(n: int) -> str:
 def restored_alert(headline: str, lasted: timedelta) -> AlertText:
     return AlertText(
         f"✅ Восстановлено: {headline}",
-        (f"Не работало {duration_text(lasted)}.", "Открыть: Платформа → Admin → Подключения."),
+        (f"Не работало {duration_text(lasted)}.", OPEN_LINE),
     )

@@ -22,6 +22,7 @@ class Action(StrEnum):
     write_owner = "write_owner"
     write_hosting = "write_hosting"
     disable_provider = "disable_provider"
+    open_bus = "open_bus"
 
 
 class Action1(StrEnum):
@@ -33,6 +34,7 @@ class Action1(StrEnum):
     write_owner = "write_owner"
     write_hosting = "write_hosting"
     disable_provider = "disable_provider"
+    open_bus = "open_bus"
 
 
 class ActionResult(BaseModel):
@@ -272,6 +274,53 @@ class ComponentStatusOut(BaseModel):
 
 class Created(BaseModel):
     id: Annotated[int, Field(title="Id")]
+
+
+class DialogAccess(StrEnum):
+    """
+    Почему сотруднику открыт диалог (поле `access` в `GET /chats`).
+    """
+
+    registry = "registry"
+    participant = "participant"
+    invoiced = "invoiced"
+
+
+class DialogOut(BaseModel):
+    """
+    Диалог лида без данных реестра (оценка, квалификация, стадия — в карточке лида).
+    """
+
+    access: DialogAccess
+    """
+    Почему диалог открыт: `registry` — реестр лидов (`leads:read`), `participant` — сотрудник участвует (ответственный за лида, клиента или сделку, автор ответа), `invoiced` — зона «Счета и оплаты» (`chats:invoiced`)
+    """
+    assigned_user_id: Annotated[int | None, Field(title="Assigned User Id")]
+    client_id: Annotated[int | None, Field(title="Client Id")]
+    display_name: Annotated[str, Field(title="Display Name")]
+    invoiced: Annotated[bool, Field(title="Invoiced")]
+    """
+    По сделке клиента ERP выставила счёт
+    """
+    language: Annotated[str, Field(title="Language")]
+    last_lead_msg_at: Annotated[AwareDatetime | None, Field(title="Last Lead Msg At")]
+    """
+    Последнее сообщение клиента
+    """
+    last_message_at: Annotated[AwareDatetime | None, Field(title="Last Message At")]
+    """
+    Последнее сообщение в диалоге (клиента, бота или сотрудника)
+    """
+    lead_id: Annotated[int, Field(title="Lead Id")]
+    source: Annotated[str, Field(title="Source")]
+    """
+    Канал лида: telegram, web, phone, email, referral
+    """
+
+
+class DialogPage(BaseModel):
+    items: Annotated[list[DialogOut], Field(title="Items")]
+    total: Annotated[int, Field(title="Total")]
 
 
 class DryRunResponse(BaseModel):
@@ -735,6 +784,9 @@ class LeadDetail(BaseModel):
     ] = None
     owner_mode: Annotated[str, Field(title="Owner Mode")]
     phone_e164: Annotated[str | None, Field(title="Phone E164")] = None
+    platform_status: Annotated[
+        PlatformStatus | None, Field(title="Platform Status")
+    ] = None
     product_interest: Annotated[list[str], Field(title="Product Interest")]
     qualification: Annotated[dict[str, Any], Field(title="Qualification")]
     score: Annotated[int, Field(title="Score")]
@@ -758,6 +810,9 @@ class LeadOut(BaseModel):
     last_lead_msg_at: Annotated[AwareDatetime | None, Field(title="Last Lead Msg At")]
     need_summary: Annotated[str | None, Field(title="Need Summary")]
     owner_mode: Annotated[str, Field(title="Owner Mode")]
+    platform_status: Annotated[
+        PlatformStatus | None, Field(title="Platform Status")
+    ] = None
     product_interest: Annotated[list[str], Field(title="Product Interest")]
     score: Annotated[int, Field(title="Score")]
     source: Annotated[str | None, Field(title="Source")] = "telegram"
@@ -834,6 +889,7 @@ class MoreAction(StrEnum):
     write_owner = "write_owner"
     write_hosting = "write_hosting"
     disable_provider = "disable_provider"
+    open_bus = "open_bus"
 
 
 class NoteOut(BaseModel):
@@ -857,6 +913,35 @@ class NoticeOut(BaseModel):
     id: Annotated[int, Field(title="Id")]
     sent_at: Annotated[AwareDatetime | None, Field(title="Sent At")] = None
     status: Annotated[Status5, Field(title="Status")]
+
+
+class OffsiteCheckOut(BaseModel):
+    """
+    Итог «Проверить» внешней копии (OPS-GDRIVE-2): `reason` — `ok` или что исправить владельцу
+    (`key_rejected`, `drive_api_disabled`, `folder_not_found`, `not_folder`, `not_shared_drive`,
+    `read_only`), `network` — Google не ответил (хостинг).
+    """
+
+    checked_at: Annotated[AwareDatetime, Field(title="Checked At")]
+    folder_name: Annotated[str | None, Field(title="Folder Name")]
+    ok: Annotated[bool, Field(title="Ok")]
+    reason: Annotated[str, Field(title="Reason")]
+
+
+class OffsiteStatusOut(BaseModel):
+    """
+    Внешняя копия бэкапов на Google Drive: ключ не возвращается — адрес аккаунта и `key_suffix`
+    (последние 4 символа ID ключа); `delivered_at` — когда ключ и папка ушли сервису копирования.
+    """
+
+    client_email: Annotated[str, Field(title="Client Email")]
+    configured: Annotated[bool, Field(title="Configured")]
+    delivered_at: Annotated[AwareDatetime | None, Field(title="Delivered At")]
+    folder_id: Annotated[str, Field(title="Folder Id")]
+    key_suffix: Annotated[str | None, Field(title="Key Suffix")]
+    key_updated_at: Annotated[AwareDatetime | None, Field(title="Key Updated At")]
+    last_check: OffsiteCheckOut | None
+    secrets_enabled: Annotated[bool, Field(title="Secrets Enabled")]
 
 
 class Owner(StrEnum):
@@ -885,6 +970,15 @@ class PasswordSource(StrEnum):
     db = "db"
     env = "env"
     none = "none"
+
+
+class PlatformStatus(StrEnum):
+    new = "new"
+    dialog = "dialog"
+    wants_quote = "wants_quote"
+    no_answer = "no_answer"
+    client = "client"
+    lost = "lost"
 
 
 class ProductOut(BaseModel):
@@ -1262,8 +1356,14 @@ class SystemStatusOut(BaseModel):
 
 
 class TeamMember(BaseModel):
+    """
+    Сотрудник в выборе («кому передать лида», «исполнитель зоны»): без почты, телефона, ролей.
+    """
+
     full_name: Annotated[str, Field(title="Full Name")]
     id: Annotated[int, Field(title="Id")]
+    initials: Annotated[str, Field(max_length=3, title="Initials")]
+    position: Annotated[str | None, Field(title="Position")] = None
 
 
 class TelegramStatusOut(BaseModel):

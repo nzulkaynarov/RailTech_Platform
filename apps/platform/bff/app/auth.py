@@ -17,6 +17,7 @@ import asyncio
 import base64
 import hashlib
 import json
+import re
 from dataclasses import dataclass
 from typing import Any
 
@@ -255,6 +256,8 @@ class AuthService:
             position=profile.get("position") or None,
             avatar_version=_avatar_version(profile),
             onboarding_done=bool(profile.get("onboarding_done", True)),
+            whats_new_shown=_whats_new(profile, "whats_new_shown"),
+            whats_new_read=_whats_new(profile, "whats_new_read"),
             language=_language(profile),
             roles=roles,
             platform_access=access,
@@ -652,27 +655,53 @@ class AuthService:
         await self.store.update(sid, lambda d: setattr(d, "language", language))
 
     async def change_password(self, sid: str, current: str, new: str) -> None:
-        resp = await self.call(
-            sid,
-            "crm",
-            "POST",
-            "/api/v1/auth/change-password",
-            json={"current_password": current, "new_password": new},
-        )
-        if resp.status_code != 204:
-            if resp.status_code == 422 and backend_reason(resp) == "wrong_password":
-                raise PlatformError(
-                    "WRONG_PASSWORD",
-                    "Текущий пароль указан неверно.",
-                    status_code=422,
-                    source="crm",
-                    details={"fields": ["current_password"]},
-                )
-            err = from_backend("crm", resp)
-            if resp.status_code == 422:
-                err.body.details = {**(err.body.details or {}), "fields": _failed_fields(resp)}
-            raise err
-        await self.store.update(sid, _clear_must_change)
+        """Смена своего пароля. Всё — под блокировкой сессии: CRM закрывает прежние токены и
+        выдаёт новую пару, которую нужно записать в Redis до того, как параллельный запрос (вторая
+        вкладка) возьмёт из сессии старый access и по отвергнутому refresh убьёт сессию. Сбой записи
+        в Redis после ответа CRM оставляет пароль уже сменённым, а сессию — закрытой: сотрудник
+        входит заново."""
+        async with self.store.lock(sid):
+            data = await self._load(sid)
+            if self._stale(data.crm, None):
+                await self._refresh(sid, data, "crm")
+            resp = await self._send(
+                "crm",
+                data.crm,
+                "POST",
+                "/api/v1/auth/change-password",
+                {"current_password": current, "new_password": new},
+                None,
+                False,
+                None,
+                None,
+                False,
+                None,
+            )
+            if resp.status_code == 401:
+                await self.store.delete(sid)
+                raise session_expired()
+            if resp.status_code != 200:
+                if resp.status_code == 422 and backend_reason(resp) == "wrong_password":
+                    raise PlatformError(
+                        "WRONG_PASSWORD",
+                        "Текущий пароль указан неверно.",
+                        status_code=422,
+                        source="crm",
+                        details={"fields": ["current_password"]},
+                    )
+                err = from_backend("crm", resp)
+                if resp.status_code == 422:
+                    err.body.details = {**(err.body.details or {}), "fields": _failed_fields(resp)}
+                raise err
+            # CRM закрыла прежние токены и выдала этой сессии новую пару: заменяем её в Redis.
+            tokens = CrmClient.tokens(resp)
+            if tokens.refresh is None:
+                raise backend_unavailable("crm", "no_refresh_cookie")
+            data.crm = BackendTokens(
+                access=tokens.access, access_exp=now() + tokens.expires_in, refresh=tokens.refresh
+            )
+            _clear_must_change(data)
+            await self.store.save(sid, data)
 
 
 def _tokens(data: SessionData, backend: Backend) -> BackendTokens | None:
@@ -716,6 +745,15 @@ def roles_of(profile: dict[str, Any]) -> list[SessionRole]:
     return roles
 
 
+_WHATS_NEW = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def _whats_new(profile: dict[str, Any], key: str) -> str | None:
+    """Отметка «Что нового» из профиля CRM (W-REL): дата записи или None (нет поля, не дата)."""
+    value = profile.get(key)
+    return value if isinstance(value, str) and _WHATS_NEW.match(value) else None
+
+
 def _apply_profile(data: SessionData, profile: dict[str, Any]) -> None:
     roles = roles_of(profile)
     access = list(profile.get("platform_access") or ["crm"])
@@ -723,6 +761,8 @@ def _apply_profile(data: SessionData, profile: dict[str, Any]) -> None:
     data.position = profile.get("position") or None
     data.avatar_version = _avatar_version(profile)
     data.onboarding_done = bool(profile.get("onboarding_done", True))
+    data.whats_new_shown = _whats_new(profile, "whats_new_shown")
+    data.whats_new_read = _whats_new(profile, "whats_new_read")
     data.language = _language(profile)
     data.roles = roles
     data.platform_access = access

@@ -1,6 +1,6 @@
 """Finance models package."""
 
-from .billing import Act, Invoice, InvoiceItem, Payment
+from .billing import Act, Invoice, InvoiceItem, Payment, PaymentConfirmation
 from .lookups import ActStatus, InvoiceStatus
 from .purchase import DealPurchaseActual
 
@@ -12,4 +12,5 @@ __all__ = [
     "InvoiceItem",
     "InvoiceStatus",
     "Payment",
+    "PaymentConfirmation",
 ]

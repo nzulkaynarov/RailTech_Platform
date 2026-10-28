@@ -17,7 +17,7 @@
 # Использование:
 #   scripts/qemu_cpu_check.sh list [built|pulled|all]   имена образов (по умолчанию all)
 #   scripts/qemu_cpu_check.sh params <имя>              контекст сборки образа для CI (key=value, для $GITHUB_OUTPUT)
-#   scripts/qemu_cpu_check.sh ref <имя>                 ссылка на сторонний образ из infra/compose/base.yml (caddy, redis, rustfs)
+#   scripts/qemu_cpu_check.sh ref <имя>                 ссылка на сторонний образ из infra/compose/base.yml или prod.yml (caddy, redis, rustfs, rclone)
 #   scripts/qemu_cpu_check.sh build <имя>               собрать linux/amd64 образ rt-cpu-check/<имя>:amd64
 #   scripts/qemu_cpu_check.sh check <имя> [образ]       проверить образ (по умолчанию собранный build / подтянутый pull)
 #   scripts/qemu_cpu_check.sh run [имя…]                собрать, проверить и удалить образы по одному (без имён — все)
@@ -58,7 +58,8 @@ build_spec() {
   esac
 }
 
-# Сторонние образы прода (не собираются, подтягиваются): ссылка берётся из compose, чтобы версия не расходилась.
+# Сторонние образы прода (не собираются, подтягиваются): ссылка берётся из compose, чтобы версия не расходилась. Сервисы только
+# прода (offsite-backup — rclone) объявлены в prod.yml.
 pulled_ref() {
   local name="$1" prefix
   case "$name" in
@@ -66,9 +67,10 @@ pulled_ref() {
     redis) prefix="redis:" ;;
     rustfs) prefix="rustfs/rustfs:" ;;
     rc) prefix="rustfs/rc:" ;;
+    rclone) prefix="rclone/rclone:" ;;
     *) return 1 ;;
   esac
-  sed -n "s|^[[:space:]]*image:[[:space:]]*\(${prefix}[^[:space:]]*\)[[:space:]]*\$|\1|p" "$ROOT/infra/compose/base.yml" | head -n 1
+  sed -n "s|^[[:space:]]*image:[[:space:]]*\(${prefix}[^[:space:]]*\)[[:space:]]*\$|\1|p" "$ROOT/infra/compose/base.yml" "$ROOT/infra/compose/prod.yml" | head -n 1
 }
 
 list_names() {

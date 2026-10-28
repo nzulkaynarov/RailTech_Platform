@@ -2513,6 +2513,7 @@
     "supply_manage": "Maintain suppliers & their offers",
     "fulfillment_manage": "Handle shipments & delivery notes",
     "fulfillment_act": "Issue acceptance acts",
+    "finance_view": "See customer invoices & payments",
     "finance_invoice": "Issue customer invoices",
     "finance_payment": "Record payments",
     "settings_edit": "Edit company details, templates & numbering",
@@ -2927,6 +2928,14 @@
         "title": "Quote approved by the director",
         "detail": "{{outgoing_number}} — ready to send"
       },
+      "auto_sent": {
+        "title": "Quote sent to the client after the director's approval",
+        "detail": "Channels: {{sent_via}}"
+      },
+      "auto_send_skipped": {
+        "title": "Quote was not sent automatically — the request manager will send it",
+        "detail": "Unavailable channels and reasons are on the quote card"
+      },
       "director_returned": {
         "title": "Quote returned by the director for rework",
         "detail": "{{comment}}"
@@ -3154,6 +3163,35 @@
       "letter_skipped": {
         "title": "EDS event skipped",
         "detail": "{{letter_number}}: the letter is not linked to an ERP deal"
+      }
+    },
+    "calc": {
+      "started": {
+        "title": "Calculation started",
+        "detail": "Draft quote for the calculation on {{letter_number}}"
+      },
+      "lines_added": {
+        "title": "Lines added to the calculation",
+        "detail": "{{letter_number}}: lines added — {{count}}"
+      },
+      "line_updated": {
+        "title": "Calculation line changed"
+      },
+      "line_deleted": {
+        "title": "Line removed from the calculation"
+      },
+      "line_signed": {
+        "title": "Calculation line approved"
+      },
+      "ready": {
+        "title": "Calculation ready: draft quote sent to the director",
+        "detail": "{{letter_number}}: all approvals collected, lines — {{lines}}"
+      }
+    },
+    "rfq": {
+      "price_requested": {
+        "title": "Price request to supplier",
+        "detail": "{{supplier}}: {{lines}} items"
       }
     }
   },
@@ -3541,6 +3579,10 @@
       "title": "Quote approved by the director",
       "message": "Quote #{{number}} approved ({{outgoing_number}}) — you can send it to the client."
     },
+    "quote.auto_send_failed": {
+      "title": "Quote not sent on some channels",
+      "message": "Quote #{{number}} was not sent via {{channels}} — send it manually."
+    },
     "quote.director_rejected": {
       "title": "Quote rejected by the director",
       "message": "Quote #{{number}} was rejected by the director. {{comment}}"
@@ -3548,6 +3590,14 @@
     "deal.calc_assigned": {
       "title": "Calculation task",
       "message": "Resolution on {{letter_number}}: calculate request #{{deal_id}} by {{due}}."
+    },
+    "calc.all_signed": {
+      "title": "All calculation lines approved",
+      "message": "Calculation on {{letter_number}}: all approvals collected, you can press “Calculation ready”."
+    },
+    "supplier_order.overdue": {
+      "title": "Supplier order overdue",
+      "message": "Order {{number}}: supplier {{supplier}} has not delivered by {{expected_date}} ({{days}} days late)"
     }
   },
   "approvalParticipation": {

@@ -55,6 +55,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/integration/v1/clients/{crm_client_id}/requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description POST /api/integration/v1/clients/{crm_client_id}/requests — «Создать заявку» CRM (шов 0.9.0, CRM-03). */
+        post: operations["api_integration_v1_clients_requests_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/integration/v1/clients/handoff": {
         parameters: {
             query?: never;
@@ -2733,6 +2750,211 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/calc/{deal_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Расчёт по заявке
+         * @description GET /api/v1/calc/<deal_id>/ — экран расчёта по заявке.
+         */
+        get: operations["calc_sheet"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/calc/{deal_id}/lines/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Добавить строки в расчёт
+         * @description POST /api/v1/calc/<deal_id>/lines/ — добавить строки (вручную или подтверждённое предложение ИИ-разбора).
+         */
+        post: operations["calc_lines_add"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/calc/{deal_id}/lines/{item_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Удалить строку расчёта
+         * @description PATCH/DELETE /api/v1/calc/<deal_id>/lines/<item_id>/ — правка и удаление строки (зона строки — в сервисе).
+         */
+        delete: operations["calc_line_delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Изменить строку расчёта (виза строки снимается)
+         * @description PATCH/DELETE /api/v1/calc/<deal_id>/lines/<item_id>/ — правка и удаление строки (зона строки — в сервисе).
+         */
+        patch: operations["calc_line_update"];
+        trace?: never;
+    };
+    "/api/v1/calc/{deal_id}/lines/{item_id}/visa/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Виза строки расчёта по её зоне
+         * @description POST /api/v1/calc/<deal_id>/lines/<item_id>/visa/ — «Подтвердить» строку (право зоны строки).
+         */
+        post: operations["calc_line_sign"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/calc/{deal_id}/parse/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * ИИ-разбор текста заявки в строки (предложение)
+         * @description POST /api/v1/calc/<deal_id>/parse/ — ИИ-разбор текста заявки в строки: задание в очереди ИИ, ответ — предложение
+         *     (`GET /api/v1/sourcing/ai-status/<task_id>/`, результат `{proposal: [...]}`); строки не пишутся.
+         */
+        post: operations["calc_parse"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/calc/{deal_id}/ready/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Расчёт готов: КП на одобрение директору (все строки завизированы)
+         * @description POST /api/v1/calc/<deal_id>/ready/ — «Расчёт готов → черновик КП директору».
+         */
+        post: operations["calc_ready"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/calc/{deal_id}/start/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Начать расчёт: черновик КП из строк заявки
+         * @description POST /api/v1/calc/<deal_id>/start/ — черновик КП расчёта из строк заявки (повтор — без изменений).
+         */
+        post: operations["calc_start"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/calc/catalog/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Каталог для сопоставления строки расчёта
+         * @description GET /api/v1/calc/catalog/?q= — карточки каталога для сопоставления строки (без ИИ).
+         */
+        get: operations["calc_catalog_search"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/calc/deals/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Заявки с заданием расчёта: id, номер, дата создания, стадия
+         * @description GET /api/v1/calc/deals/[?number=] — лёгкий справочник заявок с заданием расчёта (id, номер, создана, стадия).
+         */
+        get: operations["calc_deal_refs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/calc/tasks/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Заявки с заданием расчёта
+         * @description GET /api/v1/calc/tasks/ — «Заявки в расчёте» (и «Мои расчёты» с `mine=1`).
+         */
+        get: operations["calc_tasks_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/catalog/categories/": {
         parameters: {
             query?: never;
@@ -4450,7 +4672,7 @@ export interface paths {
         };
         /**
          * List deals
-         * @description Returns deals accessible to the current user. Admins/managers see all; clients see only their company's deals.
+         * @description Returns deals accessible to the current user. Admins/managers see all; clients see only their company's deals. `search` finds deals by number (ЗВ-ГГГГ-NNN / ПР-ГГГГ-NNN — the same NNN under either prefix, latin ZV/PR and spaces accepted), title or client company name (ERP-09).
          */
         get: operations["crm_deals_list"];
         put?: never;
@@ -6398,6 +6620,126 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/finance/receivables/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Счета и оплаты: таблица вкладки
+         * @description GET — счета вкладки «Счетов и оплат» и число счетов на каждой вкладке.
+         */
+        get: operations["finance_receivables_board"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/finance/receivables/{invoice_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Счета и оплаты: карточка счёта
+         * @description GET — карточка счёта: платёжки, платежи, остаток, журнал.
+         */
+        get: operations["finance_receivables_card"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/finance/receivables/{invoice_id}/confirm-payment/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Подтвердить оплату счёта (сумма и дата по выписке)
+         * @description POST — «Подтвердить оплату» (полная или частичная) по выписке банка.
+         */
+        post: operations["finance_receivables_confirm_payment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/finance/receivables/{invoice_id}/confirmations/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Приложить платёжку клиента к счёту
+         * @description POST — приложить платёжку клиента (файл) к открытому счёту.
+         */
+        post: operations["finance_receivables_attach_confirmation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/finance/receivables/{invoice_id}/confirmations/{confirmation_id}/file/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Файл платёжки клиента
+         * @description GET — файл платёжки клиента потоком (приватное хранилище, только после проверки права и привязки к счёту).
+         */
+        get: operations["finance_receivables_confirmation_file"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/finance/receivables/{invoice_id}/request-payment-doc/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Отметить запрос платёжки у клиента
+         * @description POST — отметить «платёжку запросили у клиента» (запись в журнале счёта).
+         */
+        post: operations["finance_receivables_request_payment_doc"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/integration/bus/deliveries/": {
         parameters: {
             query?: never;
@@ -7490,6 +7832,386 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/stock/adjustments/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Корректировка остатка: оприходовать или списать
+         * @description POST /api/v1/stock/adjustments/ — оприходовать или списать вручную (начальные остатки, инвентаризация).
+         */
+        post: operations["stock_adjust"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/stock/balances/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Остатки и резервы по номенклатуре
+         * @description GET /api/v1/stock/balances/ — остатки и резервы по номенклатуре.
+         */
+        get: operations["stock_balances_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/stock/balances/{product_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Товар на складе
+         * @description GET /api/v1/stock/balances/<product_id>/ — товар: ячейки, резервы по проектам, приход, движения.
+         */
+        get: operations["stock_product_detail"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/stock/orders/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Заказы поставщикам
+         * @description GET/POST /api/v1/stock/orders/ — заказы поставщикам; POST — создать черновик.
+         */
+        get: operations["stock_orders_list"];
+        put?: never;
+        /**
+         * Создать заказ поставщику (черновик)
+         * @description GET/POST /api/v1/stock/orders/ — заказы поставщикам; POST — создать черновик.
+         */
+        post: operations["stock_order_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/stock/orders/{order_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Заказ поставщику
+         * @description GET/PATCH /api/v1/stock/orders/<id>/ — карточка заказа; правка (состав — только в черновике).
+         */
+        get: operations["stock_order_detail"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Изменить заказ (состав — в черновике; ожидаемая дата и примечание — пока заказ не закрыт)
+         * @description GET/PATCH /api/v1/stock/orders/<id>/ — карточка заказа; правка (состав — только в черновике).
+         */
+        patch: operations["stock_order_update"];
+        trace?: never;
+    };
+    "/api/v1/stock/orders/{order_id}/cancel/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Отменить заказ
+         * @description POST /api/v1/stock/orders/<id>/cancel/ — отменить заказ (если по нему ещё ничего не принято).
+         */
+        post: operations["stock_order_cancel"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/stock/orders/{order_id}/confirm/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Отметить подтверждение поставщика
+         * @description POST /api/v1/stock/orders/<id>/confirm/ — поставщик подтвердил (отправлен → подтверждён); нужна ожидаемая дата.
+         */
+        post: operations["stock_order_confirm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/stock/orders/{order_id}/receipts/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Принять товар от поставщика по строкам заказа
+         * @description POST /api/v1/stock/orders/<id>/receipts/ — приёмка по строкам заказа (частичная); остаток склада растёт.
+         */
+        post: operations["stock_order_receive"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/stock/orders/{order_id}/send/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Отправить заказ поставщику (письмо)
+         * @description POST /api/v1/stock/orders/<id>/send/ — отправить поставщику письмом (черновик → отправлен).
+         */
+        post: operations["stock_order_send"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/stock/orders/from-deal/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Черновик заказа на дефицит проекта
+         * @description POST /api/v1/stock/orders/from-deal/ — черновик ЗП на дефицит проекта.
+         */
+        post: operations["stock_order_from_deal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/stock/overdue/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Просроченные заказы поставщикам
+         * @description GET /api/v1/stock/overdue/ — просроченные заказы (источник вида очереди `supplier_overdue`).
+         */
+        get: operations["stock_overdue_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/stock/price-requests/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Журнал запросов цены у поставщиков
+         * @description GET/POST /api/v1/stock/price-requests/ — журнал запросов цены; POST — запросить цену у поставщика письмом.
+         */
+        get: operations["stock_price_requests_list"];
+        put?: never;
+        /**
+         * Запросить цену у поставщика (письмо) по строкам расчёта
+         * @description GET/POST /api/v1/stock/price-requests/ — журнал запросов цены; POST — запросить цену у поставщика письмом.
+         */
+        post: operations["stock_price_request_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/stock/price-requests/{request_id}/answer/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Отметить ответ поставщика
+         * @description POST /api/v1/stock/price-requests/<id>/answer/ — отметить, что поставщик ответил (цена внесена в расчёт).
+         */
+        post: operations["stock_price_request_answer"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/stock/receipts/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Приёмка: ожидаемые строки и последние приёмки
+         * @description GET /api/v1/stock/receipts/ — «Приёмка»: ждут товара и последние приёмки.
+         */
+        get: operations["stock_receipts_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/stock/reservations/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Резервы под проекты
+         * @description GET/POST /api/v1/stock/reservations/ — резервы; POST — зарезервировать (или изменить количество) под строку расчёта.
+         */
+        get: operations["stock_reservations_list"];
+        put?: never;
+        /**
+         * Зарезервировать товар под строку расчёта
+         * @description GET/POST /api/v1/stock/reservations/ — резервы; POST — зарезервировать (или изменить количество) под строку расчёта.
+         */
+        post: operations["stock_reserve"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/stock/reservations/{reservation_id}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Снять резерв
+         * @description DELETE /api/v1/stock/reservations/<id>/ — снять резерв.
+         */
+        delete: operations["stock_reservation_release"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/stock/shipments/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Отгрузки по проектам
+         * @description GET/POST /api/v1/stock/shipments/ — отгрузки по проектам; POST — отгрузить со склада по резервам заявки.
+         */
+        get: operations["stock_shipments_list"];
+        put?: never;
+        /**
+         * Отгрузить со склада по резервам заявки (накладная ОТГ)
+         * @description GET/POST /api/v1/stock/shipments/ — отгрузки по проектам; POST — отгрузить со склада по резервам заявки.
+         */
+        post: operations["stock_ship"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/stock/suppliers/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Поставщики для выбора
+         * @description GET /api/v1/stock/suppliers/?q= — внешние поставщики для выбора (запрос цены, заказ).
+         */
+        get: operations["stock_suppliers_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/system-settings/": {
         parameters: {
             query?: never;
@@ -7823,6 +8545,21 @@ export interface components {
             member_id: number;
             role_ids: number[];
         };
+        AttachConfirmationRequest: {
+            /**
+             * Format: binary
+             * @description Платёжное поручение: PDF, изображение или документ, до 20 МБ.
+             */
+            file: string;
+            /** @default MANUAL */
+            source: components["schemas"]["SourceEnum"];
+            /** Format: decimal */
+            claimed_amount?: string | null;
+            /** Format: date */
+            claimed_date?: string | null;
+            /** @default  */
+            note: string;
+        };
         Attachment: {
             readonly id: number;
             /**
@@ -7919,6 +8656,15 @@ export interface components {
         AvailabilityEnum: "in_stock" | "on_order" | "expected";
         /** @enum {unknown} */
         BlankEnum: "";
+        /**
+         * @description * `not_started` - not_started
+         *     * `not_in_calculation` - not_in_calculation
+         *     * `not_draft` - not_draft
+         *     * `no_lines` - no_lines
+         *     * `visas_missing` - visas_missing
+         * @enum {string}
+         */
+        BlockerEnum: "not_started" | "not_in_calculation" | "not_draft" | "no_lines" | "visas_missing";
         BulkCreateQuoteItemsRequestRequest: {
             quote: number;
             items: {
@@ -8033,6 +8779,275 @@ export interface components {
             /** Format: date-time */
             last_success_at: string | null;
             last_error: string | null;
+        };
+        CalcAssignee: {
+            crm_user_id: number;
+            zone: components["schemas"]["CalcAssigneeZoneEnum"];
+            name: string | null;
+        };
+        /**
+         * @description * `goods` - goods
+         *     * `services` - services
+         *     * `payment_terms` - payment_terms
+         * @enum {string}
+         */
+        CalcAssigneeZoneEnum: "goods" | "services" | "payment_terms";
+        CalcCatalog: {
+            results: components["schemas"]["CalcCatalogItem"][];
+        };
+        CalcCatalogItem: {
+            id: number;
+            name: string;
+            article: string;
+            kind: components["schemas"]["CalcItemKindEnum"];
+            on_hand: number;
+            supplier_name: string | null;
+            lead_days: number | null;
+        };
+        CalcDeal: {
+            id: number;
+            /** @description Номер ЗВ-ГГГГ-NNN или ПР-ГГГГ-NNN (`Deal.number`, ERP-09) */
+            number: string | null;
+            title: string;
+            /** Format: date-time */
+            created_at: string;
+            stage_code: string;
+            client_name: string | null;
+            manager_name: string | null;
+        };
+        CalcDealRef: {
+            id: number;
+            /** @description Номер ЗВ-ГГГГ-NNN или ПР-ГГГГ-NNN (`Deal.number`, ERP-09) */
+            number: string | null;
+            /** Format: date-time */
+            created_at: string;
+            stage_code: string;
+        };
+        CalcDealRefList: {
+            results: components["schemas"]["CalcDealRef"][];
+        };
+        CalcError: {
+            detail: string;
+            missing?: number;
+            zone?: string;
+            stage?: string;
+        };
+        /**
+         * @description * `goods` - goods
+         *     * `service` - service
+         * @enum {string}
+         */
+        CalcItemKindEnum: "goods" | "service";
+        CalcJob: {
+            task_id: string;
+        };
+        CalcLine: {
+            id: number;
+            position: number;
+            name: string;
+            article: string;
+            product_id: number | null;
+            product_name: string | null;
+            kind: components["schemas"]["CalcLineKindEnum"];
+            zone: components["schemas"]["CalcLineZoneEnum"];
+            quantity: number;
+            unit: string;
+            stock: components["schemas"]["CalcStock"];
+            supplier: components["schemas"]["CalcSupplier"] | null;
+            lead_days: number | null;
+            /** Format: decimal */
+            purchase_price: string | null;
+            purchase_currency: string | null;
+            /** Format: decimal */
+            crew_rate: string | null;
+            /** Format: decimal */
+            crew_days: string | null;
+            /** Format: decimal */
+            cost: string | null;
+            /** Format: decimal */
+            client_price: string;
+            /** Format: decimal */
+            markup_pct: string | null;
+            visa: components["schemas"]["CalcVisa"] | null;
+            group: components["schemas"]["GroupEnum"];
+            can_edit: boolean;
+        };
+        CalcLineInRequest: {
+            /** @default  */
+            name: string;
+            /** @default 1 */
+            quantity: number;
+            /** @default  */
+            unit: string;
+            /** @default goods */
+            kind: components["schemas"]["CalcItemKindEnum"];
+            product_id?: number | null;
+            /** @default  */
+            article: string;
+            /** @default  */
+            note: string;
+        };
+        /**
+         * @description * `goods` - goods
+         *     * `goods_to_order` - goods_to_order
+         *     * `service` - service
+         * @enum {string}
+         */
+        CalcLineKindEnum: "goods" | "goods_to_order" | "service";
+        /**
+         * @description * `goods` - goods
+         *     * `services` - services
+         * @enum {string}
+         */
+        CalcLineZoneEnum: "goods" | "services";
+        CalcLinesCreated: {
+            deal: components["schemas"]["CalcDeal"];
+            task: components["schemas"]["CalcTaskBrief"];
+            request: components["schemas"]["CalcRequest"];
+            quote: components["schemas"]["CalcQuote"] | null;
+            lines: components["schemas"]["CalcLine"][];
+            totals: components["schemas"]["CalcTotals"];
+            visas: components["schemas"]["CalcVisaGroups"];
+            ready: components["schemas"]["CalcReady"];
+            rights: components["schemas"]["CalcRights"];
+            created: number[];
+        };
+        CalcLinesInRequest: {
+            lines: components["schemas"]["CalcLineInRequest"][];
+        };
+        CalcParseInRequest: {
+            /** @default  */
+            text: string;
+        };
+        CalcQuote: {
+            id: number;
+            version: number;
+            number: string | null;
+            state: components["schemas"]["CalcStateEnum"];
+            director_comment: string | null;
+            /** Format: decimal */
+            vat_rate: string;
+        };
+        CalcReady: {
+            allowed: boolean;
+            blocker: (components["schemas"]["BlockerEnum"] | components["schemas"]["NullEnum"]) | null;
+            missing: number;
+        };
+        CalcRequest: {
+            text: string;
+            lines: number;
+        };
+        CalcRights: {
+            goods: boolean;
+            services: boolean;
+            build: boolean;
+            cost: boolean;
+            /** @description Резервы и запросы цены у поставщиков (`supply.manage`, D2-2) */
+            stock: boolean;
+        };
+        CalcSheet: {
+            deal: components["schemas"]["CalcDeal"];
+            task: components["schemas"]["CalcTaskBrief"];
+            request: components["schemas"]["CalcRequest"];
+            quote: components["schemas"]["CalcQuote"] | null;
+            lines: components["schemas"]["CalcLine"][];
+            totals: components["schemas"]["CalcTotals"];
+            visas: components["schemas"]["CalcVisaGroups"];
+            ready: components["schemas"]["CalcReady"];
+            rights: components["schemas"]["CalcRights"];
+        };
+        /**
+         * @description * `not_started` - not_started
+         *     * `in_progress` - in_progress
+         *     * `returned` - returned
+         *     * `at_director` - at_director
+         *     * `rejected` - rejected
+         *     * `approved` - approved
+         * @enum {string}
+         */
+        CalcStateEnum: "not_started" | "in_progress" | "returned" | "at_director" | "rejected" | "approved";
+        CalcStock: {
+            /** @description На складе всего; null — у строки нет карточки каталога */
+            on_hand: number | null;
+            /** @description Свободно: остаток минус резервы всех проектов (D2-2) */
+            free: number | null;
+            /** @description Ячейка с наибольшим остатком (D2-2) */
+            cell: string | null;
+            /** @description Зарезервировано за этой строкой (D2-2) */
+            reserved: number | null;
+        };
+        CalcSupplier: {
+            name: string;
+            lead_days: number | null;
+            min_order_qty: number;
+            /** Format: date */
+            price_valid_until: string | null;
+            /** Format: decimal */
+            offer_price: string | null;
+            offer_currency: string | null;
+        };
+        CalcTaskBrief: {
+            letter_number: string;
+            letter_subject: string;
+            resolution_text: string;
+            /** Format: date-time */
+            decided_at: string;
+            decided_by_name: string | null;
+            /** Format: date */
+            due: string;
+            /** Format: decimal */
+            min_margin_pct: string | null;
+            assignees: components["schemas"]["CalcAssignee"][];
+        };
+        CalcTaskList: {
+            results: components["schemas"]["CalcTaskRow"][];
+        };
+        CalcTaskRow: {
+            deal: components["schemas"]["CalcDeal"];
+            letter_number: string;
+            /** Format: date */
+            due: string;
+            state: components["schemas"]["CalcStateEnum"];
+            lines: number;
+            visas: components["schemas"]["CalcVisaStates"];
+            assignees: components["schemas"]["CalcAssignee"][];
+        };
+        CalcTotals: {
+            /** Format: decimal */
+            purchase: string | null;
+            /** Format: decimal */
+            client: string;
+            /** Format: decimal */
+            markup_pct: string | null;
+            vat_included: boolean;
+        };
+        CalcVisa: {
+            by: string;
+            /** Format: date-time */
+            at: string;
+        };
+        CalcVisaGroup: {
+            state: components["schemas"]["CalcVisaStateEnum"];
+            total: number;
+            signed: number;
+            by: string[];
+        };
+        CalcVisaGroups: {
+            stock: components["schemas"]["CalcVisaGroup"];
+            supply: components["schemas"]["CalcVisaGroup"];
+            engineer: components["schemas"]["CalcVisaGroup"];
+        };
+        /**
+         * @description * `none` - none
+         *     * `waiting` - waiting
+         *     * `done` - done
+         * @enum {string}
+         */
+        CalcVisaStateEnum: "none" | "waiting" | "done";
+        CalcVisaStates: {
+            stock: components["schemas"]["CalcVisaStateEnum"];
+            supply: components["schemas"]["CalcVisaStateEnum"];
+            engineer: components["schemas"]["CalcVisaStateEnum"];
         };
         CancelActRequest: {
             reason: string;
@@ -9016,6 +10031,25 @@ export interface components {
             /** Порядок */
             sort_order?: number;
         };
+        ConfirmPaymentRequest: {
+            /**
+             * Format: decimal
+             * @description Сумма по выписке; не больше остатка.
+             */
+            amount: string;
+            /**
+             * Format: date
+             * @description Дата поступления по выписке; не позже сегодняшней.
+             */
+            paid_at: string;
+            /**
+             * @description Номер операции банка.
+             * @default
+             */
+            reference: string;
+            /** @description Платёжка клиента, которую подтверждает платёж. */
+            confirmation_id?: number | null;
+        };
         Contact: {
             readonly id: number;
             /**
@@ -9372,7 +10406,7 @@ export interface components {
              *     * `env` - env
              *     * `none` - none
              */
-            state: components["schemas"]["StateEnum"];
+            state: components["schemas"]["CrmPairingStatusStateEnum"];
             /** Format: date-time */
             paired_at: string | null;
             /** Format: date-time */
@@ -9390,6 +10424,13 @@ export interface components {
             code_ttl_seconds: number;
             crm_frontend_url: string;
         };
+        /**
+         * @description * `paired` - paired
+         *     * `env` - env
+         *     * `none` - none
+         * @enum {string}
+         */
+        CrmPairingStatusStateEnum: "paired" | "env" | "none";
         Currency: {
             readonly id: number;
             /**
@@ -9454,6 +10495,15 @@ export interface components {
         /** @description MED-3: Full detail serializer with quotes. */
         DealDetail: {
             readonly id: number;
+            /**
+             * Номер заявки
+             * @description ЗВ-ГГГГ-NNN; после принятия КП клиентом — ПР-ГГГГ-NNN (тот же NNN)
+             */
+            readonly number: string;
+            /** Процесс заявки */
+            readonly process: components["schemas"]["ProcessEnum"];
+            /** Срочность */
+            readonly urgency: components["schemas"]["UrgencyEnum"];
             /**
              * Компания
              * @description Компания-клиент, с которой ведётся сделка. Пусто — черновик-калькулятор без клиента.
@@ -9556,6 +10606,15 @@ export interface components {
         /** @description MED-3: Optimized list serializer with human-readable names. */
         DealList: {
             readonly id: number;
+            /**
+             * Номер заявки
+             * @description ЗВ-ГГГГ-NNN; после принятия КП клиентом — ПР-ГГГГ-NNN (тот же NNN)
+             */
+            readonly number: string;
+            /** Процесс заявки */
+            readonly process: components["schemas"]["ProcessEnum"];
+            /** Срочность */
+            readonly urgency: components["schemas"]["UrgencyEnum"];
             /**
              * Название сделки
              * @description Краткое описание сделки (опционально)
@@ -9720,6 +10779,17 @@ export interface components {
             shipped_at: string | null;
             tracking: string;
         };
+        /**
+         * @description * `draft` - draft
+         *     * `issued` - issued
+         *     * `proof_received` - proof_received
+         *     * `partially_paid` - partially_paid
+         *     * `paid` - paid
+         *     * `overdue` - overdue
+         *     * `cancelled` - cancelled
+         * @enum {string}
+         */
+        DisplayStatusEnum: "draft" | "issued" | "proof_received" | "partially_paid" | "paid" | "overdue" | "cancelled";
         /**
          * @description * `ITEM` - Позиция
          *     * `SECTION` - Раздел
@@ -9908,6 +10978,23 @@ export interface components {
              * @description Неактивные записи скрыты в формах выбора
              */
             is_active?: boolean;
+        };
+        DoneReceipt: {
+            id: number;
+            order_id: number;
+            order_number: string;
+            supplier_name: string;
+            /** Format: date-time */
+            received_at: string;
+            received_by_name: string | null;
+            supplier_doc: string | null;
+            quantity: number;
+            lines: components["schemas"]["DoneReceiptLine"][];
+        };
+        DoneReceiptLine: {
+            name: string;
+            quantity: number;
+            cell: string | null;
         };
         /** @description DB-editable email template — Platform-Operator admin CRUD. */
         EmailTemplate: {
@@ -10235,6 +11322,13 @@ export interface components {
              */
             readonly updated_at: string;
         };
+        /**
+         * @description * `stock` - stock
+         *     * `supply` - supply
+         *     * `engineer` - engineer
+         * @enum {string}
+         */
+        GroupEnum: "stock" | "supply" | "engineer";
         InviteRequestRequest: {
             /** Format: email */
             email: string;
@@ -10705,6 +11799,199 @@ export interface components {
             /** @default  */
             telegram_username: string;
         };
+        OrderActions: {
+            edit: boolean;
+            send: boolean;
+            confirm: boolean;
+            receive: boolean;
+            cancel: boolean;
+        };
+        OrderCancelInRequest: {
+            /** @default  */
+            reason: string;
+        };
+        OrderConfirmInRequest: {
+            /** Format: date */
+            expected_date?: string | null;
+        };
+        OrderCreateInRequest: {
+            supplier_id: number;
+            /** Format: date */
+            expected_date?: string | null;
+            /** @default  */
+            note: string;
+            currency?: string | null;
+            lines: components["schemas"]["OrderLineInRequest"][];
+        };
+        OrderDetail: {
+            id: number;
+            /** @description ЗП-ГГГГ-NNN */
+            number: string;
+            status: components["schemas"]["SupplierOrderStatusEnum"];
+            supplier: components["schemas"]["OrderSupplier"];
+            /** Format: date */
+            expected_date: string | null;
+            /** @description Ожидаемая дата прошла, заказ отправлен или подтверждён, но не получен */
+            overdue: boolean;
+            days_overdue: number | null;
+            currency: string | null;
+            lines_count: number;
+            quantity: number;
+            received_quantity: number;
+            receipt_state: components["schemas"]["SupplierOrderReceiptStateEnum"];
+            /**
+             * Format: decimal
+             * @description Сумма заказа — только с правом видеть цены поставщиков
+             */
+            total: string | null;
+            projects: components["schemas"]["StockDealRef"][];
+            /** Format: date-time */
+            created_at: string;
+            created_by_name: string | null;
+            actions: components["schemas"]["OrderActions"];
+            note: string;
+            /** Format: date-time */
+            sent_at: string | null;
+            sent_to: string | null;
+            /** Format: date-time */
+            confirmed_at: string | null;
+            /** Format: date-time */
+            received_at: string | null;
+            /** Format: date-time */
+            cancelled_at: string | null;
+            cancel_reason: string | null;
+            lines: components["schemas"]["OrderLine"][];
+            receipts: components["schemas"]["OrderReceipt"][];
+            log: components["schemas"]["OrderLog"][];
+            rights: components["schemas"]["OrderRights"];
+        };
+        OrderFromDealInRequest: {
+            deal_id: number;
+            supplier_id: number;
+        };
+        OrderLine: {
+            id: number;
+            position: number;
+            product_id: number | null;
+            name: string;
+            article: string;
+            unit: string;
+            quantity: number;
+            received_quantity: number;
+            /** Format: decimal */
+            unit_price: string | null;
+            /** Format: decimal */
+            line_total: string | null;
+            deal: components["schemas"]["StockDealRef"] | null;
+            quote_item_id: number | null;
+        };
+        OrderLineInRequest: {
+            /** @description Строка этого заказа (правка); без id — новая */
+            id?: number;
+            product_id: number;
+            /** @default  */
+            name: string;
+            /** @default  */
+            article: string;
+            /** @default  */
+            unit: string;
+            quantity: number;
+            /**
+             * Format: decimal
+             * @description Цена поставщика за единицу; ставит только держатель права видеть цены поставщиков
+             */
+            unit_price?: string | null;
+            deal_id?: number | null;
+            quote_item_id?: number | null;
+        };
+        OrderList: {
+            results: components["schemas"]["OrderRow"][];
+            rights: components["schemas"]["OrderRights"];
+        };
+        OrderLog: {
+            kind: components["schemas"]["OrderLogKindEnum"];
+            /** Format: date-time */
+            at: string;
+            by_name: string | null;
+            detail: string | null;
+        };
+        /**
+         * @description * `created` - created
+         *     * `edited` - edited
+         *     * `sent` - sent
+         *     * `confirmed` - confirmed
+         *     * `receipt` - receipt
+         *     * `received` - received
+         *     * `cancelled` - cancelled
+         *     * `overdue` - overdue
+         * @enum {string}
+         */
+        OrderLogKindEnum: "created" | "edited" | "sent" | "confirmed" | "receipt" | "received" | "cancelled" | "overdue";
+        OrderReceipt: {
+            id: number;
+            /** Format: date-time */
+            received_at: string;
+            received_by_name: string | null;
+            supplier_doc: string | null;
+            note: string | null;
+            lines: components["schemas"]["ReceiptLine"][];
+        };
+        OrderRights: {
+            /** @description Резервы, корректировки, заказы поставщикам, приёмка (`supply.manage`) */
+            manage: boolean;
+            /** @description Отгрузки по проектам (`fulfillment.manage`) */
+            ship: boolean;
+            /** @description Видит цены поставщиков (`quote.view_cost_margin` или зона товаров) */
+            prices: boolean;
+        };
+        OrderRow: {
+            id: number;
+            /** @description ЗП-ГГГГ-NNN */
+            number: string;
+            status: components["schemas"]["SupplierOrderStatusEnum"];
+            supplier: components["schemas"]["OrderSupplier"];
+            /** Format: date */
+            expected_date: string | null;
+            /** @description Ожидаемая дата прошла, заказ отправлен или подтверждён, но не получен */
+            overdue: boolean;
+            days_overdue: number | null;
+            currency: string | null;
+            lines_count: number;
+            quantity: number;
+            received_quantity: number;
+            receipt_state: components["schemas"]["SupplierOrderReceiptStateEnum"];
+            /**
+             * Format: decimal
+             * @description Сумма заказа — только с правом видеть цены поставщиков
+             */
+            total: string | null;
+            projects: components["schemas"]["StockDealRef"][];
+            /** Format: date-time */
+            created_at: string;
+            created_by_name: string | null;
+            actions: components["schemas"]["OrderActions"];
+        };
+        OrderSendInRequest: {
+            to_email?: string;
+        };
+        OrderSupplier: {
+            id: number;
+            name: string;
+            /** @description Только в карточке заказа */
+            email?: string | null;
+        };
+        OverdueList: {
+            results: components["schemas"]["OverdueOrder"][];
+        };
+        OverdueOrder: {
+            id: number;
+            number: string;
+            status: components["schemas"]["SupplierOrderStatusEnum"];
+            supplier_name: string;
+            /** Format: date */
+            expected_date: string;
+            days_overdue: number;
+        };
         OwnCompanyCreated: {
             id: number;
             name: string;
@@ -11073,6 +12360,23 @@ export interface components {
              * @description Привязка к компании
              */
             company?: number | null;
+        };
+        PatchedCalcLinePatchRequest: {
+            name?: string;
+            quantity?: number;
+            unit?: string;
+            lead_days?: number | null;
+            /** Format: decimal */
+            purchase_price?: string;
+            purchase_currency?: string;
+            /** Format: decimal */
+            crew_rate?: string | null;
+            /** Format: decimal */
+            crew_days?: string | null;
+            /** Format: decimal */
+            client_price?: string;
+            product_id?: number | null;
+            kind?: components["schemas"]["CalcItemKindEnum"];
         };
         PatchedCategoryRequest: {
             /**
@@ -11769,6 +13073,14 @@ export interface components {
                 [key: string]: string;
             };
         };
+        PatchedOrderPatchInRequest: {
+            supplier_id?: number;
+            /** Format: date */
+            expected_date?: string | null;
+            note?: string;
+            currency?: string | null;
+            lines?: components["schemas"]["OrderLineInRequest"][];
+        };
         /**
          * @description Strip supplier-cost fields (offers / base_price) from viewers who don't own
          *     the product. Only the OWNING seller's team + platform admins see cost & supplier
@@ -12325,6 +13637,21 @@ export interface components {
              */
             proof_file?: string | null;
         };
+        PendingReceiptLine: {
+            order_id: number;
+            order_number: string;
+            supplier_name: string;
+            /** Format: date */
+            expected_date: string | null;
+            overdue: boolean;
+            order_line_id: number;
+            name: string;
+            article: string;
+            unit: string;
+            quantity: number;
+            received_quantity: number;
+            deal: components["schemas"]["StockDealRef"] | null;
+        };
         Person: {
             id: number;
             name: string;
@@ -12346,6 +13673,54 @@ export interface components {
             position?: string;
             role?: string;
         };
+        PriceRequest: {
+            id: number;
+            supplier: components["schemas"]["OrderSupplier"];
+            deal_id: number | null;
+            deal_number: string | null;
+            /** Format: date-time */
+            requested_at: string;
+            requested_by_name: string | null;
+            to_email: string;
+            subject: string;
+            note: string | null;
+            status: components["schemas"]["PriceRequestStatusEnum"];
+            error: string | null;
+            /** Format: date-time */
+            answered_at: string | null;
+            answered_by_name: string | null;
+            answer_note: string | null;
+            lines: components["schemas"]["PriceRequestLine"][];
+        };
+        PriceRequestAnswerInRequest: {
+            /** @default  */
+            note: string;
+        };
+        PriceRequestInRequest: {
+            deal_id: number;
+            supplier_id: number;
+            /** @description Строки расчёта */
+            line_ids: number[];
+            /** @default  */
+            note: string;
+            to_email?: string;
+        };
+        PriceRequestLine: {
+            quote_item_id: number | null;
+            name: string;
+            article: string;
+            quantity: number;
+            unit: string;
+        };
+        PriceRequestList: {
+            results: components["schemas"]["PriceRequest"][];
+        };
+        /**
+         * @description * `sent` - sent
+         *     * `failed` - failed
+         * @enum {string}
+         */
+        PriceRequestStatusEnum: "sent" | "failed";
         /**
          * @description * `cabinet` - Показывать цену в кабинете
          *     * `on_request` - Цена по запросу
@@ -12416,6 +13791,12 @@ export interface components {
          * @enum {string}
          */
         ProblemsEnum: "no_contract" | "contract_rejected" | "act_returned" | "invoice_overdue";
+        /**
+         * @description * `legacy` - legacy
+         *     * `v3` - v3
+         * @enum {string}
+         */
+        ProcessEnum: "legacy" | "v3";
         /**
          * @description Strip supplier-cost fields (offers / base_price) from viewers who don't own
          *     the product. Only the OWNING seller's team + platform admins see cost & supplier
@@ -13037,7 +14418,7 @@ export interface components {
          */
         PublishedCatalogItem: {
             id: number;
-            kind: components["schemas"]["PublishedCatalogItemKindEnum"];
+            kind: components["schemas"]["CalcItemKindEnum"];
             name: string;
             description: string;
             unit: string;
@@ -13048,12 +14429,6 @@ export interface components {
             images: string[];
             attributes: components["schemas"]["_Attribute"][];
         };
-        /**
-         * @description * `goods` - goods
-         *     * `service` - service
-         * @enum {string}
-         */
-        PublishedCatalogItemKindEnum: "goods" | "service";
         PurchaseActualRequest: {
             /** @description Валюта себестоимости строк опорного КП (или UZS). */
             currency: string;
@@ -13262,6 +14637,8 @@ export interface components {
             readonly director_comment: string;
             /** @description Каналы отправки клиенту, выбранные директором при одобрении (telegram, cabinet, email) */
             readonly send_channels: string[];
+            /** @description Итог автоотправки после одобрения директором (ERP-11): requested, sent_via, skipped [{channel, reason}], error; пусто — автоотправки не было */
+            readonly send_report: unknown;
             readonly items: components["schemas"]["QuoteItem"][];
             readonly charges: components["schemas"]["QuoteCharge"][];
             readonly economics: components["schemas"]["QuoteEconomics"] | null;
@@ -13807,6 +15184,176 @@ export interface components {
         ReassignProductRequest: {
             product_id: number | null;
         };
+        ReceiptInRequest: {
+            lines: components["schemas"]["ReceiptLineInRequest"][];
+            /** @default  */
+            supplier_doc: string;
+            /** @default  */
+            note: string;
+        };
+        ReceiptLine: {
+            order_line_id: number;
+            name: string;
+            quantity: number;
+            cell: string | null;
+        };
+        ReceiptLineInRequest: {
+            order_line_id: number;
+            quantity: number;
+            /** @default  */
+            cell: string;
+        };
+        Receipts: {
+            pending: components["schemas"]["PendingReceiptLine"][];
+            done: components["schemas"]["DoneReceipt"][];
+            rights: components["schemas"]["StockRights"];
+        };
+        ReceivableBoard: {
+            tab: components["schemas"]["TabEnum"];
+            /** @description Всего счетов на вкладке. */
+            count: number;
+            /** @description Счета на каждой вкладке (вкладки не пересекаются). */
+            counts: components["schemas"]["ReceivableCounts"];
+            results: components["schemas"]["ReceivableRow"][];
+        };
+        ReceivableCard: {
+            display_status: components["schemas"]["DisplayStatusEnum"];
+            id: number;
+            number: string;
+            deal_id: number;
+            deal_title: string;
+            /** @description Год создания сделки: из него и id BFF составляет номер ЗВ/ПР (ERP-09). */
+            deal_year: number;
+            client_id: number;
+            client_name: string;
+            currency: string | null;
+            /** Format: decimal */
+            total_incl_vat: string;
+            /** Format: decimal */
+            amount_paid: string;
+            /** Format: decimal */
+            balance_due: string;
+            /** Format: date */
+            issued_at: string | null;
+            /** Format: date */
+            due_date: string | null;
+            /** @description Код статуса счёта ERP: DRAFT, ISSUED, PARTIAL, PAID, OVERDUE, CANCELLED. */
+            status: string;
+            /** @description Срок оплаты прошёл, остаток есть (вычисляется по сроку, не хранится). */
+            is_overdue: boolean;
+            days_overdue: number | null;
+            /** @description Есть платёжка клиента, которую бухгалтер ещё не подтвердил. */
+            has_pending_proof: boolean;
+            /** Format: date-time */
+            proof_received_at: string | null;
+            /** Format: decimal */
+            subtotal_excl_vat: string;
+            /** Format: decimal */
+            vat_amount: string;
+            notes: string;
+            has_pdf: boolean;
+            items: components["schemas"]["ReceivableItem"][];
+            payments: components["schemas"]["ReceivablePayment"][];
+            confirmations: components["schemas"]["ReceivableConfirmation"][];
+            history: components["schemas"]["ReceivableHistory"][];
+            /** Format: date-time */
+            payment_doc_requested_at: string | null;
+            /** @description Сотрудник вправе подтвердить оплату, счёт открыт и остаток есть. */
+            can_confirm: boolean;
+            can_attach_proof: boolean;
+            can_request_proof: boolean;
+            /** @description Повтор подтверждения: платёж уже был записан, ничего не добавлено. */
+            replayed: boolean;
+        };
+        ReceivableConfirmation: {
+            id: number;
+            source: components["schemas"]["SourceEnum"];
+            status: components["schemas"]["ReceivableConfirmationStatusEnum"];
+            original_name: string;
+            /** Format: decimal */
+            claimed_amount: string | null;
+            /** Format: date */
+            claimed_date: string | null;
+            note: string;
+            /** Format: date-time */
+            received_at: string;
+            /** @description Кто приложил: сотрудник; пусто — клиент (кабинет, бот). */
+            recorded_by: string | null;
+            payment_id: number | null;
+        };
+        /**
+         * @description * `PENDING` - PENDING
+         *     * `CONFIRMED` - CONFIRMED
+         * @enum {string}
+         */
+        ReceivableConfirmationStatusEnum: "PENDING" | "CONFIRMED";
+        ReceivableCounts: {
+            to_issue: number;
+            awaiting: number;
+            proofs: number;
+            overdue: number;
+        };
+        ReceivableHistory: {
+            /** Format: date-time */
+            at: string;
+            code: string;
+            text: string;
+            by: string | null;
+        };
+        ReceivableItem: {
+            id: number;
+            description: string;
+            quantity: number;
+            /** Format: decimal */
+            unit_price_excl_vat: string;
+            /** Format: decimal */
+            line_total_excl_vat: string;
+        };
+        ReceivablePayment: {
+            id: number;
+            /** Format: decimal */
+            amount: string;
+            /** Format: date */
+            paid_at: string;
+            method: string;
+            reference: string;
+            receipt_number: string;
+            has_proof: boolean;
+            recorded_by: string | null;
+            /** Format: date-time */
+            created_at: string;
+        };
+        ReceivableRow: {
+            display_status: components["schemas"]["DisplayStatusEnum"];
+            id: number;
+            number: string;
+            deal_id: number;
+            deal_title: string;
+            /** @description Год создания сделки: из него и id BFF составляет номер ЗВ/ПР (ERP-09). */
+            deal_year: number;
+            client_id: number;
+            client_name: string;
+            currency: string | null;
+            /** Format: decimal */
+            total_incl_vat: string;
+            /** Format: decimal */
+            amount_paid: string;
+            /** Format: decimal */
+            balance_due: string;
+            /** Format: date */
+            issued_at: string | null;
+            /** Format: date */
+            due_date: string | null;
+            /** @description Код статуса счёта ERP: DRAFT, ISSUED, PARTIAL, PAID, OVERDUE, CANCELLED. */
+            status: string;
+            /** @description Срок оплаты прошёл, остаток есть (вычисляется по сроку, не хранится). */
+            is_overdue: boolean;
+            days_overdue: number | null;
+            /** @description Есть платёжка клиента, которую бухгалтер ещё не подтвердил. */
+            has_pending_proof: boolean;
+            /** Format: date-time */
+            proof_received_at: string | null;
+        };
         RecentDocument: {
             type: components["schemas"]["TypeEnum"];
             id: number;
@@ -13942,6 +15489,14 @@ export interface components {
             detail: string;
             fields: string[];
         };
+        /**
+         * @description * `CABINET` - CABINET
+         *     * `BOT` - BOT
+         *     * `EMAIL` - EMAIL
+         *     * `MANUAL` - MANUAL
+         * @enum {string}
+         */
+        SourceEnum: "CABINET" | "BOT" | "EMAIL" | "MANUAL";
         SsoExchangeRequestRequest: {
             token: string;
         };
@@ -13966,19 +15521,191 @@ export interface components {
             platform_access: string[];
         };
         /**
-         * @description * `paired` - paired
-         *     * `env` - env
-         *     * `none` - none
-         * @enum {string}
-         */
-        StateEnum: "paired" | "env" | "none";
-        /**
          * @description * `CONTRACT` - CONTRACT
          *     * `PAYMENT` - PAYMENT
          *     * `DONE` - DONE
          * @enum {string}
          */
         StepEnum: "CONTRACT" | "PAYMENT" | "DONE";
+        StockAdjustInRequest: {
+            product_id: number;
+            /** @description Плюс — оприходовать, минус — списать; не ноль */
+            quantity: number;
+            /** @default  */
+            cell: string;
+            /** @default  */
+            note: string;
+        };
+        StockBalanceList: {
+            results: components["schemas"]["StockRow"][];
+            rights: components["schemas"]["StockRights"];
+        };
+        StockCell: {
+            /** @description Пусто — товар лежит без ячейки */
+            cell: string | null;
+            on_hand: number;
+        };
+        StockDealRef: {
+            id: number;
+            /** @description Номер ЗВ/ПР (`Deal.number`) */
+            number: string | null;
+            client_name: string | null;
+        };
+        StockError: {
+            /** @description Код отказа (`UPPER_SNAKE`) */
+            detail: string;
+            /** @description `VALIDATION_FAILED`: ошибки полей тела запроса — поле → список кодов или вложенные ошибки */
+            fields?: {
+                [key: string]: unknown;
+            };
+            /** @description `NOT_ENOUGH_STOCK`: сколько можно взять */
+            free?: number;
+            /** @description `QUANTITY_OUT_OF_RANGE`: наибольшее допустимое количество */
+            max?: number;
+            /** @description `BELOW_RESERVED`: сколько в резервах */
+            reserved?: number;
+            on_hand?: number;
+            /** @description `BELOW_SHIPPED`: уже отгружено */
+            shipped?: number;
+            /** @description `TRANSITION_NOT_ALLOWED`, `ORDER_NOT_CONFIRMED`: текущий статус */
+            current?: string;
+            /** @description `TRANSITION_NOT_ALLOWED`: куда хотели перейти */
+            target?: string;
+        };
+        StockIncomingOrder: {
+            order_id: number;
+            number: string;
+            status: components["schemas"]["SupplierOrderStatusEnum"];
+            supplier_name: string;
+            /** Format: date */
+            expected_date: string | null;
+            quantity_left: number;
+        };
+        StockMovement: {
+            kind: components["schemas"]["StockMovementKindEnum"];
+            /** @description Плюс — приход, минус — расход */
+            quantity: number;
+            cell: string | null;
+            /** Format: date-time */
+            at: string;
+            by_name: string | null;
+            note: string | null;
+        };
+        /**
+         * @description * `receipt` - receipt
+         *     * `shipment` - shipment
+         *     * `adjustment` - adjustment
+         * @enum {string}
+         */
+        StockMovementKindEnum: "receipt" | "shipment" | "adjustment";
+        StockProduct: {
+            product_id: number;
+            name: string;
+            article: string;
+            unit: string;
+            on_hand: number;
+            /** @description Остаток резервов действующих проектов */
+            reserved: number;
+            /** @description Свободный остаток: остаток − резервы */
+            free: number;
+            /** @description Ожидается по отправленным и подтверждённым заказам поставщикам */
+            incoming: number;
+            /** Format: date */
+            next_expected: string | null;
+            cells: components["schemas"]["StockCell"][];
+            reservations: components["schemas"]["StockReservation"][];
+            incoming_orders: components["schemas"]["StockIncomingOrder"][];
+            movements: components["schemas"]["StockMovement"][];
+            rights: components["schemas"]["StockRights"];
+        };
+        StockReservation: {
+            id: number;
+            product_id: number;
+            product_name: string;
+            deal: components["schemas"]["StockDealRef"];
+            quote_item_id: number | null;
+            quantity: number;
+            shipped_quantity: number;
+            remaining: number;
+            status: components["schemas"]["StockReservationStatusEnum"];
+            /** Format: date-time */
+            created_at: string;
+            created_by_name: string | null;
+        };
+        StockReservationList: {
+            results: components["schemas"]["StockReservation"][];
+        };
+        /**
+         * @description * `active` - active
+         *     * `released` - released
+         *     * `fulfilled` - fulfilled
+         * @enum {string}
+         */
+        StockReservationStatusEnum: "active" | "released" | "fulfilled";
+        StockReserveInRequest: {
+            deal_id: number;
+            quote_item_id: number;
+            quantity: number;
+        };
+        StockRights: {
+            /** @description Резервы, корректировки, заказы поставщикам, приёмка (`supply.manage`) */
+            manage: boolean;
+            /** @description Отгрузки по проектам (`fulfillment.manage`) */
+            ship: boolean;
+        };
+        StockRow: {
+            product_id: number;
+            name: string;
+            article: string;
+            unit: string;
+            on_hand: number;
+            /** @description Остаток резервов действующих проектов */
+            reserved: number;
+            /** @description Свободный остаток: остаток − резервы */
+            free: number;
+            /** @description Ожидается по отправленным и подтверждённым заказам поставщикам */
+            incoming: number;
+            /** Format: date */
+            next_expected: string | null;
+            cells: components["schemas"]["StockCell"][];
+        };
+        StockShipInRequest: {
+            deal_id: number;
+            lines: components["schemas"]["StockShipLineInRequest"][];
+            /** @default  */
+            tracking: string;
+            /** @default  */
+            carrier: string;
+            /** @default  */
+            note: string;
+        };
+        StockShipLineInRequest: {
+            reservation_id: number;
+            quantity: number;
+        };
+        StockShipment: {
+            id: number;
+            /** @description Внутренняя накладная ОТГ-ГГГГ-NNN */
+            number: string;
+            deal: components["schemas"]["StockDealRef"];
+            tracking: string | null;
+            carrier: string | null;
+            note: string | null;
+            /** Format: date-time */
+            shipped_at: string;
+            shipped_by_name: string | null;
+            lines: components["schemas"]["StockShipmentLine"][];
+        };
+        StockShipmentLine: {
+            product_id: number;
+            name: string;
+            quantity: number;
+            cell: string | null;
+        };
+        StockShipmentList: {
+            results: components["schemas"]["StockShipment"][];
+            rights: components["schemas"]["StockRights"];
+        };
         StockStatus: {
             readonly id: number;
             /**
@@ -13991,6 +15718,16 @@ export interface components {
              * @description Отображаемое название
              */
             name: string;
+        };
+        StockSupplier: {
+            id: number;
+            name: string;
+            inn: string | null;
+            /** @description Адрес для писем: почта компании или основного контакта */
+            email: string | null;
+        };
+        StockSupplierList: {
+            results: components["schemas"]["StockSupplier"][];
         };
         SupplierOffer: {
             readonly id: number;
@@ -14156,6 +15893,22 @@ export interface components {
              */
             is_active?: boolean;
         };
+        /**
+         * @description * `none` - none
+         *     * `partial` - partial
+         *     * `full` - full
+         * @enum {string}
+         */
+        SupplierOrderReceiptStateEnum: "none" | "partial" | "full";
+        /**
+         * @description * `draft` - draft
+         *     * `sent` - sent
+         *     * `confirmed` - confirmed
+         *     * `received` - received
+         *     * `cancelled` - cancelled
+         * @enum {string}
+         */
+        SupplierOrderStatusEnum: "draft" | "sent" | "confirmed" | "received" | "cancelled";
         /** @description Response shape for the SystemRole lookup feed ({code, name}). */
         SystemRoleLookup: {
             code: string;
@@ -14232,6 +15985,15 @@ export interface components {
             code: string;
             current_password: string;
         };
+        /**
+         * @description * `to_issue` - to_issue
+         *     * `awaiting` - awaiting
+         *     * `proofs` - proofs
+         *     * `overdue` - overdue
+         *     * `all` - all
+         * @enum {string}
+         */
+        TabEnum: "to_issue" | "awaiting" | "proofs" | "overdue" | "all";
         TimelineEntry: {
             readonly id: number;
             /**
@@ -14355,6 +16117,12 @@ export interface components {
              */
             is_active?: boolean;
         };
+        /**
+         * @description * `normal` - Обычная
+         *     * `urgent` - Срочная
+         * @enum {string}
+         */
+        UrgencyEnum: "normal" | "urgent";
         User: {
             readonly id: number;
             /**
@@ -14598,6 +16366,26 @@ export interface operations {
         };
     };
     api_integration_v1_clients_invite_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                crm_client_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_integration_v1_clients_requests_create: {
         parameters: {
             query?: never;
             header?: never;
@@ -18911,6 +20699,589 @@ export interface operations {
             };
             401: components["responses"]["UnauthorizedResponse"];
             403: components["responses"]["ForbiddenResponse"];
+        };
+    };
+    calc_sheet: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                deal_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcSheet"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права (зона строки, роль) или не сотрудник */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+            /** @description Заявки, задания расчёта или строки нет */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+        };
+    };
+    calc_lines_add: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                deal_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CalcLinesInRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["CalcLinesInRequest"];
+                "multipart/form-data": components["schemas"]["CalcLinesInRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcLinesCreated"];
+                };
+            };
+            /** @description Тело не прошло проверку или отказ правила строки */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права (зона строки, роль) или не сотрудник */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+            /** @description Заявки, задания расчёта или строки нет */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+            /** @description Состояние не позволяет (КП не черновик, нет виз, ИИ выключен) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+        };
+    };
+    calc_line_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                deal_id: number;
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcSheet"];
+                };
+            };
+            /** @description Тело не прошло проверку или отказ правила строки */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права (зона строки, роль) или не сотрудник */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+            /** @description Заявки, задания расчёта или строки нет */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+            /** @description Состояние не позволяет (КП не черновик, нет виз, ИИ выключен) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+        };
+    };
+    calc_line_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                deal_id: number;
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedCalcLinePatchRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedCalcLinePatchRequest"];
+                "multipart/form-data": components["schemas"]["PatchedCalcLinePatchRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcSheet"];
+                };
+            };
+            /** @description Тело не прошло проверку или отказ правила строки */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права (зона строки, роль) или не сотрудник */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+            /** @description Заявки, задания расчёта или строки нет */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+            /** @description Состояние не позволяет (КП не черновик, нет виз, ИИ выключен) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+        };
+    };
+    calc_line_sign: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                deal_id: number;
+                item_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcSheet"];
+                };
+            };
+            /** @description Тело не прошло проверку или отказ правила строки */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права (зона строки, роль) или не сотрудник */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+            /** @description Заявки, задания расчёта или строки нет */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+            /** @description Состояние не позволяет (КП не черновик, нет виз, ИИ выключен) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+        };
+    };
+    calc_parse: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                deal_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["CalcParseInRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["CalcParseInRequest"];
+                "multipart/form-data": components["schemas"]["CalcParseInRequest"];
+            };
+        };
+        responses: {
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcJob"];
+                };
+            };
+            /** @description Тело не прошло проверку или отказ правила строки */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права (зона строки, роль) или не сотрудник */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+            /** @description Заявки, задания расчёта или строки нет */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+            /** @description Состояние не позволяет (КП не черновик, нет виз, ИИ выключен) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+            /** @description Дневной лимит ИИ компании */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+            /** @description Очередь ИИ недоступна */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+        };
+    };
+    calc_ready: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                deal_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcSheet"];
+                };
+            };
+            /** @description Тело не прошло проверку или отказ правила строки */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права (зона строки, роль) или не сотрудник */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+            /** @description Заявки, задания расчёта или строки нет */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+            /** @description Состояние не позволяет (КП не черновик, нет виз, ИИ выключен) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+        };
+    };
+    calc_start: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                deal_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcSheet"];
+                };
+            };
+            /** @description Тело не прошло проверку или отказ правила строки */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права (зона строки, роль) или не сотрудник */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+            /** @description Заявки, задания расчёта или строки нет */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+            /** @description Состояние не позволяет (КП не черновик, нет виз, ИИ выключен) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+        };
+    };
+    calc_catalog_search: {
+        parameters: {
+            query?: {
+                /** @description Слова названия, артикула, кода производителя, ГОСТ */
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcCatalog"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права (зона строки, роль) или не сотрудник */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+        };
+    };
+    calc_deal_refs: {
+        parameters: {
+            query?: {
+                /** @description Отбор по номеру ЗВ/ПР (`ЗВ-2026-104`, `zv 2026 104`): один NNN года, префикс не важен */
+                number?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcDealRefList"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права (зона строки, роль) или не сотрудник */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
+        };
+    };
+    calc_tasks_list: {
+        parameters: {
+            query?: {
+                /** @description Только где сотрудник — исполнитель резолюции */
+                mine?: boolean;
+                /** @description open — стадии расчёта; all — все */
+                scope?: "all" | "open";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcTaskList"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права (зона строки, роль) или не сотрудник */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalcError"];
+                };
+            };
         };
     };
     catalog_categories_list: {
@@ -26085,6 +28456,308 @@ export interface operations {
             404: components["responses"]["NotFoundResponse"];
         };
     };
+    finance_receivables_board: {
+        parameters: {
+            query?: {
+                /** @description Строк на странице, 1–100 (по умолчанию 50). */
+                limit?: number;
+                /** @description Сколько строк пропустить. */
+                offset?: number;
+                /** @description Поиск по номеру счёта и названию клиента. */
+                q?: string;
+                /** @description Вкладка; по умолчанию `awaiting`. */
+                tab?: "all" | "awaiting" | "overdue" | "proofs" | "to_issue";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReceivableBoard"];
+                };
+            };
+            /** @description TAB_INVALID / PAGINATION_INVALID */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description ROLE_NOT_PERMITTED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
+    finance_receivables_card: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invoice_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReceivableCard"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description ROLE_NOT_PERMITTED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
+    finance_receivables_confirm_payment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invoice_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmPaymentRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ConfirmPaymentRequest"];
+                "multipart/form-data": components["schemas"]["ConfirmPaymentRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReceivableCard"];
+                };
+            };
+            /** @description NOT_FOUND / CONFIRMATION_NOT_FOUND (404); ROLE_NOT_PERMITTED / MEMBER_REQUIRED_FOR_ACTION (403); PAYMENT_EXCEEDS_BALANCE_DUE / INVOICE_NOT_ISSUED / INVOICE_NOT_OPEN / INVOICE_CANCELLED / INVOICE_ALREADY_PAID / PAYMENT_REFERENCE_CONFLICT (409); PAYMENT_DATE_IN_FUTURE / PAYMENT_AMOUNT_MUST_BE_POSITIVE (400) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description ROLE_NOT_PERMITTED / MEMBER_REQUIRED_FOR_ACTION */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description NOT_FOUND / CONFIRMATION_NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description PAYMENT_EXCEEDS_BALANCE_DUE / INVOICE_ALREADY_PAID / ... */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
+    finance_receivables_attach_confirmation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invoice_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["AttachConfirmationRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReceivableCard"];
+                };
+            };
+            /** @description Файл не принят или поле неверно */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BadRequest"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description ROLE_NOT_PERMITTED / MEMBER_REQUIRED_FOR_ACTION */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description INVOICE_NOT_OPEN */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
+    finance_receivables_confirmation_file: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                confirmation_id: number;
+                invoice_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Содержимое файла */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description ROLE_NOT_PERMITTED */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description Платёжки нет или она относится к другому счёту */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
+    finance_receivables_request_payment_doc: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invoice_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReceivableCard"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description ROLE_NOT_PERMITTED / MEMBER_REQUIRED_FOR_ACTION */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description NOT_FOUND */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+            /** @description INVOICE_NOT_OPEN */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
     busDeliveries: {
         parameters: {
             query?: {
@@ -28447,6 +31120,1160 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorDetail"];
+                };
+            };
+        };
+    };
+    stock_adjust: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StockAdjustInRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["StockAdjustInRequest"];
+                "multipart/form-data": components["schemas"]["StockAdjustInRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockProduct"];
+                };
+            };
+            /** @description Тело не прошло проверку */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права или не сотрудник */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            /** @description Объекта нет */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            /** @description Состояние не позволяет (мало остатка, резерв, статус) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+        };
+    };
+    stock_balances_list: {
+        parameters: {
+            query?: {
+                /** @description Только с резервом / с приходом */
+                only?: "incoming" | "reserved";
+                /** @description Слова названия, артикула, SKU; ищет по всей номенклатуре */
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockBalanceList"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права или не сотрудник */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+        };
+    };
+    stock_product_detail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                product_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockProduct"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права или не сотрудник */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            /** @description Объекта нет */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+        };
+    };
+    stock_orders_list: {
+        parameters: {
+            query?: {
+                /** @description Точный номер ЗП-ГГГГ-NNN */
+                number?: string;
+                /** @description Только просроченные */
+                overdue?: boolean;
+                /** @description Номер, поставщик, название позиции */
+                q?: string;
+                /** @description Статус заказа */
+                status?: "cancelled" | "confirmed" | "draft" | "received" | "sent";
+                supplier_id?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderList"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права, не сотрудник или нет права на цены поставщиков */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+        };
+    };
+    stock_order_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrderCreateInRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["OrderCreateInRequest"];
+                "multipart/form-data": components["schemas"]["OrderCreateInRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderDetail"];
+                };
+            };
+            /** @description Тело не прошло проверку */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права, не сотрудник или нет права на цены поставщиков */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            /** @description Заказа, строки, поставщика или заявки нет */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            /** @description Состояние не позволяет (недопустимый переход статуса, нет адреса, письмо не ушло — `EMAIL_FAILED`, мало товара) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+        };
+    };
+    stock_order_detail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                order_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderDetail"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права, не сотрудник или нет права на цены поставщиков */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            /** @description Заказа, строки, поставщика или заявки нет */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+        };
+    };
+    stock_order_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                order_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PatchedOrderPatchInRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PatchedOrderPatchInRequest"];
+                "multipart/form-data": components["schemas"]["PatchedOrderPatchInRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderDetail"];
+                };
+            };
+            /** @description Тело не прошло проверку */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права, не сотрудник или нет права на цены поставщиков */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            /** @description Заказа, строки, поставщика или заявки нет */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            /** @description Состояние не позволяет (недопустимый переход статуса, нет адреса, письмо не ушло — `EMAIL_FAILED`, мало товара) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+        };
+    };
+    stock_order_cancel: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                order_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["OrderCancelInRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["OrderCancelInRequest"];
+                "multipart/form-data": components["schemas"]["OrderCancelInRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderDetail"];
+                };
+            };
+            /** @description Тело не прошло проверку */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права, не сотрудник или нет права на цены поставщиков */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            /** @description Заказа, строки, поставщика или заявки нет */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            /** @description Состояние не позволяет (недопустимый переход статуса, нет адреса, письмо не ушло — `EMAIL_FAILED`, мало товара) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+        };
+    };
+    stock_order_confirm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                order_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["OrderConfirmInRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["OrderConfirmInRequest"];
+                "multipart/form-data": components["schemas"]["OrderConfirmInRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderDetail"];
+                };
+            };
+            /** @description Тело не прошло проверку */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права, не сотрудник или нет права на цены поставщиков */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            /** @description Заказа, строки, поставщика или заявки нет */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            /** @description Состояние не позволяет (недопустимый переход статуса, нет адреса, письмо не ушло — `EMAIL_FAILED`, мало товара) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+        };
+    };
+    stock_order_receive: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                order_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReceiptInRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["ReceiptInRequest"];
+                "multipart/form-data": components["schemas"]["ReceiptInRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderDetail"];
+                };
+            };
+            /** @description Тело не прошло проверку */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права, не сотрудник или нет права на цены поставщиков */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            /** @description Заказа, строки, поставщика или заявки нет */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            /** @description Состояние не позволяет (недопустимый переход статуса, нет адреса, письмо не ушло — `EMAIL_FAILED`, мало товара) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+        };
+    };
+    stock_order_send: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                order_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["OrderSendInRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["OrderSendInRequest"];
+                "multipart/form-data": components["schemas"]["OrderSendInRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderDetail"];
+                };
+            };
+            /** @description Тело не прошло проверку */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права, не сотрудник или нет права на цены поставщиков */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            /** @description Заказа, строки, поставщика или заявки нет */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            /** @description Состояние не позволяет (недопустимый переход статуса, нет адреса, письмо не ушло — `EMAIL_FAILED`, мало товара) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+        };
+    };
+    stock_order_from_deal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrderFromDealInRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["OrderFromDealInRequest"];
+                "multipart/form-data": components["schemas"]["OrderFromDealInRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderDetail"];
+                };
+            };
+            /** @description Тело не прошло проверку */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права, не сотрудник или нет права на цены поставщиков */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            /** @description Заказа, строки, поставщика или заявки нет */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            /** @description Состояние не позволяет (недопустимый переход статуса, нет адреса, письмо не ушло — `EMAIL_FAILED`, мало товара) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+        };
+    };
+    stock_overdue_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OverdueList"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права, не сотрудник или нет права на цены поставщиков */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+        };
+    };
+    stock_price_requests_list: {
+        parameters: {
+            query?: {
+                deal_id?: number;
+                supplier_id?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PriceRequestList"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права, не сотрудник или нет права на цены поставщиков */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+        };
+    };
+    stock_price_request_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PriceRequestInRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PriceRequestInRequest"];
+                "multipart/form-data": components["schemas"]["PriceRequestInRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PriceRequest"];
+                };
+            };
+            /** @description Тело не прошло проверку */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права, не сотрудник или нет права на цены поставщиков */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            /** @description Заказа, строки, поставщика или заявки нет */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            /** @description Состояние не позволяет (недопустимый переход статуса, нет адреса, письмо не ушло — `EMAIL_FAILED`, мало товара) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+        };
+    };
+    stock_price_request_answer: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PriceRequestAnswerInRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["PriceRequestAnswerInRequest"];
+                "multipart/form-data": components["schemas"]["PriceRequestAnswerInRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PriceRequest"];
+                };
+            };
+            /** @description Тело не прошло проверку */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права, не сотрудник или нет права на цены поставщиков */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            /** @description Заказа, строки, поставщика или заявки нет */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            /** @description Состояние не позволяет (недопустимый переход статуса, нет адреса, письмо не ушло — `EMAIL_FAILED`, мало товара) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+        };
+    };
+    stock_receipts_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Receipts"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права, не сотрудник или нет права на цены поставщиков */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+        };
+    };
+    stock_reservations_list: {
+        parameters: {
+            query?: {
+                deal_id?: number;
+                product_id?: number;
+                /** @description По умолчанию — действующие */
+                status?: "active" | "fulfilled" | "released";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockReservationList"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права или не сотрудник */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+        };
+    };
+    stock_reserve: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StockReserveInRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["StockReserveInRequest"];
+                "multipart/form-data": components["schemas"]["StockReserveInRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockReservation"];
+                };
+            };
+            /** @description Тело не прошло проверку */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права или не сотрудник */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            /** @description Объекта нет */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            /** @description Состояние не позволяет (мало остатка, резерв, статус) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+        };
+    };
+    stock_reservation_release: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reservation_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockReservation"];
+                };
+            };
+            /** @description Тело не прошло проверку */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права или не сотрудник */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            /** @description Объекта нет */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            /** @description Состояние не позволяет (мало остатка, резерв, статус) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+        };
+    };
+    stock_shipments_list: {
+        parameters: {
+            query?: {
+                deal_id?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockShipmentList"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права или не сотрудник */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+        };
+    };
+    stock_ship: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StockShipInRequest"];
+                "application/x-www-form-urlencoded": components["schemas"]["StockShipInRequest"];
+                "multipart/form-data": components["schemas"]["StockShipInRequest"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockShipment"];
+                };
+            };
+            /** @description Тело не прошло проверку */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права или не сотрудник */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            /** @description Объекта нет */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+            /** @description Состояние не позволяет (мало остатка, резерв, статус) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
+                };
+            };
+        };
+    };
+    stock_suppliers_list: {
+        parameters: {
+            query?: {
+                /** @description Название или ИНН */
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockSupplierList"];
+                };
+            };
+            401: components["responses"]["UnauthorizedResponse"];
+            /** @description Нет права или не сотрудник */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StockError"];
                 };
             };
         };

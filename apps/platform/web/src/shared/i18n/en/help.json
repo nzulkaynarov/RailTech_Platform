@@ -30,6 +30,8 @@
       "articles": "Articles",
       "keys": "Hotkeys",
       "news": "What is new",
+      "roadmap": "What is coming",
+      "about": "About",
       "requests": "My requests"
     },
     "write": "Write to the administrator",
@@ -234,24 +236,70 @@
     ]
   },
   "news": {
-    "intro": "What has changed in the Platform.",
-    "items": [
-      {
-        "date": "October 28, 2026",
-        "title": "Help, first login and requests to the administrator",
-        "text": "The “?” button opens help for the current screen; “Write to the administrator” works from the “No access” screen and from Help; replies arrive in the bell and in Telegram."
-      },
-      {
-        "date": "October 27, 2026",
-        "title": "Honest placeholders and a queue without dead ends",
-        "text": "A section that is not in the Platform yet says where the work is done now; in “My tasks” the “Open” button becomes “Where to do it” if there is no screen yet."
-      },
-      {
-        "date": "October 27, 2026",
-        "title": "Profile",
-        "text": "Photo, phone, signature, Telegram and deputy during vacation are on the profile page."
-      }
-    ]
+    "intro": "What has changed in the Platform, by release date. The mark on an item says who it is for.",
+    "forAll": "For everyone",
+    "empty": "No entries yet: they will appear after the next update."
+  },
+  "roadmap": {
+    "missing": "The plan is not published yet."
+  },
+  "about": {
+    "title": "About",
+    "versionWithSha": "Platform {{version}} · {{sha}}",
+    "version": "Platform {{version}}",
+    "localBuild": "Platform · local build",
+    "releasedAt": "Updated {{date}}",
+    "builtAt": "Built {{date}}",
+    "services": "Services",
+    "service": {
+      "bff": "Platform (BFF)",
+      "crm": "CRM",
+      "erp": "ERP",
+      "eds": "Documents (EDS)"
+    },
+    "status": {
+      "ok": "Working",
+      "fail": "Not responding",
+      "disabled": "Not connected"
+    },
+    "serviceVersion": "version {{version}}",
+    "noVersion": "does not report a version",
+    "copy": "Copy details for support",
+    "copied": "Copied. Paste it into a request or a message to the administrator.",
+    "copyFailed": "The browser did not allow copying. Select the text above and copy it manually.",
+    "supportLabel": "Details for support",
+    "supportHint": "No name, email or phone: version, role, language, browser, screen and time.",
+    "loading": "Checking the version and services…",
+    "error": "Could not get the version: the Platform did not respond. Reload the page.",
+    "menu": "About",
+    "support": {
+      "version": "Version: {{value}}",
+      "role": "Role: {{value}}",
+      "language": "Language: {{value}}",
+      "browser": "Browser: {{value}}",
+      "screen": "Screen: {{value}}",
+      "time": "Time: {{value}}"
+    }
+  },
+  "whatsNew": {
+    "title": "The Platform has been updated",
+    "text": "{{date}}: {{title}}. See what is new for you.",
+    "open": "What is new",
+    "close": "Close",
+    "fresh": "New",
+    "helpFresh": "Help (key ?), something new"
+  },
+  "feedback": {
+    "label": "Article feedback",
+    "question": "Did this article help?",
+    "yes": "Yes",
+    "no": "No",
+    "thanks": "Thank you! Glad it helped.",
+    "sorry": "Sorry about that. Tell us what was missing and the administrator will fix the article.",
+    "write": "Write to the administrator",
+    "outdated": "This is out of date",
+    "outdatedBody": "Help article “{{title}}” is out of date: {{link}}\nWhat changed: ",
+    "missingBody": "Help article “{{title}}” did not help: {{link}}\nWhat was missing: "
   },
   "articles": {
     "intro": "Articles by Platform section. The “?” button in the header leads to the right one.",
@@ -280,8 +328,8 @@
     "body": "What happened",
     "bodyPlaceholder": "For example: I need access to “Costing” to see the supply tasks",
     "bodyHint": "Up to 4000 characters.",
-    "auto": "Attached automatically: page {{page}}, role {{role}}.",
-    "autoNoPage": "Attached automatically: role {{role}}.",
+    "auto": "Attached automatically: page {{page}}, role {{role}}, Platform version.",
+    "autoNoPage": "Attached automatically: role {{role}}, Platform version.",
     "consequence": [
       "The administrator gets the request in “Settings · Staff requests” and in Telegram.",
       "The page and your role are attached automatically.",

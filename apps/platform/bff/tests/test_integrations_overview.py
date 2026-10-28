@@ -503,3 +503,61 @@ async def test_raw_bot_and_backup_errors_go_to_technical_not_detail(
     backup = next(a for a in body["attention"] if a["id"] == "backup:stale")
     assert (bot["detail"], bot["technical"]) == (None, "boom 401")
     assert (backup["detail"], backup["technical"]) == (None, "bucket_missing")
+
+
+async def test_offsite_copy_failure_reddens_the_storage_card_and_not_configured_does_not(
+    web: Web, crm: CrmIntegrationsFake, check: ContractChecker
+) -> None:
+    """OPS-GDRIVE: внешняя копия на Google Drive — часть «Хранилища»; «не настроено» — не сбой."""
+    offsite = service("offsite_backup", "fail", state="broken", action="write_owner")
+    crm.answer(
+        "GET",
+        "admin/external-services",
+        200,
+        services_out(
+            [offsite], [group("offsite_backup", "broken", action="write_owner", owner="owner")]
+        ),
+    )
+    crm.answer("GET", "system/backups", 200, backups())
+    await web.login(["ADMIN"])
+
+    response = await web.client.get(URL)
+
+    check(response, "/admin/integrations", "get")
+    assert cards(response.json())["storage"]["status"] == "fail"
+
+    idle = service("offsite_backup", "off", state="not_configured", action="write_owner")
+    crm.answer("GET", "admin/external-services", 200, services_out([idle], []))
+    response = await web.client.get(URL)
+    assert cards(response.json())["storage"]["status"] != "fail"
+
+
+async def test_wal_archive_is_on_the_storage_card_and_the_bus_row_keeps_its_action(
+    web: Web, crm: CrmIntegrationsFake, check: ContractChecker
+) -> None:
+    """W15-H8b: архив WAL — на карточке «Хранилище»; «Открыть журнал обмена» доходит до SPA."""
+    wal = service("wal_archive", "fail", state="broken", action="write_hosting")
+    bus = service("bus_dlq", "fail", state="broken", action="open_bus", more_actions=["recheck"])
+    crm.answer(
+        "GET",
+        "admin/external-services",
+        200,
+        services_out(
+            [wal, bus],
+            [
+                group("wal_archive", "broken", action="write_hosting", owner="hosting"),
+                group("bus_dlq", "broken", action="open_bus", id="bus_dlq:bus_dlq"),
+            ],
+        ),
+    )
+    crm.answer("GET", "system/backups", 200, backups())
+    await web.login(["ADMIN"])
+
+    response = await web.client.get(URL)
+
+    check(response, "/admin/integrations", "get")
+    body = response.json()
+    assert cards(body)["storage"]["status"] == "fail"  # архив WAL — часть «Хранилища»
+    bus_row = next(a for a in body["attention"] if a["id"] == "group:bus_dlq:bus_dlq")
+    assert bus_row["group"]["action"] == "open_bus"
+    assert bus_row["group"]["more_actions"] == ["recheck"]

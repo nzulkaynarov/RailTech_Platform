@@ -3,11 +3,13 @@
 Основание: docs/architecture/integration-map.md §1.1–§1.2, SPEC-v3 §7.1.
 
 Виды работы — секция `queue` каталога (`platform-rbac.yaml`): вид попадает в очередь, если у ролей
-«вида» есть его раздел с нужным уровнем (ADR-0012 п. 6, названия ролей не используются). Источники,
-которые есть сегодня: лиды — CRM `/inbox` (`answer_lead`, `take_lead`), одобрение КП — ERP
-`my-approval-queue` (`approve_quote`); письма, служебки, задания и платёжки ждут ERP-01…06. Роли
-«вида» — активная, если задана (Q-PLT-12-1), иначе все роли сотрудника. `QueueItem.role_id` — первая
-роль «вида», которая даёт этот вид работы.
+«вида» есть его раздел с нужным уровнем (ADR-0012 п. 6, названия ролей не используются).
+Источники сегодня: лиды — CRM `/inbox` (`answer_lead`, `take_lead`); одобрение КП — ERP
+`my-approval-queue` (`approve_quote`); письма без резолюции (`resolve_letter`) и служебки,
+заявления, отчёты на моём шаге маршрута (`approve_memo`, `pay_memo`) — EDS по токену `aud=eds`
+(D1-6): что вернул EDS, то и строки. Задания и платёжки ждут ERP-02…06. Роли «вида» — активная,
+если задана (Q-PLT-12-1), иначе все роли сотрудника. `QueueItem.role_id` — первая роль «вида»,
+которая даёт этот вид работы.
 """
 
 from dataclasses import dataclass
@@ -27,19 +29,36 @@ from app.feeds.numbers import (
     deal_title,
     lead_number,
     lead_ref,
+    letter_ref,
+    memo_ref,
     quote_number,
     quote_ref,
+    supplier_order_ref,
     ticket_ref,
 )
+from app.feeds.rework import rework_item
 from app.feeds.snapshot import (
     Covered,
     Snapshot,
     wants_approvals,
     wants_inbox,
+    wants_letters,
+    wants_memos,
     wants_projects,
+    wants_supplier_overdue,
     wants_tickets,
 )
-from app.feeds.text import ago, due_label, join, money, now_utc, parse_deadline, parse_dt, short
+from app.feeds.text import (
+    COMPANY_TZ,
+    ago,
+    due_label,
+    join,
+    money,
+    now_utc,
+    parse_deadline,
+    parse_dt,
+    short,
+)
 from app.rbac import View
 
 _RANK: dict[DueLabel, int] = {"overdue": 0, "today": 1, "tomorrow": 2, "memo": 3, "later": 4}
@@ -86,7 +105,7 @@ def _lead_row(
         subtitle=join(name, short(why or lead.get("need_summary")), ago(waiting, now)),
         due_label=due_label(due_at, now, default="today"),
         due_at=due_at,
-        object=lead_ref(lead_id, name),
+        object=lead_ref(lead_id, name, conversation=True),
     )
     return Row(item, waiting)
 
@@ -217,6 +236,106 @@ def quote_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
     return out
 
 
+def rework_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
+    """Мои документы, которые вернули на доработку (EDS по токену автора): «Доработать»."""
+    role_id = _role_id(view, "rework_document")
+    return [Row(*rework_item(entry, now, role_id=role_id)) for entry in snap.rework or []]
+
+
+def _dict(value: Any) -> dict[str, Any]:
+    return value if isinstance(value, dict) else {}
+
+
+def _text(value: Any) -> str | None:
+    return value if isinstance(value, str) and value else None
+
+
+def letter_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
+    """Письма «Ждёт резолюции» (EDS): срок — из письма, без срока срочное — сегодня."""
+    role_id = _role_id(view, "resolve_letter")
+    out: list[Row] = []
+    for letter in snap.letters or []:
+        number = letter.get("number")
+        letter_id = letter.get("id")
+        if not isinstance(number, str) or not number or not isinstance(letter_id, str):
+            continue
+        sender = _dict(letter.get("sender"))
+        links = _dict(letter.get("links"))
+        received = parse_dt(letter.get("received_at"))
+        due_at = parse_deadline(letter.get("due"))
+        subject = short(letter.get("subject"), 80)
+        item = QueueItem(
+            id=f"letter:{letter_id}",
+            role_id=role_id,
+            kind="resolve_letter",
+            title=f"Наложить резолюцию на письмо {number}",
+            subtitle=join(
+                _text(sender.get("name")),
+                subject,
+                _text(links.get("deal_number")),
+                ago(received, now),
+            ),
+            due_label=due_label(due_at, now, default="today" if letter.get("urgent") else "later"),
+            due_at=due_at,
+            object=letter_ref(number, subject or None),
+        )
+        out.append(Row(item, received))
+    return out
+
+
+_MEMO_TITLES = {"approve_memo": "Согласовать", "pay_memo": "Принять к оплате"}
+
+
+_MEMO_KIND_BY_PERMISSION: dict[str, QueueItemKind] = {
+    "memos.approve": "approve_memo",
+    "approvals.decide": "approve_memo",
+    "payments.confirm": "pay_memo",
+}
+
+
+def _memo_kind(step: dict[str, Any], view: View) -> QueueItemKind:
+    """Вид строки — по праву, которое держит текущий шаг маршрута (EDS): директор, у которого есть и
+    право бухгалтера, на шаге бухгалтера видит «Принять к оплате», а не «Согласовать». Шаг
+    конкретного сотрудника (права нет) или вид, не положенный роли, — тот, что даёт раздел роли."""
+    permission = _text(_dict(step.get("assignee")).get("permission"))
+    preferred = _MEMO_KIND_BY_PERMISSION.get(permission or "")
+    for kind in (preferred, "approve_memo", "pay_memo"):
+        if kind is not None and view.wants(kind):
+            return kind
+    return "approve_memo"
+
+
+def memo_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
+    """Служебки, заявления и отчёты на моём шаге маршрута (EDS): директору — согласовать,
+    бухгалтеру на его шаге — принять к оплате."""
+    out: list[Row] = []
+    for route in snap.memos or []:
+        obj = _dict(route.get("object"))
+        number = obj.get("number")
+        route_id = route.get("id")
+        if not isinstance(number, str) or not number or not isinstance(route_id, str):
+            continue
+        created = parse_dt(route.get("created_at"))
+        step = _dict(route.get("current_step"))
+        kind = _memo_kind(step, view)
+        role_id = _role_id(view, kind)
+        subject = short(route.get("title"), 90)
+        item = QueueItem(
+            id=f"memo:{route_id}",
+            role_id=role_id,
+            kind=kind,
+            title=f"{_MEMO_TITLES[kind]} {number}" + (f" · {subject}" if subject else ""),
+            subtitle=join(
+                _text(step.get("label")),
+                ago(created, now),
+            ),
+            due_label="memo",
+            object=memo_ref(number, subject or None),
+        )
+        out.append(Row(item, created))
+    return out
+
+
 _SUBJECT = {
     "access": "доступ",
     "notification": "уведомления",
@@ -254,6 +373,37 @@ def ticket_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
     return out
 
 
+def supplier_rows(snap: Snapshot, now: datetime, view: View) -> list[Row]:
+    """Просроченные заказы поставщикам (D2-2, SPEC-v3 §9): ожидаемая дата прошла, товар не
+    получен. Строка ведёт на карточку ЗП. Что просрочено, решает ERP (`/stock/overdue/`), BFF
+    только показывает."""
+    role_id = _role_id(view, "supplier_overdue")
+    out: list[Row] = []
+    for order in snap.overdue_orders:
+        number = order.get("number")
+        if not isinstance(number, str) or not number:
+            continue
+        expected = parse_deadline(order.get("expected_date"))
+        days = order.get("days_overdue")
+        supplier = str(order.get("supplier_name") or "") or None
+        item = QueueItem(
+            id=f"supplier_order:{order.get('id', number)}",
+            role_id=role_id,
+            kind="supplier_overdue",
+            title=f"Просрочен заказ {number}",
+            subtitle=join(
+                supplier,
+                f"ждали к {expected.astimezone(COMPANY_TZ):%d.%m}" if expected else None,
+                f"{days} дн. просрочки" if isinstance(days, int) else None,
+            ),
+            due_label="overdue",
+            due_at=expected,
+            object=supplier_order_ref(number, supplier),
+        )
+        out.append(Row(item, expected))
+    return out
+
+
 def build_queue(feed: Feed, view: View, snap: Snapshot) -> list[QueueItem]:
     now = now_utc()
     rows_: list[Row] = []
@@ -265,8 +415,15 @@ def build_queue(feed: Feed, view: View, snap: Snapshot) -> list[QueueItem]:
             rows_ += covered_rows(covered, now, view, taken)
     if wants_approvals(view):
         rows_ += quote_rows(snap, now, view)
+    rows_ += rework_rows(snap, now, view)
+    if wants_letters(view):
+        rows_ += letter_rows(snap, now, view)
+    if wants_memos(view):
+        rows_ += memo_rows(snap, now, view)
     if wants_tickets(view):
         rows_ += ticket_rows(snap, now, view)
+    if wants_supplier_overdue(view):
+        rows_ += supplier_rows(snap, now, view)
     rows_.sort(key=_sort_key)
     return [row.item for row in rows_]
 
@@ -301,6 +458,14 @@ def build_cards(view: View, snap: Snapshot, queue: list[QueueItem]) -> list[Queu
             hint="Клиенты · Ждут ответа",
             path="/crm/messages",
         )
+    if wants_letters(view) and snap.letters is not None:
+        cards["letters_without_resolution"] = QueueCard(
+            key="letters_without_resolution",
+            label="Входящие без резолюции",
+            count=len(snap.letters),
+            hint="Документы · Входящие письма" + (" · не меньше" if snap.letters_more else ""),
+            path="/eds/inbox",
+        )
     if wants_approvals(view):
         cards["quotes_to_approve"] = QueueCard(
             key="quotes_to_approve",
@@ -308,6 +473,14 @@ def build_cards(view: View, snap: Snapshot, queue: list[QueueItem]) -> list[Queu
             count=snap.approvals_total,
             hint="Документы · КП на одобрение",
             path="/eds/drafts",
+        )
+    if wants_memos(view) and snap.memos is not None:
+        cards["memos_to_approve"] = QueueCard(
+            key="memos_to_approve",
+            label="Служебные записки",
+            count=len(snap.memos),
+            hint="Документы · На согласовании" + (" · не меньше" if snap.memos_more else ""),
+            path="/eds/approvals",
         )
     if wants_projects(view):
         cards["projects_in_work"] = QueueCard(
@@ -333,9 +506,17 @@ def build_counters(view: View, snap: Snapshot, queue: list[QueueItem]) -> list[M
         items.append(
             MenuCounter(module="crm", section="messages", count=waiting, attention=waiting > 0)
         )
+    if wants_letters(view) and snap.letters is not None:
+        total = len(snap.letters)
+        items.append(MenuCounter(module="eds", section="inbox", count=total, attention=total > 0))
     if wants_approvals(view):
         total = snap.approvals_total
         items.append(MenuCounter(module="eds", section="drafts", count=total, attention=total > 0))
+    if wants_memos(view) and snap.memos is not None:
+        total = len(snap.memos)
+        items.append(
+            MenuCounter(module="eds", section="approvals", count=total, attention=total > 0)
+        )
     if wants_tickets(view):
         items.append(
             MenuCounter(
@@ -345,6 +526,9 @@ def build_counters(view: View, snap: Snapshot, queue: list[QueueItem]) -> list[M
                 attention=snap.tickets_total > 0,
             )
         )
+    if wants_supplier_overdue(view):
+        late = sum(1 for i in queue if i.kind == "supplier_overdue")
+        items.append(MenuCounter(module="erp", section="stock", count=late, attention=late > 0))
     if wants_projects(view):
         total = projects_in_work(snap)
         items.append(

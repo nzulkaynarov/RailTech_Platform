@@ -31,6 +31,8 @@ from .models import CrmClientMapping, CrmContactMapping
 from .serializers import (
     AiUsageRowSerializer,
     CatalogItemSerializer,
+    ClientRequestInSerializer,
+    ClientRequestOutSerializer,
     CompanySummarySerializer,
     ContactInSerializer,
     ContactSerializer,
@@ -53,6 +55,7 @@ from .serializers import (
 )
 from .services import bootstrap, pairing
 from .services.catalog import search_published_catalog
+from .services.client_requests import create_client_request
 from .services.handoff import _cabinet_url, process_client_handoff
 from .services.provision import provision_crm_user, revoke_crm_user_sessions
 from .services.summary import (
@@ -93,6 +96,19 @@ class HandoffClientView(BaseIntegrationView):
         out_serializer = HandoffResponseSerializer(response_data)
         status_code = status.HTTP_201_CREATED if created else status.HTTP_200_OK
         return Response(data=out_serializer.data, status=status_code)
+
+
+class ClientRequestView(BaseIntegrationView):
+    """POST /api/integration/v1/clients/{crm_client_id}/requests — «Создать заявку» CRM (шов 0.9.0, CRM-03)."""
+
+    @handle_idempotency
+    def post(self, request, crm_client_id: int, *args, **kwargs):
+        serializer = ClientRequestInSerializer(data=request.data)
+        if not serializer.is_valid():
+            raise IntegrationValidationError("VALIDATION_ERROR")
+        response_data, created = create_client_request(crm_client_id, serializer.validated_data)
+        status_code = status.HTTP_201_CREATED if created else status.HTTP_200_OK
+        return Response(data=ClientRequestOutSerializer(response_data).data, status=status_code)
 
 
 class InviteClientContactView(BaseIntegrationView):

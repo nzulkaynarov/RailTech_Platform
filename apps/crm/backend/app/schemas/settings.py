@@ -4,10 +4,12 @@
 моделью. Тексты бота — в трёх языках (CONVENTIONS.md §11).
 """
 
+import re
 from datetime import UTC, datetime
 from typing import Final, Literal
 
-from pydantic import BaseModel, Field, field_validator
+import structlog
+from pydantic import BaseModel, Field, ValidationInfo, field_validator
 
 from app.domain.business_hours import is_business_time
 from app.domain.qualification import DecisionRole, Timeline
@@ -23,6 +25,9 @@ from app.schemas.settings_profile import BotProfileSettings
 
 __all__ = ["AppSettings", "BusinessHoursSettings", "Language", "LocalizedText"]
 
+logger = structlog.get_logger(__name__)
+# Начало строки с чужой схемой (`javascript:`, `ftp://`); `host:8443` (порт — цифры) схемой не считается.
+_OTHER_SCHEME = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*:(?!\d+(?:/|$))")
 _t = localized
 
 
@@ -40,6 +45,27 @@ class CompanySettings(StrictModel):
         max_length=500,
         description="Адрес кабинета клиента (https://…): кнопка «Кабинет» под сообщениями бота о событиях ERP; пусто — кнопки нет",
     )
+
+    @field_validator("crm_base_url")
+    @classmethod
+    def _crm_base_url_is_http(cls, value: str, info: ValidationInfo) -> str:
+        """Адрес попадает в ссылки Telegram: только http(s) (`javascript:` и мусор — нет). Пусто —
+        «не задан» (подставится адрес из окружения).
+
+        При записи из интерфейса — строго (422). При чтении сохранённого (`context={"lenient":
+        True}`, `SettingsService._merge`) терпимо: адрес без схемы получает `https://`, совсем
+        негодный сбрасывается в «не задан» с предупреждением — иначе одно поле роняло бы весь
+        раздел «Компания» (название, реквизиты) до значений по умолчанию."""
+        value = value.strip()
+        if not value or is_http_url(value):
+            return value
+        if (info.context or {}).get("lenient"):
+            # «crm.example.com[:8443]» — без схемы; «javascript:…» и прочие схемы — мусор.
+            if not _OTHER_SCHEME.match(value) and is_http_url(f"https://{value}"):
+                return f"https://{value}"
+            logger.warning("company_crm_base_url_invalid_ignored")
+            return ""
+        raise ValueError("нужен адрес вида https://crm.example.com")
 
     @field_validator("cabinet_url")
     @classmethod
@@ -359,6 +385,29 @@ class SmtpSettings(StrictModel):
     from_name: str = Field(default="", max_length=120)
 
 
+class OffsiteCheckSettings(StrictModel):
+    """Итог последней «Проверить» внешней копии (OPS-GDRIVE-2): причина словом-кодом, имя папки."""
+
+    reason: str = Field(max_length=40)
+    folder_name: str | None = Field(default=None, max_length=255)
+    checked_at: datetime
+
+
+class OffsiteGdriveSettings(StrictModel):
+    """Внешняя копия бэкапов на Google Drive (OPS-GDRIVE-2) без секретов.
+
+    Ключ сервисного аккаунта — `integration_secrets` (`offsite_gdrive_key`, только на запись); здесь —
+    что видно админу: ID папки, адрес аккаунта, последние символы ID ключа, когда ключ доставлен
+    сервису копирования и итог последней проверки.
+    """
+
+    folder_id: str = Field(default="", max_length=128)
+    client_email: str = Field(default="", max_length=320)
+    key_suffix: str = Field(default="", max_length=4)
+    delivered_at: datetime | None = None
+    last_check: OffsiteCheckSettings | None = None
+
+
 class ModelKeyMask(StrictModel):
     """Откуда ключ роли модели и его последние 4 символа (ADR-0020, W13-A1).
 
@@ -383,6 +432,7 @@ class IntegrationsSettings(StrictModel):
     # после чего его снимает сама CRM. Пусто — предыдущий секрет задан вручную и живёт, пока админ не снимет.
     erp_previous_secret_until: datetime | None = None
     smtp: SmtpSettings = Field(default_factory=SmtpSettings)
+    offsite_gdrive: OffsiteGdriveSettings = Field(default_factory=OffsiteGdriveSettings)
     # Маска ключей ролей моделей (алиас → источник и последние 4 символа); пишет «Модели ИИ» при смене и сбросе.
     model_keys: dict[str, ModelKeyMask] = Field(default_factory=dict)
 

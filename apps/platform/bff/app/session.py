@@ -82,6 +82,10 @@ class SessionData(BaseModel):
     avatar_version: int | None = None
     # Приветствие и тур первого входа показаны (CRM `onboarding_done`, W15-H7); без поля — да.
     onboarding_done: bool = True
+    # «Что нового» (CRM `whats_new_shown` / `whats_new_read`, W-REL): дата записи, о которой
+    # окно уже показано, и последней открытой записи; None — ничего (или CRM поля не прислала).
+    whats_new_shown: str | None = None
+    whats_new_read: str | None = None
     roles: list[SessionRole]
     platform_access: list[str]
     must_change_password: bool

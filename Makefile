@@ -19,11 +19,15 @@ help: ## Список целей
 # --- Проверки --------------------------------------------------------------------
 
 .PHONY: check
-check: docs-links check-crm check-erp check-cabinet check-platform check-eds check-rt-bus ## Проверки всех приложений, rt-bus (lint + typecheck + unit) и ссылок документации
+check: docs-links check-crm check-erp check-cabinet check-platform check-eds check-rt-bus check-rt-docs ## Проверки всех приложений, rt-bus, rt-docs (lint + typecheck + тесты) и ссылок документации
 
 .PHONY: docs-links
-docs-links: ## Ссылки на документацию целы и ведут в docs/ (scripts/check-doc-links.sh, ORCHESTRATOR §3 п. 17)
+docs-links: ## Ссылки на документацию целы и ведут в docs/, ID строк BACKLOG уникальны (scripts/check-doc-links.sh, ORCHESTRATOR §3 п. 17)
 	scripts/check-doc-links.sh
+
+.PHONY: docs-backlog
+docs-backlog: ## Сводка docs/BACKLOG.md: всего, по приоритету и типу (счётчики в файле руками не ведутся — scripts/backlog.py)
+	python3 scripts/backlog.py
 
 .PHONY: check-crm
 check-crm: ## CRM: ruff, mypy, eslint, tsc, pytest, vitest (apps/crm/Makefile)
@@ -48,6 +52,10 @@ check-eds: ## EDS: ruff, mypy --strict, pytest на PostgreSQL — миграц�
 .PHONY: check-rt-bus
 check-rt-bus: ## Библиотека шины: ruff, mypy, миграция Django, pytest на PostgreSQL (packages/rt-bus/Makefile; без RT_BUS_TEST_DATABASE_URL — одноразовый postgres:17 в Docker)
 	$(MAKE) -C packages/rt-bus check
+
+.PHONY: check-rt-docs
+check-rt-docs: ## Документы (rt-docs): ruff, mypy, pytest с эталонными PDF в одноразовом контейнере (packages/rt-docs/Makefile; docker/test.Dockerfile, сеть выключена)
+	$(MAKE) -C packages/rt-docs check
 
 .PHONY: tokens
 tokens: ## Токены дизайна: tokens.json → dist/, копии в apps/crm (tokens.generated.ts), apps/cabinet (tokens.generated.css), apps/platform (tokens.generated.ts)
@@ -130,11 +138,13 @@ deploy-check: ## Проверка конфигурации прода без з�
 	docker compose -f $(INFRA)/compose/base.yml -f $(INFRA)/compose/prod.yml --env-file $$envfile --profile observability --profile kb-ingest --profile mcp config -q; \
 	docker compose -f $(INFRA)/compose/db.yml --env-file $$envfile config -q; echo "compose prod/db: ok"
 	@docker run --rm -e ACME_EMAIL=a@example.com -e CRM_DOMAIN=crm.example.org -e ERP_DOMAIN=erp.example.org -e CABINET_DOMAIN=cabinet.example.org -e PLATFORM_DOMAIN=platform.example.org 	  -v "$(CURDIR)/$(INFRA)/caddy/Caddyfile.prod:/etc/caddy/Caddyfile:ro" caddy:2.11.7-alpine caddy validate --config /etc/caddy/Caddyfile 2>&1 | grep -q "Valid configuration" && echo "caddy validate: ok"
-	@docker run --rm -e LANG=C.UTF-8 -v "$(CURDIR):/mnt" -w /mnt koalaman/shellcheck:stable -x $(INFRA)/deploy/*.sh $(INFRA)/db/*.sh $(INFRA)/s3/*.sh scripts/qemu_cpu_check.sh && echo "shellcheck: ok"
+	@docker run --rm -e LANG=C.UTF-8 -v "$(CURDIR):/mnt" -w /mnt koalaman/shellcheck:stable -x $(INFRA)/deploy/*.sh $(INFRA)/db/*.sh $(INFRA)/s3/*.sh $(INFRA)/offsite/*.sh scripts/qemu_cpu_check.sh && echo "shellcheck: ok"
 	@bash $(INFRA)/deploy/tests/predeploy-dump-test.sh
 	@bash $(INFRA)/deploy/tests/reset-prod-test.sh
 	@bash $(INFRA)/deploy/tests/bus-contracts-image-test.sh
 	@bash $(INFRA)/deploy/tests/crm-backup-source-test.sh
+	@bash $(INFRA)/deploy/tests/crm-status-sources-test.sh
+	@bash $(INFRA)/deploy/tests/offsite-gdrive-test.sh
 	@bash $(INFRA)/deploy/tests/telegram-webhook-url-test.sh
 	@bash $(INFRA)/deploy/tests/crm-bot-test.sh
 	@bash $(INFRA)/deploy/tests/cpu-baseline-test.sh

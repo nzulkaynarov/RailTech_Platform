@@ -5,7 +5,8 @@
   (откат — события нет). Снимок для маршрута: суммы, маржа, визы по зонам резолюции, порог маржи и срок из задания
   расчёта (`CalcTask`, проекция резолюции EDS — владелец порога EDS). КП остаётся «На утверждении».
 * `apply_director_decision` — `eds.approval.decided` по КП: approve — ИСХ-номер EDS на КП, каналы отправки,
-  «Готово к отправке» (отправка клиенту разблокирована); return — черновик с комментарием директора (правка и повторная
+  «Готово к отправке»; с выбранными каналами ERP сразу отправляет КП клиенту по доступным из них (ERP-11,
+  `sales/services/quote_auto_send.py`), без каналов — отправляет менеджер заявки (`quote.send`, C1-G-4); return — черновик с комментарием директора (правка и повторная
   отправка — новая редакция и новое событие); reject — КП отклонено. Идемпотентно: решение по другой редакции —
   устаревшее (запись в журнал КП, без изменений), повтор применённого решения — без изменений.
 """
@@ -98,7 +99,7 @@ def _visas(quote: Quote, task, ready_at: datetime) -> list[dict[str, Any]]:
     return visas
 
 
-def build_ready_payload(quote: Quote, *, ready_at: datetime) -> dict[str, Any]:
+def build_ready_payload(quote: Quote, *, ready_at: datetime, line_visas: bool = False) -> dict[str, Any]:
     """`payload` события `quote.ready_for_approval` (`QuoteReadyForApproval` в `events/erp/_defs.v1.json`)."""
     from portal import projections
 
@@ -123,20 +124,37 @@ def build_ready_payload(quote: Quote, *, ready_at: datetime) -> dict[str, Any]:
         "valid_until": quote.valid_until.isoformat() if quote.valid_until else None,
         "eds_letter_id": str(task.eds_letter_id) if task else None,
     }
+    signed = _line_visas(quote) if line_visas else None
+    if signed is not None:
+        # Расчёт по строкам (D2-1): визы — подписи строк по их зонам, нужные зоны — зоны строк КП.
+        payload["required_zones"], payload["visas"] = signed
     company = quote.deal.company
     if company is not None and company.name:
         payload["client_name"] = company.name[:255]
     return payload
 
 
+def _line_visas(quote: Quote) -> Optional[tuple[list[str], list[dict[str, Any]]]]:
+    """Визы строк расчёта (D2-1) для события: (зоны строк, визы по зонам); None — КП без виз строк."""
+    from .calculation import line_visas, line_zones
+
+    rows = line_visas(quote)
+    if not rows:
+        return None
+    crm_ids = _crm_user_ids({user.pk for _zone, user, _at in rows})
+    visas = [{"zone": zone, "by": _person(user, crm_ids), "at": _iso(at)} for zone, user, at in rows]
+    return line_zones(quote), visas
+
+
 _DECISION_FIELDS = ["director_decision", "director_comment", "director_decided_at", "outgoing_number", "send_channels"]
 
 
 @transaction.atomic
-def request_director_approval(quote: Quote, actor) -> Quote:
+def request_director_approval(quote: Quote, actor, *, line_visas: bool = False) -> Quote:
     """КП → директору: номер КП, новая редакция и событие `quote.ready_for_approval` в этой транзакции.
 
-    Вызывают отправка на согласование без проверяющих и последняя виза (`approvals.act_on_step`). Переданный объект КП
+    Вызывают отправка на согласование без проверяющих, последняя виза (`approvals.act_on_step`) и «Расчёт готов»
+    (`calculation.mark_ready`, `line_visas=True`: визы в событии — подписи строк расчёта). Переданный объект КП
     получает новые значения полей (номер, редакция). КП без компании клиента сюда не попадает (гейт отправки).
     """
     from integration.services import events
@@ -164,7 +182,7 @@ def request_director_approval(quote: Quote, actor) -> Quote:
     for name in [*changed, "updated_at"]:
         setattr(quote, name, getattr(locked, name))
 
-    payload = build_ready_payload(locked, ready_at=timezone.now())
+    payload = build_ready_payload(locked, ready_at=timezone.now(), line_visas=line_visas)
     events.publish_quote_ready_for_approval(locked, payload, actor=events.build_actor(user=actor))
     _log_quote(
         locked,
@@ -269,14 +287,28 @@ def apply_director_decision(
                 "approved_late": approved_late,
             },
         )
+        sent_via: list[str] = []
+        if quote.send_channels:
+            # ERP-11: директор выбрал каналы — КП уходит клиенту сразу по доступным из них; недоступные и остановка
+            # гейтом — в итоге (`send_report`) и журнале, одобрение остаётся в силе (тогда отправляет менеджер).
+            from sales.services.quote_auto_send import auto_send
+
+            sent_via = auto_send(quote, quote.send_channels, director=actor, outgoing_number=quote.outgoing_number)[
+                "sent_via"
+            ]
+        message = (
+            f"КП #{number} одобрено ({quote.outgoing_number or '—'}) и отправлено клиенту: {', '.join(sent_via)}."
+            if sent_via
+            else f"КП #{number} одобрено ({quote.outgoing_number or '—'}) — можно отправлять клиенту."
+        )
         _notify_user(
             quote.prepared_by_id,
             "КП одобрено директором",
-            f"КП #{number} одобрено ({quote.outgoing_number or '—'}) — можно отправлять клиенту.",
+            message,
             type_code="SUCCESS",
             link=_link(quote),
             event_code="quote.director_approved",
-            event_params={"number": number, "outgoing_number": quote.outgoing_number},
+            event_params={"number": number, "outgoing_number": quote.outgoing_number, "sent_via": sent_via},
         )
     elif decision == "return":
         _log_quote(

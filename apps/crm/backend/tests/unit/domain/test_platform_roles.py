@@ -217,19 +217,23 @@ EXPECTED: dict[tuple[str, str], tuple[set[str], set[str]]] = {
     ("eds.drafts", "full"): (set(), {"quote.review"}),
     ("eds.projects", "read"): NOTHING,
     ("eds.projects", "full"): (set(), {"contract.manage", "contract.sign", "fulfillment.act"}),
-    ("eds.payments", "read"): NOTHING,
+    ("eds.payments", "read"): (set(), {"finance.view"}),  # Q-D2-4-1 п. 2
     (
         "eds.payments",
         "full",
-    ): (set(), {"finance.invoice", "finance.payment", "finance.rates", "data.export"}),
+    ): (
+        # B-D18-1: зона переписки «Счета и оплаты» — только вместе с `chats:read`.
+        {"chats:invoiced"},
+        {"finance.view", "finance.invoice", "finance.payment", "finance.rates", "data.export"},
+    ),
     ("eds.memo.create", "read"): NOTHING,
     ("eds.memo.create", "full"): NOTHING,
     ("eds.memo.approve", "read"): NOTHING,
     ("eds.memo.approve", "full"): NOTHING,
     ("erp.calc", "read"): NOTHING,
     ("erp.calc", "full"): (set(), {"deal.manage", "quote.build", "quote.edit_pricing"}),
-    ("erp.calc.goods", "full"): (set(), {"quote.build", "quote.edit_pricing"}),
-    ("erp.calc.services", "full"): (set(), {"quote.build"}),
+    ("erp.calc.goods", "full"): (set(), {"quote.build", "quote.edit_pricing", "quote.visa_goods"}),
+    ("erp.calc.services", "full"): (set(), {"quote.build", "quote.visa_services"}),
     ("erp.stock", "read"): NOTHING,
     (
         "erp.stock",
@@ -237,11 +241,12 @@ EXPECTED: dict[tuple[str, str], tuple[set[str], set[str]]] = {
     ): (set(), {"catalog.manage", "catalog.publish", "supply.manage", "fulfillment.manage"}),
     ("chats.internal", "read"): NOTHING,
     ("chats.internal", "full"): NOTHING,
-    ("chats.external", "read"): ({"leads:read"}, set()),
+    # B-D18-1: переписка отдельно от реестра лидов — `chats:*`, а не `leads:*`.
+    ("chats.external", "read"): ({"chats:read"}, set()),
     (
         "chats.external",
         "full",
-    ): ({"leads:read", "leads:reply", "leads:note", "leads:assist"}, set()),
+    ): ({"chats:read", "chats:reply", "chats:note", "chats:assist"}, set()),
     ("company.settings", "read"): NOTHING,
     ("company.settings", "full"): (set(), {"settings.edit", "settings.charge_templates"}),
     ("admin", "read"): (ADMIN_READ, set()),
@@ -287,15 +292,23 @@ def test_every_restricted_field_gives_the_expected_erp_rights(name: str, erp: se
 # --- системные роли и шаблоны -------------------------------------------------------------------
 
 # Права ERP целых ролей, выписанные вручную.
-DIRECTOR_ERP = set(ERP_PERMISSIONS) - {"team.manage"}  # команду ведёт только администратор
+# Команду ведёт только администратор; счета директор читает (`finance.view`), но не выставляет
+# и не фиксирует оплаты (D2-4).
+DIRECTOR_ERP = set(ERP_PERMISSIONS) - {
+    "team.manage",
+    "finance.invoice",
+    "finance.payment",
+    "finance.rates",
+}
 ROLE_ERP: dict[str, set[str]] = {
-    "MANAGER": {"deal.manage", "quote.send"},
+    "MANAGER": {"deal.manage", "quote.send", "finance.view"},
     "DIRECTOR": DIRECTOR_ERP,
     "SUPPLY": {
         "deal.manage",
         "quote.build",
         "quote.edit_pricing",
         "quote.view_cost_margin",
+        "quote.visa_goods",
         "catalog.manage",
         "catalog.publish",
         "supply.manage",
@@ -305,6 +318,7 @@ ROLE_ERP: dict[str, set[str]] = {
         "deal.manage",
         "quote.build",
         "quote.edit_pricing",
+        "quote.visa_services",
         "catalog.manage",
         "catalog.publish",
         "supply.manage",
@@ -314,6 +328,7 @@ ROLE_ERP: dict[str, set[str]] = {
         "contract.manage",
         "contract.sign",
         "fulfillment.act",
+        "finance.view",
         "finance.invoice",
         "finance.payment",
         "finance.rates",
@@ -321,13 +336,14 @@ ROLE_ERP: dict[str, set[str]] = {
     },
     "ADMIN": {"team.manage", "settings.edit", "settings.charge_templates"},
 }
-# Базовая роль CRM для старого фронта (как в версии 1 каталога).
+# Базовая роль CRM — признак по матрице (D1-8, B-014): «Бухгалтер» без `crm.leads` — viewer, а не
+# manager, как в версии 1 каталога (по коду роли).
 ROLE_BASE = {
     "MANAGER": "manager",
     "DIRECTOR": "viewer",
     "SUPPLY": "viewer",
     "ENGINEER": "viewer",
-    "ACCOUNTANT": "manager",
+    "ACCOUNTANT": "viewer",
     "ADMIN": "admin",
 }
 
@@ -359,7 +375,8 @@ def test_the_two_system_roles_are_fixed_by_the_catalog() -> None:
     }
     director = dict(make_role("DIRECTOR").access)
     # R-1b (уточнение ADR-0012 п. 2): воронка и внешняя переписка — только чтение, лиды не берёт.
-    read_only = {"admin", "crm.leads", "chats.external"}
+    # D2-4: «Счета и оплаты» тоже чтение — оплату подтверждает бухгалтер.
+    read_only = {"admin", "crm.leads", "chats.external", "eds.payments"}
     assert {k for k, v in director.items() if v == "read"} == read_only
     assert {k: v for k, v in director.items() if k not in read_only} == {
         k: "full" for k in generated.RESOURCE_KEYS if k not in read_only
@@ -437,7 +454,8 @@ def test_director_keeps_everything_v1_gave_and_gains_full_where_it_had_read() ->
     v2 = dict(make_grant("DIRECTOR").access)
     assert all(v2[k] == v1[k] or (v1[k] == "read" and v2[k] == "full") for k in v1)
     raised = {k for k in v1 if v1[k] != v2[k]}
-    assert raised == {"crm.clients", "eds.payments"}
+    # D2-4: `eds.payments` у директора остаётся на чтении, как в v1
+    assert raised == {"crm.clients"}
     assert set(v2) - set(v1) == {"erp.calc.goods", "erp.calc.services", "company.settings"}
 
 
@@ -460,6 +478,7 @@ def test_union_takes_the_maximum_level_per_section_and_the_union_of_fields() -> 
     )
     assert derived.restricted_fields == ("cost_margin", "totals_only")
     assert set(derived.erp_permissions) == {
+        "finance.view",
         "finance.invoice",
         "finance.payment",
         "finance.rates",
@@ -475,7 +494,7 @@ def test_manager_plus_accountant_is_the_union_of_their_rights() -> None:
     assert derived.access["crm.leads"] == "full"  # от менеджера
     assert derived.access["eds.payments"] == "full"  # от бухгалтера
     assert derived.access["eds.projects"] == "full"  # максимум: менеджер read, бухгалтер full
-    assert derived.restricted_fields == ("supplier_prices", "totals_only")
+    assert derived.restricted_fields == ("totals_only",)
     assert set(derived.erp_permissions) == ROLE_ERP["MANAGER"] | ROLE_ERP["ACCOUNTANT"]
     assert crm_policies(make_grant("MANAGER").access) <= derived.crm_permissions
 
@@ -542,10 +561,13 @@ def test_role_without_a_code_gets_the_base_role_from_its_matrix(
     assert role_crm_base(RoleGrant(access, code=None)) == expected
 
 
-def test_role_with_a_code_keeps_the_v1_base_role_even_if_edited() -> None:
-    edited = RoleGrant({"crm.leads": "full"}, code="DIRECTOR")  # директор не становится менеджером
-    assert role_crm_base(edited) == "viewer"
-    assert role_crm_base(RoleGrant({}, code="tpl:ACCOUNTANT")) == "manager"
+def test_base_role_follows_the_matrix_not_the_role_code() -> None:
+    """D1-8: код роли признака не задаёт — отредактированный шаблон «Менеджер» без `crm.leads`
+    перестаёт быть менеджером, а «Бухгалтер» не был им и в каталоге."""
+    assert role_crm_base(RoleGrant({}, code="tpl:MANAGER")) == "viewer"
+    assert role_crm_base(RoleGrant({}, code="tpl:ACCOUNTANT")) == "viewer"
+    assert role_crm_base(RoleGrant({"crm.leads": "full"}, code="tpl:ACCOUNTANT")) == "manager"
+    assert role_crm_base(RoleGrant({"crm.leads": "full"}, code="DIRECTOR")) == "manager"
 
 
 # --- коды ----------------------------------------------------------------------------------------

@@ -20,7 +20,7 @@
 - **База** — на VPS 2: PostgreSQL 17 + pgvector, 5 баз, по роли на базу (`crm_app`, `erp_app`, `eds_app`, `litellm_app`, `langfuse_app`),
   `pg_hba` — только TLS и только внутренний IP VPS 1.
 - **Порядок деплоя** (`infra/deploy/deploy.sh <sha>`): проверка env → `pull` → **проверка базы CPU образов** (`cpu-baseline-check.sh`: в каждом образе запускается import numpy / litellm.proxy / версия бинаря; образ, которому нужен x86-64-v2, останавливает деплой до дампа и миграций, см. servers.md «CPU прод-VPS»); ту же таблицу команд раньше, в PR, прогоняет CI под эмуляцией CPU `qemu64` (задание `cpu-image`, `make deploy-check`, `scripts/qemu_cpu_check.sh`; servers.md, «Проверка под эмуляцией qemu64») → **pg_dump-гейт** `crm`, `erp` и `eds`
-  (`predeploy-dump.sh`; нет читаемого дампа — миграций нет) → миграции CRM, ERP и EDS явно (`AUTO_MIGRATE=false` у ERP, `eds-migrate` = `alembic upgrade head`) → `up -d` → smoke → здоровье `eds-api` (у EDS нет домена, smoke его не видит).
+  (`predeploy-dump.sh`; нет читаемого дампа — миграций нет) → миграции CRM, ERP и EDS явно (`AUTO_MIGRATE=false` у ERP, `eds-migrate` = `alembic upgrade head`) → автоматические секреты (`make-env-prod.sh ensure-secrets` до проверки env: сейчас `REDIS_PROBE_PASSWORD` — пароль пользователя Redis `crm-probe` для «Состояния системы» (права `PING`/`INFO`, ключей не видит), создаётся случайным и не меняется; руками не вписывается) → **`s3-init`** (ключи RustFS, которых нет в списке `S3_*_ACCESS_KEY` файла env, удаляются на каждом деплое — `prune_users` в `init.sh`, ручной ключ деплой не переживёт; `run --rm`: бакеты, ключи и политики доступа RustFS приводятся к `infra/s3/init.sh` на каждом деплое, а не только при первой инициализации; W15-H8b) → `up -d` → smoke → здоровье `eds-api` (у EDS нет домена, smoke его не видит).
 - Правило FIX-03: `/mcp` снаружи — 404 на всех доменах, включая Платформу (Caddy); smoke это проверяет.
 
 ## 1. Первая установка
@@ -132,6 +132,18 @@ Settings → Environments → `production` (включить Required reviewers 
 в эту группу не попадают и ожидающий деплой не вытесняют. Несколько слияний подряд: устаревший запуск, который уже ждёт одобрения,
 не нужен — нажмите **Reject**, иначе следующий будет ждать его решения.
 
+**Версия и «Что нового» (W-REL).** Версия Платформы в «О системе» — «Платформа ГГГГ.ММ.ДД · sha»: дату выкладки `deploy.sh` пишет
+в каталог релиза (`/opt/rt/releases/<тег>/.released_at`, один раз; повтор деплоя и откат её не меняют) и передаёт BFF как
+`RT_RELEASE_DATE` → `PLATFORM_RELEASE_DATE` (prod.yml), тег — `PLATFORM_RELEASE`; sha и дата сборки зашиты в образ BFF (build-args job
+`build`). После успешной выкладки job `release-notes` собирает строки «Для пользователей» из PR, влитых с прошлого `current_tag`
+(`scripts/release_notes.py`), и открывает **черновой** PR `docs: «Что нового» <дата>` (ветка `release-notes/<дата>-<sha>`; запись
+`docs/kb/help/changelog/<дата>.md` и копия для сборки). Архитектор правит заголовок и формулировки и переводит PR в «Ready for
+review» — CI запускается от человека, в `main` запись попадает обычным слиянием и видна сотрудникам со следующей выкладкой (окно
+«Платформа обновлена» и отметка «Новое» у «?»). Строк нет — PR нет; job упал — выкладка не отменяется, запись собирается вручную:
+`scripts/release_notes.py --from <прошлый sha> --to <sha> --repo <владелец/репо> --out-dir docs/kb/help/changelog`, затем
+`make -C apps/platform kb-sync`. Создать PR job может, только если в настройках репозитория разрешено «Allow GitHub Actions to create
+and approve pull requests» (BACKLOG B-WREL-3); иначе черновик — в артефакте и сводке прогона.
+
 **Двойной запуск на один sha.** Два `workflow_run` подряд на один коммит (например, повторный прогон CI) встают в ту же очередь и выполняются по
 очереди; второй не выкладывает то же самое повторно: шаг «Проверка - этот sha уже выложен?» читает `/opt/rt/state/current_tag` на VPS 1 и, если
 там уже этот sha, пропускает сборку `rt-cabinet`, загрузку, `deploy.sh` и smoke (job зелёный, в журнале «повторная выкладка пропущена»). Пропуск
@@ -223,6 +235,28 @@ mcp-tools.json` монтируется в контейнер по пути `../.
 
 Вручную с сервера (без Actions): `/opt/rt/releases/<sha>/infra/deploy/deploy.sh <sha>`; без миграций и дампа — `make up-prod RT_IMAGE_TAG=<sha>`.
 
+### Номера заявок ЗВ/ПР после выкладки (ERP-09, W16-D1-2)
+
+Миграция `sales/0008_backfill_deal_numbers` выдаёт номера сделкам, которые уже есть в базе, а новым сделкам номер
+выдаёт код (`Deal.save`). Сделка, созданная **старым кодом** между миграцией и стартом новых контейнеров (портал,
+передача из CRM в эти секунды), остаётся без номера: в API и событиях у неё запасной `D-<id>`. После выкладки проверить:
+
+```bash
+docker compose exec erp-backend python manage.py shell -c \
+  "from crm.models import Deal; print(Deal.objects.filter(number_seq__isnull=True).count())"
+```
+
+Не ноль — догнать той же функцией миграции (идемпотентно: сделки с номером не трогает; запускать, когда новые заявки
+не создаются, — функция ставит счётчик года на последний выданный NNN):
+
+```bash
+docker compose exec erp-backend python manage.py shell -c \
+  "import importlib; from django.apps import apps; \
+   importlib.import_module('sales.migrations.0008_backfill_deal_numbers').backfill(apps, None)"
+```
+
+Повторная проверка — `0`. Номер приходит в CRM с ближайшим событием по сделке (`deals.erp_number`).
+
 ### Django admin ERP и машинный API ERP — без внешнего маршрута (S0-5)
 
 Caddy (`no_erp_internal` в `Caddyfile.prod`/`Caddyfile.dev`) отвечает 404 на `/api/integration`, `/api/integration/*`, `/admin`, `/admin/*`
@@ -268,6 +302,11 @@ Caddy (`no_erp_internal` в `Caddyfile.prod`/`Caddyfile.dev`) отвечает 4
   и раз в месяц проверяет восстановление; сбой виден как `unhealthy` у контейнера `walg`. Восстановление на любой момент последних 14 суток в отдельный контейнер —
   `infra/db/restore-pitr.sh --target-time "YYYY-MM-DD HH:MM:SS+00"`. Подробно (включение, где лежат копии, переключение, ключ `WAL_ENC_KEY`, ротация,
   заполнение бакета) — `docs/runbooks/backup-pitr.md`. Ежедневный `pg_dump` ниже остаётся вторым рубежом.
+- **Внешняя копия на корпоративном Google Drive (OPS-GDRIVE):** сервис `offsite-backup` на VPS 1 раз в сутки (23:00 UTC) копирует архив WAL-G
+  (базовые копии и WAL за 14 суток, уже зашифрованные) в папку общего диска Google; итог — строка «Внешняя копия бэкапов» в «Состоянии системы».
+  Ключ сервисного аккаунта (`/opt/rt/secrets/gdrive-sa.json`, каталог создаёт `deploy.sh`) и `OFFSITE_GDRIVE_FOLDER_ID` в `.env.prod` кладёт
+  владелец; без них копия «не настроена», остальное работает. Ключ S3 сервиса (`S3_OFFSITE_*`) деплой создаёт сам (`ensure-secrets`).
+  Включение, диагностика, восстановление и учения — [`offsite-gdrive.md`](offsite-gdrive.md).
 - **Расписание:** контейнер `backup` на VPS 2 ежедневно в 22:00 UTC (03:00 Ташкент) делает `pg_dump` каждой базы, проверяет читаемость
   (`pg_restore -l`), хранит `BACKUP_KEEP_DAYS` (14) дней в `/var/backups/rt/<UTC-штамп>/`, выгружает в бакет `backups` RustFS
   на VPS 1 (ежедневно) и **зашифрованную** (AES-256, `BACKUP_ENC_PASSPHRASE`) копию во внешнее S3-хранилище (раз в неделю,
@@ -350,6 +389,7 @@ Caddy (`no_erp_internal` в `Caddyfile.prod`/`Caddyfile.dev`) отвечает 4
 | Redis: ERP в журнале «Кэш (Redis) недоступен», сессии Платформы не работают, очередь стоит | «Redis: брокер и кэш раздельно» ниже: `docker compose … ps redis-broker redis-cache`, `logs`, `redis-cli ping` |
 | Бэкап не создаётся | `docker logs rt-db-backup-1` на VPS 2, `/var/backups/rt/last_success`, healthcheck контейнера `backup` |
 | WAL-архив: `walg` unhealthy, `archive command failed` | `docker inspect --format '{{json .State.Health}}' rt-db-walg-1`, `docker exec -u postgres rt-db-walg-1 rt-pitr status`, `docker logs rt-db-postgres-1` — `docs/runbooks/backup-pitr.md`, разделы 4–5 |
+| Строка «Внешняя копия бэкапов» — сбой или «не настроено» | `docker compose … logs offsite-backup`, `exec offsite-backup sh /offsite/gdrive-sync.sh --probe` — [`offsite-gdrive.md`](offsite-gdrive.md), разделы 1 и 3 |
 | Не хватает памяти | `docker stats`; профили `observability` и `kb-ingest` не включать вместе |
 
 Эскалация: владелец; агент Infra — правки compose/Caddy/скриптов через PR.
@@ -502,6 +542,27 @@ Smoke с раннера в задании `rollback` устроен так же:
 администратором Admin · Журнал интеграций (`/admin/bus`) показывает подписчиков EDS без плашки «EDS не дал доступ к журналу». Резерв
 (воркер не стартовал, в логе сбой шины, нужно немедленно): на VPS 1 `docker compose … exec crm-api python -m app republish-identity
 --dry-run` (счёт), затем `… republish-identity`; повтор безопасен (Q-W13-A2-3, решено в W13C-F4).
+
+**Права CRM только из каталога, разделы в проекции EDS (D1-8, B-007/B-014).** Что меняется при выкладке: (1) миграция CRM
+`base_role_by_matrix` пересчитывает базовую роль сотрудников с ролями Платформы по матрице (шаблон «Бухгалтер» без `crm.leads` из
+`manager` становится `viewer`; права ERP и CRM не меняются, провижининг ERP не нужен); (2) миграция EDS `employee_sections` добавляет
+`employees.sections` (пусто), а CRM начинает публиковать в `identity.user.*` поле `permissions.sections` (разделы модулей EDS и ERP) —
+EDS по нему проверяет зону исполнителя резолюции (422 `assignee_zone_mismatch`). Порядок: **EDS (с миграцией) — раньше или вместе с
+CRM** (один `deploy.sh` поднимает оба); старый EDS поле игнорирует, но тогда проекция останется без разделов. Переопубликация прав
+**автоматическая**: отпечаток каталога в CRM теперь считается и по опубликованным разделам ролей (изменился), поэтому `crm-worker` при первом старте после выкладки сам публикует
+`identity.user.updated.v1` всем сотрудникам (`eds_rights_republished` в логе). Проверка: в базе EDS
+`SELECT count(*) FROM employees WHERE is_active AND sections = '{}'::jsonb` — после автопереопубликации у каждого активного сотрудника
+с ролями есть хотя бы один раздел; `> 0` у тех, у кого роли есть, — выполнить `republish-identity`. Резолюция директора на тестовом
+письме не даёт 422 `assignee_zone_mismatch`. Если даёт для всех (воркер не стартовал или в логе `eds_rights_republish_failed`, либо CRM выкатили раньше
+EDS) — резерв: `docker compose … exec crm-api python -m app republish-identity` (повтор безопасен). До переопубликации проекция без
+разделов зону не подтверждает — резолюция с исполнителями отклоняется, возврат и отказ работают.
+
+**Права ERP при смене каталога (D2-1, B-073).** Так же сам: при старте `crm-worker` сравнивает отпечаток ERP-части каталога
+(`identity_catalog_state`, ключ `erp_permissions`) и при изменении ставит провижининг всем активным сотрудникам с доступом к ERP
+(лог `erp_rights_reprovisioned`, сбой — `erp_rights_reprovision_failed`; ждущая задача на сотрудника одна — дублей нет).
+Резерв `docker compose … exec crm-api python -m app reprovision-erp` — когда после деплоя ERP была недоступна дольше
+повторов задачи (≈10 мин, задачи провижининга ушли в сбой) или в карточках сотрудников остались ошибки синхронизации ERP
+(`erp_sync`); повтор безопасен.
 
 **Откат.** `rollback.sh` на тег до EDS убирает его контейнеры (`--remove-orphans`) и не проверяет здоровье; на тег с EDS тянет `eds-api` и ждёт `healthy`.
 Миграции Alembic EDS не откатываются (как у CRM и ERP). Сброс `reset-prod.sh` (S0-8) включает базу `eds` и бакет `eds-private`: список — `crm,erp,eds`, дамп `eds` обязателен, подтверждение на VPS 2 — ввод `crm,erp,eds`.

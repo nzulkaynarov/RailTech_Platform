@@ -39,6 +39,8 @@ ERP_PENDING_INBOUND_TOKEN: Final = "erp_pending_inbound_token"  # noqa: S105 —
 ERP_PENDING_WEBHOOK_SECRET: Final = "erp_pending_webhook_secret"  # noqa: S105 — имя ключа, не секрет
 SMTP_USERNAME: Final = "smtp_username"
 SMTP_PASSWORD: Final = "smtp_password"  # noqa: S105 — имя ключа, не секрет (M3-CRM-08)
+# JSON-ключ сервисного аккаунта Google внешней копии бэкапов (OPS-GDRIVE-2).
+OFFSITE_GDRIVE_KEY: Final = "offsite_gdrive_key"
 
 
 class SecretsKeyError(RuntimeError):

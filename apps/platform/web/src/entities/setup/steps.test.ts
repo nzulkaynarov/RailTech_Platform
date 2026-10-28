@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { SetupChecklist, SetupStepState } from "../../shared/api/generated/model";
-import { STEP_TARGET, needsSetup, nextStep, stepAfter } from "./steps";
+import { STEP_TARGET, needsSetup, nextStep, staysOnCompany, stepAfter } from "./steps";
 
 function checklist(
   states: SetupStepState[],
@@ -17,6 +17,19 @@ function checklist(
     company_blocker: null,
   };
 }
+
+describe("после ERP мастер остаётся на компании (W15-G-10)", () => {
+  it("компании нет — форма; ERP не выдала доступ — ждём; компания готова или ERP не сопряжена — дальше", () => {
+    expect(staysOnCompany(checklist(["done"], { required: true, can_setup: true }))).toBe(true);
+    expect(
+      staysOnCompany({ ...checklist(["done"], null), company_blocker: "erp_unavailable" }),
+    ).toBe(true);
+    expect(staysOnCompany(checklist(["done"], { required: false, can_setup: false }))).toBe(false);
+    expect(
+      staysOnCompany({ ...checklist(["todo"], null), company_blocker: "erp_not_connected" }),
+    ).toBe(false);
+  });
+});
 
 describe("шаги чек-листа", () => {
   it("каждый шаг открывается внутри мастера, в его боковом окне (W15-H4)", () => {

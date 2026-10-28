@@ -44,6 +44,9 @@ from app.schemas_integrations import (
     MailLog,
     MailQueued,
     MailStatus,
+    OffsiteBackup,
+    OffsiteBackupIn,
+    OffsiteCheck,
     PasswordConfirm,
     ProviderKeyIn,
     ProviderKeyResult,
@@ -317,6 +320,40 @@ async def save_bot_profile(body: BotProfile, authed: Admin) -> BotProfileState:
         probe=True,
     )
     return _to(BotProfileState, out)
+
+
+# --- Внешняя копия бэкапов (OPS-GDRIVE-2) -------------------------------------------------------
+
+
+@router.get("/offsite", response_model=OffsiteBackup, operation_id="getOffsiteBackup")
+async def get_offsite(authed: Reader) -> OffsiteBackup:
+    out = await _crm(authed).get_model(crm.OffsiteStatusOut, "GET", f"{API}/integrations/offsite")
+    return _to(OffsiteBackup, out)
+
+
+@router.put("/offsite", response_model=OffsiteBackup, operation_id="saveOffsiteBackup")
+async def save_offsite(body: OffsiteBackupIn, authed: Admin) -> OffsiteBackup:
+    """Ключ сервисного аккаунта — только на запись: уходит в CRM и не возвращается."""
+    out = await _crm(authed).get_model(
+        crm.OffsiteStatusOut,
+        "PUT",
+        f"{API}/integrations/offsite",
+        json={
+            "key_json": secret(body.key_json),
+            "folder_id": body.folder_id.strip(),
+            "password": secret(body.password),
+        },
+        probe=True,
+    )
+    return _to(OffsiteBackup, out)
+
+
+@router.post("/offsite/check", response_model=OffsiteCheck, operation_id="checkOffsiteBackup")
+async def check_offsite(authed: Admin) -> OffsiteCheck:
+    out = await _crm(authed).get_model(
+        crm.OffsiteCheckOut, "POST", f"{API}/integrations/offsite/check", probe=True
+    )
+    return _to(OffsiteCheck, out)
 
 
 # --- Почта --------------------------------------------------------------------------------------
