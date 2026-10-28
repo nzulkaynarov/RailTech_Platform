@@ -170,7 +170,8 @@ async def test_create_role_is_canonical_audited_and_has_casbin_rules(
         ).scalar()
     assert rows == len(
         {"leads:read", "leads:take", "leads:work", "leads:reply", "leads:note", "leads:assist",
-         "leads:create", "stream:read", "dashboard:read", "kb:read", "reply_templates:read"}
+         "leads:create", "stream:read", "dashboard:read", "kb:read", "reply_templates:read",
+         "chats:invoiced"}  # B-D18-1: зона переписки «Счета и оплаты» (eds.payments full)
     )  # fmt: skip
 
 

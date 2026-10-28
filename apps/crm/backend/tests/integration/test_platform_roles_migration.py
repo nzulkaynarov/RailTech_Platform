@@ -215,7 +215,10 @@ def test_a_migrated_manager_and_accountant_keeps_the_same_rights(
         for act, allowed in actions.items()
         if allowed and not crm_before[res][act]
     }
-    assert extra == {"spend:read"}  # бухгалтер видит «Сводку по компании» (dashboard.summary)
+    # Бухгалтер видит «Сводку по компании» (dashboard.summary); переписка с клиентами — отдельным
+    # правом `chats:*` и зоной «Счета и оплаты» (B-D18-1), не правами реестра лидов.
+    chats = {"chats:read", "chats:reply", "chats:note", "chats:assist", "chats:invoiced"}
+    assert extra == {"spend:read", *chats}
     erp_after = set(derived.erp_permissions)
     # quote.send — менеджер отправляет одобренное КП клиенту (C1-G-4, архитектор 2026-10-26)
     assert erp_after - erp_before == {"contract.sign", "quote.send"}

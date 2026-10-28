@@ -29,6 +29,11 @@ export interface LegacyTarget {
 export interface BridgeEntry {
   /** Где работа делается сейчас; без поля — в интерфейсе её нет, см. `who` */
   legacy?: LegacyTarget;
+  /**
+   * Раздел каталога, без которого старый экран сотруднику ничего не покажет (B-D18-1: «Входящие» старой CRM — реестр
+   * лидов, раздел `crm.leads`). Раздела у сотрудника нет — кнопки «Открыть в …» нет, вместо неё текст `who`.
+   */
+  legacyNeeds?: string;
   /** Ключ `bridge:who.*`: кто и как делает работу вне интерфейса (когда `legacy` нет) */
   who?: string;
   /** Работа уже есть в Платформе в другом разделе (Каналы связи — в Admin) */
@@ -102,7 +107,15 @@ export const BRIDGE: Readonly<Record<string, BridgeEntry>> = {
 
   "chats.all": { who: "chats", when: "pilot", objectKind: "chat" },
   "chats.internal": { who: "chats", when: "pilot", objectKind: "chat" },
-  "chats.external": { legacy: crm("/inbox", "crmInbox"), when: "pilot", objectKind: "chat" },
+  // B-D18-1: переписка отдельно от реестра лидов — «Входящие» старой CRM открываются только с разделом лидов; бухгалтеру
+  // (переписка по сделкам со счётом) старая CRM ничего не покажет.
+  "chats.external": {
+    legacy: crm("/inbox", "crmInbox"),
+    legacyNeeds: "crm.leads",
+    who: "chatsExternal",
+    when: "pilot",
+    objectKind: "chat",
+  },
   "chats.contacts": { who: "chats", when: "pilot" },
 };
 

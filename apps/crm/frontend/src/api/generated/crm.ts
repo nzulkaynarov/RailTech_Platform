@@ -62,6 +62,7 @@ import type {
   DecisionsResponse,
   DeputyCandidate,
   DeputyIn,
+  DialogPage,
   DocumentOut,
   DocumentUpdate,
   DryRunResponse,
@@ -103,6 +104,7 @@ import type {
   ListAuditParams,
   ListClientsParams,
   ListDealsParams,
+  ListDialogsParams,
   ListDocumentsParams,
   ListEmailLogParams,
   ListKbDocumentsParams,
@@ -2457,6 +2459,137 @@ export function useBusOverview<
   queryClient?: QueryClient,
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
   const queryOptions = getBusOverviewQueryOptions(options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+export const getListDialogsUrl = (params?: ListDialogsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/chats?${stringifiedParams}` : `/api/v1/chats`;
+};
+
+/**
+ * @summary List Dialogs
+ */
+export const listDialogs = async (
+  params?: ListDialogsParams,
+  options?: Parameters<typeof http>[1],
+): Promise<DialogPage> => {
+  return http<DialogPage>(getListDialogsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListDialogsQueryKey = (params?: ListDialogsParams) => {
+  return [`/api/v1/chats`, ...(params ? [params] : [])] as const;
+};
+
+export const getListDialogsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listDialogs>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ListDialogsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listDialogs>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListDialogsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listDialogs>>> = ({ signal }) =>
+    listDialogs(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listDialogs>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListDialogsQueryResult = NonNullable<Awaited<ReturnType<typeof listDialogs>>>;
+export type ListDialogsQueryError = ErrorType<ErrorOut>;
+
+export function useListDialogs<
+  TData = Awaited<ReturnType<typeof listDialogs>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params: undefined | ListDialogsParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listDialogs>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listDialogs>>,
+          TError,
+          Awaited<ReturnType<typeof listDialogs>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListDialogs<
+  TData = Awaited<ReturnType<typeof listDialogs>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ListDialogsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listDialogs>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listDialogs>>,
+          TError,
+          Awaited<ReturnType<typeof listDialogs>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListDialogs<
+  TData = Awaited<ReturnType<typeof listDialogs>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ListDialogsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listDialogs>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary List Dialogs
+ */
+
+export function useListDialogs<
+  TData = Awaited<ReturnType<typeof listDialogs>>,
+  TError = ErrorType<ErrorOut>,
+>(
+  params?: ListDialogsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listDialogs>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListDialogsQueryOptions(params, options);
 
   const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
     queryKey: DataTag<QueryKey, TData, TError>;
