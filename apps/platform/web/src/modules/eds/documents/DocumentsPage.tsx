@@ -266,7 +266,9 @@ export function DocumentsPage() {
   const canViewAll = canSee(me, { anyOf: ["eds.inbox", "eds.projects", "eds.payments"] });
   // Реестр компании — по умолчанию у ролей, которым он открыт; остальным — только «Мои».
   const scope: Scope = canViewAll && params.get("scope") !== "mine" ? "all" : "mine";
-  const tab = tabOf(params.get("kind"), scope);
+  const lettersAllowed = canSee(me, { resource: "eds.inbox" });
+  const askedTab = tabOf(params.get("kind"), scope);
+  const tab = askedTab === "letters" && !lettersAllowed ? "all" : askedTab;
   const status = params.get("status") ?? "";
   const docId = parseDocumentId(params.get("doc"));
 
@@ -327,7 +329,10 @@ export function DocumentsPage() {
     },
   };
 
-  const kindTabs = KIND_TABS.filter((k) => k !== "quote" || scope === "all");
+  // «КП» — только в реестре компании; «Письма» — у ролей с чтением входящих (`eds.inbox`), остальным реестр писем не отдаётся.
+  const kindTabs = KIND_TABS.filter(
+    (k) => (k !== "quote" || scope === "all") && (k !== "letters" || lettersAllowed),
+  );
 
   const body = (
     <QueryState query={list} labels={labels}>
