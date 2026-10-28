@@ -1,5 +1,5 @@
 # CONTRACTS — шов между CRM и ERP (и портальный вход Cabinet, сервис EDS)
-Статус: действует · Владелец: архитектор · Обновлено: 2026-10-27
+Статус: действует · Владелец: архитектор · Обновлено: 2026-10-28
 
 Версия 0 · 2026-10-13 · Источник истины — файлы в `packages/contracts/` (OpenAPI — в том числе `crm.yaml`, который генерирует CRM, — и JSON-схемы);
 этот документ объясняет их. Изменение контракта — PR с обеих сторон в одной вехе (ORCHESTRATOR §3.3).
@@ -225,7 +225,7 @@ ADR-0016: у каждого файла контракта своя версия 
   `make contracts` и в CI (§9.6).
 - **Старый вебхук §3** (поле `version` в теле) — в ERP снят (B3), приёмник CRM `/integrations/erp/events` удаляет B4.
 
-### 7.1. Проверки машиной: `oasdiff` и `events_compat`
+### 7.1. Проверки машиной: `oasdiff`, `events_compat`, `documents_compat`
 
 Обе проверки входят в `make contracts` (цели `openapi-compat` и `compat` в `packages/contracts/Makefile`), в `scripts/ci_local.sh
 contracts` и в job «packages · contracts» CI. Сравнивают рабочее дерево с базой `CONTRACTS_BASE_REF` (по умолчанию
@@ -237,6 +237,7 @@ contracts` и в job «packages · contracts» CI. Сравнивают рабо
 |---|---|---|
 | `openapi/*.yaml` — все файлы (с волны 12 их шесть, новый — `eds.yaml`), в том числе сгенерированные `erp-internal.yaml` и `crm.yaml` | `scripts/openapi_compat.py` → `oasdiff breaking`, закреплённая версия (одноразовый контейнер `tufin/oasdiff` с тегом и digest; свой бинарь — `OASDIFF_BIN`) | oasdiff: уровень ERR валит; WARN (например, удалено необязательное свойство запроса) печатается и не валит — решение лида, строже (`--fail-on WARN`) не включено |
 | `events/**`, `bus/subscriptions.schema.json` | `scripts/events_compat.py` | §9.6: в пределах `vN` — только новые необязательные поля |
+| `documents/**` (тело документа, каталог переменных) | `scripts/documents_compat.py` | §11: тела хранятся годами — в мажоре схема только расширяется; каждое тело-пример базы проходит схему head, semver растёт, коды каталога не удаляются |
 
 **Что считается ломающим в OpenAPI (ERR).** Удалён путь или операция (без `deprecated: true` и даты `x-sunset` не ближе 180 дней от пометки —
 «api-path-removed-without-deprecation», «api-path-removed-before-sunset»); удалено обязательное поле ответа; новое обязательное поле
@@ -696,3 +697,13 @@ ERP применяет события EDS (E5) — §10.6.
   Объектной проверки «своя заявка» нет: в пути C1 у сделки из CRM нет ответственного в ERP.
 - **API КП** (`erp-internal.yaml`, `QuoteSerializer`, C1-G-5): `outgoing_number`, `director_decision`, `director_comment`,
   `send_channels` — только чтение; решение, комментарий и каналы видят сотрудники своей компании, не покупатель.
+
+## 11. Документы: тело и каталог (ADR-0020, D-DOC1)
+
+`packages/contracts/documents/` — единый формат тела документов EDS и ERP: `body.schema.json` (узлы ProseMirror/Tiptap и
+параметры страницы; цвет и шрифт — только из бланка), каталог видов, переменных и блоков с замком `variables.yaml`
+(подписи ru, uz-латиница, en; обязательные блоки видов), примеры тел. Рендер — пакет `packages/rt-docs`; устройство, API и
+эталоны — [`rt-docs.md`](rt-docs.md). Версии: semver в `$comment` схем; в мажоре — только расширение (новые узлы, атрибуты,
+значения enum, коды), потому что выпущенные документы хранят снимок тела; мажор 2 — новый файл `body.v2.schema.json` и
+конвертер (§7.1, `documents_compat`). Событие бланка `erp.company.letterhead.updated.v1` и API предпросмотра — в задачах D-DOC2
+и D-DOC3 (контракт раньше кода).

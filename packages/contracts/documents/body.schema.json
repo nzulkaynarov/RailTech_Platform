@@ -1,0 +1,367 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://railtech.uz/contracts/documents/body.schema.json",
+  "$comment": "semver 1.0.0 (ADR-0016, ADR-0020). Совместимость — scripts/documents_compat.py: каждое тело-пример базы обязано проходить схему head, версия при правке растёт; мажор 2 — новый файл body.v2.schema.json с конвертером.",
+  "title": "Тело документа RailTech (единый формат: письма, служебки, заявления, отчёты, КП, договор, счёт, акт)",
+  "description": "JSON блочного редактора (узлы ProseMirror/Tiptap) плюс параметры страницы. Цвет и шрифт в теле не хранятся — их задаёт бланк. Рендер — packages/rt-docs (HTML → PDF WeasyPrint, DOCX); docs/architecture/rt-docs.md, ADR-0020.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "lang", "doc"],
+  "properties": {
+    "version": { "const": 1, "description": "Мажор формата тела" },
+    "lang": {
+      "enum": ["ru", "uz", "en"],
+      "description": "Язык документа (не интерфейса): подписи блоков, формат дат и сумм, сумма прописью, перенос слов. uz — латиница; кириллица — позже (DECISIONS 2026-10-27)"
+    },
+    "page": { "$ref": "#/$defs/page" },
+    "doc": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "content"],
+      "properties": {
+        "type": { "const": "doc" },
+        "content": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/block" } }
+      }
+    }
+  },
+  "$defs": {
+    "page": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Параметры страницы документа; по умолчанию — книжная, плотность по макету бланка",
+      "properties": {
+        "orientation": { "enum": ["portrait", "landscape"], "description": "landscape — широкая спецификация" },
+        "density": {
+          "enum": ["compact", "normal", "spacious"],
+          "description": "Компактно 9,5 pt / 1,35 · Обычно 11 pt / 1,45 · Просторно 12 pt / 1,5"
+        },
+        "tuning": { "$ref": "#/$defs/tuning" }
+      }
+    },
+    "tuning": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Результат «Подогнать» (rt_docs.fit), сохранённый в документе: межстрочный, поля и отступ до текста в допустимых пределах",
+      "properties": {
+        "lineHeight": { "type": "number", "minimum": 1.2, "maximum": 1.6 },
+        "marginDeltaMm": { "type": "integer", "minimum": -6, "maximum": 0 },
+        "leadMm": { "type": "integer", "minimum": 0, "maximum": 30 }
+      }
+    },
+    "code": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$",
+      "maxLength": 64,
+      "description": "Код переменной из каталога documents/variables.yaml (company.name, counterparty.inn …)"
+    },
+    "blockCode": {
+      "type": "string",
+      "pattern": "^doc\\.[a-z][a-z0-9_]*$",
+      "maxLength": 64,
+      "description": "Код блока из каталога documents/variables.yaml (doc.items_table, doc.totals …)"
+    },
+    "align": { "enum": ["left", "center", "right", "justify"] },
+    "textOrVar": {
+      "oneOf": [
+        { "type": "string", "maxLength": 300 },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["var"],
+          "properties": { "var": { "$ref": "#/$defs/code" } }
+        }
+      ]
+    },
+    "block": {
+      "oneOf": [
+        { "$ref": "#/$defs/paragraph" },
+        { "$ref": "#/$defs/heading" },
+        { "$ref": "#/$defs/bulletList" },
+        { "$ref": "#/$defs/orderedList" },
+        { "$ref": "#/$defs/table" },
+        { "$ref": "#/$defs/pageBreak" },
+        { "$ref": "#/$defs/signature" },
+        { "$ref": "#/$defs/lockedBlock" }
+      ]
+    },
+    "inline": {
+      "oneOf": [{ "$ref": "#/$defs/text" }, { "$ref": "#/$defs/variable" }, { "$ref": "#/$defs/hardBreak" }]
+    },
+    "inlineContent": { "type": "array", "items": { "$ref": "#/$defs/inline" } },
+    "paragraph": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": {
+        "type": { "const": "paragraph" },
+        "attrs": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": { "textAlign": { "$ref": "#/$defs/align" } }
+        },
+        "content": { "$ref": "#/$defs/inlineContent" }
+      }
+    },
+    "heading": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "attrs"],
+      "properties": {
+        "type": { "const": "heading" },
+        "attrs": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["level"],
+          "properties": {
+            "level": { "enum": [1, 2, 3] },
+            "textAlign": { "$ref": "#/$defs/align" }
+          }
+        },
+        "content": { "$ref": "#/$defs/inlineContent" }
+      }
+    },
+    "listItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "content"],
+      "properties": {
+        "type": { "const": "listItem" },
+        "content": {
+          "type": "array",
+          "minItems": 1,
+          "description": "Обычно первый узел — абзац пункта, за ним вложенные списки",
+          "items": {
+            "oneOf": [{ "$ref": "#/$defs/paragraph" }, { "$ref": "#/$defs/bulletList" }, { "$ref": "#/$defs/orderedList" }]
+          }
+        }
+      }
+    },
+    "bulletList": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "content"],
+      "properties": {
+        "type": { "const": "bulletList" },
+        "content": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/listItem" } }
+      }
+    },
+    "orderedList": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "content"],
+      "properties": {
+        "type": { "const": "orderedList" },
+        "attrs": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": { "start": { "type": "integer", "minimum": 1 } }
+        },
+        "content": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/listItem" } }
+      }
+    },
+    "table": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "content"],
+      "description": "Строки tableHeader в начале таблицы — шапка, она повторяется на каждой странице",
+      "properties": {
+        "type": { "const": "table" },
+        "attrs": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "columnWidths": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 20,
+              "items": { "type": "number", "exclusiveMinimum": 0, "maximum": 100 },
+              "description": "Ширины колонок в % ширины текста"
+            },
+            "variant": {
+              "enum": ["grid", "plain", "totals"],
+              "description": "grid — с линиями (позиции), plain — без линий (реквизиты в две колонки), totals — итоги справа"
+            }
+          }
+        },
+        "content": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/tableRow" } }
+      }
+    },
+    "tableRow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "content"],
+      "properties": {
+        "type": { "const": "tableRow" },
+        "attrs": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": { "emphasis": { "type": "boolean", "description": "Выделенная строка (например, «Итого к оплате»)" } }
+        },
+        "content": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "oneOf": [{ "$ref": "#/$defs/tableCell" }, { "$ref": "#/$defs/tableHeader" }] }
+        }
+      }
+    },
+    "cellAttrs": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "colspan": { "type": "integer", "minimum": 1, "maximum": 20 },
+        "rowspan": { "type": "integer", "minimum": 1, "maximum": 1000 },
+        "align": { "enum": ["left", "center", "right"] },
+        "numeric": { "type": "boolean", "description": "Число или сумма: вправо, без переноса, табличные цифры" }
+      }
+    },
+    "tableCell": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "content"],
+      "properties": {
+        "type": { "const": "tableCell" },
+        "attrs": { "$ref": "#/$defs/cellAttrs" },
+        "content": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/paragraph" } }
+      }
+    },
+    "tableHeader": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "content"],
+      "properties": {
+        "type": { "const": "tableHeader" },
+        "attrs": { "$ref": "#/$defs/cellAttrs" },
+        "content": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/paragraph" } }
+      }
+    },
+    "pageBreak": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": { "type": { "const": "pageBreak" } }
+    },
+    "signature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "attrs"],
+      "description": "Подписи (одна или две стороны) и место печати; на новую страницу уходит только вместе с предыдущим абзацем",
+      "properties": {
+        "type": { "const": "signature" },
+        "attrs": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["parties"],
+          "properties": {
+            "parties": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 2,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "role": { "$ref": "#/$defs/textOrVar", "description": "Сторона: «Поставщик», «Покупатель»" },
+                  "position": { "$ref": "#/$defs/textOrVar", "description": "Должность подписанта" },
+                  "name": { "$ref": "#/$defs/textOrVar", "description": "ФИО подписанта" }
+                }
+              }
+            },
+            "stamp": { "type": "boolean", "description": "Место печати «М. П.»" }
+          }
+        }
+      }
+    },
+    "lockedBlock": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "attrs"],
+      "description": "Блок с замком: данные системы (таблица позиций, итоги, реквизиты) или закреплённый текст шаблона. Данные подставляет вызывающий (rt_docs blocks); без данных печатается content",
+      "properties": {
+        "type": { "const": "block" },
+        "attrs": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["code"],
+          "properties": {
+            "code": { "$ref": "#/$defs/blockCode" },
+            "locked": { "type": "boolean", "description": "Правит только владелец шаблона" },
+            "required": { "type": "boolean", "description": "Обязательный блок вида документа: удалить нельзя" }
+          }
+        },
+        "content": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              { "$ref": "#/$defs/paragraph" },
+              { "$ref": "#/$defs/heading" },
+              { "$ref": "#/$defs/bulletList" },
+              { "$ref": "#/$defs/orderedList" },
+              { "$ref": "#/$defs/table" }
+            ]
+          }
+        }
+      }
+    },
+    "text": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "text"],
+      "properties": {
+        "type": { "const": "text" },
+        "text": { "type": "string", "minLength": 1, "maxLength": 20000 },
+        "marks": {
+          "type": "array",
+          "maxItems": 4,
+          "items": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["type"],
+                "properties": { "type": { "enum": ["bold", "italic", "underline"] } }
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["type", "attrs"],
+                "properties": {
+                  "type": { "const": "link" },
+                  "attrs": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["href"],
+                    "properties": {
+                      "href": { "type": "string", "pattern": "^(https?://|mailto:|tel:)[^\\s<>\"']+$", "maxLength": 2000 }
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    "variable": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "attrs"],
+      "description": "Переменная-чип {{код}}: значение подставляет вызывающий; неразрешённая подсвечивается в предпросмотре",
+      "properties": {
+        "type": { "const": "variable" },
+        "attrs": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["code"],
+          "properties": { "code": { "$ref": "#/$defs/code" } }
+        },
+        "marks": { "$ref": "#/$defs/text/properties/marks" }
+      }
+    },
+    "hardBreak": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type"],
+      "properties": { "type": { "const": "hardBreak" } }
+    }
+  }
+}

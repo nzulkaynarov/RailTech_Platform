@@ -1,0 +1,223 @@
+{
+  "version": 1,
+  "lang": "ru",
+  "doc": {
+    "type": "doc",
+    "content": [
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "variable",
+            "attrs": {
+              "code": "company.name"
+            }
+          },
+          {
+            "type": "text",
+            "text": ", именуемое в дальнейшем «Поставщик», в лице "
+          },
+          {
+            "type": "variable",
+            "attrs": {
+              "code": "company.director_position"
+            }
+          },
+          {
+            "type": "text",
+            "text": " "
+          },
+          {
+            "type": "variable",
+            "attrs": {
+              "code": "company.director"
+            }
+          },
+          {
+            "type": "text",
+            "text": ", с одной стороны, и "
+          },
+          {
+            "type": "variable",
+            "attrs": {
+              "code": "counterparty.name"
+            }
+          },
+          {
+            "type": "text",
+            "text": ", именуемое в дальнейшем «Покупатель», с другой стороны, заключили настоящий договор о нижеследующем."
+          }
+        ],
+        "attrs": {
+          "textAlign": "justify"
+        }
+      },
+      {
+        "type": "heading",
+        "attrs": {
+          "level": 2
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "1. Предмет договора"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "1.1. Все позиции проходят входной контроль, сертификаты соответствия передаются вместе с товаром."
+          }
+        ],
+        "attrs": {
+          "textAlign": "justify"
+        }
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "1.2. Монтаж выполняется по проекту, согласованному с вашей технической службой, с соблюдением норм безопасности."
+          }
+        ],
+        "attrs": {
+          "textAlign": "justify"
+        }
+      },
+      {
+        "type": "heading",
+        "attrs": {
+          "level": 2
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "2. Цена и порядок расчётов"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "2.1. Монтаж выполняется по проекту, согласованному с вашей технической службой, с соблюдением норм безопасности."
+          }
+        ],
+        "attrs": {
+          "textAlign": "justify"
+        }
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "2.2. При изменении графика работ мы уведомим вас не позднее чем за три рабочих дня письмом или по телефону."
+          }
+        ],
+        "attrs": {
+          "textAlign": "justify"
+        }
+      },
+      {
+        "type": "block",
+        "attrs": {
+          "code": "doc.contract_liability",
+          "locked": true
+        },
+        "content": [
+          {
+            "type": "heading",
+            "attrs": {
+              "level": 2
+            },
+            "content": [
+              {
+                "type": "text",
+                "text": "3. Ответственность сторон"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "type": "text",
+                "text": "3.1. За просрочку поставки Поставщик уплачивает пеню 0,1 % от стоимости непоставленного товара за каждый день просрочки, но не более 10 %."
+              }
+            ],
+            "attrs": {
+              "textAlign": "justify"
+            }
+          }
+        ]
+      },
+      {
+        "type": "pageBreak"
+      },
+      {
+        "type": "heading",
+        "attrs": {
+          "level": 2,
+          "textAlign": "center"
+        },
+        "content": [
+          {
+            "type": "text",
+            "text": "Приложение № 1. Спецификация"
+          }
+        ]
+      },
+      {
+        "type": "block",
+        "attrs": {
+          "code": "doc.spec_table",
+          "locked": true,
+          "required": true
+        }
+      },
+      {
+        "type": "block",
+        "attrs": {
+          "code": "doc.totals",
+          "locked": true,
+          "required": true
+        }
+      },
+      {
+        "type": "signature",
+        "attrs": {
+          "parties": [
+            {
+              "role": "Поставщик",
+              "position": {
+                "var": "company.director_position"
+              },
+              "name": {
+                "var": "company.director"
+              }
+            },
+            {
+              "role": "Покупатель",
+              "position": {
+                "var": "counterparty.director_position"
+              },
+              "name": {
+                "var": "counterparty.director"
+              }
+            }
+          ],
+          "stamp": true
+        }
+      }
+    ]
+  },
+  "page": {
+    "density": "compact"
+  }
+}

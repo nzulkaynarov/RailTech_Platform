@@ -9,7 +9,7 @@ set -euo pipefail
 unset MAKEFLAGS MFLAGS MAKELEVEL args
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-ALL=(gitleaks crm contracts tokens infra erp cabinet platform eds rt-bus crm-integration crm-build crm-e2e crm-audit platform-e2e cpu-baseline)
+ALL=(gitleaks crm contracts tokens infra erp cabinet platform eds rt-bus rt-docs crm-integration crm-build crm-e2e crm-audit platform-e2e cpu-baseline)
 GITLEAKS_IMAGE=ghcr.io/gitleaks/gitleaks:v8.30.1
 CADDY_IMAGE=caddy:2.11.7-alpine
 LOGS="$ROOT/.ci-local"
@@ -40,6 +40,7 @@ usage() {
   platform          make check-platform (ruff, mypy, pytest bff; eslint, tsc, vitest web; клиент orval и токены свежие)
   eds               make check-eds — сервис документооборота: ruff, mypy --strict, pytest на одноразовом postgres:17 (миграции, шина, вход, права)
   rt-bus            make check-rt-bus — библиотека шины: ruff, mypy, миграция Django, pytest на одноразовом postgres:17
+  rt-docs           make check-rt-docs — документы: ruff, mypy, pytest с эталонными PDF в одноразовом контейнере (без сети)
   crm-integration   apps/crm/scripts/test_int_local.sh — одноразовые Postgres 17 и RustFS
   crm-build         образы CRM backend/frontend (prod) и backup с проверкой pg_dump 17
   crm-e2e           apps/crm/scripts/ci_local.sh e2e — одноразовый Postgres, API, preview, Playwright
@@ -61,12 +62,12 @@ for a in "$@"; do
   case "$a" in
     -h | --help) usage; exit 0 ;;
     --force) FORCE=1 ;;
-    --quick) STAGES=(gitleaks crm contracts tokens infra erp cabinet platform eds rt-bus) ;;
+    --quick) STAGES=(gitleaks crm contracts tokens infra erp cabinet platform eds rt-bus rt-docs) ;;
     --full) STAGES=("${ALL[@]}") ;;
     *) STAGES+=("$a") ;;
   esac
 done
-[ ${#STAGES[@]} -eq 0 ] && STAGES=(gitleaks crm contracts tokens infra erp cabinet platform eds rt-bus crm-integration crm-build)
+[ ${#STAGES[@]} -eq 0 ] && STAGES=(gitleaks crm contracts tokens infra erp cabinet platform eds rt-bus rt-docs crm-integration crm-build)
 # platform-e2e всегда после platform: check-platform пересоздаёт src/shared/api/generated (orval), и vite e2e на лету
 # перезапускается/теряет модули (ERR_CONNECTION_REFUSED). Стадии идут строго по одной; порядок фиксируем явно.
 if [[ " ${STAGES[*]} " == *" platform-e2e "* ]]; then
@@ -189,6 +190,8 @@ stage_platform() { (cd "$ROOT" && make check-platform); }
 stage_eds() { (cd "$ROOT" && make -C apps/eds install && make check-eds); }
 # Как job rt-bus в ci.yml; PostgreSQL — одноразовый контейнер packages/rt-bus/scripts/with_pg.sh (стенд не трогается).
 stage_rt-bus() { (cd "$ROOT" && make -C packages/rt-bus install && make check-rt-bus); }
+# Как job rt-docs в ci.yml (D-DOC1); рендер PDF — одноразовый контейнер packages/rt-docs/docker/test.Dockerfile.
+stage_rt-docs() { (cd "$ROOT" && make -C packages/rt-docs install && make check-rt-docs); }
 
 stage_crm-integration() {
   local status=0
