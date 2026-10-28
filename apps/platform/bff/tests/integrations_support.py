@@ -142,6 +142,9 @@ def mail_row(row_id: int, status: str = "sent", **over: Any) -> dict[str, Any]:
         "requested_by": 7,
         "created_at": EARLIER,
         "sent_at": EARLIER if status == "sent" else None,
+        "source": "crm",
+        "purpose": "invite",
+        "attachments": 0,
         **over,
     }
 

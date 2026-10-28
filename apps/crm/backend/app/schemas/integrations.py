@@ -225,9 +225,9 @@ class EmailLogItem(BaseModel):
     requested_by: int | None
     created_at: datetime
     sent_at: datetime | None
-    source: Literal["crm", "erp", "eds"] = "crm"
-    purpose: str | None = None
-    attachments: int = 0
+    source: Literal["crm", "erp", "eds"]
+    purpose: str | None
+    attachments: int
 
 
 class EmailQueuedOut(BaseModel):

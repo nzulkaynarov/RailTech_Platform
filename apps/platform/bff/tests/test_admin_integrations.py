@@ -472,16 +472,20 @@ async def test_mail_log_filters_and_hides_internal_fields(
     }
     row = response.json()["items"][0]
     assert set(row) == {
+        "attachments",
         "attempts",
         "created_at",
         "error",
         "id",
+        "purpose",
         "sent_at",
+        "source",
         "status",
         "subject",
         "template",
         "to_email",
     }
+    assert (row["source"], row["purpose"], row["attachments"]) == ("crm", "invite", 0)
     bad = await web.client.get(f"{BASE}/smtp/log", params={"status": "bounced"})
     assert bad.status_code == 422
 

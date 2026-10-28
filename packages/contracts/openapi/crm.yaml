@@ -2280,7 +2280,6 @@ components:
         `purpose` — назначение (код шаблона отправителя), `attachments` — число вложений.'
       properties:
         attachments:
-          default: 0
           title: Attachments
           type: integer
         attempts:
@@ -2318,7 +2317,6 @@ components:
           - type: 'null'
           title: Sent At
         source:
-          default: crm
           enum:
           - crm
           - erp
@@ -2360,6 +2358,9 @@ components:
       - requested_by
       - created_at
       - sent_at
+      - source
+      - purpose
+      - attachments
       title: EmailLogItem
       type: object
     EmailQueuedOut:

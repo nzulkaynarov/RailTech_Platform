@@ -301,16 +301,16 @@ class EmailLogItem(BaseModel):
     `purpose` — назначение (код шаблона отправителя), `attachments` — число вложений.
     """
 
-    attachments: Annotated[int | None, Field(title="Attachments")] = 0
+    attachments: Annotated[int, Field(title="Attachments")]
     attempts: Annotated[int, Field(title="Attempts")]
     created_at: Annotated[AwareDatetime, Field(title="Created At")]
     error: Annotated[str | None, Field(title="Error")]
     id: Annotated[int, Field(title="Id")]
     lang: Annotated[str, Field(title="Lang")]
-    purpose: Annotated[str | None, Field(title="Purpose")] = None
+    purpose: Annotated[str | None, Field(title="Purpose")]
     requested_by: Annotated[int | None, Field(title="Requested By")]
     sent_at: Annotated[AwareDatetime | None, Field(title="Sent At")]
-    source: Annotated[Source1 | None, Field(title="Source")] = "crm"
+    source: Annotated[Source1, Field(title="Source")]
     status: Annotated[Status1, Field(title="Status")]
     subject: Annotated[str, Field(title="Subject")]
     template: Annotated[str, Field(title="Template")]

@@ -12,16 +12,16 @@ import type { EmailLogItemStatus } from "./emailLogItemStatus";
  * `purpose` — назначение (код шаблона отправителя), `attachments` — число вложений.
  */
 export interface EmailLogItem {
-  attachments?: number;
+  attachments: number;
   attempts: number;
   created_at: string;
   error: string | null;
   id: number;
   lang: string;
-  purpose?: string | null;
+  purpose: string | null;
   requested_by: number | null;
   sent_at: string | null;
-  source?: EmailLogItemSource;
+  source: EmailLogItemSource;
   status: EmailLogItemStatus;
   subject: string;
   template: string;
