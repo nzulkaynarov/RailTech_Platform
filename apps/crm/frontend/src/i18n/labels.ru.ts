@@ -166,6 +166,7 @@ export const labelsRu = {
     "integrations.telegram_token": "Подключил Telegram-бота",
     "integrations.erp": "Настроил коннектор ERP",
     "integrations.smtp": "Настроил коннектор «Почта»",
+    "integrations.offsite_gdrive": "Настроил внешнюю копию бэкапов (Google Drive)",
     "user.invite": "Отправил приглашение по почте",
     "user.reset_password_email": "Сбросил пароль и отправил по почте",
     "user.password_reset_link": "Задал новый пароль по ссылке из письма",

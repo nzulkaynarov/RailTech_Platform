@@ -44,6 +44,8 @@ ROOTS = (
     "BotProfileOut",
     "ActionResult",
     "SmtpStatusOut",
+    "OffsiteStatusOut",
+    "OffsiteCheckOut",
     "SmtpCheckOut",
     "EmailLogItem",
     "EmailQueuedOut",

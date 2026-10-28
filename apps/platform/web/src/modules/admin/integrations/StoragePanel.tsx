@@ -10,6 +10,7 @@ import {
 } from "../../../shared/api/generated/platform-bff";
 import { useFormat } from "../../../shared/lib/useFormat";
 import { DefinitionList } from "../../../shared/ui/DefinitionList";
+import { OffsiteSection } from "./OffsitePanel";
 import { ActionForm, ActionToggle, LevelTag, PanelState, PanelTitle } from "./parts";
 import { useRefreshIntegrations } from "./refresh";
 
@@ -204,7 +205,8 @@ function FilesService() {
   );
 }
 
-/** Карточка «Хранилище и бэкапы»: файлы (S3 из реестра сервисов), последние копии, «Сделать копию сейчас». */
+/** Карточка «Хранилище и бэкапы»: файлы (S3 из реестра сервисов), последние копии, «Сделать копию сейчас»,
+ * внешняя копия на Google Drive (OPS-GDRIVE-2). */
 export function StoragePanel({ editable }: { editable: boolean }) {
   const { t } = useTranslation("integrations");
   const query = useGetBackups();
@@ -215,6 +217,7 @@ export function StoragePanel({ editable }: { editable: boolean }) {
       <PanelState query={query}>
         {(backups) => <BackupsBody backups={backups} editable={editable} />}
       </PanelState>
+      <OffsiteSection editable={editable} />
     </div>
   );
 }

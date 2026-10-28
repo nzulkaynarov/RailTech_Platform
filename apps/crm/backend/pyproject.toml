@@ -24,7 +24,7 @@ dependencies = [
     "psycopg[binary,pool]>=3.3.6",
     "pycasbin>=2.8.0",
     "pydantic-settings>=2.15.0",
-    "pyjwt>=2.15.1",
+    "pyjwt[crypto]>=2.15.1",
     "pyyaml>=6.0.3",
     "rt-bus[fastapi,sqlalchemy]",
     "rt-contracts",

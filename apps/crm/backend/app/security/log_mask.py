@@ -25,6 +25,15 @@ _SENSITIVE_PARAM: Final = (
 )
 
 _RULES: Final[tuple[tuple[re.Pattern[str], str], ...]] = (
+    # Закрытый ключ PEM (ключ сервисного аккаунта Google, OPS-GDRIVE-2): блок целиком, в том
+    # числе с переводами строк как `\n` внутри JSON и обрезанный.
+    (
+        re.compile(
+            r"-----BEGIN [A-Z ]*PRIVATE KEY-----.*?(?:-----END [A-Z ]*PRIVATE KEY-----|$)",
+            re.DOTALL,
+        ),
+        REDACTED,
+    ),
     # Telegram Bot API: токен в пути (`/bot123456:ABC…/getMe`), с префиксом и без него.
     (re.compile(r"\bbot\d+:[\w-]+"), "bot" + REDACTED),
     (re.compile(r"(?<![\w:/.-])\d{6,}:[A-Za-z0-9_-]{30,}(?![\w-])"), REDACTED),
@@ -63,6 +72,7 @@ _RULES: Final[tuple[tuple[re.Pattern[str], str], ...]] = (
 
 # Быстрая проверка до регулярных выражений: большинство строк журнала не содержит признаков.
 _HINTS: Final = (
+    "private key",
     "bot",
     ":",
     "amz-",

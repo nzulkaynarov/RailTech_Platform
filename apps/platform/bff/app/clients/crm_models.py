@@ -915,6 +915,35 @@ class NoticeOut(BaseModel):
     status: Annotated[Status5, Field(title="Status")]
 
 
+class OffsiteCheckOut(BaseModel):
+    """
+    Итог «Проверить» внешней копии (OPS-GDRIVE-2): `reason` — `ok` или что исправить владельцу
+    (`key_rejected`, `drive_api_disabled`, `folder_not_found`, `not_folder`, `not_shared_drive`,
+    `read_only`), `network` — Google не ответил (хостинг).
+    """
+
+    checked_at: Annotated[AwareDatetime, Field(title="Checked At")]
+    folder_name: Annotated[str | None, Field(title="Folder Name")]
+    ok: Annotated[bool, Field(title="Ok")]
+    reason: Annotated[str, Field(title="Reason")]
+
+
+class OffsiteStatusOut(BaseModel):
+    """
+    Внешняя копия бэкапов на Google Drive: ключ не возвращается — адрес аккаунта и `key_suffix`
+    (последние 4 символа ID ключа); `delivered_at` — когда ключ и папка ушли сервису копирования.
+    """
+
+    client_email: Annotated[str, Field(title="Client Email")]
+    configured: Annotated[bool, Field(title="Configured")]
+    delivered_at: Annotated[AwareDatetime | None, Field(title="Delivered At")]
+    folder_id: Annotated[str, Field(title="Folder Id")]
+    key_suffix: Annotated[str | None, Field(title="Key Suffix")]
+    key_updated_at: Annotated[AwareDatetime | None, Field(title="Key Updated At")]
+    last_check: OffsiteCheckOut | None
+    secrets_enabled: Annotated[bool, Field(title="Secrets Enabled")]
+
+
 class Owner(StrEnum):
     """
     Кто исправляет; нет — исправлять нечего

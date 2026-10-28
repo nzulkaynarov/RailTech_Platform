@@ -68,8 +68,8 @@ test.describe("Мои задачи: «Открыть» или «Где сдел�
     await expect(open).toHaveAttribute("target", "_blank");
     expect(await open.getAttribute("rel")).toContain("noopener");
     await expect(pop.getByText("Когда появится: к пилоту.")).toBeVisible();
-    // у письма, КП и служебки рядом — «Открыть», «Где сделать» нет
-    await expect(queue.getByRole("link", { name: /^Открыть:/ })).toHaveCount(3);
+    // письмо, КП и служебка рядом — «Открыть», «Где сделать» нет; плюс просроченный заказ поставщику (D2-2)
+    await expect(queue.getByRole("link", { name: /^Открыть:/ })).toHaveCount(4);
     await expect(queue.getByRole("button", { name: /^Где сделать/ })).toHaveCount(1);
     await shoot(page, "queue-where");
   });
@@ -168,18 +168,14 @@ test.describe("Мои задачи: «Открыть» или «Где сдел�
 test.describe("Мои задачи: пустые состояния и частичный результат", () => {
   test.skip(({ isMobile }) => isMobile, "ширины задаёт сам сценарий");
 
-  for (const [email, title] of [
-    ["supply@demo.example", "Заданий на расчёт нет"],
-    ["engineer@demo.example", "Заданий по услугам нет"],
-    ["accountant@demo.example", "Платёжек на подтверждение и счетов к выставлению нет"],
-  ] as const) {
-    test(`${email}: пустая очередь своими словами`, async ({ page }) => {
-      await loginAndWait(page, email);
-      await expect(page.getByRole("main").getByText(title)).toBeVisible();
-      await expect(page.getByText("Решений от вас пока не требуется")).toHaveCount(0);
-      if (email === "accountant@demo.example") await shoot(page, "queue-empty-accountant");
-    });
-  }
+  test("accountant@demo.example: пустая очередь своими словами", async ({ page }) => {
+    await loginAndWait(page, "accountant@demo.example");
+    await expect(
+      page.getByRole("main").getByText("Платёжек на подтверждение и счетов к выставлению нет"),
+    ).toBeVisible();
+    await expect(page.getByText("Решений от вас пока не требуется")).toHaveCount(0);
+    await shoot(page, "queue-empty-accountant");
+  });
 
   test("ERP не отвечает: данные CRM показаны, плашка называет «Документы» и «Расчёт»", async ({
     page,

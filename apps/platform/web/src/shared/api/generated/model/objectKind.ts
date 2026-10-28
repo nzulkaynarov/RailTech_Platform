@@ -19,4 +19,5 @@ export const ObjectKind = {
   chat: "chat",
   ticket: "ticket",
   integration: "integration",
+  supplier_order: "supplier_order",
 } as const;

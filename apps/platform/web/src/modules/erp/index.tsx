@@ -5,11 +5,13 @@ import { ModuleRoutes } from "../ModuleRoutes";
 import { matchSection } from "../registry";
 import { CalcScreen } from "./calc/CalcScreen";
 import { RequestsScreen } from "./calc/RequestsScreen";
+import { OrderScreen } from "./stock/OrderScreen";
+import { StockScreen } from "./stock/StockScreen";
 
 /**
  * Модуль «Расчёт» (ERP). «Заявки в расчёте» и «Мои расчёты» — список заданий на расчёт, карточка `/erp/calc/ЗВ-…` (и
- * `/erp/requests/ЗВ-…`) — расчёт по заявке (D2-1, SPEC-v3 §7.4); склад, номенклатура и техдокументация — заглушки каркаса
- * до D2-2 и D2-3.
+ * `/erp/requests/ЗВ-…`) — расчёт по заявке (D2-1, SPEC-v3 §7.4); «Склад» (остатки и резервы, заказы поставщикам, приёмка, отгрузки; D2-2) — `/erp/stock`, карточка заказа `/erp/stock/ЗП-…`;
+ * номенклатура и техдокументация — заглушки каркаса до D2-3.
  */
 export function Component() {
   const location = useLocation();
@@ -25,6 +27,13 @@ export function Component() {
         ) : (
           <RequestsScreen mine={match.section.key === "calc"} />
         )}
+      </RequireAccess>
+    );
+  }
+  if (match?.module.code === "erp" && match.section.key === "stock") {
+    return (
+      <RequireAccess rule={match.section.access}>
+        {match.objectId ? <OrderScreen number={match.objectId} /> : <StockScreen />}
       </RequireAccess>
     );
   }

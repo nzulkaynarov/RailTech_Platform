@@ -198,7 +198,7 @@ def test_lines_get_kind_stock_supplier_and_zone(world):
     body = _sheet(world, world["supply"])
     goods, service = body["lines"]
     assert goods["kind"] == "goods_to_order", "на складе 1, нужно 2"
-    assert goods["stock"] == {"on_hand": 1, "cell": None, "reserved": None}
+    assert goods["stock"] == {"on_hand": 1, "free": 1, "cell": None, "reserved": 0}
     assert goods["supplier"]["name"] == "ООО Вымышленный Поставщик"
     assert goods["supplier"]["lead_days"] == 45 and goods["supplier"]["price_valid_until"] == "2026-12-31"
     assert goods["article"] == "СП-Р65-11" and goods["group"] == "supply"
@@ -466,7 +466,7 @@ def test_accountant_gets_no_cost_from_erp_directly(world):
             assert line["supplier"]["offer_price"] is None and line["supplier"]["offer_currency"] is None
     assert body["totals"]["purchase"] is None and body["totals"]["markup_pct"] is None
     assert body["totals"]["client"] == "208800000.00"
-    assert body["rights"] == {"goods": False, "services": False, "build": False, "cost": False}
+    assert body["rights"] == {"goods": False, "services": False, "build": False, "cost": False, "stock": False}
 
 
 def test_role_without_zone_gets_no_cost_even_in_write_responses(world):

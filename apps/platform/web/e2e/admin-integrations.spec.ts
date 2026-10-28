@@ -193,6 +193,52 @@ test.describe("Внешние интеграции: администратор",
     await expect(page.locator("body")).not.toContainText("fresh-smtp-secret");
   });
 
+  test("Внешняя копия бэкапов: шаги Google, ключ JSON и папка из интерфейса, ключ не показывается, axe", async ({
+    page,
+  }) => {
+    await loginAndWait(page, "admin@demo.example");
+    await openIntegrations(page, "storage");
+    const section = side(page).locator("section", {
+      has: page.getByRole("heading", { name: "Внешняя копия бэкапов (Google Drive)" }),
+    });
+    await expect(section.getByText("Не настроено")).toBeVisible();
+    await expect(
+      section.getByRole("list", { name: /Подготовка в Google/ }).getByRole("listitem"),
+    ).toHaveCount(4);
+    await expectNoViolations(page, "offsite not configured");
+
+    await section.getByRole("button", { name: "Настроить" }).click();
+    const form = section.getByRole("form", { name: "Ключ и папка" });
+    await expectNoViolations(page, "offsite form");
+    const key = JSON.stringify({
+      type: "service_account",
+      client_email: "rt-offsite-backup@rt-backups.iam.gserviceaccount.com",
+      private_key_id: "0123456789abcdef1a2b",
+      private_key: "-----BEGIN PRIVATE KEY-----\\nDEMO-PRIVATE-BODY\\n-----END PRIVATE KEY-----",
+    });
+    await form.getByLabel("Ключ сервисного аккаунта (файл JSON)").setInputFiles({
+      name: "rt-backups-1a2b.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(key),
+    });
+    await expect(form.getByText(/сервисный аккаунт rt-offsite-backup@rt-backups/)).toBeVisible();
+    await form
+      .getByLabel("ID папки общего диска")
+      .fill("https://drive.google.com/drive/folders/0AbCdEfGhIjKlMnOpQrStUvWxYz?usp=sharing");
+    await password(form);
+    await tallScreenshot(page, "offsite-form");
+    await form.getByRole("button", { name: "Сохранить и проверить" }).click();
+
+    await expect(section.getByText("0AbCdEfGhIjKlMnOpQrStUvWxYz")).toBeVisible();
+    await expect(section.getByText("•••• 1a2b")).toBeVisible();
+    await expect(section.getByText(/Доступ есть: папка «rt-platform-offsite»/)).toBeVisible();
+    await expect(page.locator("body")).not.toContainText("DEMO-PRIVATE-BODY");
+    await section.getByRole("button", { name: "Проверить" }).click();
+    await expect(section.getByText(/Доступ есть/)).toBeVisible();
+    await expectNoViolations(page, "offsite configured");
+    await tallScreenshot(page, "offsite-configured");
+  });
+
   test("Внешние сервисы: проверка, выключатель с «Что произойдёт» и паролем, включение", async ({
     page,
   }) => {

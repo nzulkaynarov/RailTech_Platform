@@ -7,6 +7,7 @@ import type {
   ErpConnector,
   ExternalService,
   MailLogItem,
+  OffsiteBackup,
   SmtpConnector,
   SpendReport,
   SystemComponent,
@@ -34,6 +35,8 @@ export interface IntegrationsMock {
   profile: BotProfile;
   published: BotProfilePublish | null;
   smtp: SmtpConnector;
+  /** Внешняя копия на Google Drive (OPS-GDRIVE-2); в старом сохранённом состоянии мока поля нет. */
+  offsite?: OffsiteBackup;
   mailLog: MailLogItem[];
   services: ExternalService[];
   models: AiModel[];
@@ -222,6 +225,16 @@ function seedServices(): ExternalService[] {
       summary: "Архив пишется: последний сегмент 1 мин назад, базовая копия 7.5 ч назад",
       fix_card: "storage",
     }),
+    service("offsite_backup", "Внешняя копия бэкапов", "Копия архива базы на Google Drive", {
+      system: "ensemble",
+      status: "off",
+      owner: "owner",
+      action: "write_owner",
+      summary:
+        "Внешняя копия бэкапов на Google Drive не настроена: сервис копирования ещё не отметился",
+      hint: "Копии базы вне наших серверов нет. Кто исправляет: владелец. Что сделать: загрузить ключ сервисного аккаунта и указать папку в «Внешней копии бэкапов».",
+      fix_card: "storage",
+    }),
     service("redis_broker", "Redis: брокер", "Очереди и каналы ERP, очереди Langfuse", {
       system: "ensemble",
       summary: "Брокер Redis отвечает, память 41 %",
@@ -252,6 +265,19 @@ function seedServices(): ExternalService[] {
       p95_ms_24h: null,
     }),
   ];
+}
+
+export function seedOffsite(): OffsiteBackup {
+  return {
+    configured: false,
+    folder_id: "",
+    client_email: "",
+    key_suffix: null,
+    key_updated_at: null,
+    delivered_at: null,
+    last_check: null,
+    secrets_enabled: true,
+  };
 }
 
 function seedMailLog(): MailLogItem[] {
@@ -423,6 +449,7 @@ export function seedIntegrations(): IntegrationsMock {
       security: "starttls",
       username: "mailer",
     },
+    offsite: seedOffsite(),
     mailLog: seedMailLog(),
     services: seedServices(),
     models: seedModels(),

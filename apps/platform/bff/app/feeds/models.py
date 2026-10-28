@@ -26,6 +26,7 @@ ObjectKind = Literal[
     "chat",
     "ticket",
     "integration",
+    "supplier_order",
 ]
 StepCode = Literal[
     "REQUEST", "RESOLUTION", "CALCULATION", "QUOTE", "CONTRACT", "PAYMENT", "DONE", "LOST"
