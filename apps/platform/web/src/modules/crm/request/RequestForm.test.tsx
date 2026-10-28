@@ -187,7 +187,11 @@ describe("«Создать заявку» из лида и из клиента (
     );
 
     fireEvent.click(within(panel).getByRole("button", { name: /Создать заявку → директору/ }));
-    expect(await within(panel).findByText("Заявка создана")).toBeVisible();
+    // Повтор идёт после ответа 503 и полной перерисовки формы: на загруженном раннере CI это дольше
+    // секунды по умолчанию у findBy*.
+    expect(
+      await within(panel).findByText("Заявка создана", undefined, { timeout: 5000 }),
+    ).toBeVisible();
     expect(keys).toHaveLength(1);
     expect(readLeads().keys[keys[0] ?? ""]).toBeDefined();
     expect(requestsOf("ООО Демо-Строй")).toBe(1);
