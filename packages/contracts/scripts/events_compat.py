@@ -3,8 +3,9 @@
     uv run python scripts/events_compat.py [--base REF]
 
 Сравнивает каждую схему events/**/*.json (кроме examples/) и bus/subscriptions.schema.json с той же схемой в REF
-(`git show REF:<путь>`; по умолчанию переменная CONTRACTS_BASE_REF или origin/main). Файла или каталога в базе
-нет — новое, не ломающее. $ref (в том числе на _defs.vN.json) разворачиваются в обеих версиях до сравнения.
+(`git show REF:<путь>`; по умолчанию переменная CONTRACTS_BASE_REF, иначе точка ответвления HEAD от origin/main).
+Файла или каталога в базе нет — новое, не ломающее. $ref (в том числе на _defs.vN.json) разворачиваются в обеих
+версиях до сравнения.
 
 В пределах vN допустимы только новые необязательные поля (в `properties`), новые типы (файлы) и новые определения
 `$defs`; аннотации (title, description, examples, x-*) не сравниваются. Всё прочее — ломающее (код выхода 1), и сужение,
@@ -71,6 +72,23 @@ def working_tree() -> dict[str, Any]:
 
 def _git(*args: str) -> str:
     return subprocess.run(["git", *args], cwd=CONTRACTS, check=True, capture_output=True, text=True).stdout
+
+
+def default_base() -> str:
+    """База по умолчанию: CONTRACTS_BASE_REF (CI задаёт явно), иначе точка ответвления от origin/main.
+
+    Локально ветка часто отстаёт от main: сравнение с вершиной origin/main видело бы чужие слитые изменения как
+    «удалённые» (ложный красный) и заставляло бы делать merge main ради зелёного. Точка ответвления сравнивает только
+    свои изменения; итог слияния с main проверяет CI на PR (база — вершина main). Нет общей истории (мелкий клон) —
+    вершина origin/main (DECISIONS 2026-10-28).
+    """
+    env = os.environ.get("CONTRACTS_BASE_REF")
+    if env:
+        return env
+    try:
+        return _git("merge-base", "HEAD", DEFAULT_BASE).strip() or DEFAULT_BASE
+    except subprocess.CalledProcessError:
+        return DEFAULT_BASE
 
 
 def git_tree(ref: str) -> dict[str, Any]:
@@ -262,8 +280,9 @@ def check(base: Tree, head: Tree) -> list[str]:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n", 1)[0])
-    ap.add_argument("--base", default=os.environ.get("CONTRACTS_BASE_REF") or DEFAULT_BASE)
+    ap.add_argument("--base", default=None)
     args = ap.parse_args(argv)
+    args.base = args.base or default_base()
     try:
         base = git_tree(args.base)
     except SystemExit as e:

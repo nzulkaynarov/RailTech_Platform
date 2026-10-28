@@ -80,7 +80,7 @@
 | линтеры, типы, тесты, свежесть клиента orval и токенов | `make check-platform` (то же: `make -C apps/platform check`) |
 | один тест web | `cd apps/platform/web && pnpm test -- <шаблон>` |
 | один тест bff | `cd apps/platform/bff && uv run pytest tests/<файл>.py -x -q` |
-| клиент, типы и MSW-моки web из контракта | `make -C apps/platform gen-api` (после правки `platform-bff.yaml`; результат коммитится) |
+| клиент, типы и MSW-моки web из контракта | `make -C apps/platform gen-api` (после правки `platform-bff.yaml`; результат коммитится). Добавляющее изменение `info.version` не поднимает; шапка orval — без версии и описания, поэтому разница версий клиент не меняет (ORCHESTRATOR §4.1, CONTRACTS §7.1) |
 | модели ответов CRM из `packages/contracts/openapi/crm.yaml` → `bff/app/clients/crm_models.py` | `make -C apps/platform crm-models` (после изменения OpenAPI CRM или списка `ROOTS` в `scripts/gen_crm_models.py`; свежесть — `crm-models-check`, входит в `check-platform`) |
 | RBAC из `platform-rbac.yaml` → `bff/app/rbac_generated.py` и `web/src/app/rbac.generated.ts` | `make -C apps/platform rbac` (после правки матрицы или меню; проверка свежести — `rbac-check`, входит в `check-platform`) |
 | справка формата базы знаний `docs/kb` → `web/src/generated/kb-docs` (копия для сборки; равенство проверяет тест `kbDocs.test.ts`) | `make -C apps/platform kb-sync` (или `cd apps/platform/web && pnpm kb:sync`) после правки `docs/kb` |

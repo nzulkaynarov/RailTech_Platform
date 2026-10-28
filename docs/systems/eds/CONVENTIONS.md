@@ -56,7 +56,7 @@ ruff, mypy `--strict`, pytest (+ pytest-asyncio). Команды — [`README.md
   Один запрос — одна транзакция записи; событие шины — в ней же.
 - **Входящие события:** обработчик регистрируется в `app/bus/handlers.py` (`build_registry`), выполняется в транзакции со статусом inbox, идемпотентен (повтор `event id` гасит inbox;
   «не применять более старое» — по `updated_at` снимка), читает `data` терпимо (лишние поля не ошибка). Тип подписки — строка `eds` в `subscriptions.yaml`.
-- **Миграции Alembic:** одна голова (тест `test_single_head`), обратимые (`downgrade`), имена `YYYYMMDD_HHMM_slug`, без дрейфа от моделей (тест `test_models_match_migrations`);
+- **Миграции Alembic:** одна голова (тест `test_single_head`), обратимые (`downgrade`), имена файлов `YYYYMMDD_HHMM_slug`, `revision` — выданный `alembic revision` (случайный id, не `00NN_…`; старые не переименовываются; две головы — `alembic merge heads`, ORCHESTRATOR §4.1), без дрейфа от моделей (тест `test_models_match_migrations`);
   таблицы `rt_bus_*` — только библиотечные (`bus_tables`), не править. Новая модель — в `app/models/__init__.py`.
 - **Файлы:** ≤ 400 строк, функции ≤ 50; нет закомментированного кода и `TODO` без ссылки на задачу.
 
