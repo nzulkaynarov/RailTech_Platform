@@ -3339,6 +3339,186 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/crm/leads": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Клиенты · Лиды: вкладки по статусу Платформы, «мои / все / просроченные», поиск, канал
+     * @description CRM `GET /leads` (W16-D1-2b). Раздел `crm.leads` от чтения. Вкладки SPEC-v3 §7.2 — статус лида CRM `platform_status` (CRM-02): `new` «Новые», `dialog` «В диалоге», `wants_quote` «Просят КП», `client` «Стали клиентами»; `all` — все, в том числе «Без ответа» и «Отказ». `scope`: `mine` — лиды сотрудника, `overdue` — открытая передача с истёкшим SLA ответа, `all` — все. Поиск — по имени и сути запроса; канал — источник лида. Новые сверху по последнему сообщению.
+     */
+    get: operations["listCrmLeads"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/leads/{lead}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Карточка лида в боковом окне: контакты, каналы, согласие, факты квалификации, последние сообщения
+     * @description CRM `GET /leads/{id}` и последние сообщения `GET /leads/{id}/messages` (W16-D1-2b). Раздел `crm.leads` от чтения. Подтверждение заявки клиенту (`confirmation`), срок первого ответа на запрос с сайта (`first_response`) и приглашение в кабинет (`invitation`) — из D1-9. Номер лида — `L-NNNN`.
+     */
+    get: operations["getCrmLead"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/clients": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Клиенты · Клиенты: список с поиском по названию и ИНН (и автопоиск формы «Создать заявку»)
+     * @description CRM `GET /clients?q=` (W16-D1-2b). Раздел `crm.clients` от чтения. Сначала недавно активные.
+     */
+    get: operations["listCrmClients"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/clients/{id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Карточка клиента 360°: компания, контакты с каналами, переписка, заявки и проекты, документы, приглашение
+     * @description CRM `GET /clients/{id}`, `/clients/{id}/contacts`, `GET /deals?client_id=`, `GET /documents?client_id=` (W16-D1-2b). Раздел `crm.clients` от чтения. Контакты — только живые (удалённые CRM не отдаёт; архива контактов в CRM нет, B-030). Заявки и проекты — зеркало CRM: номер ЗВ/ПР из ERP, шаг пути из 7 по стадии ERP, «что видит клиент» — ключ `client-statuses.yaml`, состояние передачи в ERP; заявка, ещё не дошедшая до ERP, — без номера, со статусом передачи. Источник не ответил — `sources` и раздел без данных.
+     */
+    get: operations["getCrmClient"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/clients/{id}/invitation": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Отправить приглашение в кабинет повторно другим каналом
+     * @description CRM `POST /clients/{id}/invitation` (D1-9). Раздел `crm.clients` полный. Ответ — итог приглашения; канал недоступен — `status = failed` и `error_text` словами (не ошибка запроса).
+     */
+    post: operations["resendCrmClientInvitation"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/requests": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * «+ Создать заявку» из лида или клиента → в ERP, письмо директору во Входящие
+     * @description CRM `POST /leads/{id}/actions/create_request` (есть `lead`) или `POST /clients/{id}/actions/create_request` (только `client_id`), W16-D1-2b. Раздел `crm.clients` полный. Лид становится клиентом, заявка уходит в ERP задачей CRM; ERP регистрирует письмо ВХ директору в EDS. `request_key` — ключ формы (UUID на открытие формы): повтор с тем же ключом — 200 `created: false` с той же заявкой, без второй; новая — 201. Файл письма загружается заранее `POST /crm/request-files`. Отказы CRM — `details.reason`: `handoff_no_consent` (нет согласия), `consent_via_bot`, `contact_channel_required`, `request_not_allowed` (лид в отказе), `request_key_reused`, `erp_not_configured`, `not_lead_owner`, `telegram_linked_elsewhere`.
+     */
+    post: operations["createCrmRequest"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/requests/{deal}/retry": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * «Повторить отправку в ERP» для заявки с ошибкой передачи
+     * @description CRM `POST /deals/{id}/actions/retry_request` (B-082). Раздел `crm.clients` полный. Заявка снова уходит в ERP той же задачей и с тем же ключом (второй заявки не будет). Не в ошибке — 409 `request_not_failed`; данные заявки изменились после первой отправки — 409 `request_not_retryable` (создать заявку заново).
+     */
+    post: operations["retryCrmRequest"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/request-files": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Письмо на имя директора для заявки — файл в EDS
+     * @description EDS `POST /files` от имени сотрудника (обмен токена `aud=eds`), W16-D1-2b. BFF читает тело до предела 25 МБ и передаёт EDS как есть. id файла уходит в `RequestFormIn.letter_file_id`; EDS прикрепляет файл к письму ВХ, если его загрузил менеджер заявки. Больше 25 МБ — 413, не PDF/изображение/Office — 415. Раздел `crm.clients` полный.
+     */
+    post: operations["uploadCrmRequestFile"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/crm/request-files/from-message": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /**
+     * Взять вложение из переписки как письмо директору
+     * @description Вложение сообщения лида CRM (`GET /leads/{id}/messages/{m}/attachments/{i}`) копируется в EDS `POST /files` от имени сотрудника — тот же ответ, что у загрузки. Разделы `crm.leads` (чтение) и `crm.clients` (полный).
+     */
+    post: operations["copyCrmMessageAttachmentToRequest"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -6575,6 +6755,282 @@ export interface components {
     ReturnToBotIn: {
       note?: string | null;
     };
+    /**
+     * @description Статус лида для Платформы (CRM-02): Новый, В диалоге, Просит КП, Без ответа, Клиент, Отказ; подпись — у экрана
+     * @enum {string}
+     */
+    LeadPlatformStatus: "new" | "dialog" | "wants_quote" | "no_answer" | "client" | "lost";
+    LeadRow: {
+      lead: string;
+      name: string;
+      status: components["schemas"]["LeadPlatformStatus"];
+      channel: components["schemas"]["MessageChannel"];
+      language: components["schemas"]["Language"];
+      assigned: components["schemas"]["PersonRef"] | null;
+      /** @description Суть запроса от бота */
+      need: string | null;
+      /** Format: date-time */
+      last_message_at: string | null;
+      /** @description Лид написал после последнего ответа менеджера */
+      unread: boolean;
+      /** @description Открытая передача от бота ждёт «Забрать» */
+      handoff_open: boolean;
+      /** @description Истёк срок ответа по передаче */
+      overdue: boolean;
+      /** @description Клиент, если лид уже стал клиентом */
+      client_id: number | null;
+    };
+    LeadPage: {
+      items: components["schemas"]["LeadRow"][];
+      total: number;
+    };
+    LeadMessagePreview: {
+      /** @enum {string} */
+      author: "lead" | "bot" | "manager" | "system";
+      text: string;
+      /** Format: date-time */
+      at: string;
+    };
+    /** @description Сообщение клиенту от системы (подтверждение заявки, приглашение) — канал и итог словами */
+    LeadNotice: {
+      channel: string | null;
+      /** @enum {string} */
+      status: "queued" | "sent" | "failed" | "skipped";
+      /** Format: date-time */
+      sent_at: string | null;
+      /** @description Почему не ушло — словами CRM */
+      error_text: string | null;
+    };
+    /** @description Приглашение в кабинет (D1-9) — итог и «Отправить повторно другим каналом» */
+    ClientInvitation: {
+      /** @enum {string} */
+      status: "queued" | "sent" | "failed" | "skipped";
+      channel: string | null;
+      sent_via: string[];
+      /** Format: date-time */
+      sent_at: string | null;
+      contact_name: string | null;
+      error_text: string | null;
+      available_channels: ("email" | "telegram" | "both")[];
+      /** @enum {string|null} */
+      suggested_channel: "email" | "telegram" | "both" | null;
+      can_resend: boolean;
+    };
+    LeadCard: {
+      lead: string;
+      name: string;
+      status: components["schemas"]["LeadPlatformStatus"];
+      channel: components["schemas"]["MessageChannel"];
+      language: components["schemas"]["Language"];
+      assigned: components["schemas"]["PersonRef"] | null;
+      contacts: components["schemas"]["ConversationContacts"];
+      consent: {
+        /** Format: date-time */
+        given_at: string | null;
+        /**
+         * @description Отметка сотрудника (звонок, письмо, бумага); `null` — согласие дано в боте или его нет
+         * @enum {string|null}
+         */
+        method: "phone" | "email" | "paper" | null;
+      };
+      facts: components["schemas"]["HandoffFacts"];
+      need: string | null;
+      /** @description Названия продуктов */
+      interest: string[];
+      handoff: components["schemas"]["HandoffInfo"] | null;
+      last_messages: components["schemas"]["LeadMessagePreview"][];
+      client: components["schemas"]["ClientShort"] | null;
+      confirmation: components["schemas"]["LeadNotice"] | null;
+      /** @description Срок первого ответа на запрос с сайта (D1-9) */
+      first_response: {
+        /** Format: date-time */
+        due_at: string | null;
+        overdue: boolean;
+      };
+      invitation: components["schemas"]["ClientInvitation"] | null;
+    };
+    ClientShort: {
+      id: number;
+      name: string;
+      inn: string | null;
+    };
+    ClientRow: {
+      id: number;
+      name: string;
+      inn: string | null;
+      /** @description Клиент передан в бэк-офис (компания в ERP) */
+      in_erp: boolean;
+      open_requests: number;
+      /** Format: date-time */
+      last_activity_at: string | null;
+      /** @enum {string|null} */
+      handoff_status: "pending" | "done" | "failed" | null;
+    };
+    ClientList: {
+      items: components["schemas"]["ClientRow"][];
+    };
+    /** @enum {string} */
+    ClientContactChannel: "telegram" | "phone" | "email";
+    ClientContactView: {
+      id: number;
+      name: string;
+      position: string | null;
+      phone: string | null;
+      email: string | null;
+      /** @description Имя пользователя Telegram без @; пусто — Telegram не привязан или без имени */
+      telegram: string | null;
+      /** @description Каналы, по которым можно связаться (Telegram привязан, телефон, e-mail) */
+      channels: components["schemas"]["ClientContactChannel"][];
+      /** @enum {string|null} */
+      preferred_channel: "email" | "telegram" | "both" | null;
+      is_primary: boolean;
+    };
+    ClientLeadLink: {
+      lead: string;
+      name: string;
+      status: components["schemas"]["LeadPlatformStatus"];
+      /** Format: date-time */
+      last_message_at: string | null;
+    };
+    /**
+     * @description Ключ статуса для клиента (`packages/contracts/client-statuses.yaml`, SPEC-v3 §2.5); текст — у экрана
+     * @enum {string}
+     */
+    ClientSees:
+      | "in_work"
+      | "awaiting_decision"
+      | "contract_review"
+      | "contract_signing"
+      | "awaiting_payment"
+      | "checking_payment"
+      | "fulfilling"
+      | "awaiting_acceptance"
+      | "done"
+      | "rejected"
+      | "quote_expired";
+    ClientRequestRow: {
+      /** @description Заявка CRM (для «Повторить отправку в ERP») */
+      deal: number;
+      /** @description ЗВ-ГГГГ-NNN / ПР-ГГГГ-NNN из ERP; `null` — заявка ещё не дошла до ERP */
+      number: string | null;
+      title: string;
+      summary: string | null;
+      step: components["schemas"]["StepCode"];
+      /** @description Заявка стала проектом (КП принято) */
+      project: boolean;
+      client_sees: components["schemas"]["ClientSees"];
+      /** @enum {string|null} */
+      urgency: "normal" | "urgent" | null;
+      /**
+       * @description Передача заявки в ERP («Создать заявку»); `null` — заявка заведена иначе
+       * @enum {string|null}
+       */
+      transfer: "pending" | "done" | "failed" | null;
+      /** @description Код причины ошибки передачи; подпись — у экрана */
+      transfer_error: string | null;
+      /** Format: date-time */
+      created_at: string;
+      /** Format: uuid */
+      letter_file_id: string | null;
+    };
+    ClientDocumentRow: {
+      id: number;
+      title: string;
+      /** @enum {string} */
+      type: "contract" | "proposal" | "letter" | "invoice" | "act" | "other";
+      number: string | null;
+      /** Format: date */
+      date: string | null;
+      visible_to_client: boolean;
+    };
+    ClientCard: {
+      id: number;
+      name: string;
+      inn: string | null;
+      segment: string | null;
+      in_erp: boolean;
+      handoff: {
+        /** @enum {string|null} */
+        status: "pending" | "done" | "failed" | null;
+        error: string | null;
+      };
+      contacts: components["schemas"]["ClientContactView"][];
+      /** @description Переписка — лиды клиента (ссылка в «Ждут ответа») */
+      leads: components["schemas"]["ClientLeadLink"][];
+      requests: components["schemas"]["ClientRequestRow"][];
+      documents: components["schemas"]["ClientDocumentRow"][];
+      invitation: components["schemas"]["ClientInvitation"] | null;
+      /** @description Части карточки, которые CRM не отдала (`unavailable`) — экран показывает плашку в разделе */
+      sources: {
+        contacts: components["schemas"]["SourceState"];
+        requests: components["schemas"]["SourceState"];
+        documents: components["schemas"]["SourceState"];
+      };
+    };
+    InvitationResendIn: {
+      /** @enum {string} */
+      channel: "email" | "telegram" | "both";
+      contact_id?: number | null;
+    };
+    /** @description Существующий контакт клиента (`contact_id`) или новый — имя и хотя бы один канал (e-mail не обязателен) */
+    RequestContactFormIn: {
+      contact_id?: number | null;
+      full_name?: string | null;
+      position?: string | null;
+      phone?: string | null;
+      email?: string | null;
+      /**
+       * @description Telegram лида — канал нового контакта
+       * @default false
+       */
+      use_lead_telegram: boolean;
+    };
+    RequestFormIn: {
+      /**
+       * Format: uuid
+       * @description Ключ формы — один на открытие; повтор не создаёт вторую заявку
+       */
+      request_key: string;
+      /** @description Лид, из которого создаётся заявка */
+      lead?: string | null;
+      /** @description Выбранный клиент (автопоиск); без лида — обязателен */
+      client_id?: number | null;
+      company?: {
+        name: string;
+        inn?: string | null;
+      } | null;
+      contact: components["schemas"]["RequestContactFormIn"];
+      summary: string;
+      /** @enum {string} */
+      urgency: "normal" | "urgent";
+      /** Format: uuid */
+      letter_file_id?: string | null;
+      consent?: {
+        /** @enum {string} */
+        method: "phone" | "email" | "paper";
+        comment?: string | null;
+      } | null;
+    };
+    RequestCreatedView: {
+      client_id: number;
+      deal: number;
+      lead: string | null;
+      /** @description `false` — повтор формы с тем же ключом: заявка уже была создана */
+      created: boolean;
+      /** @enum {string} */
+      transfer: "pending" | "done" | "failed";
+    };
+    RequestRetriedView: {
+      deal: number;
+      client_id: number;
+      /** @enum {string} */
+      transfer: "pending" | "done" | "failed";
+    };
+    RequestFileFromMessageIn: {
+      lead: string;
+      message: number;
+      index: number;
+    };
   };
   responses: {
     /** @description `SESSION_EXPIRED` — сессии нет, истекла или сотрудник отключён */
@@ -6698,6 +7154,15 @@ export interface components {
         "application/json": components["schemas"]["Error"];
       };
     };
+    /** @description 409 `CONFLICT` — CRM отказала по состоянию; код — в `details.reason` (`request_not_allowed`, `request_key_reused`, `consent_via_bot`, `erp_not_configured`, `telegram_linked_elsewhere`, `request_not_failed`, `request_not_retryable`) */
+    RequestConflict: {
+      headers: {
+        [name: string]: unknown;
+      };
+      content: {
+        "application/json": components["schemas"]["Error"];
+      };
+    };
     /** @description 409 `CONFLICT` — состояние лида не позволяет действие; код CRM — в `details.reason` (`lead_taken` с `details.assigned_user_name`, `take_first`, `no_consent`, `already_with_bot`, `delivery_unconfirmed`, `reply_in_progress` — ответ с этим `client_message_id` ещё отправляется, повтор безопасен, `assist_disabled`, `assist_budget`, `assist_empty`, `assist_no_history`) */
     MessagesConflict: {
       headers: {
@@ -6738,6 +7203,8 @@ export interface components {
   parameters: {
     /** @description Номер обращения `ОБР-0012` (в адресе — закодированный) */
     TicketNumberPath: string;
+    /** @description Клиент CRM (id) */
+    ClientIdPath: number;
     /** @description Номер лида `L-NNNN` */
     LeadNumber: string;
     /** @description `crm_user_id` — число без ведущих нулей (`07` и `007` — не адрес сотрудника) */
@@ -12968,6 +13435,290 @@ export interface operations {
       };
       401: components["responses"]["SessionExpired"];
       403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listCrmLeads: {
+    parameters: {
+      query?: {
+        tab?: "all" | "new" | "dialog" | "wants_quote" | "client";
+        scope?: "all" | "mine" | "overdue";
+        q?: string;
+        channel?: components["schemas"]["MessageChannel"];
+        offset?: number;
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Страница лидов */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LeadPage"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getCrmLead: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Номер лида `L-NNNN` */
+        lead: components["parameters"]["LeadNumber"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Карточка лида */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LeadCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  listCrmClients: {
+    parameters: {
+      query?: {
+        q?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Клиенты */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ClientList"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  getCrmClient: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        /** @description Клиент CRM (id) */
+        id: components["parameters"]["ClientIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Карточка клиента */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ClientCard"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  resendCrmClientInvitation: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Клиент CRM (id) */
+        id: components["parameters"]["ClientIdPath"];
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["InvitationResendIn"];
+      };
+    };
+    responses: {
+      /** @description Итог приглашения */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["ClientInvitation"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["RequestConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  createCrmRequest: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RequestFormIn"];
+      };
+    };
+    responses: {
+      /** @description Повтор формы — та же заявка */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RequestCreatedView"];
+        };
+      };
+      /** @description Заявка создана, уходит в ERP */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RequestCreatedView"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["RequestConflict"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  retryCrmRequest: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path: {
+        /** @description Заявка CRM (id строки зеркала) */
+        deal: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Заявка снова передаётся */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RequestRetriedView"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      409: components["responses"]["RequestConflict"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  uploadCrmRequestFile: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "multipart/form-data": components["schemas"]["EdsFileUpload"];
+      };
+    };
+    responses: {
+      /** @description Файл сохранён в EDS */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EdsFile"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      413: components["responses"]["EdsPayloadTooLarge"];
+      415: components["responses"]["EdsUnsupportedMedia"];
+      422: components["responses"]["ValidationFailed"];
+      503: components["responses"]["BackendUnavailable"];
+    };
+  };
+  copyCrmMessageAttachmentToRequest: {
+    parameters: {
+      query?: never;
+      header: {
+        /** @description Значение cookie `rt_pf_csrf` */
+        "X-CSRF-Token": components["parameters"]["CsrfToken"];
+      };
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["RequestFileFromMessageIn"];
+      };
+    };
+    responses: {
+      /** @description Файл сохранён в EDS */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["EdsFile"];
+        };
+      };
+      401: components["responses"]["SessionExpired"];
+      403: components["responses"]["Forbidden"];
+      404: components["responses"]["NotFound"];
+      413: components["responses"]["EdsPayloadTooLarge"];
+      415: components["responses"]["EdsUnsupportedMedia"];
       503: components["responses"]["BackendUnavailable"];
     };
   };
