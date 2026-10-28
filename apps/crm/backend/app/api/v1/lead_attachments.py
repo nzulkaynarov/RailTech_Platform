@@ -2,7 +2,8 @@
 
 Бот сохраняет вложения Telegram в бакет `tg-attachments` (`app/bot/attachments.py`); в переписке
 у вложения — имя, тип, размер и ключ хранилища. Экран сотрудника получает файл этим маршрутом по
-номеру вложения в сообщении — ключ и адрес хранилища наружу не уходят. Право — `leads:read`.
+номеру вложения в сообщении — ключ и адрес хранилища наружу не уходят. Право — `leads:read` или
+`chats:read` с объектной проверкой диалога (B-D18-1, `app/api/dialog_access.py`).
 """
 
 from typing import Annotated
@@ -12,7 +13,8 @@ import structlog
 from fastapi import APIRouter, Depends, Path
 from fastapi.responses import Response
 
-from app.api.deps import ContainerDep, require
+from app.api.deps import ContainerDep
+from app.api.dialog_access import dialog
 from app.domain.errors import NotFoundError, UpstreamUnavailableError
 from app.repositories import crm
 from app.repositories import leads as leads_repo
@@ -22,7 +24,7 @@ logger = structlog.get_logger(__name__)
 
 router = APIRouter(prefix="/api/v1", tags=["leads"])
 
-Reader = Annotated[Principal, Depends(require("leads", "read"))]
+Reader = Annotated[Principal, Depends(dialog("read"))]
 MAX_ATTACHMENTS = 20
 
 

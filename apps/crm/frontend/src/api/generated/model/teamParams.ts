@@ -6,7 +6,7 @@ import type { TeamLevel } from "./teamLevel";
 
 export type TeamParams = {
   /**
-   * Раздел каталога (`erp.calc.goods`, `eds.payments`, …): сотрудники с этим разделом. Нужен `level`. Право — чтение сотрудников (`users:read`, раздел `admin` не ниже чтения); без `section` — `leads:read`. Раздела нет в каталоге — 422.
+   * Раздел каталога (`erp.calc.goods`, `eds.payments`, …): сотрудники с этим разделом. Нужен `level`. Право — чтение сотрудников (`users:read`, раздел `admin` не ниже чтения); без `section` — `leads:read` или `chats:read`. Раздела нет в каталоге — 422.
    */
   section?: string | null;
   /**

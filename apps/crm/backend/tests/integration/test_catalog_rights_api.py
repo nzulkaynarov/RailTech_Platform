@@ -7,6 +7,11 @@
 эндпоинт CRM требует своё право, и ответ ровно такой, какой даёт каталог: право есть — не отказ по
 праву (чтения — 200), права нет — 403 «not allowed».
 
+Переписка (B-D18-1): сообщения, вложения и заметки лида, ответ и заметка — `leads:<действие>` или
+`chats:<действие>`; держатель только `chats:*` получает 404 — засеянный лид не его диалог (правило
+участия и зоны — `test_chat_access_api.py`). Список диалогов `GET /chats` и имена `GET /team` —
+`leads:read` или `chats:read`.
+
 Случаи: шесть предустановок ролей (две системные и четыре шаблона), роль на каждый раздел с правами
 CRM на каждом уровне (`crm.leads` full — менеджер по базовой роли, но без клиентов и сделок),
 раздел без прав CRM, объединение двух ролей. Отдельно — `MessageOut` без `storage_key`.
@@ -73,10 +78,6 @@ READS: list[Call] = [
     ("GET", "/api/v1/inbox", None, ("leads", "read")),
     ("GET", "/api/v1/leads", None, ("leads", "read")),
     ("GET", "/api/v1/leads/{lead}", None, ("leads", "read")),
-    ("GET", "/api/v1/leads/{lead}/messages", None, ("leads", "read")),
-    ("GET", "/api/v1/leads/{lead}/messages/{message}/attachments/0", None, ("leads", "read")),
-    ("GET", "/api/v1/leads/{lead}/notes", None, ("leads", "read")),
-    ("GET", "/api/v1/team", None, ("leads", "read")),
     ("GET", "/api/v1/team?section=eds.payments&level=full", None, ("users", "read")),
     ("GET", "/api/v1/clients", None, ("clients", "read")),
     ("GET", "/api/v1/deals", None, ("deals", "read")),
@@ -94,11 +95,22 @@ READS: list[Call] = [
 # (ответ может быть 403 по лиду, 404, 409 — это объектные правила, не каталог).
 WRITES: list[Call] = [
     ("POST", "/api/v1/leads/{lead}/actions/take", None, ("leads", "take")),
-    ("POST", "/api/v1/leads/{lead}/actions/note", {"text": "заметка"}, ("leads", "note")),
-    ("POST", "/api/v1/leads/{lead}/messages", {"text": "Здравствуйте"}, ("leads", "reply")),
     ("POST", "/api/v1/clients", {"name": "ООО Матрица"}, ("clients", "write")),
     ("POST", "/api/v1/deals", {"title": "Матрица прав"}, ("deals", "write")),
 ]
+
+
+# Переписка лида (B-D18-1): `leads:<действие>` — любой диалог; только `chats:<действие>` — 404
+# (засеянный лид не диалог сотрудника); ни того ни другого — 403 по праву.
+DIALOG: list[tuple[str, str, dict[str, Any] | None, str]] = [
+    ("GET", "/api/v1/leads/{lead}/messages", None, "read"),
+    ("GET", "/api/v1/leads/{lead}/messages/{message}/attachments/0", None, "read"),
+    ("GET", "/api/v1/leads/{lead}/notes", None, "read"),
+    ("POST", "/api/v1/leads/{lead}/actions/note", {"text": "заметка"}, "note"),
+    ("POST", "/api/v1/leads/{lead}/messages", {"text": "Здравствуйте"}, "reply"),
+]
+# Списки без объекта: достаточно реестра или переписки.
+EITHER: list[str] = ["/api/v1/team", "/api/v1/chats"]
 
 
 class StubStorage:
@@ -210,6 +222,27 @@ async def _check(
             assert not _denied_by_right(response), label
             if method == "GET":
                 assert response.status_code == 200, label
+        else:
+            assert _denied_by_right(response), label
+
+    for method, template, body, action in DIALOG:
+        path = template.format(**ids)
+        response = client.request(method, path, json=body, headers=headers)
+        label = (method, path, action, sorted(merged.items()), response.status_code, response.text)
+        if ("leads", action) in rights:
+            assert not _denied_by_right(response), label
+            if method == "GET":
+                assert response.status_code == 200, label
+        elif ("chats", action) in rights:
+            assert response.status_code == 404, label
+        else:
+            assert _denied_by_right(response), label
+
+    for path in EITHER:
+        response = client.get(path, headers=headers)
+        label = (path, sorted(merged.items()), response.status_code, response.text)
+        if {("leads", "read"), ("chats", "read")} & rights:
+            assert response.status_code == 200, label
         else:
             assert _denied_by_right(response), label
 

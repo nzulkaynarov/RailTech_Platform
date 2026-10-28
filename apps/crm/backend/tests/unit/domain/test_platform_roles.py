@@ -221,7 +221,11 @@ EXPECTED: dict[tuple[str, str], tuple[set[str], set[str]]] = {
     (
         "eds.payments",
         "full",
-    ): (set(), {"finance.invoice", "finance.payment", "finance.rates", "data.export"}),
+    ): (
+        # B-D18-1: зона переписки «Счета и оплаты» — только вместе с `chats:read`.
+        {"chats:invoiced"},
+        {"finance.invoice", "finance.payment", "finance.rates", "data.export"},
+    ),
     ("eds.memo.create", "read"): NOTHING,
     ("eds.memo.create", "full"): NOTHING,
     ("eds.memo.approve", "read"): NOTHING,
@@ -237,11 +241,12 @@ EXPECTED: dict[tuple[str, str], tuple[set[str], set[str]]] = {
     ): (set(), {"catalog.manage", "catalog.publish", "supply.manage", "fulfillment.manage"}),
     ("chats.internal", "read"): NOTHING,
     ("chats.internal", "full"): NOTHING,
-    ("chats.external", "read"): ({"leads:read"}, set()),
+    # B-D18-1: переписка отдельно от реестра лидов — `chats:*`, а не `leads:*`.
+    ("chats.external", "read"): ({"chats:read"}, set()),
     (
         "chats.external",
         "full",
-    ): ({"leads:read", "leads:reply", "leads:note", "leads:assist"}, set()),
+    ): ({"chats:read", "chats:reply", "chats:note", "chats:assist"}, set()),
     ("company.settings", "read"): NOTHING,
     ("company.settings", "full"): (set(), {"settings.edit", "settings.charge_templates"}),
     ("admin", "read"): (ADMIN_READ, set()),

@@ -114,6 +114,7 @@ import type {
   Error,
   EscalationDryRun,
   EscalationSettingsIn,
+  ExternalChatList,
   ExternalService,
   ExternalServiceDetail,
   ExternalServiceList,
@@ -157,6 +158,7 @@ import type {
   ListEdsDealOptionsParams,
   ListEdsDocumentsParams,
   ListEmployeesParams,
+  ListExternalChatsParams,
   ListKbDocumentsParams,
   ListKbGapsParams,
   ListLettersParams,
@@ -22837,7 +22839,7 @@ export const getGetCrmThreadUrl = (lead: string, params?: GetCrmThreadParams) =>
 };
 
 /**
- * CRM `GET /leads/{id}/messages` (страница, старые выше), `GET /leads/{id}/notes` (только первая страница — без `before`) и `GET /team` (имена менеджеров). Раздел `crm.leads` от чтения. Подгрузка истории — `before` = id самого старого показанного сообщения. Вложения — ссылками BFF (`attachments[].url`): адреса и ключи хранилища наружу не уходят.
+ * CRM `GET /leads/{id}/messages` (страница, старые выше), `GET /leads/{id}/notes` (только первая страница — без `before`) и `GET /team` (имена менеджеров). Раздел `crm.leads` или `chats.external` от чтения (B-D18-1): держателю только `chats.external` CRM открывает лишь диалоги, где он участвует, и диалоги зоны «Счета и оплаты» (сделки клиента со счётом); чужой диалог — 404 `NOT_FOUND`, BFF проверку CRM не обходит. Подгрузка истории — `before` = id самого старого показанного сообщения. Вложения — ссылками BFF (`attachments[].url`): адреса и ключи хранилища наружу не уходят.
  * @summary Лента диалога: сообщения клиента, бота и менеджера, вложения, заметки команды
  */
 export const getCrmThread = async (
@@ -22980,7 +22982,7 @@ export const getDownloadCrmAttachmentUrl = (lead: string, message: number, index
 };
 
 /**
- * CRM `GET /leads/{id}/messages/{message}/attachments/{index}` потоком. Раздел `crm.leads` от чтения. Ответ — `Content-Disposition: attachment` и `X-Content-Type-Options: nosniff`: файл скачивается, браузер его не исполняет. Файл не сохранён (до согласия, больше 20 МБ) — 404; хранилище CRM недоступно — 502 `INTEGRATION_FAILED`.
+ * CRM `GET /leads/{id}/messages/{message}/attachments/{index}` потоком. Раздел `crm.leads` или `chats.external` от чтения; диалог проверяет CRM, как у `getCrmThread` (чужой — 404). Ответ — `Content-Disposition: attachment` и `X-Content-Type-Options: nosniff`: файл скачивается, браузер его не исполняет. Файл не сохранён (до согласия, больше 20 МБ) — 404; хранилище CRM недоступно — 502 `INTEGRATION_FAILED`.
  * @summary Вложение сообщения клиента (файл)
  */
 export const downloadCrmAttachment = async (
@@ -23792,6 +23794,169 @@ export const useReturnCrmLeadToBot = <
 > => {
   return useMutation(getReturnCrmLeadToBotMutationOptions(options), queryClient);
 };
+
+export const getListExternalChatsUrl = (params?: ListExternalChatsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/chats/external?${stringifiedParams}`
+    : `/api/v1/chats/external`;
+};
+
+/**
+ * CRM `GET /chats` (B-D18-1). Раздел `chats.external` или `crm.leads` от чтения — иначе 403 до CRM. Какие диалоги открыты, решает CRM: держателю `crm.leads` — все (`access = registry`); держателю только `chats.external` — где он участвует (ответственный за лида, клиента или сделку, автор ответа; `participant`) и, если у него ещё раздел «Счета и оплаты» полный, диалоги клиентов со счётом по сделке (`invoiced`). Данных реестра лидов (оценка, квалификация, стадия) в ответе нет. `erp_deal_id` — диалоги клиента этой заявки ERP (запросить платёжку). Переписка — `getCrmThread`, вложения — `downloadCrmAttachment`.
+ * @summary Чаты · С клиентами: диалоги, открытые сотруднику
+ */
+export const listExternalChats = async (
+  params?: ListExternalChatsParams,
+  options?: Parameters<typeof http>[1],
+): Promise<ExternalChatList> => {
+  return http<ExternalChatList>(getListExternalChatsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListExternalChatsQueryKey = (params?: ListExternalChatsParams) => {
+  return [`/api/v1/chats/external`, ...(params ? [params] : [])] as const;
+};
+
+export const getListExternalChatsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listExternalChats>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListExternalChatsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listExternalChats>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListExternalChatsQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listExternalChats>>> = ({ signal }) =>
+    listExternalChats(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listExternalChats>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> };
+};
+
+export type ListExternalChatsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listExternalChats>>
+>;
+export type ListExternalChatsQueryError = ErrorType<
+  SessionExpiredResponse | ForbiddenResponse | ValidationFailedResponse | BackendUnavailableResponse
+>;
+
+export function useListExternalChats<
+  TData = Awaited<ReturnType<typeof listExternalChats>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params: undefined | ListExternalChatsParams,
+  options: {
+    query: Partial<UseQueryOptions<Awaited<ReturnType<typeof listExternalChats>>, TError, TData>> &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listExternalChats>>,
+          TError,
+          Awaited<ReturnType<typeof listExternalChats>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListExternalChats<
+  TData = Awaited<ReturnType<typeof listExternalChats>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListExternalChatsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listExternalChats>>, TError, TData>> &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listExternalChats>>,
+          TError,
+          Awaited<ReturnType<typeof listExternalChats>>
+        >,
+        "initialData"
+      >;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+export function useListExternalChats<
+  TData = Awaited<ReturnType<typeof listExternalChats>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListExternalChatsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listExternalChats>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+/**
+ * @summary Чаты · С клиентами: диалоги, открытые сотруднику
+ */
+
+export function useListExternalChats<
+  TData = Awaited<ReturnType<typeof listExternalChats>>,
+  TError = ErrorType<
+    | SessionExpiredResponse
+    | ForbiddenResponse
+    | ValidationFailedResponse
+    | BackendUnavailableResponse
+  >,
+>(
+  params?: ListExternalChatsParams,
+  options?: {
+    query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listExternalChats>>, TError, TData>>;
+    request?: SecondParameter<typeof http>;
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+  const queryOptions = getListExternalChatsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<TData, TError> & {
+    queryKey: DataTag<QueryKey, TData, TError>;
+  };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
 
 export const getListCrmReplyTemplatesUrl = () => {
   return `/api/v1/crm/reply-templates`;

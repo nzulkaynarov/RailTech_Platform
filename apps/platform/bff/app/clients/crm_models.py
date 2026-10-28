@@ -276,6 +276,53 @@ class Created(BaseModel):
     id: Annotated[int, Field(title="Id")]
 
 
+class DialogAccess(StrEnum):
+    """
+    Почему сотруднику открыт диалог (поле `access` в `GET /chats`).
+    """
+
+    registry = "registry"
+    participant = "participant"
+    invoiced = "invoiced"
+
+
+class DialogOut(BaseModel):
+    """
+    Диалог лида без данных реестра (оценка, квалификация, стадия — в карточке лида).
+    """
+
+    access: DialogAccess
+    """
+    Почему диалог открыт: `registry` — реестр лидов (`leads:read`), `participant` — сотрудник участвует (ответственный за лида, клиента или сделку, автор ответа), `invoiced` — зона «Счета и оплаты» (`chats:invoiced`)
+    """
+    assigned_user_id: Annotated[int | None, Field(title="Assigned User Id")]
+    client_id: Annotated[int | None, Field(title="Client Id")]
+    display_name: Annotated[str, Field(title="Display Name")]
+    invoiced: Annotated[bool, Field(title="Invoiced")]
+    """
+    По сделке клиента ERP выставила счёт
+    """
+    language: Annotated[str, Field(title="Language")]
+    last_lead_msg_at: Annotated[AwareDatetime | None, Field(title="Last Lead Msg At")]
+    """
+    Последнее сообщение клиента
+    """
+    last_message_at: Annotated[AwareDatetime | None, Field(title="Last Message At")]
+    """
+    Последнее сообщение в диалоге (клиента, бота или сотрудника)
+    """
+    lead_id: Annotated[int, Field(title="Lead Id")]
+    source: Annotated[str, Field(title="Source")]
+    """
+    Канал лида: telegram, web, phone, email, referral
+    """
+
+
+class DialogPage(BaseModel):
+    items: Annotated[list[DialogOut], Field(title="Items")]
+    total: Annotated[int, Field(title="Total")]
+
+
 class DryRunResponse(BaseModel):
     by_code_candidate: Annotated[dict[str, int], Field(title="By Code Candidate")]
     by_code_current: Annotated[dict[str, int], Field(title="By Code Current")]

@@ -37,7 +37,11 @@ export function useBridgeView(
   const intro = variant === "page" ? "intro" : "short";
   const when = t("bridge:when", { when: t(`bridge:whenValue.${entry.when}`) });
 
-  const legacy = entry.legacy;
+  // Старый экран без нужного раздела ничего не покажет (B-D18-1) — тогда честно «кто делает», без кнопки.
+  const legacy =
+    entry.legacy && (!entry.legacyNeeds || canSee(me, { resource: entry.legacyNeeds }))
+      ? entry.legacy
+      : undefined;
   if (legacy) {
     const system = legacy.system;
     const where = t(`bridge:where.${legacy.where}`);

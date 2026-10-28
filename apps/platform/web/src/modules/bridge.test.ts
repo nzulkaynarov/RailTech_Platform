@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { RESOURCES } from "../app/rbac.generated";
 import { resources } from "../shared/i18n";
 import {
   BRIDGE,
@@ -34,6 +35,16 @@ describe("мост в старые экраны: карта разделов-з�
     for (const [id, entry] of Object.entries(BRIDGE)) {
       expect(Boolean(entry.legacy || entry.who || entry.internal), id).toBe(true);
       expect(["soon", "pilot"], id).toContain(entry.when);
+    }
+  });
+
+  it("старый экран с нужным разделом (B-D18-1): раздел есть в каталоге, и без него есть текст «кто делает»", () => {
+    const needing = Object.entries(BRIDGE).filter(([, entry]) => entry.legacyNeeds !== undefined);
+    expect(needing.map(([id]) => id)).toEqual(["chats.external"]);
+    for (const [id, entry] of needing) {
+      expect(Object.keys(RESOURCES), id).toContain(entry.legacyNeeds);
+      expect(entry.legacy, id).toBeDefined();
+      expect(entry.who, id).toBeDefined();
     }
   });
 

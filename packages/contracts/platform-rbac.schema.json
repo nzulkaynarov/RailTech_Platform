@@ -112,7 +112,12 @@
         "external_services:read",
         "external_services:write",
         "tickets:read",
-        "tickets:write"
+        "tickets:write",
+        "chats:read",
+        "chats:reply",
+        "chats:note",
+        "chats:assist",
+        "chats:invoiced"
       ]
     },
     "edsPermission": {

@@ -56,6 +56,29 @@ describe("SectionStubPage · раздел с мостом", () => {
     expect(within(page).getByText("Когда появится: в ближайшем обновлении.")).toBeVisible();
   });
 
+  it("«Чаты · С клиентами» (B-D18-1): с разделом лидов — «Входящие» старой CRM, без него — кто делает, без кнопки", async () => {
+    signInAs("manager@demo.example");
+    renderApp("/chats?scope=external");
+    let page = await main();
+    expect(await within(page).findByRole("link", { name: /Открыть в старой CRM/ })).toHaveAttribute(
+      "href",
+      "http://crm.localhost:8088/inbox",
+    );
+    cleanup();
+    endSession();
+
+    signInAs("accountant@demo.example");
+    renderApp("/chats?scope=external");
+    page = await main();
+    expect(
+      within(page).getByText(
+        "Сейчас этой работы в интерфейсе нет; её делает менеджер клиента: попросите его переслать нужное сообщение или файл.",
+      ),
+    ).toBeVisible();
+    expect(within(page).queryByRole("link", { name: /Открыть в/ })).toBeNull();
+    expect(page).not.toHaveTextContent("старой CRM");
+  });
+
   it("«Каналы связи» отсылают в «Настройки · Telegram-бот», а не в «Подключения» (W15-G-8)", async () => {
     signInAs("all@demo.example");
     renderApp("/crm/channels");

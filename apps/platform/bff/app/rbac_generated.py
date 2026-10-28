@@ -138,7 +138,10 @@ RESOURCE_BACKENDS: Final[dict[str, tuple[str, ...]]] = {
     "eds.inbox": ("erp",),
     "eds.drafts": ("erp",),
     "eds.projects": ("erp",),
-    "eds.payments": ("erp",),
+    "eds.payments": (
+        "crm",
+        "erp",
+    ),
     "eds.memo.create": (),
     "eds.memo.approve": (),
     "erp.calc": ("erp",),

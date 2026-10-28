@@ -2107,6 +2107,90 @@ components:
       - date_to
       title: DeputyIn
       type: object
+    DialogAccess:
+      description: Почему сотруднику открыт диалог (поле `access` в `GET /chats`).
+      enum:
+      - registry
+      - participant
+      - invoiced
+      title: DialogAccess
+      type: string
+    DialogOut:
+      description: Диалог лида без данных реестра (оценка, квалификация, стадия — в карточке лида).
+      properties:
+        access:
+          $ref: '#/components/schemas/DialogAccess'
+          description: 'Почему диалог открыт: `registry` — реестр лидов (`leads:read`), `participant` — сотрудник участвует
+            (ответственный за лида, клиента или сделку, автор ответа), `invoiced` — зона «Счета и оплаты» (`chats:invoiced`)'
+        assigned_user_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Assigned User Id
+        client_id:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Client Id
+        display_name:
+          title: Display Name
+          type: string
+        invoiced:
+          description: По сделке клиента ERP выставила счёт
+          title: Invoiced
+          type: boolean
+        language:
+          title: Language
+          type: string
+        last_lead_msg_at:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          description: Последнее сообщение клиента
+          title: Last Lead Msg At
+        last_message_at:
+          anyOf:
+          - format: date-time
+            type: string
+          - type: 'null'
+          description: Последнее сообщение в диалоге (клиента, бота или сотрудника)
+          title: Last Message At
+        lead_id:
+          title: Lead Id
+          type: integer
+        source:
+          description: 'Канал лида: telegram, web, phone, email, referral'
+          title: Source
+          type: string
+      required:
+      - lead_id
+      - display_name
+      - source
+      - language
+      - client_id
+      - assigned_user_id
+      - last_lead_msg_at
+      - last_message_at
+      - invoiced
+      - access
+      title: DialogOut
+      type: object
+    DialogPage:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/DialogOut'
+          title: Items
+          type: array
+        total:
+          title: Total
+          type: integer
+      required:
+      - items
+      - total
+      title: DialogPage
+      type: object
     DocumentOut:
       properties:
         client_id:
@@ -8587,6 +8671,67 @@ paths:
       summary: Overview
       tags:
       - bus
+  /api/v1/chats:
+    get:
+      operationId: list_dialogs
+      parameters:
+      - description: Диалоги клиента CRM
+        in: query
+        name: client_id
+        required: false
+        schema:
+          anyOf:
+          - exclusiveMinimum: 0
+            type: integer
+          - type: 'null'
+          description: Диалоги клиента CRM
+          title: Client Id
+      - description: Диалоги клиента сделки ERP (запросить платёжку)
+        in: query
+        name: erp_deal_id
+        required: false
+        schema:
+          anyOf:
+          - exclusiveMinimum: 0
+            type: integer
+          - type: 'null'
+          description: Диалоги клиента сделки ERP (запросить платёжку)
+          title: Erp Deal Id
+      - in: query
+        name: limit
+        required: false
+        schema:
+          default: 50
+          maximum: 200
+          minimum: 1
+          title: Limit
+          type: integer
+      - in: query
+        name: offset
+        required: false
+        schema:
+          default: 0
+          minimum: 0
+          title: Offset
+          type: integer
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DialogPage'
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorOut'
+          description: Ошибка валидации
+      security:
+      - HTTPBearer: []
+      summary: List Dialogs
+      tags:
+      - chats
   /api/v1/clients:
     get:
       operationId: list_clients
@@ -13060,8 +13205,8 @@ paths:
       operationId: team
       parameters:
       - description: 'Раздел каталога (`erp.calc.goods`, `eds.payments`, …): сотрудники с этим разделом. Нужен `level`. Право
-          — чтение сотрудников (`users:read`, раздел `admin` не ниже чтения); без `section` — `leads:read`. Раздела нет в
-          каталоге — 422.'
+          — чтение сотрудников (`users:read`, раздел `admin` не ниже чтения); без `section` — `leads:read` или `chats:read`.
+          Раздела нет в каталоге — 422.'
         in: query
         name: section
         required: false
@@ -13071,8 +13216,8 @@ paths:
             type: string
           - type: 'null'
           description: 'Раздел каталога (`erp.calc.goods`, `eds.payments`, …): сотрудники с этим разделом. Нужен `level`.
-            Право — чтение сотрудников (`users:read`, раздел `admin` не ниже чтения); без `section` — `leads:read`. Раздела
-            нет в каталоге — 422.'
+            Право — чтение сотрудников (`users:read`, раздел `admin` не ниже чтения); без `section` — `leads:read` или `chats:read`.
+            Раздела нет в каталоге — 422.'
           title: Section
       - description: 'Уровень раздела не ниже: `full` или `read` (`full` ⊇ `read`).'
         in: query
