@@ -56,13 +56,19 @@ MAX_BODY_BYTES = 1_000_000  # сериализованный JSON (UTF-8)
 _JSON_DEPTH = (
     3 * MAX_DEPTH + 10
 )  # уровней JSON (узел, его content и attrs) — до json.dumps и jsonschema, без RecursionError
-_C0 = re.compile(r"[\x00-\x08\x0b-\x1f]")
+_BREAKS = re.compile(r"\r\n|[\r\x0b\x0c]")  # CR LF, CR, VT (ручной перенос Word), FF → \n
+_NONCHARACTERS = "\ufdd0-\ufdef\ufffe\uffff" + "".join(
+    f"{chr(plane * 0x10000 + 0xFFFE)}{chr(plane * 0x10000 + 0xFFFF)}" for plane in range(1, 17)
+)
+#: Удаляются: C0 (кроме \t, \n), одиночные суррогаты, нехарактеры Юникода (XML/DOCX их не принимает).
+_FORBIDDEN = re.compile(f"[\x00-\x08\x0e-\x1f\ud800-\udfff{_NONCHARACTERS}]")
 _BLOCK_CODE = re.compile(r"^doc\.[a-z][a-z0-9_]*$")
 
 
 def clean_text(text: str) -> str:
-    """Управляющие символы C0, кроме табуляции и перевода строки, вычищаются (схема их не допускает)."""
-    return _C0.sub("", text)
+    """Нормализация текста на входе: CR LF, CR, VT, FF → перевод строки; прочие C0 (кроме \\t), одиночные суррогаты и
+    нехарактеры (U+FDD0–U+FDEF, U+xFFFE/U+xFFFF) вычищаются. Схема тела этих символов не допускает."""
+    return _FORBIDDEN.sub("", _BREAKS.sub("\n", text))
 
 
 def _cleaned(value: Any) -> Any:
@@ -75,8 +81,8 @@ def _cleaned(value: Any) -> Any:
     return value
 
 
-def _check_limits(value: Any, where: str) -> None:
-    """Глубина и размер — итеративно, до любой рекурсии (json.dumps, jsonschema)."""
+def _check_depth(value: Any, where: str) -> None:
+    """Глубина — итеративно, до любой рекурсии (чистка, json.dumps, jsonschema)."""
     stack: list[tuple[Any, int, int]] = [(value, 1, 1)]
     while stack:
         item, json_depth, node_depth = stack.pop()
@@ -91,6 +97,9 @@ def _check_limits(value: Any, where: str) -> None:
         else:
             continue
         stack.extend((child, json_depth + 1, next_node) for child in children)
+
+
+def _check_size(value: Any, where: str) -> None:
     try:
         size = len(json.dumps(value, ensure_ascii=False).encode())
     except (TypeError, ValueError) as error:
@@ -103,16 +112,18 @@ def normalize_body(body: Any) -> dict[str, Any]:
     """Копия тела без управляющих символов (кроме \\t и \\n) — нормализация входа перед проверкой и хранением."""
     if not isinstance(body, Mapping):
         raise BodyError(["#: body must be a JSON object"])
-    _check_limits(body, "#")
+    _check_depth(body, "#")
     cleaned: dict[str, Any] = _cleaned(body)
+    _check_size(cleaned, "#")
     return cleaned
 
 
 def normalize_blocks(blocks: Any) -> dict[str, list[Any]]:
     if not isinstance(blocks, Mapping):
         raise BodyError(["blocks: must be an object {code: [nodes]}"])
-    _check_limits(blocks, "blocks")
+    _check_depth(blocks, "blocks")
     cleaned: dict[str, list[Any]] = _cleaned(blocks)
+    _check_size(cleaned, "blocks")
     return cleaned
 
 
@@ -120,7 +131,8 @@ def validate_body(body: Any, directory: str | Path | None = None) -> None:
     """Тело документа по схеме контракта и лимитам; все нарушения — одним `BodyError` (путь → сообщение)."""
     if not isinstance(body, Mapping):
         raise BodyError(["#: body must be a JSON object"])
-    _check_limits(body, "#")
+    _check_depth(body, "#")
+    _check_size(body, "#")
     validator = _validator(contracts_dir(directory))
     errors = sorted(validator.iter_errors(body), key=lambda e: list(e.absolute_path))
     if errors:
@@ -134,7 +146,8 @@ def validate_blocks(blocks: Any, directory: str | Path | None = None) -> None:
     """
     if not isinstance(blocks, Mapping):
         raise BodyError(["blocks: must be an object {code: [nodes]}"])
-    _check_limits(blocks, "blocks")
+    _check_depth(blocks, "blocks")
+    _check_size(blocks, "blocks")
     validator = _validator(contracts_dir(directory))
     problems: list[str] = []
     for code, nodes in blocks.items():

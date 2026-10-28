@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://railtech.uz/contracts/documents/body.schema.json",
-  "$comment": "semver 1.0.0 (ADR-0016, ADR-0020). Лимиты (ревью #295): вложенность узлов ≤ 20 и тело ≤ 1 МБ проверяет rt_docs.validate_body, строки таблицы ≤ 500 — здесь; управляющие символы, кроме \\t и \\n, запрещены (rt_docs.normalize_body вычищает их на входе). Совместимость — scripts/documents_compat.py: каждое тело-пример базы обязано проходить схему head, версия при правке растёт; мажор 2 — новый файл body.v2.schema.json с конвертером.",
+  "$comment": "semver 1.0.0 (ADR-0016, ADR-0020). Лимиты (ревью #295): вложенность узлов ≤ 20 и тело ≤ 1 МБ проверяет rt_docs.validate_body, строки таблицы ≤ 500 — здесь; управляющие символы, кроме \\t и \\n, одиночные суррогаты и нехарактеры BMP (U+FDD0–U+FDEF, U+FFFE, U+FFFF) запрещены; rt_docs.normalize_body на входе переводит CR, VT, FF в \\n и вычищает остальное, включая нехарактеры других плоскостей (их не выразить одним pattern для ajv и Python re). Совместимость — scripts/documents_compat.py: каждое тело-пример базы обязано проходить схему head, версия при правке растёт; мажор 2 — новый файл body.v2.schema.json с конвертером.",
   "title": "Тело документа RailTech (единый формат: письма, служебки, заявления, отчёты, КП, договор, счёт, акт)",
   "description": "JSON блочного редактора (узлы ProseMirror/Tiptap) плюс параметры страницы. Цвет и шрифт в теле не хранятся — их задаёт бланк. Рендер — packages/rt-docs (HTML → PDF WeasyPrint, DOCX); docs/architecture/rt-docs.md, ADR-0020.",
   "type": "object",
@@ -64,8 +64,8 @@
     "plainText300": {
       "type": "string",
       "maxLength": 300,
-      "pattern": "^[^\\u0000-\\u0008\\u000B-\\u001F]*$",
-      "description": "Текст без управляющих символов, кроме \\t и \\n"
+      "pattern": "^[^\\u0000-\\u0008\\u000B-\\u001F\\uD800-\\uDFFF\\uFDD0-\\uFDEF\\uFFFE\\uFFFF]*$",
+      "description": "Текст без управляющих символов (кроме \\t и \\n), суррогатов и нехарактеров"
     },
     "textOrVar": {
       "oneOf": [
@@ -315,7 +315,7 @@
       "required": ["type", "text"],
       "properties": {
         "type": { "const": "text" },
-        "text": { "type": "string", "minLength": 1, "maxLength": 20000, "pattern": "^[^\\u0000-\\u0008\\u000B-\\u001F]*$" },
+        "text": { "type": "string", "minLength": 1, "maxLength": 20000, "pattern": "^[^\\u0000-\\u0008\\u000B-\\u001F\\uD800-\\uDFFF\\uFDD0-\\uFDEF\\uFFFE\\uFFFF]*$" },
         "marks": {
           "type": "array",
           "maxItems": 4,

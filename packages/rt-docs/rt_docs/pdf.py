@@ -8,11 +8,7 @@
 
 from __future__ import annotations
 
-import signal
-import threading
-import time
-from collections.abc import Iterator, Mapping, Sequence
-from contextlib import contextmanager
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, replace
 from typing import Any
 
@@ -30,12 +26,13 @@ from weasyprint.urls import URLFetcher, URLFetcherResponse  # noqa: E402
 
 from .contracts import Catalog  # noqa: E402
 from .css import PageSetup  # noqa: E402
+from .deadline import Deadline, Interrupted  # noqa: E402
 from .errors import RenderTimeoutError  # noqa: E402
 from .fetcher import ResourcePolicy  # noqa: E402
 from .model import DocumentMeta, Layout, Letterhead, PageStats, RenderResult, Tuning, Value  # noqa: E402
 from .prepare import Prepared, document_html, prepare  # noqa: E402
 
-__all__ = ["Prepared", "RenderTimeoutError", "measure", "prepare", "render_pdf", "render_prepared"]
+__all__ = ["Deadline", "Prepared", "RenderTimeoutError", "measure", "prepare", "render_pdf", "render_prepared"]
 
 #: Тайм-аут рендера по умолчанию, с: счёт на 500 позиций укладывается с запасом; сервисы зовут рендер в воркере.
 DEFAULT_TIMEOUT_S = 60.0
@@ -99,44 +96,6 @@ def page_stats(document: Any) -> PageStats:
     return PageStats(pages=len(pages), last_page_fill=round(fill, 4))
 
 
-class _Interrupted(BaseException):
-    """Сигнал тайм-аута внутри WeasyPrint: BaseException, чтобы его не проглотили `except Exception` движка."""
-
-
-class Deadline:
-    """Тайм-аут рендера: жёсткий (SIGALRM) в главном потоке, мягкий (проверка между проходами) — в остальных."""
-
-    def __init__(self, seconds: float | None) -> None:
-        self.seconds = seconds
-        self.until = time.monotonic() + seconds if seconds else None
-
-    def check(self) -> None:
-        if self.until is not None and time.monotonic() >= self.until:
-            raise RenderTimeoutError(self.seconds or 0)
-
-    @contextmanager
-    def armed(self) -> Iterator[Deadline]:
-        if not self.seconds or threading.current_thread() is not threading.main_thread():
-            yield self
-            return
-
-        def interrupt(_signum: int, _frame: Any) -> None:
-            raise _Interrupted
-
-        previous = signal.signal(signal.SIGALRM, interrupt)
-        outer, _ = signal.setitimer(signal.ITIMER_REAL, self.seconds)
-        started = time.monotonic()
-        try:
-            yield self
-        except _Interrupted:
-            raise RenderTimeoutError(self.seconds) from None
-        finally:
-            signal.setitimer(signal.ITIMER_REAL, 0)
-            signal.signal(signal.SIGALRM, previous)
-            if outer:  # чужой таймер процесса — вернуть остаток
-                signal.setitimer(signal.ITIMER_REAL, max(0.001, outer - (time.monotonic() - started)))
-
-
 @dataclass(frozen=True)
 class Measured:
     """Один проход вёрстки без номеров страниц: разбивка и статистика (номера на поток не влияют)."""
@@ -185,8 +144,11 @@ def render_prepared(
 ) -> RenderResult:
     """Рендер подготовленного тела с подстройкой `tuning` (по умолчанию — из `page.tuning` тела)."""
     deadline = Deadline(timeout_s)
-    with deadline.armed():
-        return finish(prepared, measure(prepared, tuning, deadline), deadline, passes=1)
+    try:
+        with deadline.armed():
+            return finish(prepared, measure(prepared, tuning, deadline), deadline, passes=1)
+    except Interrupted:  # сигнал на выходе из блока, после armed(): тоже тайм-аут
+        raise RenderTimeoutError(timeout_s or 0) from None
 
 
 def render_pdf(

@@ -13,8 +13,10 @@ from dataclasses import dataclass, replace
 from typing import Any
 
 from .css import DENSITY
+from .deadline import Deadline, Interrupted
+from .errors import RenderTimeoutError
 from .model import Density, PageStats, RenderResult, Tuning
-from .pdf import DEFAULT_TIMEOUT_S, Deadline, Prepared, finish, measure
+from .pdf import DEFAULT_TIMEOUT_S, Prepared, finish, measure
 
 #: Последняя страница заполнена меньше — «почти пустая», её пробуем убрать (документы до трёх страниц).
 NEAR_EMPTY = 0.20
@@ -87,7 +89,13 @@ def fit(prepared: Prepared, tuning: Tuning | None = None, *, timeout_s: float | 
     Кандидаты верстаются без номеров страниц (на разбивку они не влияют); проход с «Стр. N из M» — только для итога.
     `timeout_s` — на всю подгонку.
     """
-    deadline = Deadline(timeout_s)
+    try:
+        return _fit(prepared, tuning, Deadline(timeout_s))
+    except Interrupted:  # сигнал на выходе из блока armed(): тоже тайм-аут
+        raise RenderTimeoutError(timeout_s or 0) from None
+
+
+def _fit(prepared: Prepared, tuning: Tuning | None, deadline: Deadline) -> FitResult:
     with deadline.armed():
         base = measure(prepared, tuning, deadline)
         stats = base.stats

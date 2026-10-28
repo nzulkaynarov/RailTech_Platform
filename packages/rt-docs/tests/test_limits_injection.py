@@ -12,7 +12,17 @@ from typing import Any
 
 import pytest
 
-from rt_docs import BodyError, DocumentMeta, Layout, Letterhead, normalize_body, to_docx, validate_blocks, validate_body
+from rt_docs import (
+    BodyError,
+    DocumentMeta,
+    Layout,
+    Letterhead,
+    clean_text,
+    normalize_body,
+    to_docx,
+    validate_blocks,
+    validate_body,
+)
 from rt_docs.contracts import MAX_BODY_BYTES, MAX_DEPTH, MAX_TABLE_ROWS
 from rt_docs.prepare import document_html, prepare
 from rt_docs.resolve import resolve
@@ -150,7 +160,7 @@ def test_control_characters_are_rejected_by_the_schema_and_cleaned_on_input() ->
         validate_body(body)
     clean = normalize_body(body)
     validate_body(clean)
-    assert clean["doc"]["content"][0]["content"][0]["text"] == "abc\td\nef"
+    assert clean["doc"]["content"][0]["content"][0]["text"] == "abc\td\ne\nf"
     assert body["doc"]["content"][0]["content"][0]["text"].startswith("a\x00"), "вход не меняется"
 
 
@@ -160,4 +170,41 @@ def test_render_pipeline_cleans_control_characters_in_body_values_and_meta() -> 
     assert "\x00" not in out and "\x01" not in out and "\x02" not in out
     assert "значение" in out and "заголовок" in out
     result = to_docx(body, letterhead=samples.LETTERHEAD, layout=Layout.LETTER, values={"counterparty.name": "a\x00b"})
+    assert result.data[:2] == b"PK"
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ("a\x0bb", "a\nb"),  # ручной перенос строки из Word (VT)
+        ("a\x0cb", "a\nb"),  # разрыв страницы из Word (FF) — перенос строки
+        ("a\rb", "a\nb"),
+        ("a\r\nb", "a\nb"),
+        ("a\ufffeb\uffffc", "abc"),
+        ("a\ufdd0b\ufdefc", "abc"),
+        ("a\U0001fffeb\U0010ffffc", "abc"),
+        ("a\ud800b", "ab"),  # одиночный суррогат
+    ],
+)
+def test_line_breaks_become_newline_and_noncharacters_are_removed(raw: str, expected: str) -> None:
+    assert clean_text(raw) == expected
+    body = samples.body([samples.para(raw)])
+    assert normalize_body(body)["doc"]["content"][0]["content"][0]["text"] == expected
+
+
+@pytest.mark.parametrize("bad", ["a\ufffe", "a\uffff", "a\ufdd0", "a\x0b", "a\r", "a\ud800"])
+def test_schema_rejects_noncharacters_and_stray_breaks(bad: str) -> None:
+    with pytest.raises(BodyError):
+        validate_body(samples.body([samples.para(bad)]))
+
+
+def test_docx_survives_noncharacters_after_normalization() -> None:
+    body = samples.body([samples.para("x\ufffey\uffff", samples.var("counterparty.name"))])
+    result = to_docx(
+        body,
+        letterhead=samples.LETTERHEAD,
+        layout=Layout.LETTER,
+        values={"counterparty.name": "v\ufffe"},
+        meta=DocumentMeta(title="t\uffff"),
+    )
     assert result.data[:2] == b"PK"
