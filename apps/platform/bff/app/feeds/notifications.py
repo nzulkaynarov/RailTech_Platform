@@ -1,4 +1,8 @@
-"""Центр уведомлений: лента ERP (`erp:<id>`), CRM-лента — с CRM-04; вкладки — по коду события.
+"""Центр уведомлений: ленты ERP (`erp:<id>`) и CRM (`crm:<id>`, W15-H7); вкладки — по коду события.
+
+Лента CRM (`staff_notifications`: ответ на обращение, привязка Telegram) читается для каждого
+сотрудника независимо от его разделов CRM: она общая для всех, своя у каждого. Обе ленты
+сливаются по времени; непрочитанные считаются по обеим.
 
 ERP отдаёт уведомления постранично, без счётчика непрочитанных и без фильтра `is_read`. BFF берёт
 новейшие 200 (максимум страницы ERP) и страничит их сам: курсор непрозрачный (смещение),
@@ -9,6 +13,7 @@ ERP отдаёт уведомления постранично, без счёт�
 import base64
 import binascii
 from typing import Any
+from urllib.parse import quote
 
 from app.feeds.feed import SNAPSHOT_TTL_SECONDS, Feed, rows
 from app.feeds.models import Notification, NotificationPage, NotificationTab, ObjectRef
@@ -103,6 +108,56 @@ def map_erp(row: dict[str, Any], deals: dict[int, dict[str, Any]]) -> Notificati
     )
 
 
+CRM_PATH = "/api/v1/me/notifications"
+_TABS = frozenset({"decisions", "clients", "system"})
+
+
+def _crm_object(row: dict[str, Any]) -> ObjectRef | None:
+    """Объект уведомления CRM: пока — обращение (автору — «Мои обращения», админу — карточка)."""
+    number = row.get("object_number")
+    if row.get("object_kind") != "ticket" or not isinstance(number, str) or not number:
+        return None
+    segment = quote(number, safe="")
+    if row.get("kind") == "ticket_new":
+        path = f"/admin/tickets/{segment}?panel=open&tab=card"
+    else:
+        path = f"/help/requests/{segment}"
+    return ObjectRef(kind="ticket", number=number, path=path)
+
+
+def map_crm(row: dict[str, Any]) -> Notification | None:
+    created = parse_dt(row.get("created_at"))
+    if not isinstance(row.get("id"), int) or created is None:
+        return None
+    tab = row.get("tab")
+    return Notification(
+        id=f"crm:{row['id']}",
+        tab=tab if tab in _TABS else "system",
+        title=short(row.get("title"), 160) or "Уведомление",
+        subtitle=short(row.get("subtitle"), 160) or None,
+        object=_crm_object(row),
+        created_at=created,
+        read=bool(row.get("read")),
+    )
+
+
+async def _crm_part(feed: Feed) -> tuple[list[Notification], int]:
+    """Лента CRM и число непрочитанных в ней. Не зависит от разделов CRM у сотрудника."""
+    before = feed.states["crm"]
+    if before == "not_applicable":
+        feed.states["crm"] = (
+            "ok"  # уведомления CRM есть у каждого; источник для агрегатов — прежний
+        )
+    payload = await feed.get("crm", CRM_PATH, ttl=SNAPSHOT_TTL_SECONDS)
+    if before == "not_applicable" and feed.states["crm"] == "ok":
+        feed.states["crm"] = "not_applicable"
+    if not isinstance(payload, dict):
+        return [], 0
+    items = [n for row in rows(payload) if (n := map_crm(row)) is not None]
+    unread = payload.get("unread_count")
+    return items, unread if isinstance(unread, int) else sum(1 for n in items if not n.read)
+
+
 def _offset(cursor: str | None) -> int:
     if not cursor:
         return 0
@@ -125,8 +180,10 @@ async def list_notifications(
     )
     deals = snap.deal_index
     mapped = [n for row in rows(payload) if (n := map_erp(row, deals)) is not None]
+    crm_items, crm_unread = await _crm_part(feed)
+    mapped = [*mapped, *crm_items]
     mapped.sort(key=lambda n: n.created_at, reverse=True)
-    unread = sum(1 for n in mapped if not n.read)
+    unread = sum(1 for n in mapped if not n.read and n.id.startswith("erp:")) + crm_unread
     shown = [n for n in mapped if tab == "all" or n.tab == tab]
     start = _offset(cursor)
     page = shown[start : start + limit]

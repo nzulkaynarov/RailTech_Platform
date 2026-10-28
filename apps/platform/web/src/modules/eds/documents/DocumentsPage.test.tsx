@@ -117,6 +117,24 @@ describe("EDS · Документы: список", () => {
     expect(screen.queryByText("Заказ спецодежды для бригады")).toBeNull();
   });
 
+  it("реестр отдаёт меньше прав на вид (D1-10): вкладка «Письма» без права на письма — пусто словами, не ошибка", async () => {
+    // EDS без `letters.read` не включает письма в реестр: ответ 200 с пустой страницей
+    server.use(
+      http.get("*/eds/documents", ({ request }) => {
+        const kinds = new URL(request.url).searchParams.getAll("kind");
+        if (kinds.includes("letter_in")) return HttpResponse.json({ items: [], next_cursor: null });
+        return undefined;
+      }),
+    );
+    await openDocuments("manager@demo.example");
+
+    fireEvent.click(await screen.findByRole("tab", { name: "Письма" }));
+
+    expect(await screen.findByText("По этим условиям ничего нет")).toBeVisible();
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.queryByText("Не удалось загрузить документы")).toBeNull();
+  });
+
   it("администратор без доступа к реестру видит только «Мои», без переключателя; пусто — словами и с действием", async () => {
     await openDocuments("admin@demo.example", "?scope=all");
 

@@ -84,9 +84,47 @@ class HandoffRequestSerializer(serializers.Serializer):
     invite = HandoffInviteInSerializer()
 
 
+class ClientRequestNeedInSerializer(serializers.Serializer):
+    summary = serializers.CharField(max_length=5000)
+    product_interest = serializers.ListField(child=serializers.CharField(), required=False, default=list)
+
+
+class ClientRequestInSerializer(serializers.Serializer):
+    """`ClientRequestIn` шва 0.9.0: «Создать заявку» CRM для переданного клиента (CRM-03, W16-D1-2)."""
+
+    crm_request_id = serializers.IntegerField(min_value=1)
+    crm_lead_id = serializers.IntegerField(required=False, allow_null=True, default=None)
+    contact = ContactInSerializer(required=False, allow_null=True, default=None)
+    need = ClientRequestNeedInSerializer()
+    owner = HandoffOwnerInSerializer()
+    urgency = serializers.ChoiceField(choices=["normal", "urgent"])
+    letter_file_id = serializers.UUIDField(required=False, allow_null=True, default=None)
+    process = serializers.ChoiceField(choices=["v3"])
+
+
+class ClientRequestOutSerializer(serializers.Serializer):
+    erp_company_id = serializers.IntegerField()
+    erp_request_id = serializers.IntegerField()
+    number = serializers.CharField()
+
+
 class HandoffResponseInviteSerializer(serializers.Serializer):
     sent_via = serializers.ListField(child=serializers.ChoiceField(choices=["telegram", "email"]))
     cabinet_url = serializers.URLField()
+    error = serializers.CharField(allow_null=True, required=False)
+
+
+class InviteRequestSerializer(serializers.Serializer):
+    """`POST /clients/{crm_client_id}/invite`: повторное приглашение контакта выбранным каналом (0.8.0)."""
+
+    channel = serializers.ChoiceField(choices=["email", "telegram", "both"])
+    crm_contact_id = serializers.IntegerField(required=False, allow_null=True, default=None)
+
+
+class InviteResponseSerializer(serializers.Serializer):
+    sent_via = serializers.ListField(child=serializers.ChoiceField(choices=["telegram", "email"]))
+    cabinet_url = serializers.URLField()
+    error = serializers.CharField(allow_null=True, required=False)
 
 
 class HandoffResponseSerializer(serializers.Serializer):

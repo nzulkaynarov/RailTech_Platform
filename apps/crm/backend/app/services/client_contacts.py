@@ -18,7 +18,15 @@ from app.schemas.clients import ClientContacts, ContactIn, ContactOut, ContactSu
 from app.security import audit
 from app.security.principal import Principal
 
-AUDITED = ("full_name", "position", "phone_e164", "email", "is_primary", "telegram_identity_id")
+AUDITED = (
+    "full_name",
+    "position",
+    "phone_e164",
+    "email",
+    "is_primary",
+    "telegram_identity_id",
+    "preferred_channel",
+)
 
 
 def _values(body: ContactIn) -> dict[str, Any]:
@@ -30,6 +38,7 @@ def _values(body: ContactIn) -> dict[str, Any]:
         "is_primary": body.is_primary,
         "note": (body.note or "").strip() or None,
         "telegram_identity_id": body.telegram_identity_id,
+        "preferred_channel": body.preferred_channel,
     }
 
 

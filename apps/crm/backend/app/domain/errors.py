@@ -74,6 +74,8 @@ class Reason(StrEnum):
     ERP_BAD_RESPONSE = "erp_bad_response"
     # Лимит сервисного токена ERP (429 `TOO_MANY_REQUESTS` + `Retry-After`, шов 0.3.0, FIX-60).
     ERP_RATE_LIMITED = "erp_rate_limited"
+    # Повторное приглашение в кабинет (D1-9): клиент ещё не передан в ERP — приглашать некуда.
+    CLIENT_NOT_IN_ERP = "client_not_in_erp"
     # Передача клиента (FIX-31): ИНН уже принадлежит другому клиенту CRM в ERP (409 INN_CONFLICT).
     ERP_INN_CONFLICT = "erp_inn_conflict"
     # Сопряжение с ERP по одноразовому коду (M3-CRM-10): код не принят, просрочен или уже
@@ -143,6 +145,25 @@ class Reason(StrEnum):
     NOT_A_DEPUTY = "not_a_deputy"
     # Сброс пароля по ссылке: токен неверный, использован или просрочен (один код на все случаи).
     RESET_TOKEN_INVALID = "reset_token_invalid"  # noqa: S105 — подкод ошибки, не секрет
+    # Обращения сотрудников к администратору (W15-H7)
+    TICKET_SUBJECT_UNKNOWN = "ticket_subject_unknown"
+    TICKET_TEXT_EMPTY = "ticket_text_empty"
+    TICKET_TEXT_TOO_LONG = "ticket_text_too_long"
+    TICKET_PAGE_INVALID = "ticket_page_invalid"
+    TICKET_STATUS_UNKNOWN = "ticket_status_unknown"
+    TICKET_STATUS_TRANSITION = "ticket_status_transition"
+    TICKET_REPLY_EMPTY = "ticket_reply_empty"
+    TICKET_REPLY_TOO_LONG = "ticket_reply_too_long"
+    TICKET_RATE_LIMITED = "ticket_rate_limited"
+    # «Создать заявку» (W16-D1-2, CRM-03): у контакта нет ни одного канала связи; лид в отказе или
+    # обезличен.
+    CONTACT_CHANNEL_REQUIRED = "contact_channel_required"
+    REQUEST_NOT_ALLOWED = "request_not_allowed"
+    # Ключ формы `request_key` уже занят заявкой другого лида или клиента.
+    REQUEST_KEY_REUSED = "request_key_reused"
+    # ERP: тот же ключ идемпотентности заявки с другим телом (409 `IDEMPOTENCY_CONFLICT`) — заявка
+    # не создана, автоповтора нет.
+    ERP_REQUEST_CONFLICT = "erp_request_conflict"
 
 
 class DomainError(Exception):

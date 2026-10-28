@@ -1,11 +1,12 @@
-"""Расчёт · Заявки в расчёте и расчёт по заявке (контракт: tag `calc`, 0.24.0; D2-1, SPEC-v3 §7.4).
+"""Расчёт · Заявки в расчёте и расчёт по заявке (контракт: tag `calc`, 0.26.0; D2-1, SPEC-v3 §7.4).
 
 BFF не решает (CONVENTIONS.md §2 п. 2): зону строки, визы, «Расчёт готов» (только со всеми визами),
 правку закупки и цены решает ERP (`/api/v1/calc/*`, права `quote.visa_goods`, `quote.visa_services`,
 `quote.build`). Здесь — доступ к разделам каталога (чтение — `erp.calc`; начать, «Расчёт готов»,
 ИИ-разбор — `erp.calc` полный; строки — `erp.calc.goods` или `erp.calc.services` полный), адресация
-заявки по номеру ЗВ (до ERP-09 номер составляет BFF, `id` из номера не разбирается — заявка ищется
-среди заявок с заданием расчёта), вырезание полей с ограничением и перевод ошибок ERP.
+заявки по номеру ЗВ/ПР (номер выдаёт ERP, `Deal.number`; заявка ищется отбором `?number=` среди
+заявок с заданием расчёта, `id` из номера не разбирается), вырезание полей с ограничением и перевод
+ошибок ERP.
 """
 
 from typing import Annotated, Any
@@ -73,14 +74,25 @@ _MESSAGES = {
 }
 
 
+def _other_prefix(number: str) -> tuple[str, ...]:
+    """`ЗВ-2026-104` ↔ `ПР-2026-104`: заявка и проект с одним NNN (SPEC-v3 §2.2)."""
+    for one, other in (("ЗВ-", "ПР-"), ("ПР-", "ЗВ-")):
+        if number.startswith(one):
+            return (other + number[len(one) :],)
+    return ()
+
+
 class ErpCalc(ErpCompany):
     """Вызовы `/api/v1/calc/*` от имени сотрудника и поиск заявки по номеру ЗВ."""
 
     async def deal_id(self, number: str) -> int:
-        """Заявка по номеру ЗВ: лёгкий справочник ERP `GET /calc/deals/` (id, создана, стадия — без
-        строк и виз); номер — как в списках, `id` из номера не разбирается (до ERP-09)."""
-        wanted = {number, number_query(number) or number}
-        data = await self.data("GET", "calc/deals/")
+        """Заявка по номеру ЗВ/ПР: лёгкий справочник ERP `GET /calc/deals/?number=` (id, номер,
+        создана, стадия — без строк и виз). Номер выдаёт ERP (`Deal.number`, ERP-09); `id` из
+        номера не разбирается. После принятия КП заявка — проект с тем же NNN: `ЗВ-…` находит и
+        `ПР-…`."""
+        canonical = number_query(number) or number
+        wanted = {number, canonical, *_other_prefix(canonical)}
+        data = await self.data("GET", "calc/deals/", params={"number": canonical})
         for deal in data.get("results", []) if isinstance(data, dict) else []:
             if isinstance(deal, dict) and deal_number(deal) in wanted:
                 return int(deal["id"])

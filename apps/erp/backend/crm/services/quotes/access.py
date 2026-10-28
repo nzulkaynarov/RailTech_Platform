@@ -162,6 +162,11 @@ def can_send_quote_to_client(actor, quote) -> bool:
 
     M1-ERP-05: право роли `quote.send` (объединение ролей сотрудника), без выводов из должности
     или флага `can_sell`.
+
+    B-008 (решение архитектора 2026-10-27, W16-D1-2) — объектная проверка: `quote.send` из раздела «Клиенты» Платформы
+    есть у каждого менеджера, поэтому отправляет КП менеджер СВОЕЙ заявки (`deal.manager`, передаётся из CRM при
+    «Создать заявку»), а чужое — только тот, у кого есть и `quote.review` (директор и роль с «КП на одобрение» full,
+    `eds.drafts`; прежние роли ERP «Расчёт» и «Руководитель» — тоже).
     """
     from accounts.services.permissions import member_has_permission
 
@@ -170,7 +175,12 @@ def can_send_quote_to_client(actor, quote) -> bool:
     company_id = _quote_owner_company_id(quote)
     if not company_id:
         return False
-    return member_has_permission(actor, company_id, "quote.send")
+    if not member_has_permission(actor, company_id, "quote.send"):
+        return False
+    deal = getattr(quote, "deal", None)
+    if deal is not None and deal.manager_id is not None and deal.manager_id == getattr(actor, "pk", None):
+        return True
+    return member_has_permission(actor, company_id, "quote.review")
 
 
 def can_duplicate_quote(actor, quote) -> bool:

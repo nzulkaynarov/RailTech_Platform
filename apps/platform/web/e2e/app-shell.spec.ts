@@ -200,7 +200,8 @@ test.describe("роли и доступ", () => {
 
     await page.goto("/admin/roles");
     await expect(page.getByRole("heading", { level: 1, name: "Нет доступа" })).toBeVisible();
-    await expect(page.getByRole("button", { name: /Написать администратору/ })).toBeDisabled();
+    // W15-H7: кнопка рабочая (раньше была неактивна с подсказкой «Появится к пилоту»)
+    await expect(page.getByRole("button", { name: "Написать администратору" })).toBeEnabled();
     await expect(page.getByRole("complementary", { name: "Боковое окно" })).toHaveCount(0);
     await settledScreenshot(page, "forbidden");
   });

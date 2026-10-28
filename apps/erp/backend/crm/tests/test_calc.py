@@ -581,7 +581,15 @@ def test_deal_refs_are_light_and_newest_first(world):
     conforms(response, "/api/v1/calc/deals/", "get", status=200)
     rows = response.json()["results"]
     assert [row["id"] for row in rows] == [other.pk, world["deal"].pk]
-    assert set(rows[0]) == {"id", "created_at", "stage_code"} and rows[0]["stage_code"] == "CALCULATING"
+    assert set(rows[0]) == {"id", "number", "created_at", "stage_code"} and rows[0]["stage_code"] == "CALCULATING"
+    assert rows[0]["number"] == other.number and other.number.startswith("ЗВ-")
+
+    # отбор по номеру: префикс и ширина не важны (ПР — тот же NNN), не номер — пусто
+    year, seq = other.number_year, other.number_seq
+    for query in (other.number, f"zv {year} {seq}", f"ПР-{year}-{seq:03d}"):
+        found = _api(world["accountant"]).get("/api/v1/calc/deals/", {"number": query}).json()["results"]
+        assert [row["id"] for row in found] == [other.pk], query
+    assert _api(world["accountant"]).get("/api/v1/calc/deals/", {"number": "ВХ-105/26"}).json() == {"results": []}
 
 
 # ── повторное ревью: границы зон, порог маржи, стадия в готовности, act_on_step без виз строк ──────────────────

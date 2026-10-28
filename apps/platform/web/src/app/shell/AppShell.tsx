@@ -9,6 +9,8 @@ import type { ModuleConfig, SectionConfig } from "../../modules/types";
 import { SetupBanner } from "../../features/first-run/SetupBanner";
 import { useSetupPending } from "../../features/first-run/useSetupPending";
 import { GlobalSearch } from "../../features/global-search/GlobalSearch";
+import { HelpDrawer } from "../../features/help/HelpDrawer";
+import { Onboarding } from "../../features/onboarding/Onboarding";
 import { NotificationCenter } from "../../features/notifications/NotificationCenter";
 import { useNotifications } from "../../features/notifications/useNotifications";
 import { useGetMenuCounters } from "../../shared/api/generated/platform-bff";
@@ -56,6 +58,7 @@ export function AppShell() {
   const viewport = useViewport();
   const [menuDrawer, setMenuDrawer] = useState(false);
   const [bellOpen, setBellOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
 
   const match = matchSection(location.pathname, location.search);
@@ -117,6 +120,26 @@ export function AppShell() {
       }
       event.preventDefault();
       searchRef.current?.focus();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+    };
+  }, []);
+
+  // «?» открывает окно помощи, но не перехватывает ввод в полях (как ⌘K).
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== "?" || event.metaKey || event.ctrlKey || event.altKey) return;
+      const target = event.target;
+      if (
+        target instanceof HTMLElement &&
+        (target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName))
+      ) {
+        return;
+      }
+      event.preventDefault();
+      setHelpOpen(true);
     };
     window.addEventListener("keydown", onKey);
     return () => {
@@ -215,7 +238,20 @@ export function AppShell() {
     if (match.objectId) crumbs.push({ label: match.objectId });
   }
 
-  const profile = <AvatarMenu me={me} placement={viewport.mobile ? "topRight" : "topLeft"} />;
+  const openHelp = () => {
+    setHelpOpen(true);
+  };
+  const profile = (
+    <AvatarMenu me={me} placement={viewport.mobile ? "topRight" : "topLeft"} onHelp={openHelp} />
+  );
+  // Ключ раздела для статьи «К этому разделу»: `crm.leads`; профиль — `me`; сам раздел помощи — `help`.
+  const helpSection = match
+    ? `${match.module.code}.${match.section.key}`
+    : location.pathname.startsWith("/me")
+      ? "me"
+      : location.pathname.startsWith("/help")
+        ? "help"
+        : undefined;
   const tabItems = panels.tabs.map((key) => ({ key, label: t(`modules:tabs.${key}`) }));
   const panelProps = {
     id: PANEL_ID,
@@ -290,6 +326,7 @@ export function AppShell() {
           bellTitle={t("notifications.title")}
           bellOpen={bellOpen}
           onBellOpenChange={setBellOpen}
+          help={{ label: t("topbar.help"), open: helpOpen, onClick: openHelp }}
           bellContent={
             <NotificationCenter
               variant="popover"
@@ -381,6 +418,14 @@ export function AppShell() {
           </Drawer>
         </>
       ) : null}
+      <HelpDrawer
+        open={helpOpen}
+        onClose={() => {
+          setHelpOpen(false);
+        }}
+        {...(helpSection ? { sectionKey: helpSection } : {})}
+      />
+      <Onboarding />
     </Layout>
   );
 }

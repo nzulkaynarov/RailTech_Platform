@@ -15,15 +15,19 @@ from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.domain.errors import ConflictError, Reason, ValidationFailedError
+from app.domain.lead_sources import WEB_NOTE_MARK
+from app.domain.platform_links import LinkBase
 from app.domain.staff_notify import (
     Staff,
     alert_recipients,
     lead_dm_due,
     lead_dm_target,
     lead_dm_text,
+    new_lead_recipients,
+    web_lead_dm_text,
 )
 from app.models.auth import Role, User, UserRole
-from app.models.leads import Conversation, Lead, Message
+from app.models.leads import Conversation, Lead, LeadNote, Message
 from app.services import channel_texts as tx
 
 logger = structlog.get_logger(__name__)
@@ -61,7 +65,19 @@ class StaffNotifier:
                 delivered += 1
         return delivered
 
-    async def lead_message(self, lead_id: int, now: datetime, window: timedelta, base: str) -> bool:
+    async def direct(self, user_id: int, text: str, key: str) -> bool:
+        """Личное сообщение одному сотруднику (ответ на обращение): без Telegram — `False`."""
+        if self._bot is None:
+            return False
+        async with self._sessions() as session:
+            user = await session.get(User, user_id)
+        if user is None or not user.is_active or user.tg_user_id is None:
+            return False
+        return await self._deliver(user_id, user.tg_user_id, escape(text), key=key)
+
+    async def lead_message(
+        self, lead_id: int, now: datetime, window: timedelta, links: LinkBase
+    ) -> bool:
         """Новое сообщение лида → ответственному менеджеру, не чаще раза за `window`."""
         if self._bot is None:
             return False
@@ -76,7 +92,7 @@ class StaffNotifier:
             if target is None:
                 return False
             text = await _last_lead_text(session, lead_id)
-            body = lead_dm_text(lead.display_name, text, base, lead_id)
+            body = lead_dm_text(lead.display_name, text, links.lead(lead_id), lead_id)
             user_id = lead.assigned_user_id
         if not await self._deliver(user_id, target, body, key="lead_message", lead_id=lead_id):
             return False
@@ -87,7 +103,7 @@ class StaffNotifier:
                 lead.manager_notified_at = now
         return True
 
-    async def handed_over(self, lead_id: int, user_id: int, base: str) -> bool:
+    async def handed_over(self, lead_id: int, user_id: int, links: LinkBase) -> bool:
         """«Передать коллеге» → личное сообщение новому ответственному."""
         if self._bot is None:
             return False
@@ -96,13 +112,57 @@ class StaffNotifier:
             lead = await session.get(Lead, lead_id)
         if user is None or lead is None or not user.is_active or user.tg_user_id is None:
             return False
-        url = escape(f"{base.rstrip('/')}/leads/{lead_id}", quote=True)
+        url = escape(links.lead(lead_id), quote=True)
         body = tx.HANDOVER_DM.format(
             lead_id=lead_id,
             name=escape(lead.display_name or tx.NO_NAME),
             link=tx.CRM_OPEN.format(url=url),
         )
         return await self._deliver(user_id, user.tg_user_id, body, key="handover", lead_id=lead_id)
+
+    async def web_lead(
+        self,
+        lead_id: int,
+        links: LinkBase,
+        minutes: int,
+        *,
+        overdue: bool = False,
+        repeat: bool = False,
+    ) -> int:
+        """Запрос с сайта (D1-9) → личное сообщение менеджерам с включёнными уведомлениями о лидах.
+
+        Новый запрос без ответственного — всем подписанным. Повторный (`repeat`) — только
+        ответственному за лида, нет ответственного — никому. `overdue` — напоминание «никто не
+        взял»: всем подписанным, пока лид не взят. Возвращает число доставленных сообщений; отказ
+        Telegram одному менеджеру остальным не мешает.
+        """
+        if self._bot is None:
+            return 0
+        async with self._sessions() as session:
+            lead = await session.get(Lead, lead_id)
+            if lead is None or lead.erased_at is not None:
+                return 0
+            staff = await _staff(session)
+            need = await _last_web_request(session, lead_id) if repeat else None
+        if repeat:
+            # Повторный запрос известного клиента: только ответственному; нет его — никому
+            # (первый запрос этого лида уже разослан, а «Моя очередь» показывает карточку).
+            staff = [s for s in staff if s.user_id == lead.assigned_user_id]
+        template = tx.WEB_LEAD_OVERDUE_DM if overdue else tx.NEW_WEB_LEAD_DM
+        body = web_lead_dm_text(
+            template,
+            name=lead.display_name or "",
+            company=lead.company_name,
+            need=need or lead.need_summary,
+            minutes=minutes,
+            lead_url=links.lead(lead_id),
+            lead_id=lead_id,
+        )
+        delivered = 0
+        for chat_id in new_lead_recipients(staff):
+            if await self._try_send(chat_id, body, key="web_lead", lead_id=lead_id):
+                delivered += 1
+        return delivered
 
     async def _deliver(self, user_id: int, chat_id: int, text: str, **log: object) -> bool:
         """Личное сообщение сотруднику с отметкой «Telegram отказал» в профиле."""
@@ -182,6 +242,17 @@ async def _staff(session: AsyncSession, user_id: int | None = None) -> list[Staf
         )
         for u in users
     ]
+
+
+async def _last_web_request(session: AsyncSession, lead_id: int) -> str | None:
+    """Текст последнего повторного запроса с сайта (заметка `[web] …`)."""
+    text = await session.scalar(
+        select(LeadNote.text)
+        .where(LeadNote.lead_id == lead_id, LeadNote.text.startswith(WEB_NOTE_MARK))
+        .order_by(LeadNote.id.desc())
+        .limit(1)
+    )
+    return text.removeprefix(WEB_NOTE_MARK) if text else None
 
 
 async def _last_lead_text(session: AsyncSession, lead_id: int) -> str:

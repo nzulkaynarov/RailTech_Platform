@@ -42,9 +42,7 @@ describe("мост в старые экраны: карта разделов-з�
       .filter(([, entry]) => entry.when === "soon")
       .map(([id]) => id)
       .sort();
-    expect(soon).toEqual(
-      ["crm.clients", "crm.leads", "eds.approvals", "eds.drafts", "eds.new"].sort(),
-    );
+    expect(soon).toEqual(["crm.clients", "crm.leads", "eds.new"].sort());
   });
 
   it.each(["ru", "uz", "en"] as const)("%s: тексты есть для каждой записи", (lng) => {
@@ -148,7 +146,8 @@ describe("исполнимость адреса: есть ли экран в П�
     ["/dashboard/queue?panel=open&tab=notifications", true],
     ["/admin/org?invite=open&panel=open", true],
     ["/crm/leads?lead=L-2041&panel=open&tab=card", false],
-    ["/eds/drafts/%D0%9A%D0%9F-2026%2F118?panel=open&tab=approve", false],
+    ["/eds/drafts/%D0%9A%D0%9F-2026%2F118?panel=open&tab=approve", true],
+    ["/eds/approvals/%D0%A1%D0%97-2026%2F031?panel=open&tab=agree", true],
     ["/eds/payments/%D0%A1%D0%A7-2026%2F142", false],
     ["/erp/calc", true],
     ["/erp/stock", false],

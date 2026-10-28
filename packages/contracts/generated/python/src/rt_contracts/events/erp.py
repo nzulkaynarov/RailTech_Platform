@@ -112,6 +112,12 @@ class CalcZone(StrEnum):
 
 class Channel(StrEnum):
     telegram = "telegram"
+    cabinet = "cabinet"
+    email = "email"
+
+
+class Channel1(StrEnum):
+    telegram = "telegram"
     email = "email"
 
 
@@ -419,11 +425,48 @@ class DocumentCreatedV1(BaseModel):
     payload: DocumentCreated
 
 
+class InviteRequested(BaseModel):
+    """
+    Приглашение контакта в Cabinet через бот CRM (D1-9). Рабочей ссылки и токенов нет: контакт входит в Mini App по своему Telegram-аккаунту (initData), поэтому событие не секретно.
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    channel: Literal["telegram"]
+    erp_contact_id: int
+    crm_contact_id: int
+    language: Language | None = None
+    """
+    Язык контакта в ERP; бот CRM берёт язык лида, если он известен
+    """
+
+
+class InviteRequestedV1(BaseModel):
+    """
+    Тип uz.railtech.erp.invite.requested.v1, источник rt://erp. Поле data конверта (envelope.v1.json). ERP в Telegram не пишет (бот принадлежит CRM): сотрудник или передача из CRM пригласили контакта в канал telegram — ERP публикует событие, бот CRM присылает контакту сообщение с кнопкой «Открыть кабинет» (Mini App; вход по Telegram-аккаунту контакта, секретов в событии нет). Что делает CRM: доставка ботом; итог (отправлено или причина отказа словами) виден менеджеру в карточке клиента. ERP публикует событие только контакту с crm_contact_id и привязанным telegram_user_id (D1-9).
+    """
+
+    model_config = ConfigDict(
+        extra="ignore",
+    )
+    erp_company_id: int
+    """
+    Компания клиента в ERP
+    """
+    crm_client_id: int
+    """
+    Клиент в CRM
+    """
+    actor: Actor
+    payload: InviteRequested
+
+
 class InviteSent(BaseModel):
     model_config = ConfigDict(
         extra="ignore",
     )
-    channels: Annotated[list[Channel], Field(min_length=1)]
+    channels: Annotated[list[Channel1], Field(min_length=1)]
     erp_contact_id: int | None = None
     crm_contact_id: int | None = None
 
@@ -538,8 +581,27 @@ class Kind(StrEnum):
     other = "other"
 
 
+class Language(StrEnum):
+    """
+    Язык контакта в ERP; бот CRM берёт язык лида, если он известен
+    """
+
+    ru = "ru"
+    uz = "uz"
+    en = "en"
+
+
 class LineNo(RootModel[int]):
     root: Annotated[int, Field(ge=1)]
+
+
+class Process(StrEnum):
+    """
+    Процесс заявки (ERP-07): v3 — заявка Платформы (резолюция, визы, одобрение КП в EDS); legacy — заявка, начатая до Платформы. Необязательное; нет — legacy
+    """
+
+    legacy = "legacy"
+    v3 = "v3"
 
 
 class QuoteAcceptanceCodeRequested(BaseModel):
@@ -733,6 +795,10 @@ class QuoteSent(BaseModel):
     valid_until: date | None = None
     total: Amount | None = None
     currency: Currency | None = None
+    channels: list[Channel] | None = None
+    """
+    Каналы, по которым КП ушло клиенту (ERP-11, W16-D1-2): автоотправка после одобрения директором — только доступные из выбранных директором. CRM пишет клиенту в Telegram, только если в списке есть telegram. Необязательное; нет — все каналы клиента, как прежде (отправка менеджером)
+    """
 
 
 class QuoteSentV1(BaseModel):
@@ -824,6 +890,26 @@ class RequestCreated(BaseModel):
     """
     Менеджер заявки — сотрудник CRM (crm_user_id): ответственный передачи из CRM, иначе ответственный сделки ERP с сопоставлением CRM. Нет — менеджер не назначен. Необязательное (C1-G-7)
     """
+    request_number: Annotated[str | None, Field(pattern="^ЗВ-\\d{4}-\\d{3,}$")] = None
+    """
+    Номер заявки ЗВ-ГГГГ-NNN (Deal.number ERP, ERP-09; тот же, что deal.number при публикации). Необязательное, с 2026-10-28 (W16-D1-2); старое событие без него принимается
+    """
+    urgency: Urgency | None = None
+    """
+    Срочность заявки, выбранная менеджером в «Создать заявку» (W16-D1-2): urgent — письмо EDS по заявке срочное. Необязательное; нет — обычная
+    """
+    letter_file_id: UUID | None = None
+    """
+    Файл письма на имя директора, загруженный менеджером в EDS (`POST /files` eds.yaml) до создания заявки; EDS прикрепляет его к входящему письму по заявке, если файл загрузил менеджер заявки (manager_crm_user_id) и он ещё ни к чему не привязан. Необязательное (W16-D1-2)
+    """
+    crm_request_id: Annotated[int | None, Field(ge=1)] = None
+    """
+    Заявка на стороне CRM (зеркало сделки), по которой создана заявка ERP (`POST /clients/{crm_client_id}/requests` шва): CRM связывает событие с этой записью. Необязательное (W16-D1-2)
+    """
+    process: Process | None = None
+    """
+    Процесс заявки (ERP-07): v3 — заявка Платформы (резолюция, визы, одобрение КП в EDS); legacy — заявка, начатая до Платформы. Необязательное; нет — legacy
+    """
 
 
 class RequestCreatedV1(BaseModel):
@@ -870,3 +956,12 @@ class Type(StrEnum):
     system = "system"
     staff = "staff"
     client = "client"
+
+
+class Urgency(StrEnum):
+    """
+    Срочность заявки, выбранная менеджером в «Создать заявку» (W16-D1-2): urgent — письмо EDS по заявке срочное. Необязательное; нет — обычная
+    """
+
+    normal = "normal"
+    urgent = "urgent"

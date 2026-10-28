@@ -147,7 +147,7 @@ async def contact_snapshot(session: AsyncSession, contact: ClientContact) -> dic
     erp_company_id = await session.scalar(
         select(Client.erp_company_id).where(Client.id == contact.client_id)
     )
-    return {
+    snapshot: dict[str, Any] = {
         "crm_contact_id": contact.id,
         "crm_client_id": contact.client_id,
         "erp_company_id": erp_company_id,
@@ -159,6 +159,11 @@ async def contact_snapshot(session: AsyncSession, contact: ClientContact) -> dic
         "is_primary": bool(contact.is_primary),
         "updated_at": utc(await fresh_updated_at(session, ClientContact, contact.id)),
     }
+    if contact.preferred_channel:
+        # Предпочитаемый канал (D1-9): ERP берёт его при приглашении в кабинет; без выбора поле не
+        # шлём.
+        snapshot["preferred_channel"] = contact.preferred_channel
+    return snapshot
 
 
 async def lead_snapshot(session: AsyncSession, lead: Lead) -> dict[str, Any]:

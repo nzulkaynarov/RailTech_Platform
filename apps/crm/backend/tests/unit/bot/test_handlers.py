@@ -63,3 +63,71 @@ def test_contact_and_location_become_text() -> None:
     location = message(location={"latitude": 41.311081, "longitude": 69.240562})
     assert _shared_text(contact) == "📇 Азиз: +998901234567"
     assert _shared_text(location) == "📍 41.31108, 69.24056"
+
+
+# ── /start с параметром (D1-9) ─────────────────────────────────────────────────────────────────
+
+
+class _Conversation:
+    async def start(self, inc: Any) -> list[Any]:
+        from app.services.conversation import Outgoing
+
+        return [Outgoing("Здравствуйте!")]
+
+
+class _StartLinks:
+    def __init__(self, texts: list[str] | Exception) -> None:
+        self.texts = texts
+        self.calls: list[tuple[int, str]] = []
+
+    async def apply(self, tg_user_id: int, payload: str) -> Any:
+        self.calls.append((tg_user_id, payload))
+        if isinstance(self.texts, Exception):
+            raise self.texts
+        return type("R", (), {"texts": self.texts})()
+
+
+class _Settings:
+    async def get(self) -> Any:
+        from app.schemas.settings import AppSettings
+
+        return AppSettings()
+
+
+class _Bot:
+    def __init__(self) -> None:
+        self.sent: list[str] = []
+
+    async def send_message(self, chat_id: int, text: str, reply_markup: Any = None) -> None:
+        self.sent.append(text)
+
+
+async def _start(args: str | None, links: _StartLinks | None) -> list[str]:
+    from aiogram.filters import CommandObject
+
+    from app.bot.handlers import on_start
+
+    bot = _Bot()
+    command = CommandObject(prefix="/", command="start", args=args)
+    await on_start(message(text="/start"), bot, _Conversation(), _Settings(), command, links)
+    return bot.sent
+
+
+async def test_start_without_payload_just_greets() -> None:
+    links = _StartLinks(["не должно прозвучать"])
+    assert await _start(None, links) == ["Здравствуйте!"]
+    assert links.calls == []
+
+
+async def test_start_with_payload_adds_the_link_reply_after_the_greeting() -> None:
+    links = _StartLinks(["Вижу вашу заявку."])
+    assert await _start("deal_5", links) == ["Здравствуйте!", "Вижу вашу заявку."]
+    assert links.calls == [(42, "deal_5")]
+
+
+async def test_a_broken_link_never_breaks_the_greeting() -> None:
+    assert await _start("web", _StartLinks(RuntimeError("boom"))) == ["Здравствуйте!"]
+
+
+async def test_start_without_the_link_service_still_greets() -> None:
+    assert await _start("web", None) == ["Здравствуйте!"]

@@ -22,7 +22,8 @@
     "bellUnread": "Bildirishnomalar markazi, {{count}} ta yangi",
     "hidePanel": "Panelni yashirish",
     "showPanel": "Panel",
-    "searchShort": "Qidiruv"
+    "searchShort": "Qidiruv",
+    "help": "Yordam (? tugmasi)"
   },
   "notifications": {
     "title": "Bildirishnomalar markazi",
@@ -85,7 +86,8 @@
     "changePassword": "Parolni almashtirish",
     "logout": "Chiqish",
     "rolesMany": "Barcha rollar",
-    "selected": "Tanlangan"
+    "selected": "Tanlangan",
+    "help": "Yordam"
   },
   "languages": {
     "ru": "Русский",
@@ -189,8 +191,7 @@
     "textRoles": "Bo‘lim quyidagi rollarga ochiq: {{roles}}. Ish uchun kerak bo‘lsa, administratorga yozing.",
     "write": "Administratorga yozish",
     "titleActiveRole": "Bo‘lim tanlangan rol uchun mavjud emas",
-    "textActiveRole": "Barcha bo‘limlaringizga kirishni qaytarish uchun profil menyusida (avatar) «Barcha rollar»ni tanlang. Ish uchun kerak bo‘lsa, administratorga yozing.",
-    "writeSoon": "Pilotgacha paydo bo‘ladi. Hozircha administratorga to‘g‘ridan-to‘g‘ri yozing"
+    "textActiveRole": "Barcha bo‘limlaringizga kirishni qaytarish uchun profil menyusida (avatar) «Barcha rollar»ni tanlang. Ish uchun kerak bo‘lsa, administratorga yozing."
   },
   "notFound": {
     "heading": "Sahifa topilmadi",

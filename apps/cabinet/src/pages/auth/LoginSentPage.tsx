@@ -7,7 +7,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { AuthLayout } from './AuthLayout';
 
-/** «Письмо отправлено»: ответ `POST /auth/magic-link` всегда 200, поэтому текст не утверждает, что адрес есть. */
+/**
+ * «Проверьте почту»: ответ `POST /auth/magic-link` всегда 200, поэтому текст не утверждает, что адрес есть
+ * («Если адрес зарегистрирован, мы отправили ссылку»), а новому клиенту сразу показан путь — оставить запрос.
+ */
 export function LoginSentPage() {
   const { t } = useTranslation();
   const email = (useLocation().state as { email?: string } | null)?.email;
@@ -24,7 +27,8 @@ export function LoginSentPage() {
             {email ? t('auth.sent.text', { email }) : t('auth.sent.textNoEmail')}
           </CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-col gap-2">
+        <CardContent className="flex flex-col gap-3">
+          <p className="text-sm text-muted-foreground">{t('auth.sent.noLetter')}</p>
           {isPortalMock() ? (
             <Button asChild variant="secondary">
               <Link to={{ pathname: '/auth/magic', hash: '#token=demo-token-mock-link' }}>{t('auth.sent.mockLink')}</Link>
@@ -33,6 +37,12 @@ export function LoginSentPage() {
           <Button asChild variant="outline">
             <Link to="/login">{t('auth.sent.back')}</Link>
           </Button>
+          <Link
+            to="/new-client"
+            className="text-center text-sm font-medium text-primary underline-offset-4 hover:underline"
+          >
+            {t('auth.sent.newClientLink')}
+          </Link>
         </CardContent>
       </Card>
     </AuthLayout>

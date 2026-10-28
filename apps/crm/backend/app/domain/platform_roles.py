@@ -234,11 +234,13 @@ def eds_catalog_fingerprint(
     backend: Mapping[str, Mapping[str, tuple[str, ...]]] = EDS_BACKEND,
     role_access: Mapping[str, Mapping[str, str]] = ROLE_ACCESS,
     system_codes: Iterable[str] = SYSTEM_ROLE_CODES,
+    template_codes: Iterable[str] = TEMPLATE_ROLE_CODES,
 ) -> str:
     """Отпечаток (sha256) части каталога, от которой зависит `permissions.eds` в `identity.user.*`.
 
     Входит: действующий состав кодов EDS по каждому разделу и уровню (с учётом `full ⊇ read`; пустые
-    уровни и разделы не считаются) и права EDS системных ролей по их матрицам. Не входит: права CRM
+    уровни и разделы не считаются), права EDS системных ролей и шаблонов ролей (`tpl:<код>`, B-005:
+    их матрица из каталога) по их матрицам. Не входит: права CRM
     и ERP, названия, описания, порядок записей и комментарии каталога — их правка отпечаток не
     меняет. Роли с произвольной матрицей — данные, их правки идут обычными событиями сотрудника."""
     effective = {
@@ -251,20 +253,24 @@ def eds_catalog_fingerprint(
         resource: {lv: codes for lv, codes in levels.items() if codes}
         for resource, levels in effective.items()
     }
-    system = {
-        code: sorted(
-            {
-                perm
-                for resource, level in role_access.get(code, {}).items()
-                for perm in _accumulated(backend, resource, level)
-            }
-        )
-        for code in system_codes
-    }
+
+    def of_roles(codes: Iterable[str]) -> dict[str, list[str]]:
+        return {
+            code: sorted(
+                {
+                    perm
+                    for resource, level in role_access.get(code, {}).items()
+                    for perm in _accumulated(backend, resource, level)
+                }
+            )
+            for code in sorted(set(codes))
+        }
+
     payload = {
-        "v": 1,
+        "v": 2,
         "backend": {r: lv for r, lv in sorted(effective.items()) if lv},
-        "system_roles": dict(sorted(system.items())),
+        "system_roles": of_roles(system_codes),
+        "role_templates": of_roles(template_codes),
     }
     return hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
 

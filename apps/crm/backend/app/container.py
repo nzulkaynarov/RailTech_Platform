@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from app import db
 from app.config import Settings, get_settings
 from app.domain.errors import ConflictError, Reason
+from app.domain.start_link import link_key
 from app.integrations.docling import DoclingClient
 from app.integrations.litellm import Embedder, make_client
 from app.integrations.litellm_admin import LiteLLMAdmin
@@ -38,6 +39,8 @@ if TYPE_CHECKING:
     from app.services.backups import BackupReader
     from app.services.budget import BudgetGuard
     from app.services.client_contacts import ClientContactService
+    from app.services.client_notices import ClientNoticeService
+    from app.services.client_requests import ClientRequestService
     from app.services.clients import ClientService
     from app.services.documents import DocumentService
     from app.services.erp_access import ErpAccessService
@@ -46,6 +49,7 @@ if TYPE_CHECKING:
     from app.services.erp_events import ErpEventsService
     from app.services.erp_handoff import ErpHandoffService
     from app.services.erp_pairing import ErpPairingService
+    from app.services.erp_requests import ErpRequestService
     from app.services.external_services.checks import ExternalChecks
     from app.services.external_services.switches import SwitchService
     from app.services.external_services.view import ExternalServicesView
@@ -54,21 +58,25 @@ if TYPE_CHECKING:
     from app.services.kb.markdown_convert import MarkdownConverter
     from app.services.kb.search import KbSearchService
     from app.services.lead_consent import LeadConsentService
-    from app.services.lead_intake import LeadIntakeService
+    from app.services.lead_intake import LeadIntakeService, WebLeadFollowUp
     from app.services.lead_messenger import LeadMessenger
     from app.services.leads import LeadService
     from app.services.llm_usage import DbUsageRecorder
     from app.services.mail import MailService
     from app.services.password_reset import PasswordResetService
     from app.services.platform_roles import PlatformRoleService
+    from app.services.portal_invites import PortalInviteService
     from app.services.sandbox import SandboxService
     from app.services.setup import SetupService
     from app.services.smtp_connector import SmtpConnectorService
     from app.services.sso import SsoService
     from app.services.staff_deputy import StaffDeputyService
     from app.services.staff_link_notice import StaffLinkNotice
+    from app.services.staff_notifications import StaffNotificationService
+    from app.services.staff_notifier import StaffNotifier
     from app.services.staff_profile import StaffProfileService
     from app.services.staff_telegram_link import StaffTelegramLinkService
+    from app.services.staff_tickets import StaffTicketService
     from app.services.user_invites import UserInviteService
     from app.services.users import UserService
 
@@ -195,7 +203,9 @@ class Container:
     @cached_property
     def settings_service(self) -> SettingsService:
         return SettingsService(
-            self.session_factory, crm_base_url_default=self.settings.crm_base_url_default
+            self.session_factory,
+            crm_base_url_default=self.settings.crm_base_url_default,
+            platform_url=self.settings.platform_base_url,
         )
 
     @cached_property
@@ -309,7 +319,28 @@ class Container:
             self.session_factory,
             self.settings_service,
             self.settings.jwt_secret.get_secret_value().encode("utf-8"),
+            notices=self.client_notice_service,
+            on_web_lead=_enqueue_web_lead,
         )
+
+    @cached_property
+    def client_notice_service(self) -> "ClientNoticeService":
+        """Подтверждение запроса с сайта клиенту и итог отправки (D1-9, `client_notices`)."""
+        from app.services.client_notices import ClientNoticeService
+
+        return ClientNoticeService(
+            self.session_factory,
+            self.settings_service,
+            self.mail_service,
+            self.telegram_bot,
+            self._bot_username,
+            link_key(self.settings.jwt_secret.get_secret_value().encode("utf-8")),
+            self.settings,
+        )
+
+    async def _bot_username(self) -> str | None:
+        snapshot = await self.bot_state.snapshot()
+        return snapshot.username if snapshot is not None else None
 
     @cached_property
     def assist_service(self) -> "AssistService":
@@ -389,6 +420,29 @@ class Container:
         return ErpHandoffService(self.session_factory, self.erp_client)
 
     @cached_property
+    def client_request_service(self) -> "ClientRequestService":
+        """«Создать заявку» из лида и клиента (CRM-03, W16-D1-2)."""
+        from app.services.client_requests import ClientRequestService
+
+        return ClientRequestService(
+            self.session_factory,
+            backoffice_mode=self.backoffice_mode,
+            enqueue=_enqueue_erp_request,
+            on_chats_changed=_chats_changed,
+        )
+
+    @cached_property
+    def erp_request_service(self) -> "ErpRequestService":
+        """Заявка CRM → ERP задачей после коммита (шов 0.9.0)."""
+        from app.integrations.erp_requests import HttpxErpRequestClient
+        from app.services.erp_requests import ErpRequestService
+
+        client = HttpxErpRequestClient(
+            self.secrets_store, self.settings, self.settings_service, http=self.erp_http
+        )
+        return ErpRequestService(self.session_factory, client, self.erp_handoff_service)
+
+    @cached_property
     def erp_client(self) -> "ErpClient":
         """Клиент интеграции ERP (M3-CRM-03): передача клиента (handoff)."""
         from app.integrations.erp import HttpxErpClient
@@ -446,13 +500,16 @@ class Container:
         """Сообщения Telegram по событиям ERP: после коммита обработки (`app.bus.notices`)."""
         from app.bus.notices import ErpEventNotices
 
-        return ErpEventNotices(self.session_factory, self.telegram_bot, self.settings)
+        return ErpEventNotices(
+            self.session_factory, self.telegram_bot, self.settings, mail=self.mail_service
+        )
 
     @cached_property
     def erp_events_service(self) -> "ErpEventsService":
         """Обработчики событий ERP, принятых с шины (M3-CRM-04, B4)."""
         from app.services.erp_acceptance_code import AcceptanceCodeDelivery
         from app.services.erp_events import ErpEventsService
+        from app.services.erp_invite_delivery import InviteDelivery
 
         return ErpEventsService(
             self.settings_service,
@@ -460,7 +517,21 @@ class Container:
             AcceptanceCodeDelivery(
                 self.session_factory, self.settings_service, self.telegram_bot, self.settings
             ),
+            InviteDelivery(
+                self.session_factory,
+                self.settings_service,
+                self.telegram_bot,
+                self.settings,
+                self.portal_invites,
+            ),
         )
+
+    @cached_property
+    def portal_invites(self) -> "PortalInviteService":
+        """Итог приглашения в кабинет и повторная отправка другим каналом (D1-9)."""
+        from app.services.portal_invites import PortalInviteService
+
+        return PortalInviteService(self.session_factory, self.erp_client)
 
     @cached_property
     def bus(self) -> "CrmBus":
@@ -559,6 +630,7 @@ class Container:
             self.mail_service,
             self.settings_service,
             self.settings.platform_base_url,
+            self.staff_notifications,
         )
 
     @cached_property
@@ -566,6 +638,28 @@ class Container:
         from app.services.staff_deputy import StaffDeputyService
 
         return StaffDeputyService(self.session_factory)
+
+    @cached_property
+    def staff_notifications(self) -> "StaffNotificationService":
+        """Колокольчик сотрудника: события CRM (ответ на обращение, привязка Telegram, W15-H7)."""
+        from app.services.staff_notifications import StaffNotificationService
+
+        return StaffNotificationService(self.session_factory)
+
+    @cached_property
+    def staff_tickets(self) -> "StaffTicketService":
+        """Обращения сотрудников к администратору (W15-H7); личные сообщения — через бота CRM."""
+        from app.services.staff_tickets import StaffTicketService
+
+        return StaffTicketService(
+            self.session_factory, self._staff_messenger, self.settings.platform_base_url
+        )
+
+    async def _staff_messenger(self) -> "StaffNotifier | None":
+        from app.services.staff_notifier import StaffNotifier
+
+        bot = await self.telegram_bot()
+        return StaffNotifier(self.session_factory, bot) if bot is not None else None
 
     @cached_property
     def password_reset(self) -> "PasswordResetService":
@@ -681,6 +775,12 @@ async def _enqueue_ingest(document_id: int) -> object:
         raise ConflictError("document is already queued", reason=Reason.DOCUMENT_INDEXING) from exc
 
 
+async def _enqueue_web_lead(follow_up: "WebLeadFollowUp") -> None:
+    from app.tasks.client_notices import enqueue_web_lead
+
+    await enqueue_web_lead(follow_up)
+
+
 async def _enqueue_email(email_log_id: int) -> object:
     from app.tasks.mail import enqueue_email
 
@@ -697,6 +797,12 @@ async def _enqueue_erp_sync(action: str, user_id: int) -> int | None:
     from app.tasks.erp_users import enqueue_erp_sync
 
     return await enqueue_erp_sync(action, user_id)
+
+
+async def _enqueue_erp_request(deal_id: int, client_id: int, user_id: int) -> object:
+    from app.tasks.erp_requests import enqueue_erp_request
+
+    return await enqueue_erp_request(deal_id, client_id, user_id)
 
 
 async def _enqueue_erp_handoff(client_id: int, lead_id: int, user_id: int) -> object:

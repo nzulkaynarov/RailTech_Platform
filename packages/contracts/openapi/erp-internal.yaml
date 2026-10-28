@@ -3,7 +3,7 @@
 openapi: 3.0.3
 info:
   title: RailTech Platform ERP — Internal API (ERP SPA)
-  version: 1.0.0
+  version: 1.1.0
   description: 'Внутренний API ERP для ERP SPA (бэк-офис), пространство `/api/v1/` (CONTRACTS §1). Файл генерируется из схемы
     бэкенда — это не отдельное описание, а её срез; расхождение с кодом невозможно: CI перегенерирует схему и падает при diff.'
   contact:
@@ -3263,9 +3263,14 @@ paths:
   /api/v1/calc/deals/:
     get:
       operationId: calc_deal_refs
-      description: GET /api/v1/calc/deals/ — лёгкий справочник заявок с заданием расчёта (id, создана, стадия) для поиска
-        по номеру.
-      summary: 'Заявки с заданием расчёта: id, дата создания, стадия'
+      description: GET /api/v1/calc/deals/[?number=] — лёгкий справочник заявок с заданием расчёта (id, номер, создана, стадия).
+      summary: 'Заявки с заданием расчёта: id, номер, дата создания, стадия'
+      parameters:
+      - in: query
+        name: number
+        schema:
+          type: string
+        description: 'Отбор по номеру ЗВ/ПР (`ЗВ-2026-104`, `zv 2026 104`): один NNN года, префикс не важен'
       tags:
       - Calc
       security:
@@ -7053,7 +7058,8 @@ paths:
     get:
       operationId: crm_deals_list
       description: Returns deals accessible to the current user. Admins/managers see all; clients see only their company's
-        deals.
+        deals. `search` finds deals by number (ЗВ-ГГГГ-NNN / ПР-ГГГГ-NNN — the same NNN under either prefix, latin ZV/PR and
+        spaces accepted), title or client company name (ERP-09).
       summary: List deals
       parameters:
       - name: page
@@ -15145,6 +15151,10 @@ components:
       properties:
         id:
           type: integer
+        number:
+          type: string
+          nullable: true
+          description: Номер ЗВ-ГГГГ-NNN или ПР-ГГГГ-NNN (`Deal.number`, ERP-09)
         title:
           type: string
         created_at:
@@ -15163,6 +15173,7 @@ components:
       - created_at
       - id
       - manager_name
+      - number
       - stage_code
       - title
     CalcDealRef:
@@ -15170,6 +15181,10 @@ components:
       properties:
         id:
           type: integer
+        number:
+          type: string
+          nullable: true
+          description: Номер ЗВ-ГГГГ-NNN или ПР-ГГГГ-NNN (`Deal.number`, ERP-09)
         created_at:
           type: string
           format: date-time
@@ -15178,6 +15193,7 @@ components:
       required:
       - created_at
       - id
+      - number
       - stage_code
     CalcDealRefList:
       type: object
@@ -17512,6 +17528,21 @@ components:
         id:
           type: integer
           readOnly: true
+        number:
+          type: string
+          readOnly: true
+          title: Номер заявки
+          description: ЗВ-ГГГГ-NNN; после принятия КП клиентом — ПР-ГГГГ-NNN (тот же NNN)
+        process:
+          allOf:
+          - $ref: '#/components/schemas/ProcessEnum'
+          readOnly: true
+          title: Процесс заявки
+        urgency:
+          allOf:
+          - $ref: '#/components/schemas/UrgencyEnum'
+          readOnly: true
+          title: Срочность
         company:
           type: integer
           nullable: true
@@ -17626,10 +17657,13 @@ components:
       - created_at
       - execution_complete
       - id
+      - number
+      - process
       - quotes
       - request_lines_count
       - request_text
       - updated_at
+      - urgency
       - viewer_can_release
       - viewer_is_seller
     DealDetailRequest:
@@ -17672,6 +17706,21 @@ components:
         id:
           type: integer
           readOnly: true
+        number:
+          type: string
+          readOnly: true
+          title: Номер заявки
+          description: ЗВ-ГГГГ-NNN; после принятия КП клиентом — ПР-ГГГГ-NNN (тот же NNN)
+        process:
+          allOf:
+          - $ref: '#/components/schemas/ProcessEnum'
+          readOnly: true
+          title: Процесс заявки
+        urgency:
+          allOf:
+          - $ref: '#/components/schemas/UrgencyEnum'
+          readOnly: true
+          title: Срочность
         title:
           type: string
           title: Название сделки
@@ -17757,7 +17806,10 @@ components:
       - created_at
       - execution_complete
       - id
+      - number
+      - process
       - total_value
+      - urgency
       - viewer_can_release
       - viewer_is_seller
     DealStageLookup:
@@ -21652,6 +21704,14 @@ components:
       - company_types
       - id
       - name
+    ProcessEnum:
+      enum:
+      - legacy
+      - v3
+      type: string
+      description: |-
+        * `legacy` - legacy
+        * `v3` - v3
     Product:
       type: object
       description: |-
@@ -22646,6 +22706,10 @@ components:
             type: string
           readOnly: true
           description: Каналы отправки клиенту, выбранные директором при одобрении (telegram, cabinet, email)
+        send_report:
+          readOnly: true
+          description: 'Итог автоотправки после одобрения директором (ERP-11): requested, sent_via, skipped [{channel, reason}],
+            error; пусто — автоотправки не было'
         items:
           type: array
           items:
@@ -22703,6 +22767,7 @@ components:
       - public_access_token
       - public_token_revoked
       - send_channels
+      - send_report
       - status
       - subtotal_excl_vat
       - total_incl_vat
@@ -24291,6 +24356,14 @@ components:
       required:
       - code
       - name
+    UrgencyEnum:
+      enum:
+      - normal
+      - urgent
+      type: string
+      description: |-
+        * `normal` - Обычная
+        * `urgent` - Срочная
     User:
       type: object
       properties:

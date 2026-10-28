@@ -80,14 +80,21 @@ async def logout(
     return response
 
 
-@router.post("/change-password", status_code=status.HTTP_204_NO_CONTENT)
+@router.post("/change-password", response_model=TokenResponse)
 async def change_password(
-    body: ChangePasswordRequest, principal: PrincipalDep, container: ContainerDep
-) -> Response:
-    await container.user_service.change_password(
+    body: ChangePasswordRequest,
+    request: Request,
+    response: Response,
+    principal: PrincipalDep,
+    container: ContainerDep,
+) -> TokenResponse:
+    """Смена своего пароля. Прочие сессии закрываются сразу (`password_changed_at`), а эта
+    продолжается: в ответе новая пара токенов (access в теле, refresh в cookie, как при входе)."""
+    changed = await container.user_service.change_password(
         principal.actor, principal.user_id, body.current_password, body.new_password
     )
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+    session = await container.auth_service.reissue(principal.user_id, _client(request), changed)
+    return respond_with_session(response, session, container.settings)
 
 
 @router.post("/forgot-password", status_code=status.HTTP_202_ACCEPTED)

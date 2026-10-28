@@ -13,6 +13,7 @@ from .context import (
     get_traceparent,
     reset_correlation,
     set_correlation,
+    structlog_extra_processor,
     structlog_processor,
 )
 from .core import BusConfig, BusCore, DeliverStats, PumpStats
@@ -80,6 +81,7 @@ __all__ = [
     "set_correlation",
     "sign",
     "static_secrets",
+    "structlog_extra_processor",
     "structlog_processor",
     "subscribe",
     "verify",

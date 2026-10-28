@@ -1,17 +1,18 @@
 """REST по лидам (SPEC §10.1): список, карточка, переписка, входящие, действия, решения."""
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import ContainerDep, require
+from app.domain.client_requests import platform_status
 from app.domain.errors import NotFoundError
 from app.models.clients import Client
 from app.models.leads import Lead, Message
 from app.models.qualification import Escalation
-from app.repositories import crm, service_requests
+from app.repositories import crm, lead_status, service_requests
 from app.repositories import decisions as repo
 from app.repositories import leads as leads_repo
 from app.repositories import users as users_repo
@@ -40,8 +41,9 @@ from app.schemas.leads import (
     Snooze,
     TeamMember,
 )
+from app.schemas.notices import NoticeOut
 from app.security.principal import Principal
-from app.services import handoff_notes
+from app.services import handoff_notes, web_lead_sla
 
 router = APIRouter(prefix="/api/v1", tags=["leads"])
 
@@ -71,6 +73,11 @@ def escalation_out(e: Escalation | None) -> EscalationOut | None:
     )
 
 
+def _platform_status(lead: Lead, escalation: Escalation | None) -> str:
+    asks_price, sla_overdue = lead_status.escalation_flags(escalation)
+    return platform_status(lead.stage, asks_price=asks_price, sla_overdue=sla_overdue).value
+
+
 def lead_out(
     lead: Lead, escalation: Escalation | None, names: dict[int, str] | None = None
 ) -> LeadOut:
@@ -92,6 +99,7 @@ def lead_out(
         created_at=lead.created_at,
         escalation=escalation_out(escalation),
         source=lead.source,
+        platform_status=_platform_status(lead, escalation),
     )
 
 
@@ -135,8 +143,20 @@ async def list_leads(
     sort: str = Query(default="last_message", pattern="^(last_message|score|created)$"),
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
+    platform_status: Annotated[
+        str | None,
+        Query(
+            pattern=r"^(new|dialog|wants_quote|no_answer|client|lost)(,(new|dialog|wants_quote|no_answer|client|lost))*$",
+            description="Статус лида для Платформы (CRM-02), через запятую",
+        ),
+    ] = None,
+    overdue: Annotated[
+        bool | None, Query(description="Просроченные: открытая передача с истёкшим SLA ответа")
+    ] = None,
 ) -> LeadPage:
-    flt = crm.LeadFilter(stage, owner, min_score, language, q, created_from, created_to)
+    flt = crm.LeadFilter(
+        stage, owner, min_score, language, q, created_from, created_to, platform_status, overdue
+    )
     async with container.session_factory() as session:
         rows, total = await crm.list_leads(session, flt, who.user_id, limit, offset, sort)
         escalations = await crm.active_escalations(session, [r.id for r in rows])
@@ -199,8 +219,18 @@ async def get_lead(lead_id: int, _: Reader, container: ContainerDep) -> LeadDeta
         request_id = await service_requests.open_request_id(session, lead)
         client = await session.get(Client, lead.client_id) if lead.client_id is not None else None
         erp_company_id = client.erp_company_id if client is not None else None
+        confirmation = await container.client_notice_service.latest(
+            session, lead_id, "web_confirmation"
+        )
+        invitation = (
+            await container.portal_invites.current(session, client.id)
+            if client is not None
+            else None
+        )
     base = lead_out(lead, escalation, names)
     mode = await container.backoffice_mode()
+    now = datetime.now(UTC)
+    waiting = web_lead_sla.awaiting(lead.first_response_due_at, lead.assigned_user_id)
     return LeadDetail(
         **base.model_dump(),
         qualification=dict(lead.qualification or {}),
@@ -221,6 +251,14 @@ async def get_lead(lead_id: int, _: Reader, container: ContainerDep) -> LeadDeta
         client_in_erp=erp_company_id is not None,
         client_handoff_status=client.erp_handoff_status if client is not None else None,
         client_handoff_error=client.erp_handoff_error if client is not None else None,
+        first_response_due_at=lead.first_response_due_at if waiting else None,
+        first_response_overdue=web_lead_sla.overdue(
+            lead.first_response_due_at, lead.assigned_user_id, now
+        ),
+        confirmation=NoticeOut.model_validate(confirmation, from_attributes=True)
+        if confirmation is not None
+        else None,
+        invitation=invitation,
     )
 
 

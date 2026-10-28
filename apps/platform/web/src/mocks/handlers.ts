@@ -12,6 +12,7 @@ import { adminCompanyHandlers } from "./adminCompany";
 import { adminRolesHandlers } from "./adminRoles";
 import { botKbHandlers } from "./botKb";
 import { crmMessagesHandlers } from "./crmMessages";
+import { edsApprovalsHandlers } from "./edsApprovals";
 import { bridgeHandlers } from "./bridgeHandlers";
 import { edsLettersHandlers } from "./edsLetters";
 import { erpCalcHandlers } from "./erpCalc";
@@ -22,6 +23,7 @@ import { isEmployeeDisabled } from "./fixtures/employees";
 import { feedHandlers } from "./feedHandlers";
 import { profileHandlers } from "./profileHandlers";
 import { setupHandlers } from "./setupHandlers";
+import { ticketsHandlers } from "./ticketsHandlers";
 import {
   DEMO_WRONG_CURRENT_PASSWORD,
   DEMO_WRONG_PASSWORD,
@@ -152,8 +154,10 @@ export const handlers = [
   ...botKbHandlers,
   ...crmMessagesHandlers,
   ...bridgeHandlers,
+  ...ticketsHandlers,
   ...edsDocumentsHandlers,
   ...edsLettersHandlers,
+  ...edsApprovalsHandlers,
   ...erpCalcHandlers,
 
   getGetHealthMockHandler({

@@ -38,6 +38,7 @@ from django.utils import timezone
 
 from accounts.constants import Permission
 from accounts.services.permissions import is_seller, member_has_permission
+from sales.services import deal_numbers
 
 from ..constants import DealStageCode, QuoteStatusCode
 from ..models import ActivityLog, CalcLine, CalcLineKind, CalcTask
@@ -404,6 +405,7 @@ def _assignees(task: CalcTask) -> list[dict]:
 def _deal_brief(deal: Deal) -> dict:
     return {
         "id": deal.id,
+        "number": deal.number or None,
         "title": deal.title,
         "created_at": deal.created_at.isoformat(),
         "stage_code": deal.stage.code if deal.stage_id else DealStageCode.DRAFT,
@@ -476,18 +478,26 @@ def list_tasks(user, *, mine: bool = False, scope: str = "open") -> list[dict]:
 MAX_REFS = 5000
 
 
-def deal_refs(user) -> list[dict]:
-    """Лёгкий справочник заявок с заданием расчёта (без КП, строк и виз): id, дата создания, стадия — для поиска
-    заявки по номеру ЗВ в BFF до ERP-09 (B-010, B-075). С новых заявок."""
+def deal_refs(user, number: str = "") -> list[dict]:
+    """Лёгкий справочник заявок с заданием расчёта (без КП, строк и виз): id, номер ЗВ/ПР (`Deal.number`, ERP-09),
+    дата создания, стадия — для поиска заявки по номеру в BFF. `number` — отбор по номеру (`ЗВ-2026-104`, `ПР-2026-104`,
+    `zv 2026 104` — один NNN года, префикс не важен: после принятия КП заявка становится проектом с тем же NNN); не номер —
+    пусто. С новых заявок."""
     _require_staff(user)
-    rows = (
-        Deal.objects.filter(calc_tasks__isnull=False)
-        .distinct()
-        .order_by("-id")
-        .values("id", "created_at", "stage__code")[:MAX_REFS]
-    )
+    rows = Deal.objects.filter(calc_tasks__isnull=False)
+    if number:
+        parsed = deal_numbers.parse_query(number)
+        if parsed is None:
+            return []
+        rows = rows.filter(number_year=parsed[0], number_seq=parsed[1])
+    rows = rows.distinct().order_by("-id").values("id", "number", "created_at", "stage__code")[:MAX_REFS]
     return [
-        {"id": row["id"], "created_at": row["created_at"].isoformat(), "stage_code": row["stage__code"] or "DRAFT"}
+        {
+            "id": row["id"],
+            "number": row["number"] or None,
+            "created_at": row["created_at"].isoformat(),
+            "stage_code": row["stage__code"] or "DRAFT",
+        }
         for row in rows
     ]
 

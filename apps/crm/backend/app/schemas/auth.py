@@ -86,6 +86,8 @@ class UserOut(BaseModel):
     deputy_user_id: int | None = None
     deputy_from: date | None = None
     deputy_to: date | None = None
+    # Приветствие и тур первого входа уже показаны («Пропустить» / «Больше не показывать», W15-H7).
+    onboarding_done: bool = True
 
 
 class PlatformRoleGrantRef(PlatformRoleRef):
@@ -130,6 +132,8 @@ class MePatch(BaseModel):
     phone: str | None = Field(default=None, max_length=40)
     timezone: str | None = Field(default=None, max_length=64)
     email_signature: str | None = Field(default=None, max_length=2000)
+    # Закрыть приветствие и тур первого входа; снять флаг нельзя, поэтому только `true`.
+    onboarding_done: Literal[True] | None = None
 
 
 class DeputyIn(BaseModel):

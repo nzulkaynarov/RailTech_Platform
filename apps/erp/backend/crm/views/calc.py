@@ -75,19 +75,27 @@ class CalcTaskListView(APIView):
 
 
 class CalcDealRefsView(APIView):
-    """GET /api/v1/calc/deals/ — лёгкий справочник заявок с заданием расчёта (id, создана, стадия) для поиска по номеру."""
+    """GET /api/v1/calc/deals/[?number=] — лёгкий справочник заявок с заданием расчёта (id, номер, создана, стадия)."""
 
     permission_classes = [IsAuthenticated]
 
     @extend_schema(
         operation_id="calc_deal_refs",
-        summary="Заявки с заданием расчёта: id, дата создания, стадия",
+        summary="Заявки с заданием расчёта: id, номер, дата создания, стадия",
         tags=TAGS,
+        parameters=[
+            OpenApiParameter(
+                "number",
+                str,
+                required=False,
+                description="Отбор по номеру ЗВ/ПР (`ЗВ-2026-104`, `zv 2026 104`): один NNN года, префикс не важен",
+            )
+        ],
         responses={200: CalcDealRefListSerializer, 403: ERRORS[403]},
     )
     def get(self, request):
         try:
-            return Response({"results": calc.deal_refs(request.user)})
+            return Response({"results": calc.deal_refs(request.user, request.query_params.get("number", ""))})
         except CalcError as exc:
             return _fail(exc)
 

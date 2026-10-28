@@ -52,7 +52,7 @@ export function ModuleRail({
 }: ModuleRailProps) {
   if (variant === "bottom") {
     return (
-      <nav aria-label={label} className="pf-bottom-bar">
+      <nav aria-label={label} className="pf-bottom-bar" data-tour="rail">
         {modules.map((m) => (
           <RailLink key={m.code} module={m} />
         ))}
@@ -69,6 +69,7 @@ export function ModuleRail({
     >
       <nav
         aria-label={label}
+        data-tour="rail"
         style={{
           height: "100%",
           display: "flex",

@@ -38,6 +38,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/integration/v1/clients/{crm_client_id}/invite": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description POST /api/integration/v1/clients/{crm_client_id}/invite (0.8.0, D1-9): менеджер CRM приглашает контакт ещё раз. */
+        post: operations["api_integration_v1_clients_invite_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/integration/v1/clients/{crm_client_id}/requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** @description POST /api/integration/v1/clients/{crm_client_id}/requests — «Создать заявку» CRM (шов 0.9.0, CRM-03). */
+        post: operations["api_integration_v1_clients_requests_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/integration/v1/clients/handoff": {
         parameters: {
             query?: never;
@@ -2889,8 +2923,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Заявки с заданием расчёта: id, дата создания, стадия
-         * @description GET /api/v1/calc/deals/ — лёгкий справочник заявок с заданием расчёта (id, создана, стадия) для поиска по номеру.
+         * Заявки с заданием расчёта: id, номер, дата создания, стадия
+         * @description GET /api/v1/calc/deals/[?number=] — лёгкий справочник заявок с заданием расчёта (id, номер, создана, стадия).
          */
         get: operations["calc_deal_refs"];
         put?: never;
@@ -4474,7 +4508,7 @@ export interface paths {
         };
         /**
          * List deals
-         * @description Returns deals accessible to the current user. Admins/managers see all; clients see only their company's deals.
+         * @description Returns deals accessible to the current user. Admins/managers see all; clients see only their company's deals. `search` finds deals by number (ЗВ-ГГГГ-NNN / ПР-ГГГГ-NNN — the same NNN under either prefix, latin ZV/PR and spaces accepted), title or client company name (ERP-09).
          */
         get: operations["crm_deals_list"];
         put?: never;
@@ -7926,6 +7960,8 @@ export interface components {
         };
         CalcDeal: {
             id: number;
+            /** @description Номер ЗВ-ГГГГ-NNN или ПР-ГГГГ-NNN (`Deal.number`, ERP-09) */
+            number: string | null;
             title: string;
             /** Format: date-time */
             created_at: string;
@@ -7935,6 +7971,8 @@ export interface components {
         };
         CalcDealRef: {
             id: number;
+            /** @description Номер ЗВ-ГГГГ-NNN или ПР-ГГГГ-NNN (`Deal.number`, ERP-09) */
+            number: string | null;
             /** Format: date-time */
             created_at: string;
             stage_code: string;
@@ -9468,6 +9506,15 @@ export interface components {
         DealDetail: {
             readonly id: number;
             /**
+             * Номер заявки
+             * @description ЗВ-ГГГГ-NNN; после принятия КП клиентом — ПР-ГГГГ-NNN (тот же NNN)
+             */
+            readonly number: string;
+            /** Процесс заявки */
+            readonly process: components["schemas"]["ProcessEnum"];
+            /** Срочность */
+            readonly urgency: components["schemas"]["UrgencyEnum"];
+            /**
              * Компания
              * @description Компания-клиент, с которой ведётся сделка. Пусто — черновик-калькулятор без клиента.
              */
@@ -9569,6 +9616,15 @@ export interface components {
         /** @description MED-3: Optimized list serializer with human-readable names. */
         DealList: {
             readonly id: number;
+            /**
+             * Номер заявки
+             * @description ЗВ-ГГГГ-NNN; после принятия КП клиентом — ПР-ГГГГ-NNN (тот же NNN)
+             */
+            readonly number: string;
+            /** Процесс заявки */
+            readonly process: components["schemas"]["ProcessEnum"];
+            /** Срочность */
+            readonly urgency: components["schemas"]["UrgencyEnum"];
             /**
              * Название сделки
              * @description Краткое описание сделки (опционально)
@@ -12375,6 +12431,12 @@ export interface components {
             logo?: string | null;
         };
         /**
+         * @description * `legacy` - legacy
+         *     * `v3` - v3
+         * @enum {string}
+         */
+        ProcessEnum: "legacy" | "v3";
+        /**
          * @description Strip supplier-cost fields (offers / base_price) from viewers who don't own
          *     the product. Only the OWNING seller's team + platform admins see cost & supplier
          *     identity — clients, other sellers and anon never do (C1 cost-leak fix). React was
@@ -13084,6 +13146,8 @@ export interface components {
             readonly director_comment: string;
             /** @description Каналы отправки клиенту, выбранные директором при одобрении (telegram, cabinet, email) */
             readonly send_channels: string[];
+            /** @description Итог автоотправки после одобрения директором (ERP-11): requested, sent_via, skipped [{channel, reason}], error; пусто — автоотправки не было */
+            readonly send_report: unknown;
             readonly items: components["schemas"]["QuoteItem"][];
             readonly charges: components["schemas"]["QuoteCharge"][];
             readonly economics: components["schemas"]["QuoteEconomics"] | null;
@@ -14146,6 +14210,12 @@ export interface components {
              */
             is_active?: boolean;
         };
+        /**
+         * @description * `normal` - Обычная
+         *     * `urgent` - Срочная
+         * @enum {string}
+         */
+        UrgencyEnum: "normal" | "urgent";
         User: {
             readonly id: number;
             /**
@@ -14375,6 +14445,46 @@ export interface operations {
             query?: never;
             header?: never;
             path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_integration_v1_clients_invite_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                crm_client_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    api_integration_v1_clients_requests_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                crm_client_id: number;
+            };
             cookie?: never;
         };
         requestBody?: never;
@@ -19203,7 +19313,10 @@ export interface operations {
     };
     calc_deal_refs: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Отбор по номеру ЗВ/ПР (`ЗВ-2026-104`, `zv 2026 104`): один NNN года, префикс не важен */
+                number?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;

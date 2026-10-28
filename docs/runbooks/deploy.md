@@ -20,7 +20,7 @@
 - **База** — на VPS 2: PostgreSQL 17 + pgvector, 5 баз, по роли на базу (`crm_app`, `erp_app`, `eds_app`, `litellm_app`, `langfuse_app`),
   `pg_hba` — только TLS и только внутренний IP VPS 1.
 - **Порядок деплоя** (`infra/deploy/deploy.sh <sha>`): проверка env → `pull` → **проверка базы CPU образов** (`cpu-baseline-check.sh`: в каждом образе запускается import numpy / litellm.proxy / версия бинаря; образ, которому нужен x86-64-v2, останавливает деплой до дампа и миграций, см. servers.md «CPU прод-VPS»); ту же таблицу команд раньше, в PR, прогоняет CI под эмуляцией CPU `qemu64` (задание `cpu-image`, `make deploy-check`, `scripts/qemu_cpu_check.sh`; servers.md, «Проверка под эмуляцией qemu64») → **pg_dump-гейт** `crm`, `erp` и `eds`
-  (`predeploy-dump.sh`; нет читаемого дампа — миграций нет) → миграции CRM, ERP и EDS явно (`AUTO_MIGRATE=false` у ERP, `eds-migrate` = `alembic upgrade head`) → `up -d` → smoke → здоровье `eds-api` (у EDS нет домена, smoke его не видит).
+  (`predeploy-dump.sh`; нет читаемого дампа — миграций нет) → миграции CRM, ERP и EDS явно (`AUTO_MIGRATE=false` у ERP, `eds-migrate` = `alembic upgrade head`) → автоматические секреты (`make-env-prod.sh ensure-secrets` до проверки env: сейчас `REDIS_PROBE_PASSWORD` — пароль пользователя Redis `crm-probe` для «Состояния системы» (права `PING`/`INFO`, ключей не видит), создаётся случайным и не меняется; руками не вписывается) → **`s3-init`** (ключи RustFS, которых нет в списке `S3_*_ACCESS_KEY` файла env, удаляются на каждом деплое — `prune_users` в `init.sh`, ручной ключ деплой не переживёт; `run --rm`: бакеты, ключи и политики доступа RustFS приводятся к `infra/s3/init.sh` на каждом деплое, а не только при первой инициализации; W15-H8b) → `up -d` → smoke → здоровье `eds-api` (у EDS нет домена, smoke его не видит).
 - Правило FIX-03: `/mcp` снаружи — 404 на всех доменах, включая Платформу (Caddy); smoke это проверяет.
 
 ## 1. Первая установка
@@ -222,6 +222,28 @@ mcp-tools.json` монтируется в контейнер по пути `../.
 (22 схемы), `docker compose exec erp-backend python manage.py bus_retry --metrics`; порядок эксплуатации — `rt-bus-erp.md`.
 
 Вручную с сервера (без Actions): `/opt/rt/releases/<sha>/infra/deploy/deploy.sh <sha>`; без миграций и дампа — `make up-prod RT_IMAGE_TAG=<sha>`.
+
+### Номера заявок ЗВ/ПР после выкладки (ERP-09, W16-D1-2)
+
+Миграция `sales/0008_backfill_deal_numbers` выдаёт номера сделкам, которые уже есть в базе, а новым сделкам номер
+выдаёт код (`Deal.save`). Сделка, созданная **старым кодом** между миграцией и стартом новых контейнеров (портал,
+передача из CRM в эти секунды), остаётся без номера: в API и событиях у неё запасной `D-<id>`. После выкладки проверить:
+
+```bash
+docker compose exec erp-backend python manage.py shell -c \
+  "from crm.models import Deal; print(Deal.objects.filter(number_seq__isnull=True).count())"
+```
+
+Не ноль — догнать той же функцией миграции (идемпотентно: сделки с номером не трогает; запускать, когда новые заявки
+не создаются, — функция ставит счётчик года на последний выданный NNN):
+
+```bash
+docker compose exec erp-backend python manage.py shell -c \
+  "import importlib; from django.apps import apps; \
+   importlib.import_module('sales.migrations.0008_backfill_deal_numbers').backfill(apps, None)"
+```
+
+Повторная проверка — `0`. Номер приходит в CRM с ближайшим событием по сделке (`deals.erp_number`).
 
 ### Django admin ERP и машинный API ERP — без внешнего маршрута (S0-5)
 

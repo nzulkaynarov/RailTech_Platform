@@ -205,7 +205,8 @@
       "telegram_linked": "Telegramni ulagan",
       "telegram_unlinked": "Telegramni uzdi",
       "deputy_set": "Yoʻqlik vaqtiga oʻrinbosar tayinladi",
-      "deputy_cleared": "Oʻrinbosarlikni olib tashladi"
+      "deputy_cleared": "Oʻrinbosarlikni olib tashladi",
+      "onboarding_done": "Platformadagi xush kelibsiz oynasini yopdi"
     },
     "setup": {
       "admin_created": "Birinchi administrator (sozlash ustasi)"
@@ -281,6 +282,11 @@
     "external_service": {
       "disable": "Tashqi xizmatni o'chirdi",
       "enable": "Tashqi xizmatni yoqdi"
+    },
+    "staff_ticket": {
+      "create": "Administratorga yozdi",
+      "reply": "Xodim murojaatiga javob berdi",
+      "status": "Xodim murojaati holatini oʻzgartirdi"
     }
   },
   "entities": {
@@ -303,7 +309,8 @@
     "integration_secret": "Ulanish kaliti",
     "integration": "Ulanish",
     "external_service": "Tashqi xizmat",
-    "platform_role": "Platforma roli"
+    "platform_role": "Platforma roli",
+    "staff_ticket": "Xodim murojaati"
   },
   "fields": {
     "email": "Elektron pochta",

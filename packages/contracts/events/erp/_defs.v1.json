@@ -146,6 +146,37 @@
           "type": "integer",
           "minimum": 1,
           "description": "Менеджер заявки — сотрудник CRM (crm_user_id): ответственный передачи из CRM, иначе ответственный сделки ERP с сопоставлением CRM. Нет — менеджер не назначен. Необязательное (C1-G-7)"
+        },
+        "request_number": {
+          "type": "string",
+          "pattern": "^ЗВ-\\d{4}-\\d{3,}$",
+          "description": "Номер заявки ЗВ-ГГГГ-NNN (Deal.number ERP, ERP-09; тот же, что deal.number при публикации). Необязательное, с 2026-10-28 (W16-D1-2); старое событие без него принимается"
+        },
+        "urgency": {
+          "type": "string",
+          "enum": [
+            "normal",
+            "urgent"
+          ],
+          "description": "Срочность заявки, выбранная менеджером в «Создать заявку» (W16-D1-2): urgent — письмо EDS по заявке срочное. Необязательное; нет — обычная"
+        },
+        "letter_file_id": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Файл письма на имя директора, загруженный менеджером в EDS (`POST /files` eds.yaml) до создания заявки; EDS прикрепляет его к входящему письму по заявке, если файл загрузил менеджер заявки (manager_crm_user_id) и он ещё ни к чему не привязан. Необязательное (W16-D1-2)"
+        },
+        "crm_request_id": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Заявка на стороне CRM (зеркало сделки), по которой создана заявка ERP (`POST /clients/{crm_client_id}/requests` шва): CRM связывает событие с этой записью. Необязательное (W16-D1-2)"
+        },
+        "process": {
+          "type": "string",
+          "enum": [
+            "legacy",
+            "v3"
+          ],
+          "description": "Процесс заявки (ERP-07): v3 — заявка Платформы (резолюция, визы, одобрение КП в EDS); legacy — заявка, начатая до Платформы. Необязательное; нет — legacy"
         }
       },
       "additionalProperties": false
@@ -200,6 +231,19 @@
         },
         "currency": {
           "$ref": "#/$defs/Currency"
+        },
+        "channels": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "enum": [
+              "telegram",
+              "cabinet",
+              "email"
+            ]
+          },
+          "description": "Каналы, по которым КП ушло клиенту (ERP-11, W16-D1-2): автоотправка после одобрения директором — только доступные из выбранных директором. CRM пишет клиенту в Telegram, только если в списке есть telegram. Необязательное; нет — все каналы клиента, как прежде (отправка менеджером)"
         }
       },
       "additionalProperties": false
@@ -536,6 +580,39 @@
         },
         "crm_contact_id": {
           "type": "integer"
+        }
+      },
+      "additionalProperties": false
+    },
+    "InviteRequested": {
+      "type": "object",
+      "description": "Приглашение контакта в Cabinet через бот CRM (D1-9). Рабочей ссылки и токенов нет: контакт входит в Mini App по своему Telegram-аккаунту (initData), поэтому событие не секретно.",
+      "required": [
+        "channel",
+        "erp_contact_id",
+        "crm_contact_id"
+      ],
+      "properties": {
+        "channel": {
+          "type": "string",
+          "enum": [
+            "telegram"
+          ]
+        },
+        "erp_contact_id": {
+          "type": "integer"
+        },
+        "crm_contact_id": {
+          "type": "integer"
+        },
+        "language": {
+          "type": "string",
+          "enum": [
+            "ru",
+            "uz",
+            "en"
+          ],
+          "description": "Язык контакта в ERP; бот CRM берёт язык лида, если он известен"
         }
       },
       "additionalProperties": false

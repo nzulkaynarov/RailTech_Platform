@@ -225,7 +225,7 @@ def test_a_migrated_manager_and_accountant_keeps_the_same_rights(
 def test_accountant_template_loses_supplier_prices_and_downgrade_returns_them(
     alembic_config: Config, live_settings: Settings
 ) -> None:
-    """0044 (D2-1, Q-D2-1-4): «Бухгалтер» без цен поставщиков; версия роли растёт в обе стороны."""
+    """0047 (D2-1, Q-D2-1-4): «Бухгалтер» без цен поставщиков; версия роли растёт в обе стороны."""
 
     def accountant() -> tuple[list[str], int]:
         with psycopg.connect(live_settings.libpq_dsn, autocommit=True) as conn:
@@ -237,7 +237,7 @@ def test_accountant_template_loses_supplier_prices_and_downgrade_returns_them(
         return list(row[0]), int(row[1])
 
     command.upgrade(alembic_config, "head")
-    command.downgrade(alembic_config, "0043_messages_bot_created_idx")
+    command.downgrade(alembic_config, "0046_client_requests")
     fields, version = accountant()
     assert "supplier_prices" in fields
 

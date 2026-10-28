@@ -26,6 +26,7 @@ ENCODED = "%D0%97%D0%92-2026-104"
 def deal(**extra: Any) -> dict[str, Any]:
     return {
         "id": 104,
+        "number": NUMBER,
         "title": "Стрелочные переводы",
         "created_at": "2026-10-20T09:00:00+05:00",
         "stage_code": "CALCULATING",
@@ -164,7 +165,12 @@ def erp(be: Backends) -> respx.MockRouter:
 def refs(*deals: dict[str, Any]) -> dict[str, Any]:
     return {
         "results": [
-            {"id": d["id"], "created_at": d["created_at"], "stage_code": d["stage_code"]}
+            {
+                "id": d["id"],
+                "number": d.get("number"),
+                "created_at": d["created_at"],
+                "stage_code": d["stage_code"],
+            }
             for d in deals
         ]
     }
@@ -314,10 +320,7 @@ async def test_number_is_found_in_the_light_reference_of_erp(
     """Заявка по номеру — лёгкий справочник ERP (без строк и виз), и ушедшая дальше расчёта."""
     await web.login(["SUPPLY"])
     done = deal(stage_code="QUOTE_SENT")
-    other = deal(id=7, created_at="2026-01-05T09:00:00+05:00")
-    route = be.router.get(f"{CALC}/deals/").mock(
-        return_value=httpx.Response(200, json=refs(other, done))
-    )
+    route = be.router.get(f"{CALC}/deals/").mock(return_value=httpx.Response(200, json=refs(done)))
     be.router.get(f"{CALC}/104/").mock(return_value=httpx.Response(200, json=sheet(deal=done)))
 
     response = await web.client.get(f"/api/v1/erp/calc/{ENCODED}")
@@ -325,6 +328,27 @@ async def test_number_is_found_in_the_light_reference_of_erp(
     assert response.status_code == 200
     assert response.json()["step"] == "QUOTE"
     assert route.call_count == 1
+    assert route.calls.last.request.url.params["number"] == NUMBER
+
+
+async def test_request_number_finds_the_project_with_the_same_nnn(
+    web: Web, be: Backends, check: ContractChecker
+) -> None:
+    """Номер выдаёт ERP (`Deal.number`); после принятия КП заявка — проект `ПР-…` с тем же NNN,
+    латиница и ширина номера в адресе нормализуются, `id` из номера не разбирается."""
+    await web.login(["SUPPLY"])
+    project = deal(id=7, number="ПР-2026-104", stage_code="CONTRACT_SIGNED")
+    route = be.router.get(f"{CALC}/deals/").mock(
+        return_value=httpx.Response(200, json=refs(project))
+    )
+    be.router.get(f"{CALC}/7/").mock(return_value=httpx.Response(200, json=sheet(deal=project)))
+
+    response = await web.client.get("/api/v1/erp/calc/zv-2026-104")
+
+    assert response.status_code == 200
+    check(response, "/erp/calc/{number}", "get")
+    assert response.json()["number"] == "ПР-2026-104"
+    assert route.calls.last.request.url.params["number"] == NUMBER
 
 
 async def test_unknown_number_is_404(web: Web, be: Backends, check: ContractChecker) -> None:

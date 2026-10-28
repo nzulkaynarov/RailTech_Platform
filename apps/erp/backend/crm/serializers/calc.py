@@ -15,6 +15,7 @@ READY_BLOCKERS = ("not_started", "not_in_calculation", "not_draft", "no_lines", 
 
 class CalcDealSerializer(serializers.Serializer):
     id = serializers.IntegerField()
+    number = serializers.CharField(allow_null=True, help_text="Номер ЗВ-ГГГГ-NNN или ПР-ГГГГ-NNN (`Deal.number`, ERP-09)")
     title = serializers.CharField(allow_blank=True)
     created_at = serializers.DateTimeField()
     stage_code = serializers.CharField()
@@ -50,6 +51,7 @@ class CalcTaskListSerializer(serializers.Serializer):
 
 class CalcDealRefSerializer(serializers.Serializer):
     id = serializers.IntegerField()
+    number = serializers.CharField(allow_null=True, help_text="Номер ЗВ-ГГГГ-NNN или ПР-ГГГГ-NNN (`Deal.number`, ERP-09)")
     created_at = serializers.DateTimeField()
     stage_code = serializers.CharField()
 

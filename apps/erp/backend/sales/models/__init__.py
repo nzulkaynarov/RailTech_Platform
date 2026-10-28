@@ -7,7 +7,7 @@ from .calc_lines import CalcLine, CalcLineKind
 from .calc_tasks import CalcTask, CalcTaskAssignee, CalcZone
 from .charges import ChargeTemplate, QuoteCharge
 from .contracts import Contract
-from .deals import ActivityLog, Deal
+from .deals import ActivityLog, Deal, DealNumberCounter
 from .delivery import DeliveryLine, DeliveryLineStatus
 from .fulfillment import Fulfillment
 from .lookups import ChargeType, ContractStatus, DealStage, FulfillmentStatus, QuoteStatus
@@ -26,6 +26,7 @@ __all__ = [
     "Contract",
     "ContractStatus",
     "Deal",
+    "DealNumberCounter",
     "DealStage",
     "DeliveryLine",
     "DeliveryLineStatus",
