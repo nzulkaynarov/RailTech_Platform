@@ -204,7 +204,9 @@ class Container:
     @cached_property
     def settings_service(self) -> SettingsService:
         return SettingsService(
-            self.session_factory, crm_base_url_default=self.settings.crm_base_url_default
+            self.session_factory,
+            crm_base_url_default=self.settings.crm_base_url_default,
+            platform_url=self.settings.platform_base_url,
         )
 
     @cached_property

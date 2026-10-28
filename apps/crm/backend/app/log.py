@@ -13,7 +13,12 @@ from typing import Any
 
 import structlog
 from asgi_correlation_id import correlation_id
-from rt_bus.context import TRACEPARENT_HEADER, correlation, valid_traceparent
+from rt_bus.context import (
+    TRACEPARENT_HEADER,
+    correlation,
+    structlog_extra_processor,
+    valid_traceparent,
+)
 from structlog.types import EventDict, Processor, WrappedLogger
 
 from app.config import Settings
@@ -80,6 +85,7 @@ def _shared_processors() -> list[Processor]:
         structlog.contextvars.merge_contextvars,
         structlog.stdlib.add_log_level,
         structlog.stdlib.add_logger_name,
+        structlog_extra_processor,  # B-006: extra журнала шины (причина, код, подписчик, событие)
         add_request_id,
         mask_secrets,  # до pii: иначе id из токена бота станет [number], а хвост останется
         mask_pii,

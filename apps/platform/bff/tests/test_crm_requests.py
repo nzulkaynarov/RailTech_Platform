@@ -1,4 +1,4 @@
-"""«+ Создать заявку» (W16-D1-2b, контракт BFF 0.26.0, тег `requests`): прокси к CRM и EDS.
+"""«+ Создать заявку» (W16-D1-2b, контракт BFF 0.27.0, тег `requests`): прокси к CRM и EDS.
 
 CRM и EDS — на respx (`crm_leads_support`, `eds_documents_support`), ответы BFF сверяются со схемами
 platform-bff.yaml. Проверяется то, что делает BFF: раздел `crm.clients` полный (и `crm.leads` для

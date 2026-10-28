@@ -26,7 +26,7 @@ import {
 import { buildMe, currentActor, readSession } from "./mockSession";
 
 /**
- * Моки «Клиенты · Лиды, Клиенты и „Создать заявку“» (D1-2b, BFF 0.26.0). Права — как в BFF: лиды — `crm.leads`, клиенты и
+ * Моки «Клиенты · Лиды, Клиенты и „Создать заявку“» (D1-2b, BFF 0.27.0). Права — как в BFF: лиды — `crm.leads`, клиенты и
  * заявки — `crm.clients`; чтение — от уровня «чтение», изменения — «полный». Отказы формы — коды CRM в `details.reason`
  * (`handoff_no_consent`, `consent_via_bot`, `contact_channel_required`, `request_not_allowed`, `request_not_failed`), чтобы
  * экран и e2e видели настоящее поведение. Повтор формы с тем же `request_key` — 200 с той же заявкой, без второй строки.

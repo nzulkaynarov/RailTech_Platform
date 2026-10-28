@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "lang": "uz",
+  "doc": {
+    "type": "doc",
+    "content": [
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "Hurmatli Baxtiyor Baxtiyorovich!"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "Sizning xatingizni olganimizni va "
+          },
+          {
+            "type": "variable",
+            "attrs": {
+              "code": "deal.number"
+            }
+          },
+          {
+            "type": "text",
+            "text": " buyurtmasi boʻyicha yetkazib berishga tayyorligimizni tasdiqlaymiz."
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "Oʻzbekiston Respublikasi, gʻalla, qoʻshimcha shartnoma; кириллица: ўқғҳ ЎҚҒҲ"
+          }
+        ]
+      },
+      {
+        "type": "paragraph",
+        "content": [
+          {
+            "type": "text",
+            "text": "Hurmat bilan,"
+          }
+        ]
+      },
+      {
+        "type": "signature",
+        "attrs": {
+          "parties": [
+            {
+              "position": {
+                "var": "company.director_position"
+              },
+              "name": {
+                "var": "company.director"
+              }
+            }
+          ],
+          "stamp": true
+        }
+      }
+    ]
+  }
+}

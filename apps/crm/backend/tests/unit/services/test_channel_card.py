@@ -66,7 +66,7 @@ def test_overdue_and_http_link() -> None:
     card = replace(CARD, sla_overdue=True, crm_url="http://localhost/leads/124")
     text = render(card)
     assert "⏰ <b>Срок реакции просрочен</b>" in text
-    assert '<a href="http://localhost/leads/124">открыть в CRM</a>' in text
+    assert '<a href="http://localhost/leads/124">открыть</a>' in text
 
 
 def test_stage_in_words_and_kb_gap_threshold_from_settings() -> None:
